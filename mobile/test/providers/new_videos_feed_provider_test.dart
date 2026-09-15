@@ -78,6 +78,38 @@ void main() {
     }
 
     group('build', () {
+      test(
+        'keeps the cursor when the first page has no visible rows',
+        () async {
+          stubPages(
+            first: const HomeFeedResult(
+              videos: [],
+              hasMore: true,
+              paginationCursor: 'p:next-visible',
+            ),
+          );
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              cursor: 'p:next-visible',
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: _videos(1), hasMore: false),
+          );
+          final container = createContainer();
+          final first = await container.read(newVideosFeedProvider.future);
+          expect(first.videos, isEmpty);
+          expect(first.hasMoreContent, isTrue);
+
+          await container.read(newVideosFeedProvider.notifier).loadMore();
+
+          expect(
+            container.read(newVideosFeedProvider).requireValue.videos,
+            hasLength(1),
+          );
+        },
+      );
+
       // The regression: the home feed warms the shared cache with 25 videos,
       // this feed asks for 50 and gets that cached page back. Inferring
       // "no more content" from the short count killed pagination for the
@@ -149,6 +181,152 @@ void main() {
     });
 
     group('loadMore', () {
+      test(
+        'refresh replaces the old source cursor before loading more',
+        () async {
+          final requestedCursors = <String?>[];
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer((call) async {
+            final cursor = call.namedArguments[#cursor] as String?;
+            requestedCursors.add(cursor);
+            if (call.namedArguments[#skipCache] == true) {
+              return HomeFeedResult(
+                videos: _videos(1, idPrefix: 'fresh'),
+                hasMore: true,
+                paginationCursor: 'p:fresh',
+              );
+            }
+            if (cursor == 'p:fresh') {
+              return HomeFeedResult(
+                videos: _videos(1, idPrefix: 'more'),
+                hasMore: false,
+              );
+            }
+            return HomeFeedResult(
+              videos: _videos(1),
+              hasMore: true,
+              paginationCursor: 'relay:1000',
+            );
+          });
+          final container = createContainer();
+          await container.read(newVideosFeedProvider.future);
+          final notifier = container.read(newVideosFeedProvider.notifier);
+
+          await notifier.refresh();
+          await notifier.loadMore();
+
+          expect(requestedCursors, [null, null, 'p:fresh']);
+          expect(
+            container
+                .read(newVideosFeedProvider)
+                .requireValue
+                .videos
+                .map((v) => v.id),
+            ['fresh-0', 'more-0'],
+          );
+        },
+      );
+
+      test(
+        'advances an empty cursor page and retries failures in place',
+        () async {
+          final requestedCursors = <String?>[];
+          var attempts = 0;
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer((invocation) async {
+            final cursor = invocation.namedArguments[#cursor] as String?;
+            requestedCursors.add(cursor);
+            if (cursor == null) {
+              return HomeFeedResult(
+                videos: _videos(1),
+                hasMore: true,
+                paginationCursor: 'p:second',
+              );
+            }
+            if (cursor == 'p:second') {
+              return const HomeFeedResult(
+                videos: [],
+                hasMore: true,
+                paginationCursor: 'p:third',
+              );
+            }
+            if (attempts++ == 0) throw Exception('Temporary network failure');
+            return HomeFeedResult(
+              videos: _videos(1, idPrefix: 'more'),
+              hasMore: false,
+            );
+          });
+          final container = createContainer();
+          await container.read(newVideosFeedProvider.future);
+          final notifier = container.read(newVideosFeedProvider.notifier);
+
+          await notifier.loadMore();
+          expect(
+            container.read(newVideosFeedProvider).requireValue.hasMoreContent,
+            isTrue,
+          );
+          await notifier.loadMore();
+          final failed = container.read(newVideosFeedProvider).requireValue;
+          expect(failed.hasMoreContent, isTrue);
+          expect(failed.isLoadingMore, isFalse);
+          expect(failed.videos, hasLength(1));
+          await notifier.loadMore();
+
+          expect(requestedCursors, [null, 'p:second', 'p:third', 'p:third']);
+          final recovered = container.read(newVideosFeedProvider).requireValue;
+          expect(recovered.videos.map((v) => v.id), ['new-0', 'more-0']);
+          expect(recovered.hasMoreContent, isFalse);
+        },
+      );
+
+      test('keeps equal-publication rows across opaque cursor pages', () async {
+        const cursor =
+            'p:1767225600:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        final first = _videos(1);
+        final boundary = _videos(1, idPrefix: 'boundary');
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (invocation.namedArguments[#cursor] == cursor) {
+            return HomeFeedResult(videos: boundary, hasMore: false);
+          }
+          if (invocation.namedArguments[#until] != null) {
+            return const HomeFeedResult(videos: [], hasMore: false);
+          }
+          return HomeFeedResult(
+            videos: first,
+            hasMore: true,
+            paginationCursor: cursor,
+          );
+        });
+        final container = createContainer();
+        final initial = await container.read(newVideosFeedProvider.future);
+        expect(initial.videos.map((video) => video.id), ['new-0']);
+
+        await container.read(newVideosFeedProvider.notifier).loadMore();
+
+        final page = container.read(newVideosFeedProvider).requireValue;
+        expect(page.videos.map((video) => video.id), ['new-0', 'boundary-0']);
+        expect(page.hasMoreContent, isFalse);
+      });
+
       test(
         'keeps paginating on the flag rather than the returned count',
         () async {

@@ -45,7 +45,7 @@ final class NewVideosFeedProvider
   NewVideosFeed create() => NewVideosFeed();
 }
 
-String _$newVideosFeedHash() => r'0aeb529696e60170bef378e6be35214d89773a36';
+String _$newVideosFeedHash() => r'df50a26caf9b04033bcb0bc503d1292456f02778';
 
 /// New Videos feed provider - shows newest videos first.
 ///

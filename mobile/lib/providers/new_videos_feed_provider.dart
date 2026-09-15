@@ -23,11 +23,13 @@ part 'new_videos_feed_provider.g.dart';
 @Riverpod(keepAlive: true)
 class NewVideosFeed extends _$NewVideosFeed {
   int? _nextCursor;
+  String? _paginationCursor;
   final _enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
   @override
   Future<VideoFeedState> build() async {
     _nextCursor = null;
+    _paginationCursor = null;
 
     ref.watch(contentFilterVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
@@ -69,16 +71,21 @@ class NewVideosFeed extends _$NewVideosFeed {
         return const VideoFeedState(videos: [], hasMoreContent: true);
       }
 
+      _nextCursor = getOldestTimestamp(videos);
+      _paginationCursor = page.paginationCursor;
+
       if (videos.isEmpty) {
         Log.warning(
           'NewVideosFeed: No videos returned',
           name: 'NewVideosFeedProvider',
           category: LogCategory.video,
         );
-        return const VideoFeedState(videos: [], hasMoreContent: false);
+        return VideoFeedState(
+          videos: const [],
+          hasMoreContent: page.hasMore ?? false,
+        );
       }
 
-      _nextCursor = getOldestTimestamp(videos);
       final filteredVideos = _filterVideos(videos);
       _scheduleEnrichment(filteredVideos);
 
@@ -123,20 +130,25 @@ class NewVideosFeed extends _$NewVideosFeed {
       final videosRepository = ref.read(videosRepositoryProvider);
       final page = await videosRepository.getNewVideos(
         limit: AppConstants.paginationBatchSize,
-        until: _nextCursor,
+        until: _paginationCursor == null ? _nextCursor : null,
+        cursor: _paginationCursor,
       );
       final newVideos = page.videos;
 
       if (!ref.mounted) return;
 
+      _nextCursor = getOldestTimestamp(newVideos);
+      _paginationCursor = page.paginationCursor;
+
       if (newVideos.isEmpty) {
         state = AsyncData(
-          currentState.copyWith(hasMoreContent: false, isLoadingMore: false),
+          currentState.copyWith(
+            hasMoreContent: page.hasMore ?? false,
+            isLoadingMore: false,
+          ),
         );
         return;
       }
-
-      _nextCursor = getOldestTimestamp(newVideos);
 
       final dedupedNew = dedupeByFeedKey(
         newVideos,
@@ -195,6 +207,7 @@ class NewVideosFeed extends _$NewVideosFeed {
     );
 
     _nextCursor = null;
+    _paginationCursor = null;
 
     await staleWhileRevalidate(
       getCurrentState: () => state,
