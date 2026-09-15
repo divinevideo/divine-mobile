@@ -24,6 +24,7 @@
 #   - PROOFMODE_SIGNING_SERVER_TOKEN
 # 8 - PUBLISH_TO_GITHUB is configured via build inputs (dropdown) when starting builds
 #   - Set to YES to upload artifacts to a GitHub Release (for Zapstore / direct distribution)
+#     and to publish that release to Zapstore
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
 # 9 - Android publishing reads the service account from environment variable
@@ -44,6 +45,11 @@
 #     literal `\n` sequences. The CI step validates the decoded PEM envelope.
 #   The key must belong to an account with access to the app_id in
 #   mobile/shorebird.yaml, which lives in the Divine organization.
+# 11 - Create environment variable group "zapstore_credentials" with:
+#   - ZAPSTORE_NSEC (mark as secure) — the nsec that signs the Zapstore release
+#     events. The android-build workflow publishes to Zapstore automatically
+#     when PUBLISH_TO_GITHUB=YES and signs with this key, so it reaches public
+#     relays without a manual `zsp publish`. Never log or echo this value.
 #
 # Every group named under a workflow's `groups:` key must appear in this
 # checklist. Codemagic validates this whole file before it provisions a machine,
@@ -591,6 +597,47 @@ definitions:
             --generate-notes \
             "${ARTIFACTS[@]}"
         fi
+    - &publish_zapstore
+      name: Publish to Zapstore
+      script: |
+        if [ "${{ inputs.PUBLISH_TO_GITHUB }}" != "YES" ]; then
+          echo "Skipping Zapstore publish (PUBLISH_TO_GITHUB != YES)"
+          exit 0
+        fi
+        set -euo pipefail
+        VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+        TAG="$VERSION"
+        # zsp fetches the newest GitHub release, so a stale or missing release
+        # would publish someone else's APK under this signing key. Only publish
+        # when the newest release is the one this build just cut.
+        REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1 \
+          --json tagName --jq '.[0].tagName')
+        if [ "$REMOTE_TAG" != "$TAG" ]; then
+          echo "Newest release is '$REMOTE_TAG', expected '$TAG'. Refusing to publish."
+          exit 1
+        fi
+        echo "Publishing $TAG to Zapstore"
+        # Pin the publisher: the runner image's zsp is not a version we chose,
+        # and an unpinned download is a supply-chain hole. darwin-arm64 matches
+        # the mac_mini_m4 runner.
+        ZSP_VERSION=v0.4.17
+        ZSP_BIN="$(mktemp -d)/zsp"
+        curl -fsSL --retry 3 -o "$ZSP_BIN" \
+          "https://github.com/zapstore/zsp/releases/download/${ZSP_VERSION}/zsp-0.4.17-darwin-arm64"
+        chmod +x "$ZSP_BIN"
+        # zapstore.yaml lives at the repo root and points its icon at
+        # ./mobile/assets/icon/app_icon.png, so zsp must run from there.
+        cd "$CM_BUILD_DIR"
+        # --check proves the arm64 asset resolves before anything is signed.
+        "$ZSP_BIN" publish --check --pre-release zapstore.yaml
+        # --pre-release: the release this build just cut is a prerelease, so
+        # without it zsp skips it for the previous public release (the 1.0.9 bug).
+        # --skip-certificate-linking: linking the keystore to the identity is a
+        # one-time proof, not a per-release step; run `zsp identity --link-key`
+        # separately.
+        SIGN_WITH="$ZAPSTORE_NSEC" GITHUB_TOKEN="$GITHUB_TOKEN" \
+          "$ZSP_BIN" publish zapstore.yaml --quiet --skip-preview \
+          --skip-certificate-linking --pre-release
     - &build_ios
       name: Build and sign iOS (Shorebird release)
       script: |
@@ -1076,7 +1123,7 @@ workflows:
           - STAGING
           - POC
       PUBLISH_TO_GITHUB:
-        description: Create a GitHub Release with APK artifacts (for Zapstore)
+        description: Create a GitHub Release with APK artifacts and publish it to Zapstore
         type: choice
         default: "NO"
         options:
@@ -1091,6 +1138,7 @@ workflows:
         - proofmode_credentials
         - github_credentials
         - shorebird_credentials
+        - zapstore_credentials
       vars:
         # Must match `flutter:` above — see the iOS workflow for why.
         FLUTTER_VERSION: 3.47.2
@@ -1121,6 +1169,7 @@ workflows:
       - *build_aab
       - *emit_shorebird_provenance
       - *publish_github_release
+      - *publish_zapstore
     artifacts:
       - build/app/outputs/apk/release/*.apk
       - build/app/outputs/bundle/release/*.aab
