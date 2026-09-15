@@ -18,7 +18,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
-import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -241,48 +240,16 @@ class _MetadataCollaboratorsSectionBodyState
 
 /// Inspired-by section showing every credited creator as a tappable chip.
 ///
-/// Returns [SizedBox.shrink] when the video has no inspired-by attribution.
+/// Renders [VideoEvent.creditedInspiredByPubkeys], which owns which sources
+/// count and the reply rule; returns [SizedBox.shrink] when it is empty.
 class MetadataInspiredBySection extends StatelessWidget {
   const MetadataInspiredBySection({required this.video, super.key});
 
   final VideoEvent video;
 
-  /// Credited creators, deduplicated across every source: the primary
-  /// attribution the getter resolves, the NIP-27 content reference, the
-  /// `inspired-by` p-tags, and every factual clip-source credit. The primary
-  /// getter is first-wins over its sources, so the rest are added on their
-  /// own or a creator the removed feed row showed would lose its only
-  /// surface.
-  ///
-  /// The content reference and clip-source credits stay off replies: the
-  /// model gives replies their parent context instead of the Inspired By
-  /// treatment (`VideoEvent.hasInspiredBy`), and the deleted row followed
-  /// that. The p-tags are added regardless because the About panel already
-  /// rendered them for legacy replies before this change.
-  List<String> _creditedPubkeys() {
-    final pubkeys = <String>[];
-    final seen = <String>{};
-
-    void add(String? pubkey) {
-      final normalized = pubkey?.trim().toLowerCase();
-      if (normalized == null || normalized.isEmpty) return;
-      if (seen.add(normalized)) pubkeys.add(normalized);
-    }
-
-    add(video.inspiredByCreatorPubkey);
-    if (!video.isVideoReply) {
-      add(npubToHexOrNull(video.inspiredByNpub));
-      for (final credit in video.clipSourceCredits) {
-        add(credit.authorPubkey);
-      }
-    }
-    video.inspiredByPubkeys.forEach(add);
-    return pubkeys;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final pubkeys = _creditedPubkeys();
+    final pubkeys = video.creditedInspiredByPubkeys;
     if (pubkeys.isEmpty) return const SizedBox.shrink();
 
     return MetadataSection(

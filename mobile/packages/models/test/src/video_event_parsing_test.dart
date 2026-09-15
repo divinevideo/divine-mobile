@@ -743,8 +743,10 @@ void main() {
         videoEvent.inspiredByPubkeys,
         equals([creatorPubkey, secondCreator]),
       );
-      expect(videoEvent.hasInspiredBy, isTrue);
-      expect(videoEvent.inspiredByCreatorPubkey, equals(creatorPubkey));
+      expect(
+        videoEvent.creditedInspiredByPubkeys,
+        equals([creatorPubkey, secondCreator]),
+      );
     });
 
     test(
@@ -820,7 +822,7 @@ void main() {
       );
       expect(videoEvent.inspiredByVideo!.creatorPubkey, equals(creatorPubkey));
       expect(videoEvent.inspiredByVideo!.dTag, equals('test-d-tag'));
-      expect(videoEvent.hasInspiredBy, isTrue);
+      expect(videoEvent.creditedInspiredByPubkeys, equals([creatorPubkey]));
     });
 
     test('parses clip-source a-tags as factual clip credits', () {
@@ -862,7 +864,10 @@ void main() {
         videoEvent.clipSourceCredits[1].relayUrl,
         'wss://relay-two.divine.video',
       );
-      expect(videoEvent.hasInspiredBy, isTrue);
+      expect(
+        videoEvent.creditedInspiredByPubkeys,
+        equals([creatorPubkey, secondCreatorPubkey]),
+      );
     });
 
     test(
@@ -932,7 +937,7 @@ void main() {
       final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
 
       expect(videoEvent.inspiredByNpub, equals(inspiringNpub));
-      expect(videoEvent.hasInspiredBy, isTrue);
+      expect(videoEvent.creditedInspiredByPubkeys, equals([creatorPubkey]));
       expect(videoEvent.content, equals(nostrEvent.content));
       expect(videoEvent.displayContent, equals('Great idea!'));
     });
@@ -1065,11 +1070,12 @@ void main() {
 
       expect(videoEvent.inspiredByVideo, isNotNull);
       expect(videoEvent.inspiredByNpub, equals(inspiringNpub));
-      expect(videoEvent.hasInspiredBy, isTrue);
+      // The a-tag and the npub name the same creator: one credit, not two.
+      expect(videoEvent.creditedInspiredByPubkeys, equals([creatorPubkey]));
     });
 
     test(
-      'should prefer explicit inspired-by creator over factual clip credits',
+      'should credit the explicit inspired-by creator before clip credits',
       () {
         const clipCreator =
             'eeee567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
@@ -1091,10 +1097,46 @@ void main() {
           ],
         );
 
-        expect(videoEvent.hasInspiredBy, isTrue);
-        expect(videoEvent.inspiredByCreatorPubkey, creatorPubkey);
+        expect(
+          videoEvent.creditedInspiredByPubkeys,
+          equals([creatorPubkey, clipCreator]),
+        );
       },
     );
+
+    test('should credit only legacy p-tags on a reply', () {
+      const legacyCreator =
+          'ffff567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+      final nostrEvent = Event(
+        authorPubkey,
+        34236,
+        [
+          ['url', 'https://example.com/video.mp4'],
+          ['E', 'a' * 64],
+          ['K', '34236'],
+          ['a', '34236:$creatorPubkey:test-d-tag', 'wss://relay.divine.video'],
+          [
+            'p',
+            legacyCreator,
+            'wss://relay.divine.video',
+            inspiredByPTagMarker,
+          ],
+          [
+            'a',
+            '34236:$creatorPubkey:reused-clip',
+            'wss://relay.divine.video',
+            clipSourceCreditTagMarker,
+          ],
+        ],
+        'Inspired by nostr:$inspiringNpub',
+        createdAt: 1757385263,
+      );
+
+      final videoEvent = VideoEvent.fromNostrEvent(nostrEvent);
+
+      expect(videoEvent.isVideoReply, isTrue);
+      expect(videoEvent.creditedInspiredByPubkeys, equals([legacyCreator]));
+    });
 
     test('leaves an attribution line whose npub does not decode alone', () {
       // A line that credits nobody is not attribution metadata. Stripping it
@@ -1132,7 +1174,7 @@ void main() {
 
       expect(videoEvent.inspiredByVideo, isNull);
       expect(videoEvent.inspiredByNpub, isNull);
-      expect(videoEvent.hasInspiredBy, isFalse);
+      expect(videoEvent.creditedInspiredByPubkeys, isEmpty);
     });
   });
 

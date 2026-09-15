@@ -1053,37 +1053,32 @@ class VideoEvent {
   /// Whether this video has collaborators.
   bool get hasCollaborators => collaboratorPubkeys.isNotEmpty;
 
-  /// Whether this video has any Inspired By attribution.
+  /// Every creator this video credits as inspiration, as lowercase hex
+  /// pubkeys in attribution order: the inspiring video's creator, the NIP-27
+  /// content reference, the `inspired-by` p-tags, then factual clip-source
+  /// credits. Deduplicated; empty when the video credits nobody.
   ///
-  /// NIP-22 video replies also carry lowercase parent tags. Those are reply
-  /// metadata, not creator attribution, so reply videos should render their
-  /// parent context instead of the Inspired By treatment.
-  bool get hasInspiredBy =>
-      !isVideoReply &&
-      (inspiredByVideo != null ||
-          inspiredByNpub != null ||
-          inspiredByPubkeys.isNotEmpty ||
-          clipSourceCredits.isNotEmpty);
+  /// NIP-22 replies carry their parent context instead of the Inspired By
+  /// treatment, so on a reply only legacy `inspired-by` p-tags are credited.
+  List<String> get creditedInspiredByPubkeys {
+    final pubkeys = <String>[];
+    final seen = <String>{};
 
-  /// Hex pubkey of the primary inspiring creator, resolved from explicit
-  /// inspired-by metadata first and factual clip-source credits second.
-  ///
-  /// Returns `null` when there is no inspired-by attribution or the npub
-  /// cannot be decoded.
-  String? get inspiredByCreatorPubkey {
-    if (isVideoReply) return null;
-    if (inspiredByVideo != null) return inspiredByVideo!.creatorPubkey;
-    if (inspiredByNpub != null) {
-      final hex = Nip19.decode(inspiredByNpub!);
-      if (hex.isNotEmpty) return hex;
+    void add(String? pubkey) {
+      final normalized = pubkey?.trim().toLowerCase();
+      if (normalized == null || normalized.isEmpty) return;
+      if (seen.add(normalized)) pubkeys.add(normalized);
     }
-    if (inspiredByPubkeys.isNotEmpty) {
-      return inspiredByPubkeys.first;
+
+    if (!isVideoReply) {
+      add(inspiredByVideo?.creatorPubkey);
+      if (inspiredByNpub case final npub?) add(Nip19.decode(npub));
     }
-    if (clipSourceCredits.isNotEmpty) {
-      return clipSourceCredits.first.authorPubkey;
+    inspiredByPubkeys.forEach(add);
+    if (!isVideoReply) {
+      clipSourceCredits.map((credit) => credit.authorPubkey).forEach(add);
     }
-    return null;
+    return List.unmodifiable(pubkeys);
   }
 
   /// NIP-40: Check if this event has expired
