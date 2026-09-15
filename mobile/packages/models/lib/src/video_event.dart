@@ -1212,7 +1212,7 @@ class VideoEvent {
 
   /// Whether this video carries any loop-count metadata.
   ///
-  /// Used by the fullscreen player to decide whether to render
+  /// Used by video metadata UI to decide whether to render
   /// `"$totalLoops loops"` or fall back to relative time. Returns true when
   /// any of the three loop-related fields is present, even when the
   /// derived [totalLoops] is zero (a deliberate `0` count is still
