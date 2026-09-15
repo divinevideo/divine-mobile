@@ -563,5 +563,54 @@ void main() {
       );
       expect(VideoAudioEditorTimingScreen.path, equals('/video-audio-timing'));
     });
+
+    testWidgets('survives a clip player that fails to pause on drag', (
+      tester,
+    ) async {
+      // The drag handlers fire the player commands without awaiting them. A
+      // player failure used to surface as an unhandled future rejection, which
+      // the test zone reports as a test failure; routed through runDetached it
+      // is logged and the screen stays interactive.
+      when(() => mockClipPlayer.pause()).thenThrow(StateError('pause failed'));
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      await tester.drag(
+        find.byKey(VideoAudioEditorTimingScreen.videoDurationSegmentKey),
+        const Offset(40, 0),
+      );
+      await tester.pump();
+
+      verify(() => mockClipPlayer.pause()).called(1);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(VideoAudioEditorTimingScreen), findsOneWidget);
+    });
+
+    testWidgets('survives a clip player that fails to stop on confirm', (
+      tester,
+    ) async {
+      // Done stops playback before popping. The toolbar hands the async
+      // handler to a VoidCallback, so a stop failure has no caller to reach;
+      // it is owned the same way as the drag commands.
+      when(() => mockClipPlayer.stop()).thenThrow(StateError('stop failed'));
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(
+        find.bySemanticsLabel(
+          l10n.videoEditorApplyToolChangesSemanticLabel(
+            l10n.videoEditorAudioLabel,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      verify(() => mockClipPlayer.stop()).called(1);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(VideoAudioEditorTimingScreen), findsOneWidget);
+    });
   });
 }

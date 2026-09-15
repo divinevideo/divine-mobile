@@ -15,11 +15,13 @@ import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
 import 'package:openvine/blocs/video_editor/audio_timing/audio_timing_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/video_editor_audio_chip.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:sound_service/sound_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Result of the audio timing screen.
 ///
@@ -117,14 +119,26 @@ class _VideoAudioEditorTimingScreenState
     // Delay initialization until after first frame
     addPostFrameCallbackIfMounted(() {
       // Sync fling controller with initial offset after cubit initializes
-      _audioTimingCubit.initialize().then((_) {
-        if (mounted) {
-          _flingController.value = _audioTimingCubit.state.startOffset;
-        }
-      });
+      _runDetached(_initializeOffset(), 'initialize audio timing');
 
       _extractWaveform();
     });
+  }
+
+  Future<void> _initializeOffset() async {
+    await _audioTimingCubit.initialize();
+    if (mounted) {
+      _flingController.value = _audioTimingCubit.state.startOffset;
+    }
+  }
+
+  void _runDetached(Future<void> operation, String description) {
+    runDetached(
+      operation,
+      description,
+      logName: 'VideoAudioEditorTimingScreen',
+      category: LogCategory.video,
+    );
   }
 
   @override
@@ -132,8 +146,8 @@ class _VideoAudioEditorTimingScreenState
     _flingController
       ..removeListener(_onFlingUpdate)
       ..dispose();
-    _waveformBloc.close();
-    _audioTimingCubit.close();
+    _runDetached(_waveformBloc.close(), 'close waveform bloc');
+    _runDetached(_audioTimingCubit.close(), 'close audio timing cubit');
     super.dispose();
   }
 
@@ -142,14 +156,14 @@ class _VideoAudioEditorTimingScreenState
     _audioTimingCubit.updateOffset(offset);
     // Resume audio at end of fling (when velocity approaches 0)
     if (_flingController.velocity.abs() < 0.001) {
-      _audioTimingCubit.resumePlayback();
+      _runDetached(_audioTimingCubit.resumePlayback(), 'resume audio playback');
     }
   }
 
   void _handleFling(double velocity) {
     // If velocity is too low, just resume audio immediately
     if (velocity.abs() < 0.01) {
-      _audioTimingCubit.resumePlayback();
+      _runDetached(_audioTimingCubit.resumePlayback(), 'resume audio playback');
       return;
     }
 
@@ -170,7 +184,7 @@ class _VideoAudioEditorTimingScreenState
 
   /// Pauses audio playback when dragging starts.
   void _handleDragStart() {
-    _audioTimingCubit.pausePlayback();
+    _runDetached(_audioTimingCubit.pausePlayback(), 'pause audio playback');
   }
 
   /// Called from onDragEnd — audio resume is handled by _handleFling.
@@ -248,9 +262,12 @@ class _VideoAudioEditorTimingScreenState
                             context.l10n.videoEditorAudioLabel,
                           ),
                       onClose: widget.enableDeleteButton
-                          ? _deleteAudio
+                          ? () => _runDetached(_deleteAudio(), 'delete audio')
                           : context.pop,
-                      onDone: _confirmSelection,
+                      onDone: () => _runDetached(
+                        _confirmSelection(),
+                        'confirm audio timing',
+                      ),
                       center: Flexible(
                         child: IgnorePointer(
                           child: VideoEditorAudioChip(

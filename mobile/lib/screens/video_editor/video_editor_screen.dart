@@ -1,7 +1,6 @@
 // ABOUTME: Main screen for the video editor with layer editing capabilities.
 // ABOUTME: Orchestrates BLoC providers, sticker precaching, and editor canvas.
 
-import 'dart:async';
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -46,6 +45,7 @@ import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/await_push_transition.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
@@ -246,60 +246,64 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       _clipEditorBloc.add(ClipEditorInitialized(initialClips));
     }
 
-    addPostFrameCallbackIfMounted(() async {
-      Log.debug(
-        '🎬 Initializing video editor provider',
-        name: 'VideoEditorScreen',
-        category: LogCategory.video,
-      );
-
-      await ref
-          .read(videoEditorProvider.notifier)
-          .initialize(draftId: widget.draftId);
-
-      if (!mounted) return;
-      final clips = ref.read(clipManagerProvider).clips;
-      final tracker = _creationAnalyticsTracker;
-      final recorderMode =
-          tracker.activeMode ??
-          (isStopMotionComposition(clips)
-              ? VideoRecorderMode.stopMotion
-              : VideoRecorderMode.fromName(
-                  ref
-                      .read(sharedPreferencesProvider)
-                      .getString(VideoRecorderMode.persistenceKey),
-                ));
-      await tracker.editorOpened(recorderMode);
-
-      Log.info(
-        '🎬 Video editor initialized successfully',
-        name: 'VideoEditorScreen',
-        category: LogCategory.video,
-      );
-
-      // A restored draft's text layers carry only the serialized Google Font
-      // family name. Re-register the fonts they name before the canvas imports
-      // the state history, otherwise the imported overlays fall back to the
-      // default font (see #5181).
-      if (mounted) {
-        final editorStateHistory = ref
-            .read(videoEditorProvider)
-            .editorStateHistory;
-        if (editorStateHistory.isNotEmpty) {
-          await preloadEditorTextFonts(
-            fontFamilies: textFontFamiliesInHistory(editorStateHistory),
-          );
-        }
-      }
-
-      if (mounted) {
-        // Clips are now loaded — initialize the clip editor BLoC.
-        final clips = ref.read(clipManagerProvider).clips;
-        _clipEditorBloc.add(ClipEditorInitialized(clips));
-
-        _isLoadingDraft.value = false;
-      }
+    addPostFrameCallbackIfMounted(() {
+      _runDetached(_initializeEditor(), 'initialize video editor');
     });
+  }
+
+  Future<void> _initializeEditor() async {
+    Log.debug(
+      '🎬 Initializing video editor provider',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+
+    await ref
+        .read(videoEditorProvider.notifier)
+        .initialize(draftId: widget.draftId);
+
+    if (!mounted) return;
+    final clips = ref.read(clipManagerProvider).clips;
+    final tracker = _creationAnalyticsTracker;
+    final recorderMode =
+        tracker.activeMode ??
+        (isStopMotionComposition(clips)
+            ? VideoRecorderMode.stopMotion
+            : VideoRecorderMode.fromName(
+                ref
+                    .read(sharedPreferencesProvider)
+                    .getString(VideoRecorderMode.persistenceKey),
+              ));
+    await tracker.editorOpened(recorderMode);
+
+    Log.info(
+      '🎬 Video editor initialized successfully',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+
+    // A restored draft's text layers carry only the serialized Google Font
+    // family name. Re-register the fonts they name before the canvas imports
+    // the state history, otherwise the imported overlays fall back to the
+    // default font (see #5181).
+    if (mounted) {
+      final editorStateHistory = ref
+          .read(videoEditorProvider)
+          .editorStateHistory;
+      if (editorStateHistory.isNotEmpty) {
+        await preloadEditorTextFonts(
+          fontFamilies: textFontFamiliesInHistory(editorStateHistory),
+        );
+      }
+    }
+
+    if (mounted) {
+      // Clips are now loaded — initialize the clip editor BLoC.
+      final clips = ref.read(clipManagerProvider).clips;
+      _clipEditorBloc.add(ClipEditorInitialized(clips));
+
+      _isLoadingDraft.value = false;
+    }
   }
 
   @override
@@ -315,22 +319,34 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   @override
   void dispose() {
     if (widget.fromLibrary || widget.draftId != null) {
-      unawaited(_creationAnalyticsTracker.creationAbandoned());
+      _runDetached(
+        _creationAnalyticsTracker.creationAbandoned(),
+        'record abandoned creation',
+      );
     }
     Log.info(
       '🎨 Disposed',
       name: 'VideoEditorScreen',
       category: LogCategory.video,
     );
-    _stickerBloc.close();
-    _clipEditorBloc.close();
-    _timelineOverlayBloc.close();
+    _runDetached(_stickerBloc.close(), 'close sticker bloc');
+    _runDetached(_clipEditorBloc.close(), 'close clip editor bloc');
+    _runDetached(_timelineOverlayBloc.close(), 'close timeline overlay bloc');
     _isLoadingDraft.dispose();
     _bodySizeNotifier.dispose();
     _zoomMatrixNotifier.dispose();
     _playTimeNotifier.dispose();
     _playheadAdvancingNotifier.dispose();
     super.dispose();
+  }
+
+  void _runDetached(Future<void> operation, String description) {
+    runDetached(
+      operation,
+      description,
+      logName: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
   }
 
   /// Precaches stickers for faster display.
@@ -349,12 +365,13 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       // SVG assets are vector and don't need raster precaching.
       if (sticker.networkUrl == null) continue;
 
-      unawaited(
+      _runDetached(
         precacheImage(
           NetworkImage(sticker.networkUrl!),
           context,
           size: estimatedSize,
         ),
+        'precache sticker',
       );
     }
   }
@@ -1045,11 +1062,14 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
             // via startOffset. Re-extract only when this track has no samples
             // yet (new sound, or a rebuild that dropped the cache).
             if (!existingWaveformIds.contains(audio.id)) {
-              unawaited(_extractWaveform(audio));
+              _runDetached(_extractWaveform(audio), 'extract audio waveform');
             }
           }
 
-          unawaited(_healMissingAudioDurations(state.audioTracks));
+          _runDetached(
+            _healMissingAudioDurations(state.audioTracks),
+            'heal missing audio durations',
+          );
         },
         child: Builder(
           builder: (context) {
@@ -1067,22 +1087,29 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               playTimeNotifier: _playTimeNotifier,
               playheadAdvancingNotifier: _playheadAdvancingNotifier,
               fromLibrary: widget.fromLibrary,
-              onOpenCamera: () => _openCamera(
-                clipEditorBloc: context.read<ClipEditorBloc>(),
-                playhead: context
-                    .read<VideoEditorMainBloc>()
-                    .state
-                    .currentPosition,
+              onOpenCamera: () => _runDetached(
+                _openCamera(
+                  clipEditorBloc: context.read<ClipEditorBloc>(),
+                  playhead: context
+                      .read<VideoEditorMainBloc>()
+                      .state
+                      .currentPosition,
+                ),
+                'open camera recorder',
               ),
               onOpenClipsEditor: () {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 final clipEditorBloc = context.read<ClipEditorBloc>();
-                _openClipsEditor(
-                  mainBloc: mainBloc,
-                  clipEditorBloc: clipEditorBloc,
+                _runDetached(
+                  _openClipsEditor(
+                    mainBloc: mainBloc,
+                    clipEditorBloc: clipEditorBloc,
+                  ),
+                  'open clips editor',
                 );
               },
-              onAddStickers: _addStickers,
+              onAddStickers: () =>
+                  _runDetached(_addStickers(), 'open sticker picker'),
               onAddEditTextLayer: ([layer]) {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 final textBloc = context.read<VideoEditorTextBloc>();
@@ -1093,17 +1120,24 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
                   layer: layer,
                 );
               },
-              onOpenMusicLibrary: _openMusicLibrary,
+              onOpenMusicLibrary: () =>
+                  _runDetached(_openMusicLibrary(), 'open music library'),
               onOpenVoiceOver: () {
                 final mainBloc = context.read<VideoEditorMainBloc>();
-                _openVoiceOver(mainBloc: mainBloc);
+                _runDetached(
+                  _openVoiceOver(mainBloc: mainBloc),
+                  'open voice-over recorder',
+                );
               },
               onOpenCaptions: () {
                 final mainBloc = context.read<VideoEditorMainBloc>();
                 final clipEditorBloc = context.read<ClipEditorBloc>();
-                _openCaptions(
-                  mainBloc: mainBloc,
-                  clipEditorBloc: clipEditorBloc,
+                _runDetached(
+                  _openCaptions(
+                    mainBloc: mainBloc,
+                    clipEditorBloc: clipEditorBloc,
+                  ),
+                  'open captions editor',
                 );
               },
               awaitPushCoverTransition: _awaitMetadataCoverTransition,
