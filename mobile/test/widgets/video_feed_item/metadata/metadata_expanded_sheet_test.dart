@@ -23,6 +23,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
@@ -100,6 +101,8 @@ VideoEvent _makeVideo({
   List<String> categories = const [],
   List<String> collaboratorPubkeys = const [],
   InspiredByInfo? inspiredByVideo,
+  String? inspiredByNpub,
+  List<String> inspiredByPubkeys = const [],
   List<ClipSourceCredit> clipSourceCredits = const [],
   List<String>? reposterPubkeys,
   int? nostrRepostCount,
@@ -123,6 +126,8 @@ VideoEvent _makeVideo({
   categories: categories,
   collaboratorPubkeys: collaboratorPubkeys,
   inspiredByVideo: inspiredByVideo,
+  inspiredByNpub: inspiredByNpub,
+  inspiredByPubkeys: inspiredByPubkeys,
   clipSourceCredits: clipSourceCredits,
   reposterPubkeys: reposterPubkeys,
   nostrRepostCount: nostrRepostCount,
@@ -1281,6 +1286,59 @@ void main() {
         expect(find.text('Clip Source Creator'), findsOneWidget);
       },
     );
+
+    testWidgetsWithSurfaceSize(
+      'keeps an npub credit beside an inspiring video',
+      (tester) async {
+        final video = _makeVideo(
+          inspiredByVideo: const InspiredByInfo(
+            addressableId: '34236:$_inspiredByPubkey:some-dtag',
+          ),
+          inspiredByNpub: normalizeToNpub(_collaborator1),
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+                (ref) async =>
+                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+              ),
+              fetchUserProfileProvider(_collaborator1).overrideWith(
+                (ref) async =>
+                    _makeProfile(_collaborator1, 'Referenced Creator'),
+              ),
+            ],
+            child: MetadataInspiredBySection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Inspiring Creator'), findsOneWidget);
+        expect(find.text('Referenced Creator'), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize('hides when the video is a reply', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        inspiredByVideo: const InspiredByInfo(
+          addressableId: '34236:$_inspiredByPubkey:some-dtag',
+        ),
+        inspiredByPubkeys: const [_inspiredByPubkey],
+        nostrEventTags: const [
+          ['E', _parentEventId],
+          ['K', '34236'],
+        ],
+      );
+
+      await tester.pumpWidget(
+        buildSubject(child: MetadataInspiredBySection(video: video)),
+      );
+
+      expect(find.text('Inspired by'), findsNothing);
+    });
   });
 
   // ---------------------------------------------------------------------------

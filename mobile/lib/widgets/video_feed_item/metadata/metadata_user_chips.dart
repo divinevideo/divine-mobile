@@ -18,6 +18,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -246,13 +247,15 @@ class MetadataInspiredBySection extends StatelessWidget {
 
   final VideoEvent video;
 
-  /// Credited creators, primary first, deduplicated across the sources that
-  /// can each name one: the inspiring video's author, the NIP-27 content
-  /// reference, the `inspired-by` p-tags carrying the rest, and every factual
-  /// clip-source credit. The feed overlay's inspired-by row rendered the
-  /// clip-source credits before it was removed, so the About chips have to
-  /// carry them or a reused clip's creator loses its only display surface.
+  /// Credited creators, deduplicated across every source the removed feed
+  /// row rendered: the inspiring video's author, the NIP-27 content
+  /// reference, the `inspired-by` p-tags, and every factual clip-source
+  /// credit. Each source is added on its own — the primary getter is
+  /// first-wins over them, so relying on it alone drops a creator the row
+  /// showed. [VideoEvent.hasInspiredBy] gates the whole section, which keeps
+  /// replies on their parent context instead of the Inspired By treatment.
   List<String> _creditedPubkeys() {
+    if (!video.hasInspiredBy) return const [];
     final pubkeys = <String>[];
     final seen = <String>{};
 
@@ -263,6 +266,7 @@ class MetadataInspiredBySection extends StatelessWidget {
     }
 
     add(video.inspiredByCreatorPubkey);
+    add(npubToHexOrNull(video.inspiredByNpub));
     video.inspiredByPubkeys.forEach(add);
     for (final credit in video.clipSourceCredits) {
       add(credit.authorPubkey);
