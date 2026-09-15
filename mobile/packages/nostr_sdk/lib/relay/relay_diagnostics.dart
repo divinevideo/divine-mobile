@@ -71,7 +71,9 @@ const String _redactedRelayNoticeValue = '[REDACTED]';
 const String _omittedRelayNotice =
     '[NOTICE omitted: message exceeds 256 characters]';
 
-final RegExp _relayNoticeControls = RegExp(r'[\x00-\x1f\x7f]');
+// C0/C1 controls plus Unicode format characters: NEL breaks the line, and a
+// bidi override lets a relay rewrite how the rest of the log line reads.
+final RegExp _relayNoticeControls = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
 final RegExp _relayNoticeWhitespace = RegExp(r'\s+');
 final RegExp _relayNoticeSigningMaterial = RegExp(
   r'\b(?:nsec1|ncryptsec1)[a-z0-9]+\b',

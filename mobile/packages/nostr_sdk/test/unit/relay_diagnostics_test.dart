@@ -407,4 +407,17 @@ void main() {
       }
     });
   });
+
+  group('relayNoticeForDiagnostics', () {
+    test('strips Unicode controls and format characters, not just ASCII', () {
+      // NEL is a C1 line break; the bidi override and zero-width joiner are
+      // format characters that leave no visible trace but change how the
+      // rest of the log line is read or copied.
+      const notice = 'rate\u0085limited\u202e for\u200d now';
+
+      final sanitized = relayNoticeForDiagnostics(notice);
+
+      expect(sanitized, 'rate limited for now');
+    });
+  });
 }
