@@ -1966,7 +1966,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     addPostFrameCallbackIfMounted(() {
       _runDetached(
         _syncMainCapabilitiesAfterFrame(
-          scope,
           bloc,
           editor,
           direction: direction,
@@ -1978,7 +1977,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   }
 
   Future<void> _syncMainCapabilitiesAfterFrame(
-    VideoEditorScope scope,
     VideoEditorMainBloc bloc,
     ProImageEditorState editor, {
     required ClipHistoryDirection direction,
