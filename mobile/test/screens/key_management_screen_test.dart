@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for KeyManagementScreen public key and export capability UI
 // ABOUTME: Verifies public key copy plus Keycast local-vs-remote signing states
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/device_authentication_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -50,7 +53,13 @@ class _FakeKeyManagementAuthService extends Fake implements AuthService {
   bool get isNip07Available => false;
 
   @override
-  Future<String?> exportNsec({String? biometricPrompt}) async => null;
+  Future<String?> exportNsec() async {
+    exportNsecCallCount++;
+    return nsecToExport;
+  }
+
+  String? nsecToExport;
+  int exportNsecCallCount = 0;
 
   /// What [exportKeycastNsec] returns. Defaults to a refusal so a test that
   /// forgets to set it cannot accidentally assert on a fabricated key.
@@ -70,12 +79,23 @@ class _FakeKeyManagementAuthService extends Fake implements AuthService {
   int importFromNsecCallCount = 0;
 
   @override
-  Future<AuthResult> importFromNsec(
-    String nsec, {
-    String? biometricPrompt,
-  }) async {
+  Future<AuthResult> importFromNsec(String nsec) async {
     importFromNsecCallCount++;
     return const AuthResult(success: true);
+  }
+}
+
+class _FakeDeviceAuthentication implements DeviceAuthentication {
+  DeviceAuthenticationResult result = DeviceAuthenticationResult.denied;
+  final List<String> reasons = [];
+  Completer<DeviceAuthenticationResult>? pendingResult;
+
+  @override
+  Future<DeviceAuthenticationResult> authenticate({
+    required String reason,
+  }) async {
+    reasons.add(reason);
+    return pendingResult?.future ?? result;
   }
 }
 
@@ -85,6 +105,7 @@ void main() {
         'npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz';
 
     late _FakeKeyManagementAuthService authService;
+    late _FakeDeviceAuthentication deviceAuthentication;
 
     setUp(() {
       authService = _FakeKeyManagementAuthService(
@@ -92,6 +113,7 @@ void main() {
         authenticationSource: AuthenticationSource.importedKeys,
         canExportLocalNsec: false,
       );
+      deviceAuthentication = _FakeDeviceAuthentication();
     });
 
     tearDown(() {
@@ -102,17 +124,47 @@ void main() {
     Future<void> pumpSubject(
       WidgetTester tester, {
       bool restricted = false,
+      StateProvider<bool>? restrictedSource,
     }) async {
       await tester.pumpWidget(
         testMaterialApp(
           home: const KeyManagementScreen(),
           mockAuthService: authService,
           additionalOverrides: [
-            isKeyManagementRestrictedProvider.overrideWithValue(restricted),
+            isKeyManagementRestrictedProvider.overrideWith(
+              (ref) => restrictedSource == null
+                  ? restricted
+                  : ref.watch(restrictedSource),
+            ),
+            deviceAuthenticationProvider.overrideWithValue(
+              deviceAuthentication,
+            ),
           ],
         ),
       );
       await tester.pumpAndSettle();
+    }
+
+    /// Installs a platform clipboard, returning the list of values it kept.
+    ///
+    /// When [accepts] is false the write is answered with success and dropped —
+    /// what a device or enterprise policy that blocks the clipboard looks like
+    /// to Flutter, since neither engine implementation reports a failed write.
+    List<String> mockClipboard({required bool accepts}) {
+      final kept = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            switch (call.method) {
+              case 'Clipboard.setData':
+                final text = (call.arguments as Map)['text'] as String;
+                if (accepts) kept.add(text);
+                return null;
+              case 'Clipboard.getData':
+                return kept.isEmpty ? null : {'text': kept.last};
+            }
+            return null;
+          });
+      return kept;
     }
 
     testWidgets('renders the public key label', (tester) async {
@@ -177,6 +229,154 @@ void main() {
       expect(clipboardPayload, equals(testNpub));
     });
 
+    group('local private key export', () {
+      const testNsec =
+          'nsec1testkeymaterialthatisnotarealkey00000000000000000000000000';
+
+      Future<AppLocalizations> tapExport(WidgetTester tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        authService = _FakeKeyManagementAuthService(
+          currentNpub: testNpub,
+          authenticationSource: AuthenticationSource.importedKeys,
+          canExportLocalNsec: true,
+        )..nsecToExport = testNsec;
+
+        await pumpSubject(tester);
+        final exportButton = find.text(
+          l10n.keyManagementCopyNsec,
+          skipOffstage: false,
+        );
+        await tester.ensureVisible(exportButton);
+        await tester.tap(exportButton);
+        await tester.pumpAndSettle();
+        return l10n;
+      }
+
+      testWidgets(
+        'does not export or copy when device authentication is denied',
+        (
+          tester,
+        ) async {
+          final copied = mockClipboard(accepts: true);
+          deviceAuthentication.result = DeviceAuthenticationResult.denied;
+
+          final l10n = await tapExport(tester);
+
+          expect(authService.exportNsecCallCount, isZero);
+          expect(copied, isEmpty);
+          expect(deviceAuthentication.reasons, [
+            l10n.keyManagementExportAuthReason,
+          ]);
+          expect(find.text(l10n.keyManagementExportAuthDenied), findsOneWidget);
+        },
+      );
+
+      testWidgets('copies only after device authentication is granted', (
+        tester,
+      ) async {
+        final copied = mockClipboard(accepts: true);
+        deviceAuthentication.result = DeviceAuthenticationResult.authenticated;
+
+        final l10n = await tapExport(tester);
+
+        expect(authService.exportNsecCallCount, 1);
+        expect(copied, [testNsec]);
+        expect(find.text(l10n.keyManagementExportSuccess), findsOneWidget);
+      });
+
+      testWidgets(
+        'does not export when device authentication is unavailable',
+        (tester) async {
+          final copied = mockClipboard(accepts: true);
+          deviceAuthentication.result = DeviceAuthenticationResult.unavailable;
+
+          final l10n = await tapExport(tester);
+
+          expect(authService.exportNsecCallCount, isZero);
+          expect(copied, isEmpty);
+          expect(
+            find.text(l10n.keyManagementExportAuthUnavailable),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'does not export when the account becomes restricted during authentication',
+        (tester) async {
+          final copied = mockClipboard(accepts: true);
+          final restricted = StateProvider<bool>((ref) => false);
+          final authenticationResult = Completer<DeviceAuthenticationResult>();
+          deviceAuthentication.pendingResult = authenticationResult;
+          authService = _FakeKeyManagementAuthService(
+            currentNpub: testNpub,
+            authenticationSource: AuthenticationSource.importedKeys,
+            canExportLocalNsec: true,
+          )..nsecToExport = testNsec;
+
+          tester.view.physicalSize = const Size(1080, 2400);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await pumpSubject(tester, restrictedSource: restricted);
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.keyManagementCopyNsec));
+          await tester.pump();
+
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(KeyManagementScreen)),
+          );
+          container.read(restricted.notifier).state = true;
+          authenticationResult.complete(
+            DeviceAuthenticationResult.authenticated,
+          );
+          await tester.pumpAndSettle();
+
+          expect(authService.exportNsecCallCount, isZero);
+          expect(copied, isEmpty);
+        },
+      );
+
+      testWidgets('shows loading on export without spinning import', (
+        tester,
+      ) async {
+        final authenticationResult = Completer<DeviceAuthenticationResult>();
+        deviceAuthentication.pendingResult = authenticationResult;
+        authService = _FakeKeyManagementAuthService(
+          currentNpub: testNpub,
+          authenticationSource: AuthenticationSource.importedKeys,
+          canExportLocalNsec: true,
+        )..nsecToExport = testNsec;
+
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await pumpSubject(tester);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.keyManagementCopyNsec));
+        await tester.pump();
+
+        final importButton = tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, l10n.keyManagementImportButton),
+        );
+        final exportButton = tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, l10n.keyManagementCopyNsec),
+        );
+        expect(importButton.isLoading, isFalse);
+        expect(exportButton.isLoading, isTrue);
+
+        authenticationResult.complete(DeviceAuthenticationResult.denied);
+        await tester.pumpAndSettle();
+      });
+    });
+
     testWidgets(
       'shows private key copy action when Keycast account has a local nsec',
       (tester) async {
@@ -238,28 +438,6 @@ void main() {
         );
       },
     );
-
-    /// Installs a platform clipboard, returning the list of values it kept.
-    ///
-    /// When [accepts] is false the write is answered with success and dropped —
-    /// what a device or enterprise policy that blocks the clipboard looks like
-    /// to Flutter, since neither engine implementation reports a failed write.
-    List<String> mockClipboard({required bool accepts}) {
-      final kept = <String>[];
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-            switch (call.method) {
-              case 'Clipboard.setData':
-                final text = (call.arguments as Map)['text'] as String;
-                if (accepts) kept.add(text);
-                return null;
-              case 'Clipboard.getData':
-                return kept.isEmpty ? null : {'text': kept.last};
-            }
-            return null;
-          });
-      return kept;
-    }
 
     /// Pump an RPC-only Keycast account on a surface tall enough for the card's
     /// button to be on-stage, then open the password sheet.

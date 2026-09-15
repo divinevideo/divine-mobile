@@ -8,6 +8,7 @@
     <!-- Camera and Microphone Permissions for Video Recording -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Media/Storage Permissions for Profile Picture Selection -->
     <!-- For Android 13+ (API 33+) - Only images for profile pictures -->

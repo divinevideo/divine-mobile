@@ -998,15 +998,14 @@ class _FakeSecureKeyStorage extends SecureKeyStorage {
   Object? restoreError;
 
   @override
-  Future<SecureKeyContainer?> getKeyContainer({String? biometricPrompt}) async {
+  Future<SecureKeyContainer?> getKeyContainer() async {
     return primary;
   }
 
   @override
   Future<void> restorePrimaryKeyContainer(
-    SecureKeyContainer? keyContainer, {
-    String? biometricPrompt,
-  }) async {
+    SecureKeyContainer? keyContainer,
+  ) async {
     final error = restoreError;
     if (error != null) throw error;
     restoredPrimary = keyContainer;
