@@ -86,7 +86,11 @@ class SupporterRepository {
   /// the purchase path, so this turns itself on the moment a purchase happens.
   bool get hasRecoverableEvidence =>
       _prefs.getString(_cacheKey) != null ||
-      _prefs.getKeys().any((key) => key.startsWith(_pendingOwnerPrefix));
+      _prefs.getKeys().any(
+        (key) =>
+            key.startsWith(_pendingOwnerPrefix) &&
+            _prefs.getString(key) == _pubkey,
+      );
 
   /// A stream of entitlement updates. Emits the current value to new
   /// listeners.
