@@ -113,7 +113,7 @@ comments alone, or an unsubmitted `PENDING` review does not deliver a verdict.
 | Review outcome on an open pull request | Submit |
 | --- | --- |
 | Review complete, sufficient evidence, no unresolved merge-blocking findings | `APPROVE` (`gh pr review --approve`), including when there are optional suggestions |
-| Verified unresolved finding that must be fixed before merge | `REQUEST_CHANGES` (`gh pr review --request-changes`), with the defect, evidence, and required remediation |
+| Verified unresolved finding that must be fixed before merge and that you are not authorized to resolve directly (or that needs a named owner decision) | `REQUEST_CHANGES` (`gh pr review --request-changes`), with the defect, evidence, and required remediation |
 | Partial review, missing evidence needed to decide, draft feedback, or explicitly advisory feedback | `COMMENT` (`gh pr review --comment`), stating why no approval/change-request verdict is possible and what remains |
 
 Do not choose `COMMENT` merely because you are an agent, did not rerun tests
