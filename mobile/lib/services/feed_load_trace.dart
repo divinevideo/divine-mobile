@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:openvine/observability/performance_phase_timer.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 
 /// A started feed-load trace, held by its owner until it reports.
@@ -17,14 +18,22 @@ class FeedLoadTrace {
     required PerformanceTrace trace,
     required int Function() eventCount,
   }) : _trace = trace,
-       _eventCount = eventCount;
+       _eventCount = eventCount,
+       _phases = PerformancePhaseTimer(trace)..startPhase('cache_read_ms');
 
   final PerformanceTrace _trace;
+  final PerformancePhaseTimer _phases;
 
   /// Read at completion time: the count keeps rising after the trace starts.
   final int Function() _eventCount;
 
   bool _completed = false;
+
+  /// Advances the breakdown only while this load is still pending.
+  void startPhase(String metric) {
+    if (_completed) return;
+    _phases.startPhase(metric);
+  }
 
   /// Reports the trace under [completion], first caller wins.
   ///
@@ -33,9 +42,38 @@ class FeedLoadTrace {
   void complete(String completion, {int? eventTotal}) {
     if (_completed) return;
     _completed = true;
-    _trace
-      ..setMetric('event_count', eventTotal ?? _eventCount())
-      ..putAttribute('completion', completion);
-    unawaited(_trace.stop());
+    try {
+      _trace.putAttribute('terminal_phase', _phases.currentPhase ?? 'unknown');
+      _phases.finishPhase();
+      _trace
+        ..setMetric('event_count', eventTotal ?? _eventCount())
+        ..putAttribute('completion', completion);
+    } finally {
+      unawaited(_trace.stop());
+    }
+  }
+}
+
+/// Starts [phase] on [trace] once this future completes successfully.
+extension FeedLoadFuturePhase<T> on Future<T> {
+  Future<T> startPhaseAfter(FeedLoadTrace trace, String phase) => then((value) {
+    trace.startPhase(phase);
+    return value;
+  });
+}
+
+/// Pending feed-load bookkeeping for the owning service.
+extension PendingFeedLoadTraces on Map<String, FeedLoadTrace> {
+  /// Registers [trace] under [subscriptionId] and returns the function that
+  /// releases its entry and reports the trace once.
+  void Function(String completion, {int? eventTotal}) track(
+    String subscriptionId,
+    FeedLoadTrace trace,
+  ) {
+    this[subscriptionId] = trace;
+    return (String completion, {int? eventTotal}) {
+      remove(subscriptionId);
+      trace.complete(completion, eventTotal: eventTotal);
+    };
   }
 }

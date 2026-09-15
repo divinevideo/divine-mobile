@@ -8,12 +8,9 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/connection_status_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _FakeConnectionStatusService extends ConnectionStatusService {
   bool online = true;
@@ -36,11 +33,9 @@ void main() {
   group('VideoEventService Timeout Cleanup', () {
     late VideoEventService videoEventService;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
 
       // Setup mock NostrService
       when(() => mockNostrService.isInitialized).thenReturn(true);
@@ -58,7 +53,6 @@ void main() {
 
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });
@@ -171,14 +165,12 @@ void main() {
 
     late VideoEventService service;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _FakeConnectionStatusService connectionService;
     late List<List<Filter>> subscribeCalls;
     late List<void Function()> eoseCallbacks;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       connectionService = _FakeConnectionStatusService();
       subscribeCalls = [];
       eoseCallbacks = [];
@@ -201,7 +193,6 @@ void main() {
 
       service = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
         connectionService: connectionService,
       );

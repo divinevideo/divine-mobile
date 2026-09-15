@@ -12,14 +12,11 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/relay_capability_service.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -32,7 +29,6 @@ void main() {
   group('VideoEventService Sorted Queries Integration', () {
     late VideoEventService service;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late _MockProfileRepository mockProfileRepository;
     late _MockEventRouter mockEventRouter;
     late _MockRelayCapabilityService mockRelayCapabilityService;
@@ -46,7 +42,6 @@ void main() {
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       mockProfileRepository = _MockProfileRepository();
       mockEventRouter = _MockEventRouter();
       mockRelayCapabilityService = _MockRelayCapabilityService();
@@ -74,7 +69,6 @@ void main() {
       // Create VideoEventService with VideoFilterBuilder
       service = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
         profileRepository: mockProfileRepository,
         eventRouter: mockEventRouter,
@@ -334,7 +328,6 @@ void main() {
           // Create service WITHOUT VideoFilterBuilder
           final serviceWithoutBuilder = VideoEventService(
             mockNostrService,
-            subscriptionManager: mockSubscriptionManager,
             crashReporter: const SilentCrashReporter(),
             profileRepository: mockProfileRepository,
             eventRouter: mockEventRouter,

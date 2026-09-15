@@ -139,6 +139,10 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         // Re-claim the shared sink in case another FlutterEngine overwrote it.
         installLogSink()
+        if call.method == "getDiagnostics" {
+            result(PlayerRegistry.shared.diagnostics())
+            return
+        }
         // Methods that require no arguments are handled before the
         // args guard to avoid returning FlutterMethodNotImplemented.
         if call.method == "disposeAll" {
@@ -304,6 +308,7 @@ final class PlayerRegistry {
         engine messenger: FlutterBinaryMessenger
     ) {
         players[id] = instance
+        PlaybackDiagnostics.shared.track(instance)
         engines[id] = ObjectIdentifier(messenger as AnyObject)
     }
     @discardableResult
@@ -333,5 +338,9 @@ final class PlayerRegistry {
     }
     func forAll(_ action: (DivineVideoPlayerInstance) -> Void) {
         players.values.forEach(action)
+    }
+
+    func diagnostics() -> [String: Any] {
+        PlaybackDiagnostics.shared.snapshot(registeredPlayers: players.count)
     }
 }

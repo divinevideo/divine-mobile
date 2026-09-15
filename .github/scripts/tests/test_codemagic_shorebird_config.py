@@ -159,12 +159,48 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("adb shell input keyevent KEYCODE_WAKEUP", runner)
         self.assertIn("adb shell wm dismiss-keyguard", runner)
         self.assertIn("feed_ttff_test.dart", runner)
+        # The frame benchmark is its own lane; see the frame-lane test below.
+        self.assertNotIn("feed_frame_test.dart", runner)
         self.assertIn("FIXTURE_PROBE_ATTEMPTS=0", runner)
         self.assertIn('"$FIXTURE_PROBE_ATTEMPTS" -ge 30', runner)
         self.assertIn("within 30 seconds", runner)
         self.assertIn("dumpsys SurfaceFlinger", runner)
         self.assertIn("dumpsys media.codec", runner)
         self.assertIn("test_reports/feed_ttff_emulator.txt", workflow["artifacts"])
+        self.assertNotIn("local_stack", runner)
+        self.assertNotIn("GHCR", runner)
+
+    def test_feed_frame_workflow_is_selective_and_self_contained(self) -> None:
+        workflow = self._resolved_config()["workflows"]["perf-feed-frame"]
+        includes = workflow["when"]["changeset"]["includes"]
+
+        self.assertEqual(20, workflow["max_build_duration"])
+        self.assertEqual(["pull_request"], workflow["triggering"]["events"])
+        self.assertNotIn("groups", workflow["environment"])
+        self.assertIn("mobile/integration_test/perf/", includes)
+        self.assertIn("mobile/packages/infinite_video_feed/", includes)
+        self.assertIn("mobile/scripts/ci/serve_ttff_fixtures.py", includes)
+        runner = next(
+            step["script"]
+            for step in workflow["scripts"]
+            if step["name"] == "Run deterministic feed frame timing"
+        )
+        self.assertIn("serve_ttff_fixtures.py", runner)
+        self.assertIn("adb reverse tcp:8765 tcp:8765", runner)
+        self.assertIn("adb shell input keyevent KEYCODE_WAKEUP", runner)
+        self.assertIn("adb shell wm dismiss-keyguard", runner)
+        self.assertIn("feed_frame_test.dart", runner)
+        self.assertIn("test_reports/feed_frame.jsonl", runner)
+        self.assertIn("FIXTURE_PROBE_ATTEMPTS=0", runner)
+        self.assertIn('"$FIXTURE_PROBE_ATTEMPTS" -ge 30', runner)
+        self.assertIn("within 30 seconds", runner)
+        self.assertIn("dumpsys SurfaceFlinger", runner)
+        self.assertIn("dumpsys media.codec", runner)
+        self.assertIn("test_reports/feed_frame.jsonl", workflow["artifacts"])
+        self.assertIn(
+            "test_reports/feed_frame_emulator.txt", workflow["artifacts"]
+        )
+        self.assertNotIn("feed_ttff_test.dart", runner)
         self.assertNotIn("local_stack", runner)
         self.assertNotIn("GHCR", runner)
 
@@ -424,6 +460,51 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                 if re.search(rf"\${{?{variable}}}?\b", scripts):
                     self.assertIn(variable, declared, f"{name} reads ${variable} without declaring it")
 
+    def test_ios_build_workflows_select_the_ads_measurement_free_product(self) -> None:
+        # #7303: firebase_analytics links FirebaseAnalyticsCore — no IDFA
+        # support, no Google ads-measurement SDK — only while
+        # FIREBASE_ANALYTICS_WITHOUT_ADID is present as Xcode evaluates its
+        # Package.swift. Xcode reads the variable, never a workflow script, so
+        # no other check in this file sees it. Pin it on every workflow that
+        # builds the iOS product; one that builds without it silently ships the
+        # full FirebaseAnalytics product.
+        resolved = self._resolved_config()
+        real_ios_build = re.compile(
+            r"(?:shorebird (?:release|patch) ios|flutter build ios(?! --config-only))"
+        )
+
+        selected = []
+        missing = []
+        for name, workflow in resolved["workflows"].items():
+            scripts = "\n".join(
+                step.get("script", "")
+                for step in workflow.get("scripts", [])
+                if isinstance(step, dict)
+            )
+            if not real_ios_build.search(scripts):
+                continue
+            selected.append(name)
+            declared = set((workflow.get("environment") or {}).get("vars") or {})
+            if "FIREBASE_ANALYTICS_WITHOUT_ADID" not in declared:
+                missing.append(name)
+
+        # Pin the selection itself. Without this the loop enforces nothing when
+        # the build commands move behind a helper script and the match set
+        # silently empties — and a new iOS lane must force a human to look.
+        self.assertEqual(
+            sorted(selected),
+            ["e2e-smoke-ios", "ios-build", "ios-patch", "ios-simulator-build"],
+            "the set of iOS-building workflows changed; update this pin and "
+            "confirm each lane still sets FIREBASE_ANALYTICS_WITHOUT_ADID (#7303)",
+        )
+        self.assertEqual(
+            missing,
+            [],
+            "iOS-building workflows must set FIREBASE_ANALYTICS_WITHOUT_ADID so "
+            "firebase_analytics links FirebaseAnalyticsCore (#7303): "
+            f"{missing}",
+        )
+
     def test_store_release_workflows_require_main_and_emit_provenance(self) -> None:
         for workflow_name in ("ios-build", "android-build"):
             workflow = self._workflow_block(workflow_name)
@@ -480,6 +561,30 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertRegex(self.contents, r"(?m)^\s+shorebird release ios ")
         self.assertNotRegex(self.contents, r"(?m)^\s+flutter build appbundle ")
         self.assertNotRegex(self.contents, r"(?m)^\s+flutter build ipa ")
+
+    def test_android_release_leaves_libapp_stripping_to_agp(self) -> None:
+        # Shorebird's Flutter fork still runs gen_snapshot with --strip on
+        # Android, so AGP finds libapp.so pre-stripped and never emits the
+        # libapp.so.sym that Play Console needs to symbolicate Dart frames in
+        # native crashes (#7990). Forwarding --no-strip past `--` moves the
+        # stripping to AGP. The libapp.so that ships is byte-identical either
+        # way, which is why only the release command carries the flag: a
+        # patch's libapp.so comes out the same, and Play never symbolicates
+        # patched code.
+        android_release = [
+            command
+            for command in self._shorebird_release_commands()
+            if command.lstrip().startswith("shorebird release android ")
+        ]
+        self.assertEqual(1, len(android_release))
+        # Last, after every Shorebird flag: `--` ends Shorebird's own option
+        # parsing, so anything placed after it would silently stop applying.
+        self.assertRegex(
+            android_release[0],
+            r"\\\n\s+-- --extra-gen-snapshot-options=--no-strip$",
+        )
+        for command in self._shorebird_patch_commands():
+            self.assertNotIn("--extra-gen-snapshot-options", command)
 
     def test_ios_release_uploads_without_automatic_review_submission(self) -> None:
         workflow = self._workflow_block("ios-build")

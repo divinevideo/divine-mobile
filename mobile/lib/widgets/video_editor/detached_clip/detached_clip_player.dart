@@ -113,6 +113,7 @@ class DetachedClipPlayer {
   Duration? _lastPlayTime;
   DateTime? _lastSeekAt;
   bool _isPlaying = false;
+  bool _muted = false;
 
   /// The controller to hand to a `DivineVideoPlayer`.
   DivineVideoPlayerController get controller => _controller;
@@ -189,6 +190,17 @@ class DetachedClipPlayer {
     if (playTime < _windowStart) return false;
     final end = _windowEnd;
     return end == null || playTime <= end;
+  }
+
+  /// Silences the clip, or lets it play at its own volume again.
+  ///
+  /// The voice-over recorder plays the composition beneath its controls, and
+  /// a detached clip's audio would otherwise reach the microphone. Applied on
+  /// the player rather than the clip, so the clip's own volume survives.
+  Future<void> setMuted({required bool muted}) {
+    if (muted == _muted) return Future<void>.value();
+    _muted = muted;
+    return _controller.setVolume(muted ? 0 : 1);
   }
 
   /// Stops following the playhead. The player itself stays open.

@@ -99,6 +99,7 @@ class DraftRenderParametersService {
       // timeline track, so without this the same draft publishes with music
       // from the editor and silent from the library.
       selectedSound: draft.selectedSound,
+      logName: _logName,
     );
 
     final stickers = <StickerData>[];

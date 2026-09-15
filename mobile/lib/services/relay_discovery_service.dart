@@ -164,6 +164,9 @@ class RelayDiscoveryService {
   static const String _cachePrefix = 'relay_discovery_';
   static const Duration _cacheExpiry = Duration(hours: 24);
 
+  /// SharedPreferences key for the relay-discovery cache owned by [npub].
+  static String cacheStorageKey(String npub) => '$_cachePrefix$npub';
+
   /// Discover relay list for a given npub.
   ///
   /// Steps:
@@ -580,7 +583,7 @@ class RelayDiscoveryService {
   Future<void> _cacheRelays(String npub, List<DiscoveredRelay> relays) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '$_cachePrefix$npub';
+      final cacheKey = cacheStorageKey(npub);
 
       final cacheData = {
         'relays': relays.map((r) => r.toJson()).toList(),
@@ -601,7 +604,7 @@ class RelayDiscoveryService {
   Future<List<DiscoveredRelay>?> _getCachedRelays(String npub) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '$_cachePrefix$npub';
+      final cacheKey = cacheStorageKey(npub);
 
       final cacheJson = prefs.getString(cacheKey);
       if (cacheJson == null) return null;
@@ -641,7 +644,7 @@ class RelayDiscoveryService {
   Future<void> clearCache(String npub) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cacheKey = '$_cachePrefix$npub';
+      final cacheKey = cacheStorageKey(npub);
       await prefs.remove(cacheKey);
     } catch (e) {
       Log.warning(

@@ -226,10 +226,10 @@ Testing:
   [`testing.md`](testing.md#strict-coverage-packages) for the list and the
   command that regenerates it.
 - [ ] Every test you add can FAIL. No `expect(true, isTrue)`, no test body
-  that asserts nothing it controls. Frozen at zero by
-  `check_placeholder_tests.sh` (#3340) — a construction smoke test asserts
-  `expect(() => Foo(), returnsNormally)`, a lifecycle pump asserts
-  `expect(tester.takeException(), isNull)`. See
+  that asserts nothing it controls, and no `group` that declares no test.
+  Frozen at zero by `check_placeholder_tests.sh` (#3340, #9146) — a
+  construction smoke test asserts `expect(() => Foo(), returnsNormally)`, a
+  lifecycle pump asserts `expect(tester.takeException(), isNull)`. See
   [`testing.md`](testing.md#a-test-must-be-able-to-fail).
 - [ ] Every "unchanged" assertion — `final before = read(); act();
   expect(read(), before)` — pins its baseline (`expect(before, isNotNull)`,

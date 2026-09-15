@@ -1016,6 +1016,34 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
   }
 
+  /// Whether the voice-over recorder is open over the editor.
+  bool get _isVoiceOverPreview =>
+      context.read<VideoEditorMainBloc>().state.isVoiceOverPreview;
+
+  /// The volume a timeline sound plays at in the preview: its own, or silence
+  /// while the voice-over recorder is open.
+  ///
+  /// Takes [isVoiceOverPreview] rather than reading it from the bloc, so a
+  /// caller that awaits mid-loop cannot read a disposed context.
+  double _previewVolume(double volume, {required bool isVoiceOverPreview}) =>
+      isVoiceOverPreview ? 0 : volume;
+
+  /// Silences the preview while the voice-over recorder is open and restores
+  /// it afterwards.
+  ///
+  /// The recorder plays the preview beneath its translucent route so the take
+  /// can be timed against the picture; anything the editor played out of the
+  /// speaker would be captured straight back by the microphone. Clip audio is
+  /// muted on the player itself, and the overlay tracks are re-synced at zero
+  /// volume — a stop-motion composition carries its sounds on the widget-driven
+  /// engine, which the same re-sync covers.
+  void _onVoiceOverPreviewChanged({required bool isActive}) {
+    if (!_isStopMotionComposition) {
+      unawaited(_videoPlayer?.setVolume(isActive ? 0 : 1));
+    }
+    unawaited(_syncAudioTracks());
+  }
+
   // -- Frames-only stop-motion playhead --------------------------------------
 
   /// Whether the current composition is a frames-only stop-motion clip. Such a
@@ -1588,6 +1616,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _ensureSpeedClipsRendered(clips);
     await player.setLooping(looping: true);
     if (!mounted || !identical(_videoPlayer, player)) return;
+    // A player rebuilt under the voice-over recorder must come up silent too.
+    if (_isVoiceOverPreview) {
+      await player.setVolume(0);
+      if (!mounted || !identical(_videoPlayer, player)) return;
+    }
 
     _endClipLoad(generation, isReady: true);
 
@@ -1643,6 +1676,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// plus the window length.
   Future<void> _syncStopMotionAudio() async {
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
 
     final tracks = <StopMotionAudioPreviewTrack>[];
@@ -1680,7 +1714,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         StopMotionAudioPreviewTrack(
           id: item.id,
           source: source,
-          volume: sound.volume,
+          volume: _previewVolume(
+            sound.volume,
+            isVoiceOverPreview: isVoiceOverPreview,
+          ),
           windowStart: item.startTime,
           windowEnd: item.endTime,
         ),
@@ -1706,6 +1743,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!_isPlayerInitialized) return;
 
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    // Captured before the loop can await: the track builders below await the
+    // native side, and reading the bloc from a disposed context afterwards
+    // would throw.
+    final isVoiceOverPreview = _isVoiceOverPreview;
     final audioEvents = overlayState.audioTracks;
 
     final soundItems = overlayState.items
@@ -1735,7 +1776,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         if (sound.isBundled && sound.assetPath != null) {
           track = await AudioTrack.asset(
             sound.assetPath!,
-            volume: sound.volume,
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
             videoStartTime: item.startTime,
             videoEndTime: item.endTime,
             trackStart: sound.startOffset,
@@ -1743,7 +1787,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
             sound.localFilePath!,
-            volume: sound.volume,
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
             videoStartTime: item.startTime,
             videoEndTime: item.endTime,
             trackStart: sound.startOffset,
@@ -1751,7 +1798,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         } else {
           track = AudioTrack.network(
             sound.url!,
-            volume: sound.volume,
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
             videoStartTime: item.startTime,
             videoEndTime: item.endTime,
             trackStart: sound.startOffset,
@@ -2603,6 +2653,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               current.isExternalPauseRequested,
           listener: (context, state) {
             _onExternalPauseChanged(isPaused: state.isExternalPauseRequested);
+          },
+        ),
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (previous, current) =>
+              previous.isVoiceOverPreview != current.isVoiceOverPreview,
+          listener: (context, state) {
+            _onVoiceOverPreviewChanged(isActive: state.isVoiceOverPreview);
           },
         ),
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(

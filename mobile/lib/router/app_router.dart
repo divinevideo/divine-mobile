@@ -8,15 +8,12 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
-import 'package:openvine/models/invite_availability.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/invite_availability_providers.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/product_analytics_navigation_observer.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
@@ -91,35 +88,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = RouterRefreshListenable(
     authService.authStateStream,
   );
-  var lastInviteRedirectSignature = (false, true);
-  StreamSubscription<InviteAvailabilityState>? inviteAvailabilitySub;
-
-  void refreshForInviteAvailability(InviteAvailabilityState state) {
-    final signature = (state.hasResolved, state.isEnabled);
-    if (signature == lastInviteRedirectSignature) return;
-    lastInviteRedirectSignature = signature;
-    refreshListenable.refresh();
-  }
-
-  void subscribeToInviteAvailability(InviteAvailabilityCubit cubit) {
-    unawaited(inviteAvailabilitySub?.cancel());
-    lastInviteRedirectSignature = (
-      cubit.state.hasResolved,
-      cubit.state.isEnabled,
-    );
-    inviteAvailabilitySub = cubit.stream.listen(refreshForInviteAvailability);
-  }
-
-  subscribeToInviteAvailability(ref.read(inviteAvailabilityCubitProvider));
-  ref.listen(inviteAvailabilityCubitProvider, (previous, next) {
-    if (identical(previous, next)) return;
-    subscribeToInviteAvailability(next);
-    refreshListenable.refresh();
-  });
-  ref.onDispose(() {
-    unawaited(inviteAvailabilitySub?.cancel());
-  });
-
   ref.listen(currentMinorAccountReviewStatusProvider, (previous, next) {
     // A resume/background refetch that resolves to a routing-identical status
     // (active → active) must not refresh: refreshing churns the route pipeline
@@ -147,7 +115,18 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     final after = deletionGateActiveForCurrentAccount(next);
     if (before != after) refreshListenable.refresh();
   });
-  ref.onDispose(refreshListenable.dispose);
+  ref.onDispose(() {
+    unawaited(
+      refreshListenable.dispose().catchError((Object error, StackTrace stack) {
+        Log.error(
+          'Failed to dispose router refresh subscription: $error',
+          name: 'AppRouter',
+          category: LogCategory.system,
+          stackTrace: stack,
+        );
+      }),
+    );
+  });
 
   final router = GoRouter(
     navigatorKey: NavigatorKeys.root,
@@ -164,13 +143,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     // order below is load-bearing whenever two routes share a literal first
     // path segment. It's match-safe today because every module's
     // parameterized routes (`:id`, `:listId`, etc.) sit under a first segment
-    // no other module uses. The one same-prefix case in this app
-    // (`/people-lists/new` vs. `/people-lists/:listId`) is contained inside
-    // `lists_routes.dart`, which orders the literal route first and is
-    // guarded by `people_lists_route_order_test.dart`. If you add a bare
-    // `/:slug`-style route or a route that shares a first segment with
-    // another module, place it deliberately and add a similar order guard —
-    // don't rely on this spread order by accident.
+    // no other module uses. The people-list same-prefix case is contained in
+    // `lists_routes.dart`; `/following/new` intentionally spans shell and
+    // profile modules, so `shellRoutes()` must precede `profileRoutes()`.
+    // Both constraints have route-order regression tests. If you add another
+    // shared first segment, place it deliberately and guard the ordering.
     routes: [
       ...videoRoutes(),
       ...shellRoutes(),

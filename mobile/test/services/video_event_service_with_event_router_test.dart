@@ -11,7 +11,6 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/event_router.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:path/path.dart' as p;
 
@@ -73,7 +72,6 @@ void main() {
     late AppDatabase db;
     late EventRouter eventRouter;
     late MockNostrService mockNostrService;
-    late SubscriptionManager subscriptionManager;
     late VideoEventService videoEventService;
     late String testDbPath;
 
@@ -94,13 +92,9 @@ void main() {
       // Create mock NostrService
       mockNostrService = MockNostrService();
 
-      // Create SubscriptionManager
-      subscriptionManager = SubscriptionManager(mockNostrService);
-
       // Create VideoEventService with EventRouter
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
         eventRouter: eventRouter, // NEW: Pass EventRouter to VideoEventService
       );

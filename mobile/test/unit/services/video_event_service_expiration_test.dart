@@ -7,25 +7,19 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrService extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 void main() {
   group('VideoEventService NIP-40 Expiration Filtering', () {
     late VideoEventService service;
     late NostrClient nostrService;
-    late SubscriptionManager subscriptionManager;
 
     setUp(() {
       nostrService = _MockNostrService();
-      subscriptionManager = _MockSubscriptionManager();
       service = VideoEventService(
         nostrService,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

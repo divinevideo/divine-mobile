@@ -17,12 +17,12 @@ import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
-import 'package:openvine/services/support_email_composer.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/clear_logs_confirmation_sheet.dart';
 import 'package:openvine/widgets/delete_account_action.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
+import 'package:openvine/widgets/support_contact_action.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -36,7 +36,7 @@ class SupportCenterScreen extends ConsumerWidget {
     super.key,
   });
 
-  final SupportEmailCompose? composeEmail;
+  final ComposeSupportEmail? composeEmail;
   final Future<bool> Function()? openZendeskSupport;
 
   @override
@@ -258,41 +258,20 @@ class _SupportContactTile extends StatelessWidget {
   });
 
   final OpenSupportMessages? openSupportMessages;
-  final SupportEmailCompose? composeEmail;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => SupportContactCubit(
-        openSupportMessages: openSupportMessages,
-      ),
-      child: _SupportContactTileView(composeEmail: composeEmail),
-    );
-  }
-}
-
-class _SupportContactTileView extends StatelessWidget {
-  const _SupportContactTileView({this.composeEmail});
-
-  final SupportEmailCompose? composeEmail;
+  final ComposeSupportEmail? composeEmail;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return BlocConsumer<SupportContactCubit, SupportContactState>(
-      listenWhen: (previous, current) =>
-          previous.status != current.status &&
-          current.status == SupportContactStatus.unavailable,
-      listener: (context, _) => _composeSupportEmail(context),
-      builder: (context, state) {
-        final isOpening = state.status == SupportContactStatus.opening;
+    return SupportContactAction(
+      openSupportMessages: openSupportMessages,
+      composeEmail: composeEmail,
+      builder: (context, isOpening, openSupport) {
         return _SupportTile(
           icon: DivineIconName.chat,
           title: l10n.supportContactSupport,
           subtitle: l10n.supportContactSupportSubtitle,
-          onTap: isOpening
-              ? null
-              : () => context.read<SupportContactCubit>().open(),
+          onTap: isOpening ? null : openSupport,
           trailing: isOpening
               ? const SizedBox.square(
                   dimension: 20,
@@ -302,29 +281,6 @@ class _SupportContactTileView extends StatelessWidget {
         );
       },
     );
-  }
-
-  Future<void> _composeSupportEmail(BuildContext context) async {
-    final l10n = context.l10n;
-    final sharePositionOrigin = shareAnchorForContext(context);
-    try {
-      await (composeEmail ?? SupportEmailComposer().compose)(
-        toEmail: AppConstants.supportEmail,
-        subject: l10n.supportContactSupport,
-        body:
-            '${l10n.supportCouldNotOpenMessages}\n\n'
-            '${l10n.supportContactSupportSubtitle}',
-        sharePositionOrigin: sharePositionOrigin,
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          l10n.authCouldNotOpenEmail(AppConstants.supportEmail),
-          error: true,
-        ),
-      );
-    }
   }
 }
 

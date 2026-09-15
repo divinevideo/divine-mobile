@@ -7,17 +7,13 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
-
 void main() {
   late VideoEventService videoEventService;
   late _MockNostrClient mockNostrService;
-  late _MockSubscriptionManager mockSubscriptionManager;
 
   setUpAll(() {
     registerFallbackValue(<Filter>[]);
@@ -25,7 +21,6 @@ void main() {
 
   setUp(() {
     mockNostrService = _MockNostrClient();
-    mockSubscriptionManager = _MockSubscriptionManager();
 
     // Setup basic mock behavior
     when(() => mockNostrService.isInitialized).thenReturn(true);
@@ -33,21 +28,8 @@ void main() {
     when(
       () => mockNostrService.connectedRelayCount,
     ).thenReturn(3); // Mock having connected relays
-    when(
-      () => mockSubscriptionManager.createSubscription(
-        name: any(named: 'name'),
-        filters: any(named: 'filters'),
-        onEvent: any(named: 'onEvent'),
-        onError: any(named: 'onError'),
-        onComplete: any(named: 'onComplete'),
-        timeout: any(named: 'timeout'),
-        priority: any(named: 'priority'),
-      ),
-    ).thenAnswer((_) async => 'mock-subscription-id');
-
     videoEventService = VideoEventService(
       mockNostrService,
-      subscriptionManager: mockSubscriptionManager,
       crashReporter: const SilentCrashReporter(),
     );
   });
@@ -203,7 +185,7 @@ void main() {
 
   group('VideoEventService Pagination', () {
     test(
-      'should return early when pagination state has no more content',
+      'should reset and refetch when pagination state has no more content',
       () async {
         // Arrange - Get the pagination state and set hasMore=false
         await videoEventService.subscribeToVideoFeed(
@@ -211,15 +193,21 @@ void main() {
           limit: 10,
         );
 
-        // Reset the mock to isolate loadMoreEvents behavior
-        reset(mockSubscriptionManager);
+        reset(mockNostrService);
+        when(() => mockNostrService.isInitialized).thenReturn(true);
+        when(() => mockNostrService.connectedRelayCount).thenReturn(3);
 
         // Access the pagination state and mark it as having no more
-        // content
+        // content. isLoading is still set from the subscribe above, and it
+        // short-circuits loadMoreEvents first, so clear it — otherwise this
+        // test passes on the already-loading guard the next test covers and
+        // says nothing about hasMore.
         final paginationStates = videoEventService
             .getPaginationStatesForTesting();
         final discoveryState = paginationStates[SubscriptionType.discovery]!;
-        discoveryState.hasMore = false;
+        discoveryState
+          ..isLoading = false
+          ..hasMore = false;
 
         // Act
         await videoEventService.loadMoreEvents(
@@ -227,19 +215,11 @@ void main() {
           limit: 50,
         );
 
-        // Assert - Should not create any subscriptions since
-        // hasMore=false
-        verifyNever(
-          () => mockSubscriptionManager.createSubscription(
-            name: any(named: 'name'),
-            filters: any(named: 'filters'),
-            onEvent: any(named: 'onEvent'),
-            onError: any(named: 'onError'),
-            onComplete: any(named: 'onComplete'),
-            timeout: any(named: 'timeout'),
-            priority: any(named: 'priority'),
-          ),
-        );
+        // Assert - hasMore=false does not stop the load. loadMoreEvents
+        // resets the pagination state and queries again so a viewer who
+        // reaches the end of the feed can keep scrolling.
+        verify(() => mockNostrService.subscribe(any())).called(1);
+        expect(discoveryState.hasMore, isTrue);
       },
     );
 
@@ -252,8 +232,8 @@ void main() {
           limit: 10,
         );
 
-        // Reset the mock to isolate loadMoreEvents behavior
-        reset(mockSubscriptionManager);
+        reset(mockNostrService);
+        when(() => mockNostrService.isInitialized).thenReturn(true);
 
         // Set isLoading=true
         final paginationStates = videoEventService
@@ -269,17 +249,7 @@ void main() {
 
         // Assert - Should not create new subscriptions since already
         // loading
-        verifyNever(
-          () => mockSubscriptionManager.createSubscription(
-            name: any(named: 'name'),
-            filters: any(named: 'filters'),
-            onEvent: any(named: 'onEvent'),
-            onError: any(named: 'onError'),
-            onComplete: any(named: 'onComplete'),
-            timeout: any(named: 'timeout'),
-            priority: any(named: 'priority'),
-          ),
-        );
+        verifyNever(() => mockNostrService.subscribe(any()));
       },
     );
   });

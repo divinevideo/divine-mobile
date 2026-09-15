@@ -10,12 +10,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 VideoEvent _video({required String id, required String pubkey}) {
   final now = DateTime.now();
@@ -39,11 +36,9 @@ void main() {
     late VideoEventService service;
     late ContentBlocklistRepository blocklistRepo;
     late _MockNostrClient nostrClient;
-    late _MockSubscriptionManager subscriptionManager;
 
     setUp(() {
       nostrClient = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       when(() => nostrClient.isInitialized).thenReturn(true);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(
@@ -52,7 +47,6 @@ void main() {
 
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
       // No prefs — in-memory blocklist for the test.
@@ -161,7 +155,6 @@ void main() {
       ).thenAnswer((_) => const Stream<Event>.empty());
       final localService = VideoEventService(
         localNostr,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
       final localRepo = ContentBlocklistRepository();
@@ -200,11 +193,9 @@ void main() {
     late VideoEventService service;
     late ContentBlocklistRepository blocklistRepo;
     late _MockNostrClient nostrClient;
-    late _MockSubscriptionManager subscriptionManager;
 
     setUp(() {
       nostrClient = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       when(() => nostrClient.isInitialized).thenReturn(true);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(
@@ -212,7 +203,6 @@ void main() {
       ).thenAnswer((_) => const Stream<Event>.empty());
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
       blocklistRepo = ContentBlocklistRepository();
@@ -269,7 +259,6 @@ void main() {
       ).thenAnswer((_) => const Stream<Event>.empty());
       final localService = VideoEventService(
         localNostr,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
       addTearDown(localService.dispose);

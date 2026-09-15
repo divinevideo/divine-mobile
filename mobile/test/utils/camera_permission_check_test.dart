@@ -61,6 +61,7 @@ void main() {
   Widget buildSubject(
     _FakeCameraPermissionBloc bloc, {
     ValueChanged<bool>? onResult,
+    bool autoRecord = false,
   }) {
     return ProviderScope(
       child: MockGoRouterProvider(
@@ -74,7 +75,13 @@ void main() {
               body: Builder(
                 builder: (context) => ElevatedButton(
                   onPressed: () async {
-                    final result = await context.pushToCameraWithPermission();
+                    // Only the auto-record test passes the flag, so every
+                    // other test keeps exercising the production default.
+                    final result = autoRecord
+                        ? await context.pushToCameraWithPermission(
+                            autoRecord: true,
+                          )
+                        : await context.pushToCameraWithPermission();
                     onResult?.call(result);
                   },
                   child: const Text('Trigger'),
@@ -173,9 +180,7 @@ void main() {
 
       testWidgets(
         'stays put when the request is denied but still requestable',
-        (
-          tester,
-        ) async {
+        (tester) async {
           final bloc = _FakeCameraPermissionBloc(
             const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
           );
@@ -324,6 +329,31 @@ void main() {
 
         // verifyNavigated asserts exactly one push, not two.
         verifyNavigated();
+      });
+    });
+
+    group('autoRecord', () {
+      testWidgets('pushes the recorder location with the auto-record flag', (
+        tester,
+      ) async {
+        final bloc = _FakeCameraPermissionBloc(
+          const CameraPermissionLoaded(CameraPermissionStatus.authorized),
+        );
+        await tester.pumpWidget(buildSubject(bloc, autoRecord: true));
+
+        await tester.tap(find.text('Trigger'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockGoRouter.push<Object?>(
+            VideoRecorderScreen.pathForEntryPoint(
+              CreationEntryPoint.cameraFab,
+              autoRecord: true,
+            ),
+            extra: any(named: 'extra'),
+          ),
+        ).called(1);
+        verifyNotNavigated();
       });
     });
   });

@@ -191,30 +191,27 @@ void main() {
       },
     );
 
-    test(
-      'identity-change cleanup passes old pubkey as userPubkey',
-      () async {
-        // Ensure the old pubkey is correctly threaded through even when
-        // we are signing in as the new user.
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+    test('identity-change cleanup passes old pubkey as userPubkey', () async {
+      // Ensure the old pubkey is correctly threaded through even when
+      // we are signing in as the new user.
+      await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
-        final captured = verify(
-          () => mockCleanupService.clearUserSpecificData(
-            reason: 'identity_change',
-            isIdentityChange: true,
-            userPubkey: captureAny(named: 'userPubkey'),
-            // Explicit false is the identity-preservation regression guard.
-            // ignore: avoid_redundant_argument_values
-            deleteUserData: false, // regression guard: must NOT be true
-          ),
-        ).captured;
+      final captured = verify(
+        () => mockCleanupService.clearUserSpecificData(
+          reason: 'identity_change',
+          isIdentityChange: true,
+          userPubkey: captureAny(named: 'userPubkey'),
+          // Explicit false is the identity-preservation regression guard.
+          // ignore: avoid_redundant_argument_values
+          deleteUserData: false, // regression guard: must NOT be true
+        ),
+      ).captured;
 
-        // The old pubkey from SharedPreferences must be forwarded so
-        // per-user cache keys can be scoped correctly even though we do
-        // not delete the underlying data.
-        expect(captured.single, equals(oldPubkeyHex));
-      },
-    );
+      // The old pubkey from SharedPreferences must be forwarded so
+      // per-user cache keys can be scoped correctly even though we do
+      // not delete the underlying data.
+      expect(captured.single, equals(oldPubkeyHex));
+    });
 
     test(
       'remove-device signOut (deleteKeys: true) preserves user data by default',
@@ -311,27 +308,23 @@ void main() {
       },
     );
 
-    test(
-      'identity-change: isIdentityChange=true is still passed '
-      'so prefix-keyed caches are cleared',
-      () async {
-        // Prefix-keyed caches (following_list_, relay_discovery_, DM
-        // cursors) are not owner-scoped and can leak across accounts.
-        // They must still be cleared on identity change even though
-        // per-user DAO rows are preserved.
-        await _ignoringDiscoveryErrors(authService.createNewIdentity);
+    test('identity-change: isIdentityChange=true is still passed '
+        'so legacy and database cleanup stays fail-closed', () async {
+      // The identity-change flag still guards legacy unscoped state and
+      // makes database cleanup errors abort the account transition. Scoped
+      // following and relay caches are preserved independently.
+      await _ignoringDiscoveryErrors(authService.createNewIdentity);
 
-        verify(
-          () => mockCleanupService.clearUserSpecificData(
-            reason: 'identity_change',
-            isIdentityChange: true, // must still be true
-            userPubkey: any(named: 'userPubkey'),
-            // Explicit false is the identity-preservation regression guard.
-            // ignore: avoid_redundant_argument_values
-            deleteUserData: false, // regression guard: must NOT be true
-          ),
-        ).called(1);
-      },
-    );
+      verify(
+        () => mockCleanupService.clearUserSpecificData(
+          reason: 'identity_change',
+          isIdentityChange: true, // must still be true
+          userPubkey: any(named: 'userPubkey'),
+          // Explicit false is the identity-preservation regression guard.
+          // ignore: avoid_redundant_argument_values
+          deleteUserData: false, // regression guard: must NOT be true
+        ),
+      ).called(1);
+    });
   });
 }

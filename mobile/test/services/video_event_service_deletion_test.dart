@@ -9,12 +9,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 VideoEvent _videoEvent({
   required String id,
@@ -55,11 +52,9 @@ void main() {
   group('VideoEventService.removedVideoIds', () {
     late VideoEventService service;
     late _MockNostrClient nostrClient;
-    late _MockSubscriptionManager subscriptionManager;
 
     setUp(() {
       nostrClient = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       when(() => nostrClient.isInitialized).thenReturn(true);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.publicKey).thenReturn(
@@ -71,7 +66,6 @@ void main() {
 
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });
@@ -337,7 +331,6 @@ void main() {
       // Re-create for tearDown safety — overrides the field.
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
       // The original subscription should complete cleanly.

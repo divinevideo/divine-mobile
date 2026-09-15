@@ -23,7 +23,7 @@ New feature work follows the layered flow `UI -> BLoC/Cubit -> Repository -> Cli
 The workspace is organized into around 75 packages, grouped roughly as:
 
 - `mobile/packages/*_repository/` — data-access and feature repositories (feed, videos, comments, follow, profile, notifications, and more).
-- `mobile/packages/*_client/` and `mobile/packages/*_api_client/` — API and platform client boundaries (for example `verifier_client`, `funnelcake_api_client`, `invite_api_client`).
+- `mobile/packages/*_client/` and `mobile/packages/*_api_client/` — API and platform client boundaries (for example `verifier_client` and `funnelcake_api_client`).
 - `mobile/packages/models/` — shared model types and generated serialization.
 - `mobile/packages/nostr_*` — Nostr SDK, client, key management, and app-bridge behavior (`nostr_sdk`, `nostr_client`, `nostr_key_manager`, `nostr_app_bridge_repository`).
 - `mobile/packages/divine_camera/`, `mobile/packages/divine_video_player/`, `mobile/packages/media_cache/` — capture, playback, and caching.

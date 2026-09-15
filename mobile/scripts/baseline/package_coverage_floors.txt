@@ -40,7 +40,6 @@ hashtag_repository 30
 iap_repository 90
 image_metadata_stripper 100
 infinite_video_feed 100
-invite_api_client 89
 keycast_flutter 44
 likes_repository 62
 logging_types 100

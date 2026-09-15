@@ -65,7 +65,7 @@ void main() {
     await Directory(
       p.join(testDir.path, 'app_support'),
     ).create(recursive: true);
-    Hive.init(p.join(testDir.path, 'app_support'));
+    TestHelpers.setHiveHomeForTesting(p.join(testDir.path, 'app_support'));
 
     // Reset helper state. cleanupHiveBox resets UploadInitializationHelper's
     // cache too, and additionally clears any box an earlier suite registered
@@ -90,7 +90,7 @@ void main() {
     } finally {
       // close() leaves Hive's process-global home path pointing at the
       // directory deleted below.
-      Hive.init(null);
+      TestHelpers.resetHiveHomeForTesting();
       if (testDir.existsSync()) {
         await testDir.delete(recursive: true);
       }

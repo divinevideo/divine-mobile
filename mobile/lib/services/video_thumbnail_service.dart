@@ -29,27 +29,39 @@ class VideoThumbnailService {
 
   static ProVideoEditor get _proVideoEditor => ProVideoEditor.instance;
 
-  /// Serial queue for strip thumbnail extraction batches.
+  /// Serial queue for strip thumbnail extraction.
   ///
-  /// This keeps only one native decode call active at a time, but allows
-  /// multiple clip streams to interleave batch-by-batch for faster
-  /// perceived timeline fill across clips.
-  static Future<void> _stripBatchQueue = Future<void>.value();
+  /// One clip's requested decode pass runs at a time, in request order.
+  /// Cancellation is dispatched before the next pass starts, although native
+  /// decoder teardown may overlap briefly after the plugin returns.
+  static Future<void> _stripQueue = Future<void>.value();
 
-  /// Resets the strip-batch serial queue between tests.
+  /// Resets the strip serial queue between tests.
   ///
-  /// A widget test that tears down while a strip generator is awaiting the
+  /// A widget test that tears down while a strip extraction is awaiting the
   /// queue strands a forever-pending future in that test's dead FakeAsync
   /// zone; the next test would inherit it and deadlock before its first
-  /// batch.
+  /// frame.
   ///
   /// Call this from inside the `testWidgets` body, not from `setUp`: the
   /// replacement future must be created in the test's FakeAsync zone or its
   /// completion lands on the real event loop, which a widget test never
   /// reaches until it ends.
   @visibleForTesting
-  static void resetStripBatchQueueForTesting() {
-    _stripBatchQueue = Future<void>.value();
+  static void resetStripQueueForTesting() {
+    _stripQueue = Future<void>.value();
+  }
+
+  /// Waits for the strip queue and takes it. The returned function hands it
+  /// on; calling it more than once is harmless.
+  static Future<void Function()> _acquireStripQueue() async {
+    final previous = _stripQueue;
+    final release = Completer<void>();
+    _stripQueue = release.future;
+    await previous;
+    return () {
+      if (!release.isCompleted) release.complete();
+    };
   }
 
   /// Extract a thumbnail from a video file at a specific timestamp
@@ -541,8 +553,8 @@ class VideoThumbnailService {
     return Directory.systemTemp;
   }
 
-  /// Generates thumbnails for a timeline strip, yielded in batches so the
-  /// UI can update progressively.
+  /// Generates thumbnails for a timeline strip, emitted progressively as
+  /// they are decoded.
   ///
   /// Covers the source range `[startOffset, startOffset + duration]` — the
   /// window a caller actually shows, not necessarily the whole file. A
@@ -559,15 +571,25 @@ class VideoThumbnailService {
   /// video. Pass `ceil(maxPixelsPerSecond / thumbnailWidth)` to ensure every
   /// visual slot has a distinct frame at maximum zoom.
   ///
+  /// The whole window is one native decode pass, with a single hardware
+  /// decoder session so the extraction cannot starve a preview player that
+  /// shares the device's decoder pool. Frames arrive in decode order — in
+  /// time order within each pass — and [priorityTimestamps] only guarantees
+  /// that those exact positions are among the frames requested.
+  ///
+  /// Pausing the subscription stops the native decoder; resuming starts a
+  /// new pass over the frames still missing, so a clip is never decoded
+  /// twice. Cancelling stops it for good.
+  ///
   /// Thumbnails are written to temporary cache files to avoid holding
   /// large byte arrays in memory. The caller is responsible for deleting
   /// the files when they are no longer needed (see [StripThumbnail.path]).
   ///
-  /// Each yield contains the **accumulated** list so far, allowing the
+  /// Each event carries the **accumulated** list so far, allowing the
   /// caller to simply replace its current list on each event.
   ///
   /// If native extraction fails mid-stream, the stream emits the error and
-  /// closes. Batches already delivered stay valid, but the set is truncated
+  /// closes. Frames already delivered stay valid, but the set is truncated
   /// — listeners must not treat a stream that errored as having reached full
   /// density.
   static Stream<List<StripThumbnail>> generateStripThumbnails({
@@ -577,140 +599,47 @@ class VideoThumbnailService {
     required Size outputSize,
     int thumbsPerSecond = 1,
     int quality = _thumbnailQuality,
-    int batchSize = 6,
     Duration startOffset = Duration.zero,
     List<Duration>? priorityTimestamps,
-  }) async* {
-    if (duration <= Duration.zero) return;
+  }) {
+    if (duration <= Duration.zero) return const Stream.empty();
 
-    yield* _generateStripThumbnailsBatched(
-      videoPath: videoPath,
-      clipId: clipId,
-      duration: duration,
-      outputSize: outputSize,
-      thumbsPerSecond: thumbsPerSecond,
-      quality: quality,
-      batchSize: batchSize,
-      startOffset: startOffset,
-      priorityTimestamps: priorityTimestamps,
-    );
-  }
-
-  static Future<T> _runStripBatchExclusive<T>(
-    Future<T> Function() action,
-  ) async {
-    final previous = _stripBatchQueue;
-    final release = Completer<void>();
-    _stripBatchQueue = release.future;
-
-    await previous;
-    try {
-      return await action();
-    } finally {
-      release.complete();
-    }
-  }
-
-  static Stream<List<StripThumbnail>> _generateStripThumbnailsBatched({
-    required String videoPath,
-    required String clipId,
-    required Duration duration,
-    required Size outputSize,
-    required int thumbsPerSecond,
-    required int quality,
-    required int batchSize,
-    required Duration startOffset,
-    List<Duration>? priorityTimestamps,
-  }) async* {
     final durationMs = duration.inMilliseconds;
     // Enough frames to cover every visual slot at the requested density.
     final count = ((durationMs / 1000) * thumbsPerSecond).ceil().clamp(1, 500);
 
-    // Extract center-first so the strip gets useful visual coverage quickly.
+    // Center-first refinement over the window; native sorts the request by
+    // time anyway, so this only fixes *which* positions are asked for.
     final densityTimestamps = _buildProgressiveStripTimestamps(
       durationMs: durationMs,
       count: count,
       startMs: startOffset.inMilliseconds,
     );
 
-    // Priority timestamps go first (the exact frames the visible slots
-    // need at the current zoom), followed by the full-density set with
-    // duplicates removed.
-    final List<Duration> allTimestamps;
-    if (priorityTimestamps != null && priorityTimestamps.isNotEmpty) {
-      final seenMs = <int>{};
-      final merged = <Duration>[];
-      for (final ts in priorityTimestamps) {
-        if (seenMs.add(ts.inMilliseconds)) merged.add(ts);
-      }
-      for (final ts in densityTimestamps) {
-        if (seenMs.add(ts.inMilliseconds)) merged.add(ts);
-      }
-      allTimestamps = merged;
-    } else {
-      allTimestamps = densityTimestamps;
-    }
+    // The exact frames the visible slots need at the current zoom, plus the
+    // full-density set with duplicates removed.
+    final seenMs = <int>{};
+    final timestamps = <Duration>[
+      for (final ts in priorityTimestamps ?? const <Duration>[])
+        if (seenMs.add(ts.inMilliseconds)) ts,
+      for (final ts in densityTimestamps)
+        if (seenMs.add(ts.inMilliseconds)) ts,
+    ];
 
-    final cacheDir = await getTemporaryDirectory();
-    final batchId = '${clipId}_${DateTime.now().millisecondsSinceEpoch}';
-
-    final accumulated = <StripThumbnail>[];
-
-    for (
-      var batchStart = 0;
-      batchStart < allTimestamps.length;
-      batchStart += batchSize
-    ) {
-      final batchEnd = (batchStart + batchSize).clamp(0, allTimestamps.length);
-      final batchTimestamps = allTimestamps.sublist(batchStart, batchEnd);
-
-      List<Uint8List> bytes;
-      try {
-        bytes = await _runStripBatchExclusive(
-          () => _proVideoEditor.getThumbnails(
-            ThumbnailConfigs(
-              video: EditorVideo.file(videoPath),
-              outputSize: outputSize,
-              timestamps: batchTimestamps,
-              jpegQuality: quality,
-            ),
-            nativeLogLevel: .warning,
-          ),
-        );
-      } catch (error) {
-        Log.warning(
-          'Failed to generate strip thumbnails for clip $clipId: $error',
-          name: 'VideoThumbnailService',
-          category: LogCategory.video,
-        );
-        // Surface the failure as a stream error instead of closing the
-        // stream normally — listeners must be able to tell a truncated set
-        // apart from a complete one (a silent close made partial strips
-        // look final and dropped their gap-filler frames).
-        rethrow;
-      }
-
-      for (var i = 0; i < bytes.length && i < batchTimestamps.length; i++) {
-        final file = File(
-          '${cacheDir.path}/strip_${batchId}_${batchStart + i}.jpg',
-        );
-        await file.writeAsBytes(bytes[i]);
-        accumulated.add(
-          StripThumbnail(path: file.path, timestamp: batchTimestamps[i]),
-        );
-      }
-
-      final sorted = [...accumulated]
-        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      yield List.unmodifiable(sorted);
-    }
+    return _StripExtraction(
+      videoPath: videoPath,
+      clipId: clipId,
+      timestamps: timestamps,
+      outputSize: outputSize,
+      quality: quality,
+    ).stream;
   }
 
   /// Builds a center-first timestamp sequence (midpoint refinement) covering
   /// `[startMs, startMs + durationMs]`.
   ///
   /// Example progression for ~10s: 5.0s, 2.5s, 7.5s, 1.25s, 3.75s...
-  /// This improves perceived loading because early batches cover the full
+  /// This improves perceived loading because early frames cover the full
   /// requested window instead of only the beginning. The refinement runs in
   /// window-local time and every result is shifted by [startMs], so the
   /// returned timestamps are absolute positions in the source file.
@@ -813,6 +742,196 @@ class ThumbnailFileResult {
 }
 
 /// A single thumbnail extracted for a timeline strip, persisted to disk.
+/// One clip's strip extraction: a single native decode pass over
+/// [timestamps], resumable.
+///
+/// A plain `async*` generator cannot see its subscription being paused: it
+/// would park at the next `yield` while the native decoder ran the clip to
+/// the end — exactly while the editor is covered by another route or its
+/// preview player is still loading, the two moments the owner pauses for.
+/// A controller with pause/resume hooks stops the decoder on pause and, on
+/// resume, requests only the frames still missing.
+class _StripExtraction {
+  _StripExtraction({
+    required this.videoPath,
+    required this.clipId,
+    required this.timestamps,
+    required this.outputSize,
+    required this.quality,
+  }) : _done = List<bool>.filled(timestamps.length, false),
+       _fileStem = '${clipId}_${DateTime.now().millisecondsSinceEpoch}' {
+    _controller = StreamController<List<StripThumbnail>>(
+      onListen: _start,
+      onPause: _pause,
+      onResume: _resume,
+      onCancel: _stop,
+    );
+  }
+
+  final String videoPath;
+  final String clipId;
+  final List<Duration> timestamps;
+  final Size outputSize;
+  final int quality;
+
+  late final StreamController<List<StripThumbnail>> _controller;
+
+  Stream<List<StripThumbnail>> get stream => _controller.stream;
+
+  /// Per [timestamps] index: whether its frame has been delivered.
+  final List<bool> _done;
+  final List<StripThumbnail> _accumulated = [];
+  final String _fileStem;
+  int _fileCounter = 0;
+
+  /// The running native pass, if any.
+  // Owned by the controller lifecycle and cancelled by _stop.
+  // ignore: cancel_subscriptions
+  StreamSubscription<void>? _native;
+
+  /// Hands the strip queue on once the running pass is over.
+  void Function()? _releaseQueue;
+
+  /// Bumped by every start and stop, so a pass that was stopped while it was
+  /// still waiting for the queue or the cache directory sees it is stale and
+  /// steps aside instead of starting the decoder.
+  int _generation = 0;
+  bool _stoppedForPause = false;
+
+  /// Defers stopping until the current microtask queue drains. Dart's
+  /// `await for` implementation briefly pauses and resumes its source between
+  /// events; waiting one microtask distinguishes that internal hand-off from
+  /// sustained backpressure such as a route covering the editor.
+  void _pause() {
+    scheduleMicrotask(() {
+      if (!_controller.isPaused || _controller.isClosed) return;
+      _stoppedForPause = true;
+      unawaited(_stop());
+    });
+  }
+
+  void _resume() {
+    if (!_stoppedForPause) return;
+    _stoppedForPause = false;
+    unawaited(_start());
+  }
+
+  Future<void> _stop() async {
+    _generation++;
+    final native = _native;
+    final releaseQueue = _releaseQueue;
+    _native = null;
+    _releaseQueue = null;
+    await native?.cancel();
+    // The plugin stops forwarding events before this future completes and has
+    // dispatched native cancellation. Native decoder teardown may finish
+    // shortly afterwards, so the queue bounds requested passes rather than
+    // claiming there can be no teardown overlap.
+    releaseQueue?.call();
+  }
+
+  Future<void> _start() async {
+    final generation = ++_generation;
+    final remaining = [
+      for (var i = 0; i < timestamps.length; i++)
+        if (!_done[i]) i,
+    ];
+    if (remaining.isEmpty) {
+      await _controller.close();
+      return;
+    }
+
+    final release = await VideoThumbnailService._acquireStripQueue();
+    if (generation != _generation) {
+      release();
+      return;
+    }
+    _releaseQueue = release;
+
+    final Directory cacheDir;
+    try {
+      cacheDir = await getTemporaryDirectory();
+    } catch (error, stackTrace) {
+      if (generation != _generation) return;
+      _fail(error, stackTrace);
+      return;
+    }
+    if (generation != _generation) return;
+
+    _native = ProVideoEditor.instance
+        .getThumbnailStream(
+          ThumbnailConfigs(
+            video: EditorVideo.file(videoPath),
+            outputSize: outputSize,
+            timestamps: [for (final index in remaining) timestamps[index]],
+            jpegQuality: quality,
+            // The preview player shares the decoder pool with this pass.
+            maxParallelDecoders: 1,
+          ),
+          nativeLogLevel: .warning,
+        )
+        // One frame at a time: the write must land before the next frame is
+        // merged, or the emitted lists would name files not yet on disk.
+        .asyncMap((frame) => _store(frame, remaining, cacheDir))
+        .listen(
+          (_) {
+            if (generation != _generation) return;
+            final sorted = [..._accumulated]
+              ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+            _controller.add(List.unmodifiable(sorted));
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            if (generation != _generation) return;
+            _fail(error, stackTrace);
+          },
+          onDone: () {
+            _releaseQueue?.call();
+            _releaseQueue = null;
+            if (generation == _generation) unawaited(_controller.close());
+          },
+        );
+  }
+
+  /// Writes one delivered frame to the cache and records it.
+  ///
+  /// [frame] names its positions in the *remaining* request; [remaining]
+  /// maps those back onto [timestamps]. A frame several requested positions
+  /// resolve to is written once per position so every [StripThumbnail] owns
+  /// its file, as the consumers' cleanup assumes.
+  Future<void> _store(
+    ThumbnailFrame frame,
+    List<int> remaining,
+    Directory cacheDir,
+  ) async {
+    for (final requestIndex in frame.indices) {
+      final index = remaining[requestIndex];
+      final file = File(
+        '${cacheDir.path}/strip_${_fileStem}_${_fileCounter++}.jpg',
+      );
+      await file.writeAsBytes(frame.bytes);
+      _done[index] = true;
+      _accumulated.add(
+        StripThumbnail(path: file.path, timestamp: timestamps[index]),
+      );
+    }
+  }
+
+  /// Surfaces a native failure as a stream error and closes: frames already
+  /// delivered stay valid, but the set is truncated.
+  void _fail(Object error, StackTrace stackTrace) {
+    _releaseQueue?.call();
+    _releaseQueue = null;
+    Log.warning(
+      'Failed to generate strip thumbnails for clip $clipId: $error',
+      name: 'VideoThumbnailService',
+      category: LogCategory.video,
+    );
+    if (_controller.isClosed) return;
+    _controller.addError(error, stackTrace);
+    unawaited(_controller.close());
+  }
+}
+
 class StripThumbnail {
   const StripThumbnail({required this.path, required this.timestamp});
 

@@ -44,7 +44,6 @@ import 'package:openvine/services/feed_retry_scheduler.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/repost_resolver.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_block_policy.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
@@ -145,15 +144,13 @@ enum SubscriptionType {
 class VideoEventService extends ChangeNotifier implements VideoEventCache {
   VideoEventService(
     this._nostrService, {
-    required SubscriptionManager subscriptionManager,
     required CrashReporter crashReporter,
     ProfileRepository? profileRepository,
     EventRouter? eventRouter,
     VideoFilterBuilder? videoFilterBuilder,
     PerformanceTraceMonitor? performanceMonitor,
     ConnectionStatusService? connectionService,
-  }) : _subscriptionManager = subscriptionManager,
-       _crashReporter = crashReporter,
+  }) : _crashReporter = crashReporter,
        _profileRepository = profileRepository,
        _eventRouter = eventRouter,
        _videoFilterBuilder = videoFilterBuilder,
@@ -205,7 +202,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   // [_subscriptions], so concurrent identical subscribes can't both
   // issue a relay REQ.
   final Set<String> _pendingSubscriptionIds = {};
-  final List<String> _activeSubscriptionIds = [];
 
   // Global state
   bool _isLoading = false;
@@ -291,7 +287,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   FeedAspectRatioPreferenceService? _feedAspectRatioPreferenceService;
   BrokenVideoTracker? _brokenVideoTracker;
   late String? Function() _currentUserPubkey = () => _nostrService.publicKey;
-  final SubscriptionManager _subscriptionManager;
 
   final CrashReporter _crashReporter;
 
@@ -2089,7 +2084,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         throw Exception('NostrService not initialized');
       }
 
-      // BYPASS SubscriptionManager for main video feed - go directly to NostrService
       // Holds the id claimed in _pendingSubscriptionIds so the catch
       // below (where subscriptionId is out of scope) can release it.
       String? pendingClaimId;
@@ -2241,11 +2235,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           ),
           eventCount: () => eventCount,
         );
-        _pendingFeedLoadTraces[subscriptionId] = pendingTrace;
-        void completeFeedLoadTrace(String completion, {int? eventTotal}) {
-          _pendingFeedLoadTraces.remove(subscriptionId);
-          pendingTrace.complete(completion, eventTotal: eventTotal);
-        }
+        final completeFeedLoadTrace = _pendingFeedLoadTraces.track(
+          subscriptionId,
+          pendingTrace,
+        );
 
         Log.info(
           '📡 Creating subscription for $subscriptionType at ${subscriptionStartTime.toIso8601String()}',
@@ -2337,7 +2330,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           until: effectiveUntil,
           limit: limit,
           sortBy: sortBy,
-        );
+        ).startPhaseAfter(pendingTrace, 'cache_ingest_ms');
 
         // Disposed while the cache read was in flight, so dispose has already
         // closed this load's trace. Carrying on would notify a dead
@@ -2366,6 +2359,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
           completeFeedLoadTrace('cache', eventTotal: cachedEvents.length);
         }
 
+        pendingTrace.startPhase('relay_wait_ms');
         final eventStream = _nostrService.subscribe(
           filters,
           onEose: () {
@@ -2577,9 +2571,8 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       _ensureDefaultContent();
 
       // Progressive loading removed - let UI trigger loadMore as needed
-      final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
       Log.debug(
-        'Subscription status: active=$totalSubs subscriptions (${_activeSubscriptionIds.length} managed, ${_subscriptions.length} direct)',
+        'Subscription status: active=${_subscriptions.length} direct subscriptions',
         name: 'VideoEventService',
         category: LogCategory.video,
       );
@@ -3232,10 +3225,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       name: 'VideoEventService',
       category: LogCategory.video,
     );
-    final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
     final eventCount = getEventCount(subscriptionType);
     Log.verbose(
-      'Current state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
+      'Current state: $subscriptionType events=$eventCount, subscriptions=${_subscriptions.length}',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -3258,10 +3250,9 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       name: 'VideoEventService',
       category: LogCategory.video,
     );
-    final totalSubs = _subscriptions.length + _activeSubscriptionIds.length;
     final eventCount = getEventCount(subscriptionType);
     Log.verbose(
-      'Final state: $subscriptionType events=$eventCount, subscriptions=$totalSubs',
+      'Final state: $subscriptionType events=$eventCount, subscriptions=${_subscriptions.length}',
       name: 'VideoEventService',
       category: LogCategory.video,
     );
@@ -4480,19 +4471,6 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   /// Cancel all existing subscriptions
   Future<void> _cancelExistingSubscriptions() async {
-    // Cancel managed subscriptions
-    if (_activeSubscriptionIds.isNotEmpty) {
-      Log.debug(
-        'Cancelling ${_activeSubscriptionIds.length} managed subscriptions...',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
-      for (final subscriptionId in _activeSubscriptionIds) {
-        await _subscriptionManager.cancelSubscription(subscriptionId);
-      }
-      _activeSubscriptionIds.clear();
-    }
-
     // Cancel direct subscriptions
     if (_subscriptions.isNotEmpty) {
       Log.debug(

@@ -41,7 +41,7 @@ class ProtectedMinorInboxGateImpl implements ProtectedMinorInboxGate {
   /// Releases the restriction-change stream. Owned by the Riverpod provider
   /// (`ref.onDispose`); test-constructed gates should also call this.
   void dispose() {
-    _restrictionChanges.close();
+    unawaited(_restrictionChanges.close());
   }
 
   @override

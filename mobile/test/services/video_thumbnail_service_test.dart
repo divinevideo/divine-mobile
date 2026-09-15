@@ -293,35 +293,76 @@ void main() {
     });
 
     group('generateStripThumbnails', () {
+      const streamChannel = EventChannel('pro_video_editor_thumbnail_stream');
+      final fakeJpegBytes = Uint8List.fromList(
+        List<int>.generate(16, (i) => i),
+      );
+
+      /// Mocks the native side of one thumbnail stream: the sink becomes
+      /// available when the service subscribes, and [onStart] runs when it
+      /// asks native to start — that is where a test emits its frames.
+      List<MethodCall> mockThumbnailStream({
+        required void Function(MockStreamHandlerEventSink sink, String id)
+        onStart,
+      }) {
+        final calls = <MethodCall>[];
+        MockStreamHandlerEventSink? sink;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          ..setMockStreamHandler(
+            streamChannel,
+            MockStreamHandler.inline(onListen: (_, events) => sink = events),
+          )
+          ..setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            if (call.method == 'startThumbnailStream') {
+              final id = (call.arguments as Map)['id'] as String;
+              // Native answers the start first and decodes afterwards.
+              scheduleMicrotask(() => onStart(sink!, id));
+            }
+            return null;
+          });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockStreamHandler(streamChannel, null),
+        );
+        return calls;
+      }
+
+      Map<String, Object?> frameEvent(String id, int index, double progress) =>
+          {
+            'id': id,
+            'indices': [index],
+            'bytes': fakeJpegBytes,
+            'progress': progress,
+          };
+
       test(
-        'emits delivered batches then the error when extraction fails '
+        'emits delivered frames then the error when extraction fails '
         'mid-stream',
         () async {
           // In the merged VGV isolate a widget test that tears down while a
-          // strip generator awaits the static batch queue strands it on a
-          // future from its dead FakeAsync zone (see the cover screen
-          // tests); reset it or the first batch below never runs.
-          VideoThumbnailService.resetStripBatchQueueForTesting();
+          // strip extraction awaits the static queue strands it on a future
+          // from its dead FakeAsync zone (see the cover screen tests); reset
+          // it or the extraction below never starts.
+          VideoThumbnailService.resetStripQueueForTesting();
 
-          // First batch succeeds, second batch hits a native failure.
-          var callCount = 0;
-          final fakeJpegBytes = Uint8List.fromList(
-            List<int>.generate(16, (i) => i),
-          );
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-              .setMockMethodCallHandler(channel, (call) async {
-                if (call.method == 'getThumbnails') {
-                  callCount++;
-                  if (callCount > 1) {
-                    throw PlatformException(code: 'DECODER_ERROR');
-                  }
-                  return List<Uint8List>.generate(6, (_) => fakeJpegBytes);
-                }
-                return null;
+          // Six frames arrive, then native hits a decoder failure.
+          mockThumbnailStream(
+            onStart: (sink, id) {
+              for (var i = 0; i < 6; i++) {
+                sink.success(frameEvent(id, i, (i + 1) / 12));
+              }
+              sink.success({
+                'id': id,
+                'error': 'Decoder stalled',
+                'errorCode': 'THUMBNAIL_ERROR',
               });
+            },
+          );
 
-          // 12 s at 1 thumb/s with the default batch size of 6 → 2 batches.
-          final batches = <List<StripThumbnail>>[];
+          final emissions = <List<StripThumbnail>>[];
           Object? streamError;
           final done = Completer<void>();
           VideoThumbnailService.generateStripThumbnails(
@@ -330,19 +371,20 @@ void main() {
             duration: const Duration(seconds: 12),
             outputSize: const Size(48, 64),
           ).listen(
-            batches.add,
+            emissions.add,
             onError: (Object error) => streamError = error,
             onDone: done.complete,
           );
           await done.future;
 
-          // The successful batch was delivered, then the stream errored —
-          // a listener can tell the truncated set apart from a clean close.
-          expect(batches, hasLength(1));
-          expect(batches.single, hasLength(6));
+          // Every delivered frame was emitted (as a growing accumulated
+          // list), then the stream errored — a listener can tell the
+          // truncated set apart from a clean close.
+          expect(emissions, hasLength(6));
+          expect(emissions.last, hasLength(6));
           expect(streamError, isA<PlatformException>());
 
-          for (final thumbnail in batches.single) {
+          for (final thumbnail in emissions.last) {
             final file = File(thumbnail.path);
             expect(file.existsSync(), isTrue);
             file.deleteSync();
@@ -351,25 +393,22 @@ void main() {
       );
 
       test(
-        'extracts only inside the requested window, timestamped in absolute '
-        'source time',
+        'requests the whole window in one native pass on a single decoder '
+        'session and times frames in absolute source time',
         () async {
-          VideoThumbnailService.resetStripBatchQueueForTesting();
+          VideoThumbnailService.resetStripQueueForTesting();
 
-          final fakeJpegBytes = Uint8List.fromList(
-            List<int>.generate(16, (i) => i),
+          final calls = mockThumbnailStream(
+            onStart: (sink, id) {
+              for (var i = 0; i < 6; i++) {
+                sink.success(frameEvent(id, i, (i + 1) / 6));
+              }
+              sink.success({'id': id, 'done': true});
+            },
           );
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-              .setMockMethodCallHandler(channel, (call) async {
-                if (call.method == 'getThumbnails') {
-                  return List<Uint8List>.generate(6, (_) => fakeJpegBytes);
-                }
-                return null;
-              });
 
-          // A 3 s window starting 20 s into the file: 3 s at 2 thumbs/s is
-          // exactly one batch of 6.
-          final batches = <List<StripThumbnail>>[];
+          // A 3 s window starting 20 s into the file at 2 thumbs/s.
+          final emissions = <List<StripThumbnail>>[];
           final done = Completer<void>();
           VideoThumbnailService.generateStripThumbnails(
             videoPath: testVideoPath,
@@ -378,11 +417,21 @@ void main() {
             startOffset: const Duration(seconds: 20),
             outputSize: const Size(48, 64),
             thumbsPerSecond: 2,
-          ).listen(batches.add, onDone: done.complete);
+          ).listen(emissions.add, onDone: done.complete);
           await done.future;
 
-          expect(batches, hasLength(1));
-          final thumbnails = batches.single;
+          final starts = calls.where((c) => c.method == 'startThumbnailStream');
+          expect(starts, hasLength(1));
+          final args = starts.single.arguments as Map;
+          expect(args['maxParallelDecoders'], 1);
+          final requested = (args['timestamps'] as List).cast<int>();
+          expect(requested, hasLength(6));
+          for (final us in requested) {
+            expect(us ~/ 1000, inInclusiveRange(20000, 23000));
+          }
+
+          expect(emissions, hasLength(6));
+          final thumbnails = emissions.last;
           expect(thumbnails, hasLength(6));
           for (final thumbnail in thumbnails) {
             expect(
@@ -396,12 +445,177 @@ void main() {
             thumbnails.first.timestamp,
             isNot(equals(thumbnails.last.timestamp)),
           );
+          // Emitted sorted by time regardless of delivery order.
+          for (var i = 1; i < thumbnails.length; i++) {
+            expect(
+              thumbnails[i].timestamp,
+              greaterThan(thumbnails[i - 1].timestamp),
+            );
+          }
 
           for (final thumbnail in thumbnails) {
             File(thumbnail.path).deleteSync();
           }
         },
       );
+
+      test(
+        'pausing stops the native pass and resuming requests only the '
+        'frames still missing',
+        () async {
+          VideoThumbnailService.resetStripQueueForTesting();
+
+          // The first pass delivers two frames and is then left hanging (a
+          // pause cancels it); the second pass finishes the rest.
+          var passes = 0;
+          final calls = mockThumbnailStream(
+            onStart: (sink, id) {
+              passes++;
+              if (passes == 1) {
+                sink
+                  ..success(frameEvent(id, 0, 1 / 6))
+                  ..success(frameEvent(id, 1, 2 / 6));
+                return;
+              }
+              for (var i = 0; i < 4; i++) {
+                sink.success(frameEvent(id, i, (i + 1) / 4));
+              }
+              sink.success({'id': id, 'done': true});
+            },
+          );
+
+          final emissions = <List<StripThumbnail>>[];
+          final done = Completer<void>();
+          final secondEmission = Completer<void>();
+          late final StreamSubscription<List<StripThumbnail>> subscription;
+          subscription =
+              VideoThumbnailService.generateStripThumbnails(
+                videoPath: testVideoPath,
+                clipId: 'clip-paused',
+                duration: const Duration(seconds: 3),
+                outputSize: const Size(48, 64),
+                thumbsPerSecond: 2,
+              ).listen(
+                (thumbnails) {
+                  emissions.add(thumbnails);
+                  if (emissions.length == 2) secondEmission.complete();
+                },
+                onDone: done.complete,
+              );
+          await secondEmission.future;
+
+          subscription.pause();
+          await pumpEventQueue();
+          final cancels = calls.where((c) => c.method == 'cancelTask');
+          expect(cancels, hasLength(1));
+
+          subscription.resume();
+          await done.future;
+          await subscription.cancel();
+
+          final starts = calls
+              .where((c) => c.method == 'startThumbnailStream')
+              .toList();
+          expect(starts, hasLength(2));
+          expect(
+            calls.indexWhere((c) => c.method == 'cancelTask'),
+            lessThan(
+              calls.lastIndexWhere((c) => c.method == 'startThumbnailStream'),
+            ),
+          );
+          final first = ((starts[0].arguments as Map)['timestamps'] as List)
+              .cast<int>();
+          final second = ((starts[1].arguments as Map)['timestamps'] as List)
+              .cast<int>();
+          expect(first, hasLength(6));
+          expect(second, hasLength(4));
+          // The second pass asks for exactly the positions the first one
+          // never delivered.
+          expect(second, first.sublist(2));
+
+          expect(emissions.last, hasLength(6));
+          final timestamps = emissions.last.map((t) => t.timestamp).toSet();
+          expect(timestamps, hasLength(6));
+
+          for (final thumbnail in emissions.last) {
+            File(thumbnail.path).deleteSync();
+          }
+        },
+      );
+
+      test(
+        'await-for forwarding keeps one uninterrupted native pass',
+        () async {
+          VideoThumbnailService.resetStripQueueForTesting();
+
+          var passes = 0;
+          final calls = mockThumbnailStream(
+            onStart: (sink, id) async {
+              passes++;
+              final remainingCount = 7 - passes;
+              for (var i = 0; i < remainingCount; i++) {
+                sink.success(frameEvent(id, i, (i + 1) / remainingCount));
+                await Future<void>(() {});
+              }
+              sink.success({'id': id, 'done': true});
+            },
+          );
+
+          Stream<List<StripThumbnail>> forwardWithAwaitFor() async* {
+            await for (final thumbnails
+                in VideoThumbnailService.generateStripThumbnails(
+                  videoPath: testVideoPath,
+                  clipId: 'clip-forwarded',
+                  duration: const Duration(seconds: 3),
+                  outputSize: const Size(48, 64),
+                  thumbsPerSecond: 2,
+                )) {
+              yield thumbnails;
+            }
+          }
+
+          final emissions = await forwardWithAwaitFor().toList();
+
+          final starts = calls.where((c) => c.method == 'startThumbnailStream');
+          expect(starts, hasLength(1));
+          expect(emissions, hasLength(6));
+          expect(emissions.last, hasLength(6));
+
+          for (final thumbnail in emissions.last) {
+            File(thumbnail.path).deleteSync();
+          }
+        },
+      );
+
+      test('cancelling stops the native pass', () async {
+        VideoThumbnailService.resetStripQueueForTesting();
+
+        final calls = mockThumbnailStream(
+          onStart: (sink, id) => sink.success(frameEvent(id, 0, 1 / 6)),
+        );
+
+        final firstEmission = Completer<void>();
+        final subscription =
+            VideoThumbnailService.generateStripThumbnails(
+              videoPath: testVideoPath,
+              clipId: 'clip-cancelled',
+              duration: const Duration(seconds: 3),
+              outputSize: const Size(48, 64),
+              thumbsPerSecond: 2,
+            ).listen((thumbnails) {
+              if (!firstEmission.isCompleted) firstEmission.complete();
+              for (final thumbnail in thumbnails) {
+                File(thumbnail.path).deleteSync();
+              }
+            });
+        await firstEmission.future;
+
+        await subscription.cancel();
+        await pumpEventQueue();
+
+        final cancel = calls.singleWhere((c) => c.method == 'cancelTask');
+        expect((cancel.arguments as Map)['id'], isNotEmpty);
+      });
     });
   });
 

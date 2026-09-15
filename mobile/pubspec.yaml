@@ -61,7 +61,6 @@ workspace:
   - packages/hashtag_repository
   - packages/image_metadata_stripper
   - packages/iap_repository
-  - packages/invite_api_client
   - packages/keycast_flutter
   - packages/likes_repository
   - packages/logging_types
@@ -190,8 +189,6 @@ dependencies:
   in_app_purchase: ^3.2.0
   iap_repository:
     path: packages/iap_repository
-  invite_api_client:
-    path: packages/invite_api_client
   gal: ^2.3.2 # Save videos to device photo gallery
   file_selector: ^1.0.4 # For desktop file selection (macOS, Windows, Linux)
 
@@ -221,7 +218,7 @@ dependencies:
   # Pre-flights remote SVG avatars through the same tokenizer flutter_svg uses
   # before handing bytes to SvgPicture (see AvatarSvgRepository, #7296).
   xml: ^6.5.0
-  skeletonizer: ^2.1.2 # Skeleton loading animations with shimmer effect
+  skeletonizer: ^3.0.0 # Skeleton loading animations with shimmer effect
 
   # Blurhash Service - Blurhash generation and decoding for image placeholders
   blurhash_service:
@@ -352,10 +349,10 @@ dependencies:
 
   # Desktop window management for proper window sizing
   window_manager: ^0.5.1
-  firebase_core: ^4.4.0
-  firebase_crashlytics: ^5.0.7
-  firebase_messaging: ^16.1.1
-  firebase_performance: ^0.11.1+4
+  firebase_core: ^4.14.0
+  firebase_crashlytics: ^5.3.0
+  firebase_messaging: ^16.6.0
+  firebase_performance: ^0.11.5
   # 18.0.0 is the first go_router built on material_ui, and the floor is
   # load-bearing: earlier versions pick a page builder with
   # findAncestorWidgetOfExactType<MaterialApp>() against the framework class,
@@ -387,11 +384,10 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.12.0
+  pro_video_editor: ^2.13.0
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   pro_image_editor: ^14.1.1
-  flutter_colorpicker: ^1.1.0
   file_picker: ^10.3.7
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
@@ -438,7 +434,7 @@ dev_dependencies:
 
   # Testing
   file: ^7.0.1
-  firebase_core_platform_interface: ^6.0.2
+  firebase_core_platform_interface: ^8.1.1
   fake_async: ^1.3.3
   mocktail: ^1.0.3
   bloc_test: ^10.0.0

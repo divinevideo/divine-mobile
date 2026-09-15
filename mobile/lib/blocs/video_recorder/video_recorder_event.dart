@@ -18,6 +18,8 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
   const VideoRecorderInitializeRequested({
     this.videoQuality = VideoEditorConstants.quality,
     this.fromEditor = false,
+    this.recorderMode,
+    this.autoStartRecording = false,
   });
 
   final DivineVideoQuality videoQuality;
@@ -29,8 +31,29 @@ final class VideoRecorderInitializeRequested extends VideoRecorderEvent {
   /// (title, description, clips) via a stale `classic`/`upload` mode.
   final bool fromEditor;
 
+  /// Mode to open in instead of the persisted last-used one.
+  ///
+  /// Persisted as the new last-used mode before the camera starts, so a
+  /// re-initialization later in the session (returning from the editor or
+  /// the library) restores this mode rather than the previous session's —
+  /// which would clear the clips recorded in it. Ignored when [fromEditor]
+  /// is `true`: the editor reopens the camera in the session's current mode.
+  final VideoRecorderMode? recorderMode;
+
+  /// Starts recording as soon as the camera is ready.
+  ///
+  /// Dispatches [VideoRecorderRecordingStartRequested] at the end of a
+  /// successful initialization; a camera that fails to initialize never
+  /// starts recording. Used by the bottom-nav hold-to-record shortcut.
+  final bool autoStartRecording;
+
   @override
-  List<Object?> get props => [videoQuality, fromEditor];
+  List<Object?> get props => [
+    videoQuality,
+    fromEditor,
+    recorderMode,
+    autoStartRecording,
+  ];
 }
 
 /// Forwarded from `WidgetsBindingObserver.didChangeAppLifecycleState`.

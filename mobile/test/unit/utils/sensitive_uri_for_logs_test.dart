@@ -5,7 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 
 /// Issue #3360 / plan §5 — URI redaction acceptance: query keys `token`, `code`,
-/// `deviceCode`, `verifier`, `secret`, path `/invite/<code>`, `divine://` callbacks.
+/// `deviceCode`, `verifier`, `secret`, legacy invite paths, and `divine://`
+/// callbacks.
 void main() {
   group('redactUriStringForLogs', () {
     test('returns invalid placeholder when parse fails', () {
@@ -15,26 +16,23 @@ void main() {
     });
 
     group('AC #3360 — sensitive query keys', () {
-      test(
-        'redacts values for token, code, deviceCode, verifier, secret (and any other query)',
-        () {
-          const raw =
-              'https://divine.video/invite?token=abc&code=CDEF&deviceCode=dd&'
-              'verifier=vv&secret=ss&other=xx';
-          final out = redactUriStringForLogs(raw);
-          expect(out, isNot(contains('abc')));
-          expect(out, isNot(contains('CDEF')));
-          expect(out, isNot(contains('deviceCode=dd')));
-          expect(out, isNot(contains('verifier=vv')));
-          expect(out, isNot(contains('secret=ss')));
-          expect(out, isNot(contains('other=xx')));
-          expect(out, contains('token'));
-          expect(out, contains('deviceCode'));
-          expect(out, contains('verifier'));
-          expect(out, contains('secret'));
-          expect(out, contains(redactedUriComponentForLogs));
-        },
-      );
+      test('redacts values for token, code, deviceCode, verifier, secret (and any other query)', () {
+        const raw =
+            'https://divine.video/path?token=abc&code=CDEF&deviceCode=dd&'
+            'verifier=vv&secret=ss&other=xx';
+        final out = redactUriStringForLogs(raw);
+        expect(out, isNot(contains('abc')));
+        expect(out, isNot(contains('CDEF')));
+        expect(out, isNot(contains('deviceCode=dd')));
+        expect(out, isNot(contains('verifier=vv')));
+        expect(out, isNot(contains('secret=ss')));
+        expect(out, isNot(contains('other=xx')));
+        expect(out, contains('token'));
+        expect(out, contains('deviceCode'));
+        expect(out, contains('verifier'));
+        expect(out, contains('secret'));
+        expect(out, contains(redactedUriComponentForLogs));
+      });
 
       test('each AC-listed value is absent from output (single URL)', () {
         const uri =
@@ -83,7 +81,7 @@ void main() {
       expect(outProfile, contains('/3'));
     });
 
-    test('redacts invite code path segment after /invite/', () {
+    test('redacts the code from a legacy invite path', () {
       const raw =
           'https://divine.video/invite/ABCD-EFGH-INVITE?utm_source=test';
       final out = redactUriStringForLogs(raw);
@@ -114,11 +112,11 @@ void main() {
       expect(out, isNot(contains('supersecret')));
     });
 
-    test('redacts invite gate router path with code query (relative URI)', () {
-      const raw = '/welcome/invite?code=SECRETINVITE&error=';
+    test('redacts query values on a relative URI', () {
+      const raw = '/welcome?code=SECRET&error=';
       final out = redactUriStringForLogs(raw);
-      expect(out, startsWith('/welcome/invite?'));
-      expect(out, isNot(contains('SECRETINVITE')));
+      expect(out, startsWith('/welcome?'));
+      expect(out, isNot(contains('SECRET')));
       expect(out, contains('code=$redactedUriComponentForLogs'));
     });
   });

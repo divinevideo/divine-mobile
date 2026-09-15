@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/navigation/back_action.dart';
 import 'package:openvine/router/navigation/back_navigation_policy.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 
 const _npub = 'npub1xtscya34g58tk0z605fvr788k263gsu6cy9x0mhnm87echrgufzsevkk5s';
 
@@ -27,6 +28,36 @@ void main() {
     group('no route context', () {
       test('is unhandled when the context has not resolved yet', () {
         expect(resolve(null, canPop: true), equals(const BackUnhandled()));
+      });
+    });
+
+    group('campaign landing', () {
+      const campaignLanding = RouteContext(
+        type: RouteType.following,
+        npub: RoutePaths.followingNewSubject,
+      );
+
+      test('goes home on a cold start instead of closing the app', () {
+        // /following/new is a cold-start destination with nothing beneath it,
+        // so reporting the press unhandled would finish the Android activity.
+        expect(
+          resolve(campaignLanding),
+          equals(BackGoTo(RoutePaths.videoFeedForIndex(0))),
+        );
+      });
+
+      test('pops when the landing is pushed over another route', () {
+        expect(
+          resolve(campaignLanding, canPop: true),
+          equals(const BackPop()),
+        );
+      });
+
+      test('leaves a following people list unhandled at base', () {
+        expect(
+          resolve(const RouteContext(type: RouteType.following, npub: _npub)),
+          equals(const BackUnhandled()),
+        );
       });
     });
 

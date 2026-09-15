@@ -83,8 +83,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           // identity-known is the cheapest gate that yields a repository: it
-          // needs no NostrClient in the readiness, and it takes the
-          // warmCache: false branch of _buildProfileRepository.
+          // needs no NostrClient in the readiness.
           nostrSessionProvider.overrideWith(
             () => _TestNostrSession(
               const NostrSessionReadiness.identityKnown(pubkey: pubkey),

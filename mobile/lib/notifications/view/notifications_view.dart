@@ -1,6 +1,8 @@
 // ABOUTME: BLoC-driven notifications list view with scroll pagination,
 // ABOUTME: pull-to-refresh, date headers, and navigation to videos/profiles.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -225,6 +227,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             // OpenVideoTarget or OpenListTarget because it carries a video or
             // list target.
             break;
+          case OpenAppRouteTarget():
+            // Campaign-only target; in-app notification rows never create it.
+            break;
         }
       case ActorNotification(
         :final actor,
@@ -273,6 +278,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
             _navigateToProfile(context, actorPubkey);
           case OpenInboxTarget():
             break;
+          case OpenAppRouteTarget():
+            // Campaign-only target; in-app notification rows never create it.
+            break;
         }
     }
   }
@@ -309,10 +317,14 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
       VideoEngagementType.reposters =>
         VideoEngagementListScreen.repostersRouteName,
     };
-    context.pushNamed(
-      routeName,
-      pathParameters: {'eventId': eventId},
-      queryParameters: addressableId == null ? const {} : {'a': addressableId},
+    _pushRoute(
+      context.pushNamed<void>(
+        routeName,
+        pathParameters: {'eventId': eventId},
+        queryParameters: addressableId == null
+            ? const {}
+            : {'a': addressableId},
+      ),
     );
   }
 
@@ -321,8 +333,10 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     required String pubkey,
     required String listId,
   }) {
-    context.push(
-      CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
+    _pushRoute(
+      context.push<void>(
+        CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
+      ),
     );
   }
 
@@ -393,14 +407,16 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
 
     if (!context.mounted) return false;
 
-    context.push(
-      VideoDetailScreen.pathForId(routeId),
-      extra: shouldAutoOpenComments || fallbackVideoIds.isNotEmpty
-          ? VideoDetailRouteExtra(
-              autoOpenComments: shouldAutoOpenComments,
-              fallbackVideoIds: fallbackVideoIds,
-            )
-          : null,
+    _pushRoute(
+      context.push<void>(
+        VideoDetailScreen.pathForId(routeId),
+        extra: shouldAutoOpenComments || fallbackVideoIds.isNotEmpty
+            ? VideoDetailRouteExtra(
+                autoOpenComments: shouldAutoOpenComments,
+                fallbackVideoIds: fallbackVideoIds,
+              )
+            : null,
+      ),
     );
     return true;
   }
@@ -413,7 +429,21 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     );
 
     final npub = NostrKeyUtils.encodePubKey(userPubkey);
-    context.push(OtherProfileScreen.pathForNpub(npub));
+    _pushRoute(context.push<void>(OtherProfileScreen.pathForNpub(npub)));
+  }
+
+  void _pushRoute(Future<void> routeResult) {
+    // A push future is the eventual pop result; keep notification taps live.
+    unawaited(
+      routeResult.catchError((Object error, StackTrace stackTrace) {
+        Log.error(
+          'Notification route failed: $error',
+          name: 'NotificationsView',
+          category: LogCategory.ui,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
   }
 }
 

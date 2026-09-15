@@ -12,15 +12,25 @@ sealed class VideoFeedEvent extends Equatable {
 ///
 /// Dispatched when the feed screen initializes. Triggers initial
 /// data loading for the specified [mode]. If a mode was previously persisted
-/// to SharedPreferences, the bloc will restore that mode instead.
+/// to SharedPreferences, the bloc will restore that mode instead, unless
+/// [forceMode] pins the start to [mode].
 final class VideoFeedStarted extends VideoFeedEvent {
-  const VideoFeedStarted({this.mode = FeedMode.forYou});
+  const VideoFeedStarted({this.mode = FeedMode.forYou, this.forceMode = false});
 
   /// The feed mode to start with.
   final FeedMode mode;
 
+  /// Whether [mode] must win over the persisted account-scoped source.
+  ///
+  /// The campaign landing route (`/following/new`) has to render the
+  /// Following feed regardless of the account's saved home source, and it
+  /// must not write the forced choice back: opening a campaign push cannot
+  /// silently change the user's home feed. The normal restore-and-persist
+  /// path runs only when this is false.
+  final bool forceMode;
+
   @override
-  List<Object?> get props => [mode];
+  List<Object?> get props => [mode, forceMode];
 }
 
 /// Switch to a different feed mode.

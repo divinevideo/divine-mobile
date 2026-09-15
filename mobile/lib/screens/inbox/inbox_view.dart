@@ -1154,7 +1154,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
                       ? isVanished
                             ? context.l10n.inboxReportedVanishedAccount
                             : context.l10n.inboxReportedUser(displayName)
-                      : context.l10n.reportNotSent,
+                      : context.l10n.reportFailed,
                 ),
               ),
             );

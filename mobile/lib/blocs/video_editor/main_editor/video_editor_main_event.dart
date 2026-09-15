@@ -149,6 +149,11 @@ enum SubEditorType {
   music,
   clips,
   captions,
+
+  /// The voice-over recorder. It sits over the editor as a translucent route,
+  /// so the preview plays on beneath it — muted, with the timeline and the
+  /// editor's own controls stepped aside.
+  voiceOver,
 }
 
 /// Triggered when the user toggles volume edit mode in the timeline.

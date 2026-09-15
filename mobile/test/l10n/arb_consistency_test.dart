@@ -618,6 +618,11 @@ const _knownUntranslatedDebt = <String>{
   'minorAccountReviewAppealTitle',
   'minorAccountReviewAppealTeenBody',
   'minorAccountReviewAppealUnder13Body',
+  // Account-status support routing (#9172). These describe a private support
+  // handoff and need speaker review before replacing the existing localized
+  // Support Center wording.
+  'accountStatusMessageSupport',
+  'supportChatNotAvailable',
   // Inbox Badges tab and its All-tab banner. Translation deferred to the next
   // l10n pass.
   'notificationsTabBadges',

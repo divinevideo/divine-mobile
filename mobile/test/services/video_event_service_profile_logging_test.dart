@@ -7,13 +7,10 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as sdk;
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 void main() {
   group('VideoEventService profile logging', () {
@@ -27,7 +24,6 @@ void main() {
 
       service = VideoEventService(
         _MockNostrClient(),
-        subscriptionManager: _MockSubscriptionManager(),
         crashReporter: const SilentCrashReporter(),
       );
     });

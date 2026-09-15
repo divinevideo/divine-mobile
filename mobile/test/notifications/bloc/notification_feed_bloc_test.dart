@@ -90,6 +90,7 @@ void main() {
 
       when(() => mockFollowRepo.isFollowing(any())).thenReturn(false);
       when(() => mockAppBadgeClearer.clear()).thenAnswer((_) async {});
+      when(() => mockNotificationRepo.isClosed).thenReturn(false);
       when(
         () => mockNotificationRepo.watchSnapshot(filter: any(named: 'filter')),
       ).thenAnswer((_) => snapshotController.stream);
@@ -480,6 +481,31 @@ void main() {
           // The seen watermark did not advance, so the OS badge must stay put
           // — clearing it here would hide notifications the server still
           // considers unread.
+          verifyNever(() => mockAppBadgeClearer.clear());
+        },
+      );
+
+      blocTest<NotificationFeedBloc, NotificationFeedState>(
+        'treats a closed repository on seen-on-open as account-switch noise',
+        setUp: () {
+          when(() => mockNotificationRepo.isClosed).thenReturn(true);
+          when(
+            () => mockNotificationRepo.markAllAsRead(),
+          ).thenThrow(StateError('closed'));
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(NotificationFeedStarted()),
+        expect: () => [
+          NotificationFeedState(isRefreshing: true),
+          NotificationFeedState(
+            isRefreshing: true,
+            status: NotificationFeedStatus.loaded,
+          ),
+          NotificationFeedState(status: NotificationFeedStatus.loaded),
+        ],
+        verify: (_) {
+          // Nothing was marked read, so the badge must not be cleared; the
+          // StateError is expected account-switch noise, not a report.
           verifyNever(() => mockAppBadgeClearer.clear());
         },
       );

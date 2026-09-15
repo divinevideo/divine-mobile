@@ -40,6 +40,7 @@ class PendingViewEvent {
     this.totalDurationMs,
     this.loopCount,
     this.phase,
+    this.appVersion,
     this.sourceDetail,
     this.retryCount = 0,
     this.lastError,
@@ -60,6 +61,10 @@ class PendingViewEvent {
   /// Two-phase reporting phase ('start' or 'end'); null for legacy
   /// end-of-session rows that must replay without a phase tag.
   final String? phase;
+
+  /// Version of the build that recorded the view; null on rows queued before
+  /// the column existed, which replay without a `version` tag.
+  final String? appVersion;
   final String trafficSource;
   final String? sourceDetail;
   final PendingViewEventStatus status;
@@ -80,6 +85,7 @@ class PendingViewEvent {
     int? totalDurationMs,
     int? loopCount,
     String? phase,
+    String? appVersion,
     String? trafficSource,
     String? sourceDetail,
     PendingViewEventStatus? status,
@@ -99,6 +105,7 @@ class PendingViewEvent {
     totalDurationMs: totalDurationMs ?? this.totalDurationMs,
     loopCount: loopCount ?? this.loopCount,
     phase: phase ?? this.phase,
+    appVersion: appVersion ?? this.appVersion,
     trafficSource: trafficSource ?? this.trafficSource,
     sourceDetail: sourceDetail ?? this.sourceDetail,
     status: status ?? this.status,
@@ -137,6 +144,7 @@ class PendingViewEventsDao extends DatabaseAccessor<AppDatabase>
       totalDurationMs: Value(event.totalDurationMs),
       loopCount: Value(event.loopCount),
       phase: Value(event.phase),
+      appVersion: Value(event.appVersion),
       trafficSource: event.trafficSource,
       sourceDetail: Value(event.sourceDetail),
       status: event.status.name,
@@ -160,6 +168,7 @@ class PendingViewEventsDao extends DatabaseAccessor<AppDatabase>
       totalDurationMs: row.totalDurationMs,
       loopCount: row.loopCount,
       phase: row.phase,
+      appVersion: row.appVersion,
       trafficSource: row.trafficSource,
       sourceDetail: row.sourceDetail,
       status: _parseStatus(row.status),

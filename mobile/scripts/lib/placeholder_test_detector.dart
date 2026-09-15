@@ -1,5 +1,6 @@
 // ABOUTME: Detector behind check_placeholder_tests.sh — finds tests that pass
-// ABOUTME: no matter what the product does, and test files declaring none (#3340).
+// ABOUTME: no matter what the product does, and files and groups declaring
+// ABOUTME: none (#3340, #9146).
 //
 // Usage (from mobile/):
 //   dart run scripts/lib/placeholder_test_detector.dart <scan-dir>... [options]
@@ -19,8 +20,16 @@
 //    `testWidgets` / `blocTest` / `patrolTest` / `group` at all. That is the
 //    end state a gutted suite decays into, and the runner reports the file as
 //    a passing suite.
+// 3. EMPTY GROUP — a `group` whose callback tree declares no `test` /
+//    `testWidgets` / `blocTest` / `patrolTest`. Lifecycle calls and bare
+//    assertions do not count,
+//    and their callbacks are not searched: a `when(...)` inside `setUp` does
+//    not turn an empty suite into a populated one. An unknown bare invocation
+//    is conservatively treated as a possible test-declaring helper. Both
+//    imported helpers such as `defineFutureDelayedCeilingTests` and local
+//    wrappers such as `testWidgetsWithSurfaceSize` require that exemption.
 //
-// Both come straight from .claude/rules/testing.md: "A passing test should be
+// All three come from .claude/rules/testing.md: "A passing test should be
 // evidence that the feature works. If the test would still pass with the
 // feature broken, it tests nothing." A tautology is named there explicitly.
 //
@@ -77,6 +86,23 @@ const _anyDeclaration = {
   'group',
 };
 
+/// Calls that appear in a suite without declaring a test case.
+///
+/// Lifecycle callbacks are setup/cleanup code, so calls inside them cannot
+/// prove that the surrounding group contains a test. Registration and bare
+/// assertions declare nothing either: a `verify(...)` sitting directly in a
+/// group body is not a test case. Assertions come from [_assertions] so the
+/// two lists cannot drift apart.
+const Set<String> _nonDeclaringCalls = {
+  'setUp',
+  'setUpAll',
+  'tearDown',
+  'tearDownAll',
+  'addTearDown',
+  'registerFallbackValue',
+  ..._assertions,
+};
+
 /// Calls that assert. A body whose assertions are all tautologies is rule 1.
 const _assertions = {
   'expect',
@@ -98,6 +124,9 @@ enum PlaceholderKind {
 
   /// The file declares no test at all.
   noDeclarations,
+
+  /// A group's callback tree declares no test case.
+  emptyGroup,
 }
 
 /// One test that cannot fail, or one file that declares none.
@@ -291,12 +320,39 @@ class _PlaceholderVisitor extends RecursiveAstVisitor<void> {
   /// Whether the file registers anything at all with the runner.
   bool declaresAnyTest = false;
 
+  /// Number of empty groups whose callbacks are currently being visited.
+  int emptyGroupDepth = 0;
+
   @override
   void visitMethodInvocation(MethodInvocation node) {
     // `harness.test(...)` is a method on another object, not a declaration.
     if (node.realTarget == null) {
       final name = node.methodName.name;
       if (_anyDeclaration.contains(name)) declaresAnyTest = true;
+      if (name == 'group') {
+        final body = _callbackOf(node);
+        if (body != null) {
+          final scan = _GroupScan();
+          body.body.accept(scan);
+          if (!scan.declaresTest) {
+            if (emptyGroupDepth == 0) {
+              final args = node.argumentList.arguments;
+              sites.add(
+                PlaceholderTest(
+                  path: path,
+                  line: lineInfo.getLocation(node.offset).lineNumber,
+                  kind: PlaceholderKind.emptyGroup,
+                  description: args.isEmpty ? '' : _describe(args.first),
+                ),
+              );
+            }
+            emptyGroupDepth++;
+            super.visitMethodInvocation(node);
+            emptyGroupDepth--;
+            return;
+          }
+        }
+      }
       if (_testDeclarations.contains(name)) {
         final body = _callbackOf(node);
         if (body != null) {
@@ -320,17 +376,63 @@ class _PlaceholderVisitor extends RecursiveAstVisitor<void> {
     super.visitMethodInvocation(node);
   }
 
-  FunctionExpression? _callbackOf(MethodInvocation node) {
-    for (final argument in node.argumentList.arguments) {
-      if (argument is FunctionExpression) return argument;
-    }
-    return null;
-  }
-
   String _describe(Expression first) {
     final text = first.toSource().replaceAll(RegExp(r'\s+'), ' ');
     return text.length <= 70 ? text : '${text.substring(0, 67)}...';
   }
+}
+
+/// Conservatively decides whether a group callback declares any test case.
+///
+/// This deliberately does not resolve helpers. An unqualified unknown call may
+/// be a local or imported wrapper around a test declaration, so it is evidence
+/// that the group might be populated. A targeted product call is not.
+class _GroupScan extends RecursiveAstVisitor<void> {
+  bool declaresTest = false;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (declaresTest) return;
+
+    final name = node.methodName.name;
+    // A prefixed import (`ft.test(...)`) or a declaration reached through any
+    // other receiver still declares a test. Counting it costs only detection
+    // power, which is the recoverable direction.
+    if (_testDeclarations.contains(name) || name == 'blocTest') {
+      declaresTest = true;
+      return;
+    }
+
+    if (node.realTarget != null) {
+      super.visitMethodInvocation(node);
+      return;
+    }
+
+    if (_nonDeclaringCalls.contains(name)) {
+      return;
+    }
+
+    if (name == 'group') {
+      final body = _callbackOf(node);
+      if (body == null) {
+        // `group('Feature', sharedSuite)` delegates its declarations.
+        declaresTest = true;
+        return;
+      }
+      body.body.accept(this);
+      return;
+    }
+
+    // Unknown bare calls include local and imported test-declaring helpers.
+    declaresTest = true;
+  }
+}
+
+FunctionExpression? _callbackOf(MethodInvocation node) {
+  for (final argument in node.argumentList.arguments) {
+    if (argument is FunctionExpression) return argument;
+  }
+  return null;
 }
 
 /// Counts assertions in a test body and how many are trivially satisfied.

@@ -9,12 +9,9 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 void main() {
   setUpAll(() {
@@ -24,30 +21,15 @@ void main() {
   group('VideoEventService Pagination', () {
     late VideoEventService videoEventService;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
 
       // Setup basic mock responses
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
-      when(
-        () => mockSubscriptionManager.createSubscription(
-          name: any(named: 'name'),
-          filters: any(named: 'filters'),
-          onEvent: any(named: 'onEvent'),
-          onError: any(named: 'onError'),
-          onComplete: any(named: 'onComplete'),
-          timeout: any(named: 'timeout'),
-          priority: any(named: 'priority'),
-        ),
-      ).thenAnswer((_) async => 'mock-subscription-id');
-
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

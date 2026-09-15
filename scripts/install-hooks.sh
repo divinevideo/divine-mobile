@@ -227,7 +227,8 @@ fi
 # mobile/test/**/*_test.dart, then run the check READ-ONLY (no UPDATE_BASELINE) —
 # the check does the full baseline comparison (NEW/STALE/GROWTH) and fails
 # closed. Ratcheting the baseline stays a deliberate, manual author step. The
-# trigger stays conditional so unrelated pushes are not slowed.
+# trigger stays conditional so unrelated pushes are not slowed. The detector is
+# a Dart script, so run it under the pinned SDK like every other Dart call here.
 CHANGED_SERVICE_FILES=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=ADR "$BASE_BRANCH"...HEAD 2>/dev/null \
     | grep -E '^mobile/lib/services/.*\.dart$' \
     | grep -vE '\.(g|mocks)\.dart$' || true)
@@ -235,13 +236,13 @@ CHANGED_TEST_FILES=$(git -C "$REPO_ROOT" diff --name-only --diff-filter=DR "$BAS
     | grep -E '^mobile/test/.*_test\.dart$' || true)
 if [ -n "$CHANGED_SERVICE_FILES" ] || [ -n "$CHANGED_TEST_FILES" ]; then
     echo "Service/test file(s) changed; checking untested-services floor..."
-    if ! bash "$REPO_ROOT/mobile/scripts/check_untested_services_floor.sh"; then
+    if ! mise exec -- bash "$REPO_ROOT/mobile/scripts/check_untested_services_floor.sh"; then
         echo ""
         echo "Untested-services floor check failed!"
         echo "If it reported a NEW untested service: add a same-named *_test.dart"
-        echo "for the service (or delete the dead service), then ratchet the"
-        echo "baseline:"
-        echo "  UPDATE_BASELINE=1 bash mobile/scripts/check_untested_services_floor.sh"
+        echo "for the service, or a <service>_<aspect>_test.dart that imports it"
+        echo "(or delete the dead service), then ratchet the baseline:"
+        echo "  UPDATE_BASELINE=1 mise exec -- bash mobile/scripts/check_untested_services_floor.sh"
         echo "If it reported 'baseline GREW vs origin/main': your branch is behind an"
         echo "origin/main that shrank the baseline — rebase instead of running"
         echo "UPDATE_BASELINE (which would re-add the offending entries from your"

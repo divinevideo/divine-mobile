@@ -761,9 +761,9 @@ void main() {
       'does not bounce to the loading gate during a background refetch',
       (tester) async {
         // Regression: the review status is a FutureProvider that (in prod)
-        // depends on currentAuthStateProvider, which invalidates itself on
-        // every authStateStream event. A re-run puts the provider into
-        // AsyncLoading while retaining its previous value. The router must
+        // depends on currentAuthStateProvider. An auth-state change starts a
+        // review-status refresh, putting the provider into AsyncLoading while
+        // retaining its previous value. The router must
         // NOT treat that transient refetch as a cold load and bounce to the
         // loading screen — that redirect is a navigation that tears down the
         // video feed, which manifested as videos stopping while swiping the

@@ -7,16 +7,12 @@ import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/environment_config.dart';
-import 'package:openvine/models/invite_availability.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -619,124 +615,6 @@ class _DeveloperOptionsScreenState
               ],
 
               Divider(color: context.vineColors.outline, height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Text(
-                  context.l10n.devOptionsInviteAvailabilityTitle,
-                  style: VineTheme.titleMediumFont(
-                    color: context.vineColors.accentPositive,
-                  ),
-                ),
-              ),
-              BlocBuilder<InviteAvailabilityCubit, InviteAvailabilityState>(
-                builder: (context, availability) {
-                  return Column(
-                    children: [
-                      ListTile(
-                        title: Text(
-                          context.l10n.devOptionsInviteAvailabilityCurrentLabel,
-                          style: VineTheme.titleMediumFont(
-                            color: context.vineColors.primaryText,
-                          ),
-                        ),
-                        subtitle: Text(
-                          _inviteAvailabilityStateText(context, availability),
-                          style: VineTheme.bodyMediumFont(
-                            color: context.vineColors.secondaryText,
-                          ),
-                        ),
-                      ),
-                      ListTile(
-                        title: Text(
-                          context.l10n.devOptionsInviteAvailabilityUseServer,
-                          style: VineTheme.titleMediumFont(
-                            color: context.vineColors.primaryText,
-                          ),
-                        ),
-                        subtitle: Text(
-                          context
-                              .l10n
-                              .devOptionsInviteAvailabilityUseServerSubtitle,
-                          style: VineTheme.bodyMediumFont(
-                            color: context.vineColors.secondaryText,
-                          ),
-                        ),
-                        trailing:
-                            availability.developerOverride ==
-                                InviteAvailabilityOverride.useServer
-                            ? DivineIcon(
-                                icon: DivineIconName.check,
-                                color: context.vineColors.accentPositive,
-                              )
-                            : null,
-                        onTap: () => _setInviteAvailabilityOverride(
-                          InviteAvailabilityOverride.useServer,
-                        ),
-                      ),
-                      ListTile(
-                        title: Text(
-                          context.l10n.devOptionsInviteAvailabilityForceEnabled,
-                          style: VineTheme.titleMediumFont(
-                            color: context.vineColors.primaryText,
-                          ),
-                        ),
-                        subtitle: Text(
-                          context
-                              .l10n
-                              .devOptionsInviteAvailabilityForceEnabledSubtitle,
-                          style: VineTheme.bodyMediumFont(
-                            color: context.vineColors.secondaryText,
-                          ),
-                        ),
-                        trailing:
-                            availability.developerOverride ==
-                                InviteAvailabilityOverride.forceEnabled
-                            ? DivineIcon(
-                                icon: DivineIconName.check,
-                                color: context.vineColors.accentPositive,
-                              )
-                            : null,
-                        onTap: () => _setInviteAvailabilityOverride(
-                          InviteAvailabilityOverride.forceEnabled,
-                        ),
-                      ),
-                      ListTile(
-                        title: Text(
-                          context
-                              .l10n
-                              .devOptionsInviteAvailabilityForceDisabled,
-                          style: VineTheme.titleMediumFont(
-                            color: context.vineColors.primaryText,
-                          ),
-                        ),
-                        subtitle: Text(
-                          context
-                              .l10n
-                              .devOptionsInviteAvailabilityForceDisabledSubtitle,
-                          style: VineTheme.bodyMediumFont(
-                            color: context.vineColors.secondaryText,
-                          ),
-                        ),
-                        trailing:
-                            availability.developerOverride ==
-                                InviteAvailabilityOverride.forceDisabled
-                            ? DivineIcon(
-                                icon: DivineIconName.check,
-                                color: context.vineColors.accentPositive,
-                              )
-                            : null,
-                        onTap: () => _setInviteAvailabilityOverride(
-                          InviteAvailabilityOverride.forceDisabled,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              Divider(color: context.vineColors.outline, height: 32),
               ListTile(
                 leading: const DivineIcon(
                   icon: DivineIconName.bracketsAngle,
@@ -918,46 +796,6 @@ class _DeveloperOptionsScreenState
     setState(() {});
   }
 
-  String _inviteAvailabilityStateText(
-    BuildContext context,
-    InviteAvailabilityState availability,
-  ) {
-    final serverText = switch (availability.serverMode) {
-      OnboardingMode.open =>
-        context.l10n.devOptionsInviteAvailabilityServerDisabled,
-      OnboardingMode.inviteCodeRequired =>
-        context.l10n.devOptionsInviteAvailabilityServerEnabled,
-      null =>
-        availability.hasResolved
-            ? context.l10n.devOptionsInviteAvailabilityServerUnknown
-            : context.l10n.devOptionsInviteAvailabilityServerLoading,
-    };
-    final overrideText = switch (availability.developerOverride) {
-      InviteAvailabilityOverride.useServer =>
-        context.l10n.devOptionsInviteAvailabilityOverrideNone,
-      InviteAvailabilityOverride.forceEnabled =>
-        context.l10n.devOptionsInviteAvailabilityOverrideEnabled,
-      InviteAvailabilityOverride.forceDisabled =>
-        context.l10n.devOptionsInviteAvailabilityOverrideDisabled,
-    };
-    return '$serverText\n$overrideText';
-  }
-
-  void _setInviteAvailabilityOverride(InviteAvailabilityOverride override) {
-    context.read<InviteAvailabilityCubit>().setOverride(override);
-    final toast = switch (override) {
-      InviteAvailabilityOverride.useServer =>
-        context.l10n.devOptionsInviteAvailabilityUseServerToast,
-      InviteAvailabilityOverride.forceEnabled =>
-        context.l10n.devOptionsInviteAvailabilityForceEnabledToast,
-      InviteAvailabilityOverride.forceDisabled =>
-        context.l10n.devOptionsInviteAvailabilityForceDisabledToast,
-    };
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(DivineSnackbarContainer.snackBar(toast));
-  }
-
   Future<void> _clearProtectedMinorOverride() async {
     await ref.read(protectedMinorOverrideServiceProvider).clearOverride();
     ref.invalidate(protectedMinorStatusProvider);
@@ -1022,11 +860,9 @@ class _DeveloperOptionsScreenState
         .setOverride(override);
     ref.invalidate(currentMinorAccountReviewStatusProvider);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      DivineSnackbarContainer.snackBar(
-        toast,
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(DivineSnackbarContainer.snackBar(toast));
     setState(() {});
   }
 

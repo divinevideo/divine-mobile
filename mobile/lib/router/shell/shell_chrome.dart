@@ -83,7 +83,13 @@ class ShellChrome extends StatelessWidget {
           const EnvironmentIndicatorLine(),
           PointerInterceptor(
             intercepting: kIsWeb,
-            child: VineBottomNav(currentIndex: currentIndex),
+            child: VineBottomNav(
+              currentIndex: currentIndex,
+              // `/following/new` renders inside the home branch, so Home reads
+              // as active even though it is not the home feed. The nav needs
+              // that distinction to give the tap an escape back to Home.
+              isCampaignLanding: routeContext?.isCampaignFollowing ?? false,
+            ),
           ),
         ],
       ),

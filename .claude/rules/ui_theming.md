@@ -406,7 +406,7 @@ Pick both from what the field holds:
 | Email | `.emailAddress` | `.none` |
 | Username, handle, npub, hex key, NIP-05 | `.text` | `.none` |
 | URL, relay address | `.url` | `.none` |
-| Password, invite code | `.text` (+ `obscureText`) | `.none` |
+| Password | `.text` (+ `obscureText`) | `.none` |
 | One-time code, integer amount, sat count | `.number` | `.none` |
 | Decimal amount | `.numberWithOptions(decimal: true)` | `.none` |
 | Display name, list title, badge name | `.text` | `.words` |

@@ -37,11 +37,11 @@ class RouterRefreshListenable implements Listenable {
     });
   }
 
-  void dispose() {
+  Future<void> dispose() async {
     if (_disposed) return;
 
     _disposed = true;
-    _subscription.cancel();
     _listeners.clear();
+    await _subscription.cancel();
   }
 }

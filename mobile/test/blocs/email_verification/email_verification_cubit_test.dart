@@ -3,11 +3,9 @@
 
 import 'dart:async';
 
-import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
@@ -17,34 +15,6 @@ import 'package:unified_logger/unified_logger.dart';
 class _MockKeycastOAuth extends Mock implements KeycastOAuth {}
 
 class _MockAuthService extends Mock implements AuthService {}
-
-class _MockInviteApiClient extends Mock implements InviteApiClient {}
-
-class _RecordingAnalytics implements AnalyticsEventSink {
-  final properties = <({String name, String? value})>[];
-
-  @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async => properties.add((name: name, value: value));
-
-  @override
-  Future<void> setUserId(String? userId) async {}
-
-  @override
-  Future<void> logEvent({
-    required String name,
-    required Map<String, Object> parameters,
-  }) async {}
-
-  @override
-  Future<void> logScreenView({
-    required String screenName,
-    String? screenClass,
-    Map<String, Object>? parameters,
-  }) async {}
-}
 
 class _FakeKeycastSession extends Fake implements KeycastSession {}
 
@@ -63,8 +33,6 @@ void main() {
   group('EmailVerificationCubit', () {
     late _MockKeycastOAuth mockOAuth;
     late _MockAuthService mockAuthService;
-    late _MockInviteApiClient mockInviteApiClient;
-    late _RecordingAnalytics analytics;
 
     const testDeviceCode = 'test-device-code-abc123';
     const testVerifier = 'test-verifier-xyz789';
@@ -74,11 +42,6 @@ void main() {
       await LogCaptureService().clearAllLogs();
       mockOAuth = _MockKeycastOAuth();
       mockAuthService = _MockAuthService();
-      mockInviteApiClient = _MockInviteApiClient();
-      analytics = _RecordingAnalytics();
-      when(
-        () => mockAuthService.clearPendingDivineOAuthSession(),
-      ).thenAnswer((_) async {});
       // Reset static state to ensure test isolation
       EmailVerificationCubit.resetCompletedDeviceCode();
     });
@@ -87,8 +50,6 @@ void main() {
       return EmailVerificationCubit(
         oauthClient: mockOAuth,
         authService: mockAuthService,
-        inviteApiClient: mockInviteApiClient,
-        analytics: analytics,
       );
     }
 
@@ -403,390 +364,6 @@ void main() {
           expect(
             cubit.state.errorCode,
             EmailVerificationError.verificationLinkExpired,
-          );
-
-          cubit.close();
-          fake.flushMicrotasks();
-        });
-      });
-    });
-
-    group('invite activation', () {
-      const testCode = 'auth-code-from-server';
-
-      test('consumes invite with exchanged session before sign in', () {
-        when(() => mockAuthService.isRegistered).thenReturn(false);
-        when(() => mockAuthService.isAuthenticated).thenReturn(false);
-        when(() => mockAuthService.isAnonymous).thenReturn(false);
-        when(() => mockOAuth.config).thenReturn(
-          const OAuthConfig(
-            serverUrl: 'https://login.divine.video',
-            clientId: 'client-id',
-            redirectUri: 'divine://auth',
-          ),
-        );
-        when(
-          () => mockOAuth.pollForCode(testDeviceCode),
-        ).thenAnswer((_) async => PollResult.complete(testCode));
-        when(
-          () => mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-        ).thenAnswer(
-          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-        );
-        when(
-          () => mockInviteApiClient.consumeInviteWithSession(
-            code: any(named: 'code'),
-            oauthConfig: any(named: 'oauthConfig'),
-            session: any(named: 'session'),
-          ),
-        ).thenAnswer(
-          (_) async =>
-              const InviteConsumeResult(message: 'Welcome', codesAllocated: 5),
-        );
-        when(
-          () => mockAuthService.signInWithDivineOAuth(any()),
-        ).thenAnswer((_) async {});
-
-        fakeAsync((fake) {
-          final cubit = buildCubit();
-          cubit.startPolling(
-            deviceCode: testDeviceCode,
-            verifier: testVerifier,
-            email: testEmail,
-            inviteCode: 'ab12ef34',
-          );
-
-          fake.elapse(const Duration(seconds: 4));
-
-          expect(cubit.state.status, EmailVerificationStatus.success);
-          verifyInOrder([
-            () =>
-                mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-            () => mockInviteApiClient.consumeInviteWithSession(
-              code: 'AB12-EF34',
-              oauthConfig: any(named: 'oauthConfig'),
-              session: any(named: 'session'),
-            ),
-            () => mockAuthService.signInWithDivineOAuth(any()),
-          ]);
-          verifyNever(() => mockAuthService.clearPendingDivineOAuthSession());
-          expect(analytics.properties, [
-            (name: AnalyticsUserProperty.inviteCode, value: 'AB12-EF34'),
-          ]);
-
-          cubit.close();
-          fake.flushMicrotasks();
-        });
-      });
-
-      test('emits failure when invite activation fails', () {
-        when(() => mockAuthService.isRegistered).thenReturn(false);
-        when(() => mockAuthService.isAuthenticated).thenReturn(false);
-        when(() => mockOAuth.config).thenReturn(
-          const OAuthConfig(
-            serverUrl: 'https://login.divine.video',
-            clientId: 'client-id',
-            redirectUri: 'divine://auth',
-          ),
-        );
-        when(
-          () => mockOAuth.pollForCode(testDeviceCode),
-        ).thenAnswer((_) async => PollResult.complete(testCode));
-        when(
-          () => mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-        ).thenAnswer(
-          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-        );
-        when(
-          () => mockInviteApiClient.consumeInviteWithSession(
-            code: any(named: 'code'),
-            oauthConfig: any(named: 'oauthConfig'),
-            session: any(named: 'session'),
-          ),
-        ).thenThrow(const InviteApiException('Invite activation failed'));
-
-        fakeAsync((fake) {
-          final cubit = buildCubit();
-          cubit.startPolling(
-            deviceCode: testDeviceCode,
-            verifier: testVerifier,
-            email: testEmail,
-            inviteCode: 'ab12ef34',
-          );
-
-          fake.elapse(const Duration(seconds: 4));
-
-          expect(cubit.state.status, EmailVerificationStatus.failure);
-          expect(cubit.state.errorCode, EmailVerificationError.inviteUnknown);
-          expect(cubit.state.showInviteGateRecovery, isTrue);
-          expect(cubit.state.inviteRecoveryCode, 'AB12-EF34');
-          verify(
-            () => mockAuthService.clearPendingDivineOAuthSession(),
-          ).called(1);
-          verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
-
-          cubit.close();
-          fake.flushMicrotasks();
-        });
-      });
-
-      test('redacts sensitive invite activation causes in logs', () {
-        when(() => mockAuthService.isRegistered).thenReturn(false);
-        when(() => mockAuthService.isAuthenticated).thenReturn(false);
-        when(() => mockOAuth.config).thenReturn(
-          const OAuthConfig(
-            serverUrl: 'https://login.divine.video',
-            clientId: 'client-id',
-            redirectUri: 'divine://auth',
-          ),
-        );
-        when(
-          () => mockOAuth.pollForCode(testDeviceCode),
-        ).thenAnswer((_) async => PollResult.complete(testCode));
-        when(
-          () => mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-        ).thenAnswer(
-          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-        );
-        when(
-          () => mockInviteApiClient.consumeInviteWithSession(
-            code: any(named: 'code'),
-            oauthConfig: any(named: 'oauthConfig'),
-            session: any(named: 'session'),
-          ),
-        ).thenThrow(
-          const InviteApiException(
-            'Failed to authenticate invite request: signer leaked '
-            'nsec1qwertyuiopasdfghjklzxcvbnm0123456789abcdef',
-            code: InviteApiErrorCode.clientAuthFailed,
-            cause: FormatException(
-              'relay refused npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefg',
-            ),
-          ),
-        );
-
-        fakeAsync((fake) {
-          final cubit = buildCubit();
-          cubit.startPolling(
-            deviceCode: testDeviceCode,
-            verifier: testVerifier,
-            email: testEmail,
-            inviteCode: 'ab12ef34',
-          );
-
-          fake.elapse(const Duration(seconds: 4));
-
-          final logMessage = LogCaptureService()
-              .getRecentLogs()
-              .map((entry) => entry.message)
-              .lastWhere(
-                (message) => message.startsWith('Invite activation failed:'),
-              );
-
-          expect(logMessage, contains('nsec1<redacted>'));
-          expect(logMessage, contains('npub1<redacted>'));
-          expect(logMessage, isNot(contains('nsec1qwerty')));
-          expect(logMessage, isNot(contains('npub1abc')));
-
-          cubit.close();
-          fake.flushMicrotasks();
-        });
-      });
-
-      // Regression: server returns 409 "Another consumption is in progress;
-      // retry" when invite consumption races (e.g. user double-taps the
-      // verification link or the polling timer hits the same code twice).
-      // The server message literally tells the client to retry, but the
-      // cubit used to give up immediately, leaving the user stuck on the
-      // verify-email screen.
-      test(
-        'retries invite consumption on 409 conflict and succeeds on retry',
-        () {
-          when(() => mockAuthService.isRegistered).thenReturn(false);
-          when(() => mockAuthService.isAuthenticated).thenReturn(false);
-          when(() => mockAuthService.isAnonymous).thenReturn(false);
-          when(() => mockOAuth.config).thenReturn(
-            const OAuthConfig(
-              serverUrl: 'https://login.divine.video',
-              clientId: 'client-id',
-              redirectUri: 'divine://auth',
-            ),
-          );
-          when(
-            () => mockOAuth.pollForCode(testDeviceCode),
-          ).thenAnswer((_) async => PollResult.complete(testCode));
-          when(
-            () =>
-                mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-          ).thenAnswer(
-            (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-          );
-
-          var consumeCallCount = 0;
-          when(
-            () => mockInviteApiClient.consumeInviteWithSession(
-              code: any(named: 'code'),
-              oauthConfig: any(named: 'oauthConfig'),
-              session: any(named: 'session'),
-            ),
-          ).thenAnswer((_) async {
-            consumeCallCount++;
-            if (consumeCallCount == 1) {
-              throw const InviteApiException(
-                'Another consumption is in progress; retry',
-                statusCode: 409,
-              );
-            }
-            return const InviteConsumeResult(
-              message: 'Welcome',
-              codesAllocated: 5,
-            );
-          });
-          when(
-            () => mockAuthService.signInWithDivineOAuth(any()),
-          ).thenAnswer((_) async {});
-
-          fakeAsync((fake) {
-            final cubit = buildCubit();
-            cubit.startPolling(
-              deviceCode: testDeviceCode,
-              verifier: testVerifier,
-              email: testEmail,
-              inviteCode: 'ab12ef34',
-            );
-
-            // Poll fires after 3s; retry waits another ~500ms.
-            fake.elapse(const Duration(seconds: 5));
-
-            expect(cubit.state.status, EmailVerificationStatus.success);
-            expect(
-              consumeCallCount,
-              equals(2),
-              reason:
-                  'Cubit should retry once on 409 before considering '
-                  'invite consumption successful.',
-            );
-            verify(
-              () => mockAuthService.signInWithDivineOAuth(any()),
-            ).called(1);
-
-            cubit.close();
-            fake.flushMicrotasks();
-          });
-        },
-      );
-
-      test('gives up after exhausting retries on persistent 409', () {
-        when(() => mockAuthService.isRegistered).thenReturn(false);
-        when(() => mockAuthService.isAuthenticated).thenReturn(false);
-        when(() => mockOAuth.config).thenReturn(
-          const OAuthConfig(
-            serverUrl: 'https://login.divine.video',
-            clientId: 'client-id',
-            redirectUri: 'divine://auth',
-          ),
-        );
-        when(
-          () => mockOAuth.pollForCode(testDeviceCode),
-        ).thenAnswer((_) async => PollResult.complete(testCode));
-        when(
-          () => mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-        ).thenAnswer(
-          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-        );
-
-        var consumeCallCount = 0;
-        when(
-          () => mockInviteApiClient.consumeInviteWithSession(
-            code: any(named: 'code'),
-            oauthConfig: any(named: 'oauthConfig'),
-            session: any(named: 'session'),
-          ),
-        ).thenAnswer((_) async {
-          consumeCallCount++;
-          throw const InviteApiException(
-            'Another consumption is in progress; retry',
-            statusCode: 409,
-          );
-        });
-
-        fakeAsync((fake) {
-          final cubit = buildCubit();
-          cubit.startPolling(
-            deviceCode: testDeviceCode,
-            verifier: testVerifier,
-            email: testEmail,
-            inviteCode: 'ab12ef34',
-          );
-
-          // Generous elapse so all retries can play out.
-          fake.elapse(const Duration(seconds: 30));
-
-          expect(cubit.state.status, EmailVerificationStatus.failure);
-          expect(
-            consumeCallCount,
-            greaterThan(1),
-            reason:
-                'Cubit should retry at least once on 409 before giving '
-                'up.',
-          );
-          verifyNever(() => mockAuthService.signInWithDivineOAuth(any()));
-
-          cubit.close();
-          fake.flushMicrotasks();
-        });
-      });
-
-      test('does NOT retry on non-conflict InviteApiException (e.g. 400)', () {
-        when(() => mockAuthService.isRegistered).thenReturn(false);
-        when(() => mockAuthService.isAuthenticated).thenReturn(false);
-        when(() => mockOAuth.config).thenReturn(
-          const OAuthConfig(
-            serverUrl: 'https://login.divine.video',
-            clientId: 'client-id',
-            redirectUri: 'divine://auth',
-          ),
-        );
-        when(
-          () => mockOAuth.pollForCode(testDeviceCode),
-        ).thenAnswer((_) async => PollResult.complete(testCode));
-        when(
-          () => mockOAuth.exchangeCode(code: testCode, verifier: testVerifier),
-        ).thenAnswer(
-          (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-        );
-
-        var consumeCallCount = 0;
-        when(
-          () => mockInviteApiClient.consumeInviteWithSession(
-            code: any(named: 'code'),
-            oauthConfig: any(named: 'oauthConfig'),
-            session: any(named: 'session'),
-          ),
-        ).thenAnswer((_) async {
-          consumeCallCount++;
-          throw const InviteApiException(
-            'Invite is not valid',
-            statusCode: 400,
-          );
-        });
-
-        fakeAsync((fake) {
-          final cubit = buildCubit();
-          cubit.startPolling(
-            deviceCode: testDeviceCode,
-            verifier: testVerifier,
-            email: testEmail,
-            inviteCode: 'ab12ef34',
-          );
-
-          fake.elapse(const Duration(seconds: 5));
-
-          expect(cubit.state.status, EmailVerificationStatus.failure);
-          expect(
-            consumeCallCount,
-            equals(1),
-            reason: 'Non-409 invite errors must not be retried.',
           );
 
           cubit.close();
@@ -1618,7 +1195,7 @@ void main() {
 
       // A PIN submit and a poll completion can land on the same cubit at once
       // (user types the PIN while the link's poll is mid-flight). Only one may
-      // reach token exchange / invite consumption, and the in-flight poll must
+      // reach token exchange, and the in-flight poll must
       // not overwrite the PIN-driven success with a missingAuthCode failure.
       test(
         'PIN submit wins; in-flight poll bails without a second exchange',
@@ -1653,18 +1230,6 @@ void main() {
             (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
           );
           when(
-            () => mockInviteApiClient.consumeInviteWithSession(
-              code: any(named: 'code'),
-              oauthConfig: any(named: 'oauthConfig'),
-              session: any(named: 'session'),
-            ),
-          ).thenAnswer(
-            (_) async => const InviteConsumeResult(
-              message: 'Welcome',
-              codesAllocated: 5,
-            ),
-          );
-          when(
             () => mockAuthService.signInWithDivineOAuth(any()),
           ).thenAnswer((_) async {});
 
@@ -1674,7 +1239,6 @@ void main() {
                 deviceCode: testDeviceCode,
                 verifier: testVerifier,
                 email: testEmail,
-                inviteCode: 'ab12ef34',
               );
 
             // Fire the first poll tick; _poll() is now awaiting the slow
@@ -1682,7 +1246,7 @@ void main() {
             fake.elapse(const Duration(seconds: 3));
 
             // User submits the PIN mid-flight. It claims completion and runs
-            // the exchange + consume to success.
+            // the exchange to success.
             unawaited(cubit.submitPin(pin));
             fake.elapse(const Duration(seconds: 2));
 
@@ -1698,13 +1262,6 @@ void main() {
               () => mockOAuth.exchangeCode(
                 code: any(named: 'code'),
                 verifier: any(named: 'verifier'),
-              ),
-            ).called(1);
-            verify(
-              () => mockInviteApiClient.consumeInviteWithSession(
-                code: any(named: 'code'),
-                oauthConfig: any(named: 'oauthConfig'),
-                session: any(named: 'session'),
               ),
             ).called(1);
             verify(
@@ -1740,16 +1297,6 @@ void main() {
           (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
         );
         when(
-          () => mockInviteApiClient.consumeInviteWithSession(
-            code: any(named: 'code'),
-            oauthConfig: any(named: 'oauthConfig'),
-            session: any(named: 'session'),
-          ),
-        ).thenAnswer(
-          (_) async =>
-              const InviteConsumeResult(message: 'Welcome', codesAllocated: 5),
-        );
-        when(
           () => mockAuthService.signInWithDivineOAuth(any()),
         ).thenAnswer((_) async {});
 
@@ -1759,7 +1306,6 @@ void main() {
               deviceCode: testDeviceCode,
               verifier: testVerifier,
               email: testEmail,
-              inviteCode: 'ab12ef34',
             );
 
           unawaited(cubit.submitPin(pin));
@@ -1776,13 +1322,6 @@ void main() {
           ).called(1);
           verify(
             () => mockOAuth.exchangeCode(code: pinCode, verifier: testVerifier),
-          ).called(1);
-          verify(
-            () => mockInviteApiClient.consumeInviteWithSession(
-              code: any(named: 'code'),
-              oauthConfig: any(named: 'oauthConfig'),
-              session: any(named: 'session'),
-            ),
           ).called(1);
 
           cubit.close();
@@ -1816,18 +1355,6 @@ void main() {
             ),
           ).thenAnswer(
             (_) async => const TokenResponse(bunkerUrl: 'wss://relay.test'),
-          );
-          when(
-            () => mockInviteApiClient.consumeInviteWithSession(
-              code: any(named: 'code'),
-              oauthConfig: any(named: 'oauthConfig'),
-              session: any(named: 'session'),
-            ),
-          ).thenAnswer(
-            (_) async => const InviteConsumeResult(
-              message: 'Welcome',
-              codesAllocated: 5,
-            ),
           );
           when(
             () => mockAuthService.signInWithDivineOAuth(any()),

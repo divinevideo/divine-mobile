@@ -4,11 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_feed/video_feed_bloc.dart' show FeedMode;
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
@@ -30,13 +32,9 @@ List<RouteBase> shellRoutes() {
     // pageContextProvider per branch so each tab sees *its own* route context
     // (not the active tab's) and keeps rendering real content while inactive.
     StatefulShellRoute(
-      // go_router 17 started notifying the root observers from inside a
-      // shell's branch navigators, and its 18.x line is what the
-      // material_ui migration needs (#8916). Taking the new default would
-      // make root observers emit screen-view and page-load events for every
-      // in-branch push. That is a product-analytics decision, not a side
-      // effect of a design-system migration, so behaviour is pinned here
-      // until #9079 is decided deliberately.
+      // Branch events are navigator lifecycle rather than reliable user
+      // arrivals, so root analytics deliberately observes only the shell page
+      // and routes above it; see docs/ANALYTICS_OBSERVABILITY.md.
       notifyRootObserver: false,
       // Transition-free on purpose: the shell replaces `/welcome` on the root
       // navigator when the authenticated redirect lands (startup restore,
@@ -80,6 +78,23 @@ List<RouteBase> shellRoutes() {
           navigatorKey: NavigatorKeys.home,
           initialLocation: VideoFeedPage.pathForIndex(0),
           routes: [
+            GoRoute(
+              path: RoutePaths.followingNew,
+              // This contract location intentionally parses as RouteType.following
+              // while rendering the home branch's Following feed. Keep the exact
+              // literal ahead of /following/:pubkey so `new` is never treated as
+              // an account identifier.
+              pageBuilder: (ctx, st) => branchPage(
+                st,
+                const VideoFeedPage(
+                  initialMode: FeedMode.following,
+                  // A campaign tap must land on Following whatever the
+                  // account's saved home source is; the forced start is not
+                  // persisted back (see VideoFeedStarted.forceMode).
+                  forceInitialMode: true,
+                ),
+              ),
+            ),
             GoRoute(
               path: VideoFeedPage.pathWithIndex,
               name: VideoFeedPage.routeName,

@@ -14,7 +14,7 @@ void main() {
     });
 
     tearDown(() async {
-      listenable.dispose();
+      await listenable.dispose();
       await controller.close();
     });
 
@@ -55,7 +55,7 @@ void main() {
       listenable.addListener(() => calls++);
 
       listenable.refresh();
-      listenable.dispose();
+      await listenable.dispose();
 
       await Future<void>.microtask(() {});
 

@@ -9,6 +9,8 @@ import 'package:nostr_sdk/nip05/nip05_validor.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+typedef Nip05Validator = Future<bool?> Function(String nip05, String pubkey);
+
 /// Verification status for NIP-05 addresses
 enum Nip05VerificationStatus {
   /// No NIP-05 claim in profile
@@ -56,9 +58,16 @@ class _VerificationRequest {
 /// - Completer-based request deduplication
 /// - TTL-based cache expiration
 class Nip05VerificationService extends ChangeNotifier {
-  Nip05VerificationService(this._dao);
+  Nip05VerificationService(
+    this._dao, {
+    Nip05Validator validator = Nip05Validor.valid,
+    Duration batchDebounceDuration = const Duration(milliseconds: 200),
+  }) : _validator = validator,
+       _batchDebounceDuration = batchDebounceDuration;
 
   final Nip05VerificationsDao _dao;
+  final Nip05Validator _validator;
+  final Duration _batchDebounceDuration;
 
   // In-memory cache for fast access (pubkey -> status)
   final Map<String, Nip05VerificationStatus> _memoryCache = {};
@@ -145,7 +154,7 @@ class Nip05VerificationService extends ChangeNotifier {
     // Debounce batch execution
     _batchDebounceTimer?.cancel();
     _batchDebounceTimer = Timer(
-      const Duration(milliseconds: 200),
+      _batchDebounceDuration,
       _executeBatch,
     );
 
@@ -189,7 +198,7 @@ class Nip05VerificationService extends ChangeNotifier {
 
     try {
       // Use existing Nip05Validor
-      final isValid = await Nip05Validor.valid(nip05, pubkey);
+      final isValid = await _validator(nip05, pubkey);
 
       if (isValid == null) {
         // Currently being checked by another request

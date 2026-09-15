@@ -615,7 +615,7 @@ final class UserDataCleanupServiceProvider
 }
 
 String _$userDataCleanupServiceHash() =>
-    r'35ad0aa2a24a6ede377f122ee1303ba30bc75649';
+    r'd250dbc7ab86172990c916cbf9b96054284d6a2c';
 
 /// Hashtag service depends on Video event service and cache service
 
@@ -708,7 +708,60 @@ final class ContentReportingServiceProvider
 }
 
 String _$contentReportingServiceHash() =>
-    r'5f32ae82aae7471e3e3dd008a011607def6bc149';
+    r'0030c3a41a37d211afaf14a8e90ff9983bd140b1';
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] for every delivery attempt after local save.
+
+@ProviderFor(reportRetryService)
+final reportRetryServiceProvider = ReportRetryServiceProvider._();
+
+/// Auto-sweep service for the durable `pending_reports` queue.
+///
+/// Uses [ContentReportingService] for every delivery attempt after local save.
+
+final class ReportRetryServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ReportRetryService?>,
+          ReportRetryService?,
+          FutureOr<ReportRetryService?>
+        >
+    with
+        $FutureModifier<ReportRetryService?>,
+        $FutureProvider<ReportRetryService?> {
+  /// Auto-sweep service for the durable `pending_reports` queue.
+  ///
+  /// Uses [ContentReportingService] for every delivery attempt after local save.
+  ReportRetryServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'reportRetryServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$reportRetryServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ReportRetryService?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ReportRetryService?> create(Ref ref) {
+    return reportRetryService(ref);
+  }
+}
+
+String _$reportRetryServiceHash() =>
+    r'580e5f54ac229632f4b5712952c1a2126660befb';
 
 /// Content deletion service for NIP-09 delete events
 

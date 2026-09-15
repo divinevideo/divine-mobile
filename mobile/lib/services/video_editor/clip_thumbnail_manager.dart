@@ -51,7 +51,7 @@ class ClipThumbnailManager {
   // file; until then the flag protects the borrowed frames from being
   // retired as if they were the clip's own.
   final Set<String> _seeded = {};
-  // IDs whose subscription has delivered its final batch — the strip is at
+  // IDs whose subscription has delivered its final frame — the strip is at
   // full density and only a source-file change warrants re-extraction.
   final Set<String> _complete = {};
   // Strips of recently removed clips, kept (files included) for an instant
@@ -170,7 +170,7 @@ class ClipThumbnailManager {
             }
             // Partial strip (removed mid-extraction): fall through so a
             // fresh subscription fills the gaps — the restored frames
-            // stay visible as gap-fillers via the batch merge.
+            // stay visible as gap-fillers via the progressive merge.
           } else {
             // Same id but a different source file — the frames would show
             // stale content, so drop them (borrowed files stay protected).
@@ -221,8 +221,8 @@ class ClipThumbnailManager {
         // re-rendered to a trimmed file), or the trim window grew past what
         // the current request covers. Restart against the new file / window
         // but keep the current frames on screen — clearing them here
-        // would flash black until the first fresh batch arrives. The old
-        // frames are merged out progressively as fresh batches cover
+        // would flash black until the first fresh frame arrives. The old
+        // frames are merged out progressively as fresh frames cover
         // their spots (see [_mergeCarriedFrames]); their files are
         // deleted as they drop out.
         //
@@ -319,7 +319,7 @@ class ClipThumbnailManager {
     final keepDistance = Duration(
       milliseconds: (1000 / thumbsPerSecond / 2).round(),
     );
-    // Latest accumulated fresh batch, for the onDone carried-frame sweep.
+    // Latest accumulated fresh emission, for the onDone carried-frame sweep.
     var latestFresh = const <StripThumbnail>[];
     // Set when the generator hits a native extraction failure mid-stream:
     // the stream errors and closes with only a partial set delivered.
@@ -343,11 +343,11 @@ class ClipThumbnailManager {
             final notifier = _notifiers[clip.id];
             if (notifier == null) return;
             final replaced = notifier.value;
-            // Merge instead of replacing wholesale: early batches are sparse
+            // Merge instead of replacing wholesale: early emissions are sparse
             // (a handful of frames), while the carried frames are dense.
             // Dropping the carried frames here would collapse the strip to a
             // few frames + poster fallbacks and visibly reshuffle it while
-            // batches stream in (worst after a split, where the carried
+            // frames stream in (worst after a split, where the carried
             // frames already show the correct content).
             final merged = _mergeCarriedFrames(
               fresh: thumbnails,
@@ -420,11 +420,11 @@ class ClipThumbnailManager {
     return _StripWindow(start: start, end: end);
   }
 
-  /// Merges carried-over frames into a fresh accumulated batch.
+  /// Merges carried-over frames into a fresh accumulated emission.
   ///
   /// Fresh frames win; a carried frame from [previous] survives only while
   /// its timestamp is inside the clip and no fresh frame sits within
-  /// [keepDistance] of it. As batches accumulate, fresh frames blanket the
+  /// [keepDistance] of it. As emissions accumulate, fresh frames blanket the
   /// timeline and the carried set shrinks to empty on its own.
   static List<StripThumbnail> _mergeCarriedFrames({
     required List<StripThumbnail> fresh,
@@ -475,8 +475,8 @@ class ClipThumbnailManager {
 
   /// Pauses all in-flight thumbnail subscriptions — e.g. while the editor is
   /// obscured by another route — so the native frame extraction stops
-  /// contending for hardware decoders and CPU. Lossless: the batch stream
-  /// generators suspend at the next batch boundary and continue on [resumeAll].
+  /// contending for hardware decoders and CPU. Lossless: the native pass is
+  /// cancelled, then [resumeAll] requests only the frames still missing.
   void pauseAll() {
     _routePaused = true;
     _applyPause();
@@ -608,7 +608,7 @@ class _RetiredStrip {
 
   final List<StripThumbnail> frames;
 
-  /// Whether the strip's subscription had delivered its final batch, i.e.
+  /// Whether the strip's subscription had delivered its final frame, i.e.
   /// the frames are at full density and need no re-extraction on restore.
   final bool complete;
 }

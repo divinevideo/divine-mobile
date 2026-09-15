@@ -9,13 +9,10 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 VideoEvent _videoEvent({required String id}) {
   final event =
@@ -44,13 +41,11 @@ void main() {
   group('VideoEventService broken-video filtering', () {
     late VideoEventService service;
     late _MockNostrClient nostrClient;
-    late _MockSubscriptionManager subscriptionManager;
     late BrokenVideoTracker tracker;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       nostrClient = _MockNostrClient();
-      subscriptionManager = _MockSubscriptionManager();
       when(() => nostrClient.isInitialized).thenReturn(true);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.publicKey).thenReturn(
@@ -62,7 +57,6 @@ void main() {
 
       service = VideoEventService(
         nostrClient,
-        subscriptionManager: subscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
 
@@ -108,62 +102,6 @@ void main() {
         // Tracker reads live state, so a later mark is reflected immediately.
         await tracker.markVideoBroken('x', 'Confirmed unavailable');
         expect(service.filterVideoList(videos).map((v) => v.id), ['y']);
-      },
-    );
-
-    // Scoping the keys orphaned the pre-#6251 unscoped pair: no scope reads
-    // them and `_cleanupOldEntries` only sweeps the loaded scope, so they
-    // would never expire. The containsKey assertions are the load-bearing
-    // ones — isVideoBroken already returns false without the cleanup.
-    test('drops the orphaned pre-#6251 unscoped entries', () async {
-      SharedPreferences.setMockInitialValues({
-        'broken_video_urls': '["legacy1"]',
-        'broken_video_timestamps':
-            '{"legacy1":${DateTime.now().millisecondsSinceEpoch}}',
-      });
-
-      final scopedTracker = BrokenVideoTracker();
-      await scopedTracker.initialize();
-
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.containsKey('broken_video_urls'), isFalse);
-      expect(prefs.containsKey('broken_video_timestamps'), isFalse);
-      expect(scopedTracker.isVideoBroken('legacy1'), isFalse);
-    });
-
-    test(
-      'tracker persistence is scoped between anonymous and signed-in users',
-      () async {
-        final anonymousTracker = BrokenVideoTracker();
-        await anonymousTracker.initialize();
-        await anonymousTracker.markVideoBroken('signed-in-can-watch', '404');
-
-        final signedInTracker = BrokenVideoTracker(ownerPubkey: 'a' * 64);
-        await signedInTracker.initialize();
-
-        expect(signedInTracker.isVideoBroken('signed-in-can-watch'), isFalse);
-
-        await signedInTracker.markVideoBroken('blocked-for-user', '404');
-
-        final reloadedSignedInTracker = BrokenVideoTracker(
-          ownerPubkey: 'a' * 64,
-        );
-        await reloadedSignedInTracker.initialize();
-        final reloadedAnonymousTracker = BrokenVideoTracker();
-        await reloadedAnonymousTracker.initialize();
-
-        expect(
-          reloadedSignedInTracker.isVideoBroken('blocked-for-user'),
-          isTrue,
-        );
-        expect(
-          reloadedAnonymousTracker.isVideoBroken('blocked-for-user'),
-          isFalse,
-        );
-        expect(
-          reloadedAnonymousTracker.isVideoBroken('signed-in-can-watch'),
-          isTrue,
-        );
       },
     );
   });

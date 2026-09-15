@@ -22,7 +22,7 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show localNotificationTapPayload;
+    show NotificationWireValues, localNotificationTapPayload;
 import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -153,7 +153,32 @@ pushNotificationTapTarget({
   required String? eventId,
   required String? notificationType,
   required String? senderPubkey,
+  required String? tapTargetType,
+  required String? tapTargetValue,
 }) {
+  if (notificationType == NotificationWireValues.campaign) {
+    final location = campaignAppRoute(
+      type: tapTargetType,
+      value: tapTargetValue,
+    );
+    if (location == null) {
+      // Neither value is identity-linked, so logging both is how a
+      // misconfigured campaign is told apart from an untapped notification.
+      Log.warning(
+        'Unsupported campaign tap target; opening inbox '
+        '(tapTargetType=$tapTargetType, tapTargetValue=$tapTargetValue)',
+        name: 'main',
+        category: LogCategory.system,
+      );
+    }
+    return (
+      target: location == null
+          ? const OpenInboxTarget()
+          : OpenAppRouteTarget(location),
+      targetEventId: null,
+      videoCoordinate: null,
+    );
+  }
   final videoCoordinate = videoAddressableTarget(referencedAddress);
   final targetEventId = videoCoordinate != null
       ? null
@@ -184,7 +209,8 @@ pushNotificationTapTarget({
 /// repost). [eventId] is the source event itself, used as the target for
 /// mentions, which carry no `referencedEventId`. [senderPubkey] is the actor —
 /// it opens a profile for follows and is the safe fallback when a video target
-/// cannot be resolved.
+/// cannot be resolved. Campaigns use [tapTargetType] and [tapTargetValue]; an
+/// unsupported or unsafe campaign target opens the inbox.
 ///
 /// Failure UX contract (decided in #5079): the profile/inbox fallback applies
 /// only to the event-id walk, where resolution happens *before* a route exists
@@ -205,6 +231,8 @@ Future<void> routeNotificationTap({
   required String? notificationType,
   required String? senderPubkey,
   required ProviderContainer container,
+  required String? tapTargetType,
+  required String? tapTargetValue,
 }) async {
   final (:target, :targetEventId, :videoCoordinate) = pushNotificationTapTarget(
     referencedAddress: referencedAddress,
@@ -212,15 +240,18 @@ Future<void> routeNotificationTap({
     eventId: eventId,
     notificationType: notificationType,
     senderPubkey: senderPubkey,
+    tapTargetType: tapTargetType,
+    tapTargetValue: tapTargetValue,
   );
 
   switch (target) {
     case OpenListTarget(:final pubkey, :final listId):
-      container
-          .read(goRouterProvider)
-          .push(
-            CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
-          );
+      _pushRoute(
+        container,
+        CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
+      );
+    case OpenAppRouteTarget(:final location):
+      container.read(goRouterProvider).go(location);
     case OpenProfileTarget(:final actorPubkey):
       _navigateToNotificationProfile(container, actorPubkey);
     case OpenInboxTarget():
@@ -320,7 +351,24 @@ void _navigateToNotificationProfile(
   String actorPubkeyHex,
 ) {
   final npub = NostrKeyUtils.encodePubKey(actorPubkeyHex);
-  container.read(goRouterProvider).push(OtherProfileScreen.pathForNpub(npub));
+  _pushRoute(container, OtherProfileScreen.pathForNpub(npub));
+}
+
+void _pushRoute(ProviderContainer container, String location) {
+  // A push future is the eventual pop result; keep tap routing non-blocking.
+  unawaited(
+    container.read(goRouterProvider).push<void>(location).catchError((
+      Object error,
+      StackTrace stackTrace,
+    ) {
+      Log.error(
+        'Notification route failed: $error',
+        name: 'PushNotifications',
+        category: LogCategory.ui,
+        stackTrace: stackTrace,
+      );
+    }),
+  );
 }
 
 /// Opens the notifications inbox — the deterministic safe fallback when a tap

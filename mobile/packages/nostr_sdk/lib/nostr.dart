@@ -352,7 +352,9 @@ class Nostr {
   /// deadline rather than completing on the relays that answered first.
   ///
   /// A read that ends any other way than a complete, uncapped answer gets one
-  /// [RelayDiagnosticSite.queryCompletion] line, from the pool.
+  /// [RelayDiagnosticSite.queryCompletion] line: from the pool for a read it
+  /// saw, and from here under [RelayDiagnostic.clientScope] for one whose
+  /// deadline had already passed, which never reaches the pool.
   ///
   /// Throws [ArgumentError] when [filters] is empty.
   Future<QueryResult> readEvents(
@@ -634,8 +636,51 @@ class Nostr {
     required DateTime deadline,
     required bool requireAllRelaysSettled,
   }) async {
-    final eventBox = EventMemBox(sortAfterAdd: false);
+    // [RelayPool.query] rejects an empty filter list, and the deadline branch
+    // below returns before it is ever called. Validate here so a read is
+    // rejected the same way whichever path it takes.
+    if (filters.isEmpty) {
+      throw ArgumentError('No filters given', 'filters');
+    }
+
+    // A deadline that has already passed ends the read before it starts. The
+    // client's query pool can hand a slot over with the caller's budget fully
+    // spent by the wait; a REQ written then was unsubscribed a few
+    // milliseconds later, and the pool read those milliseconds of silence as
+    // every relay having swallowed the request (#7301). Nothing is asked of
+    // the relays, so the outcome is the deadline's with no relay in it — the
+    // same answer the timer below would have given.
     final subscriptionId = id ?? StringUtil.rndNameStr(16);
+    final now = DateTime.now();
+    if (!deadline.isAfter(now)) {
+      // The pool files a completion line for every read it sees; this one
+      // it never will, so the line is filed here — under [clientScope],
+      // which exists so a layer above the pool cannot spend the pool's
+      // rate-limit budget on reads no relay was asked about.
+      emitRelayDiagnostic(
+        _pool.diagnosticsSink,
+        RelayDiagnostic(
+          site: RelayDiagnosticSite.queryCompletion,
+          level: RelayDiagnosticLevel.warning,
+          relayUrl: RelayDiagnostic.clientScope,
+          message:
+              'Query $subscriptionId ended deadline before any REQ was '
+              'written: the deadline had already passed by '
+              '${now.difference(deadline).inMilliseconds}ms',
+        ),
+      );
+      // Growable, like every other exit: the normal path hands back
+      // [EventMemBox.all], which callers are free to sort or append to.
+      return (
+        result: QueryResult(events: <Event>[], endedBy: QueryEnd.deadline),
+        endedAtDeadline: true,
+        relays: <QueryRelaySummary>[],
+        cappedWithoutEvents: <String>[],
+        sentTo: null,
+      );
+    }
+
+    final eventBox = EventMemBox(sortAfterAdd: false);
     final ended = Completer<QueryOutcome>();
     var endedAtDeadline = false;
 

@@ -11,13 +11,10 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 
 // Mock classes
 class _MockNostrClient extends Mock implements NostrClient {}
-
-class _MockSubscriptionManager extends Mock implements SubscriptionManager {}
 
 // Fake classes for setUpAll
 class _FakeFilter extends Fake implements Filter {}
@@ -57,12 +54,10 @@ void main() {
   group('VideoEventService Deduplication Tests', () {
     late VideoEventService videoEventService;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late StreamController<Event> eventStreamController;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       eventStreamController = StreamController<Event>.broadcast();
 
       // Setup mock responses
@@ -80,24 +75,8 @@ void main() {
         ),
       ).thenAnswer((_) => eventStreamController.stream);
 
-      when(
-        () => mockSubscriptionManager.createSubscription(
-          name: any(named: 'name'),
-          filters: any(named: 'filters'),
-          onEvent: any(named: 'onEvent'),
-          onError: any(named: 'onError'),
-          onComplete: any(named: 'onComplete'),
-          priority: any(named: 'priority'),
-        ),
-      ).thenAnswer((_) async => 'mock-sub-id');
-
-      when(
-        () => mockSubscriptionManager.cancelSubscription(any()),
-      ).thenAnswer((_) async {});
-
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });
@@ -361,12 +340,10 @@ void main() {
   group('VideoEventService Repost Deduplication', () {
     late VideoEventService videoEventService;
     late _MockNostrClient mockNostrService;
-    late _MockSubscriptionManager mockSubscriptionManager;
     late StreamController<Event> eventStreamController;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
-      mockSubscriptionManager = _MockSubscriptionManager();
       eventStreamController = StreamController<Event>.broadcast();
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
@@ -383,24 +360,8 @@ void main() {
         ),
       ).thenAnswer((_) => eventStreamController.stream);
 
-      when(
-        () => mockSubscriptionManager.createSubscription(
-          name: any(named: 'name'),
-          filters: any(named: 'filters'),
-          onEvent: any(named: 'onEvent'),
-          onError: any(named: 'onError'),
-          onComplete: any(named: 'onComplete'),
-          priority: any(named: 'priority'),
-        ),
-      ).thenAnswer((_) async => 'mock-sub-id');
-
-      when(
-        () => mockSubscriptionManager.cancelSubscription(any()),
-      ).thenAnswer((_) async {});
-
       videoEventService = VideoEventService(
         mockNostrService,
-        subscriptionManager: mockSubscriptionManager,
         crashReporter: const SilentCrashReporter(),
       );
     });

@@ -218,9 +218,7 @@ void main() {
       );
 
       test('a completion-log failure does not revoke readiness', () async {
-        when(
-          () => crashlytics.isCrashlyticsCollectionEnabled,
-        ).thenReturn(true);
+        when(() => crashlytics.isCrashlyticsCollectionEnabled).thenReturn(true);
         when(
           () => crashlytics.log(any()),
         ).thenThrow(StateError('completion log failed'));
@@ -325,6 +323,213 @@ void main() {
           expect(_errorEntriesMentioning(marker), hasLength(1));
         },
       );
+    });
+
+    group('suppressWhen', () {
+      // The one deliberate drop in this service: an error that echoes an
+      // incident its owner has already reported once. The owner registers the
+      // filter; every sink that funnels into recordError is covered by it
+      // (#7507). The suppression tests use a StateError so the reason a
+      // report is dropped is visibly the filter, not the error's shape.
+      late _MockFirebaseCrashlytics crashlytics;
+
+      setUp(() {
+        crashlytics = _MockFirebaseCrashlytics();
+        _stubHealthyCrashlytics(crashlytics);
+        service = CrashReportingService(
+          initializeFirebase: () async {},
+          crashlytics: () => crashlytics,
+        );
+        final originalOnError = FlutterError.onError;
+        final originalPlatformOnError = PlatformDispatcher.instance.onError;
+        addTearDown(() {
+          FlutterError.onError = originalOnError;
+          PlatformDispatcher.instance.onError = originalPlatformOnError;
+        });
+      });
+
+      Future<void> recordAfterInitialize(Object error) async {
+        await service.initialize();
+        await service.recordError(error, StackTrace.current, reason: 'sink');
+      }
+
+      test('drops a report the registered suppression claims', () async {
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
+
+        await recordAfterInitialize(StateError('echo'));
+
+        verifyNever(
+          () => crashlytics.recordError(
+            any<dynamic>(),
+            any<StackTrace?>(),
+            reason: any(named: 'reason'),
+          ),
+        );
+      });
+
+      test('forwards a report the suppression does not claim', () async {
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
+
+        await recordAfterInitialize(ArgumentError('a defect'));
+
+        verify(
+          () => crashlytics.recordError(
+            any<dynamic>(),
+            any<StackTrace?>(),
+            reason: 'sink',
+          ),
+        ).called(1);
+      });
+
+      test('consults the suppression on every report', () async {
+        // DatabaseCorruptionService flips its flag mid-session, on the first
+        // corrupt statement: reports before the flip are defects, reports
+        // after it are echoes. A filter evaluated once at registration would
+        // get the whole session wrong.
+        var incidentReported = false;
+        service.suppressWhen(
+          name: 'reported incident',
+          isSuppressed: (error) => incidentReported,
+        );
+        await service.initialize();
+
+        await service.recordError(StateError('first'), null, reason: 'sink');
+        incidentReported = true;
+        await service.recordError(StateError('echo'), null, reason: 'sink');
+
+        verify(
+          () => crashlytics.recordError(
+            any<dynamic>(),
+            any<StackTrace?>(),
+            reason: 'sink',
+          ),
+        ).called(1);
+      });
+
+      test('any registered suppression can claim a report', () async {
+        service
+          ..suppressWhen(
+            name: 'argument echo',
+            isSuppressed: (error) => error is ArgumentError,
+          )
+          ..suppressWhen(
+            name: 'state echo',
+            isSuppressed: (error) => error is StateError,
+          );
+
+        await recordAfterInitialize(StateError('echo'));
+
+        verifyNever(
+          () => crashlytics.recordError(
+            any<dynamic>(),
+            any<StackTrace?>(),
+            reason: any(named: 'reason'),
+          ),
+        );
+      });
+
+      test('does not hold a suppressed report for replay', () async {
+        // Registered before initialize, like the corruption filter is: the
+        // decision is made when the report arrives, so a suppressed one must
+        // not sit in the pending list and surface once Crashlytics is up.
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
+        await service.recordError(StateError('echo'), null, reason: 'sink');
+
+        await service.initialize();
+
+        verifyNever(
+          () => crashlytics.recordError(
+            any<dynamic>(),
+            any<StackTrace?>(),
+            reason: any(named: 'reason'),
+          ),
+        );
+      });
+
+      test('does not log a suppressed report as held or lost', () async {
+        // The incident owner already wrote the incident, and the policy, to
+        // the unified log; repeating each echo there at error level would
+        // bury exactly that entry in a bug report.
+        final marker = _uniqueMarker('suppressed');
+        service.suppressWhen(
+          name: 'state echo',
+          isSuppressed: (error) => error is StateError,
+        );
+
+        await service.recordError(StateError(marker), null, reason: 'sink');
+
+        expect(_errorEntriesMentioning(marker), isEmpty);
+      });
+
+      test('never suppresses breadcrumbs or custom keys', () async {
+        service.suppressWhen(name: 'everything', isSuppressed: (error) => true);
+        await service.initialize();
+
+        service.log('breadcrumb');
+        await service.setCustomKey('phase', 'ready');
+
+        verify(() => crashlytics.log('breadcrumb')).called(1);
+        verify(() => crashlytics.setCustomKey('phase', 'ready')).called(1);
+      });
+
+      test(
+        'does not attach report-specific keys to a suppressed error',
+        () async {
+          service.suppressWhen(
+            name: 'state echo',
+            isSuppressed: (error) => error is StateError,
+          );
+          await service.initialize();
+
+          await service.recordErrorWithCustomKeys(
+            StateError('echo'),
+            StackTrace.current,
+            reason: 'sink',
+            customKeys: const {'bloc_last_state': 'stale echo'},
+          );
+
+          verifyNever(
+            () => crashlytics.setCustomKey('bloc_last_state', 'stale echo'),
+          );
+          verifyNever(
+            () => crashlytics.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          );
+        },
+      );
+
+      test('forwards the report when a named suppression throws', () async {
+        service.suppressWhen(
+          name: 'broken filter',
+          isSuppressed: (_) => throw StateError('predicate failed'),
+        );
+
+        await recordAfterInitialize(ArgumentError('original report'));
+
+        verify(
+          () => crashlytics.recordError(
+            any<dynamic>(that: isA<ArgumentError>()),
+            any<StackTrace?>(),
+            reason: 'sink',
+          ),
+        ).called(1);
+        expect(
+          LogCaptureService().getRecentLogs().map((entry) => entry.message),
+          contains(contains('Suppression "broken filter" failed')),
+        );
+      });
     });
   });
 }

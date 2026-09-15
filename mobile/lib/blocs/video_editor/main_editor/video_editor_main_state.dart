@@ -98,6 +98,18 @@ class VideoEditorMainState extends Equatable {
   /// video fills the screen and every part of it can be tapped.
   final bool isPlacingSlidePoint;
 
+  /// Whether the voice-over recorder is open over the editor.
+  ///
+  /// The preview keeps playing beneath its translucent route so the take can
+  /// be timed against the picture, but silently: the editor's own audio would
+  /// otherwise play out of the speaker and straight back into the microphone.
+  bool get isVoiceOverPreview => openSubEditor == SubEditorType.voiceOver;
+
+  /// Whether the timeline and the editor's own actions step aside so the video
+  /// fills the screen: while a slide point is being placed, and while the
+  /// voice-over recorder shows the preview behind its own controls.
+  bool get isCanvasFullscreen => isPlacingSlidePoint || isVoiceOverPreview;
+
   /// Creates a copy with the given fields replaced.
   ///
   /// Use [clearOpenSubEditor] to explicitly close the sub-editor.

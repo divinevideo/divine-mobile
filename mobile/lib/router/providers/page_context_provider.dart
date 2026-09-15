@@ -26,7 +26,6 @@ enum RouteType {
   videoEdit, // Full-screen edit flow for published videos
   subtitleEdit, // Full-screen subtitle edit flow for published videos
   importKey,
-  invites, // Invite codes share/list screen
   badges, // Badge awards dashboard
   settings,
   relaySettings, // Relay configuration screen
@@ -130,6 +129,20 @@ class RouteContext {
   );
 }
 
+/// Whether this context is the campaign landing route ([RoutePaths.followingNew]).
+///
+/// The route is registered as an exact shell route (ahead of
+/// `/following/:pubkey`) and parses as a [RouteType.following] context whose
+/// subject is the literal [RoutePaths.followingNewSubject]. Distinguishing it
+/// from a following *people list* matters where the two need different
+/// navigation: the campaign landing renders the home branch's Following feed
+/// with no owning tab, so back and the bottom-nav Home tap both target the
+/// normal home feed instead of a people-list push.
+extension CampaignFollowingRouteContext on RouteContext {
+  bool get isCampaignFollowing =>
+      type == RouteType.following && npub == RoutePaths.followingNewSubject;
+}
+
 /// Decodes a URL path segment, returning the raw input on malformed
 /// percent-encoding instead of throwing. See #3413.
 ///
@@ -216,7 +229,6 @@ bool _isKnownRouteShape(List<String> segments) {
     case 'content-preferences':
     case 'general-settings':
     case 'storage-management':
-    case 'invites':
     case 'app-language':
     case 'appearance-settings':
     case 'support-center':
@@ -484,9 +496,6 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
 
     case 'storage-management':
       return const RouteContext(type: RouteType.storageManagement);
-
-    case 'invites':
-      return const RouteContext(type: RouteType.invites);
 
     case 'app-language':
       return const RouteContext(type: RouteType.appLanguage);
@@ -776,9 +785,6 @@ String buildRoute(RouteContext context) {
 
     case RouteType.monetizationLinksSettings:
       return RoutePaths.monetizationLinksSettings;
-
-    case RouteType.invites:
-      return RoutePaths.invites;
 
     case RouteType.appLanguage:
       return RoutePaths.appLanguage;

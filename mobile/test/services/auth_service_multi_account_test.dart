@@ -2313,6 +2313,42 @@ void main() {
       });
     }
 
+    test('account switch uses the incoming account following cache', () async {
+      const previousPubkey =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final incomingPubkey = testKeyContainer.publicKeyHex;
+      SharedPreferences.setMockInitialValues({
+        'authentication_source': 'automatic',
+        'current_user_pubkey_hex': previousPubkey,
+        'following_list_$previousPubkey': jsonEncode(['previous-follow']),
+        'following_list_$incomingPubkey': jsonEncode(['incoming-follow']),
+        kKnownAccountsKey: '[]',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      var prefetchCalls = 0;
+      authService = AuthService(
+        backgroundActivityManager: BackgroundActivityManager(),
+        userDataCleanupService: UserDataCleanupService(prefs),
+        keyStorage: mockKeyStorage,
+        flutterSecureStorage: mockSecureStorage,
+        preFetchFollowing: (_) async {
+          prefetchCalls++;
+        },
+      );
+
+      when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
+      when(
+        () => mockKeyStorage.getKeyContainer(),
+      ).thenAnswer((_) async => testKeyContainer);
+
+      await _ignoringDiscoveryErrors(authService.initialize);
+
+      expect(authService.authState, AuthState.authenticated);
+      expect(prefetchCalls, 0);
+      expect(prefs.containsKey('following_list_$previousPubkey'), isTrue);
+      expect(prefs.containsKey('following_list_$incomingPubkey'), isTrue);
+    });
+
     test('prefetches following after publishing authenticated state', () async {
       final prefetchedPubkeys = <String>[];
       final prefetchStarted = Completer<void>();
@@ -2462,37 +2498,34 @@ void main() {
       ('Bunker', 'bunker_info'),
       ('OAuth', 'keycast_session'),
     ]) {
-      test(
-        'account deletion reports $signer archive cleanup failure after '
-        'teardown',
-        () async {
-          SharedPreferences.setMockInitialValues({
-            'authentication_source': AuthenticationSource.automatic.code,
-            kKnownAccountsKey: jsonEncode([
-              KnownAccount(
-                pubkeyHex: testKeyContainer.publicKeyHex,
-                authSource: AuthenticationSource.automatic,
-                addedAt: DateTime.now(),
-                lastUsedAt: DateTime.now(),
-              ).toJson(),
-            ]),
-          });
-          authService.debugSetCurrentKeyContainer(testKeyContainer);
-          final archiveKey =
-              '${archiveKeyPrefix}_${testKeyContainer.publicKeyHex}';
-          when(
-            () => mockSecureStorage.delete(key: archiveKey),
-          ).thenThrow(StateError('keychain unavailable'));
+      test('account deletion reports $signer archive cleanup failure after '
+          'teardown', () async {
+        SharedPreferences.setMockInitialValues({
+          'authentication_source': AuthenticationSource.automatic.code,
+          kKnownAccountsKey: jsonEncode([
+            KnownAccount(
+              pubkeyHex: testKeyContainer.publicKeyHex,
+              authSource: AuthenticationSource.automatic,
+              addedAt: DateTime.now(),
+              lastUsedAt: DateTime.now(),
+            ).toJson(),
+          ]),
+        });
+        authService.debugSetCurrentKeyContainer(testKeyContainer);
+        final archiveKey =
+            '${archiveKeyPrefix}_${testKeyContainer.publicKeyHex}';
+        when(
+          () => mockSecureStorage.delete(key: archiveKey),
+        ).thenThrow(StateError('keychain unavailable'));
 
-          await expectLater(
-            authService.signOut(deleteKeys: true, deleteLocalUserData: true),
-            throwsA(isA<SecureKeyStorageException>()),
-          );
+        await expectLater(
+          authService.signOut(deleteKeys: true, deleteLocalUserData: true),
+          throwsA(isA<SecureKeyStorageException>()),
+        );
 
-          verify(() => mockSecureStorage.delete(key: archiveKey)).called(1);
-          expect(authService.authState, AuthState.unauthenticated);
-        },
-      );
+        verify(() => mockSecureStorage.delete(key: archiveKey)).called(1);
+        expect(authService.authState, AuthState.unauthenticated);
+      });
     }
 
     test('named local deletion works after sign-out and preserves another '
@@ -2551,10 +2584,7 @@ void main() {
       final remaining =
           jsonDecode(prefs.getString(kKnownAccountsKey)!) as List<dynamic>;
       expect(remaining, hasLength(1));
-      expect(
-        remaining.single['pubkeyHex'],
-        remainingAccount.publicKeyHex,
-      );
+      expect(remaining.single['pubkeyHex'], remainingAccount.publicKeyHex);
     });
 
     test('named local deletion preserves an active account session', () async {

@@ -88,9 +88,7 @@ ProductAnalyticsV2Surface productAnalyticsSurfaceForRoute(String? routeName) {
       name.contains('video')) {
     return ProductAnalyticsV2Surface.feed;
   }
-  if (name.contains('create-account') ||
-      name.contains('registration') ||
-      name.contains('invite')) {
+  if (name.contains('create-account') || name.contains('registration')) {
     return ProductAnalyticsV2Surface.registration;
   }
   if (name.contains('welcome') || name.contains('landing')) {

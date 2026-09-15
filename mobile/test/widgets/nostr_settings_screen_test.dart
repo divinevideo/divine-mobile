@@ -73,7 +73,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           authServiceProvider.overrideWithValue(mockAuthService),
-          currentAuthStateProvider.overrideWith((ref) => authState),
+          currentAuthStateProvider.overrideWithValue(authState),
           isFeatureEnabledProvider(
             FeatureFlag.advancedRelaySettings,
           ).overrideWith((ref) => advancedRelaySettingsEnabled),
@@ -420,9 +420,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
-            currentAuthStateProvider.overrideWith(
-              (ref) => AuthState.authenticated,
-            ),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             isFeatureEnabledProvider(
               FeatureFlag.advancedRelaySettings,
             ).overrideWith((ref) => false),
@@ -479,9 +477,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
-            currentAuthStateProvider.overrideWith(
-              (ref) => AuthState.authenticated,
-            ),
+            currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
             isFeatureEnabledProvider(
               FeatureFlag.advancedRelaySettings,
             ).overrideWith((ref) => false),

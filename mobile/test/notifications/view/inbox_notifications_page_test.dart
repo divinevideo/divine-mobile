@@ -3,20 +3,13 @@
 // ABOUTME: watermark, #4708) and that each tab opens its own filtered feed.
 
 // Fresh widget instances make per-pump fixture ownership explicit.
-// ignore_for_file: prefer_const_constructors
-
 import 'package:badge_repository/badge_repository.dart';
-import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/inbox_notifications_page.dart';
@@ -24,7 +17,6 @@ import 'package:openvine/notifications/view/pending_badge_awards_view.dart';
 import 'package:openvine/providers/app_providers.dart';
 
 import '../../helpers/badge_fixtures.dart';
-import '../../helpers/invite_availability_harness.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 class _MockNotificationRepository extends Mock
@@ -34,20 +26,15 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
 
-class _MockInviteStatusCubit extends MockCubit<InviteStatusState>
-    implements InviteStatusCubit {}
-
 void main() {
   group(InboxNotificationsPage, () {
     late _MockNotificationRepository mockNotificationRepo;
     late _MockFollowRepository mockFollowRepo;
-    late _MockInviteStatusCubit mockInviteCubit;
     late _MockBadgeRepository mockBadgeRepo;
 
     setUp(() {
       mockNotificationRepo = _MockNotificationRepository();
       mockFollowRepo = _MockFollowRepository();
-      mockInviteCubit = _MockInviteStatusCubit();
       mockBadgeRepo = _MockBadgeRepository();
 
       when(mockBadgeRepo.loadDashboard).thenAnswer(
@@ -63,14 +50,11 @@ void main() {
       ).thenAnswer((_) async => NotificationPage.empty);
       when(() => mockNotificationRepo.markAllAsRead()).thenAnswer((_) async {});
       when(() => mockFollowRepo.isFollowing(any())).thenReturn(false);
-      when(() => mockInviteCubit.state).thenReturn(InviteStatusState());
-      when(mockInviteCubit.load).thenAnswer((_) async {});
     });
 
     Widget buildSubject({
       bool reduceMotion = false,
       bool isVisible = true,
-      InviteAvailabilityCubit? availabilityCubit,
     }) {
       return testMaterialApp(
         mockFollowRepository: mockFollowRepo,
@@ -85,17 +69,8 @@ void main() {
             data: MediaQuery.of(
               context,
             ).copyWith(disableAnimations: reduceMotion),
-            child: MultiBlocProvider(
-              providers: [
-                if (availabilityCubit != null)
-                  BlocProvider<InviteAvailabilityCubit>.value(
-                    value: availabilityCubit,
-                  ),
-                BlocProvider<InviteStatusCubit>.value(value: mockInviteCubit),
-              ],
-              child: Scaffold(
-                body: InboxNotificationsPage(isVisible: isVisible),
-              ),
+            child: Scaffold(
+              body: InboxNotificationsPage(isVisible: isVisible),
             ),
           ),
         ),
@@ -346,122 +321,6 @@ void main() {
         await tester.pump();
 
         verify(mockBadgeRepo.loadDashboard).called(1);
-      });
-    });
-
-    group('invite banner', () {
-      // Restores show/hide coverage that the deleted
-      // notifications_screen_test.dart asserted before #3567 removed
-      // the legacy screen. The banner is gated on
-      // InviteStatusState.hasAvailableInvites (true when remaining > 0).
-      final l10n = lookupAppLocalizations(const Locale('en'));
-
-      testWidgets('renders the invite card when invites are available', (
-        tester,
-      ) async {
-        when(() => mockInviteCubit.state).thenReturn(
-          const InviteStatusState(
-            status: InviteStatusLoadingStatus.loaded,
-            inviteStatus: InviteStatus(
-              canInvite: true,
-              remaining: 2,
-              total: 2,
-              codes: [
-                InviteCode(code: 'AB23-EF7K', claimed: false),
-                InviteCode(code: 'HN4P-QR56', claimed: false),
-              ],
-            ),
-          ),
-        );
-        final availabilityCubit = seededInviteAvailabilityCubit();
-        addTearDown(availabilityCubit.close);
-
-        await tester.pumpWidget(
-          buildSubject(availabilityCubit: availabilityCubit),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.notificationsInvitePlural(2)), findsOneWidget);
-      });
-
-      testWidgets(
-        'renders the singular label when exactly one invite is left',
-        (tester) async {
-          when(() => mockInviteCubit.state).thenReturn(
-            const InviteStatusState(
-              status: InviteStatusLoadingStatus.loaded,
-              inviteStatus: InviteStatus(
-                canInvite: true,
-                remaining: 1,
-                total: 2,
-                codes: [InviteCode(code: 'AB23-EF7K', claimed: false)],
-              ),
-            ),
-          );
-          final availabilityCubit = seededInviteAvailabilityCubit();
-          addTearDown(availabilityCubit.close);
-
-          await tester.pumpWidget(
-            buildSubject(availabilityCubit: availabilityCubit),
-          );
-          await tester.pumpAndSettle();
-
-          expect(find.text(l10n.notificationsInviteSingular), findsOneWidget);
-        },
-      );
-
-      testWidgets('hides the invite card when signup invites are disabled', (
-        tester,
-      ) async {
-        when(() => mockInviteCubit.state).thenReturn(
-          const InviteStatusState(
-            status: InviteStatusLoadingStatus.loaded,
-            inviteStatus: InviteStatus(
-              canInvite: true,
-              remaining: 2,
-              total: 2,
-              codes: [
-                InviteCode(code: 'AB23-EF7K', claimed: false),
-                InviteCode(code: 'HN4P-QR56', claimed: false),
-              ],
-            ),
-          ),
-        );
-        final availabilityCubit = seededInviteAvailabilityCubit(
-          serverMode: OnboardingMode.open,
-        );
-        addTearDown(availabilityCubit.close);
-
-        await tester.pumpWidget(
-          buildSubject(availabilityCubit: availabilityCubit),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.notificationsInvitePlural(2)), findsNothing);
-      });
-
-      testWidgets('hides the invite card when no invites are available', (
-        tester,
-      ) async {
-        // Default state from setUp() already has no invites, but be
-        // explicit to pin the intent.
-        when(() => mockInviteCubit.state).thenReturn(
-          const InviteStatusState(
-            status: InviteStatusLoadingStatus.loaded,
-            inviteStatus: InviteStatus(
-              canInvite: false,
-              remaining: 0,
-              total: 0,
-              codes: [],
-            ),
-          ),
-        );
-
-        await tester.pumpWidget(buildSubject());
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.notificationsInviteSingular), findsNothing);
-        expect(find.text(l10n.notificationsInvitePlural(2)), findsNothing);
       });
     });
   });

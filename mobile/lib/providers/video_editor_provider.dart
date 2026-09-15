@@ -1705,8 +1705,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   /// Build render parameters for video export.
   ///
-  /// Combines editor editing parameters with custom audio track if selected.
-  /// Returns null if no parameters or sound track are configured.
+  /// Combines editor editing parameters with the resolved audio tracks.
+  /// Always returns a value: falls back to an empty [CompleteParameters]
+  /// when nothing was configured, with audio tracks attached on top.
   CompleteParameters? _buildRenderParameters() {
     final soundTrack = state.selectedSound;
 
@@ -1717,6 +1718,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     final audioTracks = buildRenderAudioTracks(
       metaTracks: audioEvents,
       selectedSound: soundTrack,
+      logName: 'VideoEditorNotifier',
     );
 
     // Surface the resolution result so a silent export (no audio) is

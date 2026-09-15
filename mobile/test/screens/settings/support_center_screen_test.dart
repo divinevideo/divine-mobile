@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -17,7 +18,6 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
-import 'package:openvine/services/support_email_composer.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -63,7 +63,7 @@ void main() {
       WidgetTester tester, {
       AuthState authState = AuthState.authenticated,
       Locale locale = const Locale('en'),
-      SupportEmailCompose? composeEmail,
+      ComposeSupportEmail? composeEmail,
       Future<bool> Function()? openZendeskSupport,
     }) async {
       await tester.pumpWidget(
@@ -71,7 +71,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(authService),
-            currentAuthStateProvider.overrideWith((ref) => authState),
+            currentAuthStateProvider.overrideWithValue(authState),
             bugReportServiceProvider.overrideWithValue(bugReportService),
             accountDeletionServiceProvider.overrideWithValue(
               accountDeletionService,
