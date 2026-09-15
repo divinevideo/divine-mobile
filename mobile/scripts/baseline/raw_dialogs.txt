@@ -11,7 +11,6 @@
 lib/app_update/view/update_dialog.dart	1
 lib/screens/apps/nostr_app_sandbox_screen.dart	1
 lib/screens/auth/create_account_screen.dart	1
-lib/screens/auth/invite_gate_screen.dart	1
 lib/screens/auth/nostr_connect_screen.dart	1
 lib/screens/category_gallery_screen.dart	1
 lib/screens/curated_list_feed_screen.dart	1

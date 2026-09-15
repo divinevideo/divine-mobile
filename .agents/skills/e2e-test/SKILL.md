@@ -77,7 +77,6 @@ the upgrade was actually for.
 | FunnelCake API | 47777 | REST API, under `/api/` on the same proxy |
 | Blossom | 43003 | Media server |
 | Postgres | 15432 | Keycast DB |
-| Invite | 43004 | divine-invite-darshan (Viceroy) |
 
 The app reaches these at `10.0.2.2` from the emulator. Cleartext to
 loopback hosts is permitted in every build type on both platforms.
@@ -85,10 +84,8 @@ loopback hosts is permitted in every build type on both platforms.
 ### Only start what your flow needs
 
 Most services are irrelevant to any given test, and `local_up`
-failing on one does not mean you are blocked. An invite-only flow
-needs `invite` alone: a locally-generated nsec signs on-device, so
-no Keycast, and `onboarding_mode=open` means no invite gate. Check
-what is actually healthy before debugging a service you never call:
+failing on one does not mean you are blocked. Check what is actually
+healthy before debugging a service your flow never calls:
 
 ```bash
 docker compose -f local_stack/docker-compose.yml ps
@@ -160,40 +157,6 @@ whole `up` (idempotent — it restarts whatever died) up to 3 attempts,
 5s apart, **only** when it sees a name-resolution signature in the
 compose output or in the failed containers' logs. A port clash or a
 bad image fails straight through rather than retrying pointlessly.
-
-### Running a locally built backend
-
-Compose pulls `ghcr.io/divinevideo/divine-invite-darshan:e2e`. To
-test an unmerged backend branch, build it and tag it as that name so
-compose uses the local image without pulling:
-
-```bash
-docker build -f Dockerfile.local -t divine-invite-darshan:local .
-docker tag divine-invite-darshan:local ghcr.io/divinevideo/divine-invite-darshan:e2e
-```
-
-The published image is amd64-only, and Compose selects `linux/amd64`
-explicitly so Apple Silicon can run it through emulation. A local build
-on Apple Silicon is arm64-native, so select that platform before starting
-the stack:
-
-```bash
-export INVITE_PLATFORM=linux/arm64
-```
-
-`invite` is one of the few services without `pull_policy: always`, so
-a plain `mise run local_up` keeps your tag. Use `local_up_cached` if
-you have overridden a service that *does* pull on every start.
-
-### Cross-repo gotcha: `kv-store-data.json`
-
-The invite service (`divine-invite-darshan`) reads a gitignored
-`kv-store-data.json`. A **fresh worktree of that repo does not have
-it**, and without it the entire invite-service suite fails. Seed it:
-
-```bash
-printf '{}' > kv-store-data.json
-```
 
 ## Emulator
 
@@ -311,16 +274,6 @@ and so was never counted. Compare `Total:` against the number of tests
 in the file when the exit code disagrees with the summary.
 
 Write `input and output`, not `input/output`.
-
-### NIP-98 URL binding
-
-The invite service rejects a signed request whose `u` tag does not
-match the URL the server saw: `auth_invalid_binding`, HTTP 401. The
-client must sign the **same base URL it calls**. Signing
-`http://10.0.2.2:43004` while calling `http://localhost:43004` fails;
-signing and calling the same host works. If you switch the emulator
-between `10.0.2.2` and a forwarded `localhost`, switch the signing
-base URL with it.
 
 ### Provider error caching
 

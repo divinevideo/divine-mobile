@@ -269,35 +269,6 @@ void main() {
       });
     });
 
-    group('inviteBaseUrl', () {
-      // These exercise the no-define path. The
-      // `bool.hasEnvironment('INVITE_SERVER_URL')` override branch cannot be
-      // reached without a --dart-define on the test run itself.
-      test('local tracks the resolved host on Android', () {
-        debugDefaultTargetPlatformOverride = TargetPlatform.android;
-        const config = EnvironmentConfig(environment: AppEnvironment.local);
-        expect(
-          config.inviteBaseUrl,
-          'http://$androidEmulatorHost:$localInvitePort',
-        );
-      });
-
-      test('local tracks the resolved host on iOS', () {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-        const config = EnvironmentConfig(environment: AppEnvironment.local);
-        expect(config.inviteBaseUrl, 'http://$loopbackHost:$localInvitePort');
-      });
-
-      test('every non-local environment uses the invite service host', () {
-        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-        for (final env in AppEnvironment.values) {
-          if (env == AppEnvironment.local) continue;
-          final config = EnvironmentConfig(environment: env);
-          expect(config.inviteBaseUrl, 'https://invite.divine.video');
-        }
-      });
-    });
-
     group('equality', () {
       test('same environment are equal', () {
         const config1 = EnvironmentConfig(environment: AppEnvironment.staging);

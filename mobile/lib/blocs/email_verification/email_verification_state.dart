@@ -98,18 +98,6 @@ enum EmailVerificationError {
   /// The verified email already belongs to another account.
   emailAlreadyRegistered,
 
-  /// Invite activation failed because the invite was already used.
-  inviteAlreadyUsed,
-
-  /// Invite activation failed because the invite is invalid or revoked.
-  inviteInvalid,
-
-  /// Invite activation failed because of a temporary server / network issue.
-  inviteTemporary,
-
-  /// Invite activation failed for an unspecified reason.
-  inviteUnknown,
-
   /// The submitted PIN was incorrect.
   pinInvalid,
 
@@ -133,8 +121,6 @@ final class EmailVerificationState extends Equatable {
     this.status = EmailVerificationStatus.initial,
     this.pendingEmail,
     this.errorCode,
-    this.showInviteGateRecovery = false,
-    this.inviteRecoveryCode,
     this.pinStatus = PinSubmissionStatus.idle,
     this.pinErrorCode,
     this.resendStatus = ResendStatus.idle,
@@ -152,12 +138,6 @@ final class EmailVerificationState extends Equatable {
   /// Always `null` on non-failure states. Mapped to a localized string in the
   /// UI layer — never store or render a raw English string here.
   final EmailVerificationError? errorCode;
-
-  /// Whether the failure should send the user back through the invite gate.
-  final bool showInviteGateRecovery;
-
-  /// Invite code to prefill when recovering through the invite gate.
-  final String? inviteRecoveryCode;
 
   /// Status of the in-app PIN submission.
   final PinSubmissionStatus pinStatus;
@@ -187,8 +167,6 @@ final class EmailVerificationState extends Equatable {
     EmailVerificationStatus? status,
     String? pendingEmail,
     Object? errorCode = _unset,
-    bool? showInviteGateRecovery,
-    String? inviteRecoveryCode,
     PinSubmissionStatus? pinStatus,
     Object? pinErrorCode = _unset,
     ResendStatus? resendStatus,
@@ -200,9 +178,6 @@ final class EmailVerificationState extends Equatable {
       errorCode: identical(errorCode, _unset)
           ? this.errorCode
           : errorCode as EmailVerificationError?,
-      showInviteGateRecovery:
-          showInviteGateRecovery ?? this.showInviteGateRecovery,
-      inviteRecoveryCode: inviteRecoveryCode ?? this.inviteRecoveryCode,
       pinStatus: pinStatus ?? this.pinStatus,
       pinErrorCode: identical(pinErrorCode, _unset)
           ? this.pinErrorCode
@@ -218,8 +193,6 @@ final class EmailVerificationState extends Equatable {
     status,
     pendingEmail,
     errorCode,
-    showInviteGateRecovery,
-    inviteRecoveryCode,
     pinStatus,
     pinErrorCode,
     resendStatus,

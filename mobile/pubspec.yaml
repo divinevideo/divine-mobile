@@ -61,7 +61,6 @@ workspace:
   - packages/hashtag_repository
   - packages/image_metadata_stripper
   - packages/iap_repository
-  - packages/invite_api_client
   - packages/keycast_flutter
   - packages/likes_repository
   - packages/logging_types
@@ -190,8 +189,6 @@ dependencies:
   in_app_purchase: ^3.2.0
   iap_repository:
     path: packages/iap_repository
-  invite_api_client:
-    path: packages/invite_api_client
   gal: ^2.3.2 # Save videos to device photo gallery
   file_selector: ^1.0.4 # For desktop file selection (macOS, Windows, Linux)
 

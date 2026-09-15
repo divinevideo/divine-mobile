@@ -17,7 +17,6 @@ import 'package:openvine/blocs/dm/conversation_actions/conversation_actions_cubi
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
 import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
-import 'package:openvine/blocs/invite_status/invite_status_cubit.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -55,9 +54,6 @@ class _MockConversationMuteCubit extends MockCubit<ConversationMuteState>
 
 class _MockConversationActionsCubit extends MockCubit<ConversationActionsState>
     implements ConversationActionsCubit {}
-
-class _MockInviteStatusCubit extends MockCubit<InviteStatusState>
-    implements InviteStatusCubit {}
 
 class _MockDmUnreadCountCubit extends MockCubit<int>
     implements DmUnreadCountCubit {}
@@ -147,10 +143,6 @@ void main() {
         );
       }
 
-      final mockInviteCubit = _MockInviteStatusCubit();
-      when(() => mockInviteCubit.state).thenReturn(const InviteStatusState());
-      when(mockInviteCubit.load).thenAnswer((_) async {});
-
       final mockDmUnreadCubit = _MockDmUnreadCountCubit();
       when(() => mockDmUnreadCubit.state).thenReturn(dmUnreadCount);
       whenListen(
@@ -210,7 +202,6 @@ void main() {
             providers: [
               BlocProvider<ConversationListBloc>.value(value: mockBloc),
               BlocProvider<MyFollowingBloc>.value(value: mockFollowingBloc),
-              BlocProvider<InviteStatusCubit>.value(value: mockInviteCubit),
               BlocProvider<DmUnreadCountCubit>.value(value: mockDmUnreadCubit),
               BlocProvider<NotificationBadgeCubit>.value(
                 value: mockNotifBadgeCubit,

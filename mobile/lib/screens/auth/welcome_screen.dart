@@ -10,8 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/blocs/invite_availability/invite_availability_cubit.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_state.dart';
 import 'package:openvine/blocs/welcome/welcome_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -41,9 +39,6 @@ class WelcomeScreen extends ConsumerWidget {
   /// Path for create account route.
   static const createAccountPath = '/welcome/create-account';
 
-  /// Path for invite gate route.
-  static const inviteGatePath = '/welcome/invite';
-
   /// Path for reset password route.
   static const String resetPasswordPath = RoutePaths.welcomeResetPassword;
 
@@ -70,31 +65,6 @@ class WelcomeScreen extends ConsumerWidget {
     return Uri(
       path: loginOptionsPath,
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
-    ).toString();
-  }
-
-  /// Build invite gate path with optional recovery context prefilled.
-  static String inviteGatePathWithCode(
-    String code, {
-    String? error,
-    InviteGateError? errorReason,
-    String? sourceSlug,
-  }) {
-    final queryParameters = <String, String>{'code': code};
-
-    if (error != null && error.isNotEmpty) {
-      queryParameters['error'] = error;
-    }
-    if (errorReason != null) {
-      queryParameters['errorReason'] = errorReason.queryValue;
-    }
-    if (sourceSlug != null && sourceSlug.isNotEmpty) {
-      queryParameters['sourceSlug'] = sourceSlug;
-    }
-
-    return Uri(
-      path: inviteGatePath,
-      queryParameters: queryParameters,
     ).toString();
   }
 
@@ -156,14 +126,7 @@ class _WelcomeView extends ConsumerWidget {
       listener: (context, state) {
         switch (state.status) {
           case WelcomeStatus.navigatingToCreateAccount:
-            final invitesEnabled =
-                context.read<InviteAvailabilityCubit?>()?.state.isEnabled ??
-                false;
-            context.push(
-              invitesEnabled
-                  ? WelcomeScreen.inviteGatePath
-                  : WelcomeScreen.createAccountPath,
-            );
+            context.push(WelcomeScreen.createAccountPath);
           case WelcomeStatus.navigatingToLoginOptions:
             context.push(WelcomeScreen.loginOptionsPath);
           case WelcomeStatus.navigatingToAccountDeletionRecovery:

@@ -3,7 +3,7 @@
 Status: Current
 Validated against: `mobile/lib/services/video_event_service.dart`,
 `mobile/lib/services/feed_load_trace.dart`, and
-`mobile/lib/services/performance_monitoring_service.dart` on 2026-09-07.
+`mobile/lib/services/performance_monitoring_service.dart` on 2026-09-14.
 
 The `feed_load_*` custom traces measure how long a newly created feed load
 takes to reach its first terminal milestone. They cover the cache lookup and
@@ -190,6 +190,88 @@ pending, and its provider is `keepAlive`, so that fires at container
 teardown — the duration is "from this load's start until the app tore down",
 bounded by session length rather than by anything about the load. Chart
 `disposed` as a count, never as a latency.
+
+## Separating cache work from relay waiting
+
+The existing `feed_load_*` traces now carry consecutive phase metrics. Their
+start, first-wins completion, and `event_count` semantics are unchanged.
+
+| Metric | Work measured |
+| --- | --- |
+| `cache_read_ms` | Trace start through the cached-event read returning, including database availability, query, and row-to-event conversion |
+| `cache_ingest_ms` | Processing returned events and notifying listeners, or advancing to relay setup when the cache is empty |
+| `relay_wait_ms` | Relay subscription setup through the first terminal milestone, only when cache completion has not already won |
+
+`terminal_phase` names the metric active when the load ended. Cancellation,
+disposal, timeout, and errors record the unfinished phase's elapsed time too.
+Missing metrics mean a phase was never reached, not zero duration. Work after
+completion cannot add metrics to a stopped trace.
+
+In Firebase Performance, select the build and a single `completion` first.
+For a slow `cache` sample, compare `cache_read_ms` with `cache_ingest_ms`. For a
+slow `first_relay_event` or `eose_empty` sample, also inspect `relay_wait_ms`.
+Inspect abandonment counts separately; their partial phases are not successful
+load latencies. Relay waiting includes client setup, transport, server work,
+and delivery back to Dart; it is not a server query timer.
+
+## Watch-history initialization and feed waits
+
+For You and other repository paths that order videos by freshness wait for
+`SeenVideosService` through `SeenVideoLookup`. Two additional Performance traces
+separate initializing history from the wait experienced by a feed caller.
+
+### `seen_videos_initialize`
+
+One trace per actual initialization attempt. Concurrent callers share that
+attempt, and already-initialized calls do not emit another initialization trace.
+
+| Metric | Work measured |
+| --- | --- |
+| `preferences_ms` | Obtaining SharedPreferences |
+| `preferences_decode_ms` | Reading and decoding saved metrics or legacy IDs and building their in-memory maps |
+| `legacy_migration_ms` | Saving the legacy ID list as metrics and removing the old key, when needed |
+| `database_read_ms` | Awaiting all stored seen rows, including database opening, queueing, query execution, and row materialization |
+| `database_merge_ms` | Merging returned rows into the in-memory history |
+| `database_migration_ms` | Copying preference metrics into the database and recording the migration marker, when needed |
+| `migration_marker_ms` | Writing only the migration marker when database rows already exist |
+
+`database_rows`, `seen_count`, `metrics_count`, and `preferences_json_chars`
+provide size context without recording IDs or history contents. The last metric
+counts string code units, not UTF-8 bytes. Background pruning is unawaited and
+excluded from the phase breakdown.
+
+Filter `storage` to `database` or `preferences`. `completion=success` means the
+restore completed without a caught error; `partial` means the existing fallback
+continued after a decode/read/migration failure; `error` means initialization
+did not finish normally. `failed_phase` classifies caught failures without
+including exception text. Partial restore still preserves the service's existing
+ready/fallback behavior; this instrumentation does not change recovery policy.
+
+### `feed_wait_seen_history`
+
+One trace for each caller that reaches freshness ordering before history is
+initialized. `wait_ms` measures that caller's wait, which may overlap the
+initialization trace and other callers' waits. Do not add those durations.
+Already-ready callers emit no wait trace, so these samples cannot establish the
+percentage of all feed loads that waited. `initialization_state` is `not_started`
+or `in_progress`; `completion` is `ready` or `not_ready` on return. A partial
+restore can still be ready: consult the initialization trace for restore errors.
+
+If wait times are high, compare initialization's database-read, decode, merge,
+and migration metrics within the same build and device cohort. A large
+`database_read_ms` identifies the database boundary, but cannot distinguish SQL
+execution from opening or queueing without an on-device database profile.
+A large decode/merge phase points toward processing local history. These traces
+do not carry a per-feed correlation ID and do not time the recommendation HTTP
+request; use the existing HTTP metrics and first-visible/fresh-result Analytics
+events for those boundaries.
+
+All phase durations use a monotonic stopwatch and include elapsed async waits;
+they are neither CPU-time nor foreground-only measurements. The existing
+distributed-release collection gate and Firebase sampling still apply. No
+native reporting future is awaited by history initialization or feed completion.
+No new account identifiers, video IDs, request URLs, or history contents are
+included in these traces.
 
 ## What `event_count` counts
 

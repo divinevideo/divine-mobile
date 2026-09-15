@@ -12,12 +12,6 @@ class _RecordingAnalyticsEventSink implements AnalyticsEventSink {
   Future<void> setUserId(String? userId) async {}
 
   @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
-
-  @override
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
@@ -64,11 +58,7 @@ void main() {
         final handle = tracker.startFeedLoad('forYou');
         tracker
           ..markFirstVisibleContent(handle, 4, servedFromCache: false)
-          ..markFreshResultCompleted(
-            handle,
-            12,
-            recommendationPageCount: 3,
-          );
+          ..markFreshResultCompleted(handle, 12, recommendationPageCount: 3);
 
         expect(tracker.activeSessionCount, 0);
         final completion = sink.events.firstWhere(
@@ -133,11 +123,7 @@ void main() {
         );
 
         now = now.add(const Duration(milliseconds: 15));
-        tracker.markFirstVisibleContent(
-          second,
-          8,
-          servedFromCache: false,
-        );
+        tracker.markFirstVisibleContent(second, 8, servedFromCache: false);
         now = now.add(const Duration(milliseconds: 5));
         tracker.markFreshResultCompleted(second, 8);
 

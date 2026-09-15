@@ -71,7 +71,6 @@ Everything below routes through `instrumentedHttpClientFactoryProvider`.
 | Username claim / release / check | `names.divine.video` | `repository_providers.dart` |
 | Keycast OAuth (login/register/token/poll/reset) | `login.divine.video` | `auth_providers.dart` |
 | Relay-manager (minor-account review) | `api-relay-*.divine.video` | `upload_media_providers.dart` |
-| Invite server | `invite.divine.video` | `main.dart` |
 | Apps-directory listing + audit | `apps.divine.video` | `nostr_apps_providers.dart` |
 | NIP-39 identity verification | `verifier.divine.video` | `auth_providers.dart` |
 | CAWG identity verification | `verifyer.divine.video` | `auth_providers.dart` |

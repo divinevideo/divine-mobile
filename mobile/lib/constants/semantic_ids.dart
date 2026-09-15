@@ -113,11 +113,6 @@ abstract class SemanticIds {
   static const String authSignInOptionsInfoButton =
       'sign_in_options_info_button';
 
-  /// Invite gate. Account creation is gated on a code here, so these two sit
-  /// on the critical path of every flow that signs up.
-  static const String authInviteCodeField = 'invite_code_field';
-  static const String authInviteSubmitButton = 'invite_submit_button';
-
   /// Settings rows on the path to managing local account keys. These journeys
   /// have to stay addressable after settings information-architecture moves.
   static const String settingsNostrRow = 'nostr_settings_tile';
