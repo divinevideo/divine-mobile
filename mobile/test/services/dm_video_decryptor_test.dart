@@ -26,10 +26,12 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(Options());
+      registerFallbackValue('');
     });
 
     setUp(() {
       dio = _MockDio();
+      when(() => dio.options).thenReturn(BaseOptions());
       tempDir = Directory.systemTemp.createTempSync('dm_video_decryptor_');
       originalPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = MockPathProviderPlatform()
@@ -89,6 +91,58 @@ void main() {
         expect(options.responseType, ResponseType.bytes);
       },
     );
+
+    test('configures finite connect and receive timeouts on the client', () {
+      DmVideoDecryptor(dio: dio);
+
+      expect(dio.options.connectTimeout, isNotNull);
+      expect(dio.options.receiveTimeout, isNotNull);
+    });
+
+    test('rejects a non-HTTPS url before making any request', () async {
+      await expectLater(
+        DmVideoDecryptor(dio: dio).materialize(
+          url: 'http://127.0.0.1/secret',
+          key: '00' * 32,
+          nonce: '00' * 12,
+          fileName: _clipFileName,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      verifyNever(
+        () => dio.get<List<int>>(any(), options: any(named: 'options')),
+      );
+      expect(File(clipPath()).existsSync(), isFalse);
+    });
+
+    test('surfaces a download timeout as an error', () async {
+      when(
+        () => dio.get<List<int>>(_videoUrl, options: any(named: 'options')),
+      ).thenThrow(
+        DioException(
+          requestOptions: RequestOptions(path: _videoUrl),
+          type: DioExceptionType.receiveTimeout,
+        ),
+      );
+
+      await expectLater(
+        DmVideoDecryptor(dio: dio).materialize(
+          url: _videoUrl,
+          key: '00' * 32,
+          nonce: '00' * 12,
+          fileName: _clipFileName,
+        ),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.type,
+            'type',
+            DioExceptionType.receiveTimeout,
+          ),
+        ),
+      );
+      expect(File(clipPath()).existsSync(), isFalse);
+    });
 
     test(
       'propagates a decryption failure and writes no plaintext file',
