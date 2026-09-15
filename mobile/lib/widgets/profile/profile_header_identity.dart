@@ -666,7 +666,7 @@ void _openProfileFromBadgeSheet(BuildContext context, String pubkey) {
   final router = GoRouter.of(context);
   Navigator.of(context).pop();
   _runProfileDetached(
-    _awaitProfileResult(router.push(path)),
+    _awaitProfileResult(router.push<Object?>(path)),
     'open badge recipient profile',
   );
 }
@@ -678,11 +678,11 @@ void _openBadgeEditorFromBadgeSheet(BuildContext context) {
   // badge is published, and landing back on someone's profile reads as if
   // nothing happened — the new badge is on the dashboard.
   _runProfileDetached(
-    _awaitProfileResult(router.push(BadgesScreen.path)),
+    _awaitProfileResult(router.push<Object?>(BadgesScreen.path)),
     'open badges dashboard',
   );
   _runProfileDetached(
-    _awaitProfileResult(router.push(BadgeEditorScreen.createPath)),
+    _awaitProfileResult(router.push<Object?>(BadgeEditorScreen.createPath)),
     'open badge editor',
   );
 }
