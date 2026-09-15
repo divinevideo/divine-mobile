@@ -99,8 +99,8 @@ Set<String> textFontFamiliesInHistory(Map<String, dynamic> history) {
 /// the whole catalogue.
 ///
 /// Already-cached fonts resolve instantly; the timeout only bounds the first,
-/// uncached load. Timing out is not an error — the render proceeds with
-/// whatever resolved.
+/// uncached load. Timing out is not an error, and neither is a load that fails:
+/// in both cases the render proceeds with whatever resolved.
 Future<void> preloadEditorTextFonts({
   required Iterable<String> fontFamilies,
 }) async {
@@ -109,8 +109,12 @@ Future<void> preloadEditorTextFonts({
   for (final font in fonts) {
     font();
   }
-  await GoogleFonts.pendingFonts().timeout(
-    VideoEditorConstants.textFontLoadTimeout,
-    onTimeout: () => const [],
-  );
+  await GoogleFonts.pendingFonts()
+      .timeout(
+        VideoEditorConstants.textFontLoadTimeout,
+        onTimeout: () => const [],
+      )
+      // A failed load stays in google_fonts' pending set, which makes every
+      // later pendingFonts() call throw instead of time out.
+      .catchError((_) => const <void>[]);
 }
