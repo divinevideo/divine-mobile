@@ -136,6 +136,26 @@ void main() {
       expect(find.text(strings.notificationsVideoUnavailable), findsOneWidget);
     });
 
+    testWidgets('forwards a card tap to onOpenEncryptedVideo', (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMetadata(),
+            onOpenEncryptedVideo: () => taps++,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byType(EncryptedVideoCard));
+
+      expect(taps, 1);
+    });
+
     testWidgets('ignores a non-video file attachment', (tester) async {
       final imageMessage = DmMessage(
         id: 'a' * 64,

@@ -31,12 +31,14 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -1167,6 +1169,7 @@ class _MessageList extends StatelessWidget {
       context: context,
       isSent: isSent,
       isVideoShare: videoTarget != null,
+      isEncryptedVideo: message.fileMetadata?.isVideo == true,
       showPicker: showPicker,
       showDelete:
           (retractionsEnabled || !isPersisted) &&
@@ -1194,7 +1197,13 @@ class _MessageList extends StatelessWidget {
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
         await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
+      case MessageAction.playVideo:
+        await DmVideoPlayPage.open(context, message);
       case MessageAction.saveVideo:
+        if (message.fileMetadata?.isVideo == true && videoTarget == null) {
+          await _saveEncryptedVideo(context, message);
+          return;
+        }
         if (videoTarget == null) return;
         runDetached(
           context.read<SharedVideoSaveCubit>().save(videoTarget),
@@ -1213,6 +1222,61 @@ class _MessageList extends StatelessWidget {
           messageId: message.id,
           senderPubkey: message.senderPubkey,
         );
+    }
+  }
+
+  /// Decrypts an encrypted video DM and saves it to the device gallery.
+  ///
+  /// Decryption is invisible work, so the outcome is reported through the
+  /// standard snackbar. Reuses [GallerySaveService] via [saveEncryptedVideoDm].
+  Future<void> _saveEncryptedVideo(
+    BuildContext context,
+    DmMessage message,
+  ) async {
+    void showResult(String text, {required bool error}) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(DivineSnackbarContainer.snackBar(text, error: error));
+    }
+
+    final GallerySaveResult result;
+    try {
+      result = await saveEncryptedVideoDm(
+        message: message,
+        gallerySaveService: ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(gallerySaveServiceProvider),
+      );
+    } catch (error, stackTrace) {
+      Log.warning(
+        'Could not decrypt video DM for gallery save',
+        name: 'ConversationView',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (!context.mounted) return;
+      showResult(context.l10n.videoClipSaveFailed, error: true);
+      return;
+    }
+    if (!context.mounted) return;
+
+    final l10n = context.l10n;
+    final destination = GallerySaveService.destinationName;
+    switch (result) {
+      case GallerySaveSuccess():
+        showResult(
+          l10n.libraryClipsSavedToDestination(1, destination),
+          error: false,
+        );
+      case GallerySavePermissionDenied():
+        showResult(
+          l10n.libraryGalleryPermissionDenied(destination),
+          error: true,
+        );
+      case GallerySaveFailure():
+        showResult(l10n.videoClipSaveFailed, error: true);
     }
   }
 
@@ -1484,6 +1548,12 @@ class _MessageList extends StatelessWidget {
             sharedVideoRef: ownShareVideoRef,
             quotedVideoRef: quotedVideoRef,
             fileMetadata: message.fileMetadata,
+            // A received (or own) encrypted video DM opens a decrypt-and-play
+            // page on tap. A failed own send ignores this and keeps the outer
+            // resend affordance.
+            onOpenEncryptedVideo: message.fileMetadata?.isVideo == true
+                ? () => DmVideoPlayPage.open(context, message)
+                : null,
           );
           return Column(
             crossAxisAlignment: isSent

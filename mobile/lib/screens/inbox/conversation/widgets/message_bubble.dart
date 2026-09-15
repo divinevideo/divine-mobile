@@ -189,6 +189,7 @@ class MessageBubble extends StatefulWidget {
     this.onLongPress,
     this.onDoubleTap,
     this.onTap,
+    this.onOpenEncryptedVideo,
     this.deliveryStatus = DmDeliveryStatus.delivered,
     this.retractionStatus = DmRetractionStatus.none,
     this.dmReplyContext,
@@ -228,6 +229,11 @@ class MessageBubble extends StatefulWidget {
   /// (opens the resend/delete snackbar); null for every other bubble so a
   /// normal message keeps its default tap behaviour.
   final VoidCallback? onTap;
+
+  /// Called when the user taps an [EncryptedVideoCard] to play the received
+  /// encrypted video DM. Null when no play page is wired; a failed own send
+  /// keeps the outer resend affordance and ignores this.
+  final VoidCallback? onOpenEncryptedVideo;
 
   /// Per-bubble delivery state. Only rendered for sent messages; received
   /// bubbles ignore it. Defaults to [DmDeliveryStatus.delivered] so test
@@ -274,6 +280,7 @@ class _MessageBubbleState extends State<MessageBubble> {
   VoidCallback? get onLongPress => widget.onLongPress;
   VoidCallback? get onDoubleTap => widget.onDoubleTap;
   VoidCallback? get onTap => widget.onTap;
+  VoidCallback? get onOpenEncryptedVideo => widget.onOpenEncryptedVideo;
   DmDeliveryStatus get deliveryStatus => widget.deliveryStatus;
   DmRetractionStatus get retractionStatus => widget.retractionStatus;
   DmReplyContext? get dmReplyContext => widget.dmReplyContext;
@@ -490,12 +497,15 @@ class _MessageBubbleState extends State<MessageBubble> {
                             ),
                           ),
                         if (hasEncryptedVideo) ...[
-                          // The card itself is non-interactive until Task A7
-                          // wires the play page; a failed own send keeps the
-                          // outer resend affordance as the only tap target.
+                          // Tap opens the decrypt-and-play page; a failed own
+                          // send keeps the outer resend affordance as the only
+                          // tap target.
                           EncryptedVideoCard(
                             fileMetadata: fileMetadata!,
                             isSent: isSent,
+                            onTap: isFailedOwnSend
+                                ? null
+                                : onOpenEncryptedVideo,
                           ),
                         ] else if (videoStableId != null) ...[
                           _VideoLinkPreview(

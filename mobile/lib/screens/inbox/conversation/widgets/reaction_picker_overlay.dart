@@ -57,6 +57,7 @@ class ReactionPickerOverlay {
     bool showDelete = true,
     bool deleteForEveryone = true,
     bool isVideoShare = false,
+    bool isEncryptedVideo = false,
     List<String> emojis = kDefaultDmReactionEmojis,
   }) async {
     unawaited(HapticFeedback.mediumImpact());
@@ -96,6 +97,7 @@ class ReactionPickerOverlay {
                   showDelete: showDelete,
                   deleteForEveryone: deleteForEveryone,
                   isVideoShare: isVideoShare,
+                  isEncryptedVideo: isEncryptedVideo,
                   onSelected: (action) => sheetContext.popModalIfMounted(
                     ReactionPickerResult(action: action),
                   ),
@@ -226,6 +228,7 @@ class _ActionList extends StatelessWidget {
     required this.showDelete,
     required this.deleteForEveryone,
     required this.isVideoShare,
+    required this.isEncryptedVideo,
     required this.onSelected,
   });
 
@@ -237,6 +240,10 @@ class _ActionList extends StatelessWidget {
   final bool showDelete;
   final bool deleteForEveryone;
   final bool isVideoShare;
+
+  /// Whether the message is a received encrypted (kind 15) video DM. Offers
+  /// Play and Save (decrypt-then-save) instead of the shared-reel URL actions.
+  final bool isEncryptedVideo;
   final ValueChanged<MessageAction> onSelected;
 
   @override
@@ -254,7 +261,13 @@ class _ActionList extends StatelessWidget {
           label: l10n.dmMessageActionCopyVideoUrl,
           onTap: () => onSelected(MessageAction.copyVideoUrl),
         ),
-      if (isVideoShare)
+      if (isEncryptedVideo)
+        _ActionTile(
+          icon: DivineIconName.play,
+          label: l10n.videoPlayerPlayVideo,
+          onTap: () => onSelected(MessageAction.playVideo),
+        ),
+      if (isVideoShare || isEncryptedVideo)
         _ActionTile(
           icon: DivineIconName.downloadSimple,
           label: l10n.shareSheetSaveVideo,
