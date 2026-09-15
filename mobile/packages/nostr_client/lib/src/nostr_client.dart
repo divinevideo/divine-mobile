@@ -889,10 +889,11 @@ class NostrClient {
   /// returns `timedOut: true` alongside whatever the relays that did answer
   /// had delivered by then. The relay SDK's one-second settle window is
   /// reserved for the WebSocket leg; preparatory work that cannot finish
-  /// before that reservation begins is abandoned. For a shorter timeout, the
-  /// whole timeout is reserved for a relay read that can start immediately:
-  /// the cache read, reconnect sweep and query-pool wait get no preparation
-  /// budget, so any of them that cannot finish in a microtask is abandoned.
+  /// before that reservation begins is abandoned. For a timeout at or below
+  /// the reserved window, the whole timeout is reserved for a relay read that
+  /// can start immediately: the cache read, reconnect sweep and query-pool wait
+  /// get no preparation budget, so any of them that cannot finish in a
+  /// microtask is abandoned.
   /// A WebSocket query that does not honor its own
   /// budget may run for up to 250 ms beyond that deadline before its partial
   /// events are abandoned. A pool waiter that expires remains in the package's
