@@ -120,6 +120,14 @@ class CameraController: NSObject {
     /// offset makes the writer edit out the first 0.9–1.8s of sound, play the
     /// rest that far ahead of the picture, and leave the tail silent (#7888).
     private var audioClockOffset: CMTime?
+    /// How many audio buffers this recording could not retime onto the video
+    /// clock: the session clock was unavailable, the buffer's own timing
+    /// could not be read, the converted timestamp came back non-numeric, or
+    /// the retimed copy failed. Each one reached the writer on its own
+    /// unconverted audio-clock PTS, so a nonzero count here means
+    /// `audioClockOffset` does not describe every buffer in the file the way
+    /// a reader of `clockOffsetMs` would otherwise assume.
+    private var audioRetimeFailureCount = 0
     /// PTS of the first audio buffer the delegate saw for this recording,
     /// recorded before every gate that can drop it — the writer session not
     /// being open yet, an interruption in progress, or no audio writer input
@@ -2453,6 +2461,7 @@ class CameraController: NSObject {
             self.firstAppendedAudioPTS = nil
             self.firstSeenAudioPTS = nil
             self.audioClockOffset = nil
+            self.audioRetimeFailureCount = 0
             self.recordingStartTime = Date()
             self.appendedAudioBufferCount = 0
             self.maxAudioPeakDb = -160
@@ -2819,6 +2828,7 @@ class CameraController: NSObject {
             "Audio alignment: appendLeadInMs=\(ms(self.firstAppendedAudioPTS, self.writerAnchorPTS)), "
                 + "micLeadInMs=\(ms(self.firstSeenAudioPTS, self.writerAnchorPTS)), "
                 + "clockOffsetMs=\(clockOffsetMs), "
+                + "retimeFailures=\(self.audioRetimeFailureCount), "
                 + "audioTrackStartMs=\(trackStartMs), "
                 + "tapToCaptureMs=\(startDelayMs), "
                 + "attachMs=\(String(format: "%.0f", self.lastAudioAttachMs)), "
@@ -3085,9 +3095,10 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     /// both sessions share a clock, or when the copy fails; the data buffer
     /// is shared, only the timing is replaced. Runs on `videoOutputQueue`.
     private func retimedToVideoClock(_ sampleBuffer: CMSampleBuffer) -> CMSampleBuffer {
-        guard isRecording,
-              let audioClock = synchronizationClock(of: audioCaptureSession),
+        guard isRecording else { return sampleBuffer }
+        guard let audioClock = synchronizationClock(of: audioCaptureSession),
               let videoClock = synchronizationClock(of: captureSession) else {
+            audioRetimeFailureCount += 1
             return sampleBuffer
         }
         if audioClock == videoClock {
@@ -3101,12 +3112,14 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
         guard CMSampleBufferGetSampleTimingInfo(
             sampleBuffer, at: 0, timingInfoOut: &timing) == noErr,
             timing.presentationTimeStamp.isNumeric else {
+            audioRetimeFailureCount += 1
             return sampleBuffer
         }
 
         let rawPTS = timing.presentationTimeStamp
         let convertedPTS = CMSyncConvertTime(rawPTS, from: audioClock, to: videoClock)
         guard convertedPTS.isNumeric else {
+            audioRetimeFailureCount += 1
             return sampleBuffer
         }
         timing.presentationTimeStamp = convertedPTS
@@ -3126,6 +3139,7 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
             sampleBufferOut: &retimed
         )
         guard status == noErr, let retimed else {
+            audioRetimeFailureCount += 1
             return sampleBuffer
         }
         if audioClockOffset == nil {

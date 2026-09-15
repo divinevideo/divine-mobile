@@ -101,6 +101,38 @@ void main() {
       );
     });
 
+    test('counts every path a buffer can leave unconverted', () {
+      // A retry-fallback that logs nothing looks identical to a clean
+      // recording: clockOffsetMs is a property of the clocks, not of any one
+      // buffer, so it stays set even on a recording where every later
+      // buffer failed to retime. This counter is what tells the two apart.
+      expect(source, contains('private var audioRetimeFailureCount = 0'));
+
+      final start = declarationAt(
+        source,
+        'private func startRecordingAfterAudioReady(',
+      );
+      expect(start, contains('self.audioRetimeFailureCount = 0'));
+
+      // Every early-return path inside retimedToVideoClock that can fire
+      // while recording -- an unavailable clock, unreadable timing info, a
+      // non-numeric converted timestamp, or a failed retimed copy -- counts
+      // the buffer as unconverted before returning it unchanged.
+      expect(
+        'audioRetimeFailureCount += 1'.allMatches(retime).length,
+        equals(4),
+      );
+
+      final diagnostics = declarationAt(
+        source,
+        'private func logAudioAlignmentDiagnostics(',
+      );
+      expect(
+        diagnostics,
+        contains(r'retimeFailures=\(self.audioRetimeFailureCount)'),
+      );
+    });
+
     test('rejects a converted timestamp the sync call could not produce', () {
       // CMSyncConvertTime can return a non-numeric CMTime; appending that to
       // the writer would fail the whole asset-writer session rather than
