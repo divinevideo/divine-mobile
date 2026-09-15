@@ -40,13 +40,6 @@ void main() {
       );
     });
 
-    test('skips divine invite universal links', () {
-      expect(
-        shouldSkipRouteNormalization('https://divine.video/invite/ABCD-EFGH'),
-        isTrue,
-      );
-    });
-
     test('skips divine list universal links', () {
       expect(
         shouldSkipRouteNormalization('https://divine.video/list/my-vines'),

@@ -5,9 +5,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/sensitive_uri_for_logs.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
+  group('legacy invite links', () {
+    test('parse without writing the code to diagnostics', () async {
+      // The /invite branch is gone, so these land on the unknown-path log.
+      // iOS still claims /invite/* through the served AASA, so the code
+      // reaches that log site on a real device until the claim is withdrawn.
+      await LogCaptureService().clearAllLogs();
+
+      final link = DeepLinkService.parseDeepLink(
+        'https://divine.video/invite/ABCD-EFGH-SECRET',
+      );
+
+      expect(link.type, DeepLinkType.unknown);
+      final logged = [
+        for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+      ].join('\n');
+      expect(
+        logged,
+        isNot(contains('ABCD-EFGH-SECRET')),
+        reason: 'a retired invite code must not reach diagnostics',
+      );
+    });
+  });
+
   group('DeepLinkService URL Parsing', () {
     group('Video URL Parsing', () {
       test('parses valid video URL correctly', () {
@@ -191,34 +214,6 @@ void main() {
       test('rejects search URL without term', () {
         final result = DeepLinkService.parseDeepLink(
           'https://divine.video/search',
-        );
-
-        expect(result.type, equals(DeepLinkType.unknown));
-      });
-    });
-
-    group('Invite URL Parsing', () {
-      test('parses /invite/{code} correctly', () {
-        final result = DeepLinkService.parseDeepLink(
-          'https://divine.video/invite/ABCD-EFGH',
-        );
-
-        expect(result.type, equals(DeepLinkType.invite));
-        expect(result.inviteCode, equals('ABCD-EFGH'));
-      });
-
-      test('parses /invite?code={code} correctly', () {
-        final result = DeepLinkService.parseDeepLink(
-          'https://divine.video/invite?code=WXYZ-1234',
-        );
-
-        expect(result.type, equals(DeepLinkType.invite));
-        expect(result.inviteCode, equals('WXYZ-1234'));
-      });
-
-      test('rejects invite URL without code', () {
-        final result = DeepLinkService.parseDeepLink(
-          'https://divine.video/invite',
         );
 
         expect(result.type, equals(DeepLinkType.unknown));
@@ -706,16 +701,6 @@ void main() {
         expect(deepLink.type, equals(DeepLinkType.search));
         expect(deepLink.searchTerm, equals('test'));
       });
-
-      test('creates invite deep link', () {
-        const deepLink = DeepLink(
-          type: DeepLinkType.invite,
-          inviteCode: 'ABCD-EFGH',
-        );
-
-        expect(deepLink.type, equals(DeepLinkType.invite));
-        expect(deepLink.inviteCode, equals('ABCD-EFGH'));
-      });
     });
 
     group('$DeepLink toString', () {
@@ -768,19 +753,6 @@ void main() {
         expect(
           link.toString(),
           equals('DeepLink(type: search, searchTerm: q)'),
-        );
-      });
-
-      test('formats invite deep link without exposing raw invite code', () {
-        const link = DeepLink(
-          type: DeepLinkType.invite,
-          inviteCode: 'ABCD-EFGH',
-        );
-        expect(
-          link.toString(),
-          equals(
-            'DeepLink(type: invite, inviteCode: $redactedSensitiveLogPlaceholder)',
-          ),
         );
       });
 

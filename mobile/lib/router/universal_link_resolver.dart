@@ -60,7 +60,6 @@ String? _pushRouteForDeepLink(DeepLink deepLink) {
     // savedVideos is unreachable here — it only arrives over divine://, which
     // both callers reject before this point. customSchemeToRouterPath owns it.
     case DeepLinkType.savedVideos:
-    case DeepLinkType.invite:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return null;
@@ -118,9 +117,7 @@ String? customSchemeToRouterPath(Uri uri) {
 ///
 /// Mirrors the universal-link claims in the served apple-app-site-association
 /// files, so the custom scheme reaches exactly what a web page can already
-/// reach over https — and nothing more. `invite` is deliberately absent: it
-/// has no GoRoute to land on and is handled by the [DeepLinkService] stream
-/// listener for https links only.
+/// reach over https — and nothing more.
 const _customSchemeRoutablePrefixes = <String>{
   'video',
   'profile',
@@ -163,7 +160,6 @@ String? universalLinkToRouterPath(Uri uri) {
   switch (deepLink.type) {
     case DeepLinkType.video:
     case DeepLinkType.savedVideos:
-    case DeepLinkType.invite:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return null;

@@ -50,12 +50,6 @@ class _RecordingAnalytics implements AnalyticsEventSink {
   Future<void> setUserId(String? userId) async => userIds.add(userId);
 
   @override
-  Future<void> setUserProperty({
-    required String name,
-    required String? value,
-  }) async {}
-
-  @override
   Future<void> logEvent({
     required String name,
     required Map<String, Object> parameters,
@@ -361,9 +355,8 @@ void main() {
       final authService = _MockAuthService();
       when(() => authService.isAuthenticated).thenReturn(true);
       when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
-      when(
-        () => authService.authStateStream,
-      ).thenAnswer((_) => authStateController.stream);
+      when(() => authService.authStateStream)
+          .thenAnswer((_) => authStateController.stream);
 
       final analytics = _RecordingAnalytics();
       final crashUserIds = <String?>[];
@@ -401,9 +394,8 @@ void main() {
       final authService = _MockAuthService();
       when(() => authService.isAuthenticated).thenReturn(false);
       when(() => authService.currentPublicKeyHex).thenReturn(null);
-      when(
-        () => authService.authStateStream,
-      ).thenAnswer((_) => authStateController.stream);
+      when(() => authService.authStateStream)
+          .thenAnswer((_) => authStateController.stream);
 
       final analytics = _RecordingAnalytics();
       final container = ProviderContainer(

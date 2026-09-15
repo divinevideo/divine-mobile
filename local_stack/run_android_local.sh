@@ -16,7 +16,6 @@ COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 
 # shellcheck source=android_sdk.sh
 source "${SCRIPT_DIR}/android_sdk.sh"
-INVITE_SERVER_URL="$(android_emulator_invite_server_url)"
 
 DEVICE_ARG="${1:-}"
 BUILD_MODE="${2:-debug}"
@@ -89,7 +88,6 @@ clear_app_data() {
 }
 
 echo "Running Divine against the local stack on Android emulator: ${DEVICE}" >&2
-echo "Invite server: ${INVITE_SERVER_URL}" >&2
 echo "Clearing persisted app data for ${ANDROID_PACKAGE_ID} so LOCAL is deterministic" >&2
 clear_app_data
 
@@ -97,5 +95,4 @@ cd "$MOBILE_DIR"
 exec flutter run \
     -d "$DEVICE" \
     --"$BUILD_MODE" \
-    --dart-define=DEFAULT_ENV=LOCAL \
-    --dart-define=INVITE_SERVER_URL="$INVITE_SERVER_URL"
+    --dart-define=DEFAULT_ENV=LOCAL

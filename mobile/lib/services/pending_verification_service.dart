@@ -12,7 +12,6 @@ class PendingVerification {
     required this.verifier,
     required this.email,
     required this.createdAt,
-    this.inviteCode,
     this.ownerPublicKeyHex,
   });
 
@@ -20,7 +19,6 @@ class PendingVerification {
   final String verifier;
   final String email;
   final DateTime createdAt;
-  final String? inviteCode;
   final String? ownerPublicKeyHex;
 
   /// Expiration duration for pending verification data (24 hours).
@@ -51,7 +49,9 @@ class PendingVerificationService {
   static const _keyVerifier = 'pending_verification_verifier';
   static const _keyEmail = 'pending_verification_email';
   static const _keyCreatedAt = 'pending_verification_created_at';
-  static const _keyInviteCode = 'pending_verification_invite_code';
+  // TODO(#9116): Remove after the supported upgrade window no longer includes
+  // releases that persisted invite codes with pending verification data.
+  static const _retiredInviteCodeKey = 'pending_verification_invite_code';
   static const _keyOwnerPublicKeyHex =
       'pending_verification_owner_public_key_hex';
 
@@ -62,7 +62,6 @@ class PendingVerificationService {
     required String deviceCode,
     required String verifier,
     required String email,
-    String? inviteCode,
     String? ownerPublicKeyHex,
   }) async {
     try {
@@ -72,11 +71,8 @@ class PendingVerificationService {
         _storage.write(key: _keyVerifier, value: verifier),
         _storage.write(key: _keyEmail, value: email),
         _storage.write(key: _keyCreatedAt, value: createdAt),
-        _storage.write(key: _keyInviteCode, value: inviteCode),
-        _storage.write(
-          key: _keyOwnerPublicKeyHex,
-          value: ownerPublicKeyHex,
-        ),
+        _storage.delete(key: _retiredInviteCodeKey),
+        _storage.write(key: _keyOwnerPublicKeyHex, value: ownerPublicKeyHex),
       ]);
       Log.info(
         'Saved pending verification for ${redactEmailForLogs(email)}',
@@ -104,16 +100,24 @@ class PendingVerificationService {
         _storage.read(key: _keyVerifier),
         _storage.read(key: _keyEmail),
         _storage.read(key: _keyCreatedAt),
-        _storage.read(key: _keyInviteCode),
         _storage.read(key: _keyOwnerPublicKeyHex),
       ]);
+
+      try {
+        await _storage.delete(key: _retiredInviteCodeKey);
+      } catch (e) {
+        Log.warning(
+          'Failed to remove retired pending-verification invite data: $e',
+          name: 'PendingVerificationService',
+          category: LogCategory.auth,
+        );
+      }
 
       final deviceCode = results[0];
       final verifier = results[1];
       final email = results[2];
       final createdAtStr = results[3];
-      final inviteCode = results[4];
-      final ownerPublicKeyHex = results[5];
+      final ownerPublicKeyHex = results[4];
 
       // All fields required
       if (deviceCode == null || verifier == null || email == null) {
@@ -131,7 +135,6 @@ class PendingVerificationService {
         verifier: verifier,
         email: email,
         createdAt: createdAt,
-        inviteCode: inviteCode,
         ownerPublicKeyHex: ownerPublicKeyHex,
       );
 
@@ -176,7 +179,7 @@ class PendingVerificationService {
         _storage.delete(key: _keyVerifier),
         _storage.delete(key: _keyEmail),
         _storage.delete(key: _keyCreatedAt),
-        _storage.delete(key: _keyInviteCode),
+        _storage.delete(key: _retiredInviteCodeKey),
         _storage.delete(key: _keyOwnerPublicKeyHex),
       ]);
       Log.info(

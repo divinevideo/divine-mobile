@@ -1,7 +1,6 @@
 // ABOUTME: Complete end-to-end integration test for video creation flow
 // ABOUTME: Tests app start -> welcome screen -> auth -> camera navigation
-// ABOUTME: Requires: the local stack's invite service (mise run local_up).
-// ABOUTME: navigateToCreateAccount needs OnboardingMode.open for LOCAL.
+// ABOUTME: Runs headlessly on Linux; external relay failures are non-critical.
 
 @Tags(['service'])
 library;
@@ -12,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/main.dart' as app;
 
 import '../helpers/navigation_helpers.dart';
+import '../helpers/real_integration_test_helper.dart';
 import '../helpers/test_setup.dart';
 
 void main() {
@@ -25,6 +25,12 @@ void main() {
         addTearDown(() => restoreErrorHandler(originalOnError));
         final originalErrorBuilder = saveErrorWidgetBuilder();
         addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
+
+        // Headless Linux CI has the libsecret client library but no Secret
+        // Service session. Mock only the unavailable platform channels so the
+        // app can exercise its real startup and navigation flow.
+        await RealIntegrationTestHelper.setupTestEnvironment();
+        addTearDown(RealIntegrationTestHelper.cleanup);
 
         // Launch app in guarded zone to catch external relay errors.
         // pumpAndSettle never returns here: the app runs persistent polling

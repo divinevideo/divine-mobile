@@ -10,15 +10,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_bloc.dart';
-import 'package:openvine/blocs/invite_gate/invite_gate_event.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
@@ -50,14 +46,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     // Recorded once from initState: firing an analytics call (which enqueues
     // a row and kicks a network flush) from build() would rerun on every
     // rebuild, including build passes Flutter discards.
-    final inviteAccessGrant = context.read<InviteGateBloc>().state.accessGrant;
     unawaited(
       ref
           .read(analyticsServiceProvider)
           .recordRegistrationStarted(
-            entryPoint: inviteAccessGrant == null
-                ? ProductAnalyticsV2RegistrationEntryPoint.landing
-                : ProductAnalyticsV2RegistrationEntryPoint.invite,
+            entryPoint: ProductAnalyticsV2RegistrationEntryPoint.landing,
           ),
     );
   }
@@ -70,32 +63,23 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     final pendingVerificationService = ref.watch(
       pendingVerificationServiceProvider,
     );
-    final inviteApiClient = context.read<InviteApiClient>();
-    final inviteAccessGrant = context.read<InviteGateBloc>().state.accessGrant;
-
     return BlocProvider(
       create: (_) => DivineAuthCubit(
         oauthClient: oauthClient,
         authService: authService,
         pendingVerificationService: pendingVerificationService,
-        inviteApiClient: inviteApiClient,
-        inviteCode: inviteAccessGrant?.code,
-        inviteSourceSlug: inviteAccessGrant?.creatorSlug,
         validationMessages: AuthValidationMessages.fromL10n(l10n),
         requirePasswordConfirmation: true,
         appVersion: ref.watch(appVersionProvider),
-        analytics: ref.read(analyticsEventSinkProvider),
       )..initialize(),
-      child: _CreateAccountView(inviteAccessGrant: inviteAccessGrant),
+      child: const _CreateAccountView(),
     );
   }
 }
 
 /// Create account screen — View that consumes [DivineAuthCubit] state.
 class _CreateAccountView extends StatelessWidget {
-  const _CreateAccountView({this.inviteAccessGrant});
-
-  final InviteAccessGrant? inviteAccessGrant;
+  const _CreateAccountView();
 
   @override
   Widget build(BuildContext context) {
@@ -127,10 +111,7 @@ class _CreateAccountView extends StatelessWidget {
       child: BlocBuilder<DivineAuthCubit, DivineAuthState>(
         builder: (context, state) {
           if (state is DivineAuthFormState) {
-            return _CreateAccountBody(
-              state: state,
-              inviteAccessGrant: inviteAccessGrant,
-            );
+            return _CreateAccountBody(state: state);
           }
           return Scaffold(
             backgroundColor: context.vineColors.background,
@@ -148,10 +129,9 @@ class _CreateAccountView extends StatelessWidget {
 
 /// Body of the create account form with email and password.
 class _CreateAccountBody extends StatefulWidget {
-  const _CreateAccountBody({required this.state, this.inviteAccessGrant});
+  const _CreateAccountBody({required this.state});
 
   final DivineAuthFormState state;
-  final InviteAccessGrant? inviteAccessGrant;
 
   @override
   State<_CreateAccountBody> createState() => _CreateAccountBodyState();
@@ -214,37 +194,13 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
     context.read<DivineAuthCubit>().skipWithAnonymousAccount();
   }
 
-  void _returnToInviteGate() {
-    final inviteCode = widget.state.inviteRecoveryCode;
-    if (inviteCode == null) {
-      return;
-    }
-
-    context.read<InviteGateBloc>().add(const InviteGateAccessCleared());
-    context.go(
-      WelcomeScreen.inviteGatePathWithCode(
-        inviteCode,
-        error: widget.state.generalError,
-        sourceSlug: widget.state.inviteRecoverySourceSlug,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isSubmitting = widget.state.isSubmitting;
     final isSkipping = widget.state.isSkipping;
     final isDisabled = isSubmitting || isSkipping;
-    final inviteGrant = widget.inviteAccessGrant;
-    final hasCreatorContext =
-        (inviteGrant?.creatorDisplayName?.isNotEmpty ?? false) ||
-        inviteGrant?.remaining != null;
-
     return AuthFormScaffold(
       title: context.l10n.authCreateAccountTitle,
-      headerWidget: hasCreatorContext
-          ? _CreatorInviteContext(grant: inviteGrant)
-          : null,
       onBack: isDisabled ? null : () => context.pop(),
       emailController: _emailController,
       passwordController: _passwordController,
@@ -267,23 +223,7 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
         enabled: !isDisabled,
       ),
       errorWidget: widget.state.generalError != null
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AuthErrorBox(message: widget.state.generalError!),
-                if (widget.state.showInviteGateRecovery &&
-                    widget.state.inviteRecoveryCode != null) ...[
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton(
-                      onPressed: isDisabled ? null : _returnToInviteGate,
-                      child: Text(context.l10n.authBackToInviteCode),
-                    ),
-                  ),
-                ],
-              ],
-            )
+          ? AuthErrorBox(message: widget.state.generalError!)
           : null,
       primaryButton: DivineButton(
         expanded: true,
@@ -336,37 +276,6 @@ class _MarketingOptInCheckbox extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CreatorInviteContext extends StatelessWidget {
-  const _CreatorInviteContext({this.grant});
-
-  final InviteAccessGrant? grant;
-
-  @override
-  Widget build(BuildContext context) {
-    final displayName = grant?.creatorDisplayName;
-    final remaining = grant?.remaining;
-    if ((displayName == null || displayName.isEmpty) && remaining == null) {
-      return const SizedBox.shrink();
-    }
-
-    final lines = <String>[
-      if (displayName != null && displayName.isNotEmpty)
-        '$displayName invited you',
-      if (remaining != null) '$remaining invites left',
-    ];
-
-    return Text(
-      lines.join('\n'),
-      style: TextStyle(
-        fontFamily: 'Inter',
-        fontSize: 15,
-        height: 1.4,
-        color: context.vineColors.mutedText,
       ),
     );
   }

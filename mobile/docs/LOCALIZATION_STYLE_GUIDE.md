@@ -258,8 +258,7 @@ users are, and Portugal reads Brazilian Portuguese perfectly well.
 - **Where the varieties split, take the Brazilian form.** Do not reach for a
   third phrasing that dodges the split; dodging is how copy stops sounding
   like anyone.
-- Colloquial contractions are welcome — the invite copy already says `pro`
-  and `pra`.
+- Colloquial contractions are welcome when they match the surrounding voice.
 
 ### Chinese — Simplified today, with the audience question open
 
@@ -388,10 +387,9 @@ transliteration breaks it and cannot be typed back.
 Bare Latin script is allowed in every locale precisely so these survive —
 that is what `_allowedScripts` in `arb_script_integrity_test.dart` encodes.
 
-The casing rule is currently broken at the source: seven keys in `app_en.arb`
+The casing rule is currently broken at the source: four keys in `app_en.arb`
 (`nostrInfoIntroBuiltOn`, `listCollaboratorSearchHint`,
-`collaboratorInviteDmBody`, `collaboratorInviteDmBodyUntitled`,
-`invitesShareWithPeople`, `invitesShareMessage`, `invitesShareSubject`) write
+`collaboratorInviteDmBody`, `collaboratorInviteDmBodyUntitled`) write
 `DiVine` or `diVine`, and every locale faithfully mirrored it. Fix that in
 English first — a translator copying the source is doing the right thing.
 The source-side correction and locale mirrors are tracked in

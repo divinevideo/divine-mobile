@@ -1,16 +1,12 @@
 // ABOUTME: Cubit for managing Divine authentication flow
 // ABOUTME: Handles sign in, sign up, and email verification states
 
-import 'package:analytics/analytics.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:invite_api_client/invite_api_client.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
-import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/pending_verification_service.dart';
-import 'package:openvine/utils/invite_error_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -31,36 +27,22 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     required AuthService authService,
     required PendingVerificationService pendingVerificationService,
     required AuthValidationMessages validationMessages,
-    InviteApiClient? inviteApiClient,
-    String? inviteCode,
-    String? inviteSourceSlug,
     bool requirePasswordConfirmation = false,
     String? appVersion,
-    AnalyticsEventSink analytics = const NoOpAnalyticsEventSink(),
   }) : _oauthClient = oauthClient,
        _authService = authService,
        _pendingVerificationService = pendingVerificationService,
-       _inviteApiClient = inviteApiClient,
-       _inviteCode = inviteCode == null
-           ? null
-           : InviteApiClient.normalizeCode(inviteCode),
-       _inviteSourceSlug = inviteSourceSlug,
        _validationMessages = validationMessages,
        _requirePasswordConfirmation = requirePasswordConfirmation,
        _appVersion = appVersion,
-       _analytics = analytics,
        super(const DivineAuthInitial());
 
   final KeycastOAuth _oauthClient;
   final AuthService _authService;
   final PendingVerificationService _pendingVerificationService;
-  final InviteApiClient? _inviteApiClient;
-  final String? _inviteCode;
-  final String? _inviteSourceSlug;
   final AuthValidationMessages _validationMessages;
   final bool _requirePasswordConfirmation;
   final String? _appVersion;
-  final AnalyticsEventSink _analytics;
 
   /// Initialize form with default state (sign up mode)
   void initialize({
@@ -89,7 +71,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         clearEmailError: true,
         clearGeneralError: true,
         clearSignInFailureReason: true,
-        clearInviteGateRecovery: true,
       ),
     );
   }
@@ -106,7 +87,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         clearConfirmPasswordError: true,
         clearGeneralError: true,
         clearSignInFailureReason: true,
-        clearInviteGateRecovery: true,
       ),
     );
   }
@@ -122,7 +102,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         clearConfirmPasswordError: true,
         clearGeneralError: true,
         clearSignInFailureReason: true,
-        clearInviteGateRecovery: true,
       ),
     );
   }
@@ -189,7 +168,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         isSubmitting: true,
         clearGeneralError: true,
         clearSignInFailureReason: true,
-        clearInviteGateRecovery: true,
       ),
     );
 
@@ -210,7 +188,7 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         name: 'DivineAuthCubit',
         category: LogCategory.auth,
       );
-      // Auth submission failures dominate (OAuth/Invite/network) —
+      // Auth submission failures dominate (OAuth/network) —
       // matrix-NO. YES-narrowing deferred per #4592 (analogous to
       // #4597's `_onMessageSent` deferral).
       addError(e, stackTrace);
@@ -338,7 +316,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
         deviceCode: result.deviceCode!,
         verifier: verifier,
         email: email,
-        inviteCode: _inviteCode,
       );
 
       // Emit email verification state
@@ -376,7 +353,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       );
 
       final session = KeycastSession.fromTokenResponse(tokenResponse);
-      await _consumeInviteWithSessionIfNeeded(session);
 
       // Get the session and sign in
       await _authService.signInWithDivineOAuth(session);
@@ -391,29 +367,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       // above flips AuthService to `authenticated` before returning, which
       // can reroute off the auth screen and close this cubit.
       emitIfOpen(const DivineAuthSuccess());
-    } on InviteApiException catch (e, stackTrace) {
-      await _authService.clearPendingDivineOAuthSession();
-      Log.error(
-        'Invite activation failed: '
-        '${InviteErrorUtils.activationFailureLogDetails(e)}',
-        name: 'DivineAuthCubit',
-        category: LogCategory.auth,
-      );
-      // Invite API rejection — matrix-NO (API/domain row).
-      addError(e, stackTrace);
-
-      final current = state;
-      if (current is DivineAuthFormState) {
-        emitIfOpen(
-          current.copyWith(
-            isSubmitting: false,
-            generalError: InviteErrorUtils.activationFailureMessage(e),
-            showInviteGateRecovery: true,
-            inviteRecoveryCode: _inviteCode,
-            inviteRecoverySourceSlug: _inviteSourceSlug,
-          ),
-        );
-      }
     } on OAuthException catch (e, stackTrace) {
       Log.error(
         'OAuth exchange failed: ${e.message}',
@@ -492,32 +445,10 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
     if (current is! DivineAuthFormState) return;
     if (current.isSubmitting || current.isSkipping) return;
 
-    emit(
-      current.copyWith(
-        isSkipping: true,
-        clearGeneralError: true,
-        clearInviteGateRecovery: true,
-      ),
-    );
+    emit(current.copyWith(isSkipping: true, clearGeneralError: true));
 
     try {
-      final inviteCode = _inviteCode;
-      final inviteApiClient = _inviteApiClient;
-      if (inviteCode != null && inviteApiClient != null) {
-        final pendingKey = await SecureKeyContainer.generate();
-        try {
-          await inviteApiClient.consumeInviteWithKeyContainer(
-            code: inviteCode,
-            keyContainer: pendingKey,
-          );
-          await _setInviteCodeProperty(inviteCode);
-          await _authService.createAnonymousAccountFromKeyContainer(pendingKey);
-        } finally {
-          pendingKey.dispose();
-        }
-      } else {
-        await _authService.createAnonymousAccount();
-      }
+      await _authService.createAnonymousAccount();
 
       Log.info(
         'Anonymous account created successfully',
@@ -530,28 +461,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
       // this cubit. Nothing is lost: the redirect runs off auth state, and
       // no listener acts on DivineAuthSuccess here.
       emitIfOpen(const DivineAuthSuccess());
-    } on InviteApiException catch (e, stackTrace) {
-      Log.error(
-        'Anonymous account invite activation failed: '
-        '${InviteErrorUtils.activationFailureLogDetails(e)}',
-        name: 'DivineAuthCubit',
-        category: LogCategory.auth,
-      );
-      // Invite API rejection — matrix-NO (API/domain row).
-      addError(e, stackTrace);
-
-      final currentState = state;
-      if (currentState is DivineAuthFormState) {
-        emitIfOpen(
-          currentState.copyWith(
-            isSkipping: false,
-            generalError: InviteErrorUtils.activationFailureMessage(e),
-            showInviteGateRecovery: true,
-            inviteRecoveryCode: _inviteCode,
-            inviteRecoverySourceSlug: _inviteSourceSlug,
-          ),
-        );
-      }
     } catch (e, stackTrace) {
       Log.error(
         'Anonymous account creation failed: $e',
@@ -571,36 +480,6 @@ class DivineAuthCubit extends Cubit<DivineAuthState>
           ),
         );
       }
-    }
-  }
-
-  Future<void> _consumeInviteWithSessionIfNeeded(KeycastSession session) async {
-    final inviteCode = _inviteCode;
-    final inviteApiClient = _inviteApiClient;
-    if (inviteCode == null || inviteApiClient == null) {
-      return;
-    }
-
-    await inviteApiClient.consumeInviteWithSession(
-      code: inviteCode,
-      oauthConfig: _oauthClient.config,
-      session: session,
-    );
-    await _setInviteCodeProperty(inviteCode);
-  }
-
-  Future<void> _setInviteCodeProperty(String inviteCode) async {
-    try {
-      await _analytics.setUserProperty(
-        name: AnalyticsUserProperty.inviteCode,
-        value: inviteCode,
-      );
-    } catch (error) {
-      Log.warning(
-        'Failed to set invite attribution: $error',
-        name: 'DivineAuthCubit',
-        category: LogCategory.auth,
-      );
     }
   }
 
