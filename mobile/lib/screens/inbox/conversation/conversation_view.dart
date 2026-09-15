@@ -1483,6 +1483,7 @@ class _MessageList extends StatelessWidget {
             dmReplyContext: dmReplyContext,
             sharedVideoRef: ownShareVideoRef,
             quotedVideoRef: quotedVideoRef,
+            fileMetadata: message.fileMetadata,
           );
           return Column(
             crossAxisAlignment: isSent

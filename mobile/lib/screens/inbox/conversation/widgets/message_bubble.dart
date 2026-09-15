@@ -19,6 +19,7 @@ import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
@@ -193,6 +194,7 @@ class MessageBubble extends StatefulWidget {
     this.dmReplyContext,
     this.sharedVideoRef,
     this.quotedVideoRef,
+    this.fileMetadata,
     super.key,
   });
 
@@ -251,6 +253,11 @@ class MessageBubble extends StatefulWidget {
   /// card). Null for non-reply messages.
   final DmSharedVideoRef? quotedVideoRef;
 
+  /// File metadata for a received kind 15 message. When
+  /// [DmFileMetadata.isVideo] is true the bubble renders an
+  /// [EncryptedVideoCard] instead of text. Null for text messages.
+  final DmFileMetadata? fileMetadata;
+
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
 }
@@ -272,6 +279,7 @@ class _MessageBubbleState extends State<MessageBubble> {
   DmReplyContext? get dmReplyContext => widget.dmReplyContext;
   DmSharedVideoRef? get sharedVideoRef => widget.sharedVideoRef;
   DmSharedVideoRef? get quotedVideoRef => widget.quotedVideoRef;
+  DmFileMetadata? get fileMetadata => widget.fileMetadata;
 
   @override
   void initState() {
@@ -336,18 +344,29 @@ class _MessageBubbleState extends State<MessageBubble> {
     // they get their own timestamp header, the tail corner on the
     // sender's side, and the full 8 px outer padding above and below.
     final hasVideo = videoStableId != null;
-    final effectiveIsFirstInGroup = hasVideo || isFirstInGroup;
-    final effectiveIsLastInGroup = hasVideo || isLastInGroup;
+    // A received (or own) kind 15 video DM renders an encrypted card. Its
+    // content on the wire is the ciphertext URL, so it must never fall through
+    // to the text renderer.
+    final hasEncryptedVideo = fileMetadata?.isVideo == true;
+    // Both media cards share the neutral frame, the card-width cap, and the
+    // standalone grouping.
+    final hasMediaCard = hasVideo || hasEncryptedVideo;
+    final effectiveIsFirstInGroup = hasMediaCard || isFirstInGroup;
+    final effectiveIsLastInGroup = hasMediaCard || isLastInGroup;
 
     // A reply that references a video (but doesn't itself render a full card)
     // shows a compact quoted preview above its text. Strip the trailing
     // machine-readable `nostr:` citation line the reply carries on the wire so
     // only the user's comment renders below the quote.
-    final hasQuotedVideo = quotedVideoRef != null && !hasVideo;
+    final hasQuotedVideo = quotedVideoRef != null && !hasMediaCard;
     final quotedReplyText = _content.quotedReplyText;
+    // The ciphertext URL is not user-visible copy, so an encrypted video card
+    // suppresses the text expansion controls that a long body would otherwise
+    // grow.
     final hasExpansionControls =
-        _displaySlice.hasMore ||
-        _visibleCodeUnitLimit > dmInitialDisplayCodeUnits;
+        !hasEncryptedVideo &&
+        (_displaySlice.hasMore ||
+            _visibleCodeUnitLimit > dmInitialDisplayCodeUnits);
 
     // A hard-failed own send routes every tap to the outer resend/delete
     // affordance (long-press deliberately offers no resend — see
@@ -403,7 +422,7 @@ class _MessageBubbleState extends State<MessageBubble> {
             // A truncated bubble gives it up for the same reason: its Show
             // more / Show less links must open on the first tap. Plain text
             // bubbles keep double-tap-to-like.
-            onDoubleTap: hasVideo || hasQuotedVideo || hasExpansionControls
+            onDoubleTap: hasMediaCard || hasQuotedVideo || hasExpansionControls
                 ? null
                 : onDoubleTap,
             child: Row(
@@ -426,7 +445,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                     // message wraps below it. Text-only bubbles stay at the
                     // chat-typical 75 % of screen width.
                     constraints: BoxConstraints(
-                      maxWidth: hasVideo
+                      maxWidth: hasMediaCard
                           ? _videoCardWidth + 32
                           : MediaQuery.sizeOf(context).width * 0.75,
                     ),
@@ -443,7 +462,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                       // than a bright accent pill — matching the Figma
                       // `part/video thumbnail` share bubble.
                       // Text bubbles keep the sent/received accent split.
-                      color: hasVideo
+                      color: hasMediaCard
                           ? context.vineColors.mediaCard
                           : isSent
                           ? VineTheme.primaryAccessible
@@ -460,7 +479,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                             // Video messages need a bigger breath between the
                             // date header and the thumbnail; text messages
                             // keep the tighter 4 px rhythm.
-                            padding: EdgeInsets.only(bottom: hasVideo ? 12 : 4),
+                            padding: EdgeInsets.only(
+                              bottom: hasMediaCard ? 12 : 4,
+                            ),
                             child: Text(
                               timestamp,
                               style: VineTheme.labelSmallFont(
@@ -468,7 +489,15 @@ class _MessageBubbleState extends State<MessageBubble> {
                               ),
                             ),
                           ),
-                        if (videoStableId != null) ...[
+                        if (hasEncryptedVideo) ...[
+                          // The card itself is non-interactive until Task A7
+                          // wires the play page; a failed own send keeps the
+                          // outer resend affordance as the only tap target.
+                          EncryptedVideoCard(
+                            fileMetadata: fileMetadata!,
+                            isSent: isSent,
+                          ),
+                        ] else if (videoStableId != null) ...[
                           _VideoLinkPreview(
                             videoStableId: videoStableId,
                             authorPubkey: videoAuthorPubkey,

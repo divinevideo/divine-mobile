@@ -18,9 +18,11 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
@@ -1862,6 +1864,83 @@ void main() {
           // A non-failed bubble keeps the inner tap-to-open recognizer.
           expect(find.text('video:${testVideo.id}'), findsOneWidget);
         });
+      });
+    });
+
+    group('encrypted video message', () {
+      const blurhash = 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4';
+
+      DmFileMetadata videoMetadata({String? hash = blurhash}) => DmFileMetadata(
+        fileType: 'video/mp4',
+        encryptionAlgorithm: 'aes-gcm',
+        decryptionKey: '00' * 32,
+        decryptionNonce: '00' * 12,
+        fileHash: 'ab' * 32,
+        dimensions: '1080x1920',
+        blurhash: hash,
+      );
+
+      Widget bubble({
+        String? hash = blurhash,
+        bool isSent = false,
+        DmDeliveryStatus deliveryStatus = DmDeliveryStatus.delivered,
+      }) => MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: MessageBubble(
+            // A kind 15 body is the ciphertext URL, never user-visible copy.
+            message: 'https://blossom.example/encrypted',
+            timestamp: '2:30 PM',
+            isSent: isSent,
+            deliveryStatus: deliveryStatus,
+            fileMetadata: videoMetadata(hash: hash),
+          ),
+        ),
+      );
+
+      testWidgets('renders the card, never a network image', (tester) async {
+        await tester.pumpWidget(bubble());
+        await tester.pump();
+
+        expect(find.byType(EncryptedVideoCard), findsOneWidget);
+        expect(find.byType(Image), findsNothing);
+        expect(find.textContaining('blossom.example'), findsNothing);
+      });
+
+      testWidgets('uses the neutral media frame and card-width cap', (
+        tester,
+      ) async {
+        await tester.pumpWidget(bubble(isSent: true));
+        await tester.pump();
+
+        final frame = tester.widget<Container>(
+          find.ancestor(
+            of: find.byType(EncryptedVideoCard),
+            matching: find.byWidgetPredicate(
+              (w) => w is Container && w.decoration is BoxDecoration,
+            ),
+          ),
+        );
+        expect((frame.decoration! as BoxDecoration).color, VineTheme.neutral10);
+        expect(
+          (frame.decoration! as BoxDecoration).color,
+          isNot(VineTheme.primaryAccessible),
+        );
+        expect(frame.constraints?.maxWidth, 248 + 32);
+      });
+
+      testWidgets('shows the unavailable pattern without a blurhash', (
+        tester,
+      ) async {
+        await tester.pumpWidget(bubble(hash: null));
+        await tester.pump();
+
+        expect(find.byType(BlurhashDisplay), findsNothing);
+        expect(
+          find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+          findsOneWidget,
+        );
       });
     });
 
