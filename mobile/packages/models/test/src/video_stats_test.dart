@@ -2,6 +2,7 @@
 // ABOUTME: Tests JSON parsing, field handling, and VideoEvent conversion.
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -1510,6 +1511,28 @@ void main() {
     });
 
     group('toVideoEvent', () {
+      test('credits the trailing attribution line like a relay event', () {
+        final npub = Nip19.encodePubKey('d' * 64);
+        final stats = VideoStats.fromJson({
+          'event': {
+            'id': 'test-id',
+            'pubkey': 'test-pubkey',
+            'created_at': 1700000100,
+            'kind': 34236,
+            'content': 'caption\n\nInspired by nostr:$npub',
+            'tags': const [
+              ['d', 'video-1'],
+              ['url', 'https://example.com/video.mp4'],
+            ],
+          },
+        });
+
+        final video = stats.toVideoEvent();
+
+        expect(video.inspiredByNpub, equals(npub));
+        expect(video.displayContent, equals('caption'));
+      });
+
       test('preserves raw created_at when published_at controls display', () {
         final stats = VideoStats.fromJson(const {
           'event': {

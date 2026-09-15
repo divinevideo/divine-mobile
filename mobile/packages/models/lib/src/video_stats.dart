@@ -4,6 +4,7 @@
 
 import 'package:meta/meta.dart';
 import 'package:models/src/engagement_count_parser.dart';
+import 'package:models/src/video_attribution.dart';
 import 'package:models/src/video_event.dart';
 import 'package:models/src/video_url_resolver.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -603,12 +604,17 @@ class VideoStats {
         .map((tag) => tag[1])
         .where((tag) => tag.isNotEmpty)
         .toList();
+    final content = description ?? '';
     return VideoEvent(
       id: id,
       pubkey: pubkey,
       createdAt: effectiveTimestamp,
       eventCreatedAt: eventCreatedAt,
-      content: description ?? '',
+      content: content,
+      // The display side strips this line, so a REST-loaded video needs the
+      // same parsed credit a relay-loaded one gets or About has nothing to
+      // show for it.
+      inspiredByNpub: inspiredByNpubFromContent(content),
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         effectiveTimestamp * 1000,
         isUtc: true,
