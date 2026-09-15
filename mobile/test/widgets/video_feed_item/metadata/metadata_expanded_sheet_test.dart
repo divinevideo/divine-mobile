@@ -1391,6 +1391,11 @@ void main() {
       expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
       expect(find.text('Referenced Creator'), findsOneWidget);
       expect(find.text('Clip Source Creator'), findsNothing);
+
+      // Unmount explicitly and let Riverpod run its zero-duration disposal
+      // task before the test binding checks for leaked timers.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     });
   });
 
