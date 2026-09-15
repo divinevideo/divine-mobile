@@ -516,10 +516,15 @@ class _ProfileBadgeImage extends StatelessWidget {
 }
 
 void _showProfileBadgeSheet(BuildContext context, ProfileBadgeViewData badge) {
-  VineBottomSheet.show<void>(
-    context: context,
-    showHeaderDivider: false,
-    body: _ProfileBadgeDetailsSheet(badge: badge),
+  _runProfileDetached(
+    _awaitProfileResult(
+      VineBottomSheet.show<void>(
+        context: context,
+        showHeaderDivider: false,
+        body: _ProfileBadgeDetailsSheet(badge: badge),
+      ),
+    ),
+    'show profile badge sheet',
   );
 }
 
@@ -660,7 +665,10 @@ void _openProfileFromBadgeSheet(BuildContext context, String pubkey) {
   );
   final router = GoRouter.of(context);
   Navigator.of(context).pop();
-  router.push(path);
+  _runProfileDetached(
+    _awaitProfileResult(router.push(path)),
+    'open badge recipient profile',
+  );
 }
 
 void _openBadgeEditorFromBadgeSheet(BuildContext context) {
@@ -669,9 +677,14 @@ void _openBadgeEditorFromBadgeSheet(BuildContext context) {
   // Seat the dashboard under the editor. The editor pops itself once the
   // badge is published, and landing back on someone's profile reads as if
   // nothing happened — the new badge is on the dashboard.
-  router
-    ..push(BadgesScreen.path)
-    ..push(BadgeEditorScreen.createPath);
+  _runProfileDetached(
+    _awaitProfileResult(router.push(BadgesScreen.path)),
+    'open badges dashboard',
+  );
+  _runProfileDetached(
+    _awaitProfileResult(router.push(BadgeEditorScreen.createPath)),
+    'open badge editor',
+  );
 }
 
 class _VerifiedAccountsBlock extends StatelessWidget {
@@ -779,10 +792,13 @@ class _UniqueIdentifier extends ConsumerWidget {
       onTap: () {
         final verifiedNip05 = hasNip05 && !verificationFailed ? nip05 : null;
         final profileUrl = buildProfileUrl(verifiedNip05, npub);
-        ClipboardUtils.copy(
-          context,
-          profileUrl,
-          message: context.l10n.profileLinkCopied,
+        _runProfileDetached(
+          ClipboardUtils.copy(
+            context,
+            profileUrl,
+            message: context.l10n.profileLinkCopied,
+          ),
+          'copy profile link',
         );
       },
       child: Text(
