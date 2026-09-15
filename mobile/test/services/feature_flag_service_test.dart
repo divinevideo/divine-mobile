@@ -21,12 +21,10 @@ void main() {
       // Set up default stubs for all flags
       for (final flag in FeatureFlag.values) {
         when(() => mockPrefs.getBool('ff_${flag.name}')).thenReturn(null);
-        when(
-          () => mockPrefs.setBool('ff_${flag.name}', any()),
-        ).thenAnswer((_) async => true);
-        when(
-          () => mockPrefs.remove('ff_${flag.name}'),
-        ).thenAnswer((_) async => true);
+        when(() => mockPrefs.setBool('ff_${flag.name}', any()))
+            .thenAnswer((_) async => true);
+        when(() => mockPrefs.remove('ff_${flag.name}'))
+            .thenAnswer((_) async => true);
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
 
@@ -66,12 +64,10 @@ void main() {
       test(
         'ignores persisted internal flag overrides when internal access is off',
         () async {
-          when(
-            () => mockPrefs.getBool('ff_communityContentWarnings'),
-          ).thenReturn(true);
-          when(
-            () => mockPrefs.containsKey('ff_communityContentWarnings'),
-          ).thenReturn(true);
+          when(() => mockPrefs.getBool('ff_communityContentWarnings'))
+              .thenReturn(true);
+          when(() => mockPrefs.containsKey('ff_communityContentWarnings'))
+              .thenReturn(true);
 
           await service.initialize();
 
@@ -97,12 +93,10 @@ void main() {
             const BuildConfiguration(),
             canOverrideInternalFlags: () => true,
           );
-          when(
-            () => mockPrefs.getBool('ff_communityContentWarnings'),
-          ).thenReturn(true);
-          when(
-            () => mockPrefs.containsKey('ff_communityContentWarnings'),
-          ).thenReturn(true);
+          when(() => mockPrefs.getBool('ff_communityContentWarnings'))
+              .thenReturn(true);
+          when(() => mockPrefs.containsKey('ff_communityContentWarnings'))
+              .thenReturn(true);
 
           await service.initialize();
 
@@ -121,12 +115,10 @@ void main() {
       test(
         'keeps user-facing flag overrides when internal access is off',
         () async {
-          when(
-            () => mockPrefs.getBool('ff_enhancedAnalytics'),
-          ).thenReturn(true);
-          when(
-            () => mockPrefs.containsKey('ff_enhancedAnalytics'),
-          ).thenReturn(true);
+          when(() => mockPrefs.getBool('ff_enhancedAnalytics'))
+              .thenReturn(true);
+          when(() => mockPrefs.containsKey('ff_enhancedAnalytics'))
+              .thenReturn(true);
 
           await service.initialize();
 
@@ -174,9 +166,8 @@ void main() {
 
           await service.setFlag(FeatureFlag.communityContentWarnings, true);
 
-          verify(
-            () => mockPrefs.setBool('ff_communityContentWarnings', true),
-          ).called(1);
+          verify(() => mockPrefs.setBool('ff_communityContentWarnings', true))
+              .called(1);
           expect(
             service.isEnabled(FeatureFlag.communityContentWarnings),
             isTrue,
@@ -185,9 +176,8 @@ void main() {
       );
 
       test('should reset flag to build default', () async {
-        when(
-          () => mockPrefs.remove('ff_enhancedAnalytics'),
-        ).thenAnswer((_) async => true);
+        when(() => mockPrefs.remove('ff_enhancedAnalytics'))
+            .thenAnswer((_) async => true);
 
         await service.setFlag(FeatureFlag.enhancedAnalytics, true);
         await service.resetFlag(FeatureFlag.enhancedAnalytics);
@@ -223,12 +213,10 @@ void main() {
       test(
         'preserves internal flag overrides when resetting all without access',
         () async {
-          when(
-            () => mockPrefs.getBool('ff_communityContentWarnings'),
-          ).thenReturn(true);
-          when(
-            () => mockPrefs.containsKey('ff_communityContentWarnings'),
-          ).thenReturn(true);
+          when(() => mockPrefs.getBool('ff_communityContentWarnings'))
+              .thenReturn(true);
+          when(() => mockPrefs.containsKey('ff_communityContentWarnings'))
+              .thenReturn(true);
 
           await service.initialize();
           await service.resetAllFlags();
@@ -248,26 +236,25 @@ void main() {
 
     group('state queries', () {
       test('exposes user and internal flag metadata', () {
-        final supporters = service.getFlagMetadata(
-          FeatureFlag.divineSupporters,
+        final analytics = service.getFlagMetadata(
+          FeatureFlag.enhancedAnalytics,
         );
         final contentWarnings = service.getFlagMetadata(
           FeatureFlag.communityContentWarnings,
         );
 
-        expect(supporters.flag.displayName, equals('Divine Supporters'));
+        expect(analytics.flag.displayName, equals('Enhanced Analytics'));
         expect(
           contentWarnings.flag.displayName,
           equals('Community Content Warnings'),
         );
-        expect(supporters.isEnabled, isFalse);
+        expect(analytics.isEnabled, isFalse);
         expect(contentWarnings.isEnabled, isFalse);
       });
 
       test('should identify user overrides', () async {
-        when(
-          () => mockPrefs.containsKey('ff_enhancedAnalytics'),
-        ).thenReturn(true);
+        when(() => mockPrefs.containsKey('ff_enhancedAnalytics'))
+            .thenReturn(true);
 
         expect(service.hasUserOverride(FeatureFlag.enhancedAnalytics), isTrue);
         expect(service.hasUserOverride(FeatureFlag.accountSwitching), isFalse);

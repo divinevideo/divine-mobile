@@ -191,7 +191,7 @@ List<RouteBase> settingsRoutes(Ref ref) {
     GoRoute(
       path: SupporterScreen.path,
       name: SupporterScreen.routeName,
-      redirect: (_, _) => supporterRedirectIfDisabled(ref),
+      redirect: (_, _) => supporterRedirectIfUnavailable(ref),
       builder: (_, _) => const SupporterScreen(),
     ),
     GoRoute(
@@ -321,12 +321,9 @@ String? monetizationLinksRedirectIfDisabled(Ref ref) {
   return SettingsScreen.path;
 }
 
-String? supporterRedirectIfDisabled(Ref ref) {
-  final enabled = ref.read(
-    isFeatureEnabledProvider(FeatureFlag.divineSupporters),
-  );
+String? supporterRedirectIfUnavailable(Ref ref) {
   final verificationAvailable = ref.read(supporterApiClientProvider) != null;
-  if (enabled && verificationAvailable) return null;
+  if (verificationAvailable) return null;
   return SettingsScreen.path;
 }
 

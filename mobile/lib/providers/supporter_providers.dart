@@ -25,11 +25,16 @@ bool get hasInAppPurchaseStore =>
     defaultTargetPlatform != TargetPlatform.windows &&
     defaultTargetPlatform != TargetPlatform.macOS;
 
-/// Optional Worker URL supplied by the build once divine-supporters exists.
+/// Base URL of the divine-supporters Worker.
 ///
-/// Keeping this empty by default prevents the flag-gated client foundation
-/// from sending requests to an invented or undeployed endpoint.
-const supporterApiBaseUrl = String.fromEnvironment('SUPPORTERS_API_BASE_URL');
+/// Defaults to the deployed production Worker so an ordinary build ships a
+/// working supporter flow. A build overrides it with
+/// `--dart-define=SUPPORTERS_API_BASE_URL=...` to point at staging or a QA
+/// deployment; passing an empty value disables the client entirely.
+const supporterApiBaseUrl = String.fromEnvironment(
+  'SUPPORTERS_API_BASE_URL',
+  defaultValue: 'https://supporters.divine.video',
+);
 
 /// The NIP-98 authenticated supporter Worker client, when configured.
 @riverpod

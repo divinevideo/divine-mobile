@@ -341,9 +341,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final monetizationLinksEnabled = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
     );
-    final divineSupportersEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.divineSupporters),
-    );
     final supporterVerificationAvailable =
         ref.watch(supporterApiClientProvider) != null;
     // Watched here (not just in _VersionTile) so the Developer Options tile
@@ -414,7 +411,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onTap: () =>
                         context.push(MonetizationLinksSettingsScreen.path),
                   ),
-                if (divineSupportersEnabled && supporterVerificationAvailable)
+                if (supporterVerificationAvailable)
                   DivineListTile(
                     title: context.l10n.supporterTitle,
                     icon: DivineIconName.heart,

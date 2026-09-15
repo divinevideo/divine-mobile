@@ -116,4 +116,22 @@ void main() {
       verify(() => repository.recoverPurchases()).called(1);
     });
   });
+
+  group('supporterApiBaseUrl', () {
+    // The supporter feature is no longer flag-gated, so this constant is the
+    // only thing standing between a build and a working supporter flow. When
+    // it is empty, supporterApiClientProvider returns null, the settings tile
+    // is hidden and the route redirects — indistinguishable from the feature
+    // never having shipped. Worth pinning.
+    test('defaults to the deployed production Worker', () {
+      expect(supporterApiBaseUrl, 'https://supporters.divine.video');
+    });
+
+    test('is an absolute https URL that can be parsed', () {
+      final uri = Uri.parse(supporterApiBaseUrl);
+      expect(uri.isAbsolute, isTrue);
+      expect(uri.scheme, 'https');
+      expect(uri.host, isNotEmpty);
+    });
+  });
 }
