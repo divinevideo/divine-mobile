@@ -129,10 +129,14 @@ SupporterRepository supporterRepository(Ref ref) {
 /// foreground.
 ///
 /// This deliberately does not depend on the Supporter screen or the feature
-/// flag. Purchases with a known local or canonical account owner can recover
-/// without opening Settings. Unbound legacy purchases require explicit Restore
-/// to choose their account. The repository coalesces overlapping calls and
-/// retries temporary failures on a later foreground edge.
+/// flag. It runs only when the device already carries local evidence of a
+/// purchase — a cached entitlement or an interrupted claim — so an account that
+/// never bought anything does not spend an authenticated request and a store
+/// restore to find nothing. A purchase known only canonically (a reinstall, a
+/// new device) is picked up when the user opens the Supporter screen, or by an
+/// explicit Restore; unbound legacy purchases require that explicit Restore to
+/// choose their account. The repository coalesces overlapping calls and retries
+/// temporary failures on a later foreground edge.
 final supporterRecoveryProvider = Provider<Future<void>?>((ref) {
   final authService = ref.watch(authServiceProvider);
   final authState = ref.watch(currentAuthStateProvider);
