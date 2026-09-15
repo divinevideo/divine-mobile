@@ -10,9 +10,9 @@ part of 'supporter_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Whether this build can talk to the supporter Worker at all.
 ///
-/// Equivalent to `supporterApiClientProvider != null`, because an empty base
-/// URL is the only thing that makes that provider null — but it answers the
-/// question without *building* the client, which pulls in the NIP-98 and
+/// Equivalent to `supporterApiClientProvider != null`, because an unusable
+/// base URL is the only thing that makes that provider null — but it answers
+/// the question without *building* the client, which pulls in the NIP-98 and
 /// secure-auth services and the work they start. A settings tile deciding
 /// whether to render, and a route guard evaluating a redirect, should not pay
 /// that cost or leave those services running behind them.
@@ -22,9 +22,9 @@ final supporterApiConfiguredProvider = SupporterApiConfiguredProvider._();
 
 /// Whether this build can talk to the supporter Worker at all.
 ///
-/// Equivalent to `supporterApiClientProvider != null`, because an empty base
-/// URL is the only thing that makes that provider null — but it answers the
-/// question without *building* the client, which pulls in the NIP-98 and
+/// Equivalent to `supporterApiClientProvider != null`, because an unusable
+/// base URL is the only thing that makes that provider null — but it answers
+/// the question without *building* the client, which pulls in the NIP-98 and
 /// secure-auth services and the work they start. A settings tile deciding
 /// whether to render, and a route guard evaluating a redirect, should not pay
 /// that cost or leave those services running behind them.
@@ -34,9 +34,9 @@ final class SupporterApiConfiguredProvider
     with $Provider<bool> {
   /// Whether this build can talk to the supporter Worker at all.
   ///
-  /// Equivalent to `supporterApiClientProvider != null`, because an empty base
-  /// URL is the only thing that makes that provider null — but it answers the
-  /// question without *building* the client, which pulls in the NIP-98 and
+  /// Equivalent to `supporterApiClientProvider != null`, because an unusable
+  /// base URL is the only thing that makes that provider null — but it answers
+  /// the question without *building* the client, which pulls in the NIP-98 and
   /// secure-auth services and the work they start. A settings tile deciding
   /// whether to render, and a route guard evaluating a redirect, should not pay
   /// that cost or leave those services running behind them.
@@ -74,7 +74,7 @@ final class SupporterApiConfiguredProvider
 }
 
 String _$supporterApiConfiguredHash() =>
-    r'ee4d0338dca7a117c44516d34a75073fe89331c8';
+    r'5f8c8ff4fe3ebac4fdf8eabfaa8a405f85b84806';
 
 /// The NIP-98 authenticated supporter Worker client, when configured.
 
@@ -127,7 +127,7 @@ final class SupporterApiClientProvider
 }
 
 String _$supporterApiClientHash() =>
-    r'b2fccc742b9187925bc86a96aab4bba3294894de';
+    r'fbbc695c2015266839ff967d5748842e882495e1';
 
 /// The store-backed [EntitlementValidator] for the current platform.
 ///

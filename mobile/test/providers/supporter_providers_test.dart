@@ -172,4 +172,37 @@ void main() {
       );
     });
   });
+
+  group('supporterApiUsable', () {
+    // The compiled default is the only configuration a shipping build is
+    // guaranteed to have. A build-time override is accepted only when it is a
+    // base URL the client can resolve request paths against without silently
+    // changing hosts or paths.
+    test('accepts the compiled default', () {
+      expect(supporterApiUsable(supporterApiBaseUrl), isTrue);
+    });
+
+    test('accepts an https override with a path prefix or trailing slash', () {
+      expect(supporterApiUsable('https://staging.example/api'), isTrue);
+      expect(supporterApiUsable('https://staging.example/api/'), isTrue);
+    });
+
+    test('rejects an empty or missing override', () {
+      expect(supporterApiUsable(''), isFalse);
+    });
+
+    test('rejects a base URL that is not absolute https with a host', () {
+      expect(supporterApiUsable('http://supporters.divine.video'), isFalse);
+      expect(supporterApiUsable('supporters.divine.video'), isFalse);
+      expect(supporterApiUsable('https://'), isFalse);
+      expect(supporterApiUsable(' https://supporters.divine.video'), isFalse);
+    });
+
+    test('rejects a query or fragment, which would misroute requests', () {
+      // SupporterApiClient appends a slash to the base before resolving, so
+      // `https://host/api?x=1` would resolve `/v1/me` to `https://host/v1/me`.
+      expect(supporterApiUsable('https://host/api?x=1'), isFalse);
+      expect(supporterApiUsable('https://host/api#fragment'), isFalse);
+    });
+  });
 }
