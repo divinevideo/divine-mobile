@@ -1006,6 +1006,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final player = _videoPlayer;
     if (player == null) return;
     await player.seekTo(Duration.zero);
+    if (!identical(_videoPlayer, player)) return;
     await player.play();
   }
 
