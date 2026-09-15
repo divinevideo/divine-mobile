@@ -144,10 +144,10 @@ void main() {
 
   group('supporterApiBaseUrl', () {
     // The supporter flow is no longer flag-gated, so this constant is the only
-    // thing standing between a build and a working supporter flow. An empty
-    // value makes supporterApiClientProvider null, which hides the settings
-    // tile and redirects the route — indistinguishable from the feature never
-    // having shipped.
+    // thing standing between a build and a working supporter flow. An empty or
+    // malformed value makes supporterApiClientProvider null, which hides the
+    // settings tile and redirects the route — indistinguishable from the
+    // feature never having shipped.
     test('defaults to the deployed production Worker', () {
       expect(supporterApiBaseUrl, 'https://supporters.divine.video');
     });
@@ -163,13 +163,13 @@ void main() {
       expect(uri.hasFragment, isFalse);
     });
 
-    test('supporterApiConfigured follows the base URL', () {
+    test('supporterApiConfigured admits the compiled default', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      expect(
-        container.read(supporterApiConfiguredProvider),
-        supporterApiBaseUrl.isNotEmpty,
-      );
+      // The shipping build carries this constant, so it must be usable; the
+      // predicate's rejection cases are covered in the supporterApiUsable
+      // group below.
+      expect(container.read(supporterApiConfiguredProvider), isTrue);
     });
   });
 

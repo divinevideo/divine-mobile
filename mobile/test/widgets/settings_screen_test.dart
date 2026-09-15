@@ -31,6 +31,7 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/environment_service.dart';
@@ -424,6 +425,36 @@ void main() {
         );
         expect(find.text(title), findsOneWidget);
       }
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+
+    testWidgets('renders the supporter tile when the Worker is configured', (
+      tester,
+    ) async {
+      // The compiled default is a usable https URL, so no override is needed:
+      // the tile is the user-visible half of the condition the supporter route
+      // guard checks.
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(buildSubject(goRouter: mockGoRouter));
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.supporterTitle),
+        300,
+        scrollable: scrollable,
+      );
+      expect(find.text(l10n.supporterTitle), findsOneWidget);
+
+      await tester.tap(find.text(l10n.supporterTitle));
+      await tester.pumpAndSettle();
+
+      verify(() => mockGoRouter.push(SupporterScreen.path)).called(1);
 
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
