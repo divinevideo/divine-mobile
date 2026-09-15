@@ -165,6 +165,11 @@ internal class ClipAudioLoopTrack private constructor(
                 var sampleRate = inputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
                 var channels = inputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
                 val info = MediaCodec.BufferInfo()
+                // Where the sound begins on the clip's timeline. The buffers
+                // are concatenated, so only their first timestamp can say; a
+                // track that starts late, or one stamped before zero by its
+                // gapless edit, is placed by [LoopPcm.prepare] from this.
+                var firstPresentationUs: Long? = null
                 var sawInputEnd = false
                 var sawOutputEnd = false
 
@@ -198,6 +203,9 @@ internal class ClipAudioLoopTrack private constructor(
                         else -> if (out >= 0) {
                             val buffer = codec.getOutputBuffer(out)!!
                             if (info.size > 0) {
+                                if (firstPresentationUs == null) {
+                                    firstPresentationUs = info.presentationTimeUs
+                                }
                                 val chunk = ByteArray(info.size)
                                 buffer.position(info.offset)
                                 buffer.get(chunk)
@@ -221,11 +229,13 @@ internal class ClipAudioLoopTrack private constructor(
                 ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN)
                     .asShortBuffer().get(samples)
 
+                val startUs = firstPresentationUs ?: 0L
                 val prepared = LoopPcm.prepare(
                     samples = samples,
                     channels = channels,
                     sampleRate = sampleRate,
                     loopMs = loopMs,
+                    startUs = startUs,
                 ) ?: return null
                 val loopFrames = prepared.loopFrames
                 val fadeFrames = prepared.fadeFrames
@@ -280,8 +290,8 @@ internal class ClipAudioLoopTrack private constructor(
                 DivineVideoPlayerLog.debug(
                     "Looping clip audio outside ExoPlayer: ${loopFrames} frames " +
                         "at ${sampleRate}Hz for ${loopMs} ms presented, " +
-                        "${samples.size / channels} decoded, ${fadeFrames} frame " +
-                        "${if (fromPast) "crossfade" else "ramp"}",
+                        "${samples.size / channels} decoded from ${startUs} us, " +
+                        "${fadeFrames} frame ${if (fromPast) "crossfade" else "ramp"}",
                     name = "DivineVideoPlayer.AudioLoop",
                 )
                 return ClipAudioLoopTrack(track, sampleRate, loopFrames)

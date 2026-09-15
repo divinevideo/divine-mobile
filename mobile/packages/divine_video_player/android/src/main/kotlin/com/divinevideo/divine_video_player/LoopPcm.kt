@@ -67,20 +67,38 @@ internal object LoopPcm {
      * does. The presented duration can be trusted for this because the player
      * clips it to the source's own length; it is never a cap past the clip.
      *
-     * Returns null when there is no loop to build.
+     * [startUs] is where the first decoded sample sits on the clip's timeline.
+     * The decode is a concatenation of buffers and says nothing about where it
+     * begins; the timestamp does. A track whose sound starts later than its
+     * picture — an initial empty edit, which ffprobe reports as an audio
+     * `start_time` past zero — decodes to a first sample stamped that far in,
+     * and ExoPlayer plays it there. Placed at zero instead, the sound would run
+     * ahead of the picture by that much on every lap. So the loop opens with
+     * that much silence. A negative start is the other edit list, gapless
+     * trimming: the extractor stamps the encoder's priming samples before zero
+     * and the decoder, with its trimming switched off so it hands back the
+     * material past the loop point, emits them anyway. Those frames are dropped,
+     * which is the same cut the player makes with the trimming left on.
+     *
+     * Returns null when there is no loop to build, including when the sound
+     * starts only after the loop ends.
      */
     fun prepare(
         samples: ShortArray,
         channels: Int,
         sampleRate: Int,
         loopMs: Long,
+        startUs: Long = 0L,
     ): Prepared? {
         if (channels <= 0 || sampleRate <= 0 || loopMs <= 0) return null
-        val decodedFrames = samples.size / channels
         val loopFrames = (loopMs * sampleRate / 1000L)
             .coerceAtMost(Int.MAX_VALUE / channels.toLong())
             .toInt()
-        if (loopFrames <= 0 || decodedFrames <= 0) return null
+        if (loopFrames <= 0) return null
+        val placed = placeOnTimeline(samples, channels, sampleRate, startUs, loopFrames)
+            ?: return null
+        val decodedFrames = placed.size / channels
+        if (decodedFrames <= 0) return null
 
         val spare = (decodedFrames - loopFrames).coerceAtLeast(0)
         val wanted = (CROSSFADE_MS * sampleRate / 1000L).toInt()
@@ -88,14 +106,14 @@ internal object LoopPcm {
         // Grows, zero-filled, when the loop was padded out to the picture's
         // period; the decode is left whole otherwise, since the blend below
         // reads the material past the loop point out of it.
-        val out = samples.copyOf(maxOf(samples.size, loopFrames * channels))
+        val out = placed.copyOf(maxOf(placed.size, loopFrames * channels))
 
         if (fadeFrames > 0) {
             for (i in 0 until fadeFrames) {
                 val a = i.toFloat() / fadeFrames
                 for (channel in 0 until channels) {
-                    val head = samples[i * channels + channel].toFloat()
-                    val past = samples[(loopFrames + i) * channels + channel].toFloat()
+                    val head = placed[i * channels + channel].toFloat()
+                    val past = placed[(loopFrames + i) * channels + channel].toFloat()
                     out[i * channels + channel] =
                         (past * (1f - a) + head * a)
                             .coerceIn(-32768f, 32767f).toInt().toShort()
@@ -119,5 +137,35 @@ internal object LoopPcm {
             }
         }
         return Prepared(out, loopFrames, rampFrames, blendedFromPastTheLoop = false)
+    }
+
+    /**
+     * Shifts [samples] so that frame zero is the clip's time zero rather than
+     * the first decoded sample: leading silence for a start past zero, a cut
+     * for one before it.
+     *
+     * Returns null when nothing of the sound falls inside the loop.
+     */
+    private fun placeOnTimeline(
+        samples: ShortArray,
+        channels: Int,
+        sampleRate: Int,
+        startUs: Long,
+        loopFrames: Int,
+    ): ShortArray? {
+        val startFrames = Math.round(startUs.toDouble() * sampleRate / 1_000_000.0)
+        if (startFrames >= loopFrames) return null
+        val decodedFrames = samples.size / channels
+        return when {
+            startFrames > 0 -> {
+                val lead = startFrames.toInt() * channels
+                ShortArray(lead + samples.size).also { samples.copyInto(it, lead) }
+            }
+            startFrames < 0 -> {
+                val cut = (-startFrames).coerceAtMost(decodedFrames.toLong()).toInt()
+                samples.copyOfRange(cut * channels, samples.size)
+            }
+            else -> samples
+        }
     }
 }

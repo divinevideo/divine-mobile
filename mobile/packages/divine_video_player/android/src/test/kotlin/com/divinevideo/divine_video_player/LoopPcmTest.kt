@@ -178,6 +178,74 @@ class LoopPcmTest {
     }
 
     @Test
+    fun `opens with silence when the sound starts after the picture`() {
+        // A clip whose audio track begins 0.978667 s in — an initial empty
+        // edit, which ffprobe reports as the audio stream's start_time — while
+        // its video starts at zero. ExoPlayer plays the sound there. The
+        // decoded buffers only know their first timestamp, so placing them at
+        // zero would run the sound that far ahead of the picture, every lap.
+        val startUs = 978_667L
+        val decoded = (5.021333 * sampleRate).toInt()
+        val source = tone(frames = decoded)
+        val prepared = LoopPcm.prepare(
+            samples = source,
+            channels = 1,
+            sampleRate = sampleRate,
+            loopMs = 6000,
+            startUs = startUs,
+        )!!
+
+        val lead = Math.round(startUs * sampleRate / 1_000_000.0).toInt()
+        assertEquals(6 * sampleRate, prepared.loopFrames)
+        for (frame in 0 until lead) {
+            assertEquals("frame $frame should be silence", 0, prepared.samples[frame].toInt())
+        }
+        // The recording itself sits where its timestamp says, untouched past
+        // the head ramp.
+        assertEquals(source[1000], prepared.samples[lead + 1000])
+        assertNotEquals(0, prepared.samples[lead + 1000].toInt())
+    }
+
+    @Test
+    fun `drops the priming samples a gapless edit stamps before zero`() {
+        // The extractor stamps an AAC track's encoder priming before zero, and
+        // with its trimming switched off the decoder emits those frames. The
+        // player cuts them; the loop has to as well, or its sound runs late by
+        // their length.
+        val priming = 2112
+        val startUs = -Math.round(priming * 1_000_000.0 / sampleRate)
+        val loopFrames = sampleRate
+        val source = tone(frames = priming + loopFrames + sampleRate / 4)
+        val prepared = LoopPcm.prepare(
+            samples = source,
+            channels = 1,
+            sampleRate = sampleRate,
+            loopMs = 1000,
+            startUs = startUs,
+        )!!
+
+        assertEquals(loopFrames, prepared.loopFrames)
+        // Frame zero of the loop is the sample the edit list points at, read
+        // past the head blend where the material is untouched.
+        val probe = prepared.fadeFrames + 10
+        assertEquals(source[priming + probe], prepared.samples[probe])
+        assertTrue(prepared.blendedFromPastTheLoop)
+    }
+
+    @Test
+    fun `refuses a sound that starts only after the loop ends`() {
+        assertNull(
+            LoopPcm.prepare(
+                samples = tone(frames = sampleRate),
+                channels = 1,
+                sampleRate = sampleRate,
+                loopMs = 1000,
+                startUs = 1_000_000L,
+            ),
+        )
+    }
+
+    @Test
     fun `refuses input it cannot make a loop from`() {
         assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, sampleRate, loopMs = 0))
         assertNull(LoopPcm.prepare(ShortArray(0), channels = 1, sampleRate, loopMs = 1000))
