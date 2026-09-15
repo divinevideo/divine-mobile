@@ -1,15 +1,21 @@
 import 'package:curated_list_repository/curated_list_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
+import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/widgets.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -23,6 +29,9 @@ class _MockCuratedListRepository extends Mock
 
 class _MockPeopleListsRepository extends Mock
     implements PeopleListsRepository {}
+
+final _profileRepositoryAvailable = StateProvider<bool>((ref) => false);
+final _videosRepositorySelection = StateProvider<int>((ref) => 0);
 
 void main() {
   setUpAll(() {
@@ -45,12 +54,16 @@ void main() {
       mockPeopleListsRepository = _MockPeopleListsRepository();
     });
 
-    Widget createTestWidget() {
+    Widget createTestWidget({
+      Override? profileRepositoryOverride,
+      Override? videosRepositoryOverride,
+    }) {
       return testMaterialApp(
         home: const SearchResultsPage(),
         mockProfileRepository: mockProfileRepository,
         additionalOverrides: [
-          videosRepositoryProvider.overrideWithValue(mockVideosRepository),
+          videosRepositoryOverride ??
+              videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           hashtagRepositoryProvider.overrideWithValue(mockHashtagRepository),
           curatedListRepositoryProvider.overrideWithValue(
             mockCuratedListRepository,
@@ -58,9 +71,85 @@ void main() {
           peopleListsRepositoryProvider.overrideWithValue(
             mockPeopleListsRepository,
           ),
+          ?profileRepositoryOverride,
         ],
       );
     }
+
+    testWidgets('shows a waiting state while the profile repository is null', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          profileRepositoryOverride: profileRepositoryProvider
+              .overrideWithValue(
+                null,
+              ),
+        ),
+      );
+
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('shows search when the profile repository becomes available', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          profileRepositoryOverride: profileRepositoryProvider.overrideWith((
+            ref,
+          ) {
+            final isAvailable = ref.watch(_profileRepositoryAvailable);
+            return isAvailable ? mockProfileRepository : null;
+          }),
+        ),
+      );
+
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SearchResultsPage)),
+      );
+      container.read(_profileRepositoryAvailable.notifier).state = true;
+      await tester.pump();
+
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('recreates search blocs when a repository identity changes', (
+      tester,
+    ) async {
+      final replacementVideosRepository = _MockVideosRepository();
+      await tester.pumpWidget(
+        createTestWidget(
+          videosRepositoryOverride: videosRepositoryProvider.overrideWith((
+            ref,
+          ) {
+            final selection = ref.watch(_videosRepositorySelection);
+            return selection == 0
+                ? mockVideosRepository
+                : replacementVideosRepository;
+          }),
+        ),
+      );
+
+      final contextBefore = tester.element(find.byType(SearchResultsView));
+      final blocBefore = BlocProvider.of<VideoSearchBloc>(contextBefore);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SearchResultsPage)),
+      );
+      container.read(_videosRepositorySelection.notifier).state = 1;
+      await tester.pump();
+
+      final contextAfter = tester.element(find.byType(SearchResultsView));
+      final blocAfter = BlocProvider.of<VideoSearchBloc>(contextAfter);
+      expect(blocAfter, isNot(same(blocBefore)));
+      expect(blocBefore.isClosed, isTrue);
+    });
 
     testWidgets('re-runs active searches when the blocklist changes', (
       tester,

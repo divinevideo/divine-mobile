@@ -62,14 +62,40 @@ class SearchResultsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileRepository = ref.read(profileRepositoryProvider);
-    if (profileRepository == null) return const SizedBox.shrink();
+    final profileRepository = ref.watch(profileRepositoryProvider);
+    if (profileRepository == null) {
+      return ColoredBox(
+        color: context.vineColors.surface,
+        child: const Center(
+          child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
+        ),
+      );
+    }
+
+    final videosRepository = ref.watch(videosRepositoryProvider);
+    final hashtagRepository = ref.watch(hashtagRepositoryProvider);
+    final curatedListRepository = ref.watch(curatedListRepositoryProvider);
+    final peopleListsRepository = ref.watch(peopleListsRepositoryProvider);
+    final peopleListSearchEnabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
+    );
 
     return MultiBlocProvider(
+      // Recreate the search blocs when an auth-sensitive repository or flag
+      // changes so no bloc remains bound to stale dependencies.
+      // See `.claude/rules/state_management.md`.
+      key: ValueKey((
+        profileRepository,
+        videosRepository,
+        hashtagRepository,
+        curatedListRepository,
+        peopleListsRepository,
+        peopleListSearchEnabled,
+      )),
       providers: [
         BlocProvider(
           create: (_) => VideoSearchBloc(
-            videosRepository: ref.read(videosRepositoryProvider),
+            videosRepository: videosRepository,
           ),
         ),
         BlocProvider(
@@ -78,16 +104,14 @@ class SearchResultsPage extends ConsumerWidget {
         BlocProvider(create: (_) => SearchResultsFilterCubit()),
         BlocProvider(
           create: (_) => HashtagSearchBloc(
-            hashtagRepository: ref.read(hashtagRepositoryProvider),
+            hashtagRepository: hashtagRepository,
           ),
         ),
         BlocProvider(
           create: (_) => ListSearchBloc(
-            curatedListRepository: ref.read(curatedListRepositoryProvider),
-            peopleListsRepository: ref.read(peopleListsRepositoryProvider),
-            peopleListSearchEnabled: ref.read(
-              isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
-            ),
+            curatedListRepository: curatedListRepository,
+            peopleListsRepository: peopleListsRepository,
+            peopleListSearchEnabled: peopleListSearchEnabled,
           ),
         ),
       ],
