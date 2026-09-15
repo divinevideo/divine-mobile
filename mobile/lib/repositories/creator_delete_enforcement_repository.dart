@@ -64,6 +64,11 @@ class CreatorDeleteEnforcementRepository {
   final Future<void> Function(Duration) _delay;
   final void Function(Object, StackTrace)? _reportError;
 
+  /// Asks moderation-service to clean up the media a published kind-5 covers.
+  ///
+  /// [deletionEvent] is that signed event as JSON, with `id` equal to
+  /// [kind5Id]. Supplying it lets the service validate the event directly
+  /// instead of looking it up on the relay, which can lag publication.
   Future<CreatorDeleteEnforcementResult> enforce(
     String kind5Id, {
     Map<String, dynamic>? deletionEvent,
