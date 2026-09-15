@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -181,6 +183,70 @@ void main() {
     });
 
     group('loadMore', () {
+      test('ignores a late page from before refresh', () async {
+        final oldPage = Completer<HomeFeedResult>();
+        final oldPageStarted = Completer<void>();
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((call) async {
+          if (call.namedArguments[#skipCache] == true) {
+            return HomeFeedResult(
+              videos: _videos(1, idPrefix: 'fresh'),
+              hasMore: true,
+              paginationCursor: 'p:fresh',
+            );
+          }
+          if (call.namedArguments[#cursor] == 'p:old') {
+            oldPageStarted.complete();
+            return oldPage.future;
+          }
+          if (call.namedArguments[#cursor] == 'p:fresh') {
+            return HomeFeedResult(
+              videos: _videos(1, idPrefix: 'more'),
+              hasMore: false,
+            );
+          }
+          return HomeFeedResult(
+            videos: _videos(1),
+            hasMore: true,
+            paginationCursor: 'p:old',
+          );
+        });
+        final container = createContainer();
+        await container.read(newVideosFeedProvider.future);
+        final notifier = container.read(newVideosFeedProvider.notifier);
+        final pending = notifier.loadMore();
+        await oldPageStarted.future;
+        await notifier.refresh();
+        oldPage.complete(
+          HomeFeedResult(videos: _videos(1, idPrefix: 'stale'), hasMore: false),
+        );
+        await pending;
+
+        expect(
+          container
+              .read(newVideosFeedProvider)
+              .requireValue
+              .videos
+              .map((v) => v.id),
+          ['fresh-0'],
+        );
+        await notifier.loadMore();
+        expect(
+          container
+              .read(newVideosFeedProvider)
+              .requireValue
+              .videos
+              .map((v) => v.id),
+          ['fresh-0', 'more-0'],
+        );
+      });
+
       test(
         'refresh replaces the old source cursor before loading more',
         () async {

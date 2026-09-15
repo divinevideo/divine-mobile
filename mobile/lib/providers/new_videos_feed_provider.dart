@@ -24,6 +24,7 @@ part 'new_videos_feed_provider.g.dart';
 class NewVideosFeed extends _$NewVideosFeed {
   int? _nextCursor;
   String? _paginationCursor;
+  int _paginationGeneration = 0;
   final _enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
   @override
@@ -71,6 +72,7 @@ class NewVideosFeed extends _$NewVideosFeed {
         return const VideoFeedState(videos: [], hasMoreContent: true);
       }
 
+      _paginationGeneration++;
       _nextCursor = getOldestTimestamp(videos);
       _paginationCursor = page.paginationCursor;
 
@@ -124,6 +126,7 @@ class NewVideosFeed extends _$NewVideosFeed {
     if (!ref.mounted || currentState.isLoadingMore) return;
     if (!currentState.hasMoreContent) return;
 
+    final paginationGeneration = _paginationGeneration;
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
@@ -135,7 +138,9 @@ class NewVideosFeed extends _$NewVideosFeed {
       );
       final newVideos = page.videos;
 
-      if (!ref.mounted) return;
+      // A refresh can install a new first page while this request is pending.
+      // Its cursor and visible rows must not be overwritten by the old page.
+      if (!ref.mounted || paginationGeneration != _paginationGeneration) return;
 
       _nextCursor = getOldestTimestamp(newVideos);
       _paginationCursor = page.paginationCursor;
@@ -191,7 +196,7 @@ class NewVideosFeed extends _$NewVideosFeed {
         category: LogCategory.video,
       );
 
-      if (!ref.mounted) return;
+      if (!ref.mounted || paginationGeneration != _paginationGeneration) return;
       state = AsyncData(
         currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );

@@ -126,6 +126,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
   DateTime? _lastRefreshedAt;
 
+  // Installing a fresh first page invalidates any continuation of the old
+  // window, even when both requests belong to the same feed source.
+  int _paginationGeneration = 0;
+
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
   /// All four home modes (For You, Following, New, Classics) are served from
@@ -442,6 +446,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     }
 
     final source = state.source;
+    final paginationGeneration = _paginationGeneration;
     final feedLoad = _feedTracker?.startFeedLoad(
       source.mode.name,
       reason: FeedLoadReason.pagination,
@@ -465,7 +470,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         until: usesCursor ? null : until,
         paginationCursor: usesCursor ? state.paginationCursor : null,
       );
-      if (!_canEmitForSource(source, emit)) return;
+      if (!_canEmitForSource(source, emit) ||
+          paginationGeneration != _paginationGeneration) {
+        return;
+      }
 
       // Filter out videos without valid URLs
       final validNewVideos = result.videos
@@ -547,7 +555,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       // (_onActiveIndexChanged); pagination alone does not move the resume
       // position, so nothing is persisted here.
     } catch (e) {
-      if (!_canEmitForSource(source, emit)) return;
+      if (!_canEmitForSource(source, emit) ||
+          paginationGeneration != _paginationGeneration) {
+        return;
+      }
 
       Log.error(
         'VideoFeedBloc: Failed to load more videos - $e',
@@ -835,10 +846,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       if (feedLoad != null) {
         _feedTracker?.markFirstVideosReceived(feedLoad, displayedVideos.length);
       }
+      _paginationGeneration++;
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
           videos: displayedVideos,
+          isLoadingMore: false,
           // Only stop pagination when no results at all.
           // Fewer than _pageSize can happen due to server-side filtering.
           hasMore: _hasMoreForSource(
