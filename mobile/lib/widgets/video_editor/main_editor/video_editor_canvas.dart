@@ -39,6 +39,7 @@ import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
 import 'package:openvine/services/video_editor/transition_seam_render_service.dart';
 import 'package:openvine/utils/await_push_transition.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
@@ -581,6 +582,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   bool get _isPlayerInitialized => _videoPlayer?.isInitialized == true;
 
+  void _runDetached(Future<void> operation, String description) {
+    runDetached(
+      operation,
+      description,
+      logName: 'VideoEditorCanvas',
+      category: LogCategory.video,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -598,7 +608,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // Initialize the player with the current clips.
     if (_clipPaths.isNotEmpty) {
-      _initializePlayer(_clipPaths);
+      _runDetached(_initializePlayer(_clipPaths), 'initialize video player');
     }
 
     // A stop-motion composition never runs _initializePlayer (no mp4), so its
@@ -606,7 +616,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // draft. Post-frame: _isStopMotionComposition reads providers/blocs.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_isStopMotionComposition) return;
-      unawaited(_syncAudioTracks());
+      _runDetached(_syncAudioTracks(), 'sync restored audio tracks');
     });
   }
 
@@ -649,10 +659,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
     _playheadTicker?.dispose();
     _stopMotionTicker?.dispose();
-    _stopMotionAudio?.dispose();
+    final stopMotionAudio = _stopMotionAudio;
+    if (stopMotionAudio != null) {
+      _runDetached(stopMotionAudio.dispose(), 'dispose stop-motion audio');
+    }
     _stopMotionAudio = null;
-    _videoPlayerSubscription?.cancel();
-    _videoPlayer?.dispose();
+    final playerSubscription = _videoPlayerSubscription;
+    if (playerSubscription != null) {
+      _runDetached(playerSubscription.cancel(), 'cancel player subscription');
+    }
+    final player = _videoPlayer;
+    if (player != null) {
+      _runDetached(player.dispose(), 'dispose video player');
+    }
     // Null it so a release/init still awaiting bails instead of double-disposing
     // or writing to the disposed notifier below.
     _videoPlayer = null;
@@ -698,13 +717,25 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (_seamService.cached(clipA, clipB, transition) != null) return;
     if (_seamService.isRendering(clipA, clipB, transition)) return;
     _pendingSeamRenders.value++;
-    _seamService
-        .render(clipA: clipA, clipB: clipB, transition: transition)
-        .then((seam) {
-          if (!mounted) return;
-          _pendingSeamRenders.value--;
-          if (seam != null) _resyncPlayerClips();
-        });
+    _runDetached(
+      _renderSeamAndResync(clipA, clipB, transition),
+      'render transition seam',
+    );
+  }
+
+  Future<void> _renderSeamAndResync(
+    DivineVideoClip clipA,
+    DivineVideoClip clipB,
+    ClipTransition transition,
+  ) async {
+    final seam = await _seamService.render(
+      clipA: clipA,
+      clipB: clipB,
+      transition: transition,
+    );
+    if (!mounted) return;
+    _pendingSeamRenders.value--;
+    if (seam != null) _resyncPlayerClips();
   }
 
   /// Kicks off background renders of the normal-rate body for any non-1× clip,
@@ -741,11 +772,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
       if (_speedRenderService.cached(clip) != null) continue;
       if (_speedRenderService.isRendering(clip)) continue;
-      _speedRenderService.render(clip).then((rendered) {
-        if (!mounted) return;
-        if (rendered != null) _resyncSpeedClipsWhenIdle();
-      });
+      _runDetached(_renderSpeedClipAndResync(clip), 'render speed clip');
     }
+  }
+
+  Future<void> _renderSpeedClipAndResync(DivineVideoClip clip) async {
+    final rendered = await _speedRenderService.render(clip);
+    if (!mounted) return;
+    if (rendered != null) _resyncSpeedClipsWhenIdle();
   }
 
   /// Swaps the composition onto a finished speed render — but only while the
@@ -771,7 +805,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         .read<VideoEditorMainBloc>()
         .state
         .currentPosition;
-    unawaited(_swapComposition(clips, timelineStartPosition: currentPosition));
+    _runDetached(
+      _swapComposition(clips, timelineStartPosition: currentPosition),
+      'resync player clips',
+    );
   }
 
   /// Reloads the player composition while suppressing the stale position
@@ -962,8 +999,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // report (the restart target) is accepted. _onPlayerStateChanged releases
     // the pin once playback is actually reported.
     _pendingSeekTarget = Duration.zero;
-    _videoPlayer?.seekTo(Duration.zero);
-    _videoPlayer?.play();
+    _runDetached(_restartPlayback(), 'restart playback');
+  }
+
+  Future<void> _restartPlayback() async {
+    final player = _videoPlayer;
+    if (player == null) return;
+    await player.seekTo(Duration.zero);
+    await player.play();
   }
 
   /// Handles playback toggle requests from BLoC.
@@ -979,13 +1022,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // Stop the interpolator on pause so it doesn't keep advancing the play
       // time for up to one report interval before the next report stops it.
       _setPlayheadTickerActive(false);
-      _videoPlayer?.pause();
+      final player = _videoPlayer;
+      if (player != null) {
+        _runDetached(player.pause(), 'pause playback');
+      }
     } else {
       // Keep any scrub / swap pin until the player actually reports isPlaying
       // (released in _onPlayerStateChanged). Clearing it here, before the first
       // isPlaying report, would reopen the window where a delayed reset report
       // (seekTarget == null) is accepted and snaps the playhead to the start.
-      _videoPlayer?.play();
+      final player = _videoPlayer;
+      if (player != null) {
+        _runDetached(player.play(), 'resume playback');
+      }
     }
   }
 
@@ -1007,12 +1056,18 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // Stop the interpolator on pause so it doesn't keep advancing the play
       // time for up to one report interval before the next report stops it.
       _setPlayheadTickerActive(false);
-      _videoPlayer?.pause();
+      final player = _videoPlayer;
+      if (player != null) {
+        _runDetached(player.pause(), 'pause playback externally');
+      }
     } else {
       // Keep any scrub / swap pin until the player reports isPlaying; see
       // _onPlaybackToggleRequested for why clearing it here would reopen the
       // delayed-reset-report window.
-      _videoPlayer?.play();
+      final player = _videoPlayer;
+      if (player != null) {
+        _runDetached(player.play(), 'resume playback externally');
+      }
     }
   }
 
@@ -1039,9 +1094,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// engine, which the same re-sync covers.
   void _onVoiceOverPreviewChanged({required bool isActive}) {
     if (!_isStopMotionComposition) {
-      unawaited(_videoPlayer?.setVolume(isActive ? 0 : 1));
+      final player = _videoPlayer;
+      if (player != null) {
+        _runDetached(
+          player.setVolume(isActive ? 0 : 1),
+          'update voice-over preview volume',
+        );
+      }
     }
-    unawaited(_syncAudioTracks());
+    _runDetached(_syncAudioTracks(), 'sync voice-over preview audio');
   }
 
   // -- Frames-only stop-motion playhead --------------------------------------
@@ -1089,8 +1150,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (audio != null) {
       // Re-anchoring is a clock set, not a tick: a resume that lands mid-window
       // must re-seek even when it re-anchors only slightly ahead.
-      unawaited(
+      _runDetached(
         audio.syncTo(_stopMotionAnchor, isPlaying: true, isSeek: true),
+        'start stop-motion audio',
       );
     }
 
@@ -1104,7 +1166,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (_stopMotionTicker?.isActive ?? false) _stopMotionTicker!.stop();
     _setPlayheadAdvancing(advancing: false);
     final audio = _stopMotionAudio;
-    if (audio != null) unawaited(audio.pauseAll());
+    if (audio != null) {
+      _runDetached(audio.pauseAll(), 'pause stop-motion audio');
+    }
     if (!context.read<VideoEditorMainBloc>().state.isPlaying) return;
     context.read<VideoEditorMainBloc>().add(
       const VideoEditorPlaybackChanged(isPlaying: false),
@@ -1134,12 +1198,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _setLayerPlayTime(clamped);
     final audio = _stopMotionAudio;
     if (audio != null) {
-      unawaited(
+      _runDetached(
         audio.syncTo(
           clamped,
           isPlaying: _stopMotionStopwatch.isRunning,
           isSeek: true,
         ),
+        'seek stop-motion audio',
       );
     }
     context.read<VideoEditorMainBloc>().add(
@@ -1167,7 +1232,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // bloc emit below would swallow.
     _setLayerPlayTime(looped);
     final audio = _stopMotionAudio;
-    if (audio != null) unawaited(audio.syncTo(looped, isPlaying: true));
+    if (audio != null) {
+      _runDetached(
+        audio.syncTo(looped, isPlaying: true),
+        'sync stop-motion audio',
+      );
+    }
 
     // Throttle emits: the timeline animates between updates, so a frame-rate
     // stream would only flood the bloc. A wrap back to the start (looped <
@@ -1422,7 +1492,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!_isPlayerInitialized) return;
 
     if (clipPaths.isEmpty) {
-      _videoPlayer?.pause();
+      final player = _videoPlayer;
+      if (player != null) {
+        _runDetached(player.pause(), 'pause empty composition');
+      }
       _beginClipLoad();
       context.read<VideoEditorMainBloc>().add(
         const VideoEditorPlaybackChanged(isPlaying: false),
@@ -1439,10 +1512,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // snap the playhead back while paused.
     _pendingSeekTarget = currentPosition;
     final generation = _beginClipLoad();
-    unawaited(
+    _runDetached(
       _setClipsForGeneration(generation, _videoPlayer, [
         ..._buildPlayerClips(clips),
       ], startPosition: _timelineToPlayer(currentPosition)),
+      'reload changed clip paths',
     );
     _ensureSeamsRendered(clips);
     _ensureSpeedClipsRendered(clips);
@@ -1888,102 +1962,123 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // The frame can land after the editor is torn down; the guard bails before
     // touching context or providers so we never read State.context post-unmount.
-    addPostFrameCallbackIfMounted(() async {
-      bloc.add(
-        VideoEditorMainCapabilitiesChanged(
-          canUndo: editor.canUndo,
-          canRedo: editor.canRedo,
-          layers: editor.activeLayers,
+    addPostFrameCallbackIfMounted(() {
+      _runDetached(
+        _syncMainCapabilitiesAfterFrame(
+          scope,
+          bloc,
+          editor,
+          direction: direction,
+          allowOrphanStep: allowOrphanStep,
         ),
+        'sync editor capabilities',
       );
+    });
+  }
 
-      final videoDuration = context.read<ClipEditorBloc>().state.totalDuration;
+  Future<void> _syncMainCapabilitiesAfterFrame(
+    VideoEditorScope scope,
+    VideoEditorMainBloc bloc,
+    ProImageEditorState editor, {
+    required ClipHistoryDirection direction,
+    required bool allowOrphanStep,
+  }) async {
+    if (!mounted) return;
 
-      context.read<TimelineOverlayBloc>().add(
-        TimelineOverlayItemsUpdate(
-          layers: editor.activeLayers,
-          filters: editor.stateManager.activeFilters,
-          tuneAdjustments: editor.stateManager.activeTuneAdjustments,
-          totalVideoDuration: videoDuration,
-          audioTracks: editor.stateManager.audioTracks,
-          timelineMarkers: editor.stateManager.timelineMarkers,
-          captionTrack: editor.stateManager.captionTrack,
-        ),
-      );
-
-      // Reconcile the editor's current history entry with the app clip state.
-      // Undo/redo can resurrect a clip removed earlier in the session — its
-      // media was already deleted by FileCleanupService, and handing that dead
-      // path to the player fails the whole composition (COMPOSITION_ERROR) and
-      // freezes the editor. Orphaned clips are filtered out, and an entry whose
-      // clips are *all* orphaned is stepped over (rather than left to diverge
-      // from, or empty the, native player).
-      final snapshot = editor.stateManager.clipSnapshots(await _documentsPath);
-      if (!mounted || _isImportingHistory) return;
-
-      final decision = VideoEditorCanvas.resolveClipSnapshotSync(
-        snapshot: snapshot,
-        direction: direction,
+    bloc.add(
+      VideoEditorMainCapabilitiesChanged(
         canUndo: editor.canUndo,
         canRedo: editor.canRedo,
-        didReverse: _orphanStepDidReverse,
-      );
+        layers: editor.activeLayers,
+      ),
+    );
 
-      if (!allowOrphanStep) {
-        // Generic history-change reconcile: it fires alongside the directional
-        // onUndo/onRedo on every navigation, so it neither steps nor touches
-        // the walk's reverse-once flag — the directional pass (scheduled in the
-        // same frame) owns resolving an orphan-only entry. We only mirror a
-        // resolvable entry; an orphan-only or empty one is left to that pass.
-        if (decision.op != ClipSnapshotSyncOp.sync) return;
-      } else {
-        switch (decision.op) {
-          case ClipSnapshotSyncOp.skip:
-            _orphanStepDidReverse = false;
-            return;
-          case ClipSnapshotSyncOp.stepBackward:
-            _orphanStepDidReverse = _orphanStepDidReverse || decision.reversed;
-            editor.undoAction();
-            return;
-          case ClipSnapshotSyncOp.stepForward:
-            _orphanStepDidReverse = _orphanStepDidReverse || decision.reversed;
-            editor.redoAction();
-            return;
-          case ClipSnapshotSyncOp.sync:
-            _orphanStepDidReverse = false;
-        }
+    final videoDuration = context.read<ClipEditorBloc>().state.totalDuration;
+
+    context.read<TimelineOverlayBloc>().add(
+      TimelineOverlayItemsUpdate(
+        layers: editor.activeLayers,
+        filters: editor.stateManager.activeFilters,
+        tuneAdjustments: editor.stateManager.activeTuneAdjustments,
+        totalVideoDuration: videoDuration,
+        audioTracks: editor.stateManager.audioTracks,
+        timelineMarkers: editor.stateManager.timelineMarkers,
+        captionTrack: editor.stateManager.captionTrack,
+      ),
+    );
+
+    // Reconcile the editor's current history entry with the app clip state.
+    // Undo/redo can resurrect a clip removed earlier in the session — its
+    // media was already deleted by FileCleanupService, and handing that dead
+    // path to the player fails the whole composition (COMPOSITION_ERROR) and
+    // freezes the editor. Orphaned clips are filtered out, and an entry whose
+    // clips are *all* orphaned is stepped over (rather than left to diverge
+    // from, or empty the, native player).
+    final snapshot = editor.stateManager.clipSnapshots(await _documentsPath);
+    if (!mounted || _isImportingHistory) return;
+
+    final decision = VideoEditorCanvas.resolveClipSnapshotSync(
+      snapshot: snapshot,
+      direction: direction,
+      canUndo: editor.canUndo,
+      canRedo: editor.canRedo,
+      didReverse: _orphanStepDidReverse,
+    );
+
+    if (!allowOrphanStep) {
+      // Generic history-change reconcile: it fires alongside the directional
+      // onUndo/onRedo on every navigation, so it neither steps nor touches
+      // the walk's reverse-once flag — the directional pass (scheduled in the
+      // same frame) owns resolving an orphan-only entry. We only mirror a
+      // resolvable entry; an orphan-only or empty one is left to that pass.
+      if (decision.op != ClipSnapshotSyncOp.sync) return;
+    } else {
+      switch (decision.op) {
+        case ClipSnapshotSyncOp.skip:
+          _orphanStepDidReverse = false;
+          return;
+        case ClipSnapshotSyncOp.stepBackward:
+          _orphanStepDidReverse = _orphanStepDidReverse || decision.reversed;
+          editor.undoAction();
+          return;
+        case ClipSnapshotSyncOp.stepForward:
+          _orphanStepDidReverse = _orphanStepDidReverse || decision.reversed;
+          editor.redoAction();
+          return;
+        case ClipSnapshotSyncOp.sync:
+          _orphanStepDidReverse = false;
       }
+    }
 
-      final clips = decision.resolvableClips;
+    final clips = decision.resolvableClips;
 
-      if (_skipNextClipSnapshotSync) {
-        _skipNextClipSnapshotSync = false;
-        return;
-      }
+    if (_skipNextClipSnapshotSync) {
+      _skipNextClipSnapshotSync = false;
+      return;
+    }
 
-      // A split (and any split still queued behind it) drives the clip list
-      // optimistically in ClipEditorBloc, one step ahead of the editor
-      // history. This snapshot reflects the *previous* split's committed
-      // state; mirroring it back now would overwrite the just-applied split —
-      // a queued split then silently vanishes and never appears. Skip while a
-      // split is in flight; the reconcile that runs once isSplitting clears
-      // mirrors the settled clip list to both the clip manager and the bloc.
-      if (context.read<ClipEditorBloc>().state.isSplitting) return;
+    // A split (and any split still queued behind it) drives the clip list
+    // optimistically in ClipEditorBloc, one step ahead of the editor
+    // history. This snapshot reflects the *previous* split's committed
+    // state; mirroring it back now would overwrite the just-applied split —
+    // a queued split then silently vanishes and never appears. Skip while a
+    // split is in flight; the reconcile that runs once isSplitting clears
+    // mirrors the settled clip list to both the clip manager and the bloc.
+    if (context.read<ClipEditorBloc>().state.isSplitting) return;
 
-      // Only update if clips actually changed to avoid unnecessary rebuilds
-      // and autosave triggers. DivineVideoClip uses reference equality, so
-      // we compare the editable properties explicitly.
-      final currentClips = ref.read(clipManagerProvider).clips;
-      if (VideoEditorCanvas.clipsChanged(currentClips, clips)) {
-        ref.read(clipManagerProvider.notifier).replaceClips(clips);
-      }
-      if (VideoEditorCanvas.clipsChanged(
-        context.read<ClipEditorBloc>().state.clips,
-        clips,
-      )) {
-        context.read<ClipEditorBloc>().add(ClipEditorInitialized(clips));
-      }
-    });
+    // Only update if clips actually changed to avoid unnecessary rebuilds
+    // and autosave triggers. DivineVideoClip uses reference equality, so
+    // we compare the editable properties explicitly.
+    final currentClips = ref.read(clipManagerProvider).clips;
+    if (VideoEditorCanvas.clipsChanged(currentClips, clips)) {
+      ref.read(clipManagerProvider.notifier).replaceClips(clips);
+    }
+    if (VideoEditorCanvas.clipsChanged(
+      context.read<ClipEditorBloc>().state.clips,
+      clips,
+    )) {
+      context.read<ClipEditorBloc>().add(ClipEditorInitialized(clips));
+    }
   }
 
   /// Syncs the draw capabilities from the paint editor to the bloc.
@@ -2070,7 +2165,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       notifier.setProcessing(false);
       return;
     }
-    notifier.startRenderVideo();
+    await notifier.startRenderVideo();
   }
 
   /// Handles the done action from the main editor.
@@ -2148,7 +2243,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     if (!mounted || _clipPaths.isEmpty) return;
     await _initializePlayer(_clipPaths, startPosition: resumePosition);
     if (mounted && wasPlaying) {
-      _videoPlayer?.play();
+      await _videoPlayer?.play();
     }
   }
 
@@ -2220,7 +2315,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         // doesn't snap the playhead back while paused.
         _pendingSeekTarget = currentPosition;
         final generation = _beginClipLoad();
-        unawaited(
+        _runDetached(
           _setClipsForGeneration(
             generation,
             _videoPlayer,
@@ -2229,6 +2324,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             ],
             startPosition: _timelineToPlayer(currentPosition),
           ),
+          'reload trimmed clips',
         );
         _ensureSeamsRendered(clips);
         _ensureSpeedClipsRendered(clips);
@@ -2254,7 +2350,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         // doesn't snap the playhead back while paused.
         _pendingSeekTarget = currentPosition;
         final generation = _beginClipLoad();
-        unawaited(
+        _runDetached(
           _setClipsForGeneration(
             generation,
             _videoPlayer,
@@ -2263,6 +2359,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             ],
             startPosition: _timelineToPlayer(currentPosition),
           ),
+          'reload speed-adjusted clips',
         );
         _ensureSeamsRendered(clips);
         _ensureSpeedClipsRendered(clips);
@@ -2286,8 +2383,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             .state
             .currentPosition;
 
-        unawaited(
+        _runDetached(
           _swapComposition(clips, timelineStartPosition: currentPosition),
+          'reload transition-adjusted clips',
         );
         _ensureSeamsRendered(clips);
         _ensureSpeedClipsRendered(clips);
@@ -2309,7 +2407,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             final position = state.trimPosition;
             if (position == null) return;
             _lastLayerTrimPosition = position;
-            _onSeekRequested(position);
+            _runDetached(_onSeekRequested(position), 'seek layer trim');
           },
         ),
         // Sync scrubber once at gesture end (not mid-drag) to avoid
@@ -2338,7 +2436,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             final position = state.dragPosition;
             if (position == null) return;
             _lastLayerDragPosition = position;
-            _onSeekRequested(position);
+            _runDetached(_onSeekRequested(position), 'seek dragged layer');
           },
         ),
         // Sync scrubber once at drag end (not mid-drag).
@@ -2372,7 +2470,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             _seekEpoch++;
             _pendingSeekPosition = null;
             _isSeeking = false;
-            unawaited(
+            _runDetached(
               _setClipsSafely(_videoPlayer, [
                 VideoClip(
                   uri: path,
@@ -2381,6 +2479,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   playbackSpeed: clip.playbackSpeed ?? 1.0,
                 ),
               ]),
+              'show clip trim preview',
             );
           },
         ),
@@ -2402,9 +2501,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               clipId: clipId,
               sourcePosition: sourcePosition,
             );
-            _onSeekRequested(
-              sourcePosition,
-              playTimePosition: playTimePosition,
+            _runDetached(
+              _onSeekRequested(
+                sourcePosition,
+                playTimePosition: playTimePosition,
+              ),
+              'seek clip trim',
             );
           },
         ),
@@ -2417,7 +2519,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               (previous.trimmingItemId != null &&
                   current.trimmingItemId == null),
           listener: (context, state) {
-            _onStateHistoryChange(scope, bloc);
+            _runDetached(
+              _onStateHistoryChange(scope, bloc),
+              'persist overlay history',
+            );
           },
         ),
         // Sync native audio tracks when audio sources change
@@ -2468,7 +2573,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             return item?.type == TimelineOverlayType.sound;
           },
           listener: (context, state) {
-            _syncAudioTracks();
+            _runDetached(_syncAudioTracks(), 'sync changed audio tracks');
           },
         ),
         // Persist audio track volume changes to the ProImageEditor undo
@@ -2680,7 +2785,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           listenWhen: (previous, current) =>
               previous.seekCounter != current.seekCounter,
           listener: (context, state) {
-            _onSeekRequested(state.seekPosition);
+            _runDetached(
+              _onSeekRequested(state.seekPosition),
+              'seek timeline',
+            );
           },
         ),
       ],
@@ -2960,8 +3068,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 _isImportingHistory = false;
                 _syncMainCapabilities(scope, bloc);
               },
-              onStateHistoryChange: (_, _) =>
+              onStateHistoryChange: (_, _) {
+                _runDetached(
                   _onStateHistoryChange(scope, bloc),
+                  'persist editor history',
+                );
+              },
               onOpenSubEditor: (editorMode) {
                 Log.debug(
                   '🎬 Opening sub-editor: $editorMode',
@@ -3005,7 +3117,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
                 // Trigger haptic feedback when entering the remove area
                 if (isOverRemoveArea && !_wasOverRemoveArea) {
-                  unawaited(HapticService.destructiveZoneFeedback());
+                  _runDetached(
+                    HapticService.destructiveZoneFeedback(),
+                    'signal destructive layer target',
+                  );
                 }
                 _wasOverRemoveArea = isOverRemoveArea;
 
@@ -3042,7 +3157,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       );
                       scope.editor?.activeLayers.remove(removed);
                     }
-                    _onStateHistoryChange(scope, bloc);
+                    _runDetached(
+                      _onStateHistoryChange(scope, bloc),
+                      'persist removed layer history',
+                    );
                   }
                   _selectedLayer = null;
                 }
@@ -3084,7 +3202,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   ? null
                   : scope.onAddEditTextLayer(layer),
               helperLines: HelperLinesCallbacks(
-                onLineHit: () => unawaited(HapticService.snapFeedback()),
+                onLineHit: () => _runDetached(
+                  HapticService.snapFeedback(),
+                  'signal layer alignment',
+                ),
               ),
             ),
             paintEditorCallbacks: PaintEditorCallbacks(
