@@ -30,6 +30,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
@@ -52,6 +53,16 @@ import '../helpers/test_provider_overrides.dart';
 
 const _ownPubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+final _deletionEvent = Event.fromJson({
+  'id': 'delete-event-id',
+  'pubkey': _ownPubkey,
+  'created_at': 1757385263,
+  'kind': 5,
+  'tags': <List<String>>[],
+  'content': '',
+  'sig': '12' * 64,
+});
 
 class _MockContentDeletionService extends Mock
     implements ContentDeletionService {}
@@ -579,10 +590,14 @@ void main() {
           (_) async => DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: _deletionEvent,
           ),
         );
         when(
-          () => enforcementRepository.enforce('delete-event-id'),
+          () => enforcementRepository.enforce(
+            'delete-event-id',
+            deletionEvent: _deletionEvent,
+          ),
         ).thenAnswer((_) => cleanupCompleter.future);
 
         await tester.pumpWidget(

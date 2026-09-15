@@ -3,12 +3,23 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 
 void main() {
+  final deletionEvent = Event.fromJson({
+    'id': 'delete-event-id',
+    'pubkey': 'ab' * 32,
+    'created_at': 1757385263,
+    'kind': 5,
+    'tags': <List<String>>[],
+    'content': '',
+    'sig': '12' * 64,
+  });
+
   Future<BuildContext> pumpContext(
     WidgetTester tester, {
     Locale locale = const Locale('en'),
@@ -43,6 +54,7 @@ void main() {
           DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.someRelays,
+            deleteEvent: deletionEvent,
           ),
         ),
         equals(l10n.shareMenuDeletePartiallyConfirmed),
@@ -58,6 +70,7 @@ void main() {
           DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: deletionEvent,
           ),
         ),
         isNull,
@@ -90,6 +103,7 @@ void main() {
           DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.someRelays,
+            deleteEvent: deletionEvent,
           ),
         ),
         equals(
@@ -135,6 +149,7 @@ void main() {
           DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.someRelays,
+            deleteEvent: deletionEvent,
           ),
         ),
         isEmpty,

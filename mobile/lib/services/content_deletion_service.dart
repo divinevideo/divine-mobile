@@ -89,7 +89,7 @@ class DeleteResult {
   factory DeleteResult.createSuccess(
     String deleteEventId, {
     required DeleteAcceptance acceptance,
-    Event? deleteEvent,
+    required Event deleteEvent,
   }) => DeleteResult(
     success: true,
     deleteEventId: deleteEventId,

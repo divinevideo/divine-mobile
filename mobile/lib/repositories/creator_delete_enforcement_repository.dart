@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 enum CreatorDeleteEnforcementStatus { confirmed, delayed, failed, unavailable }
@@ -71,14 +72,14 @@ class CreatorDeleteEnforcementRepository {
   /// instead of looking it up on the relay, which can lag publication.
   Future<CreatorDeleteEnforcementResult> enforce(
     String kind5Id, {
-    Map<String, dynamic>? deletionEvent,
+    Event? deletionEvent,
   }) async {
     if (!_enabled) return const CreatorDeleteEnforcementResult.unavailable();
     try {
       // Encode once so NIP-98 binds exactly the bytes sent to the service.
       final body = deletionEvent == null
           ? null
-          : jsonEncode({'event': deletionEvent});
+          : jsonEncode({'event': deletionEvent.toJson()});
       return await _enforce(kind5Id, body: body);
     } on Object catch (error, stackTrace) {
       _reportError?.call(error, stackTrace);

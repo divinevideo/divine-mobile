@@ -41,6 +41,17 @@ void main() {
       timestamp: DateTime.fromMillisecondsSinceEpoch(1757385264 * 1000),
       videoUrl: 'https://example.com/second.mp4',
     );
+    final deletionEvent = Event.fromJson({
+      'id': 'delete-event-id',
+      'pubkey': video.pubkey,
+      'created_at': 1757385263,
+      'kind': 5,
+      'tags': [
+        ['e', video.id],
+      ],
+      'content': 'Delete this video',
+      'sig': '12' * 64,
+    });
 
     late _MockContentDeletionService deletionService;
     late _MockVideoEventService videoEventService;
@@ -56,7 +67,12 @@ void main() {
       deletionService = _MockContentDeletionService();
       videoEventService = _MockVideoEventService();
       enforcementRepository = _MockEnforcementRepository();
-      when(() => enforcementRepository.enforce(any())).thenAnswer(
+      when(
+        () => enforcementRepository.enforce(
+          any(),
+          deletionEvent: any(named: 'deletionEvent'),
+        ),
+      ).thenAnswer(
         (_) async => const CreatorDeleteEnforcementResult.confirmed(),
       );
     });
@@ -103,7 +119,7 @@ void main() {
           deletionEvent: captureAny(named: 'deletionEvent'),
         ),
       ).captured.single;
-      expect(suppliedEvent, event.toJson());
+      expect(suppliedEvent, same(event));
       cleanupCompleter.complete(
         const CreatorDeleteEnforcementResult.confirmed(),
       );
@@ -126,6 +142,7 @@ void main() {
           (_) async => DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: deletionEvent,
           ),
         );
       },
@@ -229,9 +246,15 @@ void main() {
           (_) async => DeleteResult.createSuccess(
             'delete-event-id',
             acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: deletionEvent,
           ),
         );
-        when(() => enforcementRepository.enforce('delete-event-id')).thenAnswer(
+        when(
+          () => enforcementRepository.enforce(
+            'delete-event-id',
+            deletionEvent: deletionEvent,
+          ),
+        ).thenAnswer(
           (_) async => const CreatorDeleteEnforcementResult.delayed(),
         );
       },
@@ -272,10 +295,14 @@ void main() {
         (_) async => DeleteResult.createSuccess(
           'delete-event-id',
           acceptance: DeleteAcceptance.everyRelay,
+          deleteEvent: deletionEvent,
         ),
       );
       when(
-        () => enforcementRepository.enforce('delete-event-id'),
+        () => enforcementRepository.enforce(
+          'delete-event-id',
+          deletionEvent: deletionEvent,
+        ),
       ).thenAnswer((_) => cleanupCompleter.future);
       final cubit = buildCubit();
 
@@ -306,10 +333,14 @@ void main() {
         (_) async => DeleteResult.createSuccess(
           'delete-event-id',
           acceptance: DeleteAcceptance.everyRelay,
+          deleteEvent: deletionEvent,
         ),
       );
       when(
-        () => enforcementRepository.enforce('delete-event-id'),
+        () => enforcementRepository.enforce(
+          'delete-event-id',
+          deletionEvent: deletionEvent,
+        ),
       ).thenAnswer(
         (_) => Future.error(StateError('unexpected enforcement failure')),
       );
@@ -433,6 +464,7 @@ void main() {
         DeleteResult.createSuccess(
           'delete-event-id',
           acceptance: DeleteAcceptance.everyRelay,
+          deleteEvent: deletionEvent,
         ),
       );
       await deletion;
@@ -441,7 +473,12 @@ void main() {
       verify(
         () => videoEventService.removeVideoEventCompletely(video),
       ).called(1);
-      verify(() => enforcementRepository.enforce('delete-event-id')).called(1);
+      verify(
+        () => enforcementRepository.enforce(
+          'delete-event-id',
+          deletionEvent: deletionEvent,
+        ),
+      ).called(1);
     });
 
     blocTest<OwnerVideoActionsCubit, OwnerVideoActionsState>(

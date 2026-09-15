@@ -182,7 +182,7 @@ class OwnerVideoActionsCubit extends Cubit<OwnerVideoActionsState>
       }
       final result = await enforcementRepository.enforce(
         deleteEventId,
-        deletionEvent: deleteResult.deleteEvent?.toJson(),
+        deletionEvent: deleteResult.deleteEvent,
       );
       cleanupStatus = switch (result.status) {
         CreatorDeleteEnforcementStatus.confirmed =>
