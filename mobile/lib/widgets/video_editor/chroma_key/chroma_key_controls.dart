@@ -195,7 +195,7 @@ class _InfoRow extends StatelessWidget {
 
 /// Auto-detect plus the two screen presets.
 ///
-/// Only Auto-detect waits for a measurement in flight. The presets stay live,
+/// Only Auto-detect waits for a wanted measurement. The presets stay live,
 /// like the swatch and the sliders below: someone who shot on blue should not
 /// have to sit out the green measurement the panel started on its own. A
 /// preset tapped while one runs writes it off instead — see
