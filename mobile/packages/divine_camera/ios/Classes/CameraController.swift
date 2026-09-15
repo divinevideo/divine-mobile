@@ -3090,10 +3090,14 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     /// the tail (#7888). `CMSyncConvertTime` is the conversion AVFoundation
     /// itself documents for exactly this.
     ///
-    /// Returns the buffer unchanged while not recording (nothing downstream
+    /// Returns the buffer unchanged when not recording (nothing downstream
     /// reads it then, and the audio session runs between recordings), when
-    /// both sessions share a clock, or when the copy fails; the data buffer
-    /// is shared, only the timing is replaced. Runs on `videoOutputQueue`.
+    /// both sessions already share a clock, or when any later step of the
+    /// retime fails -- an unavailable clock, unreadable timing info, a
+    /// non-numeric converted timestamp, or a failed buffer copy. Every
+    /// retime failure while recording counts against
+    /// `audioRetimeFailureCount`. The data buffer is shared in every case;
+    /// only the timing is ever replaced. Runs on `videoOutputQueue`.
     private func retimedToVideoClock(_ sampleBuffer: CMSampleBuffer) -> CMSampleBuffer {
         guard isRecording else { return sampleBuffer }
         guard let audioClock = synchronizationClock(of: audioCaptureSession),
