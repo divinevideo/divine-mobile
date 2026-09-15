@@ -4,17 +4,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/saved_sound_context_builder.dart';
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 
 const _fullEventId =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const _fullPubkey =
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
-VideoEvent _video({String? textTrackContent}) => VideoEvent(
+VideoEvent _video({
+  String? textTrackContent,
+  String content = 'The original post description',
+}) => VideoEvent(
   id: _fullEventId,
   pubkey: _fullPubkey,
   createdAt: 1700000000,
-  content: 'The original post description',
+  content: content,
   timestamp: DateTime.utc(2026, 7, 31),
   title: 'Original post title',
   thumbnailUrl: 'https://example.com/thumbnail.jpg',
@@ -36,6 +40,19 @@ void main() {
       expect(context.description, 'The original post description');
       expect(context.thumbnailUrl, 'https://example.com/thumbnail.jpg');
       expect(context.transcript, isNull);
+    });
+
+    test('keeps the wire-format attribution line out of the description', () {
+      final npub = normalizeToNpub(_fullPubkey)!;
+      final context = const SavedSoundContextBuilder().fromVideo(
+        _video(
+          content:
+              'The original post description\n\n'
+              '${inspiredByAttributionLine(npub)}',
+        ),
+      );
+
+      expect(context.description, 'The original post description');
     });
 
     test('turns embedded VTT cues into readable transcript text', () {

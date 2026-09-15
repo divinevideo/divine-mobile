@@ -546,16 +546,6 @@
     "videoFollowButtonFollow": "フォロー",
     "audioAttributionOriginalSound": "オリジナルサウンド",
     "audioAttributionUnavailableSound": "サウンドが見つからないよ",
-    "videoInspiredByAttributionMultiple": "@{creatorName} +{additionalCreatorCount} にインスパイアされた",
-    "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "videoInspiredByAttribution": "@{creatorName} にインスパイアされた",
-    "@videoInspiredByAttribution": {
-        "placeholders": {
-            "creatorName": {
-                "type": "String"
-            }
-        }
-    },
     "videoCollaboratorWithOne": "@{name} と",
     "@videoCollaboratorWithOne": {
         "placeholders": {
@@ -4259,10 +4249,6 @@
     "videoClipSaveTo": "{destination}に保存",
     "@videoClipSaveTo": {"placeholders": {"destination": {"type": "String"}}},
     "videoClipDelete": "クリップを削除",
-    "inspiredByAttributionMultipleSemanticLabel": "{creatorName} +{additionalCreatorCount}にインスパイアされたよ。タップするとプロフィールを見れるよ。",
-    "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "inspiredByAttributionSemanticLabel": "{creatorName}にインスパイアされたよ。タップするとプロフィールを見れるよ。",
-    "@inspiredByAttributionSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}}},
     "searchVideosSortOptionsLabel": "動画の検索結果を並び替え",
     "searchVideosSortTrending": "話題",
     "@searchVideosSortTrending": {"description": "Label for the video search sort option that shows currently popular or trending results."},

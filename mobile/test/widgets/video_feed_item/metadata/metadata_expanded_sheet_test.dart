@@ -23,6 +23,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
@@ -100,6 +101,9 @@ VideoEvent _makeVideo({
   List<String> categories = const [],
   List<String> collaboratorPubkeys = const [],
   InspiredByInfo? inspiredByVideo,
+  String? inspiredByNpub,
+  List<String> inspiredByPubkeys = const [],
+  List<ClipSourceCredit> clipSourceCredits = const [],
   List<String>? reposterPubkeys,
   int? nostrRepostCount,
   String? audioEventId,
@@ -122,6 +126,9 @@ VideoEvent _makeVideo({
   categories: categories,
   collaboratorPubkeys: collaboratorPubkeys,
   inspiredByVideo: inspiredByVideo,
+  inspiredByNpub: inspiredByNpub,
+  inspiredByPubkeys: inspiredByPubkeys,
+  clipSourceCredits: clipSourceCredits,
   reposterPubkeys: reposterPubkeys,
   nostrRepostCount: nostrRepostCount,
   audioEventId: audioEventId,
@@ -1238,6 +1245,158 @@ void main() {
 
       expect(find.text('Inspired by'), findsNothing);
     });
+
+    testWidgetsWithSurfaceSize(
+      'keeps every credited creator from clip sources',
+      (tester) async {
+        final video = _makeVideo(
+          inspiredByVideo: const InspiredByInfo(
+            addressableId: '34236:$_inspiredByPubkey:some-dtag',
+          ),
+          clipSourceCredits: const [
+            ClipSourceCredit(
+              authorPubkey: _inspiredByPubkey,
+              addressableId: '34236:$_inspiredByPubkey:some-dtag',
+            ),
+            ClipSourceCredit(
+              authorPubkey: _collaborator1,
+              addressableId: '34236:$_collaborator1:reused-clip',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+                (ref) async =>
+                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+              ),
+              fetchUserProfileProvider(_collaborator1).overrideWith(
+                (ref) async =>
+                    _makeProfile(_collaborator1, 'Clip Source Creator'),
+              ),
+            ],
+            child: MetadataInspiredBySection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Inspiring Creator'), findsOneWidget);
+        expect(find.text('Clip Source Creator'), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'keeps an npub credit beside an inspiring video',
+      (tester) async {
+        final video = _makeVideo(
+          inspiredByVideo: const InspiredByInfo(
+            addressableId: '34236:$_inspiredByPubkey:some-dtag',
+          ),
+          inspiredByNpub: normalizeToNpub(_collaborator1),
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+                (ref) async =>
+                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+              ),
+              fetchUserProfileProvider(_collaborator1).overrideWith(
+                (ref) async =>
+                    _makeProfile(_collaborator1, 'Referenced Creator'),
+              ),
+            ],
+            child: MetadataInspiredBySection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Inspiring Creator'), findsOneWidget);
+        expect(find.text('Referenced Creator'), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'keeps a legacy inspired-by p-tag credit on a reply',
+      (tester) async {
+        final video = _makeVideo(
+          inspiredByPubkeys: const [_inspiredByPubkey],
+          nostrEventTags: const [
+            ['E', _parentEventId],
+            ['K', '34236'],
+          ],
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: [
+              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+                (ref) async =>
+                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+              ),
+            ],
+            child: MetadataInspiredBySection(video: video),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Inspiring Creator'), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize('keeps the content credit on a reply', (
+      tester,
+    ) async {
+      VideoEvent video({required bool reply}) => _makeVideo(
+        inspiredByNpub: normalizeToNpub(_collaborator1),
+        clipSourceCredits: const [
+          ClipSourceCredit(
+            authorPubkey: _collaborator2,
+            addressableId: '34236:$_collaborator2:reused-clip',
+          ),
+        ],
+        nostrEventTags: reply
+            ? const [
+                ['E', _parentEventId],
+                ['K', '34236'],
+              ]
+            : const [],
+      );
+      Widget subject(VideoEvent video) => buildSubject(
+        providerOverrides: [
+          fetchUserProfileProvider(_collaborator1).overrideWith(
+            (ref) async => _makeProfile(_collaborator1, 'Referenced Creator'),
+          ),
+          fetchUserProfileProvider(_collaborator2).overrideWith(
+            (ref) async => _makeProfile(_collaborator2, 'Clip Source Creator'),
+          ),
+        ],
+        child: MetadataInspiredBySection(video: video),
+      );
+
+      // Positive control: off a reply the same sources render both credits.
+      await tester.pumpWidget(subject(video(reply: false)));
+      await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+      expect(find.text('Referenced Creator'), findsOneWidget);
+      expect(find.text('Clip Source Creator'), findsOneWidget);
+
+      await tester.pumpWidget(subject(video(reply: true)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+      expect(find.text('Referenced Creator'), findsOneWidget);
+      expect(find.text('Clip Source Creator'), findsNothing);
+
+      // Unmount explicitly and let Riverpod run its zero-duration disposal
+      // task before the test binding checks for leaked timers.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 1));
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -2061,7 +2220,9 @@ void main() {
       (tester) async {
         final video = _makeVideo(
           title: 'Who knew?',
-          content: 'What really happens behind the scenes',
+          content:
+              'What really happens behind the scenes\n\n'
+              '${inspiredByAttributionLine(normalizeToNpub(_inspiredByPubkey)!)}',
           hashtags: ['grease', 'take503'],
           collaboratorPubkeys: [_collaborator1],
           inspiredByVideo: const InspiredByInfo(
@@ -2106,6 +2267,7 @@ void main() {
 
         // Title + description
         expect(find.text('Who knew?'), findsOneWidget);
+        // Exact match: an unstripped line would lengthen the caption text.
         expect(
           find.text('What really happens behind the scenes'),
           findsOneWidget,

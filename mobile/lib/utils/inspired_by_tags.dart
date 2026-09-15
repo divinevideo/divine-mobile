@@ -33,8 +33,8 @@ String withInspiredByContentReference(String content, Iterable<String> npubs) {
   for (final npub in npubs) {
     final trimmed = npub.trim();
     if (trimmed.isEmpty) continue;
-    final suffix = '\n\nInspired by nostr:$trimmed';
-    return content.isEmpty ? suffix.trim() : '$content$suffix';
+    final line = inspiredByAttributionLine(trimmed);
+    return content.isEmpty ? line : '$content\n\n$line';
   }
   return content;
 }

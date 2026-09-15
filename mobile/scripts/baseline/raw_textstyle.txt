@@ -77,7 +77,6 @@ lib/widgets/video_feed_item/actions/share_sheet_message_input.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_more_actions.dart	2
 lib/widgets/video_feed_item/actions/share_with_section.dart	3
 lib/widgets/video_feed_item/content_warning_helpers.dart	2
-lib/widgets/video_feed_item/inspired_by_attribution_row.dart	1
 lib/widgets/video_feed_item/list_attribution_chip.dart	1
 lib/widgets/video_feed_item/reaction_overlay.dart	1
 lib/widgets/video_feed_item/reel_dm_reply_bar.dart	1

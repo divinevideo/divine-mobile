@@ -1679,19 +1679,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get audioAttributionUnavailableSound => 'Ljud otillgängligt';
 
   @override
-  String videoInspiredByAttributionMultiple(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return 'Inspirerad av @$creatorName +$additionalCreatorCount';
-  }
-
-  @override
-  String videoInspiredByAttribution(String creatorName) {
-    return 'Inspirerad av @$creatorName';
-  }
-
-  @override
   String videoCollaboratorWithOne(String name) {
     return 'med @$name';
   }
@@ -7289,19 +7276,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoClipDelete => 'Ta bort klipp';
-
-  @override
-  String inspiredByAttributionMultipleSemanticLabel(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return 'Inspirerad av $creatorName +$additionalCreatorCount. Tryck för att se deras profil.';
-  }
-
-  @override
-  String inspiredByAttributionSemanticLabel(String creatorName) {
-    return 'Inspirerad av $creatorName. Tryck för att se deras profil.';
-  }
 
   @override
   String get bugReportSendReport => 'Skicka rapport';

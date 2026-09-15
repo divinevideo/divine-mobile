@@ -34,7 +34,6 @@ import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_row.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
-import 'package:openvine/widgets/video_feed_item/inspired_by_attribution_row.dart';
 import 'package:openvine/widgets/video_feed_item/list_attribution_chip.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/video_card_meta.dart';
@@ -603,24 +602,21 @@ class VideoOverlayActions extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  // Collaborator avatar row (if video has collaborators)
-                  if (video != null && video.hasCollaborators) ...[
-                    const SizedBox(height: 4),
-                    CollaboratorAvatarRow(video: video),
-                  ],
-                  if (video != null && video.isVideoReply) ...[
-                    const SizedBox(height: 4),
-                    VideoReplyParentLink(
-                      video: video,
-                      variant: VideoReplyParentLinkVariant.overlay,
-                      onInteracted: onInteracted,
-                    ),
-                  ],
-                  // Inspired-by attribution row (if video credits another creator)
-                  if (video != null && video.hasInspiredBy) ...[
-                    const SizedBox(height: 4),
-                    InspiredByAttributionRow(video: video, isActive: isActive),
-                  ],
+                ],
+                // These are video relationships, not caption content. Keep
+                // them visible when stripping wire-format attribution leaves
+                // an otherwise captionless video.
+                if (video != null && video.hasCollaborators) ...[
+                  const SizedBox(height: 4),
+                  CollaboratorAvatarRow(video: video),
+                ],
+                if (video != null && video.isVideoReply) ...[
+                  const SizedBox(height: 4),
+                  VideoReplyParentLink(
+                    video: video,
+                    variant: VideoReplyParentLinkVariant.overlay,
+                    onInteracted: onInteracted,
+                  ),
                 ],
                 // Audio attribution row (all videos)
                 const SizedBox(height: 4),

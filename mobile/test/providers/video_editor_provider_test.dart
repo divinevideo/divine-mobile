@@ -34,6 +34,7 @@ import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -2120,7 +2121,8 @@ void main() {
           .read(videoEditorProvider.notifier)
           .initFromPublishedVideo(
             buildVideo(
-              content: 'A caption\n\nInspired by nostr:npub1someattribution',
+              content:
+                  'A caption\n\nInspired by nostr:${normalizeToNpub('e' * 64)}',
             ),
           );
 
@@ -2138,7 +2140,9 @@ void main() {
       container
           .read(videoEditorProvider.notifier)
           .initFromPublishedVideo(
-            buildVideo(content: 'Inspired by nostr:npub1someattribution'),
+            buildVideo(
+              content: 'Inspired by nostr:${normalizeToNpub('e' * 64)}',
+            ),
           );
 
       expect(container.read(videoEditorProvider).description, isEmpty);

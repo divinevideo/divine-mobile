@@ -15,7 +15,8 @@ import 'package:models/models.dart'
         ClipSourceCredit,
         InspiredByInfo,
         NativeProofData,
-        VideoEvent;
+        VideoEvent,
+        stripInspiredByAttribution;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
@@ -781,13 +782,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   void initFromPublishedVideo(VideoEvent video) {
     _suppressAutosave = true;
 
-    // Strip any appended NIP-27 inspired-by line before displaying the
-    // description in the edit form. Empty-caption publishes trim the leading
-    // newlines, so the attribution line can also be the entire content —
-    // mirror the parse regex in VideoEvent.fromNostrEvent.
-    var content = video.content;
-    final npubPattern = RegExp(r'(^|\n\n)Inspired by nostr:npub1[a-z0-9]+\s*$');
-    content = content.replaceFirst(npubPattern, '');
+    final content = stripInspiredByAttribution(video.content);
 
     state = VideoEditorProviderState(
       // Getter falls back to rawTags so the toggle survives a cache round-trip.
