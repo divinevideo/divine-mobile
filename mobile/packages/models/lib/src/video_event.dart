@@ -1120,8 +1120,12 @@ class VideoEvent {
       shareKind == NIP71VideoKinds.addressableNormalVideo;
 
   /// Display-sanitized video content without wire-format attribution metadata.
-  String get displayContent =>
-      sanitizeForDisplay(stripInspiredByAttribution(content));
+  ///
+  /// Computed once per instance: [content] is final, and the feed grid and
+  /// player overlay read this on every rebuild.
+  late final String displayContent = sanitizeForDisplay(
+    stripInspiredByAttribution(content),
+  );
 
   /// Display-sanitized video title. Returns `null` when no title is set.
   String? get displayTitle => title != null ? sanitizeForDisplay(title!) : null;
