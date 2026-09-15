@@ -86,9 +86,13 @@ class MetadataStatsRow extends StatelessWidget {
                           const _VerticalDivider(),
                           // Loops trails the interaction stats: the count
                           // stays available to anyone who wants it without
-                          // leading the row.
+                          // leading the row. A video whose event carries no
+                          // loop metadata shows the same dash as an unknown
+                          // interaction count instead of a fabricated zero.
                           _StatColumn(
-                            count: video.totalLoops,
+                            count: video.hasLoopMetadata
+                                ? video.totalLoops
+                                : null,
                             label: context.l10n.metadataLoopsLabel(
                               video.totalLoops,
                             ),

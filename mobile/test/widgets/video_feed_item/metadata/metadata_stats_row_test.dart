@@ -134,7 +134,17 @@ void main() {
 
       await _pump(tester, video: _video(), bloc: bloc);
 
-      expect(find.text('—'), findsNWidgets(3));
+      expect(find.text('—'), findsNWidgets(4));
+      expect(find.text('0'), findsNothing);
+    });
+
+    testWidgets('keeps a genuine zero loop count visible', (tester) async {
+      await _pump(
+        tester,
+        video: _video(rawTags: {'views': '0'}),
+        bloc: bloc,
+      );
+
       expect(find.text('0'), findsOneWidget);
     });
 
