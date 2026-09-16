@@ -73,15 +73,22 @@ failures your change introduced. If you stop before a check finishes, or a check
 is blocked or fails for unrelated reasons, name its state and evidence instead
 of claiming completion. Addressed feedback passes the same gate before handoff.
 
-**Authority.** Review and diagnosis stay report-only until a human asks for an
-external action. If the pull-request runbook or the required approval mapping
-is unavailable, leave the pull request open and report the blocker. Approved
-work is merged only when the governing workflow and user authorization allow
-it; otherwise hand it back and name who must merge it. Never push to a pull
-request you do not own without announcing it there in the same session, asking
-the author to review the changes, and re-requesting or naming reviewers whose
-review the push made stale. Changing visible state does not recall
-notifications. Reversibility never grants authority.
+**Authority.** Post every code review and re-review conclusion to GitHub,
+including reviews with no findings, unless the current task explicitly requires
+a private review or no post. A review request authorizes that publication;
+verify the submitted review or comment and return its direct URL. A delegated
+read-only reviewer gives its conclusion to the coordinating agent instead of
+posting it. If delivery is blocked, preserve the conclusion and report the
+review as incomplete. Diagnosis and non-review reports stay report-only unless
+external delivery is authorized. Branch modification, takeover, merging, and
+issue creation require separate authorization. If the pull-request runbook or
+the required approval mapping is unavailable, leave the pull request open and
+report the blocker. Approved work is merged only when the governing workflow
+and user authorization allow it; otherwise hand it back and name who must merge
+it. Never push to a pull request you do not own without announcing it there in
+the same session, asking the author to review the changes, and re-requesting or
+naming reviewers whose review the push made stale. Changing visible state does
+not recall notifications. Reversibility never grants authority.
 
 ### Divine Brain
 
