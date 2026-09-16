@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.security.keystore.KeyGenParameterSpec
@@ -66,6 +67,13 @@ class MainActivity : FlutterActivity() {
 
     // Nostr bridge per-frame origin attestation plugin (#4105)
     private var nostrBridgeAttestationPlugin: NostrBridgeAttestationPlugin? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // FlutterActivity has attached its view by now; ask the panel for its
+        // fastest refresh rate so feed scrolling can run at 120 Hz.
+        HighRefreshRate.apply(this, findViewById(FLUTTER_VIEW_ID))
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
