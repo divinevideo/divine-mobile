@@ -304,7 +304,7 @@ updates.
     the launch prefix needs an explicit session lifetime
     (`mobile/lib/screens/feed/pooled_fullscreen_video_feed_screen.dart:119-142`,
     `mobile/lib/router/pooled_fullscreen_feed_route.dart:13-69`,
-    `mobile/lib/router/profile_screen_router.dart:566-578`,
+    `mobile/lib/screens/profile_screen_router.dart:566-578`,
     `mobile/lib/widgets/profile/profile_video_feed_view.dart:113-153`).
 24. **Code policy is not a release compatibility check.** The audit did not
     verify production `disallowed_kinds` or every target environment's normal
