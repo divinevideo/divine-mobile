@@ -138,6 +138,11 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
   /// that accepts the handshake and then drops the socket.
   bool closeOnCreate = false;
 
+  /// Optional frame delivered just before the automatic close, modelling a
+  /// relay that says why it is refusing (NOTICE, CLOSED, AUTH) and then drops.
+  /// Runs after the manager has subscribed, so the frame is delivered.
+  String? messageBeforeClose;
+
   @override
   WebSocketChannel create(Uri uri) {
     if (shouldFail) {
@@ -150,7 +155,11 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
     );
     createdChannels.add(channel);
     if (closeOnCreate) {
-      scheduleMicrotask(channel.simulateClose);
+      final frame = messageBeforeClose;
+      Timer.run(() {
+        if (frame != null) channel.simulateMessage(frame);
+        channel.simulateClose();
+      });
     }
     final signal = createdSignal;
     if (signal != null && !signal.isCompleted) signal.complete();
@@ -168,6 +177,7 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
     readyGate = null;
     createdSignal = null;
     closeOnCreate = false;
+    messageBeforeClose = null;
   }
 }
 
@@ -479,6 +489,35 @@ void main() {
         expect(flappingManager.state, equals(ConnectionState.disconnected));
       });
 
+      test('a refusal frame before the close still counts against the '
+          'self-heal budget', () async {
+        final factory = MockWebSocketChannelFactory()
+          ..closeOnCreate = true
+          ..messageBeforeClose = '["NOTICE","rate-limited"]';
+        final refusingManager = WebSocketConnectionManager(
+          url: 'wss://refusing.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 3,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration.zero,
+            idleTimeout: Duration.zero,
+          ),
+        );
+        addTearDown(refusingManager.dispose);
+
+        await refusingManager.connect();
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        // "The relay spoke before dropping us" is not usefulness: a NOTICE,
+        // CLOSED, or AUTH frame is how a refusing relay says no, and it must
+        // not clear the budget (#8992).
+        expect(factory.createdChannels, hasLength(4));
+        expect(refusingManager.state, equals(ConnectionState.disconnected));
+      });
+
       test('a connection that carried traffic resets the self-heal '
           'budget', () async {
         final factory = MockWebSocketChannelFactory()..closeOnCreate = true;
@@ -503,12 +542,14 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 150));
         expect(factory.createdChannels, hasLength(3));
 
-        // An on-demand dial that then receives a message proves the link is
-        // usable, so the next remote close starts a fresh self-heal budget
-        // and dials again instead of staying parked at the exhausted cap.
+        // An on-demand dial that receives a message and then stays up for at
+        // least a backoff interval proves the link is usable, so the next
+        // remote close starts a fresh self-heal budget and dials again
+        // instead of staying parked at the exhausted cap.
         factory.closeOnCreate = false;
         await flappingManager.send('["REQ","sub"]');
         factory.lastChannel!.simulateMessage('["EOSE","sub"]');
+        await Future<void>.delayed(const Duration(milliseconds: 20));
         factory.lastChannel!.simulateClose();
         await Future<void>.delayed(const Duration(milliseconds: 50));
 

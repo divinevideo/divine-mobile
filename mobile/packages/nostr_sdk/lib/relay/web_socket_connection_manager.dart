@@ -168,6 +168,10 @@ class WebSocketConnectionManager {
   // Activity tracking for idle detection
   DateTime? _lastActivityAt;
 
+  /// When the current connection was established, used to judge whether a
+  /// closed connection lived long enough to clear the self-heal budget.
+  DateTime? _connectedAt;
+
   // Stream controllers for external consumers
   final _stateController = StreamController<ConnectionState>.broadcast();
   final _messageController = StreamController<String>.broadcast();
@@ -302,6 +306,7 @@ class WebSocketConnectionManager {
 
       // Track connection time as initial activity
       _lastActivityAt = DateTime.now();
+      _connectedAt = _lastActivityAt;
 
       // Start heartbeat timer if configured
       _startHeartbeat();
@@ -412,11 +417,12 @@ class WebSocketConnectionManager {
 
     if (!_shouldReconnect) return;
 
-    // A connection that carried a message or outlived the idle timeout was
-    // stable: the next self-heal starts a fresh budget. One that accepted and
-    // immediately closed is not stable, and repeated short-lived cycles are
-    // capped at [WebSocketConfig.maxReconnectAttempts] so a relay that keeps
-    // dropping the socket cannot drive an unbounded dial loop (#8992).
+    // A connection that lasted and was either used or outlived the idle
+    // timeout was stable: the next self-heal starts a fresh budget. One that
+    // accepted and immediately closed is not stable, and repeated short-lived
+    // cycles are capped at [WebSocketConfig.maxReconnectAttempts] so a relay
+    // that keeps dropping the socket cannot drive an unbounded dial loop
+    // (#8992).
     if (_closedConnectionWasStable()) {
       _consecutiveSelfHealReconnects = 0;
     } else {
@@ -435,14 +441,19 @@ class WebSocketConnectionManager {
   /// Whether the connection that just closed proved stable enough to clear
   /// the self-heal budget.
   ///
-  /// A connection that received inbound traffic, or that stayed up at least
-  /// as long as the idle timeout, is doing useful work; only a socket that
-  /// came and went without either counts toward the budget.
+  /// Lasting at least one backoff interval is the floor: a socket that dies
+  /// sooner was never useful, whatever it sent first — a NOTICE, CLOSED, or
+  /// AUTH frame is a refusal, not work. Above that floor, inbound traffic or
+  /// a lifetime at least as long as the idle timeout proves the link was
+  /// doing something.
   bool _closedConnectionWasStable() {
+    final connectedAt = _connectedAt;
+    if (connectedAt == null) return false;
+    final age = DateTime.now().difference(connectedAt);
+    if (age < config.baseReconnectDelay) return false;
     if (_receivedMessageOnThisConnection) return true;
     if (config.idleTimeout == Duration.zero) return false;
-    final idle = idleDuration;
-    return idle != null && idle >= config.idleTimeout;
+    return age >= config.idleTimeout;
   }
 
   /// Disconnect from the WebSocket server
