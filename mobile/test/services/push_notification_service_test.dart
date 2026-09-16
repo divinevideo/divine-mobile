@@ -57,6 +57,7 @@ void main() {
       'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
   const testToken = 'fcm-test-token-abc123';
   const encryptedPayload = 'encrypted-payload-xyz';
+  const testTimeZoneOffsetMinutes = -300;
   const pushPublishTimeout = Duration(seconds: 5);
 
   const configuredPushServicePubkey =
@@ -91,6 +92,7 @@ void main() {
     String? token = testToken,
     Future<String?> Function()? getToken,
     FutureOr<bool> Function()? isCurrent,
+    int Function()? timeZoneOffsetMinutes,
   }) {
     return PushNotificationService(
       authService: mockAuthService,
@@ -99,6 +101,8 @@ void main() {
       environmentConfig: testEnvironment,
       getToken: getToken ?? () async => token,
       isCurrent: isCurrent,
+      timeZoneOffsetMinutes:
+          timeZoneOffsetMinutes ?? () => testTimeZoneOffsetMinutes,
     );
   }
 
@@ -152,7 +156,7 @@ void main() {
         expect(registrationJson['token'], testToken);
         expect(
           registrationJson['timezoneOffsetMinutes'],
-          DateTime.now().timeZoneOffset.inMinutes,
+          testTimeZoneOffsetMinutes,
         );
 
         verify(
@@ -1237,7 +1241,7 @@ void main() {
         expect(registrationJson['token'], 'new-refreshed-token');
         expect(
           registrationJson['timezoneOffsetMinutes'],
-          DateTime.now().timeZoneOffset.inMinutes,
+          testTimeZoneOffsetMinutes,
         );
 
         verify(

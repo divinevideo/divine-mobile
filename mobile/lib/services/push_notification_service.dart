@@ -68,12 +68,15 @@ class PushNotificationService {
     required EnvironmentConfig environmentConfig,
     required Future<String?> Function() getToken,
     FutureOr<bool> Function()? isCurrent,
+    int Function()? timeZoneOffsetMinutes,
   }) : _authService = authService,
        _nostrClient = nostrClient,
        _notificationService = notificationService,
        _environmentConfig = environmentConfig,
        _getToken = getToken,
-       _isCurrent = isCurrent;
+       _isCurrent = isCurrent,
+       _timeZoneOffsetMinutes =
+           timeZoneOffsetMinutes ?? _deviceTimeZoneOffsetMinutes;
 
   final AuthService _authService;
   final NostrClient _nostrClient;
@@ -81,7 +84,11 @@ class PushNotificationService {
   final EnvironmentConfig _environmentConfig;
   final Future<String?> Function() _getToken;
   final FutureOr<bool> Function()? _isCurrent;
+  final int Function() _timeZoneOffsetMinutes;
   bool _acceptsRegistration = true;
+
+  static int _deviceTimeZoneOffsetMinutes() =>
+      DateTime.now().timeZoneOffset.inMinutes;
 
   /// Prevents future token registration publishes for this session.
   ///
@@ -370,7 +377,7 @@ class PushNotificationService {
 
     final plaintext = jsonEncode({
       'token': token,
-      'timezoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+      'timezoneOffsetMinutes': _timeZoneOffsetMinutes(),
     });
 
     final encrypted = await _nostrClient.signer.nip44Encrypt(
