@@ -50,8 +50,29 @@ void main() {
         ),
       ];
 
-  for (final testCase in pinFeedbackCases) {
-    testWidgets('shows the ${testCase.$1.name} snackbar', (tester) async {
+  group('renders', () {
+    for (final testCase in pinFeedbackCases) {
+      testWidgets('shows the ${testCase.$1.name} snackbar', (tester) async {
+        final cubit = _MockProfileFeedCubit();
+        final states = StreamController<ProfileFeedState>();
+        addTearDown(states.close);
+        whenListen(
+          cubit,
+          states.stream,
+          initialState: const ProfileFeedState(),
+        );
+        addTearDown(cubit.close);
+
+        await tester.pumpWidget(_TestApp(cubit: cubit));
+        states.add(ProfileFeedState(pinFeedback: testCase.$1));
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(testCase.$2(l10n)), findsOneWidget);
+      });
+    }
+
+    testWidgets('shows the load-more error snackbar', (tester) async {
       final cubit = _MockProfileFeedCubit();
       final states = StreamController<ProfileFeedState>();
       addTearDown(states.close);
@@ -63,31 +84,12 @@ void main() {
       addTearDown(cubit.close);
 
       await tester.pumpWidget(_TestApp(cubit: cubit));
-      states.add(ProfileFeedState(pinFeedback: testCase.$1));
+      states.add(const ProfileFeedState(hasLoadMoreError: true));
       await tester.pump();
 
       final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(testCase.$2(l10n)), findsOneWidget);
+      expect(find.text(l10n.profileFeedLoadMoreError), findsOneWidget);
     });
-  }
-
-  testWidgets('shows the load-more error snackbar', (tester) async {
-    final cubit = _MockProfileFeedCubit();
-    final states = StreamController<ProfileFeedState>();
-    addTearDown(states.close);
-    whenListen(
-      cubit,
-      states.stream,
-      initialState: const ProfileFeedState(),
-    );
-    addTearDown(cubit.close);
-
-    await tester.pumpWidget(_TestApp(cubit: cubit));
-    states.add(const ProfileFeedState(hasLoadMoreError: true));
-    await tester.pump();
-
-    final l10n = lookupAppLocalizations(const Locale('en'));
-    expect(find.text(l10n.profileFeedLoadMoreError), findsOneWidget);
   });
 }
 
