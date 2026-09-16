@@ -738,16 +738,6 @@
   "@audioAttributionUnavailableSound": {
     "description": "Neutral label shown when a video references a shared sound event that cannot currently be fetched. Must not imply the video author's original sound."
   },
-  "videoInspiredByAttributionMultiple": "Lấy cảm hứng từ @{creatorName} +{additionalCreatorCount}",
-  "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-  "videoInspiredByAttribution": "Lấy cảm hứng từ @{creatorName}",
-  "@videoInspiredByAttribution": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "videoCollaboratorWithOne": "cùng @{name}",
   "@videoCollaboratorWithOne": {
     "placeholders": {
@@ -3839,16 +3829,6 @@
     }
   },
   "videoClipDelete": "Xóa clip",
-  "inspiredByAttributionMultipleSemanticLabel": "Lấy cảm hứng từ {creatorName} +{additionalCreatorCount}. Chạm để xem hồ sơ của họ.",
-  "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-  "inspiredByAttributionSemanticLabel": "Lấy cảm hứng từ {creatorName}. Chạm để xem hồ sơ của họ.",
-  "@inspiredByAttributionSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "bugReportSendReport": "Gửi báo cáo",
   "supportSubjectRequiredLabel": "Chủ đề *",
   "supportPublicSubmissionTitle": "Bài đăng GitHub công khai",

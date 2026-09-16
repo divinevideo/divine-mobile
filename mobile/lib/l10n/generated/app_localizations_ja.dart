@@ -1538,19 +1538,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioAttributionUnavailableSound => 'サウンドが見つからないよ';
 
   @override
-  String videoInspiredByAttributionMultiple(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return '@$creatorName +$additionalCreatorCount にインスパイアされた';
-  }
-
-  @override
-  String videoInspiredByAttribution(String creatorName) {
-    return '@$creatorName にインスパイアされた';
-  }
-
-  @override
   String videoCollaboratorWithOne(String name) {
     return '@$name と';
   }
@@ -6937,19 +6924,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoClipDelete => 'クリップを削除';
-
-  @override
-  String inspiredByAttributionMultipleSemanticLabel(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return '$creatorName +$additionalCreatorCountにインスパイアされたよ。タップするとプロフィールを見れるよ。';
-  }
-
-  @override
-  String inspiredByAttributionSemanticLabel(String creatorName) {
-    return '$creatorNameにインスパイアされたよ。タップするとプロフィールを見れるよ。';
-  }
 
   @override
   String get bugReportSendReport => 'レポートを送信';

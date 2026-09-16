@@ -2,9 +2,12 @@
 // ABOUTME: getters, and for the constructor's UTF-16 well-formedness boundary.
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
 
 void main() {
+  final npub = Nip19.encodePubKey('d' * 64);
+
   VideoEvent build({
     String? title,
     String content = '',
@@ -62,6 +65,43 @@ void main() {
 
     test('returns content unchanged when no zalgo present', () {
       expect(build(content: 'caption').displayContent, equals('caption'));
+    });
+
+    test('strips a trailing inspired-by attribution line', () {
+      final content = 'caption\n\nInspired by nostr:$npub';
+
+      expect(build(content: content).displayContent, equals('caption'));
+    });
+
+    test('returns empty content when attribution is the whole content', () {
+      final content = 'Inspired by nostr:$npub';
+
+      expect(build(content: content).displayContent, isEmpty);
+    });
+
+    test('preserves an inline inspired-by mention', () {
+      final content = 'A remix Inspired by nostr:$npub';
+
+      expect(build(content: content).displayContent, equals(content));
+    });
+
+    test('preserves an attribution line after only one newline', () {
+      final content = 'caption\nInspired by nostr:$npub';
+
+      expect(build(content: content).displayContent, equals(content));
+    });
+
+    test('drops whitespace left behind by a stripped attribution line', () {
+      final content = 'caption\n\n\nInspired by nostr:$npub';
+
+      expect(build(content: content).displayContent, equals('caption'));
+    });
+
+    test('preserves an attribution line whose npub does not decode', () {
+      const content =
+          'caption\n\nInspired by nostr:npub1syntheticcreator000000000000000';
+
+      expect(build(content: content).displayContent, equals(content));
     });
 
     test('strips excessive combining marks from content', () {

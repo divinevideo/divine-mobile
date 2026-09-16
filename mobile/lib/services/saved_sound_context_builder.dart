@@ -17,7 +17,7 @@ class SavedSoundContextBuilder {
       creatorPubkey: video.pubkey,
       creatorName: _nonBlank(creatorName),
       title: _nonBlank(video.displayTitle),
-      description: _nonBlank(video.content),
+      description: _nonBlank(video.displayContent),
       thumbnailUrl: _nonBlank(video.effectiveThumbnailUrl),
       transcript: _transcript(video.textTrackContent),
     );

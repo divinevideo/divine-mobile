@@ -111,8 +111,7 @@ void main() {
       expect(video.replyRootEventId, parentEventId);
       expect(video.replyRootAddressableId, rootAddressableId);
       expect(video.replyRootRouteId, rootAddressableId);
-      expect(video.hasInspiredBy, isFalse);
-      expect(video.inspiredByCreatorPubkey, isNull);
+      expect(video.creditedInspiredByPubkeys, isEmpty);
     });
   });
 }

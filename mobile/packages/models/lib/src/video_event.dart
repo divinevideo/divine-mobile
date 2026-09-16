@@ -713,19 +713,8 @@ class VideoEvent {
     }
 
     // Resolve the Inspired By person from the trailing NIP-27 attribution
-    // line the publisher appends ("Inspired by nostr:npub1..."). Anchored to
-    // the end of content and to a preceding blank line (or start of content,
-    // for empty-caption publishes) so a prose nostr:npub mention is never
-    // mistaken for attribution. Keep in sync with the strip regex in
-    // video_editor_provider.dart.
-    String? inspiredByNpub;
-    final npubPattern = RegExp(
-      r'(?:^|\n\n)Inspired by nostr:(npub1[a-z0-9]+)\s*$',
-    );
-    final npubMatch = npubPattern.firstMatch(event.content);
-    if (npubMatch != null) {
-      inspiredByNpub = npubMatch.group(1);
-    }
+    // line the publisher appends ("Inspired by nostr:npub1...").
+    final inspiredByNpub = inspiredByNpubFromContent(event.content);
 
     final createdAtTimestamp = event.createdAt is DateTime
         ? (event.createdAt as DateTime).millisecondsSinceEpoch ~/ 1000
@@ -1064,37 +1053,30 @@ class VideoEvent {
   /// Whether this video has collaborators.
   bool get hasCollaborators => collaboratorPubkeys.isNotEmpty;
 
-  /// Whether this video has any Inspired By attribution.
+  /// Every creator this video credits as inspiration, as lowercase hex
+  /// pubkeys in attribution order: the inspiring video's creator, the NIP-27
+  /// content reference, the `inspired-by` p-tags, then factual clip-source
+  /// credits. Deduplicated; empty when the video credits nobody.
   ///
-  /// NIP-22 video replies also carry lowercase parent tags. Those are reply
-  /// metadata, not creator attribution, so reply videos should render their
-  /// parent context instead of the Inspired By treatment.
-  bool get hasInspiredBy =>
-      !isVideoReply &&
-      (inspiredByVideo != null ||
-          inspiredByNpub != null ||
-          inspiredByPubkeys.isNotEmpty ||
-          clipSourceCredits.isNotEmpty);
+  /// NIP-22 replies keep content and legacy `inspired-by` p-tag credits in
+  /// About, while their parent context replaces video and clip-source credits.
+  List<String> get creditedInspiredByPubkeys {
+    final pubkeys = <String>[];
+    final seen = <String>{};
 
-  /// Hex pubkey of the primary inspiring creator, resolved from explicit
-  /// inspired-by metadata first and factual clip-source credits second.
-  ///
-  /// Returns `null` when there is no inspired-by attribution or the npub
-  /// cannot be decoded.
-  String? get inspiredByCreatorPubkey {
-    if (isVideoReply) return null;
-    if (inspiredByVideo != null) return inspiredByVideo!.creatorPubkey;
-    if (inspiredByNpub != null) {
-      final hex = Nip19.decode(inspiredByNpub!);
-      if (hex.isNotEmpty) return hex;
+    void add(String? pubkey) {
+      final normalized = pubkey?.trim().toLowerCase();
+      if (normalized == null || normalized.isEmpty) return;
+      if (seen.add(normalized)) pubkeys.add(normalized);
     }
-    if (inspiredByPubkeys.isNotEmpty) {
-      return inspiredByPubkeys.first;
+
+    if (!isVideoReply) add(inspiredByVideo?.creatorPubkey);
+    if (inspiredByNpub case final npub?) add(Nip19.decode(npub));
+    inspiredByPubkeys.forEach(add);
+    if (!isVideoReply) {
+      clipSourceCredits.map((credit) => credit.authorPubkey).forEach(add);
     }
-    if (clipSourceCredits.isNotEmpty) {
-      return clipSourceCredits.first.authorPubkey;
-    }
-    return null;
+    return List.unmodifiable(pubkeys);
   }
 
   /// NIP-40: Check if this event has expired
@@ -1135,8 +1117,13 @@ class VideoEvent {
       shareKind == NIP71VideoKinds.addressableShortVideo ||
       shareKind == NIP71VideoKinds.addressableNormalVideo;
 
-  /// Display-sanitized video content (zalgo caps, well-formed UTF-16).
-  String get displayContent => sanitizeForDisplay(content);
+  /// Display-sanitized video content without wire-format attribution metadata.
+  ///
+  /// Computed once per instance: [content] is final, and the feed grid and
+  /// player overlay read this on every rebuild.
+  late final String displayContent = sanitizeForDisplay(
+    stripInspiredByAttribution(content),
+  );
 
   /// Display-sanitized video title. Returns `null` when no title is set.
   String? get displayTitle => title != null ? sanitizeForDisplay(title!) : null;

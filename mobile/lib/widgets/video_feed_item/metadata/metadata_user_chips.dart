@@ -240,33 +240,16 @@ class _MetadataCollaboratorsSectionBodyState
 
 /// Inspired-by section showing every credited creator as a tappable chip.
 ///
-/// Returns [SizedBox.shrink] when the video has no inspired-by attribution.
+/// Renders [VideoEvent.creditedInspiredByPubkeys], which owns which sources
+/// count and the reply rule; returns [SizedBox.shrink] when it is empty.
 class MetadataInspiredBySection extends StatelessWidget {
   const MetadataInspiredBySection({required this.video, super.key});
 
   final VideoEvent video;
 
-  /// Credited creators, primary first, deduplicated across the sources that
-  /// can each name one: the inspiring video's author, the NIP-27 content
-  /// reference, and the `inspired-by` p-tags carrying the rest.
-  List<String> _creditedPubkeys() {
-    final pubkeys = <String>[];
-    final seen = <String>{};
-
-    void add(String? pubkey) {
-      final normalized = pubkey?.trim().toLowerCase();
-      if (normalized == null || normalized.isEmpty) return;
-      if (seen.add(normalized)) pubkeys.add(normalized);
-    }
-
-    add(video.inspiredByCreatorPubkey);
-    video.inspiredByPubkeys.forEach(add);
-    return pubkeys;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final pubkeys = _creditedPubkeys();
+    final pubkeys = video.creditedInspiredByPubkeys;
     if (pubkeys.isEmpty) return const SizedBox.shrink();
 
     return MetadataSection(

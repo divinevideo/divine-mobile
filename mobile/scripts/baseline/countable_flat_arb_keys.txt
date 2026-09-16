@@ -20,7 +20,6 @@ deleteAccountProgressEvents # ratio: "{current} / {total}"
 devOptionsClipRecoveryOrphanFiles # detached: colon form
 exploreVideoCounter # ratio: "Video {current}/{total}"
 inboxMessageRequestsSemanticLabel # detached: "{requestCount} pending" has no noun
-inspiredByAttributionMultipleSemanticLabel # detached: "+{n}" overflow badge
 libraryClipsSavePartialResult # detached: "{n} saved, {n} failed" has no noun
 libraryCreateVideo # detached: parenthetical "Create Video ({count})"
 libraryDraftCopyTitle # ordinal: "(copy {number})"
@@ -57,4 +56,3 @@ videoEditorTimelinePositionFormat # unit: "{minutes}m {seconds}s" symbols
 videoEditorTimelineVolumePreview # percentage
 videoEditorTransitionCurveOptionSemanticLabel # ordinal: "Easing curve {number}"
 videoEditorVoiceOverTakeName # ordinal: "Recording {number}"
-videoInspiredByAttributionMultiple # detached: "+{n}" overflow badge

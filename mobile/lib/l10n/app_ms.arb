@@ -738,16 +738,6 @@
   "@audioAttributionUnavailableSound": {
     "description": "Neutral label shown when a video references a shared sound event that cannot currently be fetched. Must not imply the video author's original sound."
   },
-  "videoInspiredByAttributionMultiple": "Diilhamkan oleh @{creatorName} +{additionalCreatorCount}",
-  "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-  "videoInspiredByAttribution": "Diilhamkan oleh @{creatorName}",
-  "@videoInspiredByAttribution": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "videoCollaboratorWithOne": "bersama @{name}",
   "@videoCollaboratorWithOne": {
     "placeholders": {
@@ -3839,16 +3829,6 @@
     }
   },
   "videoClipDelete": "Padam klip",
-  "inspiredByAttributionMultipleSemanticLabel": "Diilhamkan oleh {creatorName} +{additionalCreatorCount}. Ketik untuk melihat profil mereka.",
-  "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-  "inspiredByAttributionSemanticLabel": "Diilhamkan oleh {creatorName}. Ketik untuk melihat profil mereka.",
-  "@inspiredByAttributionSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "bugReportSendReport": "Hantar Laporan",
   "supportSubjectRequiredLabel": "Subjek *",
   "supportPublicSubmissionTitle": "Siaran GitHub awam",

@@ -17,8 +17,11 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/auth_service.dart'
     show AuthService, AuthState;
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
+import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
+import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -112,6 +115,98 @@ void main() {
   });
 
   group('renders', () {
+    testWidgets('hides inspired-by attribution from the player overlay', (
+      tester,
+    ) async {
+      final npub = normalizeToNpub('d' * 64)!;
+      testVideo = testVideo.copyWith(
+        content: 'Visible caption\n\n${inspiredByAttributionLine(npub)}',
+        inspiredByNpub: npub,
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          additionalOverrides: [
+            repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider<VideoInteractionsBloc>.value(
+                value: mockInteractionsBloc,
+                child: VideoOverlayActions(
+                  video: testVideo,
+                  isVisible: true,
+                  isActive: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Exact match: an unstripped line would lengthen the caption text.
+      expect(find.text('Visible caption'), findsOneWidget);
+    });
+
+    testWidgets(
+      'keeps collaborator and reply controls when attribution is the caption',
+      (tester) async {
+        final npub = normalizeToNpub('d' * 64)!;
+        testVideo = VideoEvent(
+          id: testVideo.id,
+          pubkey: testVideo.pubkey,
+          createdAt: testVideo.createdAt,
+          content: inspiredByAttributionLine(npub),
+          timestamp: testVideo.timestamp,
+          videoUrl: testVideo.videoUrl,
+          collaboratorPubkeys: const [
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          ],
+          nostrEventTags: const [
+            [
+              'E',
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            ],
+            ['K', '34236'],
+          ],
+          inspiredByNpub: npub,
+        );
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              repostsRepositoryProvider.overrideWithValue(
+                mockRepostsRepository,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: BlocProvider<VideoInteractionsBloc>.value(
+                  value: mockInteractionsBloc,
+                  child: VideoOverlayActions(
+                    video: testVideo,
+                    isVisible: true,
+                    isActive: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(testVideo.displayContent, isEmpty);
+        expect(find.byType(CollaboratorAvatarRow), findsOneWidget);
+        expect(find.byType(VideoReplyParentLink), findsOneWidget);
+      },
+    );
+
     testWidgets('paints a brand-green heart in the author name', (
       tester,
     ) async {

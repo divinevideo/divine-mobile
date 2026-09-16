@@ -1551,19 +1551,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get audioAttributionUnavailableSound => '声音不可用';
 
   @override
-  String videoInspiredByAttributionMultiple(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return '灵感来自 @$creatorName +$additionalCreatorCount';
-  }
-
-  @override
-  String videoInspiredByAttribution(String creatorName) {
-    return '灵感来自 @$creatorName';
-  }
-
-  @override
   String videoCollaboratorWithOne(String name) {
     return '与 @$name 合作';
   }
@@ -6878,19 +6865,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoClipDelete => '删除片段';
-
-  @override
-  String inspiredByAttributionMultipleSemanticLabel(
-    String creatorName,
-    int additionalCreatorCount,
-  ) {
-    return '灵感来自 $creatorName +$additionalCreatorCount。点按查看 TA 的主页。';
-  }
-
-  @override
-  String inspiredByAttributionSemanticLabel(String creatorName) {
-    return '灵感来自 $creatorName。点按查看 TA 的主页。';
-  }
 
   @override
   String get bugReportSendReport => '发送报告';

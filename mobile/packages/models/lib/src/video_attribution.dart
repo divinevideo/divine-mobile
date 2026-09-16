@@ -3,6 +3,54 @@
 // ABOUTME: video events (Kind 34236)
 
 import 'package:meta/meta.dart';
+import 'package:models/src/nostr_hex_utils.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
+
+/// Prefix of the trailing NIP-27 line that preserves inspired-by attribution
+/// in published content, shared by the publish-side writer and the parser.
+const inspiredByAttributionPrefix = 'Inspired by nostr:';
+
+/// The attribution line naming [npub], exactly as the publisher appends it.
+String inspiredByAttributionLine(String npub) =>
+    '$inspiredByAttributionPrefix$npub';
+
+/// Matches the trailing NIP-27 line used to preserve inspired-by attribution.
+///
+/// The line must be separated from a caption by a blank line, or be the whole
+/// content for a publish without a caption. Anchoring prevents prose mentions
+/// from being mistaken for attribution.
+final inspiredByAttributionPattern = RegExp(
+  '(?:^|\\n\\n)${RegExp.escape(inspiredByAttributionPrefix)}'
+  r'(npub1[a-z0-9]+)\s*$',
+);
+
+/// The npub credited by a trailing attribution line in [content], or `null`
+/// when there is no such line or its npub does not decode to a pubkey.
+///
+/// An undecodable npub credits nobody, so the line is left alone: it stays
+/// visible in the caption rather than being stripped with nothing to show
+/// for it.
+String? inspiredByNpubFromContent(String content) =>
+    _decodableAttributionMatch(content)?.group(1);
+
+/// Removes a trailing inspired-by attribution line from displayable content.
+///
+/// Only a line whose npub decodes is removed; see [inspiredByNpubFromContent].
+/// Whitespace the caption carried before the blank-line separator goes with
+/// it, so a caption typed with a trailing newline does not keep a dangling
+/// one.
+String stripInspiredByAttribution(String content) {
+  final match = _decodableAttributionMatch(content);
+  if (match == null) return content;
+  return content.substring(0, match.start).trimRight();
+}
+
+RegExpMatch? _decodableAttributionMatch(String content) {
+  final match = inspiredByAttributionPattern.firstMatch(content);
+  if (match == null) return null;
+  final hex = Nip19.decode(match.group(1)!);
+  return NostrHexUtils.isValidPubkey(hex) ? match : null;
+}
 
 /// Information about a video that inspired the current video.
 ///

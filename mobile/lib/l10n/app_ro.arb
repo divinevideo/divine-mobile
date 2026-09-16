@@ -546,16 +546,6 @@
     "videoFollowButtonFollow": "Urmărește",
     "audioAttributionOriginalSound": "Sunet original",
     "audioAttributionUnavailableSound": "Sunet indisponibil",
-    "videoInspiredByAttributionMultiple": "Inspirat de @{creatorName} +{additionalCreatorCount}",
-    "@videoInspiredByAttributionMultiple": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "videoInspiredByAttribution": "Inspirat de @{creatorName}",
-    "@videoInspiredByAttribution": {
-        "placeholders": {
-            "creatorName": {
-                "type": "String"
-            }
-        }
-    },
     "videoCollaboratorWithOne": "cu @{name}",
     "@videoCollaboratorWithOne": {
         "placeholders": {
@@ -4259,10 +4249,6 @@
     "videoClipSaveTo": "Salvează în {destination}",
     "@videoClipSaveTo": {"placeholders": {"destination": {"type": "String"}}},
     "videoClipDelete": "Șterge clipul",
-    "inspiredByAttributionMultipleSemanticLabel": "Inspirat de {creatorName} +{additionalCreatorCount}. Atinge ca să-i vezi profilul.",
-    "@inspiredByAttributionMultipleSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}, "additionalCreatorCount": {"type": "int"}}},
-    "inspiredByAttributionSemanticLabel": "Inspirat de {creatorName}. Atinge ca să-i vezi profilul.",
-    "@inspiredByAttributionSemanticLabel": {"placeholders": {"creatorName": {"type": "String"}}},
     "searchVideosSortOptionsLabel": "Sortează rezultatele video",
     "searchVideosSortTrending": "În trend",
     "@searchVideosSortTrending": {"description": "Label for the video search sort option that shows currently popular or trending results."},

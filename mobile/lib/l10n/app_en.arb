@@ -1036,25 +1036,6 @@
   "@audioAttributionUnavailableSound": {
     "description": "Neutral label shown when a video references a shared sound event that cannot currently be fetched. Must not imply the video author's original sound."
   },
-  "videoInspiredByAttributionMultiple": "Inspired by @{creatorName} +{additionalCreatorCount}",
-  "@videoInspiredByAttributionMultiple": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      },
-      "additionalCreatorCount": {
-        "type": "int"
-      }
-    }
-  },
-  "videoInspiredByAttribution": "Inspired by @{creatorName}",
-  "@videoInspiredByAttribution": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "videoCollaboratorWithOne": "with @{name}",
   "@videoCollaboratorWithOne": {
     "placeholders": {
@@ -4709,25 +4690,6 @@
     }
   },
   "videoClipDelete": "Delete clip",
-  "inspiredByAttributionMultipleSemanticLabel": "Inspired by {creatorName} +{additionalCreatorCount}. Tap to view their profile.",
-  "@inspiredByAttributionMultipleSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      },
-      "additionalCreatorCount": {
-        "type": "int"
-      }
-    }
-  },
-  "inspiredByAttributionSemanticLabel": "Inspired by {creatorName}. Tap to view their profile.",
-  "@inspiredByAttributionSemanticLabel": {
-    "placeholders": {
-      "creatorName": {
-        "type": "String"
-      }
-    }
-  },
   "bugReportSendReport": "Send Report",
   "supportSubjectRequiredLabel": "Subject *",
   "supportPublicSubmissionTitle": "Public GitHub post",
