@@ -74,6 +74,8 @@ class PlayheadInterpolator {
     _stopwatch
       ..reset()
       ..start();
+    // Ticker.start() asserts the ticker is idle; anchor() re-runs on every
+    // player report while playing (~5×/s) and must not double-start it.
     final ticker = _ticker ??= _vsync.createTicker(_onTick);
     if (!ticker.isActive) ticker.start();
     onAdvancingChanged(true);
