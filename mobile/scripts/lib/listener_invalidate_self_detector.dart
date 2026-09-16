@@ -43,12 +43,14 @@ class _ListenerVisitor extends RecursiveAstVisitor<void> {
     if (node.methodName.name == 'addListener' &&
         node.argumentList.arguments.isNotEmpty) {
       final argument = node.argumentList.arguments.first;
-      final callback = argument is NamedExpression
-          ? argument.expression
-          : argument;
+      final callback = _unwrapCallback(
+        argument is NamedExpression ? argument.expression : argument,
+      );
       final finder = _InvalidateSelfFinder(_functions);
       if (callback is FunctionExpression) {
         callback.body.accept(finder);
+      } else if (_isInvalidateSelfTearOff(callback)) {
+        finder.found = true;
       } else if (callback is SimpleIdentifier) {
         finder.follow(callback.name, callback);
       } else if (callback is PrefixedIdentifier) {
@@ -120,6 +122,37 @@ bool _isRefReceiver(Expression? receiver) {
   };
   return name == 'ref' || name == '_ref';
 }
+
+/// Strips the wrappers that do not change which callback is registered, so a
+/// `listener!`, `(listener)`, or `listener as VoidCallback` argument resolves
+/// like the bare identifier it wraps.
+Expression _unwrapCallback(Expression expression) {
+  var current = expression;
+  while (true) {
+    final Expression next;
+    if (current is ParenthesizedExpression) {
+      next = current.expression;
+    } else if (current is PostfixExpression && current.operator.lexeme == '!') {
+      next = current.operand;
+    } else if (current is AsExpression) {
+      next = current.expression;
+    } else {
+      return current;
+    }
+    current = next;
+  }
+}
+
+/// Whether the registered callback is `invalidateSelf` itself — `addListener`
+/// handed `ref.invalidateSelf`, `_ref.invalidateSelf`, or a `this.ref` form.
+/// The listener *is* the provider rebuild, so there is no body to walk.
+bool _isInvalidateSelfTearOff(Expression expression) => switch (expression) {
+  PropertyAccess(:final propertyName, :final target) =>
+    propertyName.name == 'invalidateSelf' && _isRefReceiver(target),
+  PrefixedIdentifier(:final identifier, :final prefix) =>
+    identifier.name == 'invalidateSelf' && _isRefReceiver(prefix),
+  _ => false,
+};
 
 class _SameFileFunctions {
   _SameFileFunctions(CompilationUnit unit) {
@@ -208,6 +241,16 @@ class _FunctionCollector extends RecursiveAstVisitor<void> {
     }
     super.visitVariableDeclaration(node);
   }
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    final assigned = node.rightHandSide;
+    if (node.operator.lexeme == '=' && assigned is FunctionExpression) {
+      final name = _assignedName(node.leftHandSide);
+      if (name != null) _add(name, assigned.body, _assignmentScope(node));
+    }
+    super.visitAssignmentExpression(node);
+  }
 }
 
 /// Where a closure bound to a variable can be named from: the enclosing block
@@ -219,6 +262,33 @@ AstNode? _variableScope(VariableDeclaration node) {
     FieldDeclaration() => declaration.parent,
     _ => null,
   };
+}
+
+/// The name a plain `name = ...` or `this.name = ...` assignment binds.
+String? _assignedName(Expression expression) => switch (expression) {
+  SimpleIdentifier(:final name) => name,
+  PropertyAccess(target: ThisExpression(), :final propertyName) =>
+    propertyName.name,
+  _ => null,
+};
+
+/// Where a closure assigned to a variable or field can be named from: its
+/// nearest enclosing block, function body, or class. `_variableScope` above
+/// serves the declaration form; an assignment has neither a
+/// `VariableDeclarationStatement` nor a `FieldDeclaration` to read.
+AstNode? _assignmentScope(AssignmentExpression node) {
+  for (
+    AstNode? current = node.parent;
+    current != null;
+    current = current.parent
+  ) {
+    if (current is Block ||
+        current is FunctionBody ||
+        current is ClassDeclaration) {
+      return current;
+    }
+  }
+  return null;
 }
 
 bool _isGenerated(String path) =>

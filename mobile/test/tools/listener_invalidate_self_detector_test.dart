@@ -157,6 +157,92 @@ class Owner {
       expect(sites, isEmpty);
     });
 
+    test('flags ref.invalidateSelf registered as the listener itself', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  service.addListener(ref.invalidateSelf);
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('flags a `_ref` tear-off registered as the listener', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this._ref);
+  final Ref _ref;
+  void install() => service.addListener(_ref.invalidateSelf);
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('allows a tear-off on a receiver that is not a Ref', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  service.addListener(other.invalidateSelf);
+  return 0;
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
+    test('follows a closure assigned to a field and null-asserted', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void Function()? listener;
+
+  void install() {
+    listener = () => ref.invalidateSelf();
+    service.addListener(listener!);
+  }
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('follows a closure assigned to a local variable', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  void Function() listener;
+  listener = () => ref.invalidateSelf();
+  service.addListener(listener);
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('ignores an assignment scoped to another method', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void Function()? listener;
+
+  void other() {
+    listener = () => ref.invalidateSelf();
+    listener!();
+  }
+
+  void install() {
+    listener = () => ref.state = 1;
+    service.addListener(listener!);
+  }
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
     test('follows a class method tear-off', () {
       final sites = findListenerInvalidateSelfSitesInSource('''
 class Owner {
