@@ -396,6 +396,12 @@ jobs:
           # can only shrink. Fix with emitIfOpen / addIfOpen from
           # lib/blocs/close_guard.dart.
           bash scripts/check_post_close_emit_ceiling.sh
+      - name: 🔁 Verify service listeners do not invalidate their own provider
+        run: |
+          # Issue #9266. Rebuilding a provider from its registered service
+          # callback reinstalls the listener and resets local version state.
+          # Publish a changed value instead; this AST-backed guard is zero-based.
+          bash scripts/check_listener_invalidate_self.sh
       - name: ⏱️ Verify no uncancellable timer-backed waits (frozen at zero)
         run: |
           # Issue #8457, epic #4339. A `Timer(...)` nobody holds whose callback
