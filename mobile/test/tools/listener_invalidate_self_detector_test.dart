@@ -221,26 +221,68 @@ int provider(Ref ref) {
       expect(sites, hasLength(1));
     });
 
-    test('ignores an assignment scoped to another method', () {
+    test('follows a field closure assigned in the constructor', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref) {
+    listener = () => ref.invalidateSelf();
+  }
+
+  final Ref ref;
+  void Function()? listener;
+
+  void install() => service.addListener(listener!);
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('ignores a local assignment scoped to another method', () {
       final sites = findListenerInvalidateSelfSitesInSource('''
 class Owner {
   Owner(this.ref);
   final Ref ref;
-  void Function()? listener;
 
   void other() {
+    void Function() listener;
     listener = () => ref.invalidateSelf();
-    listener!();
+    listener();
   }
 
   void install() {
+    void Function() listener;
     listener = () => ref.state = 1;
-    service.addListener(listener!);
+    service.addListener(listener);
   }
 }
 ''');
 
       expect(sites, isEmpty);
+    });
+
+    test('unwraps a cast callback argument', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  final listener = () => ref.invalidateSelf();
+  service.addListener(listener as VoidCallback);
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('unwraps a parenthesized callback argument', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  final listener = () => ref.invalidateSelf();
+  service.addListener((listener));
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
     });
 
     test('follows a class method tear-off', () {

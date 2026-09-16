@@ -247,7 +247,9 @@ class _FunctionCollector extends RecursiveAstVisitor<void> {
     final assigned = node.rightHandSide;
     if (node.operator.lexeme == '=' && assigned is FunctionExpression) {
       final name = _assignedName(node.leftHandSide);
-      if (name != null) _add(name, assigned.body, _assignmentScope(node));
+      if (name != null) {
+        _add(name, assigned.body, _assignmentScope(node, name));
+      }
     }
     super.visitAssignmentExpression(node);
   }
@@ -272,11 +274,23 @@ String? _assignedName(Expression expression) => switch (expression) {
   _ => null,
 };
 
-/// Where a closure assigned to a variable or field can be named from: its
-/// nearest enclosing block, function body, or class. `_variableScope` above
-/// serves the declaration form; an assignment has neither a
-/// `VariableDeclarationStatement` nor a `FieldDeclaration` to read.
-AstNode? _assignmentScope(AssignmentExpression node) {
+/// Where a closure assigned to a variable or field can be named from.
+///
+/// An explicit `this.name = ...`, or a bare `name = ...` the enclosing class
+/// declares as a field, is visible from every method of that class — the same
+/// reach the declaration form (`late final ... name = ...`) already has — so
+/// it takes the class as its scope unless an enclosing block declares `name`
+/// as a local. Anything else keeps its nearest block or function body, so an
+/// assignment made inside one method is not read as a binding for another.
+AstNode? _assignmentScope(AssignmentExpression node, String name) {
+  final classDeclaration = _enclosingClass(node);
+  final lhs = node.leftHandSide;
+  final explicitField = lhs is PropertyAccess && lhs.target is ThisExpression;
+  if (classDeclaration != null &&
+      (explicitField || _declaresField(classDeclaration, name)) &&
+      !_enclosingBlockDeclaresLocal(node, name)) {
+    return classDeclaration;
+  }
   for (
     AstNode? current = node.parent;
     current != null;
@@ -289,6 +303,50 @@ AstNode? _assignmentScope(AssignmentExpression node) {
     }
   }
   return null;
+}
+
+ClassDeclaration? _enclosingClass(AstNode node) {
+  for (
+    AstNode? current = node.parent;
+    current != null;
+    current = current.parent
+  ) {
+    if (current is ClassDeclaration) return current;
+  }
+  return null;
+}
+
+bool _declaresField(ClassDeclaration node, String name) {
+  for (final member in node.body.members) {
+    if (member is FieldDeclaration) {
+      for (final variable in member.fields.variables) {
+        if (variable.name.lexeme == name) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// Whether a block between the assignment and its class declares [name] as a
+/// local, in which case the assignment binds the local and not a field.
+bool _enclosingBlockDeclaresLocal(AstNode node, String name) {
+  for (
+    AstNode? current = node.parent;
+    current != null;
+    current = current.parent
+  ) {
+    if (current is Block) {
+      for (final statement in current.statements) {
+        if (statement is VariableDeclarationStatement) {
+          for (final variable in statement.variables.variables) {
+            if (variable.name.lexeme == name) return true;
+          }
+        }
+      }
+    }
+    if (current is ClassDeclaration) return false;
+  }
+  return false;
 }
 
 bool _isGenerated(String path) =>
