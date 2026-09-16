@@ -4621,6 +4621,18 @@ abstract class AppLocalizations {
   /// **'When someone you\'re watching posts'**
   String get notificationSettingsNewPostsSubtitle;
 
+  /// No description provided for @notificationSettingsCampaigns.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine updates'**
+  String get notificationSettingsCampaigns;
+
+  /// No description provided for @notificationSettingsCampaignsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasional product and community updates'**
+  String get notificationSettingsCampaignsSubtitle;
+
   /// No description provided for @notificationSettingsActions.
   ///
   /// In en, this message translates to:

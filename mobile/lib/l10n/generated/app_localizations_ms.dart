@@ -2681,6 +2681,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Apabila seseorang yang anda ikuti menyiarkan';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Tindakan';
 
   @override

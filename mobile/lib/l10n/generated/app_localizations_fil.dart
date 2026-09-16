@@ -2705,6 +2705,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Kapag nag-post ang taong binabantayan mo';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Mga Aksyon';
 
   @override

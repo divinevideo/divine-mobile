@@ -2784,6 +2784,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Gdy ktoś, kogo obserwujesz, publikuje';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Akcje';
 
   @override

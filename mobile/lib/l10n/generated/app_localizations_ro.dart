@@ -2793,6 +2793,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Când cineva pe care îl urmărești postează';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Acțiuni';
 
   @override

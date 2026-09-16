@@ -13,6 +13,7 @@ class NotificationPreferences extends Equatable {
     this.mentionsEnabled = true,
     this.repostsEnabled = true,
     this.newPostsEnabled = true,
+    this.campaignsEnabled = false,
   });
 
   /// Create preferences from a list of enabled Nostr event kinds.
@@ -52,6 +53,7 @@ class NotificationPreferences extends Equatable {
       mentionsEnabled: json['mentionsEnabled'] as bool? ?? true,
       repostsEnabled: json['repostsEnabled'] as bool? ?? true,
       newPostsEnabled: json['newPostsEnabled'] as bool? ?? true,
+      campaignsEnabled: json['campaignsEnabled'] as bool? ?? false,
     );
   }
 
@@ -69,6 +71,9 @@ class NotificationPreferences extends Equatable {
 
   /// Whether to receive a push when a subscribed creator posts a new video.
   final bool newPostsEnabled;
+
+  /// Whether the user explicitly opted into engagement campaign pushes.
+  final bool campaignsEnabled;
 
   /// Convert to the kinds list format expected by the push service.
   ///
@@ -91,6 +96,7 @@ class NotificationPreferences extends Equatable {
       'mentionsEnabled': mentionsEnabled,
       'repostsEnabled': repostsEnabled,
       'newPostsEnabled': newPostsEnabled,
+      'campaignsEnabled': campaignsEnabled,
     };
   }
 
@@ -101,6 +107,7 @@ class NotificationPreferences extends Equatable {
     bool? mentionsEnabled,
     bool? repostsEnabled,
     bool? newPostsEnabled,
+    bool? campaignsEnabled,
   }) {
     return NotificationPreferences(
       likesEnabled: likesEnabled ?? this.likesEnabled,
@@ -109,6 +116,7 @@ class NotificationPreferences extends Equatable {
       mentionsEnabled: mentionsEnabled ?? this.mentionsEnabled,
       repostsEnabled: repostsEnabled ?? this.repostsEnabled,
       newPostsEnabled: newPostsEnabled ?? this.newPostsEnabled,
+      campaignsEnabled: campaignsEnabled ?? this.campaignsEnabled,
     );
   }
 
@@ -120,5 +128,6 @@ class NotificationPreferences extends Equatable {
     mentionsEnabled,
     repostsEnabled,
     newPostsEnabled,
+    campaignsEnabled,
   ];
 }

@@ -2625,6 +2625,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Saat orang yang kamu pantau memposting';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Aksi';
 
   @override

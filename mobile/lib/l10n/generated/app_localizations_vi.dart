@@ -2667,6 +2667,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Khi người bạn theo dõi đăng bài';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Thao tác';
 
   @override

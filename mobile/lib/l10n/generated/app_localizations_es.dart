@@ -2725,6 +2725,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Cuando alguien que sigues publica';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Acciones';
 
   @override
