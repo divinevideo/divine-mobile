@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/nostr_signature_verification_policy.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/audio_device_preference_service.dart';
@@ -104,8 +105,7 @@ class LanguagePreferenceVersionNotifier
 
     void increment() => state++;
 
-    service.addListener(increment);
-    ref.onDispose(() => service.removeListener(increment));
+    listenForProviderLifetime(ref, service, increment);
     return 0;
   }
 }

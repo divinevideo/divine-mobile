@@ -112,7 +112,7 @@ final class FeatureFlagServiceProvider
 }
 
 String _$featureFlagServiceHash() =>
-    r'f663b9f0232f24e115143321b82371ae100822ba';
+    r'3a216f823f891a7d0ea0a6f585ad08dd044e19fb';
 
 /// Feature flag state provider that publishes service changes to its state.
 ///
@@ -161,7 +161,7 @@ final class FeatureFlagStateNotifierProvider
 }
 
 String _$featureFlagStateNotifierHash() =>
-    r'1e187d2b5476c5048b52537d9f3e0d65126ff836';
+    r'b790185313696e1056982e7115ff00fdd68a3ebf';
 
 /// Feature flag state provider that publishes service changes to its state.
 ///

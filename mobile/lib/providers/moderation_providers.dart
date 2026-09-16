@@ -8,6 +8,7 @@ import 'package:content_policy/content_policy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -71,8 +72,7 @@ class DivineHostFilterVersion extends Notifier<int> {
   @override
   int build() {
     final service = ref.watch(divineHostFilterServiceProvider);
-    service.addListener(increment);
-    ref.onDispose(() => service.removeListener(increment));
+    listenForProviderLifetime(ref, service, increment);
     return 0;
   }
 
@@ -102,8 +102,7 @@ class VideoProvenanceFilterVersion extends Notifier<int> {
   @override
   int build() {
     final service = ref.watch(videoProvenanceFilterServiceProvider);
-    service.addListener(increment);
-    ref.onDispose(() => service.removeListener(increment));
+    listenForProviderLifetime(ref, service, increment);
     return 0;
   }
 
@@ -201,12 +200,8 @@ class ContentFilterVersion extends Notifier<int> {
     final aspectRatioPreference = ref.watch(
       feedAspectRatioPreferenceServiceProvider,
     );
-    service.addListener(increment);
-    aspectRatioPreference.addListener(increment);
-    ref.onDispose(() {
-      service.removeListener(increment);
-      aspectRatioPreference.removeListener(increment);
-    });
+    listenForProviderLifetime(ref, service, increment);
+    listenForProviderLifetime(ref, aspectRatioPreference, increment);
     return 0;
   }
 

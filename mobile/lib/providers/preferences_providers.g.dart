@@ -241,7 +241,7 @@ final class LanguagePreferenceVersionNotifierProvider
 }
 
 String _$languagePreferenceVersionNotifierHash() =>
-    r'515eb0d7c4edd697387b36f5d1346401579cd30c';
+    r'597990e8f59b15a7ce877e01c6fe2f65e328db8a';
 
 /// Rebuild trigger for consumers that need the latest content-language
 /// preference in request parameters.
