@@ -428,15 +428,19 @@ void main() {
         expect(states, contains(ConnectionState.disconnected));
       });
 
-      test('stays disconnected when relay closes connection', () async {
+      test('reconnects on its own when relay closes connection', () async {
         await manager.connect();
 
         mockFactory.lastChannel!.simulateClose();
         await Future.delayed(const Duration(milliseconds: 50));
 
-        // Should stay disconnected - no automatic reconnect
-        expect(manager.state, equals(ConnectionState.disconnected));
-        expect(mockFactory.createdChannels.length, equals(1));
+        // A connection with no further outbound sends (a live REQ with
+        // nothing else pending) never reaches the on-demand send() path,
+        // so the manager must repair itself here or it would stay dead
+        // forever (#8992). `manager`'s setUp config uses a 10ms backoff,
+        // well inside this 50ms window.
+        expect(manager.state, equals(ConnectionState.connected));
+        expect(mockFactory.createdChannels.length, greaterThan(1));
       });
     });
 
@@ -467,6 +471,35 @@ void main() {
 
         expect(idleManager.state, equals(ConnectionState.disconnected));
         expect(idleChannel.isClosed, isTrue);
+      });
+
+      test('reconnects on its own after the heartbeat forces a disconnect, '
+          'with nothing else calling send()', () async {
+        final factory = MockWebSocketChannelFactory();
+        final idleManager = WebSocketConnectionManager(
+          url: 'wss://test.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            baseReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration(milliseconds: 20),
+            idleTimeout: Duration(milliseconds: 200),
+          ),
+        );
+        addTearDown(idleManager.dispose);
+
+        await idleManager.connect();
+        final idleChannel = factory.lastChannel!;
+
+        // Idle-disconnects at ~220ms (first heartbeat tick past 200ms idle)
+        // and reconnects ~10ms later on its own; the check below lands well
+        // inside that reconnected window, long before the next idle cycle
+        // (~450ms) could disconnect it again.
+        await Future<void>.delayed(const Duration(milliseconds: 260));
+
+        expect(idleChannel.isClosed, isTrue);
+        expect(idleManager.state, equals(ConnectionState.connected));
+        expect(factory.createdChannels, hasLength(greaterThan(1)));
       });
 
       test('closes the channel sink when checkHealth finds a stale '

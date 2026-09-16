@@ -397,7 +397,12 @@ class WebSocketConnectionManager {
     unawaited(_closeChannel());
 
     _setState(ConnectionState.disconnected);
-    // No automatic reconnection - reconnect happens on-demand when sending
+
+    // A receive-only socket (a live REQ with nothing left to send) never
+    // reaches the on-demand reconnect in send(), so repair it here (#8992).
+    if (_shouldReconnect) {
+      unawaited(_tryReconnect());
+    }
   }
 
   /// Disconnect from the WebSocket server
