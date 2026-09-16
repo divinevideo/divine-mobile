@@ -1176,19 +1176,24 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       '${fromCache ? 'from cache' : 'from network'}',
     );
 
-    // Use the legacy Android `SurfaceTextureEntry` backend instead of the
-    // default `SurfaceProducer`. The feed renders many players concurrently;
-    // when a sibling player's decoder is released the Exynos C2 H.264
-    // driver triggers a global format reprobe, and SurfaceProducer's small
-    // ImageReader buffer pool can leak the previously-decoded frame onto a
-    // peer player's surface for one frame (visible flicker). The legacy
-    // single-buffer SurfaceTexture has no shared pool and is immune.
-    // Trade-off: no surface-recreate callback (e.g. permission dialogs);
-    // acceptable for the feed because the screen is always foregrounded
-    // while videos are playing. No effect on iOS/macOS.
+    // Render through Android's `SurfaceProducer` (ImageReader-backed, the
+    // controller's default), not the legacy `SurfaceTextureEntry` this feed
+    // opted into under Skia with `useLegacySurface: true`. On
+    // Impeller/Vulkan the legacy surface is no longer zero-copy: every frame
+    // of every visible player goes through the engine's GL→Vulkan trampoline
+    // — a synchronous fence wait, a blit and two layout transitions — which
+    // profiled at 10–12 ms of raster time per frame (16+ ms with two pages
+    // visible mid-swipe) and held the feed at 30–40 fps. SurfaceProducer
+    // imports the decoder's AHardwareBuffer directly; the same scroll costs
+    // ~1 ms. The legacy path was kept for a one-frame ghost on Exynos C2 —
+    // a sibling decoder's release leaking a stale frame through the
+    // ImageReader pool — which did not reproduce on Flutter 3.47.2 with the
+    // pool trims the engine has since added; if it returns, that is the
+    // driver class to look at first. The producer also brings the
+    // surface-recreate callback back, so playback survives OEM compositor
+    // events. No effect on iOS/macOS.
     final controller = DivineVideoPlayerController(
       useTexture: true,
-      useLegacySurface: true,
       // Up to three feed players stay live at once; bound each one's native
       // read-ahead buffer so short-form playback doesn't OOM on low-RAM
       // Android devices (#3419).

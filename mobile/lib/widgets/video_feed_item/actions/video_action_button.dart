@@ -1,8 +1,6 @@
 // ABOUTME: Shared base widget for video overlay action buttons.
 // ABOUTME: 48x48 tap target containing a 24 icon over a label/count.
 
-import 'dart:ui';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -80,13 +78,12 @@ class VideoActionButton extends StatefulWidget {
 }
 
 class _VideoActionButtonState extends State<VideoActionButton> {
-  /// Cached icon subtree. The icon — a [DivineIcon] with two blurred
-  /// ([ImageFiltered]) shadow layers — depends only on [VideoActionButton.icon]
-  /// and [VideoActionButton.iconColor], never on the [VideoActionButton.count].
-  /// Reusing the same widget instance across rebuilds lets Flutter skip
-  /// re-running — and re-rasterising the shadow blur of — the icon when only
-  /// the interaction count changes, which happens once per incoming
-  /// like/comment/repost event during the cold-start flood.
+  /// Cached icon subtree. The [ShadowedDivineIcon] depends only on
+  /// [VideoActionButton.icon] and [VideoActionButton.iconColor], never on the
+  /// [VideoActionButton.count]. Reusing the same widget instance across
+  /// rebuilds lets Flutter skip re-running the icon when only the interaction
+  /// count changes, which happens once per incoming like/comment/repost event
+  /// during the cold-start flood.
   Widget? _icon;
 
   @override
@@ -100,7 +97,7 @@ class _VideoActionButtonState extends State<VideoActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _icon ??= _ShadowedIcon(
+    final icon = _icon ??= ShadowedDivineIcon(
       icon: widget.icon,
       color: widget.iconColor,
     );
@@ -193,77 +190,6 @@ class _VideoActionCaption extends StatelessWidget {
         softWrap: false,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-/// 24x24 icon with two layered glyph drop shadows matching the Figma
-/// button spec. The shadow layers are [DivineIcon]s tinted in
-/// [VineTheme.innerShadow] and wrapped in [ExcludeSemantics] so they
-/// don't pollute the accessibility tree with duplicate icon nodes —
-/// only the foreground glyph is read by screen readers.
-class _ShadowedIcon extends StatelessWidget {
-  const _ShadowedIcon({required this.icon, required this.color});
-
-  final DivineIconName icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    // Isolate the two ImageFiltered (saveLayer) shadow blurs in their own
-    // repaint layer. In the feed these icons sit over a playing video, whose
-    // texture changes every frame; without a boundary the blurs share the
-    // video's layer and are re-rasterised on every frame (profiling showed
-    // this as the dominant raster cost — a constant red/raster-bound frame
-    // graph). A boundary here — rather than around the whole overlay — keeps
-    // the cached layer alive even while sibling overlay content (subtitles,
-    // counts) repaints, since the icon itself changes only on icon/color.
-    return RepaintBoundary(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          _IconShadow(icon: icon, offset: const Offset(1, 1), blurSigma: 1),
-          _IconShadow(
-            icon: icon,
-            offset: const Offset(0.4, 0.4),
-            blurSigma: 0.6,
-          ),
-          DivineIcon(icon: icon, color: color),
-        ],
-      ),
-    );
-  }
-}
-
-/// One of the two stacked drop shadows behind [_ShadowedIcon]'s glyph.
-/// Renders a [DivineIcon] tinted in [VineTheme.innerShadow], offset, and
-/// blurred via [ImageFiltered] so the shadow follows the glyph silhouette
-/// rather than the bounding rect.
-class _IconShadow extends StatelessWidget {
-  const _IconShadow({
-    required this.icon,
-    required this.offset,
-    required this.blurSigma,
-  });
-
-  final DivineIconName icon;
-  final Offset offset;
-  final double blurSigma;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: offset,
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        // Defensive ExcludeSemantics — DivineIcon is currently just a
-        // thin SvgPicture wrapper with no Semantics of its own, but if
-        // it ever gains one, the two shadow copies should stay out of
-        // the accessibility tree.
-        child: ExcludeSemantics(
-          child: DivineIcon(icon: icon, color: VineTheme.innerShadow),
-        ),
       ),
     );
   }

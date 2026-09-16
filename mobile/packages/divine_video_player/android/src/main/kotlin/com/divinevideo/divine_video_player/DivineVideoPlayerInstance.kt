@@ -314,11 +314,16 @@ internal class DivineVideoPlayerInstance(
      * dialogs, OEM compositor events on Vivo/Android 16).
      *
      * When [useLegacySurface] is `true` this uses the legacy
-     * [TextureRegistry.SurfaceTextureEntry] which does not deliver
+     * [TextureRegistry.SurfaceTextureEntry], which does not deliver
      * surface-recreate callbacks but is immune to the SurfaceProducer
-     * ImageReader-pool ghost-frame issue. Use this for screens that
-     * render many players at once (the feed) where a sibling decoder's
-     * release can leak a stale frame onto a peer's surface.
+     * ImageReader-pool ghost-frame issue: a sibling decoder's release
+     * can leak a stale frame onto a peer's surface. That ghost last
+     * reproduced on the Exynos C2 driver and did not on Flutter 3.47.2,
+     * where the feed — its long-time user — moved back to
+     * SurfaceProducer. The editor's paired players still opt in for their
+     * own cross-player contamination case. Opt a screen in only when the
+     * ghost is observed there; under Impeller the legacy surface also
+     * costs a per-frame trampoline in the engine.
      */
     fun enableTextureOutput(
         registry: TextureRegistry,

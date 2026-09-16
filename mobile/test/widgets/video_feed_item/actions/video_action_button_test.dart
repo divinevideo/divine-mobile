@@ -45,26 +45,25 @@ void main() {
 
   group(VideoActionButton, () {
     group('renders', () {
-      testWidgets('$DivineIcon with specified icon', (tester) async {
+      testWidgets('$ShadowedDivineIcon with specified icon', (tester) async {
         await tester.pumpWidget(buildSubject(icon: DivineIconName.chat));
 
-        // Three DivineIcons render per button: two shadow copies +
-        // the foreground glyph. The foreground is always last in the
-        // stack, and is the only one with the caller-supplied color
-        // (shadows use VineTheme.innerShadow).
-        final divineIcon = tester
-            .widgetList<DivineIcon>(find.byType(DivineIcon))
-            .last;
-        expect(divineIcon.icon, equals(DivineIconName.chat));
+        // The glyph is looked up on the shadowed wrapper, not on the
+        // DivineIcons inside it: once the raster cache has baked this icon
+        // the wrapper paints a single bitmap and no DivineIcon is mounted.
+        final icon = tester.widget<ShadowedDivineIcon>(
+          find.byType(ShadowedDivineIcon),
+        );
+        expect(icon.icon, equals(DivineIconName.chat));
       });
 
-      testWidgets('$DivineIcon with specified color', (tester) async {
+      testWidgets('$ShadowedDivineIcon with specified color', (tester) async {
         await tester.pumpWidget(buildSubject(iconColor: Colors.red));
 
-        final divineIcon = tester
-            .widgetList<DivineIcon>(find.byType(DivineIcon))
-            .last;
-        expect(divineIcon.color, equals(Colors.red));
+        final icon = tester.widget<ShadowedDivineIcon>(
+          find.byType(ShadowedDivineIcon),
+        );
+        expect(icon.color, equals(Colors.red));
       });
 
       testWidgets('$GestureDetector fills the 48x48 tap target', (
@@ -171,7 +170,7 @@ void main() {
         await tester.pumpWidget(buildSubject(isLoading: true));
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
-        expect(find.byType(DivineIcon), findsNothing);
+        expect(find.byType(ShadowedDivineIcon), findsNothing);
       });
 
       testWidgets('hides count when loading', (tester) async {
@@ -272,33 +271,33 @@ void main() {
       });
     });
 
-    group('raster', () {
+    group('icon painting', () {
       testWidgets(
-        'wraps the blurred icon shadows in a RepaintBoundary so they are '
-        'cached over the playing feed video',
+        'uses $ShadowedDivineIcon with the Figma shadow-10 pair',
         (tester) async {
-          await tester.pumpWidget(buildSubject());
-
-          // The foreground glyph must sit inside a RepaintBoundary that lives
-          // under the button, so the ImageFiltered shadow blurs rasterise once
-          // and are cached instead of re-rastered on every video frame.
-          expect(
-            find.ancestor(
-              of: find.byType(DivineIcon).last,
-              matching: find.descendant(
-                of: find.byType(VideoActionButton),
-                matching: find.byType(RepaintBoundary),
-              ),
+          await tester.pumpWidget(
+            buildSubject(
+              icon: DivineIconName.chat,
+              iconColor: VineTheme.vineGreen,
             ),
-            findsOneWidget,
           );
+
+          final shadowed = tester.widget<ShadowedDivineIcon>(
+            find.descendant(
+              of: find.byType(VideoActionButton),
+              matching: find.byType(ShadowedDivineIcon),
+            ),
+          );
+          expect(shadowed.icon, equals(DivineIconName.chat));
+          expect(shadowed.color, equals(VineTheme.vineGreen));
+          expect(shadowed.shadows, equals(divineIconButtonShadows));
         },
       );
     });
 
     group('icon caching', () {
-      DivineIcon foregroundIcon(WidgetTester tester) =>
-          tester.widgetList<DivineIcon>(find.byType(DivineIcon)).last;
+      ShadowedDivineIcon foregroundIcon(WidgetTester tester) =>
+          tester.widget<ShadowedDivineIcon>(find.byType(ShadowedDivineIcon));
 
       testWidgets('does not rebuild the icon when only the count changes', (
         tester,
