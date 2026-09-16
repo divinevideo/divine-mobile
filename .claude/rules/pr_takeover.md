@@ -98,9 +98,83 @@ or qualifying it.
 
 Check `mergedAt` before choosing a GitHub review state. Never submit
 `CHANGES_REQUESTED` after a pull request has merged: it cannot block the merge
-and reads as an outstanding author action. Use a plain `COMMENT` for useful
-retrospective feedback, or file a separately authorized issue when verified
-follow-up work is required.
+and reads as an outstanding author action. On a merged pull request, use an
+authorized plain `COMMENT` review (`gh pr review <n> --comment --body-file
+<file>`) for useful retrospective feedback, or file a separately authorized
+issue when verified follow-up work is required.
+
+### Submit an explicit review verdict
+
+Once posting is authorized, completing a review means submitting a GitHub
+review with a verdict that matches the findings. A body saying "No actionable
+findings" with state `COMMENTED` is not an approval. An issue comment, inline
+comments alone, or an unsubmitted `PENDING` review does not deliver a verdict.
+
+| Review outcome on an open pull request | Submit |
+| --- | --- |
+| Review complete, sufficient evidence, no unresolved merge-blocking findings | `APPROVE` (`gh pr review --approve`), including when there are optional suggestions |
+| Verified unresolved finding that must be fixed before merge and that you are not authorized to resolve directly (or that needs a named owner decision) | `REQUEST_CHANGES` (`gh pr review --request-changes`), with the defect, evidence, and required remediation |
+| Partial review, missing evidence needed to decide, draft feedback, or explicitly advisory feedback | `COMMENT` (`gh pr review --comment`), stating why no approval/change-request verdict is possible and what remains |
+
+Do not choose `COMMENT` merely because you are an agent, did not rerun tests
+locally, have nonblocking suggestions, or are not the person who will merge.
+Assess whether the available evidence is sufficient and disclose validation
+limits. Missing essential validation means the review is incomplete, not clean.
+Approval records the reviewer's conclusion; it does not waive required CI,
+independent review, owner approval, or the author's merge decision.
+
+Posting authority does not grant branch-modification authority. When a blocker
+is verified and you are not authorized to fix the branch, request changes.
+When remediation is authorized, fix and validate it, then review the resulting
+head. Never approve merely because you wrote the fix; satisfy the governing
+independent-review requirements.
+
+Before submitting, read the authenticated login and the pull request's author,
+`state`, `isDraft`, `mergedAt`, and `headRefOid`. If the acting account is the
+PR author, GitHub cannot accept its approval or change request: report that
+limitation and identify the eligible reviewer needed. Request their review only
+when the task or governing workflow authorizes it. Do not switch accounts to
+evade the restriction or describe a comment as approval. If the PR is merged or closed,
+use an authorized plain `COMMENT` review for useful retrospective feedback, or an
+authorized ordinary comment when a review cannot be submitted, instead of an
+approval or change request.
+
+Pin the submission to the full commit SHA you actually reviewed. If the head
+moved, review the new changes before giving a current-head verdict. The REST
+API supports an explicit `commit_id`; write a JSON file containing that SHA,
+`event` (`APPROVE`, `REQUEST_CHANGES`, or `COMMENT`), and the review `body`, then
+submit it with:
+
+```bash
+gh api --method POST repos/OWNER/REPO/pulls/NUMBER/reviews --input review.json
+```
+
+With `gh pr review`, use `--repo OWNER/REPO`, the appropriate verdict flag and
+`--body-file`; recheck the head immediately before submitting. With either
+method, fetch the resulting review and the live PR head afterward:
+
+```bash
+gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
+  | jq -s 'add | map(select(.user.login == "<authenticated-login>")) | .[-1]
+           | {state, commit_id, submitted_at, html_url}'
+```
+
+Verify its `state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as
+intended, its `commit_id` equals the reviewed SHA, and `submitted_at` is
+present. A review submitted with `gh pr review` carries the head GitHub saw at
+submission; only the REST form pins the SHA you chose. If the head changed
+during submission, report that the verdict covers the older commit and
+re-review before claiming the current head is approved.
+
+Return the review URL, saved verdict, and reviewed SHA. A successful CLI exit
+or an overall `reviewDecision` alone is insufficient: other reviewers and
+branch rules affect the aggregate. If submission fails, report the actual
+error and remaining action; do not silently fall back to a comment and call
+the review delivered. If retrying after an uncertain response, inspect existing
+reviews first to avoid duplicate submissions. On an authorized re-review, if
+previous blockers are resolved, submit a new approval for the reviewed head
+instead of only commenting "fixed"; do not dismiss another reviewer's decision.
+
 
 ---
 
@@ -108,15 +182,25 @@ follow-up work is required.
 
 Before pushing, enumerate the review items and decide each one. Fetch
 inline threads too — a PR can carry substantive findings with zero
-inline threads, or findings only in outdated threads:
+inline threads, or findings only in outdated threads. The queries below show
+only their first page: inspect `pageInfo` and paginate the reviews, threads, and
+each thread's comments until all are read before claiming complete coverage:
 
 ```bash
 gh pr view <number> --json reviews --jq '.reviews[] | "\(.author.login) \(.state)\n\(.body)"'
+gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
+  --jq '.[] | "\(.user.login) \(.state)\n\(.body)"'
 gh api graphql -f query='
 { repository(owner:"divinevideo",name:"divine-mobile"){ pullRequest(number:NNN){
-  reviewThreads(first:100){ nodes { isResolved isOutdated path line
-    comments(first:10){ nodes { author{login} body } } } } } } }'
+  reviewThreads(first:100){ pageInfo{ hasNextPage endCursor }
+    nodes { isResolved isOutdated path line
+    comments(first:10){ pageInfo{ hasNextPage endCursor }
+      nodes { author{login} body } } } } } } }'
 ```
+
+The `gh pr view` line does not paginate; the REST call returns the full review
+list. Pass a connection's `endCursor` to its `after:` argument while
+`hasNextPage` is true.
 
 Every item lands in exactly one bucket: **fixed**, **escalated**
 (needs product/architecture judgment — name the decision), or
@@ -134,11 +218,83 @@ carries user-visible blast radius (cache-key bumps that invalidate
 every device, migrations, schema changes, defaults). Bury it in a
 bullet list of review fixes and nobody signs off on it.
 
+### Close the loop on requested changes
+
+A posted change request creates follow-up work for both the author and the
+reviewer. Within an authorized review workflow, closing out your own findings
+is part of the job. Report-only instructions still control external actions.
+Do not leave an obsolete blocking verdict behind after verifying its resolution.
+
+**Author or fixing agent:** enumerate every finding from review bodies and
+inline threads, including outdated and resolved threads. Paginate reviews,
+threads, and thread comments; a truncated first page is not a complete review
+history. For each item, link the original finding and record the fixing commit
+and validation, or explain why it is disputed, deferred, or awaiting a named
+owner. After pushing and inspecting required checks, request re-review from the
+original reviewer when authorized (do not duplicate a pending request). Say
+"ready for re-review," not "review resolved": the author's response is not the
+reviewer's acceptance. Do not dismiss their blocking review or resolve their
+thread merely because a fix was pushed.
+
+**Reviewer returning to their findings:**
+
+1. Fetch the current head, open/closed and draft state, previous verdict,
+   every original finding and the author's responses. Inspect the actual fixes and all intervening changes,
+   with enough surrounding code and validation to check for regressions. Do
+   not approve solely from "fixed," green CI, a resolved/outdated thread, or
+   the fact that another reviewer approved. A scoped check of your findings
+   alone must not be presented as approval of an otherwise unreviewed PR.
+2. Give each original finding a disposition: **verified fixed** (commit and
+   evidence), **withdrawn** (explain why the finding was wrong), **accepted as
+   nonblocking** (explain the remaining risk and any required owner decision),
+   or **still blocking / unverified** (state exactly what remains and who owns
+   it). Disputed, deferred, or unverified does not mean fixed. Do not invent a
+   code change to justify withdrawing an incorrect finding.
+3. Reply in each original thread with the disposition and evidence, then
+   resolve threads you raised only when their finding is verified fixed,
+   withdrawn, or explicitly accepted as nonblocking. Use GitHub's resolve-thread
+   action and re-fetch `isResolved` to verify it. A body-only finding has no
+   thread to resolve: link it in the new review's itemized closeout. Leave
+   another reviewer's threads to that reviewer unless explicitly delegated;
+   write access or a shared posting account alone is not delegation.
+4. When the PR is open and non-draft, and the complete current-head review has
+   sufficient evidence and no unresolved merge blockers, submit a new `APPROVE`
+   review through the same
+   GitHub identity that requested changes, if that is the authorized identity
+   available. This is the normal way to supersede your own change request;
+   do not merely comment "fixed" or dismiss the old review. Keep the historical
+   review as the audit trail. If another identity owns the blocking verdict,
+   identify that reviewer and request their re-review when authorized; your
+   approval does not clear their change request. Never switch credentials to
+   impersonate the original reviewer.
+5. If verified blockers remain, retain or submit `REQUEST_CHANGES` and update
+   the outstanding list. If re-review is incomplete, explain the missing
+   evidence without clearing the prior blocker. Do not submit a duplicate
+   verdict solely to restate an unchanged finding. For a draft, report the
+   verified findings as advisory feedback and leave approval until it is ready.
+   If the PR is already merged or closed, follow the retrospective-comment rule
+   instead of approving it.
+6. Re-fetch the review and thread state. Verify your saved verdict and reviewed
+   SHA, check the live head has not moved, and confirm which threads remain
+   unresolved and which reviewers still request changes. Thread resolution
+   does not clear `CHANGES_REQUESTED`; approval does not resolve threads.
+   Report any failed mutation or unavailable permission as incomplete closeout,
+   with its next owner, rather than claiming success.
+
+Finish with: **reviewed SHA; each finding's disposition and evidence; review URL
+and saved verdict; unresolved threads or other blocking reviewers; next owner
+and action**. Distinguish "my findings are closed" from "the PR is ready to
+merge." Closing a review is not closing the PR, merging it, closing a linked
+issue, or waiving CI, independent review, or owner approval. Those retain their
+own authorization and verification requirements.
+
+
 ---
 
 ## 3. Do not hand back until checks are green
 
-**Pushing is not the end of the task. Green CI is.**
+**After pushing, finish validation before handing back for re-review. Green CI
+does not close review findings or clear a change request.**
 
 After every push to a PR branch, wait for the checks to finish and
 read the result:
