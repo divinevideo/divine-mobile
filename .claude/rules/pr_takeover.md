@@ -154,8 +154,9 @@ With `gh pr review`, use `--repo OWNER/REPO`, the appropriate verdict flag and
 method, fetch the resulting review and the live PR head afterward:
 
 ```bash
-gh api repos/OWNER/REPO/pulls/NUMBER/reviews \
-  --jq '.[-1] | {state, commit_id, submitted_at, html_url}'
+gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
+  | jq -s 'add | map(select(.user.login == "<authenticated-login>")) | .[-1]
+           | {state, commit_id, submitted_at, html_url}'
 ```
 
 Verify its `state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as
