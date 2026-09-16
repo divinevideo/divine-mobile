@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' show NIP71VideoKinds;
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/environment_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -31,8 +32,7 @@ class CurrentEnvironmentNotifier extends _$CurrentEnvironmentNotifier {
 
     void listener() => state = service.currentConfig;
 
-    service.addListener(listener);
-    ref.onDispose(() => service.removeListener(listener));
+    listenForProviderLifetime(ref, service, listener);
 
     return service.currentConfig;
   }
@@ -50,8 +50,7 @@ class IsDeveloperModeEnabledNotifier extends _$IsDeveloperModeEnabledNotifier {
 
     void listener() => state = service.isDeveloperModeEnabled;
 
-    service.addListener(listener);
-    ref.onDispose(() => service.removeListener(listener));
+    listenForProviderLifetime(ref, service, listener);
 
     return service.isDeveloperModeEnabled;
   }

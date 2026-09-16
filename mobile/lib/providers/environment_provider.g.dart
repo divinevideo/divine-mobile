@@ -107,7 +107,7 @@ final class CurrentEnvironmentNotifierProvider
 }
 
 String _$currentEnvironmentNotifierHash() =>
-    r'c7c7e76b1b44e62ed21a2c23873125a63a019be8';
+    r'e5beea53f71799096cbed281c9efd69cb29593d8';
 
 /// Provider for current environment config that publishes service changes.
 ///
@@ -180,7 +180,7 @@ final class IsDeveloperModeEnabledNotifierProvider
 }
 
 String _$isDeveloperModeEnabledNotifierHash() =>
-    r'c67445459e1ce3db51edb2228ceb32cf37cb825d';
+    r'123b0c2d4f8354a65c6daf1f9324b023097332fd';
 
 /// Provider for developer mode state that publishes service changes.
 ///

@@ -11,7 +11,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// self-labeling (`L`/`l` tags with ISO-639-1 namespace).
 ///
 /// When no custom language is set, the device's OS language is used.
-class LanguagePreferenceService {
+class LanguagePreferenceService implements Listenable {
   /// SharedPreferences key for the content language preference
   static const String prefsKey = 'content_language';
 
@@ -137,11 +137,13 @@ class LanguagePreferenceService {
   }
 
   /// Register a listener for content-language preference changes.
+  @override
   void addListener(VoidCallback listener) {
     _listeners.add(listener);
   }
 
   /// Remove a listener previously registered with [addListener].
+  @override
   void removeListener(VoidCallback listener) {
     _listeners.remove(listener);
   }

@@ -6,6 +6,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -37,8 +38,7 @@ FeatureFlagService featureFlagService(Ref ref) {
   // SettingsScreen.initState, and a new identity here would strand that
   // capture on an orphaned service.
   void onEnvironmentChanged() => service.initialize();
-  environmentService.addListener(onEnvironmentChanged);
-  ref.onDispose(() => environmentService.removeListener(onEnvironmentChanged));
+  listenForProviderLifetime(ref, environmentService, onEnvironmentChanged);
 
   return service;
 }
@@ -55,8 +55,7 @@ class FeatureFlagStateNotifier extends _$FeatureFlagStateNotifier {
 
     void listener() => state = service.currentState.allFlags;
 
-    service.addListener(listener);
-    ref.onDispose(() => service.removeListener(listener));
+    listenForProviderLifetime(ref, service, listener);
 
     return service.currentState.allFlags;
   }
