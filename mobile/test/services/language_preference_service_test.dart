@@ -84,6 +84,23 @@ void main() {
         expect(notifications, equals(1));
       });
 
+      test(
+        'does not persist or notify when the language is unchanged',
+        () async {
+          await service.initialize();
+          await service.setContentLanguage('pt');
+          var notifications = 0;
+          service.addListener(() {
+            notifications++;
+          });
+
+          await service.setContentLanguage('pt');
+
+          expect(notifications, isZero);
+          expect(service.contentLanguage, equals('pt'));
+        },
+      );
+
       test('does not notify removed listeners', () async {
         await service.initialize();
         var notifications = 0;

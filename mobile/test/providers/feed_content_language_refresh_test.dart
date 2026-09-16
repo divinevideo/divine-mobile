@@ -198,6 +198,18 @@ Future<void> _expectRefetchesOnLanguageChange({
     reason: 'the language change must trigger a second request',
   );
   expect(requestedLanguages.last?.first, equals('es'));
+
+  await container
+      .read(languagePreferenceServiceProvider)
+      .setContentLanguage('es');
+  await pumpEventQueue();
+  await readFeed();
+
+  expect(
+    requestedLanguages,
+    hasLength(2),
+    reason: 're-selecting the active language must not refetch the feed',
+  );
 }
 
 HomeFeedResult _recommendedResult(List<String> ids) {
