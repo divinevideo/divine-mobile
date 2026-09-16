@@ -261,6 +261,15 @@ void main() {
       test('readCached is null before any fetch', () async {
         expect(await repository.readCached(_owner), isNull);
       });
+
+      test('readCached drops a corrupt cache entry instead of serving it '
+          'and throwing later', () async {
+        final key = ProfilePinsRepository.cacheKeyFor(_owner);
+        cacheDao.store[key] = '["${_coordinate('one')}", null]';
+
+        expect(await repository.readCached(_owner), isNull);
+        expect(cacheDao.store, isNot(contains(key)));
+      });
     });
 
     group('pin', () {

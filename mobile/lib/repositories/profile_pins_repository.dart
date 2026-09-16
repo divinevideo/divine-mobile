@@ -394,6 +394,9 @@ class ProfilePinsRepository {
     }
   }
 
+  /// Eager on purpose: `cast` returns a lazy view that only throws when an
+  /// element is read, which is long after `CacheSync.read`'s guard has
+  /// returned and left the corrupt entry on disk.
   static List<String> _coordinatesFromJson(String json) =>
-      (jsonDecode(json) as List<dynamic>).cast<String>();
+      List<String>.from(jsonDecode(json) as List<dynamic>);
 }
