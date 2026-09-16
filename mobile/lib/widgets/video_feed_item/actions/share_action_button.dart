@@ -32,6 +32,7 @@ import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart'
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/owner_video_cleanup_feedback.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
@@ -55,6 +56,19 @@ part 'share_sheet_header.dart';
 part 'share_sheet_message_input.dart';
 part 'share_sheet_more_actions.dart';
 part 'share_with_section.dart';
+
+void _runShareDetached(Future<void> operation, String description) {
+  runDetached(
+    operation,
+    description,
+    logName: 'ShareActionButton',
+    category: LogCategory.ui,
+  );
+}
+
+Future<void> _awaitShareResult<T>(Future<T> operation) async {
+  await operation;
+}
 
 /// Share action button for video overlay.
 ///
@@ -87,12 +101,17 @@ class ShareActionButton extends StatelessWidget {
     final videoSharingService = container.read(videoSharingServiceProvider);
     if (profileRepository == null || videoSharingService == null) return;
 
-    context.showVideoPausingVineBottomSheet<void>(
-      builder: (sheetContext) => _UnifiedShareSheet(
-        video: video,
-        profileRepository: profileRepository,
-        videoSharingService: videoSharingService,
+    _runShareDetached(
+      _awaitShareResult(
+        context.showVideoPausingVineBottomSheet<void>(
+          builder: (sheetContext) => _UnifiedShareSheet(
+            video: video,
+            profileRepository: profileRepository,
+            videoSharingService: videoSharingService,
+          ),
+        ),
       ),
+      'present share sheet',
     );
   }
 
@@ -152,10 +171,15 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      _crosspostCubit = VideoCrosspostCubit(
+      final crosspostCubit = VideoCrosspostCubit(
         client: ref.read(crossposterApiClientProvider),
         eventId: widget.video.id,
-      )..loadConnections();
+      );
+      _crosspostCubit = crosspostCubit;
+      _runShareDetached(
+        crosspostCubit.loadConnections(),
+        'load crosspost connections',
+      );
     }
     _shareSheetBloc =
         ShareSheetBloc(
@@ -180,9 +204,18 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
 
   @override
   void dispose() {
-    _crosspostCubit?.close();
-    _ownerVideoActionsCubit?.close();
-    _shareSheetBloc.close();
+    final crosspostCubit = _crosspostCubit;
+    if (crosspostCubit != null) {
+      _runShareDetached(crosspostCubit.close(), 'close crosspost cubit');
+    }
+    final ownerVideoActionsCubit = _ownerVideoActionsCubit;
+    if (ownerVideoActionsCubit != null) {
+      _runShareDetached(
+        ownerVideoActionsCubit.close(),
+        'close owner video actions cubit',
+      );
+    }
+    _runShareDetached(_shareSheetBloc.close(), 'close share sheet bloc');
     _messageController.dispose();
     super.dispose();
   }
@@ -257,18 +290,21 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
             listenWhen: (prev, curr) =>
                 curr.selectedRecipients.length > prev.selectedRecipients.length,
             listener: (context, state) {
-              SemanticsService.sendAnnouncement(
-                View.of(context),
-                context.l10n.shareSelectedRecipientAnnouncement(
-                  // Non-null for every selectable row: `_ContactItem` and
-                  // `FindPeopleSheet` both resolve the name through
-                  // `dmPeerDisplayName` before handing the recipient over.
-                  state.selectedRecipients.last.displayName ??
-                      UserProfile.defaultDisplayNameFor(
-                        state.selectedRecipients.last.pubkey,
-                      ),
+              _runShareDetached(
+                SemanticsService.sendAnnouncement(
+                  View.of(context),
+                  context.l10n.shareSelectedRecipientAnnouncement(
+                    // Non-null for every selectable row: `_ContactItem` and
+                    // `FindPeopleSheet` both resolve the name through
+                    // `dmPeerDisplayName` before handing the recipient over.
+                    state.selectedRecipients.last.displayName ??
+                        UserProfile.defaultDisplayNameFor(
+                          state.selectedRecipients.last.pubkey,
+                        ),
+                  ),
+                  Directionality.of(context),
                 ),
-                Directionality.of(context),
+                'announce selected share recipient',
               );
             },
           ),
@@ -313,9 +349,14 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
             onActionPressed: showViewChat
                 ? () {
                     if (!hostContext.mounted) return;
-                    hostContext.push(
-                      ConversationPage.pathForId(conversationId),
-                      extra: [recipientPubkey],
+                    _runShareDetached(
+                      _awaitShareResult(
+                        hostContext.push<void>(
+                          ConversationPage.pathForId(conversationId),
+                          extra: [recipientPubkey],
+                        ),
+                      ),
+                      'open shared conversation',
                     );
                   }
                 : null,
@@ -381,7 +422,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           ShareSheetCopiedKind.eventJson => context.l10n.shareCopiedEventJson,
           ShareSheetCopiedKind.eventId => context.l10n.shareCopiedEventId,
         };
-        Clipboard.setData(ClipboardData(text: text));
+        _runShareDetached(
+          Clipboard.setData(ClipboardData(text: text)),
+          'copy share value to clipboard',
+        );
         _safePop(context);
         messenger.showSnackBar(DivineSnackbarContainer.snackBar(snackText));
       case ShareSheetShareViaTriggered(
@@ -391,14 +435,19 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         :final subject,
       ):
         final files = thumbnailPath != null ? [XFile(thumbnailPath)] : null;
-        showShareSheet(
-          context,
-          ShareParams(
-            text: shareUrl,
-            files: files,
-            title: title,
-            subject: subject,
+        _runShareDetached(
+          _awaitShareResult(
+            showShareSheet(
+              context,
+              ShareParams(
+                text: shareUrl,
+                files: files,
+                title: title,
+                subject: subject,
+              ),
+            ),
           ),
+          'present platform share sheet',
         );
       case ShareSheetActionFailure():
         messenger.showSnackBar(
@@ -438,24 +487,34 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   }
 
   void _handleAddToList() {
-    _presentAfterDismiss<void>((hostContext) {
-      return showDialog<void>(
-        context: hostContext,
-        builder: (context) => SelectListDialog(video: widget.video),
-      );
-    });
+    _runShareDetached(
+      _awaitShareResult(
+        _presentAfterDismiss<void>((hostContext) {
+          return showDialog<void>(
+            context: hostContext,
+            builder: (context) => SelectListDialog(video: widget.video),
+          );
+        }),
+      ),
+      'present add-to-list dialog',
+    );
   }
 
   void _handleEditVideo() {
     if (_ownerVideoActionsCubit?.isDeleteInProgress(widget.video.id) ?? false) {
       return;
     }
-    _presentAfterDismiss<void>((hostContext) async {
-      hostContext.push(
-        VideoMetadataEditScreen.pathFor(widget.video.id),
-        extra: widget.video,
-      );
-    });
+    _runShareDetached(
+      _awaitShareResult(
+        _presentAfterDismiss<void>((hostContext) {
+          return hostContext.push<void>(
+            VideoMetadataEditScreen.pathFor(widget.video.id),
+            extra: widget.video,
+          );
+        }),
+      ),
+      'open video metadata editor',
+    );
   }
 
   Future<void> _handleDeleteVideo() async {

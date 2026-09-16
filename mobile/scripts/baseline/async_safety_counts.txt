@@ -188,7 +188,6 @@ discarded_futures|lib/widgets/video_feed_item/actions/help_classify_action_butto
 discarded_futures|lib/widgets/video_feed_item/actions/like_action_button.dart	1
 discarded_futures|lib/widgets/video_feed_item/actions/report_action_button.dart	1
 discarded_futures|lib/widgets/video_feed_item/actions/repost_action_button.dart	1
-discarded_futures|lib/widgets/video_feed_item/actions/share_action_button.dart	11
 discarded_futures|lib/widgets/video_feed_item/audio_attribution_row.dart	1
 discarded_futures|lib/widgets/video_feed_item/collaborator_avatar_row.dart	3
 discarded_futures|lib/widgets/video_feed_item/feed_playback_toggles_pill.dart	2
@@ -368,7 +367,6 @@ unawaited_futures|lib/widgets/image_attachment_picker.dart	1
 unawaited_futures|lib/widgets/library/sounds_tab.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
 unawaited_futures|lib/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart	1
-unawaited_futures|lib/widgets/video_feed_item/actions/share_action_button.dart	1
 unawaited_futures|lib/widgets/video_recorder/video_recorder_library_button.dart	1
 unawaited_futures|lib/widgets/video_recorder/video_recorder_navigation.dart	1
 unawaited_futures|test/blocs/account_deletion_recovery/account_deletion_recovery_cubit_test.dart	3
