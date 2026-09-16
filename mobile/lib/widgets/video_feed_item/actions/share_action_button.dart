@@ -66,10 +66,6 @@ void _runShareDetached(Future<void> operation, String description) {
   );
 }
 
-Future<void> _awaitShareResult<T>(Future<T> operation) async {
-  await operation;
-}
-
 /// Share action button for video overlay.
 ///
 /// Shows a share icon that opens a unified share bottom sheet with:
@@ -102,13 +98,11 @@ class ShareActionButton extends StatelessWidget {
     if (profileRepository == null || videoSharingService == null) return;
 
     _runShareDetached(
-      _awaitShareResult(
-        context.showVideoPausingVineBottomSheet<void>(
-          builder: (sheetContext) => _UnifiedShareSheet(
-            video: video,
-            profileRepository: profileRepository,
-            videoSharingService: videoSharingService,
-          ),
+      context.showVideoPausingVineBottomSheet<void>(
+        builder: (sheetContext) => _UnifiedShareSheet(
+          video: video,
+          profileRepository: profileRepository,
+          videoSharingService: videoSharingService,
         ),
       ),
       'present share sheet',
@@ -346,11 +340,9 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
                 ? () {
                     if (!hostContext.mounted) return;
                     _runShareDetached(
-                      _awaitShareResult(
-                        hostContext.push<void>(
-                          ConversationPage.pathForId(conversationId),
-                          extra: [recipientPubkey],
-                        ),
+                      hostContext.push<void>(
+                        ConversationPage.pathForId(conversationId),
+                        extra: [recipientPubkey],
                       ),
                       'open shared conversation',
                     );
@@ -432,15 +424,13 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       ):
         final files = thumbnailPath != null ? [XFile(thumbnailPath)] : null;
         _runShareDetached(
-          _awaitShareResult(
-            showShareSheet(
-              context,
-              ShareParams(
-                text: shareUrl,
-                files: files,
-                title: title,
-                subject: subject,
-              ),
+          showShareSheet(
+            context,
+            ShareParams(
+              text: shareUrl,
+              files: files,
+              title: title,
+              subject: subject,
             ),
           ),
           'present platform share sheet',
@@ -484,14 +474,12 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
 
   void _handleAddToList() {
     _runShareDetached(
-      _awaitShareResult(
-        _presentAfterDismiss<void>((hostContext) {
-          return showDialog<void>(
-            context: hostContext,
-            builder: (context) => SelectListDialog(video: widget.video),
-          );
-        }),
-      ),
+      _presentAfterDismiss<void>((hostContext) {
+        return showDialog<void>(
+          context: hostContext,
+          builder: (context) => SelectListDialog(video: widget.video),
+        );
+      }),
       'present add-to-list dialog',
     );
   }
@@ -501,14 +489,12 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       return;
     }
     _runShareDetached(
-      _awaitShareResult(
-        _presentAfterDismiss<void>((hostContext) {
-          return hostContext.push<void>(
-            VideoMetadataEditScreen.pathFor(widget.video.id),
-            extra: widget.video,
-          );
-        }),
-      ),
+      _presentAfterDismiss<void>((hostContext) {
+        return hostContext.push<void>(
+          VideoMetadataEditScreen.pathFor(widget.video.id),
+          extra: widget.video,
+        );
+      }),
       'open video metadata editor',
     );
   }
