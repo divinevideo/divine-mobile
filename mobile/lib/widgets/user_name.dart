@@ -2,7 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/constants/og_beta_testers.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
@@ -173,7 +173,8 @@ class UserName extends ConsumerWidget {
         showProfileBadges &&
         !isOgViner &&
         !showCheckmark &&
-        isOgBetaTesterPubkey(effectivePubkey);
+        (ref.watch(ogDivinerEligibilityProvider(effectivePubkey)).value ??
+            false);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
