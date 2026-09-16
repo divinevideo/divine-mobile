@@ -607,11 +607,12 @@ definitions:
         set -euo pipefail
         VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
         TAG="$VERSION"
-        # zsp fetches the newest GitHub release, so a stale or missing release
-        # would publish someone else's APK under this signing key. Only publish
-        # when the newest release is the one this build just cut.
+        # zsp fetches the newest GitHub release it can download an APK from,
+        # so a stale or missing release would publish someone else's APK under
+        # this signing key. Only publish when the newest release is the one
+        # this build just cut. Drafts are excluded because zsp skips them.
         REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1 \
-          --json tagName --jq '.[0].tagName')
+          --exclude-drafts --json tagName --jq '.[0].tagName')
         if [ "$REMOTE_TAG" != "$TAG" ]; then
           echo "Newest release is '$REMOTE_TAG', expected '$TAG'. Refusing to publish."
           exit 1
