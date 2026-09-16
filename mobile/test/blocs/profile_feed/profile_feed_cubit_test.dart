@@ -1142,7 +1142,7 @@ void main() {
             videos: [
               _video('a', createdAt: 3000, dTag: 'a'),
               _video('b', createdAt: 2000, dTag: 'b'),
-              _video('c', createdAt: 1000, dTag: 'c'),
+              _video('c', dTag: 'c'),
             ],
             nextOffset: 3,
             totalVideoCount: 3,
@@ -1185,7 +1185,7 @@ void main() {
           'same emit that orders by it', () async {
         when(() => h.ves.authorVideos(_author)).thenReturn([
           _video('a', createdAt: 3000, dTag: 'a'),
-          _video('c', createdAt: 1000, dTag: 'c'),
+          _video('c', dTag: 'c'),
         ]);
         when(
           () => h.pins.readCached(_author),
@@ -1195,7 +1195,7 @@ void main() {
         h.stubAuthorFeed(
           _result([
             _video('a', createdAt: 3000, dTag: 'a'),
-            _video('c', createdAt: 1000, dTag: 'c'),
+            _video('c', dTag: 'c'),
           ], hasMore: false),
         );
 
@@ -1389,7 +1389,7 @@ void main() {
           () => h.repo.getVideosByAddressableIds([
             _coordinate('old'),
           ], cacheResults: true),
-        ).thenAnswer((_) async => [resolveCount++ == 0 ? oldV1 : oldV2]);
+        ).thenAnswer((_) async => [if (resolveCount++ == 0) oldV1 else oldV2]);
         when(
           () => h.pins.unpin(_coordinate('old')),
         ).thenAnswer((_) async => const ProfilePinMutation.succeeded([]));
