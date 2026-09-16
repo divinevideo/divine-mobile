@@ -267,8 +267,13 @@ thread merely because a fix was pushed.
    review through the same
    GitHub identity that requested changes, if that is the authorized identity
    available. This is the normal way to supersede your own change request;
-   do not merely comment "fixed" or dismiss the old review. Keep the historical
-   review as the audit trail. If another identity owns the blocking verdict,
+   do not merely comment "fixed" or dismiss the old review. Recheck the live
+   head immediately before submitting, and prefer the SHA-pinned REST form from
+   [Submit an explicit review verdict](#submit-an-explicit-review-verdict) when
+   the head could move — an unpinned `gh pr review` attaches to whatever is
+   newest at submission time, not the commit you just re-reviewed. Keep the
+   historical review as the audit trail. If another identity owns the blocking
+   verdict,
    identify that reviewer and request their re-review when authorized; your
    approval does not clear their change request. Never switch credentials to
    impersonate the original reviewer.
