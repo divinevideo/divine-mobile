@@ -17070,18 +17070,6 @@ abstract class AppLocalizations {
   /// **'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealUnder13Body;
 
-  /// No description provided for @appealOpenSupportCenter.
-  ///
-  /// In en, this message translates to:
-  /// **'Open Support Center'**
-  String get appealOpenSupportCenter;
-
-  /// Button opening private support messaging to request reconsideration of an account restriction.
-  ///
-  /// In en, this message translates to:
-  /// **'Message support'**
-  String get accountStatusMessageSupport;
-
   /// No description provided for @minorAccountReviewOpenModerationMessage.
   ///
   /// In en, this message translates to:

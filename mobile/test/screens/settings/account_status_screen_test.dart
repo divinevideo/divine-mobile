@@ -70,7 +70,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.suspended);
 
       expect(find.text(l10n.accountStatusSuspendedHeading), findsOneWidget);
-      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
+      expect(find.text(l10n.supportContactSupport), findsOneWidget);
       expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
       expect(
         find.text(l10n.accountStatusKeysUnaffectedHeading),
@@ -84,7 +84,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.banned);
 
       expect(find.text(l10n.accountStatusBannedHeading), findsOneWidget);
-      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
+      expect(find.text(l10n.supportContactSupport), findsOneWidget);
     });
 
     testWidgets('a publish-confirmed unknown restriction gets an appeal path', (
@@ -92,7 +92,7 @@ void main() {
     ) async {
       await _pumpWith(tester, AccountEnforcementKind.unknownRestriction);
 
-      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
+      expect(find.text(l10n.supportContactSupport), findsOneWidget);
     });
 
     testWidgets('an unrestricted account is greeted, not reported to', (
@@ -101,7 +101,7 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.noRestrictionReported);
 
       expect(find.text(l10n.accountStatusAllClearHeading), findsOneWidget);
-      expect(find.text(l10n.accountStatusMessageSupport), findsNothing);
+      expect(find.text(l10n.supportContactSupport), findsNothing);
       expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
     });
 
@@ -115,7 +115,7 @@ void main() {
         );
 
         expect(find.text(l10n.accountStatusRestrictedHeading), findsOneWidget);
-        expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
         expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
       },
     );
@@ -146,7 +146,7 @@ void main() {
         },
       );
 
-      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.tap(find.text(l10n.supportContactSupport));
       await tester.pumpAndSettle();
 
       expect(openCalls, 1);
@@ -172,7 +172,7 @@ void main() {
             },
       );
 
-      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.tap(find.text(l10n.supportContactSupport));
       await tester.pumpAndSettle();
 
       expect(emailBody, contains(l10n.supportCouldNotOpenMessages));
@@ -198,7 +198,7 @@ void main() {
             },
       );
 
-      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.tap(find.text(l10n.supportContactSupport));
       await tester.pumpAndSettle();
 
       expect(composed, isTrue);
@@ -219,7 +219,7 @@ void main() {
         }) async => throw Exception('email failure'),
       );
 
-      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.tap(find.text(l10n.supportContactSupport));
       await tester.pumpAndSettle();
 
       expect(
@@ -242,9 +242,9 @@ void main() {
         },
       );
 
-      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.tap(find.text(l10n.supportContactSupport));
       await tester.pump();
-      await tester.tap(find.text(l10n.accountStatusMessageSupport));
+      await tester.tap(find.text(l10n.supportContactSupport));
 
       expect(openCalls, 1);
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
@@ -467,7 +467,7 @@ void main() {
       expect(find.text(l10n.accountStatusSuspendedHeading), findsOneWidget);
       expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
       expect(find.text(l10n.accountStatusRetry), findsOneWidget);
-      expect(find.text(l10n.accountStatusMessageSupport), findsOneWidget);
+      expect(find.text(l10n.supportContactSupport), findsOneWidget);
     });
 
     testWidgets('an active account is offered no futile retry', (tester) async {

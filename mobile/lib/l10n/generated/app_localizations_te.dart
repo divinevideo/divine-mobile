@@ -10360,12 +10360,6 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
 
   @override
-  String get appealOpenSupportCenter => 'మద్దతు కేంద్రాన్ని తెరవండి';
-
-  @override
-  String get accountStatusMessageSupport => 'Message support';
-
-  @override
   String get minorAccountReviewOpenModerationMessage =>
       'మోడరేషన్ సందేశాన్ని తెరవండి';
 
