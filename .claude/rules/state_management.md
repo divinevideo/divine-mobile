@@ -1290,9 +1290,12 @@ Frozen at **zero** by `mobile/scripts/check_listener_invalidate_self.sh`
 (#9266) over `mobile/lib`. The detector
 (`mobile/scripts/lib/listener_invalidate_self_detector.dart`, pinned by
 `mobile/test/tools/listener_invalidate_self_detector_test.dart`) is a real
-Dart AST because it has to follow the callback: a tear-off, a named local
-function, and a closure bound to a variable or field all register the same
-body from a different place in the file. List sites with:
+Dart AST because it has to follow the callback: a tear-off of a method on the
+registering class, a named local function, and a closure bound to a variable
+or field all register the same body from a different place in the file. It
+matches `addListener` callbacks only: a `StreamSubscription.listen` or
+`ref.listen` callback that invalidates its own provider carries the same
+hazard but relies on review. List sites with:
 
 ```bash
 cd mobile && dart run scripts/lib/listener_invalidate_self_detector.dart lib --path-prefix . --detail
