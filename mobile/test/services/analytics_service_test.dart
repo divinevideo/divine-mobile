@@ -15,6 +15,7 @@ import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/view_event_publisher.dart';
+import 'package:openvine/services/view_event_retry_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
@@ -25,6 +26,22 @@ class _MockPendingViewEventsDao extends Mock implements PendingViewEventsDao {}
 class _MockProductEventQueue extends Mock implements ProductEventQueue {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
+
+/// Records the sweeps and consent pushes the service sends its retry queue.
+class _FakeViewEventRetryService extends Fake implements ViewEventRetryService {
+  int sweepCount = 0;
+  Object? sweepError;
+  bool? publishingEnabled;
+
+  @override
+  Future<void> sweep() async {
+    sweepCount++;
+    if (sweepError case final error?) throw error;
+  }
+
+  @override
+  void setPublishingEnabled(bool enabled) => publishingEnabled = enabled;
+}
 
 /// Records what the consent switch asked of the Firebase backend.
 class _RecordingCollectionControl implements AnalyticsCollectionControl {
@@ -589,6 +606,27 @@ void main() {
       },
     );
 
+    test('pushes the consent decision into the view-event sweep', () async {
+      // The sweep cannot read consent back from this service (its provider
+      // is a dependency of this one), so the decision has to be pushed down
+      // at load and at every later switch.
+      SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+      final retryService = _FakeViewEventRetryService();
+      analyticsService.dispose();
+      analyticsService = AnalyticsService(
+        backgroundActivityManager: BackgroundActivityManager(),
+        viewEventRetryService: retryService,
+        disableNostrPublishing: true,
+      );
+
+      await analyticsService.initialize();
+      expect(retryService.publishingEnabled, isFalse);
+
+      await analyticsService.setAnalyticsEnabled(true);
+      expect(retryService.publishingEnabled, isTrue);
+      expect(retryService.sweepCount, 1);
+    });
+
     test(
       'does not record product events before initialize loads consent',
       () async {
@@ -717,16 +755,15 @@ void main() {
       );
       tempDbPath = '${tempDir.path}/test.db';
       database = AppDatabase.test(NativeDatabase(File(tempDbPath!)));
-      var flushCount = 0;
+      final retryService = _FakeViewEventRetryService();
       analyticsService.dispose();
       analyticsService = AnalyticsService(
         backgroundActivityManager: BackgroundActivityManager(),
         pendingViewEventsDao: database!.pendingViewEventsDao,
-        flushPendingViewEvents: () async {
-          flushCount++;
-        },
+        viewEventRetryService: retryService,
       );
       await analyticsService.initialize();
+      retryService.sweepCount = 0;
 
       final video = VideoEvent(
         id: '22e73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
@@ -773,7 +810,7 @@ void main() {
       expect(retryable.single.loopCount, 1);
       expect(retryable.single.trafficSource, 'home');
       expect(retryable.single.sourceDetail, 'following');
-      expect(flushCount, 1);
+      expect(retryService.sweepCount, 1);
     });
 
     test(
@@ -832,7 +869,6 @@ void main() {
       analyticsService = AnalyticsService(
         backgroundActivityManager: BackgroundActivityManager(),
         pendingViewEventsDao: database!.pendingViewEventsDao,
-        flushPendingViewEvents: () async {},
       );
       await analyticsService.initialize();
 
@@ -887,7 +923,6 @@ void main() {
         backgroundActivityManager: BackgroundActivityManager(),
         viewEventPublisher: publisher,
         pendingViewEventsDao: database!.pendingViewEventsDao,
-        flushPendingViewEvents: () async {},
         appVersion: () => 'staging-smoke-0123456789abcdef0123456789abcdef',
       );
       await analyticsService.initialize();
@@ -942,7 +977,6 @@ void main() {
         analyticsService = AnalyticsService(
           backgroundActivityManager: BackgroundActivityManager(),
           pendingViewEventsDao: database!.pendingViewEventsDao,
-          flushPendingViewEvents: () async {},
         );
         await analyticsService.initialize();
 
@@ -988,16 +1022,15 @@ void main() {
       );
       tempDbPath = '${tempDir.path}/test.db';
       database = AppDatabase.test(NativeDatabase(File(tempDbPath!)));
-      var flushCount = 0;
+      final retryService = _FakeViewEventRetryService();
       analyticsService.dispose();
       analyticsService = AnalyticsService(
         backgroundActivityManager: BackgroundActivityManager(),
         pendingViewEventsDao: database!.pendingViewEventsDao,
-        flushPendingViewEvents: () async {
-          flushCount++;
-        },
+        viewEventRetryService: retryService,
       );
       await analyticsService.initialize();
+      retryService.sweepCount = 0;
       await analyticsService.setAnalyticsEnabled(false);
 
       final video = VideoEvent(
@@ -1023,7 +1056,7 @@ void main() {
             '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       );
       expect(retryable, isEmpty);
-      expect(flushCount, 0);
+      expect(retryService.sweepCount, 0);
     });
 
     test('falls back to direct publish when pending enqueue fails', () async {
@@ -1092,7 +1125,8 @@ void main() {
         backgroundActivityManager: BackgroundActivityManager(),
         viewEventPublisher: publisher,
         pendingViewEventsDao: database!.pendingViewEventsDao,
-        flushPendingViewEvents: () async => throw StateError('flush failed'),
+        viewEventRetryService: _FakeViewEventRetryService()
+          ..sweepError = StateError('flush failed'),
       );
       await analyticsService.initialize();
       final video = _testVideo();

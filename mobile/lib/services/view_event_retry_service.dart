@@ -41,14 +41,12 @@ class ViewEventRetryService {
     required PendingViewEventsDao pendingViewEventsDao,
     required String userPubkey,
     required Stream<bool> appForegroundStream,
-    bool Function()? isAnalyticsEnabled,
     ViewEventRetryConfig retryConfig = const ViewEventRetryConfig(),
     DateTime Function() now = DateTime.now,
   }) : _viewEventPublisher = viewEventPublisher,
        _dao = pendingViewEventsDao,
        _userPubkey = userPubkey,
        _appForegroundStream = appForegroundStream,
-       _isAnalyticsEnabled = isAnalyticsEnabled,
        _retryConfig = retryConfig,
        _now = now;
 
@@ -57,14 +55,6 @@ class ViewEventRetryService {
   final String _userPubkey;
   final Stream<bool> _appForegroundStream;
 
-  /// Reads the current analytics consent decision, owned by `AnalyticsService`.
-  ///
-  /// Sampled at sweep time rather than injected as a value: consent can be
-  /// withdrawn while this service is alive, and the queue outlives the switch.
-  /// Null means no consent owner is wired, which only happens in tests that
-  /// exercise the sweep mechanics themselves.
-  final bool Function()? _isAnalyticsEnabled;
-
   final ViewEventRetryConfig _retryConfig;
   final DateTime Function() _now;
 
@@ -72,7 +62,21 @@ class ViewEventRetryService {
   bool _isInitialized = false;
   bool _isSweeping = false;
 
+  /// Whether the consent owner, `AnalyticsService`, currently permits
+  /// publishing. Pushed in through [setPublishingEnabled] rather than read
+  /// back from the owner, which already depends on this service for its
+  /// immediate flush — a read in the other direction is a Riverpod dependency
+  /// cycle. Starts disabled so an independently activated retry service cannot
+  /// publish before the owner has loaded and pushed the stored decision.
+  bool _publishingEnabled = false;
+
   bool get isInitialized => _isInitialized;
+
+  /// Applies the analytics consent decision to every later publish attempt.
+  ///
+  /// Takes effect mid-sweep too: the sweep re-checks before each irreversible
+  /// publish, so a withdrawal during a pass stops the remaining rows.
+  void setPublishingEnabled(bool enabled) => _publishingEnabled = enabled;
 
   @visibleForTesting
   bool get isSweeping => _isSweeping;
@@ -101,7 +105,7 @@ class ViewEventRetryService {
     // foreground sweep can race that deletion, and rows written by a build
     // that predates the switch have never been offered a consent decision at
     // all. Publishing is the irreversible half, so it is what gets gated.
-    if (_isAnalyticsEnabled?.call() == false) return;
+    if (!_publishingEnabled) return;
 
     if (_isSweeping) return;
     _isSweeping = true;
@@ -127,7 +131,7 @@ class ViewEventRetryService {
         // flight. Check again after the final await before publication; the
         // publisher call begins synchronously, so no other event-loop turn can
         // change consent between this check and that irreversible operation.
-        if (_isAnalyticsEnabled?.call() == false) return;
+        if (!_publishingEnabled) return;
 
         try {
           final video = _toVideoEvent(row);
