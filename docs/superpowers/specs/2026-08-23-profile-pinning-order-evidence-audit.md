@@ -217,8 +217,13 @@ updates.
     repository package, it also
     requires `analysis_options.yaml`, a package CI workflow, a measured package
     coverage-floor entry, and the package CI/coverage floor checks.
-11. **Use the supported analyzer command.** The supported command is
-    `cd mobile && flutter analyze`, without positional directories.
+11. **Prefer the whole-package analyzer scope.** Run
+    `cd mobile && flutter analyze`, which covers the `mobile` package in one
+    pass. Positional directories are supported and are what the repository's
+    own pre-push hook uses
+    (`scripts/install-hooks.sh:382`, `flutter analyze lib test integration_test`);
+    they simply narrow the scope, so prefer the bare form when checking the
+    whole package.
 12. **Mutation serialization is only process-local.** A future chain can order
     one app process, but two devices or Web and mobile can read the same base and
     publish competing replacements. New events normally need
