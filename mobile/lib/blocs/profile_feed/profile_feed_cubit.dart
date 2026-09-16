@@ -837,9 +837,16 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     }
 
     _pinnedCoordinates = coordinates;
-    // The tile the owner long-pressed is in the window, but keeping a copy
-    // means a later window reset (refresh, filter flip) cannot lose the pin.
-    _resolvedPinnedVideos.putIfAbsent(coordinate, () => event.video);
+    if (coordinates.contains(coordinate)) {
+      // The tile the owner long-pressed is in the window, but keeping a copy
+      // means a later window reset (refresh, filter flip) cannot lose the pin.
+      _resolvedPinnedVideos[coordinate] = event.video;
+    } else {
+      // Unpinned: drop the copy rather than keep it in a map of pinned
+      // videos, so a later pin resolves the current revision instead of
+      // rendering whatever this tile happened to be showing.
+      _resolvedPinnedVideos.remove(coordinate);
+    }
     emit(
       state.copyWith(
         videos: _applyFeedFilters(_unfilteredVideos),

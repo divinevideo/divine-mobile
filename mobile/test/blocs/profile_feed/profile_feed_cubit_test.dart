@@ -1297,6 +1297,41 @@ void main() {
         },
       );
 
+      test('unpinning drops the resolved copy, so a later pin list resolves '
+          'the video again instead of serving the stale one', () async {
+        final oldV1 = _video('old-v1', createdAt: 10, dTag: 'old');
+        final oldV2 = _video('old-v2', createdAt: 10, dTag: 'old');
+        var resolveCount = 0;
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('old')]);
+        when(
+          () => h.repo.getVideosByAddressableIds([
+            _coordinate('old'),
+          ], cacheResults: true),
+        ).thenAnswer((_) async => [resolveCount++ == 0 ? oldV1 : oldV2]);
+        when(
+          () => h.pins.unpin(_coordinate('old')),
+        ).thenAnswer((_) async => const ProfilePinMutation.succeeded([]));
+
+        final cubit = await buildReady(
+          _result([_video('a', createdAt: 3000, dTag: 'a')], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.videos.map((v) => v.id), ['old-v1', 'a']);
+
+        cubit.add(ProfileFeedUnpinRequested(oldV1));
+        await pumpEventQueue();
+        expect(cubit.state.pinnedCoordinates, isEmpty);
+
+        // The relay reports it pinned again — from Divine Web, or a re-pin
+        // after the video was edited.
+        cubit.add(ProfileFeedPinsChanged([_coordinate('old')]));
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['old-v2', 'a']);
+      });
+
       test('unpin: adopts the accepted list, reports unpinned', () async {
         final b = _video('b', createdAt: 2000, dTag: 'b');
         when(
