@@ -2525,6 +2525,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationSettingsNewPostsSubtitle => '当你关注的人发布内容时';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => '操作';
 
   @override

@@ -2696,6 +2696,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'جب آپ کا فالو کردہ کوئی شخص پوسٹ کرے';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'کارروائیاں';
 
   @override

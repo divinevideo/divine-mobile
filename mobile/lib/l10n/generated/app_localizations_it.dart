@@ -2730,6 +2730,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Quando qualcuno che segui pubblica';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Azioni';
 
   @override

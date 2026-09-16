@@ -2632,6 +2632,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'İzlediğin biri paylaştığında';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'İşlemler';
 
   @override

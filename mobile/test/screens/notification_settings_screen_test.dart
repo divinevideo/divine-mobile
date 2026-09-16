@@ -40,12 +40,10 @@ void main() {
     setUp(() {
       mockRepo = _MockNotificationRepository();
       mockPrefsService = _MockNotificationPreferencesService();
-      when(
-        mockPrefsService.loadPreferences,
-      ).thenAnswer((_) async => const NotificationPreferences());
-      when(
-        () => mockPrefsService.updatePreferences(any()),
-      ).thenAnswer((_) async {});
+      when(mockPrefsService.loadPreferences)
+          .thenAnswer((_) async => const NotificationPreferences());
+      when(() => mockPrefsService.updatePreferences(any()))
+          .thenAnswer((_) async {});
     });
 
     Widget buildSubject({
@@ -59,9 +57,8 @@ void main() {
             mockPrefsService,
           ),
           // Ships default-off, so the new-posts row has to be asked for.
-          isFeatureEnabledProvider(
-            FeatureFlag.newPostNotifications,
-          ).overrideWithValue(newPostNotifications),
+          isFeatureEnabledProvider(FeatureFlag.newPostNotifications)
+              .overrideWithValue(newPostNotifications),
         ],
         home: const NotificationSettingsScreen(),
       );
@@ -319,6 +316,34 @@ void main() {
       // The neighbouring rows still render, so this is the flag and not a
       // failed build.
       expect(find.text(l10n.notificationSettingsLikes), findsOneWidget);
+    });
+
+    testWidgets('campaign updates require an explicit opt-in', (tester) async {
+      await tester.pumpWidget(buildSubject(repo: mockRepo));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(NotificationSettingsScreen)),
+      );
+      final campaignSwitch = find.descendant(
+        of: find.ancestor(
+          of: find.text(l10n.notificationSettingsCampaigns),
+          matching: find.byType(Card),
+        ),
+        matching: find.byType(Switch),
+      );
+      await scrollUntilTappable(tester, campaignSwitch, 100);
+
+      final widget = tester.widget<Switch>(campaignSwitch);
+      expect(widget.value, isFalse);
+      await tester.tap(campaignSwitch);
+      await tester.pump();
+
+      verify(
+        () => mockPrefsService.updatePreferences(
+          const NotificationPreferences(campaignsEnabled: true),
+        ),
+      ).called(1);
     });
   });
 }

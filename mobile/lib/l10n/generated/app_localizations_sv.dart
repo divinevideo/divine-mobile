@@ -2691,6 +2691,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'När någon du bevakar publicerar';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'Åtgärder';
 
   @override

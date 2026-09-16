@@ -2796,6 +2796,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎవరైనా మీరు పోస్ట్‌లను చూస్తున్నప్పుడు';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => 'చర్యలు';
 
   @override

@@ -2523,6 +2523,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get notificationSettingsNewPostsSubtitle => '지켜보는 사람이 게시할 때';
 
   @override
+  String get notificationSettingsCampaigns => 'Divine updates';
+
+  @override
+  String get notificationSettingsCampaignsSubtitle =>
+      'Occasional product and community updates';
+
+  @override
   String get notificationSettingsActions => '작업';
 
   @override
