@@ -10219,12 +10219,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get appealOpenSupportCenter => 'Buka pusat dukungan';
-
-  @override
-  String get accountStatusMessageSupport => 'Message support';
-
-  @override
   String get minorAccountReviewOpenModerationMessage => 'Buka pesan moderasi';
 
   @override
