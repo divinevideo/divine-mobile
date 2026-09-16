@@ -273,7 +273,7 @@ class _DmVideoPlayPageState extends ConsumerState<DmVideoPlayPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            context.l10n.notificationsVideoUnavailable,
+            context.l10n.dmVideoUnavailable,
             style: const TextStyle(color: Colors.white),
           ),
         ],

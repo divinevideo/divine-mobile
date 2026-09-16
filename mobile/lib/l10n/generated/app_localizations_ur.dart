@@ -3604,6 +3604,18 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'واٹر مارک کے ساتھ محفوظ کریں';
 
   @override
+  String get dmAttachVideo => 'ویڈیو منسلک کریں';
+
+  @override
+  String get dmVideoUnavailable => 'یہ ویڈیو نہیں کھل سکی';
+
+  @override
+  String get dmVideoSent => 'ویڈیو بھیج دی گئی';
+
+  @override
+  String get dmVideoSendFailed => 'ویڈیو نہیں بھیجی جا سکی';
+
+  @override
   String get shareSheetSaveVideo => 'ویڈیو محفوظ کریں';
 
   @override

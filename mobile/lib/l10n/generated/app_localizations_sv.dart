@@ -3595,6 +3595,18 @@ class AppLocalizationsSv extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Spara med vattenmärke';
 
   @override
+  String get dmAttachVideo => 'Bifoga video';
+
+  @override
+  String get dmVideoUnavailable => 'Det gick inte att öppna videon';
+
+  @override
+  String get dmVideoSent => 'Video skickad';
+
+  @override
+  String get dmVideoSendFailed => 'Det gick inte att skicka videon';
+
+  @override
   String get shareSheetSaveVideo => 'Spara video';
 
   @override

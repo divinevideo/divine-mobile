@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
+import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -471,6 +472,13 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
     blossom: ref.watch(blossomUploadServiceProvider),
   );
 });
+
+/// Gallery picker used to choose a video to attach to a DM.
+///
+/// Extracted behind a provider so the composer's pick-and-send path can be
+/// driven by a fake in widget tests; `ImagePicker` talks to a platform plugin
+/// that no test binding provides.
+final dmVideoPickerProvider = Provider<ImagePicker>((ref) => ImagePicker());
 
 /// Unified resolver for fetching a [VideoEvent] by its event id, with
 /// in-memory → personal cache → relay fallback. See [VideoEventResolver].

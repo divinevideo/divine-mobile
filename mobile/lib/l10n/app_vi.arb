@@ -1796,6 +1796,10 @@
   "shareSheetRemoveFromSaved": "Xóa khỏi mục đã lưu",
   "shareSheetSaveToGallery": "Lưu vào thư viện ảnh",
   "shareSheetSaveWithWatermark": "Lưu kèm watermark",
+  "dmAttachVideo": "Đính kèm video",
+  "dmVideoUnavailable": "Không mở được video này",
+  "dmVideoSent": "Đã gửi video",
+  "dmVideoSendFailed": "Không gửi được video",
   "shareSheetSaveVideo": "Lưu video",
   "shareSheetAddToClips": "Thêm vào clip",
   "@shareSheetAddToClips": {

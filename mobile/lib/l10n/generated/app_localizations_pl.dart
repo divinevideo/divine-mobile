@@ -3698,6 +3698,18 @@ class AppLocalizationsPl extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Zapisz ze znakiem wodnym';
 
   @override
+  String get dmAttachVideo => 'Dołącz wideo';
+
+  @override
+  String get dmVideoUnavailable => 'Nie udało się otworzyć tego filmu';
+
+  @override
+  String get dmVideoSent => 'Film wysłany';
+
+  @override
+  String get dmVideoSendFailed => 'Nie udało się wysłać filmu';
+
+  @override
   String get shareSheetSaveVideo => 'Zapisz film';
 
   @override

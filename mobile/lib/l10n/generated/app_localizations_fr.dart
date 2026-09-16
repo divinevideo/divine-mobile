@@ -3657,6 +3657,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Enregistrer avec filigrane';
 
   @override
+  String get dmAttachVideo => 'Joindre une vidéo';
+
+  @override
+  String get dmVideoUnavailable => 'Impossible d\'ouvrir cette vidéo';
+
+  @override
+  String get dmVideoSent => 'Vidéo envoyée';
+
+  @override
+  String get dmVideoSendFailed => 'Impossible d\'envoyer la vidéo';
+
+  @override
   String get shareSheetSaveVideo => 'Enregistrer la vidéo';
 
   @override

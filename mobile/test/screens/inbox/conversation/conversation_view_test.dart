@@ -3,8 +3,10 @@
 // ABOUTME: plus the app bar and input bar rendering.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 // `ProfileStats` here is the domain model from `models`, not the Drift
 // table class of the same name — the repository hides it the same way.
@@ -17,6 +19,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -36,6 +39,7 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
+import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -68,6 +72,51 @@ class _MockWatermarkDownloadService extends Mock
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+
+/// Gallery picker stand-in: the real `ImagePicker` needs a platform plugin no
+/// test binding provides.
+class _FakeImagePicker extends ImagePicker {
+  _FakeImagePicker(this.pickedVideo);
+
+  final XFile? pickedVideo;
+
+  @override
+  Future<XFile?> pickVideo({
+    required ImageSource source,
+    CameraDevice preferredCameraDevice = CameraDevice.rear,
+    Duration? maxDuration,
+  }) async => pickedVideo;
+}
+
+/// Drives the send lifecycle without touching crypto, Blossom, or relays.
+class _FakeVideoSendService extends DmVideoSendService {
+  _FakeVideoSendService({required this.result})
+    : super(
+        dmRepository: _MockDmRepository(),
+        blossom: _MockBlossomUploadService(),
+      );
+
+  final NIP17SendResult result;
+
+  @override
+  Future<NIP17SendResult> sendVideo({
+    required String recipientPubkey,
+    required File videoFile,
+    required String mimeType,
+    String? blurhash,
+    String? dimensions,
+    void Function(DmVideoSendPhase phase)? onPhase,
+  }) async {
+    onPhase?.call(DmVideoSendPhase.encrypting);
+    onPhase?.call(DmVideoSendPhase.uploading);
+    onPhase?.call(DmVideoSendPhase.sending);
+    return result;
+  }
+}
 
 class _MockAuthService extends MockAuthService {
   _MockAuthService(this._pubkey);
@@ -195,6 +244,8 @@ void main() {
       Future<bool>? otherProfileVanishedFuture,
       bool isIdentityResolving = false,
       Stream<ConversationState>? stateStream,
+      DmVideoSendService? videoSendService,
+      ImagePicker? videoPicker,
     }) {
       final effectiveState = state ?? const ConversationState();
       if (restoreStatus != null) {
@@ -254,6 +305,10 @@ void main() {
           followRelationshipProvider.overrideWith(
             (ref, pubkey) => Stream.value(FollowRelationship.mutual),
           ),
+          if (videoSendService != null)
+            dmVideoSendServiceProvider.overrideWithValue(videoSendService),
+          if (videoPicker != null)
+            dmVideoPickerProvider.overrideWithValue(videoPicker),
         ],
         home: BlocProvider<ConversationBloc>.value(
           value: mockBloc,
@@ -3566,6 +3621,73 @@ void main() {
             onProgress: any(named: 'onProgress'),
           ),
         ).called(1);
+      });
+    });
+
+    // Task A8 — the encrypted-video send only rendered progress (the composer
+    // spinner); a delivered or refused send had no copy of its own, so the
+    // failure was silent once the spinner stopped.
+    group('encrypted video DM send outcomes', () {
+      late Directory tempDir;
+
+      setUp(() {
+        tempDir = Directory.systemTemp.createTempSync('dm_video_view_');
+      });
+
+      tearDown(() {
+        if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      });
+
+      XFile pickedVideo() {
+        final file = File('${tempDir.path}/clip.mp4')
+          ..writeAsBytesSync(const [1, 2, 3]);
+        return XFile(file.path);
+      }
+
+      Future<void> attachVideo(
+        WidgetTester tester, {
+        required DmVideoSendService videoSendService,
+      }) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: const ConversationState(status: ConversationStatus.loaded),
+            videoSendService: videoSendService,
+            videoPicker: _FakeImagePicker(pickedVideo()),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsIdentifier('dm_attach_video_button'),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('confirms a delivered video DM', (tester) async {
+        await attachVideo(
+          tester,
+          videoSendService: _FakeVideoSendService(
+            result: NIP17SendResult.success(
+              rumorEventId: 'a' * 64,
+              messageEventId: 'b' * 64,
+              recipientPubkey: otherPubkey,
+            ),
+          ),
+        );
+
+        expect(find.text(l10n.dmVideoSent), findsOneWidget);
+        expect(find.text(l10n.dmVideoSendFailed), findsNothing);
+      });
+
+      testWidgets('surfaces a refused video DM send', (tester) async {
+        await attachVideo(
+          tester,
+          videoSendService: _FakeVideoSendService(
+            result: const NIP17SendResult.failure('upload failed'),
+          ),
+        );
+
+        expect(find.text(l10n.dmVideoSendFailed), findsOneWidget);
+        expect(find.text(l10n.dmVideoSent), findsNothing);
       });
     });
 

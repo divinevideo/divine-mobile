@@ -56,14 +56,6 @@ Widget? _buildCounter(
   return _RemainingCounter(remaining: remaining);
 }
 
-/// Accessible label for the composer's video attach button.
-///
-/// Placeholder until this feature is localized (Task A8): the app has no
-/// existing key for "attach a video", so a non-localized marker is used
-/// rather than an unrelated key.
-@visibleForTesting
-const String dmAttachVideoSemanticsLabel = 'Attach video';
-
 /// Message input bar at the bottom of the conversation screen.
 ///
 /// Features a text field with surfaceContainer background, 20px radius,
@@ -163,7 +155,9 @@ class _MessageInputBarState extends State<MessageInputBar> {
                   child: Semantics(
                     identifier: 'dm_attach_video_button',
                     button: true,
-                    label: dmAttachVideoSemanticsLabel,
+                    label: widget.isAttachVideoBusy
+                        ? context.l10n.libraryPreparingVideo
+                        : context.l10n.dmAttachVideo,
                     child: SizedBox.square(
                       dimension: 40,
                       child: IconButton(

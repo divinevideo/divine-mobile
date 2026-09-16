@@ -3572,6 +3572,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Lưu kèm watermark';
 
   @override
+  String get dmAttachVideo => 'Đính kèm video';
+
+  @override
+  String get dmVideoUnavailable => 'Không mở được video này';
+
+  @override
+  String get dmVideoSent => 'Đã gửi video';
+
+  @override
+  String get dmVideoSendFailed => 'Không gửi được video';
+
+  @override
   String get shareSheetSaveVideo => 'Lưu video';
 
   @override

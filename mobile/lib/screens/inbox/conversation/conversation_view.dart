@@ -738,7 +738,9 @@ class _SendBarState extends ConsumerState<_SendBar> {
 
     final XFile? picked;
     try {
-      picked = await ImagePicker().pickVideo(source: ImageSource.gallery);
+      picked = await ref
+          .read(dmVideoPickerProvider)
+          .pickVideo(source: ImageSource.gallery);
     } catch (error, stackTrace) {
       Log.error(
         'Picking a video to attach to a DM failed',
@@ -757,12 +759,49 @@ class _SendBarState extends ConsumerState<_SendBar> {
     _videoSubscription ??= cubit.stream.listen((state) {
       if (!mounted) return;
       setState(() => _videoStatus = state.status);
+      _onVideoSendOutcome(state.status);
     });
 
     await cubit.send(
       recipientPubkey: recipient,
       videoFile: File(picked.path),
       mimeType: _videoMimeTypeFor(picked.path),
+    );
+  }
+
+  /// Surfaces the terminal outcome of a video DM send.
+  ///
+  /// Progress is the composer's spinner, so only `sent` and `failed` need copy.
+  /// The failure would otherwise be silent: a send refused before the enqueue
+  /// leaves no bubble, so the spinner stopping is the only signal.
+  void _onVideoSendOutcome(VideoDmSendStatus status) {
+    switch (status) {
+      case VideoDmSendStatus.sent:
+        _showVideoToast(context.l10n.dmVideoSent, error: false);
+        return;
+      case VideoDmSendStatus.failed:
+        _showVideoToast(context.l10n.dmVideoSendFailed, error: true);
+        return;
+      case VideoDmSendStatus.idle:
+      case VideoDmSendStatus.encrypting:
+      case VideoDmSendStatus.uploading:
+      case VideoDmSendStatus.sending:
+        return;
+    }
+  }
+
+  /// Shows a snackbar for a video send outcome and announces it.
+  void _showVideoToast(String message, {required bool error}) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: error));
+    // Per `accessibility.md`, async visible state changes must announce
+    // explicitly — Material's default SnackBar semantics are weaker than the
+    // written rule and not guaranteed across platforms.
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
     );
   }
 

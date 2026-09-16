@@ -1796,6 +1796,10 @@
   "shareSheetRemoveFromSaved": "Alih keluar simpanan",
   "shareSheetSaveToGallery": "Simpan ke Galeri",
   "shareSheetSaveWithWatermark": "Simpan dengan Tera Air",
+  "dmAttachVideo": "Lampirkan video",
+  "dmVideoUnavailable": "Tidak dapat membuka video ini",
+  "dmVideoSent": "Video dihantar",
+  "dmVideoSendFailed": "Tidak dapat menghantar video",
   "shareSheetSaveVideo": "Simpan Video",
   "shareSheetAddToClips": "Tambah ke klip",
   "@shareSheetAddToClips": {

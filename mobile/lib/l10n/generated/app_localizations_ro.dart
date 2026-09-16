@@ -3710,6 +3710,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Salvează cu filigran';
 
   @override
+  String get dmAttachVideo => 'Atașează videoclipul';
+
+  @override
+  String get dmVideoUnavailable => 'Nu am putut deschide acest videoclip';
+
+  @override
+  String get dmVideoSent => 'Videoclip trimis';
+
+  @override
+  String get dmVideoSendFailed => 'Nu am putut trimite videoclipul';
+
+  @override
   String get shareSheetSaveVideo => 'Salvează videoclipul';
 
   @override

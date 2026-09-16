@@ -170,7 +170,7 @@ void main() {
       expect(find.byType(DivineVideoPlayer), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(
-        find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+        find.text(AppLocalizationsEn().dmVideoUnavailable),
         findsOneWidget,
       );
       expect(File(expectedClipPath()).existsSync(), isFalse);

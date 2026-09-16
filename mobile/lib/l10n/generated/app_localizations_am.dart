@@ -3521,6 +3521,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'በውሃ ምልክት አስቀምጥ';
 
   @override
+  String get dmAttachVideo => 'ቪዲዮ አይዝ';
+
+  @override
+  String get dmVideoUnavailable => 'ይህ ቪዲዮ መክፈት አልተቸልም';
+
+  @override
+  String get dmVideoSent => 'ቪዲዮ ተልኳል';
+
+  @override
+  String get dmVideoSendFailed => 'ቪዲዮ መልክ አልተቸልም';
+
+  @override
   String get shareSheetSaveVideo => 'ቪዲዮ አስቀምጥ';
 
   @override

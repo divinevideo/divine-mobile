@@ -3650,6 +3650,18 @@ class AppLocalizationsBg extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Запази с воден знак';
 
   @override
+  String get dmAttachVideo => 'Прикачи видео';
+
+  @override
+  String get dmVideoUnavailable => 'Видеото не можа да се отвори';
+
+  @override
+  String get dmVideoSent => 'Видеото е изпратено';
+
+  @override
+  String get dmVideoSendFailed => 'Видеото не можа да се изпрати';
+
+  @override
   String get shareSheetSaveVideo => 'Запази видео';
 
   @override

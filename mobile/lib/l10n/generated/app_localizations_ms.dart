@@ -3594,6 +3594,18 @@ class AppLocalizationsMs extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Simpan dengan Tera Air';
 
   @override
+  String get dmAttachVideo => 'Lampirkan video';
+
+  @override
+  String get dmVideoUnavailable => 'Tidak dapat membuka video ini';
+
+  @override
+  String get dmVideoSent => 'Video dihantar';
+
+  @override
+  String get dmVideoSendFailed => 'Tidak dapat menghantar video';
+
+  @override
   String get shareSheetSaveVideo => 'Simpan Video';
 
   @override

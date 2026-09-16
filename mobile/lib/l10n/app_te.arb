@@ -2175,6 +2175,10 @@
   },
   "shareSheetSaveToGallery": "గ్యాలరీకి సేవ్ చేయండి",
   "shareSheetSaveWithWatermark": "వాటర్‌మార్క్‌తో సేవ్ చేయండి",
+  "dmAttachVideo": "వీడియోను అటాచ్ చేయండి",
+  "dmVideoUnavailable": "ఈ వీడియోను తెరవడం సాధ్యపడలేదు",
+  "dmVideoSent": "వీడియో పంపబడింది",
+  "dmVideoSendFailed": "వీడియోను పంపడం సాధ్యపడలేదు",
   "shareSheetSaveVideo": "వీడియోను సేవ్ చేయండి",
   "shareSheetAddToClips": "క్లిప్‌లకు జోడించండి",
   "@shareSheetAddToClips": {
