@@ -60,6 +60,9 @@ class LanguagePreferenceService {
   /// [languageCode] must be an ISO-639-1 code (e.g. `'en'`, `'es'`, `'pt'`).
   Future<void> setContentLanguage(String languageCode) async {
     try {
+      await initialize();
+      if (_customLanguage == languageCode) return;
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(prefsKey, languageCode);
       _customLanguage = languageCode;
@@ -82,6 +85,9 @@ class LanguagePreferenceService {
   /// Clear the custom language preference, reverting to device default.
   Future<void> clearContentLanguage() async {
     try {
+      await initialize();
+      if (_customLanguage == null) return;
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(prefsKey);
       _customLanguage = null;

@@ -35,7 +35,7 @@ void main() {
       await service.initialize();
     });
 
-    test('publishes every service notification as a new version', () async {
+    test('publishes only changed languages as new versions', () async {
       final container = ProviderContainer(
         overrides: [
           languagePreferenceServiceProvider.overrideWithValue(service),
@@ -56,12 +56,12 @@ void main() {
       await pumpEventQueue();
       expect(container.read(languagePreferenceVersionProvider), equals(1));
 
-      // The service notifies on every call, including a repeat of the same
-      // language, and the provider turns each notification into a new version.
+      // Re-selecting the active language is a no-op, so it must not advance
+      // the version or notify dependents.
       await service.setContentLanguage('es');
       await pumpEventQueue();
-      expect(container.read(languagePreferenceVersionProvider), equals(2));
-      expect(versions, equals([1, 2]));
+      expect(container.read(languagePreferenceVersionProvider), equals(1));
+      expect(versions, equals([1]));
       expect(
         service.addListenerCalls,
         equals(1),
