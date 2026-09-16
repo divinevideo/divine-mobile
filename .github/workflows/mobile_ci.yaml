@@ -839,6 +839,39 @@ jobs:
           path: mobile/test/goldens/**/failures/*.png
           if-no-files-found: ignore
 
+  web-bundle-size:
+    name: Web Bundle Size
+    needs: changes
+    # This must run on merge_group as well as pull_request. Two individually
+    # safe bundles can cross the provider limit when the queue combines them.
+    if: ${{ needs.changes.outputs.app == 'true' }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Build production web bundle
+        run: |
+          flutter build web \
+            --release \
+            --tree-shake-icons \
+            --optimization-level=4 \
+            --pwa-strategy=none \
+            --dart-define=DEFAULT_ENV=PRODUCTION \
+            --dart-define=BACKEND_URL=https://api.divine.video \
+            --no-source-maps
+      - name: Check web bundle file sizes
+        run: bash scripts/check_web_bundle_file_size.sh build/web
+
   mobile-ci:
     name: Mobile CI
     if: ${{ always() }}
@@ -852,6 +885,7 @@ jobs:
       - tests
       - vgv-tag-gate
       - goldens
+      - web-bundle-size
     runs-on: ubuntu-24.04
     steps:
       - name: Verify upstream jobs
@@ -864,6 +898,7 @@ jobs:
           TESTS_RESULT: ${{ needs.tests.result }}
           VGV_TAG_GATE_RESULT: ${{ needs.vgv-tag-gate.result }}
           GOLDENS_RESULT: ${{ needs.goldens.result }}
+          WEB_BUNDLE_SIZE_RESULT: ${{ needs.web-bundle-size.result }}
           APP_CI_REQUIRED: ${{ needs.changes.outputs.app }}
           UPDATE_GOLDENS: ${{ inputs.update_goldens }}
         run: |
@@ -876,6 +911,7 @@ jobs:
           echo "tests: ${TESTS_RESULT}"
           echo "vgv-tag-gate: ${VGV_TAG_GATE_RESULT}"
           echo "goldens: ${GOLDENS_RESULT}"
+          echo "web-bundle-size: ${WEB_BUNDLE_SIZE_RESULT}"
 
           # A regeneration dispatch skips `golden.sh verify`, so this run
           # compared no pixels. It publishes a check run named "Mobile CI" on
@@ -911,8 +947,12 @@ jobs:
           # too broad for an independently maintained path allowlist.
           if [ "${APP_CI_REQUIRED}" = "true" ]; then
             required_results+=("${GOLDENS_RESULT}")
+            required_results+=("${WEB_BUNDLE_SIZE_RESULT}")
           elif [[ "${GOLDENS_RESULT}" != "success" && "${GOLDENS_RESULT}" != "skipped" ]]; then
             echo "Goldens failed or were cancelled despite app CI not being required."
+            exit 1
+          elif [[ "${WEB_BUNDLE_SIZE_RESULT}" != "success" && "${WEB_BUNDLE_SIZE_RESULT}" != "skipped" ]]; then
+            echo "Web bundle size failed or was cancelled despite app CI not being required."
             exit 1
           fi
 

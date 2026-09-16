@@ -30,6 +30,7 @@
     "Analyze": { "warn": 150, "fail": 300 },
     "Format": { "warn": 90, "fail": 180 },
     "VGV Tag Gate": { "warn": 30, "fail": 90 },
-    "Goldens": { "warn": 150, "fail": 300 }
+    "Goldens": { "warn": 150, "fail": 300 },
+    "Web Bundle Size": { "warn": 300, "fail": 480 }
   }
 }

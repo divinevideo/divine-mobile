@@ -10,12 +10,12 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Extension on [TextFont] for text editor UI purposes.
 extension TextEditorFont on TextFont {
-  /// Returns the display name of this font, or `null` when it is neither a
-  /// Google Font nor a style with a family name.
+  /// Returns the display name of this font, or `null` when it has no family
+  /// name.
   ///
-  /// A Google Font resolves to its published family name ("Shadows Into
-  /// Light") rather than the squashed `fontFamily` identifier
-  /// ("ShadowsIntoLight_regular"). Anything else falls back to its
+  /// An editor-catalogue font resolves to its published Google Fonts family
+  /// name ("Shadows Into Light") rather than the squashed `fontFamily`
+  /// identifier ("ShadowsIntoLight_regular"). Anything else falls back to its
   /// `fontFamily` with the "_regular" suffix removed and underscores converted
   /// to spaces.
   String? get _resolvedDisplayName {

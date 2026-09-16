@@ -1,5 +1,5 @@
 // ABOUTME: Tests the web bundle per-file size guard that keeps the built site
-// ABOUTME: deployable to Cloudflare Pages: pass, warn band, over limit, missing.
+// ABOUTME: deployable to Cloudflare Pages, including empty or unreadable sites.
 
 import 'dart:io';
 
@@ -23,11 +23,18 @@ void main() {
         ..closeSync();
     }
 
-    ProcessResult runGuard({String? site, bool underActions = false}) {
+    ProcessResult runGuard({
+      String? site,
+      bool underActions = false,
+      String? path,
+    }) {
       return Process.runSync(
         'bash',
         [scriptPath, site ?? siteDirectory],
-        environment: {'GITHUB_ACTIONS': underActions ? 'true' : 'false'},
+        environment: {
+          'GITHUB_ACTIONS': underActions ? 'true' : 'false',
+          'PATH': ?path,
+        },
       );
     }
 
@@ -111,8 +118,8 @@ void main() {
       expect(
         result.stdout,
         contains(
-          "❌ main.dart.js is 25.0 MiB, over Cloudflare Pages' 25.0 MiB "
-          'per-file limit.',
+          '❌ main.dart.js is 25.0 MiB (26214401 bytes), over Cloudflare '
+          "Pages' 25.0 MiB (26214400 bytes) per-file limit.",
         ),
       );
       expect(result.stdout, contains('❌ assets/big.bin is 26.0 MiB'));
@@ -132,6 +139,28 @@ void main() {
 
       expect(result.exitCode, 1, reason: result.stdout.toString());
       expect(result.stdout, contains('does not exist'));
+    });
+
+    test('fails when the site directory contains no files', () {
+      final result = runGuard();
+
+      expect(result.exitCode, 1, reason: result.stdout.toString());
+      expect(result.stdout, contains('contains no files'));
+    });
+
+    test('fails when the site directory cannot be scanned', () {
+      final fakeBin = Directory('${temporaryDirectory.path}/bin')..createSync();
+      File('${fakeBin.path}/find').writeAsStringSync(
+        '#!/usr/bin/env bash\nexit 23\n',
+      );
+      Process.runSync('chmod', ['+x', '${fakeBin.path}/find']);
+
+      final result = runGuard(
+        path: '${fakeBin.path}:${Platform.environment['PATH']}',
+      );
+
+      expect(result.exitCode, 1, reason: result.stdout.toString());
+      expect(result.stdout, contains('Could not scan'));
     });
   });
 }

@@ -543,6 +543,19 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
         self.assertIn("fetch-depth: 0", job)
 
+    def test_web_bundle_size_is_part_of_required_mobile_ci(self) -> None:
+        job_start = self.mobile_ci_contents.index("  web-bundle-size:")
+        next_job = self.mobile_ci_contents.index("\n  mobile-ci:", job_start)
+        job = self.mobile_ci_contents[job_start:next_job]
+
+        self.assertIn("flutter build web", job)
+        self.assertIn("check_web_bundle_file_size.sh build/web", job)
+        self.assertIn("      - web-bundle-size", self.mobile_ci_contents)
+        self.assertIn(
+            "WEB_BUNDLE_SIZE_RESULT: ${{ needs.web-bundle-size.result }}",
+            self.mobile_ci_contents,
+        )
+
     def test_caption_generator_names_missing_flutter_embedding_jar(self) -> None:
         self.assertIn("if (!flutterDebugEmbeddingJar.isFile)", self.caption_generator_gradle_contents)
         self.assertIn("Flutter debug embedding JAR not found at", self.caption_generator_gradle_contents)
