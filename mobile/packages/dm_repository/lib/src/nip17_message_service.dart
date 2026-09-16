@@ -66,12 +66,20 @@ typedef IsolateGiftWrapBatchBuilder =
 /// connectivity in keep their prior classification behavior.
 typedef OfflineProbe = Future<bool> Function();
 
-/// Body marker Keycast returns (with HTTP 403) only for the verified_minor DM
-/// containment gate. Suspended accounts return "Account restricted" and token
-/// failures are 401 with their own refresh path, so matching this exact marker
-/// terminalizes a policy refusal while leaving transient errors retryable.
-/// Mirrors `MINOR_DM_DENIED_MSG` in divinevideo/keycast.
-const _minorDmPolicyDenialMarker = 'Operation denied by policy';
+/// Body marker Keycast returns with HTTP 403 for a policy refusal.
+///
+/// NOT unique to one gate (#7337): the identical string comes from the
+/// verified_minor DM containment gate, from ANY authorization whose
+/// allowed-kinds policy scope excludes the kind being signed (e.g. the
+/// `policy:social` default, which lacks kind 13), and from raw-key egress
+/// refusal. The 403 body carries no machine-readable cause, so matching this
+/// marker can only prove "some policy said no" — never that the recipient
+/// specifically is disallowed. Suspended accounts return "Account restricted"
+/// and token failures are 401 with their own refresh path, so the marker
+/// still separates a policy refusal from a transient error; it must not be
+/// escalated any further than that. Mirrors `MINOR_DM_DENIED_MSG` in
+/// divinevideo/keycast.
+const _keycastPolicyDenialMarker = 'Operation denied by policy';
 
 /// Service for sending encrypted private messages using NIP-17 gift wrapping.
 ///
@@ -329,11 +337,11 @@ class NIP17MessageService {
         _senderPublicKey,
       ]);
     } on Object catch (e) {
-      // Transient: a 5xx, an expired token, a timeout, or the verified_minor
-      // policy refusal. Fall back for THIS send without latching — the
-      // fallback's own nip44Encrypt re-hits a policy refusal and sendRumor
-      // terminalizes it as `blocked`, and a blip must not cost the rest of the
-      // session its fast path.
+      // Transient: a 5xx, an expired token, a timeout, or an ambiguous
+      // policy refusal (#7337). Fall back for THIS send without latching —
+      // the fallback's own nip44Encrypt re-hits a policy refusal and
+      // sendRumor terminalizes it as a hard failure, and a blip must not
+      // cost the rest of the session its fast path.
       Log.warning(
         'Server gift-wrap batch failed for rumor ${rumorEvent.id}: $e; '
         'falling back to the per-wrap signing path',
@@ -938,16 +946,18 @@ class NIP17MessageService {
         error: e,
         stackTrace: stackTrace,
       );
-      if (e.toString().contains(_minorDmPolicyDenialMarker)) {
-        // Keycast's server-side verified_minor gate refused to sign or encrypt
-        // this DM. That is a permanent policy decision, not a transient error,
-        // so terminalize it (blocked) rather than returning a retryable failure
-        // the drain would re-attempt until maxRetries and Resend would
-        // deterministically re-fail. The blocked → terminal drain path already
-        // exists (#6028); this routes the server refusal into it.
-        return const NIP17SendResult.blocked(
-          'blocked: recipient not permitted by send policy',
-        );
+      if (e.toString().contains(_keycastPolicyDenialMarker)) {
+        // A bare marker match cannot tell a genuine recipient block from the
+        // signer's own authorization being under-scoped (#7337) — Keycast
+        // returns this identical body for both. Terminalize as a hard,
+        // non-retryable failure rather than `blocked`: the row survives as a
+        // red "not delivered" bubble the user can retry or delete, instead of
+        // being silently destroyed on a false-positive match. Retrying a
+        // genuine policy refusal will deterministically re-fail, which is the
+        // honest outcome given the client cannot distinguish the cause. The
+        // one place Divine actually knows the recipient is disallowed is the
+        // `DmSendPolicy` pre-gate above, which still returns `blocked`.
+        return NIP17SendResult.failure('policy refusal (cause ambiguous): $e');
       }
       if (e is TransientSignerFailure) {
         // The signer gave up instead of signing — a remote signer that bounds
