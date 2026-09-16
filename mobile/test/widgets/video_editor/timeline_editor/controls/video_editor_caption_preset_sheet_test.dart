@@ -47,4 +47,20 @@ void main() {
       expect(captionPresetDisplayName(de, 'classic'), equals('Klassisch'));
     });
   });
+
+  group('presetAtGridIndex', () {
+    test('reserves the first two tiles for Custom and Saved', () {
+      expect(presetAtGridIndex(0), isNull);
+      expect(presetAtGridIndex(1), isNull);
+    });
+
+    test('maps the grid onto the presets in order', () {
+      expect(presetAtGridIndex(2), CaptionStylePreset.presets.first);
+      expect(presetAtGridIndex(3), CaptionStylePreset.presets[1]);
+      expect(
+        presetAtGridIndex(CaptionStylePreset.presets.length + 1),
+        CaptionStylePreset.presets.last,
+      );
+    });
+  });
 }

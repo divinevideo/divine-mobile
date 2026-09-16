@@ -10,6 +10,16 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_s
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_custom_style_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_caption_styles_sheet.dart';
 
+/// The preset a grid tile shows, or null for the two leading tiles.
+///
+/// Custom and Saved occupy 0 and 1, so the grid holds `presets.length + 2`
+/// items and a preset sits two places after its own index. Exposed so that
+/// offset has a test: drawing a tile needs real Google Fonts, which unit
+/// tests do not have.
+@visibleForTesting
+CaptionStylePreset? presetAtGridIndex(int index) =>
+    index < 2 ? null : CaptionStylePreset.presets[index - 2];
+
 /// The chosen caption style: a built-in preset or a user-defined custom style.
 sealed class CaptionStyleSelection {
   const CaptionStyleSelection();
@@ -205,7 +215,7 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
             icon: DivineIconName.bookmarkSimple,
           );
         }
-        final preset = CaptionStylePreset.presets[index - 2];
+        final preset = presetAtGridIndex(index)!;
         final label = captionPresetDisplayName(l10n, preset.id);
         return _StyleTile(
           style: preset.style,
