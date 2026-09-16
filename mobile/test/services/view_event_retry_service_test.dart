@@ -100,7 +100,7 @@ void main() {
         appForegroundStream: foregroundStream ?? const Stream<bool>.empty(),
         retryConfig: retryConfig,
         now: () => now,
-      );
+      )..setPublishingEnabled(true);
     }
 
     setUp(() {

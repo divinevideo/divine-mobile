@@ -624,6 +624,7 @@ void main() {
 
       await analyticsService.setAnalyticsEnabled(true);
       expect(retryService.publishingEnabled, isTrue);
+      expect(retryService.sweepCount, 1);
     });
 
     test(
@@ -762,6 +763,7 @@ void main() {
         viewEventRetryService: retryService,
       );
       await analyticsService.initialize();
+      retryService.sweepCount = 0;
 
       final video = VideoEvent(
         id: '22e73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
@@ -1028,6 +1030,7 @@ void main() {
         viewEventRetryService: retryService,
       );
       await analyticsService.initialize();
+      retryService.sweepCount = 0;
       await analyticsService.setAnalyticsEnabled(false);
 
       final video = VideoEvent(

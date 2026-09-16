@@ -296,6 +296,7 @@ class AnalyticsService implements BackgroundAwareService {
     if (_productAnalyticsEnabled) {
       _recoverQueuedProductEvents();
     }
+    _recoverQueuedViewEvents();
   }
 
   Future<void> _applyFirebaseAnalyticsConsent({required bool enabled}) async {
@@ -357,6 +358,17 @@ class AnalyticsService implements BackgroundAwareService {
   void _recoverQueuedProductEvents() {
     try {
       final recovery = _productEventQueue?.recoverPublishingAndFlush();
+      if (recovery != null) {
+        unawaited(recovery.catchError((Object _) {}));
+      }
+    } catch (_) {
+      // Queue recovery is best-effort and must not prevent app startup.
+    }
+  }
+
+  void _recoverQueuedViewEvents() {
+    try {
+      final recovery = _viewEventRetryService?.sweep();
       if (recovery != null) {
         unawaited(recovery.catchError((Object _) {}));
       }
