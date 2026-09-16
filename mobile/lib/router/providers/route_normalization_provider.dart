@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -107,9 +108,7 @@ final routeNormalizationProvider = Provider<void>((ref) {
     }
   }
 
-  // Attach listener and ensure cleanup on dispose
-  router.routerDelegate.addListener(listener);
-  ref.onDispose(() => router.routerDelegate.removeListener(listener));
+  listenForProviderLifetime(ref, router.routerDelegate, listener);
 
   return;
 });
