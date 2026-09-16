@@ -244,6 +244,83 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertNotIn("submit_as_draft", block)
         self.assertNotIn("track: production", block)
 
+    def test_android_build_publishes_to_zapstore_after_github_release(self) -> None:
+        workflow = self._workflow_block("android-build")
+        self.assertIn("- zapstore_credentials", workflow)
+        self.assertLess(
+            workflow.index("- *publish_github_release"),
+            workflow.index("- *publish_zapstore"),
+            "Zapstore publishes the release this build just cut, so that "
+            "release step has to run first",
+        )
+        # Zapstore is the Android store; ios-build also publishes a GitHub
+        # release but must not publish it to Zapstore.
+        self.assertNotIn("- *publish_zapstore", self._workflow_block("ios-build"))
+
+    def test_zapstore_publish_is_pinned_and_fails_closed(self) -> None:
+        definition = self._definition_block("publish_zapstore")
+        release = self._definition_block("publish_github_release")
+
+        # Same gate as the GitHub release step: a NO build must not publish,
+        # and every command failure has to abort the step.
+        self.assertIn(
+            'if [ "${{ inputs.PUBLISH_TO_GITHUB }}" != "YES" ]; then', definition
+        )
+        self.assertIn("set -euo pipefail", definition)
+
+        # The guard only works if it compares against the same version the
+        # release step just tagged. The extraction is duplicated by design, so
+        # pin that both copies exist rather than letting one drift.
+        version_query = (
+            "VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' "
+            "| sed 's/+.*//')"
+        )
+        self.assertIn(version_query, release)
+        self.assertIn(version_query, definition)
+
+        # zsp selects the newest release it can download an APK from, so a
+        # stale or missing release would publish the wrong APK under this
+        # signing key. The guard refuses unless the newest release is the one
+        # this build cut. Drafts are excluded because zsp skips them.
+        self.assertIn(
+            'REMOTE_TAG=$(gh release list --repo "$CM_REPO_SLUG" --limit 1',
+            definition,
+        )
+        self.assertIn("--exclude-drafts", definition)
+        self.assertIn('if [ "$REMOTE_TAG" != "$TAG" ]; then', definition)
+
+        # --check parses the arm64 APK before anything is signed.
+        # --pre-release is what makes the CI-created prerelease selectable at
+        # all; without it zsp steps back to the previous public release, which
+        # is how 1.0.9 was published wrong. --skip-certificate-linking keeps
+        # the one-time keystore prompt out of a release build.
+        self.assertIn(
+            '"$ZSP_BIN" publish --check --pre-release zapstore.yaml', definition
+        )
+        self.assertRegex(
+            definition,
+            r'"\$ZSP_BIN" publish zapstore.yaml --quiet --skip-preview \\\n\s+'
+            r"--skip-certificate-linking --pre-release",
+        )
+
+        # The release asset name drops the tag's leading "v"; deriving it from
+        # ZSP_VERSION stops a version bump from downloading the previous asset
+        # (or 404ing) when only one of the two literals is updated.
+        self.assertIn("ZSP_VERSION=v0.4.17", definition)
+        self.assertIn('ZSP_ASSET="zsp-${ZSP_VERSION#v}-darwin-arm64"', definition)
+        self.assertIn(
+            "https://github.com/zapstore/zsp/releases/download/"
+            "${ZSP_VERSION}/${ZSP_ASSET}",
+            definition,
+        )
+        self.assertNotRegex(definition, r"zsp-\d+\.\d+\.\d+-darwin-arm64")
+
+        # The nsec reaches zsp through the environment only: never an
+        # argument, never echoed, and `set -x` would print it to the log.
+        self.assertEqual(1, definition.count("ZAPSTORE_NSEC"))
+        self.assertIn('SIGN_WITH="$ZAPSTORE_NSEC"', definition)
+        self.assertNotIn("set -x", definition)
+
     def test_supporters_defines_are_not_passed_by_the_build(self) -> None:
         """The supporter client is configured in the app, not by the build.
 
