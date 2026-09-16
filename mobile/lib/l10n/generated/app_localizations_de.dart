@@ -821,6 +821,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Netzwerk nicht erreichbar. Überprüfe deine Verbindung und versuch es nochmal.';
+
+  @override
   String get profilePinFailed =>
       'Das Video konnte nicht angepinnt werden. Versuch es nochmal.';
 

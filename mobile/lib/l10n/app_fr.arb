@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Échec de la réservation du nom d'utilisateur. Réessaie.",
     "profileSetupPublishFailed": "Échec de la publication du profil. Réessaie.",
     "profileSetupNoRelaysConnected": "Impossible d'accéder au réseau. Vérifie ta connexion et réessaie.",
+    "profilePinConnectionFailed": "Impossible d'accéder au réseau. Vérifie ta connexion et réessaie.",
     "profileSetupDisplayNameLabel": "Nom affiché",
     "profileSetupDisplayNameRequired": "Entre un nom affiché",
     "profileSetupBioLabel": "Bio (facultatif)",

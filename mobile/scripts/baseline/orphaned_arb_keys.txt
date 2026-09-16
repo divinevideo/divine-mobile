@@ -29,27 +29,3 @@
 # and minorAccountReviewUnder13LegalTitle (-> minorAccountReviewUnder13WhyTitle).
 # They are distinct authored, translated wordings: recoverable from history if
 # product ever prefers one, but no longer live keys.
-appTitle # wire: main.dart:2791 and :2814 pass MaterialApp title: 'Divine' literally
-authNip07ExtensionNotFound # wire: auth_service.dart:2142 throws the English text; screens/auth/login_options_screen.dart:254 renders result.errorMessage, whose l10n fallback is authNip07ConnectionFailed (a different key), so this key never renders
-contentFiltersViolenceGore # test-only: content_filters_screen_test.dart:64 asserts findsNothing while its 3 siblings assert findsOneWidget
-contentWarningNone # test-only: video_metadata_content_warning_selector_test.dart:72 asserts findsNothing
-minorAccountReviewApproachBody # staged: #3531, "How Divine thinks about it" section, unplaced pair
-minorAccountReviewApproachTitle # staged: #3531, "How Divine thinks about it" section, unplaced pair
-minorAccountReviewFamilyResourcesBody # staged: #3531, family-resources body; heading renders as LearnMoreTitle, CTA is live
-minorAccountReviewFooter # staged: #3531, welcome-screen footer, unplaced
-minorAccountReviewParentConsentLegalBody # staged: #3531, parent-consent legal body, unplaced
-minorAccountReviewParentConsentPauseNote # staged: #3531, parent-consent pause note, unplaced
-minorAccountReviewRulesBody # staged: #3531, "The rules are not the same everywhere" section, unplaced pair
-minorAccountReviewRulesTitle # staged: #3531, "The rules are not the same everywhere" section, unplaced pair
-minorAccountReviewUnder13HonestyBody # staged: #3531, under-13 honesty section, unplaced pair
-minorAccountReviewUnder13HonestyTitle # staged: #3531, under-13 honesty section, unplaced pair
-minorAccountReviewUnder13LegalBody # staged: #3531, under-13 legal body; heading renders as Under13WhyTitle
-profileLibraryLabel # test-only: library_screen_test.dart:272 asserts findsNothing in selection mode
-relayDiagnosticFailed # wire: relay_diagnostic_screen.dart:1018, Text(result.errorMessage ?? ...) fallback
-relayDiagnosticNoRelaysConfigured # wire: relay_diagnostic_screen.dart:250, rendered at :1018
-reportSelectReason # test-only: report_content_dialog_test.dart:2065 asserts findsNothing
-settingsDeveloperModeTapsRemaining # test-only: ICU plural fixture in countable_plural_test.dart:43 and l10n_test.dart:267
-shareMenuFollowSetsAvailable # test-only: ICU plural fixture in countable_plural_test.dart:41
-shareMenuVideoCount # test-only: ICU plural fixture in countable_plural_test.dart:40
-soundsSearchResults # wire: search_results/widgets/videos_section.dart:106 passes contextTitle literally
-videoFeedLoopCountLabel # test-only: ICU plural fixture in countable_plural_test.dart:42

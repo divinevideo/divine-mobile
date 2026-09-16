@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Kunde inte claima användarnamnet. Försök igen.",
     "profileSetupPublishFailed": "Kunde inte publicera profilen. Försök igen.",
     "profileSetupNoRelaysConnected": "Kunde inte nå nätverket. Kontrollera din anslutning och försök igen.",
+    "profilePinConnectionFailed": "Kunde inte nå nätverket. Kontrollera din anslutning och försök igen.",
     "profileSetupDisplayNameLabel": "Visningsnamn",
     "profileSetupDisplayNameRequired": "Ange ett visningsnamn",
     "profileSetupBioLabel": "Bio (valfritt)",

@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Falha ao reivindicar o nome de usuário. Tente novamente.",
     "profileSetupPublishFailed": "Falha ao publicar perfil. Tente novamente.",
     "profileSetupNoRelaysConnected": "Não foi possível acessar a rede. Verifique sua conexão e tente novamente.",
+    "profilePinConnectionFailed": "Não foi possível acessar a rede. Verifique sua conexão e tente novamente.",
     "profileSetupDisplayNameLabel": "Nome de exibição",
     "profileSetupDisplayNameRequired": "Por favor, insira um nome de exibição",
     "profileSetupBioLabel": "Bio (opcional)",

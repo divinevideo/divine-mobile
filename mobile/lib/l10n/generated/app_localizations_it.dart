@@ -824,6 +824,10 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Impossibile raggiungere la rete. Controlla la connessione e riprova.';
+
+  @override
   String get profilePinFailed =>
       'Non è stato possibile fissare il video. Riprova.';
 

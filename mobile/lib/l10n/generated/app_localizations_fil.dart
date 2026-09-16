@@ -790,6 +790,10 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Hindi makonekta sa network. Tingnan ang koneksyon mo at subukan ulit.';
+
+  @override
   String get profilePinFailed => 'Hindi na-pin ang video. Subukan ulit.';
 
   @override

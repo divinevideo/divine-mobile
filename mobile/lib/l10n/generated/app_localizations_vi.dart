@@ -783,6 +783,10 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Không kết nối được với mạng. Kiểm tra kết nối của bạn rồi thử lại nhé.';
+
+  @override
   String get profilePinFailed => 'Không ghim được video đó. Thử lại nhé.';
 
   @override

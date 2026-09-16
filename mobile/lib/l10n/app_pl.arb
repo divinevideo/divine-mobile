@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Nie udało się zarezerwować nazwy użytkownika. Spróbuj ponownie.",
     "profileSetupPublishFailed": "Nie udało się opublikować profilu. Spróbuj ponownie.",
     "profileSetupNoRelaysConnected": "Nie można połączyć się z siecią. Sprawdź połączenie i spróbuj ponownie.",
+    "profilePinConnectionFailed": "Nie można połączyć się z siecią. Sprawdź połączenie i spróbuj ponownie.",
     "profileSetupDisplayNameLabel": "Nazwa wyświetlana",
     "profileSetupDisplayNameRequired": "Wprowadź nazwę wyświetlaną",
     "profileSetupBioLabel": "Bio (opcjonalnie)",

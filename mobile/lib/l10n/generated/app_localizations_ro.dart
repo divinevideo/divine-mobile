@@ -853,6 +853,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Nu s-a putut accesa rețeaua. Verifică conexiunea și încearcă din nou.';
+
+  @override
   String get profilePinFailed =>
       'Nu am putut fixa videoclipul. Încearcă din nou.';
 

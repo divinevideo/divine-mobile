@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "No se pudo reservar el nombre de usuario. Probá de nuevo.",
     "profileSetupPublishFailed": "No se pudo publicar el perfil. Probá de nuevo.",
     "profileSetupNoRelaysConnected": "No se pudo conectar a la red. Verificá tu conexión e intentá de nuevo.",
+    "profilePinConnectionFailed": "No se pudo conectar a la red. Verificá tu conexión e intentá de nuevo.",
     "profileSetupDisplayNameLabel": "Nombre a mostrar",
     "profileSetupDisplayNameRequired": "Ingresá un nombre a mostrar",
     "profileSetupBioLabel": "Bio (opcional)",

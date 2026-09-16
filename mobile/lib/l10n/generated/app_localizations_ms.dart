@@ -784,6 +784,10 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Tidak dapat mencapai rangkaian. Semak sambungan anda dan cuba lagi.';
+
+  @override
   String get profilePinFailed => 'Video itu tidak dapat disemat. Cuba lagi.';
 
   @override

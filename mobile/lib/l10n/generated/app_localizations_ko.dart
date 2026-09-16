@@ -716,6 +716,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      '네트워크에 연결할 수 없어요. 연결 상태를 확인하고 다시 시도해보세요.';
+
+  @override
   String get profilePinFailed => '영상을 고정하지 못했어요. 다시 시도해 주세요.';
 
   @override

@@ -842,6 +842,10 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Nie można połączyć się z siecią. Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
   String get profilePinFailed =>
       'Nie udało się przypiąć tego filmu. Spróbuj ponownie.';
 

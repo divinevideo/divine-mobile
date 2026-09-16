@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "تعذّرت المطالبة باسم المستخدم. حاول مرّة أخرى.",
     "profileSetupPublishFailed": "تعذّر نشر الملف الشخصي. حاول مرّة أخرى.",
     "profileSetupNoRelaysConnected": "لا يمكن الوصول إلى الشبكة. تحقق من اتصالك وحاول مرة أخرى.",
+    "profilePinConnectionFailed": "لا يمكن الوصول إلى الشبكة. تحقق من اتصالك وحاول مرة أخرى.",
     "profileSetupDisplayNameLabel": "الاسم المعروض",
     "profileSetupDisplayNameRequired": "يرجى إدخال اسم معروض",
     "profileSetupBioLabel": "نبذة (اختيارية)",

@@ -225,6 +225,7 @@
     "profileSetupClaimFailed": "사용자명을 가져오지 못했어요. 다시 시도해보세요.",
     "profileSetupPublishFailed": "프로필을 게시하지 못했어요. 다시 시도해보세요.",
     "profileSetupNoRelaysConnected": "네트워크에 연결할 수 없어요. 연결 상태를 확인하고 다시 시도해보세요.",
+    "profilePinConnectionFailed": "네트워크에 연결할 수 없어요. 연결 상태를 확인하고 다시 시도해보세요.",
     "profileSetupDisplayNameLabel": "표시 이름",
     "profileSetupDisplayNameRequired": "표시 이름을 입력해주세요",
     "profileSetupBioLabel": "소개 (선택)",

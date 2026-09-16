@@ -832,6 +832,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Impossible d\'accéder au réseau. Vérifie ta connexion et réessaie.';
+
+  @override
   String get profilePinFailed =>
       'Impossible d\'épingler cette vidéo. Réessaie.';
 

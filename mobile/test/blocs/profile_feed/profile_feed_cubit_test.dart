@@ -1531,6 +1531,99 @@ void main() {
         },
       );
 
+      for (final testCase
+          in <
+            (
+              ProfilePinFailure,
+              ProfileFeedPinFeedback,
+            )
+          >[
+            (
+              ProfilePinFailure.notAuthenticated,
+              ProfileFeedPinFeedback.pinFailed,
+            ),
+            (
+              ProfilePinFailure.couldNotReachRelays,
+              ProfileFeedPinFeedback.pinConnectionFailed,
+            ),
+            (
+              ProfilePinFailure.timedOut,
+              ProfileFeedPinFeedback.pinConnectionFailed,
+            ),
+            (
+              ProfilePinFailure.limitReached,
+              ProfileFeedPinFeedback.pinLimitReached,
+            ),
+            (
+              ProfilePinFailure.publishDidNotComplete,
+              ProfileFeedPinFeedback.pinFailed,
+            ),
+          ]) {
+        test('pin maps ${testCase.$1.name} to ${testCase.$2.name}', () async {
+          final video = _video('b', createdAt: 2000, dTag: 'b');
+          when(() => h.pins.pin(_coordinate('b'))).thenAnswer(
+            (_) async => ProfilePinMutation.failed(testCase.$1),
+          );
+          final cubit = await buildReady(
+            _result([video], hasMore: false),
+          );
+          addTearDown(cubit.close);
+
+          cubit.add(ProfileFeedPinRequested(video));
+          await pumpEventQueue();
+
+          expect(cubit.state.pinFeedback, testCase.$2);
+        });
+      }
+
+      for (final testCase
+          in <
+            (
+              ProfilePinFailure,
+              ProfileFeedPinFeedback,
+            )
+          >[
+            (
+              ProfilePinFailure.notAuthenticated,
+              ProfileFeedPinFeedback.unpinFailed,
+            ),
+            (
+              ProfilePinFailure.couldNotReachRelays,
+              ProfileFeedPinFeedback.pinConnectionFailed,
+            ),
+            (
+              ProfilePinFailure.timedOut,
+              ProfileFeedPinFeedback.pinConnectionFailed,
+            ),
+            (
+              ProfilePinFailure.limitReached,
+              ProfileFeedPinFeedback.unpinFailed,
+            ),
+            (
+              ProfilePinFailure.publishDidNotComplete,
+              ProfileFeedPinFeedback.unpinFailed,
+            ),
+          ]) {
+        test('unpin maps ${testCase.$1.name} to ${testCase.$2.name}', () async {
+          final video = _video('b', createdAt: 2000, dTag: 'b');
+          when(
+            () => h.pins.fetch(_author),
+          ).thenAnswer((_) async => [_coordinate('b')]);
+          when(() => h.pins.unpin(_coordinate('b'))).thenAnswer(
+            (_) async => ProfilePinMutation.failed(testCase.$1),
+          );
+          final cubit = await buildReady(
+            _result([video], hasMore: false),
+          );
+          addTearDown(cubit.close);
+
+          cubit.add(ProfileFeedUnpinRequested(video));
+          await pumpEventQueue();
+
+          expect(cubit.state.pinFeedback, testCase.$2);
+        });
+      }
+
       test(
         'pin at the cap reports the limit without a relay round trip',
         () async {

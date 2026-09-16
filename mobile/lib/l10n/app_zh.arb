@@ -464,6 +464,7 @@
   "profileSetupClaimFailed": "注册用户名失败，请重试。",
   "profileSetupPublishFailed": "发布资料失败，请重试。",
   "profileSetupNoRelaysConnected": "无法连接网络。请检查连接后重试。",
+  "profilePinConnectionFailed": "无法连接网络。请检查连接后重试。",
   "profileSetupDisplayNameLabel": "昵称",
   "profileSetupDisplayNameRequired": "请输入昵称",
   "profileSetupBioLabel": "简介（可选）",

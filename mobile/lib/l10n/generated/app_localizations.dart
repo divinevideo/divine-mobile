@@ -1358,13 +1358,19 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{You can pin {count} video. Unpin it to make room.} other{You can pin up to {count} videos. Unpin one to make room.}}'**
   String profilePinLimitReached(int count);
 
-  /// Snackbar when pinning a video failed (offline, relay rejected, signing failed).
+  /// Snackbar when a profile pin or unpin could not reach the relays.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the network. Check your connection and try again.'**
+  String get profilePinConnectionFailed;
+
+  /// Snackbar when pinning a video failed after reaching the relays, such as a rejection or signing failure.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t pin that video. Try again.'**
   String get profilePinFailed;
 
-  /// Snackbar when unpinning a video failed (offline, relay rejected, signing failed).
+  /// Snackbar when unpinning a video failed after reaching the relays, such as a rejection or signing failure.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t unpin that video. Try again.'**

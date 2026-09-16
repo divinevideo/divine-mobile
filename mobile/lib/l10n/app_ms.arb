@@ -464,6 +464,7 @@
   "profileSetupClaimFailed": "Gagal mengambil nama pengguna. Sila cuba lagi.",
   "profileSetupPublishFailed": "Gagal menerbitkan profil. Sila cuba lagi.",
   "profileSetupNoRelaysConnected": "Tidak dapat mencapai rangkaian. Semak sambungan anda dan cuba lagi.",
+  "profilePinConnectionFailed": "Tidak dapat mencapai rangkaian. Semak sambungan anda dan cuba lagi.",
   "profileSetupDisplayNameLabel": "Nama Paparan",
   "profileSetupDisplayNameRequired": "Sila masukkan nama paparan",
   "profileSetupBioLabel": "Bio (Pilihan)",

@@ -817,6 +817,10 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'نیٹ ورک تک رسائی نہیں ہو سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+
+  @override
   String get profilePinFailed => 'وہ ویڈیو پن نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
 
   @override

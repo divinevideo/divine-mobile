@@ -464,6 +464,7 @@
   "profileSetupClaimFailed": "Không thể đăng ký tên người dùng. Vui lòng thử lại.",
   "profileSetupPublishFailed": "Không thể đăng hồ sơ. Vui lòng thử lại.",
   "profileSetupNoRelaysConnected": "Không kết nối được với mạng. Kiểm tra kết nối của bạn rồi thử lại nhé.",
+  "profilePinConnectionFailed": "Không kết nối được với mạng. Kiểm tra kết nối của bạn rồi thử lại nhé.",
   "profileSetupDisplayNameLabel": "Tên hiển thị",
   "profileSetupDisplayNameRequired": "Vui lòng nhập tên hiển thị",
   "profileSetupBioLabel": "Tiểu sử (Không bắt buộc)",

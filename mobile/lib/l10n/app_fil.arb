@@ -225,6 +225,7 @@
     "profileSetupClaimFailed": "Nabigong i-claim ang username. Subukan ulit.",
     "profileSetupPublishFailed": "Nabigong i-publish ang profile. Subukan ulit.",
     "profileSetupNoRelaysConnected": "Hindi makonekta sa network. Tingnan ang koneksyon mo at subukan ulit.",
+    "profilePinConnectionFailed": "Hindi makonekta sa network. Tingnan ang koneksyon mo at subukan ulit.",
     "profileSetupDisplayNameLabel": "Pangalang ipapakita",
     "profileSetupDisplayNameRequired": "Maglagay ng display name",
     "profileSetupBioLabel": "Bio (opsyonal)",

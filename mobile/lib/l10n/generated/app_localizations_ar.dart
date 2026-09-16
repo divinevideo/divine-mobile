@@ -803,6 +803,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'لا يمكن الوصول إلى الشبكة. تحقق من اتصالك وحاول مرة أخرى.';
+
+  @override
   String get profilePinFailed => 'تعذّر تثبيت هذا الفيديو. حاول مرة أخرى.';
 
   @override

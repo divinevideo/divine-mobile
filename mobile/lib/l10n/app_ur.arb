@@ -464,6 +464,7 @@
   "profileSetupClaimFailed": "صارف نام حاصل نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
   "profileSetupPublishFailed": "پروفائل شائع نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
   "profileSetupNoRelaysConnected": "نیٹ ورک تک رسائی نہیں ہو سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
+  "profilePinConnectionFailed": "نیٹ ورک تک رسائی نہیں ہو سکی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
   "profileSetupDisplayNameLabel": "ڈسپلے نام",
   "profileSetupDisplayNameRequired": "براہ کرم ڈسپلے نام درج کریں",
   "profileSetupBioLabel": "بائیو (اختیاری)",
