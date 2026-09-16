@@ -166,9 +166,8 @@ class UserName extends ConsumerWidget {
     final showCheckmark =
         showProfileBadges && shouldShowSpecialProfileCheckmark(effectivePubkey);
     // The beta chit yields to both the checkmark and the OG Viner chit, so a
-    // name never carries two of them. The Viner rosters are disjoint by
-    // construction; many team accounts also appear on the beta roster, so the
-    // checkmark still has to be checked here.
+    // name never carries two of them. Team members can also be eligible beta
+    // testers, so checkmark precedence is still required.
     final isOgBetaTester =
         showProfileBadges &&
         !isOgViner &&

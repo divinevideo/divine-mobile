@@ -136,11 +136,8 @@ class _ProfileHeaderNameRow extends ConsumerWidget {
     final textStyle = VineTheme.titleLargeFont(
       color: context.vineColors.primaryText,
     );
-    // Every chit beside the name is gated on !isVanished for the reason the
-    // comment below gives: all three rosters are compiled in, so none of them
-    // can drop an account that vanishes after release. Only the beta chit
-    // carried the gate until now, which left a vanished team pubkey rendering
-    // "Deleted account" with a checkmark beside it.
+    // A vanished account renders "Deleted account"; no identity chit belongs
+    // beside it, even if cached eligibility or team membership still matches.
     final isOgViner =
         !isVanished &&
         ref.watch(
@@ -151,12 +148,8 @@ class _ProfileHeaderNameRow extends ConsumerWidget {
     final showCheckmark =
         !isVanished && shouldShowSpecialProfileCheckmark(userIdHex);
     // The beta chit yields to both the checkmark and the OG Viner chit, so a
-    // name never carries two of them. The Viner rosters are disjoint by
-    // construction; many team accounts also appear on the beta roster, so the
-    // checkmark still has to be checked here.
-    // A vanished account renders profileDeletedAccountName, so a chit beside
-    // it is incoherent. The roster is compiled in and cannot drop anyone who
-    // vanishes after release, so the gate has to live here.
+    // name never carries two of them. Team members can also be eligible beta
+    // testers, so checkmark precedence is still required.
     final isOgBetaTester =
         !isVanished &&
         !isOgViner &&
