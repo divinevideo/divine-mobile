@@ -2505,6 +2505,67 @@ void main() {
 
         expect(find.text('overlay'), findsOneWidget);
       });
+
+      testWidgets(
+        'a player state change rebuilds only its own page, not the '
+        'neighbours',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(
+            playerIds: const <int>[0, 1],
+            firstFrameRenderedOnListen: false,
+          );
+          final overlayBuilds = <int, int>{};
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('current'), _makeVideo('next')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                  overlayBuilder:
+                      (context, index, controller, {required isActive}) {
+                        overlayBuilds[index] = (overlayBuilds[index] ?? 0) + 1;
+                        return Text('overlay $index');
+                      },
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            await tester.pump();
+
+            // Both pages have mounted and settled through their own init.
+            expect(overlayBuilds[0], greaterThan(0));
+            expect(overlayBuilds[1], greaterThan(0));
+            final currentBuilds = overlayBuilds[0]!;
+            final nextBuilds = overlayBuilds[1]!;
+
+            // The next page's first frame lands: one more build for it,
+            // none for the page the viewer is watching. Before rebuilds
+            // were scoped per page this went through setState on the
+            // whole PageView and rebuilt every overlay on every swipe.
+            await harness.sendEvent(1, <Object?, Object?>{
+              'status': 'ready',
+              'videoWidth': 1280,
+              'videoHeight': 720,
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump();
+            await tester.pump();
+
+            expect(overlayBuilds[1], equals(nextBuilds + 1));
+            expect(overlayBuilds[0], equals(currentBuilds));
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pumpAndSettle();
+            await harness.dispose();
+          }
+        },
+      );
     });
 
     group('scroll direction', () {

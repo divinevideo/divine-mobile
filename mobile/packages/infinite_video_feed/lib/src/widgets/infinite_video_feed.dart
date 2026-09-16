@@ -343,6 +343,17 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   static const Cubic _pageJumpCurve = Curves.easeInOut;
 
   late final PageController _pageController;
+
+  /// One revision counter per page index; the page's subtree listens to it.
+  ///
+  /// Player state changes (init, dimensions, first frame, errors) and the
+  /// active-page flip concern one or two pages, so they bump those counters
+  /// instead of calling [setState] on the whole [PageView]. A feed-wide
+  /// `setState` rebuilt every mounted page's overlay — author row, caption,
+  /// action rail, subtitle pill — three or four times per swipe, and that
+  /// rebuild plus the text relayout it forced was the one late frame each
+  /// swipe still had after the raster work landed.
+  final _pageRevisions = <int, ValueNotifier<int>>{};
   late final ValueNotifier<double> _pagePosition;
 
   // Live controller window — read by build(). Stays on the State because
@@ -703,6 +714,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _sources.clear();
     _pagePosition.dispose();
     _pageController.dispose();
+    for (final revision in _pageRevisions.values) {
+      revision.dispose();
+    }
+    _pageRevisions.clear();
     for (final controller in _controllers.values) {
       unawaited(controller.dispose());
     }
@@ -716,9 +731,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   void _log(String message) =>
       Log.debug(message, name: _logName, category: LogCategory.video);
 
+  /// Rebuilds every page. Reserved for changes that touch the whole feed —
+  /// the video list, the active flag, release on backgrounding.
   void _rebuild() {
     if (mounted) setState(() {});
   }
+
+  /// Rebuilds one page. See [_pageRevisions].
+  void _rebuildPage(int index) {
+    if (!mounted) return;
+    _pageRevision(index).value++;
+  }
+
+  ValueNotifier<int> _pageRevision(int index) =>
+      _pageRevisions.putIfAbsent(index, () => ValueNotifier<int>(0));
 
   void _setPlaybackActive(bool isActive) {
     if (_isActive == isActive) return;
@@ -1151,6 +1177,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _sources.remove(index);
     _controllerInitGenerations.remove(index);
     unawaited(_controllers.remove(index)?.dispose());
+    _rebuildPage(index);
   }
   // coverage:ignore-end
 
@@ -1385,6 +1412,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         _errorTypes[index] = errorType;
         _errors.add(index);
       }
+      // The removal above means ownsInit() no longer holds, so the rebuild
+      // after this block is skipped; the error layer still has to show.
+      _rebuildPage(index);
     }
     // coverage:ignore-end
 
@@ -1397,7 +1427,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       return;
       // coverage:ignore-end
     }
-    _rebuild();
+    _rebuildPage(index);
     if (_errors.contains(index)) {
       // coverage:ignore-start
       // Native init-failure auto-retry scheduling is exercised by runtime
@@ -1463,7 +1493,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _staleDetector.forget(index);
     _subscriptions.unsubscribe(index);
     unawaited(_controllers.remove(index)?.dispose());
-    _rebuild();
+    _rebuildPage(index);
     // Skip cache on manual retry so a corrupt cached file does not loop
     // the same failure indefinitely.
     await _initController(index, skipCache: true);
@@ -1714,7 +1744,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     unawaited(_controllers[index]?.stop());
     _errors.add(index);
     _errorTypes[index] ??= type;
-    _rebuild();
+    _rebuildPage(index);
     _scheduleAutoRetryIfEligible(index);
   }
 
@@ -1729,7 +1759,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     unawaited(_controllers[index]?.stop());
     _errors.add(index);
     _errorTypes[index] = type;
-    _rebuild();
+    _rebuildPage(index);
   }
 
   String? _videoIdAt(int index) {
@@ -1749,7 +1779,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (terminalType == null) return false;
     _errors.add(index);
     _errorTypes[index] = terminalType;
-    _rebuild();
+    _rebuildPage(index);
     return true;
   }
 
@@ -1826,8 +1856,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   // platform-emitted stream traffic itself.
   void _attachSubscriptions(int index, DivineVideoPlayerController controller) {
     _subscriptions
-      ..subscribeToDimensions(index, controller, onDimensionsReady: _rebuild)
-      ..subscribeToFirstFrame(index, controller, onFirstFrame: _rebuild)
+      ..subscribeToDimensions(
+        index,
+        controller,
+        onDimensionsReady: () => _rebuildPage(index),
+      )
+      ..subscribeToFirstFrame(
+        index,
+        controller,
+        onFirstFrame: () => _rebuildPage(index),
+      )
       ..subscribeToPlaybackErrors(
         index,
         controller,
@@ -1946,7 +1984,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
     unawaited(_onIndexChanged(index));
 
-    if (mounted) setState(() {});
+    // Only the outgoing and incoming pages read `isActive`; every other
+    // mounted page is unchanged, so leave its overlay alone.
+    _rebuildPage(previousIndex);
+    _rebuildPage(index);
   }
   // coverage:ignore-end
 
@@ -1970,65 +2011,74 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       scrollDirection: widget.scrollDirection,
       onPageChanged: _onPageChanged,
       itemCount: widget.videos.length,
-      itemBuilder: (context, index) {
-        final hasError = _errors.contains(index) || _hasTerminalError(index);
-        final controller = _controllers[index];
+      itemBuilder: (context, index) => ValueListenableBuilder<int>(
+        valueListenable: _pageRevision(index),
+        builder: (context, _, _) => _buildPage(context, index),
+      ),
+    );
+  }
 
-        final overlay = widget.overlayBuilder?.call(
-          context,
-          index,
-          controller,
-          isActive: index == _currentIndex,
-        );
-        final videoItem = VideoItemWidget(
-          controller: controller,
-          shouldPortraitExpand: widget.shouldPortraitExpand,
-        );
+  /// One page of the feed: loading layer, video, overlay and error layer.
+  ///
+  /// Rebuilt through its own revision counter (see [_pageRevision]), so a
+  /// state change on this index never rebuilds its neighbours.
+  Widget _buildPage(BuildContext context, int index) {
+    final hasError = _errors.contains(index) || _hasTerminalError(index);
+    final controller = _controllers[index];
 
-        final hasVideoSize =
-            controller != null && controller.state.videoHeight != 0;
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // Loading layer — shown while the video surface is not yet
-            // available. Removed once the first frame is rendered so the
-            // widget (and any timers it owns) are properly disposed.
-            if (!hasError &&
-                (!hasVideoSize || !controller.state.isFirstFrameRendered))
-              ?widget.loadingBuilder?.call(
+    final overlay = widget.overlayBuilder?.call(
+      context,
+      index,
+      controller,
+      isActive: index == _currentIndex,
+    );
+    final videoItem = VideoItemWidget(
+      controller: controller,
+      shouldPortraitExpand: widget.shouldPortraitExpand,
+    );
+
+    final hasVideoSize =
+        controller != null && controller.state.videoHeight != 0;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Loading layer — shown while the video surface is not yet
+        // available. Removed once the first frame is rendered so the
+        // widget (and any timers it owns) are properly disposed.
+        if (!hasError &&
+            (!hasVideoSize || !controller.state.isFirstFrameRendered))
+          ?widget.loadingBuilder?.call(
+            context,
+            index,
+            isSquare: _isSquareVideo(controller),
+          ),
+
+        if (!hasError && hasVideoSize)
+          widget.videoBuilder?.call(
                 context,
+                videoItem,
                 index,
-                isSquare: _isSquareVideo(controller),
-              ),
+                controller,
+              ) ??
+              videoItem,
+        // Overlay layer — consumer-provided controls, progress, etc.
+        ?overlay,
 
-            if (!hasError && hasVideoSize)
-              widget.videoBuilder?.call(
-                    context,
-                    videoItem,
-                    index,
-                    controller,
-                  ) ??
-                  videoItem,
-            // Overlay layer — consumer-provided controls, progress, etc.
-            ?overlay,
-
-            if (hasError)
-              // coverage:ignore-start
-              // Consumer-supplied error UI is wiring only; package tests cover
-              // retry behavior elsewhere and don't need to duplicate builder
-              // composition here.
-              ?widget.errorBuilder?.call(
-                context,
-                index,
-                () => unawaited(retryAt(index).then((_) {})),
-                _terminalErrorTypeAt(index) ??
-                    _errorTypes[index] ??
-                    VideoErrorType.generic,
-              ),
-            // coverage:ignore-end
-          ],
-        );
-      },
+        if (hasError)
+          // coverage:ignore-start
+          // Consumer-supplied error UI is wiring only; package tests cover
+          // retry behavior elsewhere and don't need to duplicate builder
+          // composition here.
+          ?widget.errorBuilder?.call(
+            context,
+            index,
+            () => unawaited(retryAt(index).then((_) {})),
+            _terminalErrorTypeAt(index) ??
+                _errorTypes[index] ??
+                VideoErrorType.generic,
+          ),
+        // coverage:ignore-end
+      ],
     );
   }
 }
