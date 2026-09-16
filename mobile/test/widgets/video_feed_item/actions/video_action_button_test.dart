@@ -271,10 +271,9 @@ void main() {
       });
     });
 
-    group('raster', () {
+    group('icon painting', () {
       testWidgets(
-        'draws the icon through $ShadowedDivineIcon so its shadow blurs are '
-        'baked once instead of re-rastered on every video frame',
+        'uses $ShadowedDivineIcon with the Figma shadow-10 pair',
         (tester) async {
           await tester.pumpWidget(
             buildSubject(
