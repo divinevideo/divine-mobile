@@ -203,9 +203,23 @@ gh api graphql -f query='
       nodes { author{login} body } } } } } } }'
 ```
 
-The `gh pr view` line does not paginate; the REST call returns the full review
-list. Pass a connection's `endCursor` to its `after:` argument while
-`hasNextPage` is true.
+`gh pr view --json reviews` already paginates internally and returns every
+review regardless of count; the REST form above is here because the
+verification step later in this file needs REST's field names (`commit_id`,
+`submitted_at`), which `--json reviews` does not expose the same way. For
+`reviewThreads` itself, page with `pageInfo.hasNextPage` / `endCursor` as
+shown. The nested `comments` connection is different: it is a separate
+connection *per thread node*, so adding `after:` to the shared
+`comments(first:10)` selection applies that one cursor to every thread's
+comments in the batch, not to a single thread. To read comment 11+ of one
+specific thread, query that thread by id instead:
+
+```bash
+gh api graphql -f query='
+{ node(id: "<thread-id>") { ... on PullRequestReviewThread {
+  comments(first: 10, after: "<cursor>") { pageInfo{ hasNextPage endCursor }
+    nodes { author{login} body } } } } }'
+```
 
 Every item lands in exactly one bucket: **fixed**, **escalated**
 (needs product/architecture judgment — name the decision), or
