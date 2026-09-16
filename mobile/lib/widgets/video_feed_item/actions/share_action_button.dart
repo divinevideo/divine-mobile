@@ -204,20 +204,16 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
 
   @override
   void dispose() {
-    final crosspostCubit = _crosspostCubit;
-    if (crosspostCubit != null) {
-      _runShareDetached(crosspostCubit.close(), 'close crosspost cubit');
-    }
-    final ownerVideoActionsCubit = _ownerVideoActionsCubit;
-    if (ownerVideoActionsCubit != null) {
-      _runShareDetached(
-        ownerVideoActionsCubit.close(),
-        'close owner video actions cubit',
-      );
-    }
+    _closeCubitIfPresent(_crosspostCubit, 'crosspost');
+    _closeCubitIfPresent(_ownerVideoActionsCubit, 'owner video actions');
     _runShareDetached(_shareSheetBloc.close(), 'close share sheet bloc');
     _messageController.dispose();
     super.dispose();
+  }
+
+  void _closeCubitIfPresent(BlocBase<Object?>? cubit, String name) {
+    if (cubit == null) return;
+    _runShareDetached(cubit.close(), 'close $name cubit');
   }
 
   /// Dismisses the share sheet from a context inside it.
