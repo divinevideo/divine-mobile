@@ -176,10 +176,12 @@ class VideoEditorConstants {
   /// font of every saved draft.
   ///
   /// `familyName` is the name google_fonts publishes the family under, spaces
-  /// and capitalisation included ('Press Start 2P', not 'PressStart2p'). It
-  /// has to match exactly, because `editorTextFontIndexFor` derives the
-  /// serialized `fontFamily` identifier from it; the round-trip test in
-  /// `test/utils/editor_text_fonts_test.dart` fails on a name that does not.
+  /// and capitalisation included ('Press Start 2P', not 'PressStart2p'); it is
+  /// also the label the font picker shows. `editorTextFontIndexFor` derives the
+  /// serialized `fontFamily` identifier from it with the spaces stripped, so
+  /// the round-trip test in `test/utils/editor_text_fonts_test.dart` pins the
+  /// spelling and capitalisation but cannot see a spacing error. Copy the name
+  /// from the google_fonts source instead of retyping it.
   ///
   /// Every entry ships under the SIL Open Font License 1.1, Apache 2.0 or the
   /// Ubuntu Font License, all of which permit commercial use. Before adding a
