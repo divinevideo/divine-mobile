@@ -116,6 +116,14 @@ comments alone, or an unsubmitted `PENDING` review does not deliver a verdict.
 | Verified unresolved finding that must be fixed before merge and that you are not authorized to resolve directly (or that needs a named owner decision) | `REQUEST_CHANGES` (`gh pr review --request-changes`), with the defect, evidence, and required remediation |
 | Partial review, missing evidence needed to decide, draft feedback, or explicitly advisory feedback | `COMMENT` (`gh pr review --comment`), stating why no approval/change-request verdict is possible and what remains |
 
+The table assumes a non-draft pull request. `state: OPEN` alone does not
+imply that — a draft is also open, and nothing above gates on `isDraft`.
+[Establish authorship](#1-establish-authorship-before-you-touch-anything)
+already makes a draft read-only unless the author explicitly asked for
+implementation, and that read-only status covers submitting a formal
+`APPROVE` the same way it covers pushing code: report findings as advisory
+feedback and hold the verdict until the PR is marked ready.
+
 Do not choose `COMMENT` merely because you are an agent, did not rerun tests
 locally, have nonblocking suggestions, or are not the person who will merge.
 Assess whether the available evidence is sufficient and disclose validation
