@@ -85,10 +85,16 @@ git grep -n -F -- '<snippet>' '<commit>' -- '<path>'
 git log --all -S'<snippet>' -- '<path>'
 ```
 
-The commit-object check must succeed before any path or snippet check. Treat a
-`fatal:` result or exit status 128 as a broken lookup and stop; it is not
-evidence that the cited content is absent. For `git grep`, exit status 1 means
-the lookup succeeded and the snippet was not found.
+The commit-object check must succeed before any path or snippet check: a
+`fatal:` result or exit status 128 from `git cat-file -e '<commit>^{commit}'`
+means that lookup itself is broken (unfetched commit, wrong ref) and is not
+evidence about the cited content — stop and fix the lookup rather than
+reasoning about the finding. Once the commit resolves, a `fatal:`/128 from the
+*path* check (`git cat-file -e '<commit>:<path>'`) means the opposite: the
+path does not exist at that commit, which is real evidence for a finding
+about a deleted, renamed, or relocated file — do not discard it as
+inconclusive. For `git grep`, exit status 1 means the lookup succeeded and the
+snippet was not found.
 
 The last command is supporting history only; the reviewed commit is the
 authority. A nearby comment that describes a rejected pattern is not evidence
