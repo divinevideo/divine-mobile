@@ -8,6 +8,17 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
+  DivineVideoClip ratioClip(double? v, {double? orig = 9 / 16}) =>
+      DivineVideoClip(
+        id: 'c',
+        video: editor.EditorVideo.file(File('/tmp/x.mp4')),
+        duration: const Duration(seconds: 5),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: model.AspectRatio.square,
+        originalAspectRatio: orig,
+        videoAspectRatio: v,
+      );
+
   DivineVideoClip clip(String videoPath) => DivineVideoClip(
     id: 'c1',
     video: editor.EditorVideo.file(File(videoPath)),
@@ -535,5 +546,19 @@ void main() {
         <String>['/stills/a.jpg', '/stills/b.jpg'],
       );
     });
+  });
+
+  test('degenerate measured ratios fall back', () {
+    expect(ratioClip(0).videoAspectRatio, 9 / 16);
+    expect(ratioClip(double.nan).videoAspectRatio, 9 / 16);
+    expect(ratioClip(double.infinity).videoAspectRatio, 9 / 16);
+    expect(ratioClip(-1.5).videoAspectRatio, 9 / 16);
+    expect(ratioClip(1.0).videoAspectRatio, 1.0);
+  });
+
+  test('a degenerate persisted original ratio falls back too', () {
+    expect(ratioClip(null, orig: 0).originalAspectRatio, 9 / 16);
+    expect(ratioClip(null, orig: double.nan).originalAspectRatio, 9 / 16);
+    expect(ratioClip(null, orig: 3 / 4).originalAspectRatio, 3 / 4);
   });
 }

@@ -382,7 +382,12 @@ class DivineVideoClip {
   }
 
   /// Returns the original aspect ratio, or 9/16 as fallback if not set.
-  double get originalAspectRatio => _originalAspectRatio ?? 9 / 16;
+  ///
+  /// Non-positive and non-finite stored values fall back too: this now divides
+  /// a layout box in `computeSurfaceSize`, where a 0 gives an infinite
+  /// constraint and a NaN gives a NaN one, both of which are layout assertions
+  /// rather than a wrong shape.
+  double get originalAspectRatio => _usableRatio(_originalAspectRatio) ?? 9 / 16;
 
   /// Aspect ratio of the frames in [video].
   ///
@@ -392,7 +397,15 @@ class DivineVideoClip {
   /// first clip's value is the editor canvas's coordinate system for the whole
   /// session (and every draft saved from it), so layers authored against it
   /// would shift if a transform rewrote it.
-  double get videoAspectRatio => _videoAspectRatio ?? originalAspectRatio;
+  double get videoAspectRatio =>
+      _usableRatio(_videoAspectRatio) ?? originalAspectRatio;
+
+  /// A ratio only counts when it can divide a box: finite and above zero.
+  ///
+  /// Both fields are persisted and one of them is measured off a file, so a
+  /// bad value survives in a draft rather than being recomputed.
+  static double? _usableRatio(double? ratio) =>
+      (ratio != null && ratio.isFinite && ratio > 0) ? ratio : null;
 
   DivineVideoClip copyWith({
     String? id,
