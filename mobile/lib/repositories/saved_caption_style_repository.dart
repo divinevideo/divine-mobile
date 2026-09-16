@@ -19,8 +19,12 @@ import 'package:uuid/uuid.dart';
 class SavedCaptionStyleRepository {
   /// Creates a repository over [dao] for [ownerPubkey].
   ///
-  /// [ownerPubkey] stamps every saved row and scopes every read; `null`
-  /// reads and writes ownerless rows only, which the next sign-in claims.
+  /// [ownerPubkey] stamps every saved row and scopes every read. A `null`
+  /// owner is unscoped rather than ownerless: the DAO drops the predicate
+  /// entirely, so reads return every row in the table, including other
+  /// accounts'. Nothing passes null today, because
+  /// `resolveLocalContentOwnerPubkey` always returns a value, falling back to
+  /// the anonymous marker the next sign-in claims.
   SavedCaptionStyleRepository({
     required SavedCaptionStylesDao dao,
     this.ownerPubkey,
