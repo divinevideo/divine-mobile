@@ -15,40 +15,42 @@ void main() {
     redirectUri: 'divine://oauth/callback',
   );
 
-  test('returns the server-computed eligibility boolean', () async {
-    final oauth = KeycastOAuth(
-      config: config,
-      httpClient: MockClient((request) async {
-        expect(
-          request.url,
-          Uri.parse(
-            'https://login.divine.video/api/public/users/$pubkey/og-diviner',
-          ),
-        );
-        return http.Response('{"eligible":true}', 200);
-      }),
-    );
+  group('isOgDiviner', () {
+    test('returns the server-computed eligibility boolean', () async {
+      final oauth = KeycastOAuth(
+        config: config,
+        httpClient: MockClient((request) async {
+          expect(
+            request.url,
+            Uri.parse(
+              'https://login.divine.video/api/public/users/$pubkey/og-diviner',
+            ),
+          );
+          return http.Response('{"eligible":true}', 200);
+        }),
+      );
 
-    expect(await oauth.isOgDiviner(pubkey.toUpperCase()), isTrue);
-  });
+      expect(await oauth.isOgDiviner(pubkey.toUpperCase()), isTrue);
+    });
 
-  test('rejects a malformed eligibility response', () async {
-    final oauth = KeycastOAuth(
-      config: config,
-      httpClient: MockClient(
-        (_) async => http.Response('{"eligible":"yes"}', 200),
-      ),
-    );
+    test('rejects a malformed eligibility response', () async {
+      final oauth = KeycastOAuth(
+        config: config,
+        httpClient: MockClient(
+          (_) async => http.Response('{"eligible":"yes"}', 200),
+        ),
+      );
 
-    expect(oauth.isOgDiviner(pubkey), throwsFormatException);
-  });
+      expect(oauth.isOgDiviner(pubkey), throwsFormatException);
+    });
 
-  test('rejects a failed eligibility response', () async {
-    final oauth = KeycastOAuth(
-      config: config,
-      httpClient: MockClient((_) async => http.Response('not found', 404)),
-    );
+    test('rejects a failed eligibility response', () async {
+      final oauth = KeycastOAuth(
+        config: config,
+        httpClient: MockClient((_) async => http.Response('not found', 404)),
+      );
 
-    expect(oauth.isOgDiviner(pubkey), throwsA(isA<http.ClientException>()));
+      expect(oauth.isOgDiviner(pubkey), throwsA(isA<http.ClientException>()));
+    });
   });
 }

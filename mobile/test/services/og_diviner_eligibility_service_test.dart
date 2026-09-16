@@ -16,42 +16,44 @@ void main() {
     redirectUri: 'divine://oauth/callback',
   );
 
-  test('fetches once and reuses the result in memory', () async {
-    var requests = 0;
-    final service = OgDivinerEligibilityService(
-      keycast: KeycastOAuth(
-        config: config,
-        httpClient: MockClient((_) async {
-          requests++;
-          return http.Response('{"eligible":true}', 200);
-        }),
-      ),
-    );
+  group('isEligible', () {
+    test('fetches once and reuses the result in memory', () async {
+      var requests = 0;
+      final service = OgDivinerEligibilityService(
+        keycast: KeycastOAuth(
+          config: config,
+          httpClient: MockClient((_) async {
+            requests++;
+            return http.Response('{"eligible":true}', 200);
+          }),
+        ),
+      );
 
-    expect(await service.isEligible(pubkey), isTrue);
-    expect(await service.isEligible(pubkey.toUpperCase()), isTrue);
-    expect(requests, 1);
-  });
+      expect(await service.isEligible(pubkey), isTrue);
+      expect(await service.isEligible(pubkey.toUpperCase()), isTrue);
+      expect(requests, 1);
+    });
 
-  test('coalesces concurrent requests for the same pubkey', () async {
-    var requests = 0;
-    final service = OgDivinerEligibilityService(
-      keycast: KeycastOAuth(
-        config: config,
-        httpClient: MockClient((_) async {
-          requests++;
-          return http.Response('{"eligible":true}', 200);
-        }),
-      ),
-    );
+    test('coalesces concurrent requests for the same pubkey', () async {
+      var requests = 0;
+      final service = OgDivinerEligibilityService(
+        keycast: KeycastOAuth(
+          config: config,
+          httpClient: MockClient((_) async {
+            requests++;
+            return http.Response('{"eligible":true}', 200);
+          }),
+        ),
+      );
 
-    expect(
-      await Future.wait([
-        service.isEligible(pubkey),
-        service.isEligible(pubkey),
-      ]),
-      [true, true],
-    );
-    expect(requests, 1);
+      expect(
+        await Future.wait([
+          service.isEligible(pubkey),
+          service.isEligible(pubkey),
+        ]),
+        [true, true],
+      );
+      expect(requests, 1);
+    });
   });
 }
