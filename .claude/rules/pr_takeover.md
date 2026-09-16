@@ -212,9 +212,9 @@ instead of only commenting "fixed"; do not dismiss another reviewer's decision.
 
 Before pushing, enumerate the review items and decide each one. Fetch
 inline threads too — a PR can carry substantive findings with zero
-inline threads, or findings only in outdated threads. The queries below show
-only their first page: inspect `pageInfo` and paginate the reviews, threads, and
-each thread's comments until all are read before claiming complete coverage:
+inline threads, or findings only in outdated threads. The GraphQL query below
+shows only its first page: inspect `pageInfo` and paginate the threads and each
+thread's comments until all are read before claiming complete coverage:
 
 ```bash
 gh pr view <number> --json reviews --jq '.reviews[] | "\(.author.login) \(.state)\n\(.body)"'
