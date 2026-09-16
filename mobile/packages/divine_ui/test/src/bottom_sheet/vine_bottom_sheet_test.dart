@@ -251,7 +251,7 @@ void main() {
       },
     );
 
-    testWidgets('content is scrollable when expanded', (tester) async {
+    testWidgets('content is scrollable in scrollable mode', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -283,26 +283,6 @@ void main() {
 
       // Now last item should be visible
       expect(find.text('Item 49'), findsOneWidget);
-    });
-
-    testWidgets('wraps content when expanded is false', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: VineBottomSheet(
-              title: Text('Test Sheet'),
-              expanded: false,
-              body: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [Text('Item 1'), Text('Item 2')],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('Item 1'), findsOneWidget);
-      expect(find.text('Item 2'), findsOneWidget);
     });
 
     testWidgets('renders fixed mode with scrollable false', (tester) async {

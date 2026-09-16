@@ -49,17 +49,12 @@ Complete dark-mode design system providing:
 | Component | Description |
 |-----------|-------------|
 | `VineBottomSheet` | Base bottom sheet with drag handle and themed styling. Supports scrollable and fixed modes. |
-| `VineBottomSheetActionMenu` | Action menu variant (list of tappable actions) |
+| `VineBottomSheetActionMenu` | Icon-and-label action list. For bespoke menus, use `VineBottomSheet.show<T>` with private tiles that pop a typed result; see `lib/screens/comments/widgets/comment_options_modal.dart`. |
 | `VineBottomSheetDragHandle` | Reusable drag handle widget |
 | `VineBottomSheetHeader` | Header with title/subtitle for bottom sheets |
+| `VineBottomSheetPrompt` | Confirmation or decision prompt with typed results. |
 | `VineBottomSheetSelectionMenu` | Selection menu variant (pick from options) |
-
-**Removed:** `VineBottomSheetTileMenu` — an icon-and-label tile menu, never
-exported from the package barrel and never called. Use
-`VineBottomSheetActionMenu` for icon-and-label action lists, or
-`VineBottomSheet.show<T>` with private tiles that pop a typed result
-(`lib/screens/comments/widgets/comment_options_modal.dart` is the worked
-example).
+| `VineKeyboardAwareFooter` | Bottom-sheet footer that stays visible above the keyboard. |
 
 ### Text Field
 
