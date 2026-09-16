@@ -1,7 +1,6 @@
 // ABOUTME: Tests for environment providers publishing service changes to state
 // ABOUTME: Covers value propagation, a single subscription, and disposal cleanup
 
-import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/environment_config.dart';
@@ -9,22 +8,10 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/services/environment_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _RecordingEnvironmentService extends EnvironmentService {
-  int addListenerCalls = 0;
-  int removeListenerCalls = 0;
+import 'listener_call_recorder.dart';
 
-  @override
-  void addListener(VoidCallback listener) {
-    addListenerCalls++;
-    super.addListener(listener);
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    removeListenerCalls++;
-    super.removeListener(listener);
-  }
-}
+class _RecordingEnvironmentService extends EnvironmentService
+    with ListenerCallRecorder {}
 
 void main() {
   group('environment providers', () {

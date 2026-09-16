@@ -1,7 +1,6 @@
 // ABOUTME: Tests for Riverpod providers managing feature flag service and state
 // ABOUTME: Validates provider setup, dependency injection, and state management
 
-import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,25 +12,13 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'listener_call_recorder.dart';
+
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
-class _RecordingFeatureFlagService extends FeatureFlagService {
+class _RecordingFeatureFlagService extends FeatureFlagService
+    with ListenerCallRecorder {
   _RecordingFeatureFlagService(super._prefs, super._buildConfig);
-
-  int addListenerCalls = 0;
-  int removeListenerCalls = 0;
-
-  @override
-  void addListener(VoidCallback listener) {
-    addListenerCalls++;
-    super.addListener(listener);
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    removeListenerCalls++;
-    super.removeListener(listener);
-  }
 }
 
 void main() {
