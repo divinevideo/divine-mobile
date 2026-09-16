@@ -22,6 +22,7 @@ import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
@@ -30,6 +31,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/nip05_verification_service.dart';
+import 'package:openvine/services/og_diviner_eligibility_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -38,6 +40,12 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Mock classes (public because they are imported by many test files)
+class _IneligibleOgDivinerService extends Fake
+    implements OgDivinerEligibilityService {
+  @override
+  Future<bool> isEligible(String pubkey) async => false;
+}
+
 class MockSharedPreferences extends Mock implements SharedPreferences {}
 
 class MockAuthService extends Mock implements AuthService {}
@@ -465,6 +473,12 @@ List<Override> getStandardTestOverrides({
     // Override NIP-05 verification service to avoid opening Drift/SQLite in
     // widget tests that only care about badge presence, not verification.
     nip05VerificationServiceProvider.overrideWithValue(mockNip05),
+
+    // Identity widgets must not start HTTP requests and provider retry timers
+    // in unrelated widget tests. Badge tests override this result explicitly.
+    ogDivinerEligibilityServiceProvider.overrideWithValue(
+      _IneligibleOgDivinerService(),
+    ),
 
     // Always override FollowRepository to prevent LateInitializationError from
     // CacheSync._dao (uninitialized Drift DAO) when VideoFollowButton calls
