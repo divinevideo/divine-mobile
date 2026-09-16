@@ -19,6 +19,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
+import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/config/profile_metrics.dart';
@@ -51,12 +52,14 @@ import 'package:openvine/widgets/profile/profile_actions_sheet/profile_actions_s
 import 'package:openvine/widgets/profile/profile_header_widget.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 import 'package:openvine/widgets/profile/profile_website_row.dart';
+import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:verifier_client/verifier_client.dart';
 
 import '../../helpers/finders.dart';
 import '../../helpers/go_router.dart';
@@ -72,6 +75,10 @@ class _MockOthersFollowersBloc
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
+
+class _MockOtherProfileBloc
+    extends MockBloc<OtherProfileEvent, OtherProfileState>
+    implements OtherProfileBloc {}
 
 class _MockBackgroundPublishBloc
     extends MockBloc<BackgroundPublishEvent, BackgroundPublishState>
@@ -363,6 +370,7 @@ void main() {
       bool renderHeader = true,
       MockAuthService? authService,
       bool isVanished = false,
+      OtherProfileState? otherProfileState,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -431,12 +439,23 @@ void main() {
           const Stream<PeopleListsState>.empty(),
           initialState: peopleListsState ?? const PeopleListsState(),
         );
+        _MockOtherProfileBloc? mockOtherProfileBloc;
+        if (otherProfileState != null) {
+          mockOtherProfileBloc = _MockOtherProfileBloc();
+          whenListen(
+            mockOtherProfileBloc,
+            const Stream<OtherProfileState>.empty(),
+            initialState: otherProfileState,
+          );
+        }
         header = MultiBlocProvider(
           providers: [
             BlocProvider<OthersFollowersBloc>.value(
               value: mockOthersFollowersBloc,
             ),
             BlocProvider<PeopleListsBloc>.value(value: mockPeopleListsBloc),
+            if (mockOtherProfileBloc != null)
+              BlocProvider<OtherProfileBloc>.value(value: mockOtherProfileBloc),
           ],
           child: header,
         );
@@ -3567,45 +3586,99 @@ void main() {
         },
       );
     });
-  });
+    group('verified account chips (#6154)', () {
+      // A profile whose verifier-confirmed claim is carried on the bloc state
+      // must render its chip. Web renders the same claim; mobile shows nothing,
+      // which is what this issue reports.
+      testWidgets("renders a chip for another profile's verified claim", (
+        tester,
+      ) async {
+        final testProfile = createTestProfile(displayName: 'Linked User');
 
-  group('buildProfileUrl', () {
-    const testNpub =
-        'npub10z98cqe5kehs5wfnax59vqzuyd7puhr2dyy0g5ha5kxc83h38yts0z3mgg';
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: false,
+            suppliedProfile: testProfile,
+            otherProfileState: OtherProfileLoaded(
+              profile: testProfile,
+              isFresh: true,
+              verifiedClaims: const [
+                IdentityClaim(
+                  pubkey: testUserHex,
+                  platform: 'twitter',
+                  identity: 'mjb',
+                  proof: '2079265722060902514',
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-    test('returns subdomain URL for divine.video NIP-05', () {
-      expect(
-        buildProfileUrl('_@thomassanders.divine.video', testNpub),
-        equals('https://thomassanders.divine.video'),
-      );
+        expect(find.byType(VerifiedAccountsRow), findsOneWidget);
+        expect(find.textContaining('twitter/mjb'), findsOneWidget);
+      });
+
+      // The read path swallows a missing OtherProfileBloc and returns an empty
+      // claim list, so the chips vanish with no error and no log. Pin that so
+      // the silent branch is at least visible in the suite.
+      testWidgets('renders no chip when OtherProfileBloc is absent', (
+        tester,
+      ) async {
+        final testProfile = createTestProfile(displayName: 'Linked User');
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: false,
+            suppliedProfile: testProfile,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VerifiedAccountsRow), findsNothing);
+      });
     });
 
-    test('returns subdomain URL for user@subdomain.divine.video NIP-05', () {
-      expect(
-        buildProfileUrl('user@rabble.divine.video', testNpub),
-        equals('https://rabble.divine.video'),
-      );
-    });
+    group('buildProfileUrl', () {
+      const testNpub =
+          'npub10z98cqe5kehs5wfnax59vqzuyd7puhr2dyy0g5ha5kxc83h38yts0z3mgg';
 
-    test('returns npub profile URL for non-divine.video NIP-05', () {
-      expect(
-        buildProfileUrl('alice@example.com', testNpub),
-        equals('https://divine.video/profile/$testNpub'),
-      );
-    });
+      test('returns subdomain URL for divine.video NIP-05', () {
+        expect(
+          buildProfileUrl('_@thomassanders.divine.video', testNpub),
+          equals('https://thomassanders.divine.video'),
+        );
+      });
 
-    test('returns npub profile URL when NIP-05 is null', () {
-      expect(
-        buildProfileUrl(null, testNpub),
-        equals('https://divine.video/profile/$testNpub'),
-      );
-    });
+      test('returns subdomain URL for user@subdomain.divine.video NIP-05', () {
+        expect(
+          buildProfileUrl('user@rabble.divine.video', testNpub),
+          equals('https://rabble.divine.video'),
+        );
+      });
 
-    test('returns npub profile URL when NIP-05 is empty', () {
-      expect(
-        buildProfileUrl('', testNpub),
-        equals('https://divine.video/profile/$testNpub'),
-      );
+      test('returns npub profile URL for non-divine.video NIP-05', () {
+        expect(
+          buildProfileUrl('alice@example.com', testNpub),
+          equals('https://divine.video/profile/$testNpub'),
+        );
+      });
+
+      test('returns npub profile URL when NIP-05 is null', () {
+        expect(
+          buildProfileUrl(null, testNpub),
+          equals('https://divine.video/profile/$testNpub'),
+        );
+      });
+
+      test('returns npub profile URL when NIP-05 is empty', () {
+        expect(
+          buildProfileUrl('', testNpub),
+          equals('https://divine.video/profile/$testNpub'),
+        );
+      });
     });
   });
 }
