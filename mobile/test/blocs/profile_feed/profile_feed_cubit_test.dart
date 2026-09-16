@@ -1585,25 +1585,35 @@ void main() {
         },
       );
 
-      test('a second mutation while one is in flight is dropped', () async {
+      test('a second mutation waits for the one in flight instead of being '
+          'dropped', () async {
         final a = _video('a', createdAt: 3000, dTag: 'a');
         final b = _video('b', createdAt: 2000, dTag: 'b');
         final inFlight = Completer<ProfilePinMutation>();
-        when(() => h.pins.pin(any())).thenAnswer((_) => inFlight.future);
+        when(
+          () => h.pins.pin(_coordinate('a')),
+        ).thenAnswer((_) => inFlight.future);
+        when(() => h.pins.unpin(_coordinate('b'))).thenAnswer(
+          (_) async => ProfilePinMutation.succeeded([_coordinate('a')]),
+        );
         final cubit = await buildReady(_result([a, b], hasMore: false));
         addTearDown(cubit.close);
 
+        // The delete-path cleanup lands while a pin is still publishing.
         cubit
           ..add(ProfileFeedPinRequested(a))
-          ..add(ProfileFeedPinRequested(b));
+          ..add(ProfileFeedUnpinRequested(b, quiet: true));
         await pumpEventQueue();
         expect(cubit.state.isPinMutationInFlight, isTrue);
+        verifyNever(() => h.pins.unpin(any()));
 
         inFlight.complete(ProfilePinMutation.succeeded([_coordinate('a')]));
         await pumpEventQueue();
 
         verify(() => h.pins.pin(_coordinate('a'))).called(1);
-        verifyNever(() => h.pins.pin(_coordinate('b')));
+        verify(() => h.pins.unpin(_coordinate('b'))).called(1);
+        expect(cubit.state.isPinMutationInFlight, isFalse);
+        expect(cubit.state.pinnedCoordinates, [_coordinate('a')]);
         expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
       });
     });

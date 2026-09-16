@@ -100,7 +100,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     on<ProfileFeedPinsChanged>(_onPinsChanged, transformer: sequential());
     on<ProfileFeedPinMutationRequested>(
       _onPinMutationRequested,
-      transformer: droppable(),
+      transformer: sequential(),
     );
 
     _registerRealtimeListeners();

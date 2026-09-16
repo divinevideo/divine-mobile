@@ -85,9 +85,12 @@ final class ProfileFeedPinsChanged extends ProfileFeedEvent {
 }
 
 /// A pin-list mutation for one of the viewer's own videos. Both variants share
-/// one `droppable` bucket: a request that lands while another is in flight is
-/// discarded, so a pin and an unpin can never interleave their
-/// read-modify-write and the sheet's disabled state stays truthful.
+/// one `sequential` bucket: a request that lands while another is in flight
+/// waits for it rather than being dropped, so the quiet cleanup a delete
+/// sends cannot be lost to a pin the viewer tapped a moment earlier. The
+/// repository serializes its own read-modify-write, the cap check reads the
+/// state the previous mutation left, and both operations are idempotent, so
+/// a queued duplicate is a no-op rather than a hazard.
 sealed class ProfileFeedPinMutationRequested extends ProfileFeedEvent {
   const ProfileFeedPinMutationRequested(this.video, {this.quiet = false});
 
