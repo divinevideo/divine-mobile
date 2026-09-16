@@ -877,6 +877,10 @@ class ModerationLabelService {
   /// common case — a connected-but-silent relay — and retrying it inline would
   /// abandon and re-drive itself in a tight loop. Waiting for the next status
   /// change cannot spin and is still strictly better than latching.
+  ///
+  /// [NostrClient.retryDisconnectedRelays] below is a separate, safe action:
+  /// it only dials relays that are *not* connected, so it cannot re-drive
+  /// the connected-but-silent case above (#8992).
   void _scheduleRetryWhenRelayReady(String pubkey) {
     // A load already in flight when dispose() ran still completes, and would
     // otherwise arm a subscription nothing is left to cancel.
@@ -899,6 +903,8 @@ class ModerationLabelService {
         _hadConnectedRelayWhileWaiting = hasConnectedRelay;
       }
     });
+
+    unawaited(_nostrClient.retryDisconnectedRelays());
   }
 
   void _retryLabelersAwaitingRelay() {

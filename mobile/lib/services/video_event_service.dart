@@ -4601,6 +4601,11 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         _retrySubscriptionsAwaitingRelayReady();
       }
     });
+
+    // Kick the pool ourselves; the listener above only fires on a status
+    // change, and nothing else causes one for an idle-disconnected pool
+    // (#8992).
+    unawaited(_nostrService.retryDisconnectedRelays());
   }
 
   void _retrySubscriptionsAwaitingRelayReady() {
