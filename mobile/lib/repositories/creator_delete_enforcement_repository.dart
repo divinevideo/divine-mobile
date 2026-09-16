@@ -7,7 +7,9 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/observability/performance_operation.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 
 enum CreatorDeleteEnforcementStatus { confirmed, delayed, failed, unavailable }
 
@@ -35,6 +37,8 @@ class CreatorDeleteEnforcementRepository {
     required http.Client httpClient,
     required Nip98AuthService nip98AuthService,
     bool enabled = true,
+    PerformanceTraceMonitor performanceMonitor =
+        const NoOpPerformanceTraceMonitor(),
     Duration requestTimeout = const Duration(seconds: 15),
     Duration pollTimeout = const Duration(seconds: 30),
     bool Function()? shouldBoundSigning,
@@ -46,6 +50,7 @@ class CreatorDeleteEnforcementRepository {
        _httpClient = httpClient,
        _nip98AuthService = nip98AuthService,
        _enabled = enabled,
+       _performanceMonitor = performanceMonitor,
        _requestTimeout = requestTimeout,
        _pollTimeout = pollTimeout,
        _shouldBoundSigning = shouldBoundSigning ?? _alwaysBoundSigning,
@@ -59,6 +64,7 @@ class CreatorDeleteEnforcementRepository {
   final http.Client _httpClient;
   final Nip98AuthService _nip98AuthService;
   final bool _enabled;
+  final PerformanceTraceMonitor _performanceMonitor;
   final Duration _requestTimeout;
   final Duration _pollTimeout;
   final bool Function() _shouldBoundSigning;
@@ -75,25 +81,36 @@ class CreatorDeleteEnforcementRepository {
     Event? deletionEvent,
   }) async {
     if (!_enabled) return const CreatorDeleteEnforcementResult.unavailable();
+    final timing = _DeletionTiming(_performanceMonitor);
+    var result = const CreatorDeleteEnforcementResult.delayed();
     try {
       // Encode once so NIP-98 binds exactly the bytes sent to the service.
       final body = deletionEvent == null
           ? null
           : jsonEncode({'event': deletionEvent.toJson()});
-      return await _enforce(kind5Id, body: body);
+      return result = await _enforce(kind5Id, timing, body: body);
     } on Object catch (error, stackTrace) {
+      timing.reason = 'exception';
       _reportError?.call(error, stackTrace);
-      return const CreatorDeleteEnforcementResult.delayed();
+      return result;
+    } finally {
+      timing.finish(result.status);
     }
   }
 
   Future<CreatorDeleteEnforcementResult> _enforce(
-    String kind5Id, {
+    String kind5Id,
+    _DeletionTiming timing, {
     String? body,
   }) async {
     final postUri = _uri('/api/delete', kind5Id);
-    final firstResponse = await _request(postUri, HttpMethod.post, body: body);
-    if (firstResponse?.statusCode == 202) return _poll(kind5Id);
+    final firstResponse = await _request(
+      postUri,
+      HttpMethod.post,
+      timing,
+      body: body,
+    );
+    if (firstResponse?.statusCode == 202) return _poll(kind5Id, timing);
     final result = _terminalPostResult(firstResponse);
     if (result != null) return result;
     return const CreatorDeleteEnforcementResult.delayed();
@@ -125,7 +142,10 @@ class CreatorDeleteEnforcementRepository {
     return const CreatorDeleteEnforcementResult.failed();
   }
 
-  Future<CreatorDeleteEnforcementResult> _poll(String kind5Id) async {
+  Future<CreatorDeleteEnforcementResult> _poll(
+    String kind5Id,
+    _DeletionTiming timing,
+  ) async {
     final uri = _uri('/api/delete-status', kind5Id);
     final stopwatch = Stopwatch()..start();
     var scheduledElapsed = Duration.zero;
@@ -142,6 +162,7 @@ class CreatorDeleteEnforcementRepository {
       final response = await _request(
         uri,
         HttpMethod.get,
+        timing,
         timeout: requestBudget < _requestTimeout
             ? requestBudget
             : _requestTimeout,
@@ -155,6 +176,7 @@ class CreatorDeleteEnforcementRepository {
         ),
       );
     }
+    timing.reason = 'poll_budget_exhausted';
     return const CreatorDeleteEnforcementResult.delayed();
   }
 
@@ -197,12 +219,17 @@ class CreatorDeleteEnforcementRepository {
 
   Future<http.Response?> _request(
     Uri uri,
-    HttpMethod method, {
+    HttpMethod method,
+    _DeletionTiming timing, {
     Duration? timeout,
     String? body,
   }) async {
     final requestBudget = timeout ?? _requestTimeout;
     final stopwatch = Stopwatch()..start();
+    final phaseTimer = Stopwatch()..start();
+    var signing = true;
+    timing.requests++;
+    if (method == HttpMethod.get) timing.polls++;
     try {
       final tokenFuture = _nip98AuthService.createAuthToken(
         url: uri.toString(),
@@ -215,16 +242,23 @@ class CreatorDeleteEnforcementRepository {
       final token = _shouldBoundSigning()
           ? await tokenFuture.timeout(requestBudget)
           : await tokenFuture;
+      timing.signingMs += phaseTimer.elapsedMilliseconds;
+      phaseTimer.reset();
+      signing = false;
       if (token == null) {
+        timing.reason = 'signing_unavailable';
         return http.Response('', 401);
       }
       final remaining = requestBudget - stopwatch.elapsed;
-      if (remaining <= Duration.zero) return null;
+      if (remaining <= Duration.zero) {
+        timing.reason = 'signing_budget_exhausted';
+        return null;
+      }
       final headers = {
         'Authorization': token.authorizationHeader,
         if (body != null) 'Content-Type': 'application/json; charset=utf-8',
       };
-      return await switch (method) {
+      final response = await switch (method) {
         HttpMethod.get =>
           _httpClient.get(uri, headers: headers).timeout(remaining),
         HttpMethod.post =>
@@ -233,12 +267,29 @@ class CreatorDeleteEnforcementRepository {
               .timeout(remaining),
         _ => throw ArgumentError.value(method, 'method'),
       };
+      timing.reason = response.statusCode >= 200 && response.statusCode < 300
+          ? 'response'
+          : 'http_${response.statusCode}';
+      return response;
     } on TimeoutException {
+      timing.reason = signing ? 'signing_timeout' : 'http_timeout';
       return null;
     } on SocketException {
+      timing.reason = signing
+          ? 'signing_transport_error'
+          : 'http_transport_error';
       return null;
     } on http.ClientException {
+      timing.reason = signing
+          ? 'signing_transport_error'
+          : 'http_transport_error';
       return null;
+    } finally {
+      if (signing) {
+        timing.signingMs += phaseTimer.elapsedMilliseconds;
+      } else {
+        timing.httpMs += phaseTimer.elapsedMilliseconds;
+      }
     }
   }
 
@@ -258,4 +309,29 @@ class CreatorDeleteEnforcementRepository {
   }
 
   static bool _alwaysBoundSigning() => true;
+}
+
+/// One context per enforcement, including its signing and polling attempts.
+class _DeletionTiming {
+  _DeletionTiming(PerformanceTraceMonitor monitor)
+    : operation = PerformanceOperation(monitor, 'creator_delete_enforcement');
+
+  final PerformanceOperation operation;
+  final stopwatch = Stopwatch()..start();
+  int requests = 0;
+  int polls = 0;
+  int signingMs = 0;
+  int httpMs = 0;
+  String reason = 'unknown';
+
+  void finish(CreatorDeleteEnforcementStatus status) => operation.finish(
+    attributes: {'outcome': status.name, 'reason': reason},
+    metrics: {
+      'total_ms': stopwatch.elapsedMilliseconds,
+      'signing_ms': signingMs,
+      'http_ms': httpMs,
+      'request_count': requests,
+      'poll_count': polls,
+    },
+  );
 }

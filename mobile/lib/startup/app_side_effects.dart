@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/feed_playback_performance_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
@@ -41,6 +42,9 @@ class AppRootSideEffects extends ConsumerWidget {
     // Redirects the router to canonical URLs. Router plumbing, not a service:
     // it only reads `goRouterProvider` and attaches a listener.
     ref.watch(routeNormalizationProvider);
+
+    // Observe the existing first-frame bus before any feed mounts.
+    ref.watch(feedPlaybackPerformanceProvider);
 
     // Retains parameter-free route context for support diagnostics. It must be
     // active before the user enters Settings or the Support Center.

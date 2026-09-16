@@ -5,7 +5,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:openvine/observability/performance_operation.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Tracks performance timing for different startup phases
@@ -48,6 +50,66 @@ class StartupPerformanceService {
   DateTime? _videoReadyTime;
 
   bool _isInitialized = false;
+  PerformanceTraceMonitor? _performanceMonitor;
+  final _reportedSamples = <String>{};
+
+  static const _exportedPhases = {
+    'total',
+    'bindings',
+    'crash_reporting',
+    'window_manager',
+    'shared_preferences',
+    'environment_service',
+    'core_services',
+    'audio_session',
+    'hive_storage',
+    'performance_monitoring',
+    'logging_config',
+    'video_cache',
+    'seed_data_preload',
+    'seed_media_maintenance',
+    'zendesk',
+  };
+  static const _exportedMilestones = {
+    'first_frame',
+    'auth_shell_ready',
+    'ui_ready',
+    'video_ready',
+  };
+
+  /// Attach after Firebase initialization; preserve timings measured before it.
+  /// These snapshot traces carry measured milliseconds, not trace duration.
+  void attachPerformanceMonitor(PerformanceTraceMonitor monitor) {
+    if (_performanceMonitor != null) return;
+    _performanceMonitor = monitor;
+    _exportCompletedSamples();
+  }
+
+  void _exportCompletedSamples() {
+    final monitor = _performanceMonitor;
+    if (monitor == null) return;
+    final metrics = getMetrics();
+    for (final phase in _exportedPhases) {
+      final key = 'phase_${phase}_ms';
+      if (metrics[key] case final int elapsed) {
+        if (!_reportedSamples.add(key)) continue;
+        PerformanceOperation(monitor, 'startup_phase').finish(
+          attributes: {'phase': phase},
+          metrics: {'elapsed_ms': elapsed},
+        );
+      }
+    }
+    for (final milestone in _exportedMilestones) {
+      final key = '${milestone}_ms';
+      if (metrics[key] case final int elapsed) {
+        if (!_reportedSamples.add(key)) continue;
+        PerformanceOperation(monitor, 'startup_milestone').finish(
+          attributes: {'milestone': milestone},
+          metrics: {'elapsed_ms': elapsed},
+        );
+      }
+    }
+  }
 
   /// Initialize the performance monitoring service
   Future<void> initialize() async {
@@ -91,6 +153,7 @@ class StartupPerformanceService {
     final phase = _phases[phaseName];
     if (phase != null && !phase.isCompleted) {
       phase.complete();
+      _exportCompletedSamples();
       final duration = phase.duration?.inMilliseconds ?? 0;
 
       Log.info(
@@ -143,6 +206,7 @@ class StartupPerformanceService {
       'First frame: ${elapsed}ms',
     );
     _crashReporting.setCustomKey('first_frame_ms', elapsed);
+    _exportCompletedSamples();
   }
 
   DateTime? _authShellReadyTime;
@@ -177,6 +241,7 @@ class StartupPerformanceService {
       'Auth shell ready: ${elapsed}ms',
     );
     _crashReporting.setCustomKey('auth_shell_ready_ms', elapsed);
+    _exportCompletedSamples();
   }
 
   /// Mark when UI is ready for interaction
@@ -196,6 +261,7 @@ class StartupPerformanceService {
       'UI ready: ${elapsed}ms',
     );
     _crashReporting.setCustomKey('ui_ready_ms', elapsed);
+    _exportCompletedSamples();
   }
 
   /// Mark when video system is ready
@@ -215,6 +281,7 @@ class StartupPerformanceService {
       'Video ready: ${elapsed}ms',
     );
     _crashReporting.setCustomKey('video_ready_ms', elapsed);
+    _exportCompletedSamples();
 
     // Complete the total startup phase
     completePhase('total');

@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:openvine/observability/network/http_metric_recorder.dart';
 import 'package:openvine/observability/network/performance_http_client.dart';
 
+import '../../helpers/recording_performance_monitor.dart';
+
 class _RecordedSpan implements HttpMetricSpan {
   _RecordedSpan(this.urlPattern, this.method);
 
@@ -100,6 +102,68 @@ class _FakeInnerClient extends http.BaseClient {
 }
 
 void main() {
+  group('send operation telemetry', () {
+    test(
+      'separates deletion 404 from lookup latency without leaking ids',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final client = PerformanceHttpClient(
+          inner: _FakeInnerClient(statusCode: 404),
+          recorder: _FakeRecorder(),
+          performanceMonitor: monitor,
+        );
+        addTearDown(client.close);
+        final response = await client.post(
+          Uri.parse(
+            'https://moderation-api.divine.video/api/delete/private-event?token=secret',
+          ),
+        );
+        expect(response.statusCode, 404);
+        final trace = monitor.traces.single;
+        expect(trace.name, 'http_operation');
+        expect(trace.attributes, {
+          'operation': 'creator_delete',
+          'method': 'POST',
+          'status': '404',
+          'outcome': 'http_error',
+        });
+        expect(trace.metrics['response_bytes'], 2);
+        expect(trace.metrics['headers_ms'], greaterThanOrEqualTo(0));
+        expect(
+          trace.metrics['total_ms'],
+          greaterThanOrEqualTo(trace.metrics['headers_ms']!),
+        );
+        expect(trace.stops, 1);
+      },
+    );
+
+    test(
+      'transport errors emit a terminal operation and preserve the error',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        final error = StateError('connection unavailable');
+        final client = PerformanceHttpClient(
+          inner: _FakeInnerClient(error: error),
+          recorder: _FakeRecorder(),
+          performanceMonitor: monitor,
+        );
+        addTearDown(client.close);
+        await expectLater(
+          client.get(
+            Uri.parse('https://moderation-api.divine.video/check-result/id'),
+          ),
+          throwsA(same(error)),
+        );
+        expect(
+          monitor.traces.single.attributes['operation'],
+          'moderation_lookup',
+        );
+        expect(monitor.traces.single.attributes['outcome'], 'transport_error');
+        expect(monitor.traces.single.stops, 1);
+      },
+    );
+  });
+
   group(PerformanceHttpClient, () {
     late _FakeRecorder recorder;
 
@@ -170,20 +234,28 @@ void main() {
 
     test('does not report requests to third-party hosts', () async {
       final inner = _FakeInnerClient();
-      final client = PerformanceHttpClient(inner: inner, recorder: recorder);
+      final monitor = RecordingPerformanceMonitor();
+      final client = PerformanceHttpClient(
+        inner: inner,
+        recorder: recorder,
+        performanceMonitor: monitor,
+      );
       addTearDown(client.close);
 
       await client.get(Uri.parse('https://api.github.com/repos/divine/app'));
 
       expect(recorder.spans, isEmpty);
       expect(inner.sent, hasLength(1));
+      expect(monitor.traces, isEmpty);
     });
 
     test('still sends the request when the recorder declines it', () async {
+      final monitor = RecordingPerformanceMonitor();
       final inner = _FakeInnerClient();
       final client = PerformanceHttpClient(
         inner: inner,
         recorder: _FakeRecorder(enabled: false),
+        performanceMonitor: monitor,
       );
       addTearDown(client.close);
 
@@ -192,6 +264,7 @@ void main() {
       );
 
       expect(response.statusCode, 200);
+      expect(monitor.traces, isEmpty);
       expect(inner.sent, hasLength(1));
     });
 
@@ -215,6 +288,7 @@ void main() {
     test(
       'completes the span when the response body errors mid-stream',
       () async {
+        final monitor = RecordingPerformanceMonitor();
         final client = PerformanceHttpClient(
           inner: _FakeInnerClient(
             responder: () => Stream<List<int>>.fromIterable([
@@ -222,6 +296,7 @@ void main() {
             ]).followedBy(Stream.error(http.ClientException('reset'))),
           ),
           recorder: recorder,
+          performanceMonitor: monitor,
         );
         addTearDown(client.close);
 
@@ -234,29 +309,39 @@ void main() {
           throwsA(isA<http.ClientException>()),
         );
         expect(recorder.only.isCompleted, isTrue);
+        expect(monitor.traces.single.attributes['outcome'], 'body_error');
       },
     );
 
-    test('completes the span once when the body is cancelled', () async {
-      final client = PerformanceHttpClient(
-        inner: _FakeInnerClient(
-          responder: () => Stream<List<int>>.periodic(
-            const Duration(milliseconds: 5),
-            (_) => utf8.encode('chunk'),
-          ),
-        ),
-        recorder: recorder,
-      );
-      addTearDown(client.close);
-
-      final response = await client.send(
-        http.Request('GET', Uri.parse('https://media.divine.video/abc.mp4')),
-      );
-      final subscription = response.stream.listen(null);
-      await subscription.cancel();
-
-      expect(recorder.only.completions, 1);
-    });
+    test(
+      'cancels a silent body immediately and closes both telemetry spans',
+      () async {
+        final monitor = RecordingPerformanceMonitor();
+        var upstreamCancelled = false;
+        final source = StreamController<List<int>>(
+          onCancel: () {
+            upstreamCancelled = true;
+          },
+        );
+        addTearDown(source.close);
+        final client = PerformanceHttpClient(
+          inner: _FakeInnerClient(responder: () => source.stream),
+          recorder: recorder,
+          performanceMonitor: monitor,
+        );
+        addTearDown(client.close);
+        final response = await client.send(
+          http.Request('GET', Uri.parse('https://media.divine.video/abc.mp4')),
+        );
+        final subscription = response.stream.listen(null);
+        await subscription.cancel();
+        expect(upstreamCancelled, isTrue);
+        expect(recorder.only.completions, 1);
+        expect(monitor.traces.single.attributes['outcome'], 'cancelled');
+        expect(monitor.traces.single.stops, 1);
+      },
+      timeout: const Timeout(Duration(seconds: 3)),
+    );
 
     test('closing the wrapper closes the client it wraps', () {
       final inner = _FakeInnerClient();
