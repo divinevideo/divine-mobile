@@ -9,6 +9,12 @@ analyzer:
     - "**/generated/**"
     - "**/l10n/**"
     - "build/**"
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
   errors:
     avoid_catches_without_on_clauses: ignore
     avoid_positional_boolean_parameters: ignore

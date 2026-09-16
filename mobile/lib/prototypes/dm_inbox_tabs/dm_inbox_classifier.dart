@@ -427,6 +427,22 @@ class DmInboxClassifier {
   ///
   /// Several official identities: the least blockable one wins, since the
   /// user cannot block an operational account out of the room.
+  ///
+  /// Membership is the right predicate here *because* the participant set is
+  /// already authenticated upstream, and this rule depends on that. Two
+  /// production invariants supply it, both in `DmRepository`:
+  ///
+  /// - The rumor is unsigned, so `dm_decryption_worker` discards its claimed
+  ///   `pubkey` and substitutes the seal's, which signed. The sender reaching
+  ///   `_resolveConversationParticipants` is authenticated, not claimed.
+  /// - That resolver collapses a first-contact message carrying extra `p`
+  ///   tags to `[self, sender]`, so an inbound event cannot mint a room it is
+  ///   not already part of. Groups come only from the user's own sends.
+  ///
+  /// Together those mean a stranger cannot place a published official pubkey
+  /// into a room's participants, so "every participant is official" implies
+  /// "every possible author is official". Weaken either invariant and this
+  /// check needs the authenticated sender as well, not just membership.
   DivineOfficialIdentity? _officialIdentityFor(Set<String> others) {
     if (others.isEmpty) return null;
     DivineOfficialIdentity? selected;
