@@ -199,6 +199,26 @@ class _FunctionCollector extends RecursiveAstVisitor<void> {
     _add(node.name.lexeme, node.body, node.parent);
     super.visitMethodDeclaration(node);
   }
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final initializer = node.initializer;
+    if (initializer is FunctionExpression) {
+      _add(node.name.lexeme, initializer.body, _variableScope(node));
+    }
+    super.visitVariableDeclaration(node);
+  }
+}
+
+/// Where a closure bound to a variable can be named from: the enclosing block
+/// for a local, the enclosing class for a field, the whole file otherwise.
+AstNode? _variableScope(VariableDeclaration node) {
+  final declaration = node.parent?.parent;
+  return switch (declaration) {
+    VariableDeclarationStatement() => declaration.parent,
+    FieldDeclaration() => declaration.parent,
+    _ => null,
+  };
 }
 
 bool _isGenerated(String path) =>

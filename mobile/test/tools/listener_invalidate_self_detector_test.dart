@@ -111,6 +111,52 @@ int provider(Ref ref) {
       expect(sites, isEmpty);
     });
 
+    test('follows a closure bound to a local variable', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  final void Function() listener = () {
+    ref.invalidateSelf();
+  };
+  service.addListener(listener);
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('follows a closure bound to a field', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  late final VoidCallback _listener = () => ref.invalidateSelf();
+  void install() => service.addListener(_listener);
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('ignores a same-named closure scoped to another method', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void other() {
+    final void Function() listener = () => ref.invalidateSelf();
+    listener();
+  }
+  void install() {
+    final void Function() listener = () => ref.state = 1;
+    service.addListener(listener);
+  }
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
     test('follows a class method tear-off', () {
       final sites = findListenerInvalidateSelfSitesInSource('''
 class Owner {
