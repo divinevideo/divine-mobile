@@ -9,13 +9,16 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_player.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 /// The preview surface for the current clip: a [DivineVideoPlayer] for a normal
 /// clip, or a controlled `StopMotionPlayer` for a frames-only stop-motion clip.
 ///
 /// The stop-motion branch subscribes to the editor's `currentPosition` so the
-/// shown frame follows play/pause and timeline scrubbing. That subscription is
-/// scoped here — a normal clip never rebuilds on position ticks.
+/// shown frame follows play/pause and timeline scrubbing. The video branch only
+/// selects the frame ratio of the clip under the playhead from it — a crop /
+/// rotate transform gives one clip a differently shaped file than the rest of
+/// the composition — so a normal clip never rebuilds on position ticks.
 class VideoEditorClipPreview extends StatelessWidget {
   /// Creates a [VideoEditorClipPreview].
   const VideoEditorClipPreview({
@@ -42,12 +45,29 @@ class VideoEditorClipPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final clipManagerFrames = clip.stopMotionFrames;
     if (clipManagerFrames == null) {
-      return VideoEditorPlayer(
-        controller: controller,
-        targetAspectRatio: clip.targetAspectRatio,
-        originalAspectRatio: clip.originalAspectRatio,
-        bodySize: bodySize,
-        renderSize: renderSize,
+      // The live clip list, for the same reason as the frames below: a
+      // transform lands in ClipEditorBloc first, and the clip manager only
+      // learns of it through the history path a post-frame later.
+      return BlocSelector<
+        ClipEditorBloc,
+        ClipEditorState,
+        List<DivineVideoClip>
+      >(
+        selector: (state) => state.clips,
+        builder: (context, liveClips) =>
+            BlocSelector<VideoEditorMainBloc, VideoEditorMainState, double>(
+              selector: (state) =>
+                  (clipAtTimelinePosition(liveClips, state.currentPosition) ??
+                          clip)
+                      .videoAspectRatio,
+              builder: (context, videoAspectRatio) => VideoEditorPlayer(
+                controller: controller,
+                targetAspectRatio: clip.targetAspectRatio,
+                videoAspectRatio: videoAspectRatio,
+                bodySize: bodySize,
+                renderSize: renderSize,
+              ),
+            ),
       );
     }
 
@@ -77,7 +97,7 @@ class VideoEditorClipPreview extends StatelessWidget {
           builder: (context, position) => VideoEditorPlayer(
             controller: controller,
             targetAspectRatio: clip.targetAspectRatio,
-            originalAspectRatio: clip.originalAspectRatio,
+            videoAspectRatio: clip.videoAspectRatio,
             bodySize: bodySize,
             renderSize: renderSize,
             stopMotionFrames: frames,

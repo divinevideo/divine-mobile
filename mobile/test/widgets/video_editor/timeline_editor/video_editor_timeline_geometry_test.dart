@@ -317,6 +317,63 @@ void main() {
     }
   });
 
+  group(clipAtTimelinePosition, () {
+    test('resolves the clip whose playback span holds the position', () {
+      expect(
+        clipAtTimelinePosition(clips, const Duration(seconds: 1)),
+        clips[0],
+      );
+      expect(
+        clipAtTimelinePosition(clips, const Duration(milliseconds: 2500)),
+        clips[1],
+      );
+      expect(
+        clipAtTimelinePosition(clips, const Duration(seconds: 6)),
+        clips[2],
+      );
+    });
+
+    test('a boundary belongs to the clip that starts there', () {
+      expect(
+        clipAtTimelinePosition(clips, const Duration(seconds: 2)),
+        clips[1],
+      );
+    });
+
+    test('walks in playback time, so speed and trims count', () {
+      // c0 plays 1s of its 2s at 2×, c1 has 1s trimmed off: 0.5s + 2s.
+      final timed = [
+        _clip('c0', 2, speed: 2, trimStart: const Duration(seconds: 1)),
+        _clip('c1', 3, trimEnd: const Duration(seconds: 1)),
+        _clip('c2', 2),
+      ];
+
+      expect(
+        clipAtTimelinePosition(timed, const Duration(milliseconds: 400)),
+        timed[0],
+      );
+      expect(
+        clipAtTimelinePosition(timed, const Duration(milliseconds: 600)),
+        timed[1],
+      );
+      expect(
+        clipAtTimelinePosition(timed, const Duration(milliseconds: 2600)),
+        timed[2],
+      );
+    });
+
+    test('the last clip absorbs a position past the composition end', () {
+      expect(
+        clipAtTimelinePosition(clips, const Duration(seconds: 9)),
+        clips[2],
+      );
+    });
+
+    test('is null for an empty composition', () {
+      expect(clipAtTimelinePosition(const [], Duration.zero), isNull);
+    });
+  });
+
   group(clipSourcePositionToTimelinePosition, () {
     test(
       'maps a second-clip start trim handle to the clip start in timeline',

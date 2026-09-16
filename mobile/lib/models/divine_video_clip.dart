@@ -21,6 +21,7 @@ class DivineVideoClip {
     required this.recordedAt,
     required this.targetAspectRatio,
     required double? originalAspectRatio,
+    double? videoAspectRatio,
     this.video,
     this.stopMotionFrames,
     this.libraryTitle,
@@ -63,7 +64,8 @@ class DivineVideoClip {
          sourceRelayHint: sourceRelayHint,
        ),
        _thumbnailTimestamp = thumbnailTimestamp,
-       _originalAspectRatio = originalAspectRatio;
+       _originalAspectRatio = originalAspectRatio,
+       _videoAspectRatio = videoAspectRatio;
 
   final String id;
 
@@ -86,6 +88,10 @@ class DivineVideoClip {
 
   /// Original aspect ratio from the recorded video (raw value, may be null)
   final double? _originalAspectRatio;
+
+  /// Frame ratio of [video] once a bake changed it from the recording's (raw
+  /// value, null while the file still has the recording's shape)
+  final double? _videoAspectRatio;
 
   final Completer<bool>? processingCompleter;
 
@@ -378,6 +384,16 @@ class DivineVideoClip {
   /// Returns the original aspect ratio, or 9/16 as fallback if not set.
   double get originalAspectRatio => _originalAspectRatio ?? 9 / 16;
 
+  /// Aspect ratio of the frames in [video].
+  ///
+  /// A crop / rotate transform bakes a new file whose shape no longer matches
+  /// the recording, so the preview must fit *this* ratio rather than
+  /// [originalAspectRatio]. The latter stays untouched by a transform: the
+  /// first clip's value is the editor canvas's coordinate system for the whole
+  /// session (and every draft saved from it), so layers authored against it
+  /// would shift if a transform rewrote it.
+  double get videoAspectRatio => _videoAspectRatio ?? originalAspectRatio;
+
   DivineVideoClip copyWith({
     String? id,
     EditorVideo? video,
@@ -390,6 +406,7 @@ class DivineVideoClip {
     String? thumbnailPath,
     Duration? thumbnailTimestamp,
     double? originalAspectRatio,
+    double? videoAspectRatio,
     model.AspectRatio? targetAspectRatio,
     Completer<bool>? processingCompleter,
     CameraLensMetadata? lensMetadata,
@@ -443,6 +460,7 @@ class DivineVideoClip {
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       thumbnailTimestamp: thumbnailTimestamp ?? _thumbnailTimestamp,
       originalAspectRatio: originalAspectRatio ?? _originalAspectRatio,
+      videoAspectRatio: videoAspectRatio ?? _videoAspectRatio,
       targetAspectRatio: targetAspectRatio ?? this.targetAspectRatio,
       processingCompleter: processingCompleter ?? this.processingCompleter,
       lensMetadata: lensMetadata ?? this.lensMetadata,
@@ -503,6 +521,7 @@ class DivineVideoClip {
           : null,
       'thumbnailTimestampMs': _thumbnailTimestamp?.inMilliseconds,
       'originalAspectRatio': _originalAspectRatio,
+      if (_videoAspectRatio != null) 'videoAspectRatio': _videoAspectRatio,
       'targetAspectRatio': targetAspectRatio.name,
       'lensMetadata': lensMetadata?.toMap(),
       'ghostFramePath': ghostFramePath != null
@@ -613,6 +632,7 @@ class DivineVideoClip {
           ? Duration(milliseconds: thumbnailTimestampMs)
           : null,
       originalAspectRatio: json['originalAspectRatio'] as double?,
+      videoAspectRatio: (json['videoAspectRatio'] as num?)?.toDouble(),
       targetAspectRatio: model.AspectRatio.values.firstWhere(
         (e) => e.name == aspectRatioName,
         orElse: () => model.AspectRatio.square,

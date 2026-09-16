@@ -201,6 +201,44 @@ void main() {
     });
   });
 
+  group('DivineVideoClip.videoAspectRatio', () {
+    test("is the recording's ratio until a bake reshapes the file", () {
+      final recorded = clip('/videos/clip.mp4').copyWith(
+        originalAspectRatio: 9 / 16,
+      );
+
+      expect(recorded.videoAspectRatio, 9 / 16);
+      expect(recorded.toJson().containsKey('videoAspectRatio'), isFalse);
+    });
+
+    test('round-trips through JSON without touching originalAspectRatio', () {
+      // A square crop of a 9:16 recording: the file is 1:1, the canvas the
+      // session's layers were authored on stays 9:16.
+      final transformed = clip(
+        '/videos/clip.mp4',
+      ).copyWith(originalAspectRatio: 9 / 16, videoAspectRatio: 1);
+
+      final restored = DivineVideoClip.fromJson(
+        transformed.toJson(),
+        '/videos',
+      );
+
+      expect(restored.videoAspectRatio, 1);
+      expect(restored.originalAspectRatio, 9 / 16);
+    });
+
+    test('survives an unrelated copyWith', () {
+      final transformed = clip('/videos/clip.mp4').copyWith(
+        originalAspectRatio: 9 / 16,
+        videoAspectRatio: 1,
+      );
+
+      // A split or a reverse re-renders the same frames, so both halves keep
+      // the shape the transform gave them.
+      expect(transformed.copyWith(volume: 0.5).videoAspectRatio, 1);
+    });
+  });
+
   group('DivineVideoClip.chromaKey', () {
     const key = ClipChromaKey(key: editor.ChromaKey.greenScreen());
 

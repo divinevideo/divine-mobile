@@ -6,11 +6,20 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_thumbnail.dart';
 
+/// The clip surface inside the editor canvas.
+///
+/// The canvas hands this widget a box shaped like the *recording* (the first
+/// clip's `originalAspectRatio`), and the native surface stretches to whatever
+/// box it gets — so the frames are laid out at [videoAspectRatio], covering the
+/// target rect that [targetAspectRatio] cuts out of the box. For a clip whose
+/// file still has the recording's shape that surface *is* the box, exactly as
+/// before; for one whose file a crop / rotate transform reshaped it is the
+/// target rect itself, rather than the file squeezed to the recording's shape.
 class VideoEditorPlayer extends StatelessWidget {
   const VideoEditorPlayer({
     required this.controller,
     required this.targetAspectRatio,
-    required this.originalAspectRatio,
+    required this.videoAspectRatio,
     required this.bodySize,
     required this.renderSize,
     this.stopMotionFrames,
@@ -19,7 +28,10 @@ class VideoEditorPlayer extends StatelessWidget {
   });
 
   final model.AspectRatio targetAspectRatio;
-  final double originalAspectRatio;
+
+  /// Aspect ratio of the frames the surface shows — the file at the playhead,
+  /// not the recording the canvas is shaped after.
+  final double videoAspectRatio;
   final DivineVideoPlayerController? controller;
   final Size bodySize;
   final Size renderSize;
@@ -36,7 +48,6 @@ class VideoEditorPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aspectRatio = targetAspectRatio.value;
     final frames = stopMotionFrames;
 
     return ClipPath(
@@ -45,25 +56,43 @@ class VideoEditorPlayer extends StatelessWidget {
         targetAspectRatio: targetAspectRatio.value,
         borderRadius: VideoEditorConstants.canvasRadius,
       ),
-      child: AspectRatio(
-        aspectRatio: aspectRatio,
-        child: frames != null
-            ? StopMotionPlayer(
-                frames: frames,
-                position: stopMotionPosition,
-                cacheHeight:
-                    (renderSize.height * MediaQuery.devicePixelRatioOf(context))
-                        .round(),
-              )
-            : DivineVideoPlayer(
-                controller: controller,
-                placeholder: VideoEditorThumbnail(contentSize: renderSize),
-                // The editor swaps an external thumbnail spinner straight to
-                // the player once the frame is decoded, so the first frame is
-                // already rendered when this mounts. Cross-fade the thumbnail
-                // out instead of hard-cutting (which read as a flicker).
-                crossFadePlaceholder: true,
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final surfaceSize = computeSurfaceSize(
+            widgetSize: constraints.biggest,
+            bodySize: bodySize,
+            targetAspectRatio: targetAspectRatio.value,
+            videoAspectRatio: videoAspectRatio,
+          );
+          // Centred in the box; a file wider than it (a landscape import in
+          // a portrait session) covers the target rect by overflowing the box
+          // sideways, and the clipper above cuts it back to the rect.
+          return OverflowBox(
+            minWidth: surfaceSize.width,
+            maxWidth: surfaceSize.width,
+            minHeight: surfaceSize.height,
+            maxHeight: surfaceSize.height,
+            child: frames != null
+                ? StopMotionPlayer(
+                    frames: frames,
+                    position: stopMotionPosition,
+                    cacheHeight:
+                        (renderSize.height *
+                                MediaQuery.devicePixelRatioOf(context))
+                            .round(),
+                  )
+                : DivineVideoPlayer(
+                    controller: controller,
+                    placeholder: VideoEditorThumbnail(contentSize: renderSize),
+                    // The editor swaps an external thumbnail spinner straight
+                    // to the player once the frame is decoded, so the first
+                    // frame is already rendered when this mounts. Cross-fade
+                    // the thumbnail out instead of hard-cutting (which read as
+                    // a flicker).
+                    crossFadePlaceholder: true,
+                  ),
+          );
+        },
       ),
     );
   }
@@ -128,4 +157,31 @@ Size computeClipSize({
     return Size(widgetSize.height * targetAspectRatio, widgetSize.height);
   }
   return Size(widgetSize.width, widgetSize.width / targetAspectRatio);
+}
+
+/// Size the native surface is laid out at: frames of [videoAspectRatio]
+/// scaled to cover the [computeClipSize] rect, the way the export centre-crops
+/// every clip to the composition's ratio.
+///
+/// When [videoAspectRatio] is the ratio of [widgetSize] itself — the canvas box
+/// shaped like the recording — this is [widgetSize], so an untransformed clip
+/// lays out exactly as it did before the surface followed the file's shape.
+///
+/// Exposed for testing only.
+@visibleForTesting
+Size computeSurfaceSize({
+  required Size widgetSize,
+  required Size bodySize,
+  required double targetAspectRatio,
+  required double videoAspectRatio,
+}) {
+  final clipSize = computeClipSize(
+    widgetSize: widgetSize,
+    bodySize: bodySize,
+    targetAspectRatio: targetAspectRatio,
+  );
+  if (videoAspectRatio > targetAspectRatio) {
+    return Size(clipSize.height * videoAspectRatio, clipSize.height);
+  }
+  return Size(clipSize.width, clipSize.width / videoAspectRatio);
 }
