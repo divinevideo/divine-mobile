@@ -115,8 +115,28 @@ void main() {
           createOld: v15.DatabaseAtV15.new,
           createNew: v16.DatabaseAtV16.new,
           openTestedDatabase: AppDatabase.new,
-          createItems: (batch, oldDb) {},
+          createItems: (batch, oldDb) {
+            // The step is additive, so seed a v15 row and require it back:
+            // without this the test pins the new table and index while a
+            // future destructive edit to the same step goes unnoticed.
+            batch.insert(
+              oldDb.clipCategories,
+              v15.ClipCategoriesCompanion.insert(
+                id: 'kept-across-v16',
+                name: 'Existing category',
+                createdAt: 1700000000,
+              ),
+            );
+          },
           validateItems: (newDb) async {
+            final kept = await newDb
+                .customSelect(
+                  "SELECT COUNT(*) AS c FROM clip_categories "
+                  "WHERE id = 'kept-across-v16'",
+                )
+                .getSingle();
+            expect(kept.data['c'], 1);
+
             // The new table exists and accepts a row after the migration.
             await newDb.customStatement(
               "INSERT INTO saved_caption_styles (id, name, style, order_index, "
