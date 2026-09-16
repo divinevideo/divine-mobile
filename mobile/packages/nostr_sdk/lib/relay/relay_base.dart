@@ -285,7 +285,8 @@ class RelayBase extends Relay {
   /// Check if the connection is healthy (connected and not idle).
   ///
   /// Returns true if healthy, false if disconnected or idle.
-  /// If idle, forces disconnect to enable reconnection on next operation.
+  /// If idle, forces disconnect; the connection manager then reconnects on
+  /// its own.
   bool checkHealth() {
     if (_connectionManager == null) return false;
     return _connectionManager!.checkHealth();

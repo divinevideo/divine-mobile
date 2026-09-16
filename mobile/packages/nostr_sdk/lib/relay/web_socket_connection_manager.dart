@@ -1,4 +1,4 @@
-// ABOUTME: Manages WebSocket connections with on-demand reconnection.
+// ABOUTME: Manages WebSocket connections with self-healing and on-demand reconnection.
 // ABOUTME: Single responsibility class for WebSocket lifecycle, designed for testability.
 
 import 'dart:async';
@@ -43,7 +43,8 @@ class _ConnectionLimit {
 
 /// Configuration for WebSocket connection behavior
 class WebSocketConfig {
-  /// Maximum number of reconnection attempts made for one send.
+  /// Maximum number of reconnection attempts made for one send, and the cap
+  /// on consecutive self-heal reconnects after short-lived connections.
   final int maxReconnectAttempts;
 
   /// Base delay for send-path reconnect backoff (doubles each attempt).
@@ -107,17 +108,21 @@ class DefaultWebSocketChannelFactory implements WebSocketChannelFactory {
 }
 
 /// {@template web_socket_connection_manager}
-/// Manages a single WebSocket connection with on-demand reconnection and
-/// idle detection.
+/// Manages a single WebSocket connection with self-healing, on-demand
+/// reconnection and idle detection.
 ///
 /// Reconnects on demand when a message is sent while disconnected. A stream
-/// error or closure marks the connection disconnected so the next send can
-/// start that bounded reconnect attempt.
+/// error, a remote close, or an idle drop that the caller did not request also
+/// starts a bounded reconnect on its own, because a receive-only socket (a
+/// live REQ with nothing left to send) never reaches the send path (#8992).
+/// After [disconnect] or [dispose], or once the self-heal budget is spent on
+/// a relay that keeps dropping the socket, the connection stays down until
+/// the next send or explicit connect.
 ///
 /// Idle Detection (heartbeat):
 /// - Tracks when the last message was received
 /// - Periodically checks if connection has been idle beyond [idleTimeout]
-/// - Forces disconnect when idle, enabling reconnection on next send
+/// - Forces disconnect when idle, then reconnects as above
 /// - Configure via [WebSocketConfig.heartbeatInterval] and [idleTimeout]
 ///
 /// Designed for testability with:
