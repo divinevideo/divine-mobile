@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:clock/clock.dart';
 import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
@@ -887,7 +888,14 @@ class NostrClient {
   /// [timeout] is an end-to-end deadline for the cache read, reconnect sweep,
   /// query-pool acquisition, and WebSocket query together. Exhausting it
   /// returns `timedOut: true` alongside whatever the relays that did answer
-  /// had delivered by then. A WebSocket query that does not honor its own
+  /// had delivered by then. The relay SDK's one-second settle window is
+  /// reserved for the WebSocket leg; preparatory work that cannot finish
+  /// before that reservation begins is abandoned. For a timeout at or below
+  /// the reserved window, the whole timeout is reserved for a relay read that
+  /// can start immediately: the cache read, reconnect sweep and query-pool wait
+  /// get no preparation budget, so any of them that cannot finish in a
+  /// microtask is abandoned.
+  /// A WebSocket query that does not honor its own
   /// budget may run for up to 250 ms beyond that deadline before its partial
   /// events are abandoned. A pool waiter that expires remains in the package's
   /// FIFO only until a resource reaches it; it releases that resource without
@@ -1022,7 +1030,7 @@ class NostrClient {
     required Duration timeout,
     required bool requireAllRelaysSettled,
   }) async {
-    final startedAt = DateTime.now();
+    final startedAt = clock.now();
     // A disposed client's query pool is closed; querying it is a no-op
     // rather than an error. This is the common case (checked upfront to
     // skip pointless cache/reconnect work below) — the narrower re-check
@@ -1048,8 +1056,19 @@ class NostrClient {
     // that asked for 5s could wait 48s (#7091). This mirrors the same
     // discipline `Nostr.queryEventsDetailed` already applies one layer down.
     final deadline = startedAt.add(timeout);
+    // Preserve one relay settle window for the network leg without extending
+    // the caller's end-to-end deadline.
+    final networkReservation = timeout < RelayPool.querySettleWindow
+        ? timeout
+        : RelayPool.querySettleWindow;
+    final preparationDeadline = deadline.subtract(networkReservation);
     Duration remainingTimeout() {
-      final remaining = deadline.difference(DateTime.now());
+      final remaining = deadline.difference(clock.now());
+      return remaining.isNegative ? Duration.zero : remaining;
+    }
+
+    Duration remainingPreparationTime() {
+      final remaining = preparationDeadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
@@ -1074,7 +1093,7 @@ class NostrClient {
             await dao
                 .getEventsByFilter(filters.first)
                 .timeout(
-                  remainingTimeout(),
+                  remainingPreparationTime(),
                 ),
             filters,
           ),
@@ -1106,7 +1125,7 @@ class NostrClient {
         _hasRelayOutsidePool(effectiveTempRelays);
     if (_relayManager.connectedRelays.isEmpty && !canAnswerWithoutPool) {
       try {
-        await retryDisconnectedRelays().timeout(remainingTimeout());
+        await retryDisconnectedRelays().timeout(remainingPreparationTime());
       } on TimeoutException {
         // Reconnecting is best-effort: query whatever came up in the budget
         // rather than spending the caller's whole timeout dialling hosts that
@@ -1144,7 +1163,7 @@ class NostrClient {
       final acquisition = _queryPool.request();
       PoolResource resource;
       try {
-        resource = await acquisition.timeout(remainingTimeout());
+        resource = await acquisition.timeout(remainingPreparationTime());
       } on TimeoutException {
         // package:pool cannot remove a waiter from its FIFO. Drain it when a
         // slot eventually reaches it, but never run the abandoned callback.
@@ -1202,8 +1221,8 @@ class NostrClient {
         // an inactivity timer reset on every acquire and release, so a busy
         // pool resets it forever while one waiter starves.
         skippedReason =
-            'no query-pool slot arrived inside the budget, so '
-            'the read was skipped';
+            'no query-pool slot arrived before the reserved network window, '
+            'so the read was skipped';
       } on TimeoutException {
         // The read outlived its own deadline by the whole grace period. The
         // relay pool saw it and files its own line when it concludes, so the
@@ -1267,7 +1286,7 @@ class NostrClient {
                     // had a relay still holding the REQ when the deadline
                     // fired.
                     (network.endedBy == QueryEnd.noRelay &&
-                        !DateTime.now().isBefore(deadline))),
+                        !clock.now().isBefore(deadline))),
     );
   }
 
@@ -1339,13 +1358,13 @@ class NostrClient {
     Duration pageTimeout = const Duration(seconds: 10),
     Duration? timeout = const Duration(minutes: 2),
   }) async {
-    final startedAt = DateTime.now();
+    final startedAt = clock.now();
     final deadline = timeout == null ? null : startedAt.add(timeout);
     // With no overall deadline, one page's budget bounds each step that has
     // to settle before the walk can start.
     Duration budget() {
       if (deadline == null) return pageTimeout;
-      final remaining = deadline.difference(DateTime.now());
+      final remaining = deadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
@@ -1455,7 +1474,7 @@ class NostrClient {
   }) {
     final sink = _relayManager.diagnosticsSink;
     if (sink == null) return;
-    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    final elapsedMs = clock.now().difference(startedAt).inMilliseconds;
     emitRelayDiagnostic(
       sink,
       RelayDiagnostic(
@@ -1512,9 +1531,9 @@ class NostrClient {
     List<int> relayTypes = RelayType.all,
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    final deadline = DateTime.now().add(timeout);
+    final deadline = clock.now().add(timeout);
     Duration remainingTimeout() {
-      final remaining = deadline.difference(DateTime.now());
+      final remaining = deadline.difference(clock.now());
       return remaining.isNegative ? Duration.zero : remaining;
     }
 
