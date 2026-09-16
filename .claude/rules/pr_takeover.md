@@ -155,7 +155,10 @@ method, fetch the resulting review and the live PR head afterward:
 
 ```bash
 gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
-  | jq -s 'add | map(select(.user.login == "<authenticated-login>")) | .[-1]
+  | jq -s 'add | map(select(.user.login == "<authenticated-login>"))
+           | if length == 0
+             then error("no review found for <authenticated-login>")
+             else .[-1] end
            | {state, commit_id, submitted_at, html_url}'
 ```
 
