@@ -340,7 +340,7 @@ class NIP17MessageService {
       // Transient: a 5xx, an expired token, a timeout, or an ambiguous
       // policy refusal (#7337). Fall back for THIS send without latching —
       // the fallback's own nip44Encrypt re-hits a policy refusal and
-      // sendRumor terminalizes it as a hard failure, and a blip must not
+      // sendRumor classifies it as a hard failure, and a blip must not
       // cost the rest of the session its fast path.
       Log.warning(
         'Server gift-wrap batch failed for rumor ${rumorEvent.id}: $e; '
@@ -949,13 +949,16 @@ class NIP17MessageService {
       if (e.toString().contains(_keycastPolicyDenialMarker)) {
         // A bare marker match cannot tell a genuine recipient block from the
         // signer's own authorization being under-scoped (#7337) — Keycast
-        // returns this identical body for both. Terminalize as a hard,
-        // non-retryable failure rather than `blocked`: the row survives as a
-        // red "not delivered" bubble the user can retry or delete, instead of
-        // being silently destroyed on a false-positive match. Retrying a
-        // genuine policy refusal will deterministically re-fail, which is the
-        // honest outcome given the client cannot distinguish the cause. The
-        // one place Divine actually knows the recipient is disallowed is the
+        // returns this identical body for both. Classify as a hard failure
+        // rather than `blocked`: the row survives as a red "not delivered"
+        // bubble instead of being deleted on a false-positive match. Not
+        // `retryablePending` either — that would keep the bubble looking
+        // in-flight for a refusal that never clears on its own. The retry
+        // sweep still re-drives a hard-failed row up to its maxRetries
+        // budget; a genuine policy refusal re-fails each time and the bubble
+        // then stays for the user to retry or delete, which is the honest
+        // outcome given the client cannot distinguish the cause. The one
+        // place Divine actually knows the recipient is disallowed is the
         // `DmSendPolicy` pre-gate above, which still returns `blocked`.
         return NIP17SendResult.failure('policy refusal (cause ambiguous): $e');
       }

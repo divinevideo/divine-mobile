@@ -394,7 +394,7 @@ void main() {
 
     group('Keycast policy-denial classification (#6067)', () {
       test(
-        'a 403 "operation denied by policy" refusal terminalizes as a hard '
+        'a 403 "operation denied by policy" refusal classifies as a hard '
         'failure, not a block (#7337)',
         () async {
           // This body is not unique to the verified_minor gate it was
@@ -402,7 +402,7 @@ void main() {
           // string for any authorization whose allowed-kinds policy scope
           // excludes the kind being signed, e.g. `policy:social` signing a
           // kind-13 seal. The client cannot tell those causes apart from the
-          // body alone, so it must not terminalize as a recipient block. A
+          // body alone, so it must not classify as a recipient block. A
           // remote signer is not isolate-capable, so sendRumor's _buildWrap
           // goes straight to the injected main-isolate builder;
           // LocalNostrSigner stands in for that not-isolate-capable signer,
@@ -428,7 +428,8 @@ void main() {
           );
 
           // NOT blocked — a block deletes the queued row (#7337); an
-          // ambiguous policy refusal must leave it as a retryable failure.
+          // ambiguous policy refusal must leave it as a hard-failed row the
+          // sweep re-drives and the user can retry or delete.
           expect(result.blocked, isFalse);
           expect(result.success, isFalse);
           expect(result.retryablePending, isFalse);
@@ -507,14 +508,16 @@ void main() {
       );
 
       test(
-        'a policy refusal still terminalizes over the transient marker '
-        '(non-retryable, not blocked)',
+        'a policy refusal still classifies as a hard failure over the '
+        'transient marker (not retryable-pending, not blocked)',
         () async {
           // Ordering guard. A Keycast response could in principle be both a
           // 5xx-shaped transient and carry the ambiguous policy-denial
-          // marker; the hard-failure classification must win, because a
-          // retryable-pending send re-driven until maxRetries deterministically
-          // re-fails on a genuine policy refusal (#6028, #7337).
+          // marker; the hard-failure classification must win. Both lanes are
+          // re-driven by the sweep, but retryable-pending keeps the row
+          // `pending` — a bubble that looks in-flight — while a policy
+          // refusal never clears on its own and must surface as a red
+          // failure the user can act on (#6028, #7337).
           final policyDenied = NIP17MessageService(
             signer: LocalNostrSigner(_testPrivateKey),
             senderPublicKey: _testPublicKey,
@@ -2880,13 +2883,13 @@ void main() {
         expect(signer.batchCalls, equals(2));
       });
 
-      test('a policy refusal thrown by the batch still terminalizes as a '
+      test('a policy refusal thrown by the batch still classifies as a '
           'hard failure, not blocked (#7337)', () async {
         // Keycast answers 403 "Operation denied by policy" for several
         // unrelated denials (#7337), not only the verified_minor gate this
         // was originally written for. The batch rethrows it, the fallback's
-        // own encrypt re-hits it, and sendRumor must classify it terminal
-        // (non-retryable) rather than retryable — but not as a recipient
+        // own encrypt re-hits it, and sendRumor must classify it as a hard
+        // failure rather than retryable-pending — but not as a recipient
         // block, since the client cannot tell the causes apart.
         final signer = _BatchWrapSigner(
           localPrivateKey,
