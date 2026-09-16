@@ -316,7 +316,14 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             definition,
         )
         self.assertNotRegex(definition, r"zsp-\d+\.\d+\.\d+-darwin-arm64")
-        self.assertRegex(definition, r"ZSP_SHA256=[0-9a-f]{64}")
+        # Pin the exact digest, not just its shape: a version bump that forgets
+        # to move ZSP_SHA256 with ZSP_VERSION must fail here, not on the
+        # release runner after the APK and GitHub release are already cut.
+        self.assertIn(
+            "ZSP_SHA256="
+            "7846ff44db5cd9e29a35370ad6503c06875f594eacb1ede60bd5685116f4b2d4",
+            definition,
+        )
         self.assertIn(
             'echo "${ZSP_SHA256}  ${ZSP_BIN}" | shasum -a 256 -c -', definition
         )
