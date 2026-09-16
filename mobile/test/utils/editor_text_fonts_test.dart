@@ -36,6 +36,17 @@ void main() {
       final fonts = VideoEditorConstants.textFonts;
       expect(fonts.toSet(), hasLength(fonts.length));
     });
+
+    test('rejects in-place reordering, which would repoint saved drafts', () {
+      final fonts = VideoEditorConstants.textFonts;
+      expect(fonts, hasLength(greaterThan(1)));
+      final first = fonts.first;
+
+      expect(() => fonts.sort((a, b) => 0), throwsUnsupportedError);
+      expect(() => fonts.removeAt(0), throwsUnsupportedError);
+      expect(() => fonts.add(GoogleFonts.inter), throwsUnsupportedError);
+      expect(fonts.first, same(first));
+    });
   });
 
   group('editorTextFontsFor', () {
