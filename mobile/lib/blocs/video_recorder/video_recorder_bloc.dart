@@ -190,9 +190,7 @@ class VideoRecorderBloc
           },
           onAutoStopped: (video) {
             if (isClosed) return;
-            if (state.recorderMode.hasRecordingLimit) {
-              add(_VideoRecorderAutoStopped(video));
-            }
+            add(_VideoRecorderAutoStopped(video));
           },
         );
 
@@ -1058,6 +1056,7 @@ class VideoRecorderBloc
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
+      addError(const RecordingProducedNoVideoException(), StackTrace.current);
       clipManager.resetRecording();
       return;
     }
@@ -2366,4 +2365,20 @@ class VideoRecorderBloc
     }
     return super.close();
   }
+}
+
+/// Thrown when the camera service reports a stop with no video file — e.g.
+/// the capture session was interrupted before any frame was ever captured,
+/// so there was nothing to salvage (#9210). Deliberately not wrapped with
+/// `Reportable`: an expected outcome of an interruption, not a
+/// programming-invariant violation (`error_handling.md`'s decision matrix
+/// says NO). It exists only so this path reaches `addError` instead of
+/// failing silently.
+class RecordingProducedNoVideoException implements Exception {
+  const RecordingProducedNoVideoException();
+
+  @override
+  String toString() =>
+      'RecordingProducedNoVideoException: camera service stopped recording '
+      'but returned no video file';
 }

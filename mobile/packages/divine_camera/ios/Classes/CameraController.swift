@@ -81,6 +81,34 @@ class CameraController: NSObject {
         }
     }
 
+    /// Set by the AVCaptureSession interruption observer the moment iOS
+    /// revokes camera hardware access (e.g. `.videoDeviceNotAvailableInBackground`
+    /// when the app backgrounds mid-recording). While true, `captureOutput`
+    /// stops appending buffers to the asset writer — this is the fast path
+    /// that has to win a race against `pausePreview()`, which only runs
+    /// after Dart's async app-lifecycle round trip and is not guaranteed to
+    /// beat the OS revoking the hardware encoder session out from under an
+    /// in-progress append. Once that happens the writer fails irrecoverably
+    /// (#9210), so closing this window is what actually prevents the loss.
+    ///
+    /// Synchronized via `captureSessionInterruptedLock` for the same reason
+    /// as `audioInterrupted`: the notification can land on any thread, but
+    /// `captureOutput` always reads on `videoOutputQueue`.
+    private let captureSessionInterruptedLock = NSLock()
+    private var _captureSessionInterrupted: Bool = false
+    private var captureSessionInterrupted: Bool {
+        get {
+            captureSessionInterruptedLock.lock()
+            defer { captureSessionInterruptedLock.unlock() }
+            return _captureSessionInterrupted
+        }
+        set {
+            captureSessionInterruptedLock.lock()
+            _captureSessionInterrupted = newValue
+            captureSessionInterruptedLock.unlock()
+        }
+    }
+
     /// Diagnostics for the finished-clip audio log (#4779 family): how many
     /// audio buffers reached the writer and the loudest peak seen during
     /// the recording (dBFS, 0 = full scale). A populated track whose peak
@@ -307,6 +335,7 @@ class CameraController: NSObject {
         super.init()
         checkCameraAvailability()
         registerAudioSessionInterruptionObserver()
+        registerCaptureSessionInterruptionObserver()
     }
 
     deinit {
@@ -592,6 +621,110 @@ class CameraController: NSObject {
         case .default: return "default"
         case .builtInMicMuted: return "builtInMicMuted"
         default: return "raw(\(raw))"
+        }
+    }
+
+    /// Observe `AVCaptureSession` interruptions — the OS's authoritative
+    /// signal that camera hardware access was revoked, most commonly
+    /// `.videoDeviceNotAvailableInBackground` when the app backgrounds
+    /// mid-capture (documented in `AVCaptureSession.h`). Unlike the audio
+    /// interruption above, this is not scoped to a singleton — filter by
+    /// object identity in the handler so the separate `audioCaptureSession`
+    /// (also an `AVCaptureSession`) doesn't get misattributed.
+    private func registerCaptureSessionInterruptionObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCaptureSessionWasInterrupted(_:)),
+            name: AVCaptureSession.wasInterruptedNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCaptureSessionInterruptionEnded(_:)),
+            name: AVCaptureSession.interruptionEndedNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleCaptureSessionWasInterrupted(_ notification: Notification) {
+        guard let session = notification.object as? AVCaptureSession,
+              session === self.captureSession else { return }
+
+        reclaimLogSink?()
+
+        // Set synchronously, as the very first state change: this is what
+        // closes the race against a buffer already in flight to the asset
+        // writer. See the doc comment on `captureSessionInterrupted` for
+        // why this has to be faster than pausePreview().
+        captureSessionInterrupted = true
+
+        let reason = Self.captureInterruptionReasonDescription(notification.userInfo)
+        DivineCameraLog.shared.warning(
+            "AVCaptureSession interrupted (reason=\(reason))",
+            name: "DivineCamera.Lifecycle"
+        )
+
+        // Every existing caller of stopRecording() runs on main (Flutter's
+        // method channel dispatch, or autoStopRecording()'s own
+        // DispatchQueue.main.async timer). Matching that convention here
+        // avoids a race between this notification-driven finalize and a
+        // Dart-initiated stop landing on main at nearly the same moment —
+        // e.g. background, then immediately foreground and tap Stop.
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, self.isRecording else { return }
+            DivineCameraLog.shared.info(
+                "Recording interrupted by backgrounding — finalizing "
+                    + "whatever was captured so far",
+                name: "DivineCamera.Recording"
+            )
+            self.stopRecording { [weak self] result, error in
+                if let result = result {
+                    self?.sendAutoStopEvent(result: result)
+                } else {
+                    DivineCameraLog.shared.error(
+                        "Recording interrupted with nothing to salvage: "
+                            + "\(error ?? "unknown error")",
+                        name: "DivineCamera.Recording"
+                    )
+                }
+            }
+        }
+    }
+
+    @objc private func handleCaptureSessionInterruptionEnded(_ notification: Notification) {
+        guard let session = notification.object as? AVCaptureSession,
+              session === self.captureSession else { return }
+
+        reclaimLogSink?()
+        captureSessionInterrupted = false
+        DivineCameraLog.shared.info(
+            "AVCaptureSession interruption ended",
+            name: "DivineCamera.Lifecycle"
+        )
+    }
+
+    /// Human-readable `AVCaptureSession.InterruptionReason` for the
+    /// diagnostics log. Mirrors `interruptionReasonDescription` above.
+    private static func captureInterruptionReasonDescription(
+        _ userInfo: [AnyHashable: Any]?
+    ) -> String {
+        guard
+            let raw = userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int,
+            let reason = AVCaptureSession.InterruptionReason(rawValue: raw)
+        else { return "unspecified" }
+        switch reason {
+        case .videoDeviceNotAvailableInBackground:
+            return "videoDeviceNotAvailableInBackground"
+        case .audioDeviceInUseByAnotherClient:
+            return "audioDeviceInUseByAnotherClient"
+        case .videoDeviceInUseByAnotherClient:
+            return "videoDeviceInUseByAnotherClient"
+        case .videoDeviceNotAvailableWithMultipleForegroundApps:
+            return "videoDeviceNotAvailableWithMultipleForegroundApps"
+        case .videoDeviceNotAvailableDueToSystemPressure:
+            return "videoDeviceNotAvailableDueToSystemPressure"
+        default:
+            return "raw(\(raw))"
         }
     }
 
@@ -2545,25 +2678,30 @@ class CameraController: NSObject {
         videoOutputQueue.async { [weak self] in
             guard let self = self else { return }
 
+            // A writer session is only open once the first frame has been
+            // appended (see captureOutput's startSession(atSourceTime:)).
+            // Interrupted-before-any-frame and stopped-before-any-frame
+            // (a very fast record-then-stop tap) both land here.
+            let hasSession = writer.status == .writing && self.isWriterSessionStarted
+
             // Bound the session to the last video frame. With a look-ahead
             // stabilization mode the trailing ~0.5–1s of video never reaches
             // the writer, so audio would otherwise outlast video and the clip
             // would end on a held (frozen) frame. Ending here trims that
             // surplus audio so both tracks stop together.
-            if writer.status == .writing,
-                self.isWriterSessionStarted,
-                let endPTS = self.lastVideoFrameEndPTS {
+            if hasSession, let endPTS = self.lastVideoFrameEndPTS {
                 writer.endSession(atSourceTime: endPTS)
             }
 
             self.videoWriterInput?.markAsFinished()
             self.audioWriterInput?.markAsFinished()
 
-            writer.finishWriting { [weak self] in
+            let finishHandler: () -> Void = { [weak self] in
                 guard let self = self else { return }
-                
+
                 DispatchQueue.main.async {
-                    if writer.status == .completed {
+                    switch writer.status {
+                    case .completed:
                         // Get video dimensions
                         guard let outputURL = self.currentRecordingURL else {
                             completion(nil, "Output URL not available")
@@ -2624,7 +2762,18 @@ class CameraController: NSObject {
                         ]
 
                         completion(result, nil)
-                    } else {
+                    case .cancelled:
+                        // No frame was ever appended, so no writer session
+                        // was ever opened — cancelWriting() below is the
+                        // deliberate result, not a failure.
+                        DivineCameraLog.shared.warning(
+                            "Recording stopped with no content captured "
+                                + "(interrupted, or stopped before the "
+                                + "first frame arrived)",
+                            name: "DivineCamera.Recording"
+                        )
+                        completion(nil, "No content captured")
+                    default:
                         DivineCameraLog.shared.error(
                             "Recording failed: "
                                 + "\(writer.error?.localizedDescription ?? "Unknown error")",
@@ -2632,7 +2781,7 @@ class CameraController: NSObject {
                         )
                         completion(nil, "Recording failed: \(writer.error?.localizedDescription ?? "Unknown error")")
                     }
-                    
+
                     // Cleanup
                     self.assetWriter = nil
                     self.videoWriterInput = nil
@@ -2657,6 +2806,16 @@ class CameraController: NSObject {
                         }
                     }
                 }
+            }
+
+            if hasSession {
+                writer.finishWriting(completionHandler: finishHandler)
+            } else {
+                // finishWriting()'s behavior when startSession(atSourceTime:)
+                // was never called is undocumented; cancel outright instead
+                // of risking it, then run the same completion/cleanup path.
+                writer.cancelWriting()
+                finishHandler()
             }
         }
     }
@@ -2980,7 +3139,7 @@ extension CameraController: FlutterTexture {
 
 extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        guard !isPaused else { return }
+        guard !isPaused, !captureSessionInterrupted else { return }
 
         // Handle video output
         if output == videoOutput {

@@ -1459,9 +1459,11 @@ void main() {
             ),
           ),
         act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
-        // No error reaches addError: the wakelock failure is logged and
-        // swallowed by _disableWakelockSafely, never the recovery catch.
-        errors: () => const <Object>[],
+        // The wakelock failure itself is logged and swallowed by
+        // _disableWakelockSafely, never the recovery catch — but the stub's
+        // null videoResult still reports RecordingProducedNoVideoException,
+        // independently of the wakelock outcome.
+        errors: () => [isA<RecordingProducedNoVideoException>()],
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
@@ -1471,8 +1473,9 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'on a clean stop, clipManager.stopRecording() is called so the '
-        'periodic duration timer is cancelled on the normal path',
+        'when stopRecording() returns no video file, reports '
+        'RecordingProducedNoVideoException via addError and still resets '
+        'to idle so the recorder is not stuck (#9210)',
         setUp: () {
           when(
             () => cameraService.stopRecording(),
@@ -1485,11 +1488,14 @@ void main() {
             ),
           ),
         act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
-        errors: () => const <Object>[],
+        errors: () => [isA<RecordingProducedNoVideoException>()],
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
+          // stopRecording() must still run so the periodic duration timer
+          // is cancelled (resetRecording() alone would leave it running).
           verify(() => clipManager.stopRecording()).called(1);
+          verify(() => clipManager.resetRecording()).called(1);
         },
       );
 
@@ -1522,7 +1528,12 @@ void main() {
           );
           bloc.add(const VideoRecorderRecordingStopRequested());
         },
-        errors: () => [isA<Exception>()],
+        // First call throws (recovery path); second returns null, which
+        // now also reports RecordingProducedNoVideoException.
+        errors: () => [
+          isA<Exception>(),
+          isA<RecordingProducedNoVideoException>(),
+        ],
         verify: (bloc) {
           // Both stops reached the native call — the first recovered without
           // latching isStoppingRecording=true (which would have bailed the
