@@ -695,6 +695,31 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'ピン留め済み';
+
+  @override
+  String get profilePinSuccess => 'プロフィールの先頭にピン留めしました。';
+
+  @override
+  String get profileUnpinSuccess => 'ピン留めを解除しました。元の位置に戻ります。';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ピン留めできるのは$count本までです。どれか一本を解除すると空きができます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'この動画をピン留めできませんでした。もう一度お試しください。';
+
+  @override
+  String get profileUnpinFailed => 'この動画のピン留めを解除できませんでした。もう一度お試しください。';
+
+  @override
   String get profileShowMore => 'もっと見る';
 
   @override
@@ -1144,14 +1169,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoGridEditVideo => '動画を編集';
 
   @override
-  String get videoGridEditVideoSubtitle => 'タイトル、説明、ハッシュタグを更新';
+  String get videoGridPinVideo => '動画をピン留め';
+
+  @override
+  String get videoGridUnpinVideo => 'ピン留めを解除';
 
   @override
   String get videoGridDeleteVideo => '動画を削除';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'この動画をDivineから削除します。他のNostrクライアントには、まだ表示される場合があります。';
 
   @override
   String get videoGridDeletingContent => 'コンテンツを削除中...';

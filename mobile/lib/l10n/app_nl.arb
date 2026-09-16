@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Vastgepind",
+    "profilePinSuccess": "Bovenaan je profiel vastgepind.",
+    "profileUnpinSuccess": "Losgemaakt. Weer op zijn gewone plek.",
+    "profilePinLimitReached": "{count, plural, =1{Je kunt {count} video vastpinnen. Maak hem los om ruimte te maken.} other{Je kunt maximaal {count} video's vastpinnen. Maak er een los om ruimte te maken.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Die video kon niet worden vastgepind. Probeer het opnieuw.",
+    "profileUnpinFailed": "Die video kon niet worden losgemaakt. Probeer het opnieuw.",
     "profileShowMore": "Meer weergeven",
     "profileShowLess": "Minder weergeven",
     "dmMessageDisplayLimitReached": "De rest van dit bericht wordt niet weergegeven.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Zoeken naar meer video's",
     "videoGridOptionsTitle": "Video-opties",
     "videoGridEditVideo": "Video bewerken",
-    "videoGridEditVideoSubtitle": "Titel, beschrijving en hashtags bijwerken",
+    "videoGridPinVideo": "Video vastpinnen",
+    "videoGridUnpinVideo": "Video losmaken",
     "videoGridDeleteVideo": "Video verwijderen",
-    "videoGridDeleteVideoSubtitle": "Deze video uit Divine verwijderen. Hij kan nog steeds verschijnen in andere Nostr-clients.",
     "videoGridDeletingContent": "Inhoud verwijderen...",
     "exploreTabFeatured": "Uitgelicht",
   "exploreTabClassics": "Klassiekers",

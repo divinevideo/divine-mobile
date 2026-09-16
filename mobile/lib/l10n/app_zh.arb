@@ -393,6 +393,19 @@
       }
     }
   },
+  "profileVideoPinnedValue": "已置顶",
+  "profilePinSuccess": "已置顶到你的主页顶部。",
+  "profileUnpinSuccess": "已取消置顶，回到原来的位置。",
+  "profilePinLimitReached": "{count, plural, other{最多可以置顶 {count} 个视频。取消一个置顶来腾出位置。}}",
+  "@profilePinLimitReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePinFailed": "无法置顶这个视频，再试一次。",
+  "profileUnpinFailed": "无法取消置顶这个视频，再试一次。",
   "profileShowMore": "显示更多",
   "profileShowLess": "收起",
   "dmMessageDisplayLimitReached": "此消息的其余部分不会显示。",
@@ -556,9 +569,9 @@
   "videoGridRefreshLabel": "正在寻找更多视频",
   "videoGridOptionsTitle": "视频选项",
   "videoGridEditVideo": "编辑视频",
-  "videoGridEditVideoSubtitle": "更新标题、简介和话题标签",
+  "videoGridPinVideo": "置顶视频",
+  "videoGridUnpinVideo": "取消置顶",
   "videoGridDeleteVideo": "删除视频",
-  "videoGridDeleteVideoSubtitle": "从 Divine 删除此视频。它可能仍会出现在其他 Nostr 客户端上。",
   "videoGridDeletingContent": "正在删除内容...",
   "exploreTabFeatured": "精选",
   "exploreTabClassics": "经典",

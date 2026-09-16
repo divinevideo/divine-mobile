@@ -338,6 +338,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Закачено",
+    "profilePinSuccess": "Закачено най-отгоре в профила ти.",
+    "profileUnpinSuccess": "Откачено. Върна се на обичайното си място.",
+    "profilePinLimitReached": "{count, plural, =1{Можеш да закачиш {count} видео. Откачи го, за да освободиш място.} other{Можеш да закачиш до {count} видеа. Откачи едно, за да освободиш място.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Видеото не можа да се закачи. Опитай пак.",
+    "profileUnpinFailed": "Видеото не можа да се откачи. Опитай пак.",
     "profileShowMore": "Покажи повече",
     "profileShowLess": "Покажи по-малко",
     "dmMessageDisplayLimitReached": "Останалата част от съобщението не се показва.",
@@ -475,9 +488,9 @@
     "videoGridRefreshLabel": "Търсим още видеа",
     "videoGridOptionsTitle": "Опции за видеото",
     "videoGridEditVideo": "Редактирай видеото",
-    "videoGridEditVideoSubtitle": "Актуализирай заглавие, описание и хаштагове",
+    "videoGridPinVideo": "Закачи видеото",
+    "videoGridUnpinVideo": "Откачи видеото",
     "videoGridDeleteVideo": "Изтрий видеото",
-    "videoGridDeleteVideoSubtitle": "Премахни това видео от Divine. Може още да се вижда в други Nostr клиенти.",
     "videoGridDeletingContent": "Трием съдържанието...",
     "exploreTabFeatured": "Избрани",
   "exploreTabClassics": "Класики",

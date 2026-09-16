@@ -775,6 +775,33 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Fäst';
+
+  @override
+  String get profilePinSuccess => 'Fäst högst upp på din profil.';
+
+  @override
+  String get profileUnpinSuccess => 'Lossad. Tillbaka på sin vanliga plats.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Du kan fästa upp till $count videor. Lossa en för att göra plats.',
+      one: 'Du kan fästa $count video. Lossa den för att göra plats.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Videon kunde inte fästas. Försök igen.';
+
+  @override
+  String get profileUnpinFailed => 'Videon kunde inte lossas. Försök igen.';
+
+  @override
   String get profileShowMore => 'Visa mer';
 
   @override
@@ -1249,15 +1276,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoGridEditVideo => 'Redigera video';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Uppdatera titel, beskrivning och hashtags';
+  String get videoGridPinVideo => 'Fäst video';
+
+  @override
+  String get videoGridUnpinVideo => 'Lossa video';
 
   @override
   String get videoGridDeleteVideo => 'Ta bort video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Ta bort den här videon från Divine. Den kan fortfarande visas i andra Nostr-klienter.';
 
   @override
   String get videoGridDeletingContent => 'Tar bort innehåll...';

@@ -13,6 +13,7 @@ This document describes the Nostr event schemas for video-related events as impl
 | 34236 | Addressable short video | Parameterized replaceable | Primary video content (NIP-71) |
 | 34235 | Addressable normal video | Parameterized replaceable | Horizontal/longer videos (NIP-71) |
 | 22236 | Video view event | Ephemeral | Analytics for video views |
+| 10001 | Pinned videos | Replaceable | A creator's pinned profile videos (NIP-51 list, Divine `a`-tag convention) |
 
 ---
 
@@ -409,3 +410,49 @@ with no new playback emits nothing. An app kill mid-session still leaves the
   the view and contributes zero loops, each `end` contributes
   `viewed` seconds ÷ video duration as loops, and an event with no `phase` keeps
   the legacy single-shot behaviour (`viewed` floored at one second)
+
+---
+
+## Kind 10001 - Pinned Profile Videos
+
+A creator's pinned videos live on their NIP-51 kind-10001 list as kind-34236
+`a` coordinates, in stored order:
+
+```json
+{
+  "kind": 10001,
+  "pubkey": "<creator pubkey hex>",
+  "tags": [
+    ["a", "34236:<creator pubkey hex>:<d tag>"],
+    ["a", "34236:<creator pubkey hex>:<d tag>"]
+  ],
+  "content": ""
+}
+```
+
+NIP-51 names kind 10001 "Pinned notes" and expects kind-1 `e` references;
+the video coordinates are a Divine convention shared with Divine Web, so other
+clients ignore them. Mobile (`ProfilePinsRepository`) therefore:
+
+- manages only `a` tags that name a kind-34236 video authored by the list
+  owner with a non-empty `d`; every other tag, and `content` (reserved by
+  NIP-51 for the encrypted private-item array), is carried through a rewrite
+  byte-for-byte
+- inserts a new pin at the **front** so the most recently pinned video shows
+  first (Web appends; NIP-51 recommends appending, so this is a documented
+  deviation), and removes every copy of a coordinate on unpin
+- caps the list at 6 owner-authored coordinates, counting stored references
+  whether or not their video still resolves; an imported longer list is never
+  truncated. A successful delete of a pinned video from the profile grid is
+  followed by a best-effort, unannounced unpin so the deleted coordinate does
+  not keep occupying a slot with no tile left to free it from
+- reads the list with full relay settlement before every write and refuses to
+  publish over an inconclusive read, because a replaceable event republished
+  from a partial read silently drops items
+- picks the canonical revision by `created_at` descending, event id ascending
+  on a tie, and stamps a replacement past the base it supersedes
+
+The profile grid (`ProfileFeedCubit`) leads with the pinned videos in stored
+order — resolving a pin outside the loaded feed window by coordinate — and
+follows with the rest of the feed in its usual order. The fullscreen feed
+launched from the grid derives the same sequence.

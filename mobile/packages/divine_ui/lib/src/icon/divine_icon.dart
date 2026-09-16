@@ -164,6 +164,11 @@ enum DivineIconName {
   plus('plus'),
   prohibit('prohibit'),
   prohibitInset('prohibitInset'),
+
+  /// The filled pin glyph from the profile pinned-video badge in Figma,
+  /// exported without its drop-shadow filter because `flutter_svg` cannot
+  /// render one.
+  pushPin('push_pin'),
   question('question'),
   queue('queue'),
   repeat('repeat'),

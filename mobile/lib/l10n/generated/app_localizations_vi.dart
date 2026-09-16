@@ -763,6 +763,32 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Đã ghim';
+
+  @override
+  String get profilePinSuccess => 'Đã ghim lên đầu hồ sơ của bạn.';
+
+  @override
+  String get profileUnpinSuccess => 'Đã bỏ ghim. Video về lại chỗ cũ.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Bạn có thể ghim tối đa $count video. Bỏ ghim một video để có chỗ.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Không ghim được video đó. Thử lại nhé.';
+
+  @override
+  String get profileUnpinFailed => 'Không bỏ ghim được video đó. Thử lại nhé.';
+
+  @override
   String get profileShowMore => 'Xem thêm';
 
   @override
@@ -1232,14 +1258,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoGridEditVideo => 'Chỉnh sửa video';
 
   @override
-  String get videoGridEditVideoSubtitle => 'Cập nhật tiêu đề, mô tả và hashtag';
+  String get videoGridPinVideo => 'Ghim video';
+
+  @override
+  String get videoGridUnpinVideo => 'Bỏ ghim video';
 
   @override
   String get videoGridDeleteVideo => 'Xóa video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Gỡ video này khỏi Divine. Nó vẫn có thể xuất hiện trên các ứng dụng Nostr khác.';
 
   @override
   String get videoGridDeletingContent => 'Đang xóa nội dung...';

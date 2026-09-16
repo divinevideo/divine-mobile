@@ -814,6 +814,37 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'పిన్ చేయబడింది';
+
+  @override
+  String get profilePinSuccess => 'మీ ప్రొఫైల్ పైభాగంలో పిన్ చేయబడింది.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'పిన్ తీసివేయబడింది. మళ్లీ దాని సాధారణ స్థానంలో ఉంది.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'మీరు గరిష్టంగా $count వీడియోలను పిన్ చేయవచ్చు. చోటు కోసం ఒకదాని పిన్ తీసివేయండి.',
+      one:
+          'మీరు $count వీడియోను పిన్ చేయవచ్చు. చోటు కోసం దాని పిన్ తీసివేయండి.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed =>
+      'ఆ వీడియోను పిన్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get profileUnpinFailed =>
+      'ఆ వీడియో పిన్ తీసివేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get profileShowMore => 'మరింత చూపించు';
 
   @override
@@ -1293,15 +1324,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoGridEditVideo => 'వీడియోను సవరించండి';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'శీర్షిక, వివరణ మరియు హ్యాష్‌ట్యాగ్‌లను నవీకరించండి';
+  String get videoGridPinVideo => 'వీడియోను పిన్ చేయండి';
+
+  @override
+  String get videoGridUnpinVideo => 'పిన్ తీసివేయండి';
 
   @override
   String get videoGridDeleteVideo => 'వీడియోని తొలగించండి';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Divine నుండి ఈ వీడియోని తీసివేయండి. ఇది ఇప్పటికీ ఇతర Nostr క్లయింట్‌లలో కనిపించవచ్చు.';
 
   @override
   String get videoGridDeletingContent => 'కంటెంట్‌ని తొలగిస్తోంది...';

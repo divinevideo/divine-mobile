@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Épinglée",
+    "profilePinSuccess": "Épinglée en haut de ton profil.",
+    "profileUnpinSuccess": "Désépinglée. De retour à sa place habituelle.",
+    "profilePinLimitReached": "{count, plural, =1{Tu peux épingler {count} vidéo. Désépingle-la pour faire de la place.} other{Tu peux épingler jusqu'à {count} vidéos. Désépingle-en une pour faire de la place.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Impossible d'épingler cette vidéo. Réessaie.",
+    "profileUnpinFailed": "Impossible de désépingler cette vidéo. Réessaie.",
     "profileShowMore": "Afficher plus",
     "profileShowLess": "Afficher moins",
     "dmMessageDisplayLimitReached": "Le reste de ce message n’est pas affiché.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Recherche de plus de vidéos",
     "videoGridOptionsTitle": "Options de la vidéo",
     "videoGridEditVideo": "Modifier la vidéo",
-    "videoGridEditVideoSubtitle": "Mettre à jour titre, description et hashtags",
+    "videoGridPinVideo": "Épingler la vidéo",
+    "videoGridUnpinVideo": "Désépingler la vidéo",
     "videoGridDeleteVideo": "Supprimer la vidéo",
-    "videoGridDeleteVideoSubtitle": "Retirer cette vidéo de Divine. Elle peut encore apparaître dans d'autres clients Nostr.",
     "videoGridDeletingContent": "Suppression du contenu...",
     "exploreTabFeatured": "À la une",
   "exploreTabClassics": "Classiques",

@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -49,12 +50,16 @@ class _MockEnforcementRepository extends Mock
 class _MockProfileFeedCubit extends MockBloc<ProfileFeedEvent, ProfileFeedState>
     implements ProfileFeedCubit {}
 
-ProfileFeedCubit _stubbedProfileFeedCubit() {
+ProfileFeedCubit _stubbedProfileFeedCubit({
+  ProfileFeedState state = const ProfileFeedState(
+    status: ProfileFeedStatus.ready,
+  ),
+}) {
   final cubit = _MockProfileFeedCubit();
   whenListen(
     cubit,
     const Stream<ProfileFeedState>.empty(),
-    initialState: const ProfileFeedState(status: ProfileFeedStatus.ready),
+    initialState: state,
   );
   return cubit;
 }
@@ -83,9 +88,27 @@ DivineVideoDraft _createTestDraft({String title = 'Test Draft'}) {
   );
 }
 
+/// The grid tile numbered [number] (1-based), found by its semantic label
+/// resolved from l10n so a copy change cannot silently break these tests.
+Finder _thumbnail(int number) => find.bySemanticsLabel(
+  lookupAppLocalizations(const Locale('en')).profileVideoThumbnailLabel(number),
+);
+
+/// The kind-5 a successful delete carries, handed on to enforcement.
+final _deletionEvent = Event.fromJson({
+  'id': 'delete-event-id',
+  'pubkey': _ownPubkey,
+  'created_at': 1757385263,
+  'kind': 5,
+  'tags': <List<String>>[],
+  'content': '',
+  'sig': '12' * 64,
+});
+
 List<model.VideoEvent> _createTestVideos({
   required String pubkey,
   int count = 2,
+  bool addressable = false,
 }) {
   final now = DateTime.now();
   final nowUnix = now.millisecondsSinceEpoch ~/ 1000;
@@ -100,6 +123,7 @@ List<model.VideoEvent> _createTestVideos({
       title: 'Video $i',
       videoUrl: 'https://example.com/v$i.mp4',
       thumbnailUrl: 'https://example.com/thumb$i.jpg',
+      addressableDTag: addressable ? 'd-$i' : null,
     ),
   );
 }
@@ -109,6 +133,10 @@ void main() {
     late _MockAuthService mockAuth;
     late _MockBackgroundPublishBloc mockBloc;
     late _MockDmRepository mockDmRepository;
+
+    setUpAll(() {
+      registerFallbackValue(const ProfileFeedStarted());
+    });
 
     setUp(() {
       mockAuth = _MockAuthService();
@@ -125,8 +153,9 @@ void main() {
       List<PendingCollaboratorInviteGroup> pendingInviteGroups = const [],
       Locale? locale,
       List<Override> additionalOverrides = const [],
+      ProfileFeedCubit? profileFeedCubit,
     }) {
-      final profileFeedCubit = _stubbedProfileFeedCubit();
+      profileFeedCubit ??= _stubbedProfileFeedCubit();
       return testProviderScope(
         additionalOverrides: [
           ...additionalOverrides,
@@ -252,7 +281,7 @@ void main() {
             ),
           );
 
-          await tester.tap(find.bySemanticsLabel('Video thumbnail 3'));
+          await tester.tap(_thumbnail(3));
           await tester.pumpAndSettle();
 
           final args = capturedExtra as ProfilePooledFullscreenVideoFeedArgs?;
@@ -319,7 +348,7 @@ void main() {
           );
 
           expect(find.byType(PartialCircleSpinner), findsOneWidget);
-          await tester.tap(find.bySemanticsLabel('Video thumbnail 3'));
+          await tester.tap(_thumbnail(3));
           await tester.pumpAndSettle();
 
           final args = capturedExtra as ProfilePooledFullscreenVideoFeedArgs?;
@@ -342,7 +371,7 @@ void main() {
             buildSubject(userIdHex: _ownPubkey, videos: videos),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.videoGridEditVideo), findsOneWidget);
@@ -392,7 +421,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.videoGridEditVideo), findsNothing);
@@ -411,9 +440,7 @@ void main() {
           buildSubject(userIdHex: _ownPubkey, videos: videos),
         );
 
-        final node = tester.getSemantics(
-          find.bySemanticsLabel('Video thumbnail 1'),
-        );
+        final node = tester.getSemantics(_thumbnail(1));
         expect(
           node.getSemanticsData().hasAction(SemanticsAction.longPress),
           isTrue,
@@ -466,7 +493,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.videoGridEditVideo), findsNothing);
@@ -520,7 +547,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridEditVideo));
           await tester.pumpAndSettle();
@@ -540,7 +567,7 @@ void main() {
             buildSubject(userIdHex: _ownPubkey, videos: videos),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridDeleteVideo));
           await tester.pumpAndSettle();
@@ -555,7 +582,8 @@ void main() {
       );
 
       testWidgets(
-        'delete stays disabled with a spinner while work is pending',
+        'the sheet closes on Delete, and reopens with every entry disabled '
+        'while that delete is still pending',
         (tester) async {
           when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
           final videos = _createTestVideos(pubkey: _ownPubkey);
@@ -584,49 +612,40 @@ void main() {
               ],
             ),
           );
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridDeleteVideo));
           await tester.pumpAndSettle();
+          // The sheet is gone; the confirmation sits over the grid.
+          expect(find.text(l10n.videoGridEditVideo), findsNothing);
           await tester.tap(find.text(l10n.shareMenuDelete));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 300));
 
-          expect(find.byType(CircularProgressIndicator), findsOneWidget);
-          final editTile = tester.widget<ListTile>(
+          await tester.longPress(_thumbnail(1));
+          await tester.pumpAndSettle();
+          ListTile tileFor(String label) => tester.widget<ListTile>(
             find.ancestor(
-              of: find.text(l10n.videoGridEditVideo),
+              of: find.text(label),
               matching: find.byType(ListTile),
             ),
           );
-          expect(editTile.enabled, isFalse);
-          final deleteTile = tester.widget<ListTile>(
-            find.ancestor(
-              of: find.text(l10n.videoGridDeleteVideo),
-              matching: find.byType(ListTile),
-            ),
-          );
-          expect(deleteTile.enabled, isFalse);
+          expect(tileFor(l10n.videoGridEditVideo).enabled, isFalse);
+          expect(tileFor(l10n.videoGridDeleteVideo).enabled, isFalse);
+          await tester.tap(find.text(l10n.videoGridDeleteVideo));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.shareMenuDeleteConfirmation), findsNothing);
 
           relayCompleter.complete(
             DeleteResult.failure('rejected', DeleteFailureKind.relayRejected),
           );
           await tester.pumpAndSettle();
-
-          final recoveredEditTile = tester.widget<ListTile>(
-            find.ancestor(
-              of: find.text(l10n.videoGridEditVideo),
-              matching: find.byType(ListTile),
-            ),
-          );
-          final recoveredDeleteTile = tester.widget<ListTile>(
-            find.ancestor(
-              of: find.text(l10n.videoGridDeleteVideo),
-              matching: find.byType(ListTile),
-            ),
-          );
-          expect(recoveredEditTile.enabled, isTrue);
-          expect(recoveredDeleteTile.enabled, isTrue);
+          await tester.tapAt(const Offset(10, 10));
+          await tester.pumpAndSettle();
+          await tester.longPress(_thumbnail(1));
+          await tester.pumpAndSettle();
+          expect(tileFor(l10n.videoGridEditVideo).enabled, isTrue);
+          expect(tileFor(l10n.videoGridDeleteVideo).enabled, isTrue);
 
           verify(
             () => deletionService.quickDelete(
@@ -894,6 +913,351 @@ void main() {
         expect(
           find.text(l10n.profileCollaboratorInviteRetryResult(0)),
           findsNothing,
+        );
+      });
+    });
+
+    group('pinned videos', () {
+      testWidgets(
+        'a pinned tile carries the pin badge and a pinned semantic value',
+        (
+          tester,
+        ) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_otherPubkey);
+          final videos = _createTestVideos(
+            pubkey: _ownPubkey,
+            addressable: true,
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final cubit = _stubbedProfileFeedCubit(
+            state: ProfileFeedState(
+              status: ProfileFeedStatus.ready,
+              pinnedCoordinates: [videos[1].addressableId!],
+            ),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: videos,
+              profileFeedCubit: cubit,
+            ),
+          );
+
+          final pinnedTile = _thumbnail(2);
+          expect(
+            tester.getSemantics(pinnedTile).value,
+            l10n.profileVideoPinnedValue,
+          );
+          expect(tester.getSemantics(_thumbnail(1)).value, isEmpty);
+          final badges = find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.pushPin,
+          );
+          expect(badges, findsOneWidget);
+          expect(
+            find.ancestor(of: badges, matching: pinnedTile),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets('Pin Video in the actions sheet dispatches a pin request', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(
+          pubkey: _ownPubkey,
+          addressable: true,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _stubbedProfileFeedCubit();
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _ownPubkey,
+            videos: videos,
+            profileFeedCubit: cubit,
+          ),
+        );
+
+        await tester.longPress(_thumbnail(1));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoGridPinVideo), findsOneWidget);
+
+        await tester.tap(find.text(l10n.videoGridPinVideo));
+        await tester.pumpAndSettle();
+
+        verify(() => cubit.add(ProfileFeedPinRequested(videos[0]))).called(1);
+        expect(find.text(l10n.videoGridPinVideo), findsNothing);
+      });
+
+      testWidgets(
+        'a pinned video offers Unpin Video and dispatches an unpin request',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final videos = _createTestVideos(
+            pubkey: _ownPubkey,
+            addressable: true,
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final cubit = _stubbedProfileFeedCubit(
+            state: ProfileFeedState(
+              status: ProfileFeedStatus.ready,
+              pinnedCoordinates: [videos[0].addressableId!],
+            ),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: videos,
+              profileFeedCubit: cubit,
+            ),
+          );
+
+          await tester.longPress(_thumbnail(1));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.videoGridUnpinVideo), findsOneWidget);
+          expect(find.text(l10n.videoGridPinVideo), findsNothing);
+
+          await tester.tap(find.text(l10n.videoGridUnpinVideo));
+          await tester.pumpAndSettle();
+
+          verify(
+            () => cubit.add(ProfileFeedUnpinRequested(videos[0])),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
+        'at the cap, Pin Video stays tappable and hands the decision to the '
+        'cubit, which answers with the limit',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final videos = _createTestVideos(
+            pubkey: _ownPubkey,
+            count: ProfileFeedState.maxPinnedVideos + 1,
+            addressable: true,
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final cubit = _stubbedProfileFeedCubit(
+            state: ProfileFeedState(
+              status: ProfileFeedStatus.ready,
+              pinnedCoordinates: [
+                for (final video in videos.skip(1)) video.addressableId!,
+              ],
+            ),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: videos,
+              profileFeedCubit: cubit,
+            ),
+          );
+
+          await tester.longPress(_thumbnail(1));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoGridPinVideo));
+          await tester.pumpAndSettle();
+
+          verify(
+            () => cubit.add(ProfileFeedPinRequested(videos[0])),
+          ).called(1);
+        },
+      );
+
+      testWidgets('while a pin mutation is in flight the entry is disabled', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(
+          pubkey: _ownPubkey,
+          addressable: true,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _stubbedProfileFeedCubit(
+          state: const ProfileFeedState(
+            status: ProfileFeedStatus.ready,
+            isPinMutationInFlight: true,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _ownPubkey,
+            videos: videos,
+            profileFeedCubit: cubit,
+          ),
+        );
+
+        await tester.longPress(_thumbnail(1));
+        await tester.pumpAndSettle();
+
+        final tile = tester.widget<ListTile>(
+          find.ancestor(
+            of: find.text(l10n.videoGridPinVideo),
+            matching: find.byType(ListTile),
+          ),
+        );
+        expect(tile.enabled, isFalse);
+        await tester.tap(find.text(l10n.videoGridPinVideo));
+        await tester.pumpAndSettle();
+        verifyNever(() => cubit.add(any(that: isA<ProfileFeedPinRequested>())));
+      });
+
+      testWidgets('a legacy video without a d tag has no Pin entry', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(pubkey: _ownPubkey);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildSubject(userIdHex: _ownPubkey, videos: videos),
+        );
+
+        await tester.longPress(_thumbnail(1));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoGridEditVideo), findsOneWidget);
+        expect(find.text(l10n.videoGridPinVideo), findsNothing);
+        expect(find.text(l10n.videoGridUnpinVideo), findsNothing);
+      });
+
+      testWidgets(
+        'deleting a pinned video quietly unpins it once the delete succeeds',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final videos = _createTestVideos(
+            pubkey: _ownPubkey,
+            addressable: true,
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final cubit = _stubbedProfileFeedCubit(
+            state: ProfileFeedState(
+              status: ProfileFeedStatus.ready,
+              pinnedCoordinates: [videos[0].addressableId!],
+            ),
+          );
+          final deletionService = _MockContentDeletionService();
+          final enforcementRepository = _MockEnforcementRepository();
+          when(
+            () => deletionService.quickDelete(
+              video: videos[0],
+              reason: DeleteReason.personalChoice,
+            ),
+          ).thenAnswer(
+            (_) async => DeleteResult.createSuccess(
+              'delete-event-id',
+              acceptance: DeleteAcceptance.everyRelay,
+              deleteEvent: _deletionEvent,
+            ),
+          );
+          when(
+            () => enforcementRepository.enforce(
+              'delete-event-id',
+              deletionEvent: _deletionEvent,
+            ),
+          ).thenAnswer(
+            (_) async => const CreatorDeleteEnforcementResult.confirmed(),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: videos,
+              profileFeedCubit: cubit,
+              additionalOverrides: [
+                contentDeletionServiceProvider.overrideWith(
+                  (ref) async => deletionService,
+                ),
+                creatorDeleteEnforcementRepositoryProvider.overrideWithValue(
+                  enforcementRepository,
+                ),
+              ],
+            ),
+          );
+          await tester.longPress(_thumbnail(1));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoGridDeleteVideo));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+
+          verify(() => cubit.add(const ProfileFeedRefreshRequested()))
+              .called(1);
+          verify(
+            () => cubit.add(ProfileFeedUnpinRequested(videos[0], quiet: true)),
+          ).called(1);
+        },
+      );
+
+      testWidgets('deleting an unpinned video leaves the pin list alone', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(
+          pubkey: _ownPubkey,
+          addressable: true,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _stubbedProfileFeedCubit(
+          state: ProfileFeedState(
+            status: ProfileFeedStatus.ready,
+            pinnedCoordinates: [videos[1].addressableId!],
+          ),
+        );
+        final deletionService = _MockContentDeletionService();
+        final enforcementRepository = _MockEnforcementRepository();
+        when(
+          () => deletionService.quickDelete(
+            video: videos[0],
+            reason: DeleteReason.personalChoice,
+          ),
+        ).thenAnswer(
+          (_) async => DeleteResult.createSuccess(
+            'delete-event-id',
+            acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: _deletionEvent,
+          ),
+        );
+        when(
+          () => enforcementRepository.enforce(
+            'delete-event-id',
+            deletionEvent: _deletionEvent,
+          ),
+        ).thenAnswer(
+          (_) async => const CreatorDeleteEnforcementResult.confirmed(),
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _ownPubkey,
+            videos: videos,
+            profileFeedCubit: cubit,
+            additionalOverrides: [
+              contentDeletionServiceProvider.overrideWith(
+                (ref) async => deletionService,
+              ),
+              creatorDeleteEnforcementRepositoryProvider.overrideWithValue(
+                enforcementRepository,
+              ),
+            ],
+          ),
+        );
+        await tester.longPress(_thumbnail(1));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoGridDeleteVideo));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.shareMenuDelete));
+        await tester.pumpAndSettle();
+
+        verify(() => cubit.add(const ProfileFeedRefreshRequested())).called(1);
+        verifyNever(
+          () => cubit.add(any(that: isA<ProfileFeedUnpinRequested>())),
         );
       });
     });

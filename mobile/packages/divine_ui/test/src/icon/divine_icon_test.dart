@@ -50,6 +50,10 @@ void main() {
       expect(DivineIconName.bugFill.assetPath, 'assets/icon/bug_fill.svg');
     });
 
+    test('pushPin maps to the profile pinned-video badge asset', () {
+      expect(DivineIconName.pushPin.assetPath, 'assets/icon/push_pin.svg');
+    });
+
     test('all enum values have non-empty file names', () {
       for (final icon in DivineIconName.values) {
         expect(

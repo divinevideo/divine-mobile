@@ -775,6 +775,32 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'የተሰካ';
+
+  @override
+  String get profilePinSuccess => 'በመገለጫዎ አናት ላይ ተሰክቷል።';
+
+  @override
+  String get profileUnpinSuccess => 'ተነስቷል። ወደ ተለመደው ቦታው ተመልሷል።';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'እስከ $count ቪዲዮዎችን መስካት ይችላሉ። ቦታ ለማስለቀቅ አንዱን ያንሱ።',
+      one: '$count ቪዲዮ መስካት ይችላሉ። ቦታ ለማስለቀቅ ያንሱት።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'ያንን ቪዲዮ መስካት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get profileUnpinFailed => 'ያንን ቪዲዮ ማንሳት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
   String get profileShowMore => 'ተጨማሪ አሳይ';
 
   @override
@@ -1233,14 +1259,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoGridEditVideo => 'ቪዲዮ አርትዕ';
 
   @override
-  String get videoGridEditVideoSubtitle => 'ርዕስ፣ መግለጫ እና ሃሽታጎችን ያዘምኑ';
+  String get videoGridPinVideo => 'ቪዲዮ ስካ';
+
+  @override
+  String get videoGridUnpinVideo => 'ቪዲዮ አንሳ';
 
   @override
   String get videoGridDeleteVideo => 'ቪዲዮ ሰርዝ';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'ይህን ቪዲዮ ከDivine አስወግድ። በሌሎች Nostr ደንበኞች ላይ አሁንም ሊታይ ይችላል።';
 
   @override
   String get videoGridDeletingContent => 'ይዘትን በመሰረዝ ላይ...';

@@ -70,3 +70,51 @@ final class ProfileFeedEnrichmentReady extends ProfileFeedEvent {
   @override
   List<Object?> get props => [enriched, sourceKeys];
 }
+
+/// Internal: the author's pin list arrived (cache, relay, or an accepted
+/// mutation); re-derive the pinned-first sequence and resolve any pinned video
+/// outside the loaded feed window.
+final class ProfileFeedPinsChanged extends ProfileFeedEvent {
+  const ProfileFeedPinsChanged(this.coordinates);
+
+  /// Managed kind-34236 coordinates in stored order.
+  final List<String> coordinates;
+
+  @override
+  List<Object?> get props => [coordinates];
+}
+
+/// A pin-list mutation for one of the viewer's own videos. Both variants share
+/// one `sequential` bucket: a request that lands while another is in flight
+/// waits for it rather than being dropped, so the quiet cleanup a delete
+/// sends cannot be lost to a pin the viewer tapped a moment earlier. The
+/// repository serializes its own read-modify-write, the cap check reads the
+/// state the previous mutation left, and both operations are idempotent, so
+/// a queued duplicate is a no-op rather than a hazard.
+sealed class ProfileFeedPinMutationRequested extends ProfileFeedEvent {
+  const ProfileFeedPinMutationRequested(this.video, {this.quiet = false});
+
+  final VideoEvent video;
+
+  /// Leave [ProfileFeedState.pinFeedback] untouched whatever the outcome, for
+  /// a mutation the viewer did not ask for by name.
+  final bool quiet;
+
+  @override
+  List<Object?> get props => [video, quiet];
+}
+
+/// Pins [video] to the front of the viewer's own profile.
+final class ProfileFeedPinRequested extends ProfileFeedPinMutationRequested {
+  const ProfileFeedPinRequested(super.video);
+}
+
+/// Removes [video] from the viewer's own pinned videos.
+///
+/// The grid sends it [quiet] after a successful delete of a pinned video:
+/// the deleted coordinate would otherwise keep occupying one of the pin
+/// slots with no tile left to unpin it from. That cleanup is best-effort and
+/// rides on the delete's own snackbar, so neither outcome announces itself.
+final class ProfileFeedUnpinRequested extends ProfileFeedPinMutationRequested {
+  const ProfileFeedUnpinRequested(super.video, {super.quiet});
+}

@@ -809,6 +809,37 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Épinglée';
+
+  @override
+  String get profilePinSuccess => 'Épinglée en haut de ton profil.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Désépinglée. De retour à sa place habituelle.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tu peux épingler jusqu\'à $count vidéos. Désépingle-en une pour faire de la place.',
+      one:
+          'Tu peux épingler $count vidéo. Désépingle-la pour faire de la place.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed =>
+      'Impossible d\'épingler cette vidéo. Réessaie.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Impossible de désépingler cette vidéo. Réessaie.';
+
+  @override
   String get profileShowMore => 'Afficher plus';
 
   @override
@@ -1288,15 +1319,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoGridEditVideo => 'Modifier la vidéo';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Mettre à jour titre, description et hashtags';
+  String get videoGridPinVideo => 'Épingler la vidéo';
+
+  @override
+  String get videoGridUnpinVideo => 'Désépingler la vidéo';
 
   @override
   String get videoGridDeleteVideo => 'Supprimer la vidéo';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Retirer cette vidéo de Divine. Elle peut encore apparaître dans d\'autres clients Nostr.';
 
   @override
   String get videoGridDeletingContent => 'Suppression du contenu...';

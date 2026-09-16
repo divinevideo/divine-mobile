@@ -718,6 +718,31 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => '已置顶';
+
+  @override
+  String get profilePinSuccess => '已置顶到你的主页顶部。';
+
+  @override
+  String get profileUnpinSuccess => '已取消置顶，回到原来的位置。';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '最多可以置顶 $count 个视频。取消一个置顶来腾出位置。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => '无法置顶这个视频，再试一次。';
+
+  @override
+  String get profileUnpinFailed => '无法取消置顶这个视频，再试一次。';
+
+  @override
   String get profileShowMore => '显示更多';
 
   @override
@@ -1154,14 +1179,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoGridEditVideo => '编辑视频';
 
   @override
-  String get videoGridEditVideoSubtitle => '更新标题、简介和话题标签';
+  String get videoGridPinVideo => '置顶视频';
+
+  @override
+  String get videoGridUnpinVideo => '取消置顶';
 
   @override
   String get videoGridDeleteVideo => '删除视频';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      '从 Divine 删除此视频。它可能仍会出现在其他 Nostr 客户端上。';
 
   @override
   String get videoGridDeletingContent => '正在删除内容...';

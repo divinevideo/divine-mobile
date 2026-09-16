@@ -12,11 +12,13 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_enrichment_merge.dart';
+import 'package:openvine/blocs/profile_feed/profile_feed_pin_overlay.dart';
 import 'package:openvine/blocs/profile_feed/profile_video_metadata_cache.dart';
 import 'package:openvine/blocs/profile_feed/profile_video_snapshot_cache.dart';
 import 'package:openvine/blocs/profile_shared/profile_tab_sync_completion.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:stream_transform/stream_transform.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -60,11 +62,13 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     required VideosRepository videosRepository,
     required VideoEventService videoEventService,
     required ContentBlocklistRepository blocklistRepository,
+    required ProfilePinsRepository profilePinsRepository,
     required EnrichVideos enrichVideos,
   }) : _authorPubkey = authorPubkey,
        _videosRepository = videosRepository,
        _videoEventService = videoEventService,
        _blocklistRepository = blocklistRepository,
+       _pinsRepository = profilePinsRepository,
        _enrichVideos = enrichVideos,
        super(const ProfileFeedState()) {
     on<ProfileFeedStarted>(_onStarted, transformer: sequential());
@@ -91,6 +95,11 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     );
     on<ProfileFeedEnrichmentReady>(
       _onEnrichmentReady,
+      transformer: sequential(),
+    );
+    on<ProfileFeedPinsChanged>(_onPinsChanged, transformer: sequential());
+    on<ProfileFeedPinMutationRequested>(
+      _onPinMutationRequested,
       transformer: sequential(),
     );
 
@@ -121,6 +130,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   final VideosRepository _videosRepository;
   final VideoEventService _videoEventService;
   final ContentBlocklistRepository _blocklistRepository;
+  final ProfilePinsRepository _pinsRepository;
   final EnrichVideos _enrichVideos;
 
   /// Best-effort stale-while-revalidate persistence for the Videos tab.
@@ -135,6 +145,15 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   /// Backfill cache for engagement counts, used on the Nostr-fallback loadMore
   /// branch where there is no REST hydration.
   final ProfileVideoMetadataCache _metadataCache = ProfileVideoMetadataCache();
+
+  /// The author's pin list in stored order. Source state, like
+  /// [_unfilteredVideos]: [_applyFeedFilters] overlays it on every emit.
+  List<String> _pinnedCoordinates = const [];
+
+  /// Pinned videos fetched on their own because they sit outside the loaded
+  /// feed window (an old video pinned to the front). Keyed by coordinate; a
+  /// copy in [_unfilteredVideos] always wins over one held here.
+  final Map<String, VideoEvent> _resolvedPinnedVideos = {};
 
   /// True while a cold-load fetch is in flight (timer-coupled lifecycle
   /// bookkeeping; the observable result is [ProfileFeedState.isInitialLoad]).
@@ -188,8 +207,15 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     // Stale-while-revalidate: a persisted snapshot restores the full
     // scrolled-through window + REST cursor instantly, so reopening a profile
     // does not re-paginate from the relay (#5279 extended to the Videos tab).
-    final cached = await _snapshotCache.read();
+    // The cached pin list is read alongside it so the first emit already
+    // leads with the pinned videos instead of reordering a frame later.
+    final (cached, cachedPins) = await (
+      _snapshotCache.read(),
+      _pinsRepository.readCached(_authorPubkey),
+    ).wait;
     if (isClosed) return;
+    if (cachedPins != null) _pinnedCoordinates = cachedPins;
+    unawaited(_revalidatePins(cachedPins));
     if (cached != null && cached.videos.isNotEmpty) {
       await _restoreFromCache(emit, cached: cached, relaySeed: relaySeed);
       return;
@@ -206,6 +232,11 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       state.copyWith(
         status: ProfileFeedStatus.ready,
         videos: _applyFeedFilters(relaySeed),
+        // The cached list already ordered `videos`, so it has to reach state
+        // on the same emit: ProfileFeedPinsChanged is still queued behind
+        // this handler, and until it lands `isPinned` would contradict what
+        // the grid is already showing.
+        pinnedCoordinates: _pinnedCoordinates,
         hasMoreContent:
             relaySeed.length >= AppConstants.hasMoreContentThreshold,
         isInitialLoad: relaySeed.isEmpty,
@@ -257,6 +288,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       state.copyWith(
         status: ProfileFeedStatus.ready,
         videos: _applyFeedFilters(merged),
+        pinnedCoordinates: _pinnedCoordinates,
         nextOffset: cached.nextOffset,
         totalVideoCount: cached.totalVideoCount,
         hasMoreContent: cached.hasMoreContent,
@@ -509,10 +541,13 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
           mergeWithCurrent: true,
         );
       } else {
-        // Nostr-fallback pagination (REST unavailable).
-        final until = state.videos.isEmpty
+        // Nostr-fallback pagination (REST unavailable). The cursor comes from
+        // the source window, not the displayed sequence: a pinned video from
+        // years ago leads the display and would otherwise drag `until` back
+        // past every unseen page.
+        final until = _unfilteredVideos.isEmpty
             ? null
-            : state.videos
+            : _unfilteredVideos
                   .map((v) => v.createdAt)
                   .reduce((a, b) => a < b ? a : b);
         final before = _videoEventService.authorVideos(_authorPubkey).length;
@@ -680,6 +715,160 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   }
 
   // ---------------------------------------------------------------------------
+  // Pinned videos (kind 10001)
+  // ---------------------------------------------------------------------------
+
+  /// Resolves any cached pin outside the loaded window, then re-reads the
+  /// list from the relays. An inconclusive read keeps the cached list.
+  Future<void> _revalidatePins(List<String>? cached) async {
+    if (cached != null && cached.isNotEmpty) {
+      add(ProfileFeedPinsChanged(cached));
+    }
+    try {
+      final fresh = await _pinsRepository.fetch(_authorPubkey);
+      if (isClosed || fresh == null || listEquals(fresh, cached)) return;
+      add(ProfileFeedPinsChanged(fresh));
+    } on Object catch (error, stackTrace) {
+      if (!isClosed) addError(error, stackTrace);
+    }
+  }
+
+  Future<void> _onPinsChanged(
+    ProfileFeedPinsChanged event,
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    _pinnedCoordinates = event.coordinates;
+    emit(
+      state.copyWith(
+        videos: _applyFeedFilters(_unfilteredVideos),
+        pinnedCoordinates: event.coordinates,
+      ),
+    );
+    await _resolveMissingPinnedVideos(emit);
+  }
+
+  /// Fetches the pinned videos that neither the loaded window nor an earlier
+  /// resolution holds, then re-derives the sequence so they take their place.
+  Future<void> _resolveMissingPinnedVideos(
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    final loaded = {
+      for (final video in _unfilteredVideos) ?video.addressableId,
+      ..._resolvedPinnedVideos.keys,
+    };
+    final missing = _pinnedCoordinates
+        .where((coordinate) => !loaded.contains(coordinate))
+        .toList();
+    if (missing.isEmpty) return;
+
+    try {
+      final videos = await _videosRepository.getVideosByAddressableIds(
+        missing,
+        cacheResults: true,
+      );
+      if (isClosed) return;
+      for (final video in videos) {
+        final coordinate = video.addressableId;
+        if (coordinate != null && missing.contains(coordinate)) {
+          _resolvedPinnedVideos[coordinate] = video;
+        }
+      }
+      emit(state.copyWith(videos: _applyFeedFilters(_unfilteredVideos)));
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+    }
+  }
+
+  Future<void> _onPinMutationRequested(
+    ProfileFeedPinMutationRequested event,
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    final coordinate = event.video.addressableId;
+    if (coordinate == null ||
+        !ProfilePinsRepository.isEligibleCoordinate(
+          coordinate,
+          owner: _authorPubkey,
+        )) {
+      return;
+    }
+    final isPin = event is ProfileFeedPinRequested;
+    if (isPin && !state.isPinned(event.video) && !state.canPinMore) {
+      // The sheet offers Pin at the cap so the tap can explain the limit;
+      // the relay would only confirm what the local list already says.
+      emit(state.copyWith(pinFeedback: ProfileFeedPinFeedback.none));
+      emit(
+        state.copyWith(pinFeedback: ProfileFeedPinFeedback.pinLimitReached),
+      );
+      return;
+    }
+    // A quiet request never touches pinFeedback: no reset, no outcome.
+    emit(
+      state.copyWith(
+        isPinMutationInFlight: true,
+        pinFeedback: event.quiet ? null : ProfileFeedPinFeedback.none,
+      ),
+    );
+
+    ProfilePinMutation result;
+    try {
+      result = isPin
+          ? await _pinsRepository.pin(coordinate)
+          : await _pinsRepository.unpin(coordinate);
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      result = const ProfilePinMutation.failed(
+        ProfilePinFailure.publishDidNotComplete,
+      );
+    }
+    if (isClosed) return;
+
+    final coordinates = result.coordinates;
+    if (coordinates == null) {
+      emit(
+        state.copyWith(
+          isPinMutationInFlight: false,
+          pinFeedback: event.quiet
+              ? null
+              : switch (result.failure) {
+                  ProfilePinFailure.limitReached =>
+                    ProfileFeedPinFeedback.pinLimitReached,
+                  _ when isPin => ProfileFeedPinFeedback.pinFailed,
+                  _ => ProfileFeedPinFeedback.unpinFailed,
+                },
+        ),
+      );
+      return;
+    }
+
+    _pinnedCoordinates = coordinates;
+    if (coordinates.contains(coordinate)) {
+      // The tile the owner long-pressed is in the window, but keeping a copy
+      // means a later window reset (refresh, filter flip) cannot lose the pin.
+      _resolvedPinnedVideos[coordinate] = event.video;
+    } else {
+      // Unpinned: drop the copy rather than keep it in a map of pinned
+      // videos, so a later pin resolves the current revision instead of
+      // rendering whatever this tile happened to be showing.
+      _resolvedPinnedVideos.remove(coordinate);
+    }
+    emit(
+      state.copyWith(
+        videos: _applyFeedFilters(_unfilteredVideos),
+        pinnedCoordinates: coordinates,
+        isPinMutationInFlight: false,
+        pinFeedback: event.quiet
+            ? null
+            : switch (event) {
+                ProfileFeedPinRequested() => ProfileFeedPinFeedback.pinned,
+                ProfileFeedUnpinRequested() => ProfileFeedPinFeedback.unpinned,
+              },
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Initial-load spinner machine (#4164)
   // ---------------------------------------------------------------------------
 
@@ -729,7 +918,26 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   /// the REST author endpoint (anonymous, applies no per-viewer block). Relay
   /// videos are already blocklist-filtered by [VideoEventService] at reception
   /// (#4782). Does NOT remove tombstones — those are handled in the merge paths.
+  ///
+  /// Every emit derives the displayed sequence through here, so the pinned
+  /// videos lead it on every path (cold load, pagination, relay snapshot,
+  /// enrichment, filter change) rather than only on the ones that remembered.
   List<VideoEvent> _applyFeedFilters(List<VideoEvent> videos) {
+    final filtered = _filterVisible(videos);
+    if (_pinnedCoordinates.isEmpty) return filtered;
+    return overlayPinnedVideos(
+      base: filtered,
+      pinnedCoordinates: _pinnedCoordinates,
+      resolved: {
+        for (final video in _withoutTombstones(
+          _filterVisible(_resolvedPinnedVideos.values.toList()),
+        ))
+          video.addressableId!: video,
+      },
+    );
+  }
+
+  List<VideoEvent> _filterVisible(List<VideoEvent> videos) {
     if (videos.isEmpty) return videos;
     final blockFiltered = videos
         .where((v) => !_blocklistRepository.shouldFilterFromFeeds(v.pubkey))

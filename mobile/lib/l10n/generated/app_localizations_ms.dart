@@ -763,6 +763,34 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Disemat';
+
+  @override
+  String get profilePinSuccess => 'Disemat di bahagian atas profil anda.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Sematan dibuang. Kembali ke tempat biasanya.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Anda boleh menyemat sehingga $count video. Buang satu sematan untuk memberi ruang.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Video itu tidak dapat disemat. Cuba lagi.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Sematan video itu tidak dapat dibuang. Cuba lagi.';
+
+  @override
   String get profileShowMore => 'Tunjuk lagi';
 
   @override
@@ -1232,15 +1260,13 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoGridEditVideo => 'Sunting Video';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Kemas kini tajuk, keterangan dan hashtag';
+  String get videoGridPinVideo => 'Semat Video';
+
+  @override
+  String get videoGridUnpinVideo => 'Buang Sematan';
 
   @override
   String get videoGridDeleteVideo => 'Padam Video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Alih keluar video ini daripada Divine. Ia mungkin masih muncul pada klien Nostr lain.';
 
   @override
   String get videoGridDeletingContent => 'Memadam kandungan...';

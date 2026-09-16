@@ -795,6 +795,35 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'پن شدہ';
+
+  @override
+  String get profilePinSuccess => 'آپ کے پروفائل کے اوپر پن ہو گئی۔';
+
+  @override
+  String get profileUnpinSuccess =>
+      'پن ہٹا دی گئی۔ اپنی معمول کی جگہ پر واپس آ گئی۔';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'آپ زیادہ سے زیادہ $count ویڈیوز پن کر سکتے ہیں۔ جگہ بنانے کے لیے ایک کی پن ہٹائیں۔',
+      one: 'آپ $count ویڈیو پن کر سکتے ہیں۔ جگہ بنانے کے لیے اس کی پن ہٹائیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'وہ ویڈیو پن نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get profileUnpinFailed =>
+      'اس ویڈیو کی پن نہیں ہٹ سکی۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get profileShowMore => 'مزید دکھائیں';
 
   @override
@@ -1264,15 +1293,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoGridEditVideo => 'ویڈیو میں ترمیم کریں';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'عنوان، تفصیل اور ہیش ٹیگز اپڈیٹ کریں';
+  String get videoGridPinVideo => 'ویڈیو پن کریں';
+
+  @override
+  String get videoGridUnpinVideo => 'پن ہٹائیں';
 
   @override
   String get videoGridDeleteVideo => 'ویڈیو حذف کریں';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'یہ ویڈیو Divine سے ہٹائیں۔ یہ دیگر Nostr کلائنٹس پر پھر بھی نظر آ سکتی ہے۔';
 
   @override
   String get videoGridDeletingContent => 'مواد حذف ہو رہا ہے...';

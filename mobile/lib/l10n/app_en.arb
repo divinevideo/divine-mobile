@@ -542,6 +542,35 @@
       }
     }
   },
+  "profileVideoPinnedValue": "Pinned",
+  "@profileVideoPinnedValue": {
+    "description": "Semantic value read after a profile grid tile's label when the creator pinned that video to the top of their profile."
+  },
+  "profilePinSuccess": "Pinned to the top of your profile.",
+  "@profilePinSuccess": {
+    "description": "Snackbar after a video was pinned to the creator's own profile."
+  },
+  "profileUnpinSuccess": "Unpinned. Back in its usual spot.",
+  "@profileUnpinSuccess": {
+    "description": "Snackbar after a video was removed from the creator's pinned videos."
+  },
+  "profilePinLimitReached": "{count, plural, =1{You can pin {count} video. Unpin it to make room.} other{You can pin up to {count} videos. Unpin one to make room.}}",
+  "@profilePinLimitReached": {
+    "description": "Snackbar when the creator taps Pin Video while already at the maximum number of pinned videos. {count} is that maximum.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePinFailed": "Couldn't pin that video. Try again.",
+  "@profilePinFailed": {
+    "description": "Snackbar when pinning a video failed (offline, relay rejected, signing failed)."
+  },
+  "profileUnpinFailed": "Couldn't unpin that video. Try again.",
+  "@profileUnpinFailed": {
+    "description": "Snackbar when unpinning a video failed (offline, relay rejected, signing failed)."
+  },
   "profileShowMore": "Show more",
   "profileShowLess": "Show less",
   "dmMessageDisplayLimitReached": "The rest of this message isn't displayed.",
@@ -786,9 +815,15 @@
   "videoGridRefreshLabel": "Searching for more videos",
   "videoGridOptionsTitle": "Video Options",
   "videoGridEditVideo": "Edit Video",
-  "videoGridEditVideoSubtitle": "Update title, description, and hashtags",
+  "videoGridPinVideo": "Pin Video",
+  "@videoGridPinVideo": {
+    "description": "Action in the long-press sheet on one of the creator's own profile videos: pins it to the top of their profile."
+  },
+  "videoGridUnpinVideo": "Unpin Video",
+  "@videoGridUnpinVideo": {
+    "description": "Action in the long-press sheet on one of the creator's own pinned videos: removes it from the pinned videos."
+  },
   "videoGridDeleteVideo": "Delete Video",
-  "videoGridDeleteVideoSubtitle": "Remove this video from Divine. It may still appear on other Nostr clients.",
   "videoGridDeletingContent": "Deleting content...",
   "exploreTabFeatured": "Featured",
   "@exploreTabFeatured": {

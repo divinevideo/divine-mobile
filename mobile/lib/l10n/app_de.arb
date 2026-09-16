@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Angepinnt",
+    "profilePinSuccess": "Oben in deinem Profil angepinnt.",
+    "profileUnpinSuccess": "Losgelöst. Wieder an seinem gewohnten Platz.",
+    "profilePinLimitReached": "{count, plural, =1{Du kannst {count} Video anpinnen. Löse es, um Platz zu machen.} other{Du kannst bis zu {count} Videos anpinnen. Löse eins, um Platz zu machen.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Das Video konnte nicht angepinnt werden. Versuch es nochmal.",
+    "profileUnpinFailed": "Das Video konnte nicht losgelöst werden. Versuch es nochmal.",
     "profileShowMore": "Mehr anzeigen",
     "profileShowLess": "Weniger anzeigen",
     "dmMessageDisplayLimitReached": "Der Rest dieser Nachricht wird nicht angezeigt.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Suche nach weiteren Videos",
     "videoGridOptionsTitle": "Video-Optionen",
     "videoGridEditVideo": "Video bearbeiten",
-    "videoGridEditVideoSubtitle": "Titel, Beschreibung und Hashtags aktualisieren",
+    "videoGridPinVideo": "Video anpinnen",
+    "videoGridUnpinVideo": "Video loslösen",
     "videoGridDeleteVideo": "Video löschen",
-    "videoGridDeleteVideoSubtitle": "Dieses Video aus Divine entfernen. Es kann weiterhin in anderen Nostr-Clients erscheinen.",
     "videoGridDeletingContent": "Inhalt wird gelöscht...",
     "exploreTabFeatured": "Empfohlen",
   "exploreTabClassics": "Klassiker",

@@ -393,6 +393,19 @@
       }
     }
   },
+  "profileVideoPinnedValue": "Đã ghim",
+  "profilePinSuccess": "Đã ghim lên đầu hồ sơ của bạn.",
+  "profileUnpinSuccess": "Đã bỏ ghim. Video về lại chỗ cũ.",
+  "profilePinLimitReached": "{count, plural, other{Bạn có thể ghim tối đa {count} video. Bỏ ghim một video để có chỗ.}}",
+  "@profilePinLimitReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePinFailed": "Không ghim được video đó. Thử lại nhé.",
+  "profileUnpinFailed": "Không bỏ ghim được video đó. Thử lại nhé.",
   "profileShowMore": "Xem thêm",
   "profileShowLess": "Thu gọn",
   "dmMessageDisplayLimitReached": "Phần còn lại của tin nhắn này không được hiển thị.",
@@ -556,9 +569,9 @@
   "videoGridRefreshLabel": "Đang tìm thêm video",
   "videoGridOptionsTitle": "Tùy chọn video",
   "videoGridEditVideo": "Chỉnh sửa video",
-  "videoGridEditVideoSubtitle": "Cập nhật tiêu đề, mô tả và hashtag",
+  "videoGridPinVideo": "Ghim video",
+  "videoGridUnpinVideo": "Bỏ ghim video",
   "videoGridDeleteVideo": "Xóa video",
-  "videoGridDeleteVideoSubtitle": "Gỡ video này khỏi Divine. Nó vẫn có thể xuất hiện trên các ứng dụng Nostr khác.",
   "videoGridDeletingContent": "Đang xóa nội dung...",
   "exploreTabFeatured": "Nổi bật",
   "exploreTabClassics": "Kinh điển",

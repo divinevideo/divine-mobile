@@ -524,6 +524,19 @@
       }
     }
   },
+  "profileVideoPinnedValue": "పిన్ చేయబడింది",
+  "profilePinSuccess": "మీ ప్రొఫైల్ పైభాగంలో పిన్ చేయబడింది.",
+  "profileUnpinSuccess": "పిన్ తీసివేయబడింది. మళ్లీ దాని సాధారణ స్థానంలో ఉంది.",
+  "profilePinLimitReached": "{count, plural, =1{మీరు {count} వీడియోను పిన్ చేయవచ్చు. చోటు కోసం దాని పిన్ తీసివేయండి.} other{మీరు గరిష్టంగా {count} వీడియోలను పిన్ చేయవచ్చు. చోటు కోసం ఒకదాని పిన్ తీసివేయండి.}}",
+  "@profilePinLimitReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePinFailed": "ఆ వీడియోను పిన్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
+  "profileUnpinFailed": "ఆ వీడియో పిన్ తీసివేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "profileShowMore": "మరింత చూపించు",
   "profileShowLess": "తక్కువ చూపు",
   "dmMessageDisplayLimitReached": "ఈ సందేశంలోని మిగిలిన భాగం చూపబడదు.",
@@ -759,9 +772,9 @@
   "videoGridRefreshLabel": "మరిన్ని వీడియోల కోసం శోధిస్తోంది",
   "videoGridOptionsTitle": "వీడియో ఎంపికలు",
   "videoGridEditVideo": "వీడియోను సవరించండి",
-  "videoGridEditVideoSubtitle": "శీర్షిక, వివరణ మరియు హ్యాష్‌ట్యాగ్‌లను నవీకరించండి",
+  "videoGridPinVideo": "వీడియోను పిన్ చేయండి",
+  "videoGridUnpinVideo": "పిన్ తీసివేయండి",
   "videoGridDeleteVideo": "వీడియోని తొలగించండి",
-  "videoGridDeleteVideoSubtitle": "Divine నుండి ఈ వీడియోని తీసివేయండి. ఇది ఇప్పటికీ ఇతర Nostr క్లయింట్‌లలో కనిపించవచ్చు.",
   "videoGridDeletingContent": "కంటెంట్‌ని తొలగిస్తోంది...",
   "exploreTabFeatured": "ఫీచర్ చేయబడింది",
   "@exploreTabFeatured": {

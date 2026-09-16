@@ -199,13 +199,41 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
           extra: video,
         ),
         onDeleted: () async {
+          final feedCubit = context.read<ProfileFeedCubit>();
           // The service marks the video locally deleted; a refresh drops the
           // tile from the grid without waiting for relay propagation.
-          context.read<ProfileFeedCubit>().add(
-            const ProfileFeedRefreshRequested(),
-          );
+          feedCubit.add(const ProfileFeedRefreshRequested());
+          // The deleted video's coordinate would otherwise keep one of the
+          // pin slots with no tile left to free it from. Quiet: the delete
+          // already reported, and a stale reference is not worth a second
+          // snackbar either way.
+          if (feedCubit.state.isPinned(video)) {
+            feedCubit.add(ProfileFeedUnpinRequested(video, quiet: true));
+          }
         },
+        pinAction: _pinActionFor(video),
       );
+
+  /// The Pin/Unpin entry for [video], or null when it cannot be pinned: pins
+  /// live on the owner's own profile and name a video by its addressable
+  /// coordinate, so a legacy video without a `d` tag has nothing to pin by.
+  OwnerVideoPinAction? _pinActionFor(VideoEvent video) {
+    if (video.pubkey != widget.userIdHex || video.addressableId == null) {
+      return null;
+    }
+    final feedCubit = context.read<ProfileFeedCubit>();
+    final feedState = feedCubit.state;
+    final isPinned = feedState.isPinned(video);
+    return OwnerVideoPinAction(
+      isPinned: isPinned,
+      isBusy: feedState.isPinMutationInFlight,
+      onTap: () => feedCubit.add(
+        isPinned
+            ? ProfileFeedUnpinRequested(video)
+            : ProfileFeedPinRequested(video),
+      ),
+    );
+  }
 
   void _onVideoTapped(
     VideoEvent tappedVideo, {
@@ -329,7 +357,8 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
     // Count uploading videos to offset indices for published videos
     final uploadingCount = activeUploads.length;
 
-    final isLoadingMore = context.watch<ProfileFeedCubit>().state.isLoadingMore;
+    final feedState = context.watch<ProfileFeedCubit>().state;
+    final isLoadingMore = feedState.isLoadingMore;
     final pendingInviteGroups = isOwnProfile
         ? ref
               .watch(pendingCollaboratorInviteGroupsProvider)
@@ -379,6 +408,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                   videoEvent: eventEntry.videoEvent,
                   userIdHex: widget.userIdHex,
                   index: index,
+                  isPinned: feedState.isPinned(eventEntry.videoEvent),
                   onLongPress:
                       currentUserPubkey != null &&
                           currentUserPubkey == eventEntry.videoEvent.pubkey
@@ -461,6 +491,7 @@ class _VideoGridTile extends StatelessWidget {
     required this.videoEvent,
     required this.userIdHex,
     required this.index,
+    required this.isPinned,
     required this.onTap,
     this.onLongPress,
   });
@@ -468,6 +499,9 @@ class _VideoGridTile extends StatelessWidget {
   final VideoEvent videoEvent;
   final String userIdHex;
   final int index;
+
+  /// The creator pinned this video to the top of their profile.
+  final bool isPinned;
   final VoidCallback onTap;
 
   /// Opens the own-video actions sheet; null on other users' profiles.
@@ -477,6 +511,10 @@ class _VideoGridTile extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     identifier: 'video_thumbnail_$index',
     label: context.l10n.profileVideoThumbnailLabel(index + 1),
+    // Read after the label ("Video thumbnail 2, Pinned"): the badge itself
+    // is decorative, so this is the only way a screen reader learns of the
+    // pin.
+    value: isPinned ? context.l10n.profileVideoPinnedValue : null,
     button: true,
     onLongPress: onLongPress,
     onLongPressHint: onLongPress == null
@@ -489,10 +527,45 @@ class _VideoGridTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         child: DecoratedBox(
           decoration: BoxDecoration(color: context.vineColors.card),
-          child: ProfileTabThumbnail(
-            thumbnailUrl: videoEvent.thumbnailUrl,
-            blurhash: videoEvent.blurhash,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ProfileTabThumbnail(
+                thumbnailUrl: videoEvent.thumbnailUrl,
+                blurhash: videoEvent.blurhash,
+              ),
+              if (isPinned) const _PinnedBadge(),
+            ],
           ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// The pin glyph on a pinned tile, per the Figma profile design: 18dp, white,
+/// 8dp in from the thumbnail's top-end corner, no backing shape.
+///
+/// Decorative — the tile's semantic value already says the video is pinned.
+/// Static white rather than a `vineColors` token because the ground is the
+/// thumbnail, not an app surface, and the badge ignores the system text scale
+/// so it cannot outgrow the fixed-size cell it overlays.
+class _PinnedBadge extends StatelessWidget {
+  const _PinnedBadge();
+
+  static const double _inset = 8;
+  static const double _size = 18;
+
+  @override
+  Widget build(BuildContext context) => PositionedDirectional(
+    top: _inset,
+    end: _inset,
+    child: ExcludeSemantics(
+      child: MediaQuery.withNoTextScaling(
+        child: const DivineIcon(
+          icon: DivineIconName.pushPin,
+          size: _size,
+          color: VineTheme.whiteText,
         ),
       ),
     ),

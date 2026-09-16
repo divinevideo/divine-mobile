@@ -1334,6 +1334,42 @@ abstract class AppLocalizations {
   /// **'Video thumbnail {number}'**
   String profileVideoThumbnailLabel(int number);
 
+  /// Semantic value read after a profile grid tile's label when the creator pinned that video to the top of their profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get profileVideoPinnedValue;
+
+  /// Snackbar after a video was pinned to the creator's own profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned to the top of your profile.'**
+  String get profilePinSuccess;
+
+  /// Snackbar after a video was removed from the creator's pinned videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpinned. Back in its usual spot.'**
+  String get profileUnpinSuccess;
+
+  /// Snackbar when the creator taps Pin Video while already at the maximum number of pinned videos. {count} is that maximum.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You can pin {count} video. Unpin it to make room.} other{You can pin up to {count} videos. Unpin one to make room.}}'**
+  String profilePinLimitReached(int count);
+
+  /// Snackbar when pinning a video failed (offline, relay rejected, signing failed).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t pin that video. Try again.'**
+  String get profilePinFailed;
+
+  /// Snackbar when unpinning a video failed (offline, relay rejected, signing failed).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t unpin that video. Try again.'**
+  String get profileUnpinFailed;
+
   /// No description provided for @profileShowMore.
   ///
   /// In en, this message translates to:
@@ -2180,23 +2216,23 @@ abstract class AppLocalizations {
   /// **'Edit Video'**
   String get videoGridEditVideo;
 
-  /// No description provided for @videoGridEditVideoSubtitle.
+  /// Action in the long-press sheet on one of the creator's own profile videos: pins it to the top of their profile.
   ///
   /// In en, this message translates to:
-  /// **'Update title, description, and hashtags'**
-  String get videoGridEditVideoSubtitle;
+  /// **'Pin Video'**
+  String get videoGridPinVideo;
+
+  /// Action in the long-press sheet on one of the creator's own pinned videos: removes it from the pinned videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin Video'**
+  String get videoGridUnpinVideo;
 
   /// No description provided for @videoGridDeleteVideo.
   ///
   /// In en, this message translates to:
   /// **'Delete Video'**
   String get videoGridDeleteVideo;
-
-  /// No description provided for @videoGridDeleteVideoSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove this video from Divine. It may still appear on other Nostr clients.'**
-  String get videoGridDeleteVideoSubtitle;
 
   /// No description provided for @videoGridDeletingContent.
   ///

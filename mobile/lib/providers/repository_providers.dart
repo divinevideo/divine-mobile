@@ -32,12 +32,14 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/profile_pins_signer_adapter.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
@@ -587,6 +589,19 @@ Future<BookmarksRepository> bookmarksRepository(Ref ref) async {
     nostrClient: nostrService,
     signer: BookmarkSignerAdapter(authService),
     prefs: prefs,
+  );
+}
+
+/// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).
+///
+/// Long-lived so the revision a mutation just got accepted survives the
+/// profile grid unmounting: the fullscreen feed builds its own
+/// `ProfileFeedCubit` a moment later and reads through the same instance.
+@Riverpod(keepAlive: true)
+ProfilePinsRepository profilePinsRepository(Ref ref) {
+  return ProfilePinsRepository(
+    nostrClient: ref.watch(nostrServiceProvider),
+    signer: ProfilePinsSignerAdapter(ref.watch(authServiceProvider)),
   );
 }
 

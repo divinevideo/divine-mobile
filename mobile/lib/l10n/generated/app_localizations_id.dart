@@ -734,6 +734,34 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Disematkan';
+
+  @override
+  String get profilePinSuccess => 'Disematkan di bagian atas profilmu.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Sematan dilepas. Kembali ke tempat biasanya.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Kamu bisa menyematkan hingga $count video. Lepas satu sematan untuk memberi ruang.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Video itu gagal disematkan. Coba lagi.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Sematan video itu gagal dilepas. Coba lagi.';
+
+  @override
   String get profileShowMore => 'Tampilkan lebih banyak';
 
   @override
@@ -1203,15 +1231,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoGridEditVideo => 'Ubah Video';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Perbarui judul, deskripsi, dan hashtag';
+  String get videoGridPinVideo => 'Sematkan Video';
+
+  @override
+  String get videoGridUnpinVideo => 'Lepas Sematan';
 
   @override
   String get videoGridDeleteVideo => 'Hapus Video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Hapus video ini dari Divine. Video ini mungkin masih muncul di klien Nostr lain.';
 
   @override
   String get videoGridDeletingContent => 'Menghapus konten...';

@@ -92,6 +92,11 @@ class EventKind {
 
   static const int profileBadges = 10008;
 
+  /// NIP-51 "Pinned notes" list. Divine stores a creator's pinned profile
+  /// videos here as kind-34236 `a` coordinates, an extension shared with
+  /// Divine Web; other clients expect kind-1 `e` references.
+  static const int pinList = 10001;
+
   static const int bookmarksList = 10003;
 
   static const int groupList = 10009;
