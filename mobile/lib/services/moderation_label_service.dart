@@ -878,9 +878,13 @@ class ModerationLabelService {
   /// abandon and re-drive itself in a tight loop. Waiting for the next status
   /// change cannot spin and is still strictly better than latching.
   ///
-  /// [NostrClient.retryDisconnectedRelays] below is a separate, safe action:
-  /// it only dials relays that are *not* connected, so it cannot re-drive
-  /// the connected-but-silent case above (#8992).
+  /// [NostrClient.retryDisconnectedRelays] below dials only relays that are
+  /// *not* connected, so it does not re-drive the connected-but-silent case
+  /// directly. Its sweep does health-check the connected relays first, though,
+  /// and can force an idle one down; with the connection manager's self-heal
+  /// that relay comes back, and the status change can re-drive the labeler
+  /// above. That path is bounded by the relay's idle timeout, so it cannot
+  /// spin the way an inline retry would (#8992).
   void _scheduleRetryWhenRelayReady(String pubkey) {
     // A load already in flight when dispose() ran still completes, and would
     // otherwise arm a subscription nothing is left to cancel.
