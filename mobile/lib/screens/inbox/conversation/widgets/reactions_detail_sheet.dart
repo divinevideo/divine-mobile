@@ -13,6 +13,7 @@ import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Modal sheet listing every reactor on a DM message.
@@ -286,10 +287,15 @@ class _ReactorRow extends ConsumerWidget {
       );
       if (retry != true || cubit.isClosed) return;
       if (context.mounted) {
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          context.l10n.dmReactionChipRetryAnnouncement,
-          Directionality.of(context),
+        runDetached(
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            context.l10n.dmReactionChipRetryAnnouncement,
+            Directionality.of(context),
+          ),
+          'announce DM reaction removal retry',
+          logName: 'ReactionsDetailSheet',
+          category: LogCategory.ui,
         );
       }
       cubit.add(
@@ -301,10 +307,15 @@ class _ReactorRow extends ConsumerWidget {
       return;
     }
     if (isFailed) {
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        context.l10n.dmReactionChipRetryAnnouncement,
-        Directionality.of(context),
+      runDetached(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          context.l10n.dmReactionChipRetryAnnouncement,
+          Directionality.of(context),
+        ),
+        'announce DM reaction retry',
+        logName: 'ReactionsDetailSheet',
+        category: LogCategory.ui,
       );
       cubit.add(
         ConversationReactionRetryRequested(

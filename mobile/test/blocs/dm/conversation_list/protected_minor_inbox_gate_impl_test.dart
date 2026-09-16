@@ -119,7 +119,7 @@ void main() {
   });
 
   group('changes', () {
-    test('changes forwards the service verdict-change stream', () {
+    test('changes forwards the service verdict-change stream', () async {
       final controller = StreamController<void>.broadcast();
       addTearDown(controller.close);
       when(
@@ -128,8 +128,9 @@ void main() {
 
       final gate = build(restricted: true);
 
-      expectLater(gate.changes, emits(null));
+      final expectation = expectLater(gate.changes, emits(null));
       controller.add(null);
+      await expectation;
     });
 
     test(

@@ -16,6 +16,7 @@ import 'package:openvine/screens/inbox/message_requests/request_preview_page.dar
 import 'package:openvine/screens/inbox/message_requests/widgets/request_bulk_actions_sheet.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_tile.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 /// View for the message requests inbox.
 ///
@@ -192,10 +193,15 @@ class _RequestList extends StatelessWidget {
             'subject': conversation.subject,
           };
 
-    context.pushNamed(
-      RequestPreviewPage.routeName,
-      pathParameters: {'id': conversation.id},
-      extra: extra,
+    runDetached(
+      context.pushNamed(
+        RequestPreviewPage.routeName,
+        pathParameters: {'id': conversation.id},
+        extra: extra,
+      ),
+      'open message request preview',
+      logName: 'MessageRequestsView',
+      category: LogCategory.ui,
     );
   }
 }

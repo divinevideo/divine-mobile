@@ -68,12 +68,12 @@ void main() {
       expect(cubit.state.status, MessageRequestActionsStatus.processing);
     });
 
-    test('initial state has idle status', () {
+    test('initial state has idle status', () async {
       final cubit = createCubit();
 
       expect(cubit.state.status, equals(MessageRequestActionsStatus.idle));
 
-      cubit.close();
+      await cubit.close();
     });
 
     group('declineRequest', () {

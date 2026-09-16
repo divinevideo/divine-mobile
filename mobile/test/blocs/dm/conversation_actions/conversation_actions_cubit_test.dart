@@ -69,21 +69,21 @@ void main() {
       expect(cubit.state.status, ConversationActionsStatus.processing);
     });
 
-    test('initial state is idle', () {
+    test('initial state is idle', () async {
       final cubit = createCubit();
       expect(cubit.state.status, ConversationActionsStatus.idle);
-      cubit.close();
+      await cubit.close();
     });
 
     group('isBlocked', () {
-      test('delegates to ContentBlocklistRepository', () {
+      test('delegates to ContentBlocklistRepository', () async {
         when(() => mockBlocklistRepository.isBlocked(pubkey)).thenReturn(true);
 
         final cubit = createCubit();
         expect(cubit.isBlocked(pubkey), isTrue);
 
         verify(() => mockBlocklistRepository.isBlocked(pubkey)).called(1);
-        cubit.close();
+        await cubit.close();
       });
     });
 

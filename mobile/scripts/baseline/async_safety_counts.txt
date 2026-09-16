@@ -4,7 +4,6 @@
 # Owner: issue #9118 (NotThatKindOfDrLiz); affected-file owners must classify
 # their futures and reduce the baseline when they touch these paths.
 discarded_futures|integration_test/account_swap_integration_test.dart	1
-discarded_futures|integration_test/dm_owner_scoped_uniqueness_test.dart	1
 discarded_futures|integration_test/helpers/service_init_helper.dart	2
 discarded_futures|lib/app/divine_app.dart	4
 discarded_futures|lib/app_update/view/update_dialog.dart	1
@@ -44,14 +43,6 @@ discarded_futures|lib/screens/feed/feed_settings_menu.dart	1
 discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
 discarded_futures|lib/screens/feed/video_feed_page/feed_error_widget.dart	1
 discarded_futures|lib/screens/hashtag_feed_screen.dart	2
-discarded_futures|lib/screens/inbox/conversation/conversation_page.dart	1
-discarded_futures|lib/screens/inbox/conversation/conversation_view.dart	6
-discarded_futures|lib/screens/inbox/conversation/widgets/collaborator_invite_card.dart	2
-discarded_futures|lib/screens/inbox/conversation/widgets/message_bubble.dart	3
-discarded_futures|lib/screens/inbox/conversation/widgets/video_link_preview_cubit.dart	1
-discarded_futures|lib/screens/inbox/inbox_view.dart	2
-discarded_futures|lib/screens/inbox/message_requests/message_requests_view.dart	1
-discarded_futures|lib/screens/inbox/message_requests/request_preview_page.dart	1
 discarded_futures|lib/screens/library_screen.dart	1
 discarded_futures|lib/screens/minor_account_review_screen.dart	5
 discarded_futures|lib/screens/notification_settings_screen.dart	1
@@ -156,7 +147,6 @@ discarded_futures|lib/widgets/video_feed_item/metadata/metadata_sounds_section.d
 discarded_futures|lib/widgets/video_feed_item/metadata/metadata_tags_section.dart	1
 discarded_futures|lib/widgets/video_feed_item/metadata/metadata_user_chips.dart	2
 discarded_futures|lib/widgets/video_feed_item/metadata/video_reposters_cubit.dart	1
-discarded_futures|lib/widgets/video_feed_item/reel_dm_reply_bar.dart	4
 discarded_futures|lib/widgets/video_feed_item/video_feed_item.dart	3
 discarded_futures|lib/widgets/video_feed_item/video_follow_button.dart	1
 discarded_futures|lib/widgets/video_feed_item/video_interactions_restriction_listener.dart	1
@@ -178,14 +168,6 @@ discarded_futures|test/blocs/community_suggest/community_suggest_cubit_test.dart
 discarded_futures|test/blocs/creator_sync/sound_sync_cubit_test.dart	1
 discarded_futures|test/blocs/crosspost_settings/crosspost_settings_cubit_test.dart	9
 discarded_futures|test/blocs/divine_auth/divine_auth_cubit_test.dart	1
-discarded_futures|test/blocs/dm/conversation/conversation_bloc_test.dart	9
-discarded_futures|test/blocs/dm/conversation_actions/conversation_actions_cubit_test.dart	2
-discarded_futures|test/blocs/dm/conversation_list/conversation_list_bloc_test.dart	3
-discarded_futures|test/blocs/dm/conversation_list/protected_minor_inbox_gate_impl_test.dart	1
-discarded_futures|test/blocs/dm/inline_reel_reply/inline_reel_reply_cubit_test.dart	2
-discarded_futures|test/blocs/dm/message_requests/message_request_actions_cubit_test.dart	1
-discarded_futures|test/blocs/dm/restore_status/dm_restore_status_cubit_test.dart	1
-discarded_futures|test/blocs/dm/unread_count/dm_unread_count_cubit_test.dart	6
 discarded_futures|test/blocs/drafts_library/drafts_library_bloc_test.dart	1
 discarded_futures|test/blocs/explore_tabs/explore_tabs_cubit_test.dart	1
 discarded_futures|test/blocs/feed_loading_moderation/feed_loading_moderation_cubit_test.dart	9
@@ -242,7 +224,6 @@ discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
 discarded_futures|test/screens/auth/email_verification_screen_test.dart	1
 discarded_futures|test/screens/feed/feed_mode_switch_test.dart	2
-discarded_futures|test/screens/inbox/bloc/new_message_search_bloc_test.dart	1
 discarded_futures|test/screens/safety_settings_screen_test.dart	6
 discarded_futures|test/screens/search_blocklist_filter_test.dart	6
 discarded_futures|test/screens/search_results/view/search_results_view_test.dart	5
@@ -293,16 +274,12 @@ discarded_futures|test/widgets/video_feed_item/inline_comment_composer_bar_test.
 discarded_futures|test/widgets/video_metadata/video_metadata_help_sheet_test.dart	1
 discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
-unawaited_futures|integration_test/e2e/dm_optimistic_survives_watch_race_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
 unawaited_futures|lib/screens/auth/create_account_screen.dart	1
 unawaited_futures|lib/screens/auth/nostr_connect_screen.dart	2
 unawaited_futures|lib/screens/auth/secure_account_screen.dart	1
 unawaited_futures|lib/screens/curated_list_feed_screen.dart	2
 unawaited_futures|lib/screens/feed/video_feed_page.dart	1
-unawaited_futures|lib/screens/inbox/conversation/conversation_view.dart	2
-unawaited_futures|lib/screens/inbox/conversation/widgets/reactions_detail_sheet.dart	2
-unawaited_futures|lib/screens/inbox/inbox_view.dart	2
 unawaited_futures|lib/screens/settings/support_center_screen.dart	1
 unawaited_futures|lib/screens/verify/verify_screen.dart	1
 unawaited_futures|lib/screens/video_metadata/video_metadata_cover_screen.dart	3

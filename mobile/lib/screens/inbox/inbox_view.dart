@@ -39,6 +39,7 @@ import 'package:openvine/screens/inbox/widgets/inbox_fab.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_filter_chips.dart';
 import 'package:openvine/screens/inbox/widgets/inbox_segmented_toggle.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Main inbox view containing the Messages/Notifications segmented toggle
@@ -319,11 +320,16 @@ void _pushConversation(
     name: 'InboxView',
     category: LogCategory.ui,
   );
-  context.push(
-    ConversationPage.pathForId(conversationId),
-    extra: subject == null
-        ? participantPubkeys
-        : {'participantPubkeys': participantPubkeys, 'subject': subject},
+  runDetached(
+    context.push(
+      ConversationPage.pathForId(conversationId),
+      extra: subject == null
+          ? participantPubkeys
+          : {'participantPubkeys': participantPubkeys, 'subject': subject},
+    ),
+    'open DM conversation',
+    logName: 'InboxView',
+    category: LogCategory.ui,
   );
 }
 
@@ -984,7 +990,12 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
   }
 
   void _openMessageRequests(BuildContext context) {
-    context.pushNamed(MessageRequestsPage.routeName);
+    runDetached(
+      context.pushNamed(MessageRequestsPage.routeName),
+      'open message requests',
+      logName: 'InboxView',
+      category: LogCategory.ui,
+    );
   }
 
   void _onConversationTapped(
@@ -1162,9 +1173,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
 
         case ConversationAction.block:
           if (isBlocked) {
-            actionsCubit.unblockUser(otherPubkey);
+            await actionsCubit.unblockUser(otherPubkey);
           } else {
-            actionsCubit.blockUser(otherPubkey);
+            await actionsCubit.blockUser(otherPubkey);
           }
           if (context.mounted) {
             ScaffoldMessenger.of(

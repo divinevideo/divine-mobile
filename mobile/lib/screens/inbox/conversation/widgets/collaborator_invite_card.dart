@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:openvine/services/collaborator_invite_state_store.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
 const double _collaboratorInviteMaxCardWidth = 420;
@@ -584,8 +585,13 @@ class _ActionRow extends StatelessWidget {
             onPressed: isAccepting
                 ? null
                 : () {
-                    context.read<CollaboratorInviteActionsCubit>().acceptInvite(
-                      invite,
+                    runDetached(
+                      context
+                          .read<CollaboratorInviteActionsCubit>()
+                          .acceptInvite(invite),
+                      'accept collaborator invite',
+                      logName: 'CollaboratorInviteCard',
+                      category: LogCategory.ui,
                     );
                   },
           ),
@@ -599,8 +605,13 @@ class _ActionRow extends StatelessWidget {
             onPressed: isAccepting
                 ? null
                 : () {
-                    context.read<CollaboratorInviteActionsCubit>().ignoreInvite(
-                      invite,
+                    runDetached(
+                      context
+                          .read<CollaboratorInviteActionsCubit>()
+                          .ignoreInvite(invite),
+                      'ignore collaborator invite',
+                      logName: 'CollaboratorInviteCard',
+                      category: LogCategory.ui,
                     );
                   },
           ),

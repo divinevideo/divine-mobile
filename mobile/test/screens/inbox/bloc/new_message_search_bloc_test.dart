@@ -59,14 +59,14 @@ void main() {
       );
     }
 
-    test('initial state is loadingContacts', () {
+    test('initial state is loadingContacts', () async {
       when(() => mockFollowRepo.followingPubkeys).thenReturn([]);
       final bloc = createBloc();
       expect(bloc.state.status, NewMessageSearchStatus.loadingContacts);
       expect(bloc.state.contacts, isEmpty);
       expect(bloc.state.query, isEmpty);
       expect(bloc.state.results, isEmpty);
-      bloc.close();
+      await bloc.close();
     });
 
     group('excludes the current user (#8351)', () {

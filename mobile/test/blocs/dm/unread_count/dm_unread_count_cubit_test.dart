@@ -113,7 +113,7 @@ void _settle(FakeAsync fake) {
 /// synchronous, which is what leaves the shared controllers listener-free for
 /// the group `tearDown`.
 void _close(FakeAsync fake, DmUnreadCountCubit cubit) {
-  cubit.close();
+  unawaited(cubit.close());
   fake.flushMicrotasks();
 }
 
@@ -295,7 +295,7 @@ void main() {
         // Identity arrived → the followed-but-unreplied 1:1 is counted.
         expect(cubit.state, equals(1));
         _close(fake, cubit);
-        pubkeyController.close();
+        unawaited(pubkeyController.close());
         fake.flushMicrotasks();
       },
     );
@@ -540,9 +540,9 @@ void main() {
         expect(cubit.state, equals(2));
 
         _close(fake, cubit);
-        acceptedController2.close();
-        potentialController2.close();
-        followingController2.close();
+        unawaited(acceptedController2.close());
+        unawaited(potentialController2.close());
+        unawaited(followingController2.close());
         fake.flushMicrotasks();
       },
     );
@@ -597,7 +597,7 @@ void main() {
         expect(cubit.state, equals(1));
 
         _close(fake, cubit);
-        stateController.close();
+        unawaited(stateController.close());
         fake.flushMicrotasks();
       },
     );

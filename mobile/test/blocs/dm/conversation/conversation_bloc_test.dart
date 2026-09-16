@@ -504,7 +504,7 @@ void main() {
           ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
 
           // Schedule emissions after bloc subscribes
-          Future<void>.delayed(Duration.zero).then((_) {
+          final emissions = Future<void>.delayed(Duration.zero).then((_) async {
             controller.add([testMessage]);
             const secondMessage = DmMessage(
               id: '7777777777777777777777777777777777777777777777777777777777777777',
@@ -515,8 +515,9 @@ void main() {
               giftWrapId: '8888888888888888888888888888888888888888888888888888888888888888',
             );
             controller.add([testMessage, secondMessage]);
-            controller.close();
+            await controller.close();
           });
+          addTearDown(() => emissions);
         },
         build: buildBloc,
         act: (bloc) => bloc.add(const ConversationStarted()),
@@ -1594,24 +1595,32 @@ void main() {
 
             // Complete both after a short delay; with concurrent() both
             // handlers are already in flight when the first resolves.
-            Future<void>.delayed(const Duration(milliseconds: 30)).then((_) {
-              completer1.complete(
-                NIP17SendResult.success(
-                  rumorEventId: sentEventId,
-                  messageEventId: sentEventId,
-                  recipientPubkey: recipientPubkey,
-                ),
-              );
-            });
-            Future<void>.delayed(const Duration(milliseconds: 60)).then((_) {
-              completer2.complete(
-                NIP17SendResult.success(
-                  rumorEventId: sentEventId,
-                  messageEventId: sentEventId,
-                  recipientPubkey: recipientPubkey,
-                ),
-              );
-            });
+            final firstCompletion =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 30),
+                ).then((_) {
+                  completer1.complete(
+                    NIP17SendResult.success(
+                      rumorEventId: sentEventId,
+                      messageEventId: sentEventId,
+                      recipientPubkey: recipientPubkey,
+                    ),
+                  );
+                });
+            addTearDown(() => firstCompletion);
+            final secondCompletion =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 60),
+                ).then((_) {
+                  completer2.complete(
+                    NIP17SendResult.success(
+                      rumorEventId: sentEventId,
+                      messageEventId: sentEventId,
+                      recipientPubkey: recipientPubkey,
+                    ),
+                  );
+                });
+            addTearDown(() => secondCompletion);
           },
           build: buildBloc,
           act: (bloc) {
@@ -1685,37 +1694,49 @@ void main() {
             // Emit on first stream, then trigger re-add, then emit on second
             // stream. The first stream's later emission should be ignored
             // because restartable() cancels it.
-            Future<void>.delayed(const Duration(milliseconds: 10)).then((_) {
-              controller1.add([testMessage]);
-            });
-            Future<void>.delayed(const Duration(milliseconds: 60)).then((_) {
-              // This emission on the old stream should be ignored
-              controller1.add([
-                testMessage,
-                const DmMessage(
-                  id: '9999999999999999999999999999999999999999999999999999999999999999',
-                  conversationId: conversationId,
-                  senderPubkey: senderPubkey,
-                  content: 'Should be ignored',
-                  createdAt: 1700000200,
-                  giftWrapId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-                ),
-              ]);
-              controller1.close();
-            });
-            Future<void>.delayed(const Duration(milliseconds: 70)).then((_) {
-              controller2.add([
-                const DmMessage(
-                  id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-                  conversationId: conversationId,
-                  senderPubkey: recipientPubkey,
-                  content: 'New subscription message',
-                  createdAt: 1700000300,
-                  giftWrapId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-                ),
-              ]);
-              controller2.close();
-            });
+            final firstEmission =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 10),
+                ).then((_) {
+                  controller1.add([testMessage]);
+                });
+            addTearDown(() => firstEmission);
+            final staleEmission =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 60),
+                ).then((_) async {
+                  // This emission on the old stream should be ignored
+                  controller1.add([
+                    testMessage,
+                    const DmMessage(
+                      id: '9999999999999999999999999999999999999999999999999999999999999999',
+                      conversationId: conversationId,
+                      senderPubkey: senderPubkey,
+                      content: 'Should be ignored',
+                      createdAt: 1700000200,
+                      giftWrapId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    ),
+                  ]);
+                  await controller1.close();
+                });
+            addTearDown(() => staleEmission);
+            final replacementEmission =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 70),
+                ).then((_) async {
+                  controller2.add([
+                    const DmMessage(
+                      id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                      conversationId: conversationId,
+                      senderPubkey: recipientPubkey,
+                      content: 'New subscription message',
+                      createdAt: 1700000300,
+                      giftWrapId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                    ),
+                  ]);
+                  await controller2.close();
+                });
+            addTearDown(() => replacementEmission);
           },
           build: buildBloc,
           act: (bloc) async {

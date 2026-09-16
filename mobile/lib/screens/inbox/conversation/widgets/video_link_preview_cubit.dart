@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -56,7 +57,12 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
        super(const VideoLinkPreviewLoading()) {
     // Schedule as microtask so the first emit happens after callers
     // (BlocProvider, blocTest) have subscribed to the stream.
-    Future.microtask(_resolve);
+    runDetached(
+      Future.microtask(_resolve),
+      'resolve DM video link preview',
+      logName: 'VideoLinkPreviewCubit',
+      category: LogCategory.ui,
+    );
   }
 
   final String _videoStableId;

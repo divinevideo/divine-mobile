@@ -588,15 +588,18 @@ void main() {
       );
     });
 
-    test('initial state is $ConversationListState with initial status', () {
-      final bloc = createBloc();
+    test(
+      'initial state is $ConversationListState with initial status',
+      () async {
+        final bloc = createBloc();
 
-      expect(bloc.state, equals(const ConversationListState()));
-      expect(bloc.state.status, equals(ConversationListStatus.initial));
-      expect(bloc.state.conversations, equals(const <DmConversation>[]));
+        expect(bloc.state, equals(const ConversationListState()));
+        expect(bloc.state.status, equals(ConversationListStatus.initial));
+        expect(bloc.state.conversations, equals(const <DmConversation>[]));
 
-      bloc.close();
-    });
+        await bloc.close();
+      },
+    );
 
     test(
       'coalesces a burst of conversation writes into a single recompute '
@@ -1097,9 +1100,13 @@ void main() {
             });
 
             // Complete the first call after some time
-            Future<void>.delayed(const Duration(milliseconds: 50)).then((_) {
-              completer.complete();
-            });
+            final completion =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 50),
+                ).then((_) {
+                  completer.complete();
+                });
+            addTearDown(() => completion);
           },
           build: createBloc,
           act: (bloc) {
@@ -1463,12 +1470,16 @@ void main() {
             );
             // Recovery completes: flip the flag, then signal via the recovery
             // stream so the combined stream re-fires and re-classifies.
-            Future<void>.delayed(const Duration(milliseconds: 50)).then((_) {
-              when(
-                () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
-              ).thenReturn(true);
-              recoveryController.add(false);
-            });
+            final recovery =
+                Future<void>.delayed(
+                  const Duration(milliseconds: 50),
+                ).then((_) {
+                  when(
+                    () => mockDmRepository.hasCompletedHistoryRecoveryBefore,
+                  ).thenReturn(true);
+                  recoveryController.add(false);
+                });
+            addTearDown(() => recovery);
           },
           build: createBloc,
           act: (bloc) => bloc.add(const ConversationListStarted()),

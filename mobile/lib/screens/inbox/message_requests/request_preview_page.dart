@@ -11,6 +11,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/inbox/message_requests/request_preview_view.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Request preview page.
 ///
@@ -62,17 +64,26 @@ class RequestPreviewPage extends ConsumerWidget {
           // See .claude/rules/state_management.md ("Bridging Riverpod-provided
           // dependencies into BlocProvider").
           key: ValueKey(dmRepository),
-          create: (_) => RequestPreviewCubit(
-            dmRepository: dmRepository,
-            conversationId: conversationId,
-            initialParticipantPubkeys: participantPubkeys,
-            // #176 preview gate: both callbacks read live state at load time,
-            // mirroring the conversation route guard.
-            isDmRestricted: () => ref.read(isDmRestrictedProvider),
-            isApprovedRecipient: ref
-                .read(officialAccountsServiceProvider)
-                .isReadableByProtectedMinor,
-          )..load(),
+          create: (_) {
+            final cubit = RequestPreviewCubit(
+              dmRepository: dmRepository,
+              conversationId: conversationId,
+              initialParticipantPubkeys: participantPubkeys,
+              // #176 preview gate: both callbacks read live state at load time,
+              // mirroring the conversation route guard.
+              isDmRestricted: () => ref.read(isDmRestrictedProvider),
+              isApprovedRecipient: ref
+                  .read(officialAccountsServiceProvider)
+                  .isReadableByProtectedMinor,
+            );
+            runDetached(
+              cubit.load(),
+              'load message request preview',
+              logName: 'RequestPreviewPage',
+              category: LogCategory.ui,
+            );
+            return cubit;
+          },
         ),
         BlocProvider(
           // Re-key on the captured auth-flippable repository so the cubit is
