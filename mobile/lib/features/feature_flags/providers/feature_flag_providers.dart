@@ -1,6 +1,7 @@
 // ABOUTME: Riverpod providers for feature flag service and state management
 // ABOUTME: Provides dependency injection for feature flag system with proper lifecycle management
 
+import 'package:collection/collection.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
@@ -59,6 +60,15 @@ class FeatureFlagStateNotifier extends _$FeatureFlagStateNotifier {
 
     return service.currentState.allFlags;
   }
+
+  // service.currentState.allFlags allocates a fresh Map.unmodifiable on every
+  // call, so the default identity-based updateShouldNotify would renotify
+  // every dependent on every service change, even one that changed no flag.
+  @override
+  bool updateShouldNotify(
+    Map<FeatureFlag, bool> previous,
+    Map<FeatureFlag, bool> next,
+  ) => !const MapEquality<FeatureFlag, bool>().equals(previous, next);
 }
 
 /// Individual feature flag check provider family

@@ -244,5 +244,33 @@ void main() {
         expect(service.removeListenerCalls, equals(1));
       },
     );
+
+    test(
+      'does not notify dependents when a notification changes no flag',
+      () async {
+        final container = ProviderContainer(
+          overrides: [featureFlagServiceProvider.overrideWithValue(service)],
+        );
+        addTearDown(container.dispose);
+
+        final notifications = <Map<FeatureFlag, bool>>[];
+        final subscription = container.listen(
+          featureFlagStateProvider,
+          (_, next) => notifications.add(next),
+        );
+
+        final currentValue = service.isEnabled(FeatureFlag.enhancedAnalytics);
+        await service.setFlag(FeatureFlag.enhancedAnalytics, currentValue);
+        await pumpEventQueue();
+
+        expect(
+          notifications,
+          isEmpty,
+          reason: 'no flag value changed, so dependents must not renotify',
+        );
+
+        subscription.close();
+      },
+    );
   });
 }
