@@ -181,7 +181,7 @@ final class LanguagePreferenceServiceProvider
 }
 
 String _$languagePreferenceServiceHash() =>
-    r'a6e5b3c32d40108a2c44f422fcb95f64e4a68214';
+    r'97066a39a87e568a25bf048686701348e237bdaa';
 
 /// Rebuild trigger for consumers that need the latest content-language
 /// preference in request parameters.
