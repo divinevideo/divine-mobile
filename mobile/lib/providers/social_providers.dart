@@ -493,17 +493,15 @@ ViewEventRetryService? viewEventRetryService(Ref ref) {
   final foregroundController = StreamController<bool>();
   ref.onDispose(foregroundController.close);
 
+  // Consent is not read from `analyticsServiceProvider` here, not even lazily
+  // from inside a sweep: that provider watches this one, and Riverpod rejects
+  // a `ref.read` back up that edge as a dependency cycle in debug builds.
+  // `AnalyticsService` pushes the decision down instead.
   final service = ViewEventRetryService(
     viewEventPublisher: viewPublisher,
     pendingViewEventsDao: db.pendingViewEventsDao,
     userPubkey: userPubkey,
     appForegroundStream: foregroundController.stream,
-    // `ref.read` inside the callback, not `ref.watch` at build time:
-    // `analyticsServiceProvider` watches *this* provider, so watching it back
-    // would be a dependency cycle. Sweeps run long after both are built, and
-    // sampling then is also what makes a mid-session withdrawal take effect.
-    isAnalyticsEnabled: () =>
-        ref.read(analyticsServiceProvider).analyticsEnabled,
   );
 
   runProviderDetached(
@@ -590,7 +588,7 @@ AnalyticsService analyticsService(Ref ref) {
     backgroundActivityManager: ref.read(backgroundActivityManagerProvider),
     viewEventPublisher: viewPublisher,
     pendingViewEventsDao: db.pendingViewEventsDao,
-    flushPendingViewEvents: retryService?.sweep,
+    viewEventRetryService: retryService,
     productEventQueue: productQueue,
     analyticsCollectionControl: ref.watch(analyticsCollectionControlProvider),
     currentUserPubkey: () => authService.currentPublicKeyHex,

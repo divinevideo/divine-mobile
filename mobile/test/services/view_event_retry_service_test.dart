@@ -92,14 +92,12 @@ void main() {
     ViewEventRetryService makeService({
       Stream<bool>? foregroundStream,
       ViewEventRetryConfig retryConfig = const ViewEventRetryConfig(),
-      bool Function()? isAnalyticsEnabled,
     }) {
       return ViewEventRetryService(
         viewEventPublisher: publisher,
         pendingViewEventsDao: dao,
         userPubkey: userPubkey,
         appForegroundStream: foregroundStream ?? const Stream<bool>.empty(),
-        isAnalyticsEnabled: isAnalyticsEnabled,
         retryConfig: retryConfig,
         now: () => now,
       );
@@ -148,7 +146,7 @@ void main() {
         // consent decision at all. Publishing them is irreversible, so the
         // sweep asks before it publishes rather than trusting the queue.
         await dao.enqueue(makeEvent(id: 'view-a'));
-        final service = makeService(isAnalyticsEnabled: () => false);
+        final service = makeService()..setPublishingEnabled(false);
 
         await service.sweep();
 
@@ -168,15 +166,14 @@ void main() {
       });
 
       test('publishes again once consent is granted', () async {
-        // Consent is sampled per sweep, so the gate tracks a mid-session
+        // Consent is checked per sweep, so the gate tracks a mid-session
         // change instead of freezing whatever was true at construction.
         await dao.enqueue(makeEvent(id: 'view-a'));
-        var consented = false;
-        final service = makeService(isAnalyticsEnabled: () => consented);
+        final service = makeService()..setPublishingEnabled(false);
         await service.sweep();
         expect(await dao.getById('view-a'), isNotNull);
 
-        consented = true;
+        service.setPublishingEnabled(true);
         await service.sweep();
 
         expect(await dao.getById('view-a'), isNull);
@@ -190,10 +187,8 @@ void main() {
           await dao.enqueue(makeEvent(id: 'view-a'));
           final foreground = StreamController<bool>();
           addTearDown(foreground.close);
-          final service = makeService(
-            foregroundStream: foreground.stream,
-            isAnalyticsEnabled: () => false,
-          );
+          final service = makeService(foregroundStream: foreground.stream)
+            ..setPublishingEnabled(false);
           await service.initialize();
           addTearDown(service.dispose);
 
@@ -220,12 +215,12 @@ void main() {
         'does not publish when consent is withdrawn during a sweep',
         () async {
           await dao.enqueue(makeEvent(id: 'view-a'));
-          var consented = true;
+          late final ViewEventRetryService service;
           dao = _ConsentWithdrawingPendingViewEventsDao(
             database,
-            onMarkedPublishing: () => consented = false,
+            onMarkedPublishing: () => service.setPublishingEnabled(false),
           );
-          final service = makeService(isAnalyticsEnabled: () => consented);
+          service = makeService();
 
           await service.sweep();
 

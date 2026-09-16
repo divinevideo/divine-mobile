@@ -14,6 +14,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/view_event_publisher.dart';
+import 'package:openvine/services/view_event_retry_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
@@ -32,7 +33,7 @@ class AnalyticsService implements BackgroundAwareService {
     required BackgroundActivityManager backgroundActivityManager,
     ViewEventPublisher? viewEventPublisher,
     PendingViewEventsDao? pendingViewEventsDao,
-    Future<void> Function()? flushPendingViewEvents,
+    ViewEventRetryService? viewEventRetryService,
     ProductEventQueue? productEventQueue,
     AnalyticsCollectionControl? analyticsCollectionControl,
     String? Function()? currentUserPubkey,
@@ -46,7 +47,7 @@ class AnalyticsService implements BackgroundAwareService {
   }) : _backgroundActivityManager = backgroundActivityManager,
        _viewEventPublisher = viewEventPublisher,
        _pendingViewEventsDao = pendingViewEventsDao,
-       _flushPendingViewEvents = flushPendingViewEvents,
+       _viewEventRetryService = viewEventRetryService,
        _productEventQueue = productEventQueue,
        _analyticsCollectionControl = analyticsCollectionControl,
        _currentUserPubkey = currentUserPubkey,
@@ -74,7 +75,13 @@ class AnalyticsService implements BackgroundAwareService {
   ViewEventPublisher? _viewEventPublisher;
 
   final PendingViewEventsDao? _pendingViewEventsDao;
-  final Future<void> Function()? _flushPendingViewEvents;
+
+  /// Drains the durable view-event queue and receives the consent decision.
+  ///
+  /// Consent is pushed down, as it is for [_productEventQueue], never read
+  /// back by the sweep: that service's provider is a dependency of this one,
+  /// so a read in that direction is a Riverpod dependency cycle.
+  final ViewEventRetryService? _viewEventRetryService;
   final ProductEventQueue? _productEventQueue;
 
   /// SDK-level gate for the older Firebase Analytics path.
@@ -276,6 +283,7 @@ class AnalyticsService implements BackgroundAwareService {
   Future<void> _applyAnalyticsConsent(bool enabled) async {
     _analyticsEnabled = enabled;
     _productEventQueue?.setSendingEnabled(_productAnalyticsEnabled && enabled);
+    _viewEventRetryService?.setPublishingEnabled(enabled);
     await _applyFirebaseAnalyticsConsent(enabled: enabled);
 
     if (!enabled) {
@@ -843,7 +851,7 @@ class AnalyticsService implements BackgroundAwareService {
     }
 
     try {
-      await _flushPendingViewEvents?.call();
+      await _viewEventRetryService?.sweep();
     } catch (e) {
       Log.debug(
         'Failed to flush pending view events immediately: $e',
