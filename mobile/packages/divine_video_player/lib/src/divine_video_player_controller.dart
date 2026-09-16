@@ -58,12 +58,15 @@ class DivineVideoPlayerController {
   /// Android side allocates a legacy `SurfaceTextureEntry` instead of
   /// the default `SurfaceProducer`. The legacy backend has no
   /// surface-recreate callback (so it can't transparently survive
-  /// permission dialogs / OEM compositor events), but it has no shared
-  /// `ImageReader` buffer pool either — which makes it immune to the
-  /// 1-frame ghost frame that surfaces when many `SurfaceProducer`-backed
-  /// players coexist and a sibling decoder is released (the feed flicker).
-  /// Use it for screens that render many players at once. No effect on
-  /// iOS/macOS. Defaults to `false`.
+  /// permission dialogs / OEM compositor events), and under
+  /// Impeller/Vulkan its texture needs a per-frame GL→Vulkan trampoline
+  /// in the engine. It exists as the workaround for a 1-frame ghost
+  /// frame that surfaced when many `SurfaceProducer`-backed players
+  /// coexisted and a sibling decoder was released on the Exynos C2
+  /// driver (the feed flicker). That ghost did not reproduce on Flutter
+  /// 3.47.2, and the feed — the screen that opted in for it — moved back
+  /// to the producer; opt in only when the ghost is observed on the
+  /// device at hand. No effect on iOS/macOS. Defaults to `false`.
   ///
   /// [bufferProfile] caps how much media each native player buffers into
   /// memory. Defaults to [VideoBufferProfile.full] (platform defaults);
