@@ -510,13 +510,12 @@ void main() {
           );
           await tester.pumpWidget(createTestWidget());
 
-          // The visible caret uses VineTheme.whiteText; shadow copies use
-          // VineTheme.innerShadow -- filter to the real icon only.
+          // The caret and its shadow pair are one baked ShadowedDivineIcon.
           final caretIcon = find.descendant(
             of: find.byType(FeedModeSwitch),
             matching: find.byWidgetPredicate(
               (w) =>
-                  w is DivineIcon &&
+                  w is ShadowedDivineIcon &&
                   w.icon == DivineIconName.caretDown &&
                   w.color == VineTheme.whiteText,
             ),
@@ -548,7 +547,7 @@ void main() {
             of: find.byType(FeedModeSwitch),
             matching: find.byWidgetPredicate(
               (w) =>
-                  w is DivineIcon &&
+                  w is ShadowedDivineIcon &&
                   w.icon == DivineIconName.caretDown &&
                   w.color == VineTheme.whiteText,
             ),

@@ -468,43 +468,43 @@ class _HomeTabButtonState extends State<_HomeTabButton>
     final iconBox = SizedBox.square(
       dimension: kMinInteractiveDimension,
       child: Center(
-        child: Opacity(
-          opacity: widget.isSelected ? 1.0 : 0.32,
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_swapController, _rotationController]),
-            builder: (context, _) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  // House icon — fades out and shrinks on refresh.
-                  Opacity(
-                    opacity: _houseOpacity.value,
-                    child: Transform.scale(
-                      scale: _houseScale.value,
-                      child: _ShadowedNavIcon(
-                        icon: DivineIconName.houseSimple,
-                        showShadow: widget.isSelected,
-                      ),
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_swapController, _rotationController]),
+          builder: (context, _) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // House icon — fades out and shrinks on refresh.
+                Opacity(
+                  opacity: _houseOpacity.value,
+                  child: Transform.scale(
+                    scale: _houseScale.value,
+                    child: _NavIcon(
+                      icon: DivineIconName.houseSimple,
+                      isSelected: widget.isSelected,
                     ),
                   ),
-                  // Refresh arrow — fades in, scales up, and rotates.
-                  Opacity(
-                    opacity: _arrowOpacity.value,
-                    child: Transform.scale(
-                      scale: _arrowScale.value,
-                      child: Transform.rotate(
-                        angle: _rotationController.value * 2 * pi,
-                        child: DivineIcon(
-                          icon: DivineIconName.arrowClockwise,
-                          color: context.vineColors.onNav,
+                ),
+                // Refresh arrow — fades in, scales up, and rotates.
+                Opacity(
+                  opacity: _arrowOpacity.value,
+                  child: Transform.scale(
+                    scale: _arrowScale.value,
+                    child: Transform.rotate(
+                      angle: _rotationController.value * 2 * pi,
+                      child: DivineIcon(
+                        icon: DivineIconName.arrowClockwise,
+                        color: navIconColor(
+                          context,
+                          isSelected: widget.isSelected,
                         ),
                       ),
                     ),
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -524,7 +524,7 @@ class _HomeTabButtonState extends State<_HomeTabButton>
 /// Tap target + Semantics wrapper shared by the Explore and Inbox tabs.
 ///
 /// The child gets the 32 %-opacity dim in the unselected state and the
-/// glyph-shaped shadow pair in the selected state. See [_ShadowedNavIcon].
+/// glyph-shaped shadow pair in the selected state. See [_NavIcon].
 ///
 /// [tapTargetWidth] is the full width the GestureDetector occupies inside
 /// the bottom nav row — usually larger than the 48 px icon container so
@@ -561,12 +561,7 @@ class _IconTabButton extends StatelessWidget {
     Widget iconBox = SizedBox.square(
       dimension: kMinInteractiveDimension,
       child: Center(
-        child: Opacity(
-          // Figma: unselected tabs render at 32 % opacity; selected stays
-          // at 100 %. No color tint — just dim + shadow toggle.
-          opacity: isSelected ? 1.0 : 0.32,
-          child: _ShadowedNavIcon(icon: icon, showShadow: isSelected),
-        ),
+        child: _NavIcon(icon: icon, isSelected: isSelected),
       ),
     );
 
@@ -589,23 +584,44 @@ class _IconTabButton extends StatelessWidget {
   }
 }
 
-/// 24×24 [DivineIcon] that optionally paints the Figma `effects/shadow-10`
-/// drop-shadow pair underneath the glyph, through [ShadowedDivineIcon] so
-/// the shadowed composite is rasterised once rather than blurred on every
-/// frame. Same treatment as the feed's `VideoActionButton` icons.
-class _ShadowedNavIcon extends StatelessWidget {
-  const _ShadowedNavIcon({required this.icon, required this.showShadow});
+/// One tab's 24×24 glyph, baked through [ShadowedDivineIcon] so it is one
+/// draw per frame rather than live layers under the video: selected tabs
+/// carry the Figma `effects/shadow-10` drop-shadow pair, unselected tabs are
+/// the bare glyph dimmed via [navIconColor]. Same treatment as the feed's
+/// `VideoActionButton` icons.
+class _NavIcon extends StatelessWidget {
+  const _NavIcon({required this.icon, required this.isSelected});
 
   final DivineIconName icon;
-  final bool showShadow;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    final color = context.vineColors.onNav;
-    if (!showShadow) return DivineIcon(icon: icon, color: color);
+    final color = navIconColor(context, isSelected: isSelected);
+    if (!isSelected) {
+      // Baked without shadows: a live SVG glyph is a colour-filter
+      // `saveLayer` on every video frame, the bitmap is one draw.
+      return ShadowedDivineIcon(icon: icon, color: color, shadows: const []);
+    }
     return ShadowedDivineIcon(icon: icon, color: color);
   }
 }
+
+/// Figma: unselected tabs render at 32 % opacity; selected stays at 100 %.
+///
+/// The dim is applied to the glyph tint rather than through an [Opacity]
+/// widget. Each glyph is a single flat shape, so tinting it at 32 % alpha is
+/// pixel-identical to compositing it at 32 % — and it costs nothing per
+/// frame, where an [Opacity] below 100 % is an offscreen pass on every video
+/// frame the nav bar sits over.
+@visibleForTesting
+Color navIconColor(BuildContext context, {required bool isSelected}) {
+  final color = context.vineColors.onNav;
+  return isSelected ? color : color.withValues(alpha: kUnselectedNavIconAlpha);
+}
+
+/// Alpha of an unselected tab's glyph; see [navIconColor].
+const double kUnselectedNavIconAlpha = 0.32;
 
 /// Profile tab: 24×24 rounded-8 box with a lime fallback background and
 /// the currently-signed-in user's avatar on top. Selection state is
@@ -650,15 +666,9 @@ class _ProfileTabButton extends ConsumerWidget {
         child: hasAvatar
             ? _ProfileAvatarBox(imageUrl: imageUrl, isSelected: isSelected)
             // No signed-in avatar: render the same icon-tab treatment
-            // (opacity dim / shadow) as Home / Search / Inbox so the
-            // nav bar still feels uniform until the profile loads.
-            : Opacity(
-                opacity: isSelected ? 1.0 : 0.32,
-                child: _ShadowedNavIcon(
-                  icon: DivineIconName.userCircle,
-                  showShadow: isSelected,
-                ),
-              ),
+            // (dim / shadow) as Home / Search / Inbox so the nav bar still
+            // feels uniform until the profile loads.
+            : _NavIcon(icon: DivineIconName.userCircle, isSelected: isSelected),
       ),
     );
 

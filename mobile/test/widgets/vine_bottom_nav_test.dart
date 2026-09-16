@@ -169,6 +169,48 @@ void main() {
     });
 
     testWidgets(
+      'dims unselected tab glyphs through their tint, not an Opacity layer',
+      (tester) async {
+        await pumpSubject(tester);
+
+        final context = tester.element(find.byType(VineBottomNav));
+        final onNav = context.vineColors.onNav;
+
+        ShadowedDivineIcon glyphOf(DivineIconName icon) =>
+            tester.widget<ShadowedDivineIcon>(
+              find.byWidgetPredicate(
+                (w) => w is ShadowedDivineIcon && w.icon == icon,
+              ),
+            );
+
+        // Home is selected: full tint, with the baked shadow pair.
+        final home = glyphOf(DivineIconName.houseSimple);
+        expect(home.color, equals(onNav));
+        expect(home.shadows, equals(divineIconButtonShadows));
+
+        // Search and Inbox are not: same tint at 32 % alpha, baked flat.
+        for (final icon in [DivineIconName.search, DivineIconName.chat]) {
+          final glyph = glyphOf(icon);
+          expect(glyph.color, equals(onNav.withValues(alpha: 0.32)));
+          expect(glyph.shadows, isEmpty);
+        }
+
+        // The dim used to be an Opacity widget around each glyph, which is
+        // an offscreen pass on every video frame under Impeller. (The
+        // refresh arrow's Opacity sits at 0 while idle, which paints nothing.)
+        expect(
+          find.ancestor(
+            of: find.byType(ShadowedDivineIcon),
+            matching: find.byWidgetPredicate(
+              (w) => w is Opacity && w.opacity > 0 && w.opacity < 1,
+            ),
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
       'shows the refresh arrow when mounted while a home retap refresh is '
       'already active',
       (tester) async {

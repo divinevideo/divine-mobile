@@ -100,6 +100,10 @@ class ShadowedDivineIcon extends StatefulWidget {
   final double size;
 
   /// Shadows painted under the glyph, first entry lowest.
+  ///
+  /// An empty list bakes the bare glyph. That is still worth it for an icon
+  /// that sits over video: a live [DivineIcon] with a tint is a colour-filter
+  /// `saveLayer` on every frame, the baked bitmap is a single draw.
   final List<DivineIconShadow> shadows;
 
   /// Raster cache to draw from. Defaults to [ShadowedIconRasterCache.instance];
