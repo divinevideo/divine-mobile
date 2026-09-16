@@ -134,6 +134,15 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
   /// A real handshake is a network round trip that other work can run inside.
   Completer<void>? readyGate;
 
+  /// When true, every created channel closes right away, modelling a relay
+  /// that accepts the handshake and then drops the socket.
+  bool closeOnCreate = false;
+
+  /// Optional frame delivered just before the automatic close, modelling a
+  /// relay that says why it is refusing (NOTICE, CLOSED, AUTH) and then drops.
+  /// Runs after the manager has subscribed, so the frame is delivered.
+  String? messageBeforeClose;
+
   @override
   WebSocketChannel create(Uri uri) {
     if (shouldFail) {
@@ -145,6 +154,13 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
           : (readyGate?.future ?? Future.value()),
     );
     createdChannels.add(channel);
+    if (closeOnCreate) {
+      final frame = messageBeforeClose;
+      Timer.run(() {
+        if (frame != null) channel.simulateMessage(frame);
+        channel.simulateClose();
+      });
+    }
     final signal = createdSignal;
     if (signal != null && !signal.isCompleted) signal.complete();
     return channel;
@@ -160,6 +176,8 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
     readyError = null;
     readyGate = null;
     createdSignal = null;
+    closeOnCreate = false;
+    messageBeforeClose = null;
   }
 }
 
@@ -428,15 +446,115 @@ void main() {
         expect(states, contains(ConnectionState.disconnected));
       });
 
-      test('stays disconnected when relay closes connection', () async {
+      test('reconnects on its own when relay closes connection', () async {
         await manager.connect();
 
         mockFactory.lastChannel!.simulateClose();
         await Future.delayed(const Duration(milliseconds: 50));
 
-        // Should stay disconnected - no automatic reconnect
-        expect(manager.state, equals(ConnectionState.disconnected));
-        expect(mockFactory.createdChannels.length, equals(1));
+        // A connection with no further outbound sends (a live REQ with
+        // nothing else pending) never reaches the on-demand send() path,
+        // so the manager must repair itself here or it would stay dead
+        // forever (#8992). `manager`'s setUp config uses a 10ms backoff,
+        // well inside this 50ms window.
+        expect(manager.state, equals(ConnectionState.connected));
+        expect(mockFactory.createdChannels.length, greaterThan(1));
+      });
+
+      test('stops self-healing after repeated immediate closes', () async {
+        final factory = MockWebSocketChannelFactory()..closeOnCreate = true;
+        final flappingManager = WebSocketConnectionManager(
+          url: 'wss://flapping.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 3,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration.zero,
+            idleTimeout: Duration.zero,
+          ),
+        );
+        addTearDown(flappingManager.dispose);
+
+        await flappingManager.connect();
+
+        // One initial dial plus maxReconnectAttempts self-heals, then the
+        // budget is exhausted: the manager waits for an on-demand path
+        // instead of dialling a relay that keeps dropping the socket
+        // forever (#8992).
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        expect(factory.createdChannels, hasLength(4));
+        expect(flappingManager.state, equals(ConnectionState.disconnected));
+      });
+
+      test('a refusal frame before the close still counts against the '
+          'self-heal budget', () async {
+        final factory = MockWebSocketChannelFactory()
+          ..closeOnCreate = true
+          ..messageBeforeClose = '["NOTICE","rate-limited"]';
+        final refusingManager = WebSocketConnectionManager(
+          url: 'wss://refusing.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 3,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration.zero,
+            idleTimeout: Duration.zero,
+          ),
+        );
+        addTearDown(refusingManager.dispose);
+
+        await refusingManager.connect();
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        // "The relay spoke before dropping us" is not usefulness: a NOTICE,
+        // CLOSED, or AUTH frame is how a refusing relay says no, and it must
+        // not clear the budget (#8992).
+        expect(factory.createdChannels, hasLength(4));
+        expect(refusingManager.state, equals(ConnectionState.disconnected));
+      });
+
+      test('a connection that carried traffic resets the self-heal '
+          'budget', () async {
+        final factory = MockWebSocketChannelFactory()..closeOnCreate = true;
+        final flappingManager = WebSocketConnectionManager(
+          url: 'wss://flapping.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 2,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration.zero,
+            idleTimeout: Duration.zero,
+          ),
+        );
+        addTearDown(flappingManager.dispose);
+
+        await flappingManager.connect();
+
+        // One initial dial plus maxReconnectAttempts self-heals exhaust the
+        // budget; the relay continues to be retried on demand only.
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        expect(factory.createdChannels, hasLength(3));
+
+        // An on-demand dial that receives a message and then stays up for at
+        // least a backoff interval proves the link is usable, so the next
+        // remote close starts a fresh self-heal budget and dials again
+        // instead of staying parked at the exhausted cap.
+        factory.closeOnCreate = false;
+        await flappingManager.send('["REQ","sub"]');
+        factory.lastChannel!.simulateMessage('["EOSE","sub"]');
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        factory.lastChannel!.simulateClose();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        expect(factory.createdChannels, hasLength(5));
+        expect(flappingManager.state, equals(ConnectionState.connected));
       });
     });
 
@@ -467,6 +585,35 @@ void main() {
 
         expect(idleManager.state, equals(ConnectionState.disconnected));
         expect(idleChannel.isClosed, isTrue);
+      });
+
+      test('reconnects on its own after the heartbeat forces a disconnect, '
+          'with nothing else calling send()', () async {
+        final factory = MockWebSocketChannelFactory();
+        final idleManager = WebSocketConnectionManager(
+          url: 'wss://test.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            baseReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration(milliseconds: 20),
+            idleTimeout: Duration(milliseconds: 200),
+          ),
+        );
+        addTearDown(idleManager.dispose);
+
+        await idleManager.connect();
+        final idleChannel = factory.lastChannel!;
+
+        // Idle-disconnects at ~220ms (first heartbeat tick past 200ms idle)
+        // and reconnects ~10ms later on its own; the check below lands well
+        // inside that reconnected window, long before the next idle cycle
+        // (~450ms) could disconnect it again.
+        await Future<void>.delayed(const Duration(milliseconds: 260));
+
+        expect(idleChannel.isClosed, isTrue);
+        expect(idleManager.state, equals(ConnectionState.connected));
+        expect(factory.createdChannels, hasLength(greaterThan(1)));
       });
 
       test('closes the channel sink when checkHealth finds a stale '

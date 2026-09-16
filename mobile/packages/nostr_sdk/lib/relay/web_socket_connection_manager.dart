@@ -1,4 +1,4 @@
-// ABOUTME: Manages WebSocket connections with on-demand reconnection.
+// ABOUTME: Manages WebSocket connections with self-healing and on-demand reconnection.
 // ABOUTME: Single responsibility class for WebSocket lifecycle, designed for testability.
 
 import 'dart:async';
@@ -43,7 +43,8 @@ class _ConnectionLimit {
 
 /// Configuration for WebSocket connection behavior
 class WebSocketConfig {
-  /// Maximum number of reconnection attempts made for one send.
+  /// Maximum number of reconnection attempts made for one send, and the cap
+  /// on consecutive self-heal reconnects after short-lived connections.
   final int maxReconnectAttempts;
 
   /// Base delay for send-path reconnect backoff (doubles each attempt).
@@ -107,17 +108,23 @@ class DefaultWebSocketChannelFactory implements WebSocketChannelFactory {
 }
 
 /// {@template web_socket_connection_manager}
-/// Manages a single WebSocket connection with on-demand reconnection and
-/// idle detection.
+/// Manages a single WebSocket connection with self-healing, on-demand
+/// reconnection and idle detection.
 ///
 /// Reconnects on demand when a message is sent while disconnected. A stream
-/// error or closure marks the connection disconnected so the next send can
-/// start that bounded reconnect attempt.
+/// error, a remote close, or an idle drop that the caller did not request also
+/// starts a bounded reconnect on its own, because a receive-only socket (a
+/// live REQ with nothing left to send) never reaches the send path (#8992).
+/// After [disconnect] the connection stays down until an explicit [connect],
+/// and [dispose] ends reconnection for good — neither a send nor a connect
+/// revives it. Once the self-heal budget is spent on a relay that keeps
+/// dropping the socket, it stays down until the next send or explicit
+/// connect.
 ///
 /// Idle Detection (heartbeat):
 /// - Tracks when the last message was received
 /// - Periodically checks if connection has been idle beyond [idleTimeout]
-/// - Forces disconnect when idle, enabling reconnection on next send
+/// - Forces disconnect when idle, then reconnects as above
 /// - Configure via [WebSocketConfig.heartbeatInterval] and [idleTimeout]
 ///
 /// Designed for testability with:
@@ -149,6 +156,15 @@ class WebSocketConnectionManager {
   int _reconnectAttempts = 0;
   bool _shouldReconnect = true;
 
+  /// Self-heal reconnects attempted back-to-back after short-lived
+  /// connections. Reset by a stable connection or an explicit connect, so
+  /// only a relay that keeps accepting and then immediately dropping the
+  /// socket can exhaust it (#8992).
+  int _consecutiveSelfHealReconnects = 0;
+
+  /// Whether the current connection received at least one inbound frame.
+  bool _receivedMessageOnThisConnection = false;
+
   /// Set by [dispose] before its first await, so a connect that is already
   /// in flight can tell that its owner is gone by the time it resumes.
   bool _disposed = false;
@@ -158,6 +174,10 @@ class WebSocketConnectionManager {
 
   // Activity tracking for idle detection
   DateTime? _lastActivityAt;
+
+  /// When the current connection was established, used to judge whether a
+  /// closed connection lived long enough to clear the self-heal budget.
+  DateTime? _connectedAt;
 
   // Stream controllers for external consumers
   final _stateController = StreamController<ConnectionState>.broadcast();
@@ -225,6 +245,7 @@ class WebSocketConnectionManager {
     }
 
     _shouldReconnect = true;
+    _consecutiveSelfHealReconnects = 0;
     return _doConnect();
   }
 
@@ -288,9 +309,11 @@ class WebSocketConnectionManager {
 
       _setState(ConnectionState.connected);
       _reconnectAttempts = 0;
+      _receivedMessageOnThisConnection = false;
 
       // Track connection time as initial activity
       _lastActivityAt = DateTime.now();
+      _connectedAt = _lastActivityAt;
 
       // Start heartbeat timer if configured
       _startHeartbeat();
@@ -366,6 +389,7 @@ class WebSocketConnectionManager {
 
   void _onMessage(dynamic message) {
     _lastActivityAt = DateTime.now();
+    _receivedMessageOnThisConnection = true;
     if (_messageController.isClosed) return;
     if (message is String) {
       _messageController.add(message);
@@ -397,7 +421,46 @@ class WebSocketConnectionManager {
     unawaited(_closeChannel());
 
     _setState(ConnectionState.disconnected);
-    // No automatic reconnection - reconnect happens on-demand when sending
+
+    if (!_shouldReconnect) return;
+
+    // A connection that lasted and was either used or outlived the idle
+    // timeout was stable: the next self-heal starts a fresh budget. One that
+    // accepted and immediately closed is not stable, and repeated short-lived
+    // cycles are capped at [WebSocketConfig.maxReconnectAttempts] so a relay
+    // that keeps dropping the socket cannot drive an unbounded dial loop
+    // (#8992).
+    if (_closedConnectionWasStable()) {
+      _consecutiveSelfHealReconnects = 0;
+    } else {
+      _consecutiveSelfHealReconnects++;
+    }
+    if (_consecutiveSelfHealReconnects > config.maxReconnectAttempts) {
+      log('Self-heal reconnect budget exhausted for $url');
+      return;
+    }
+
+    // A receive-only socket (a live REQ with nothing left to send) never
+    // reaches the on-demand reconnect in send(), so repair it here (#8992).
+    unawaited(_tryReconnect());
+  }
+
+  /// Whether the connection that just closed proved stable enough to clear
+  /// the self-heal budget.
+  ///
+  /// Lasting at least one backoff interval is the floor: a socket that dies
+  /// sooner was never useful, whatever it sent first — a NOTICE, CLOSED, or
+  /// AUTH frame is a refusal, not work. Above that floor, inbound traffic or
+  /// a lifetime at least as long as the idle timeout proves the link was
+  /// doing something.
+  bool _closedConnectionWasStable() {
+    final connectedAt = _connectedAt;
+    if (connectedAt == null) return false;
+    final age = DateTime.now().difference(connectedAt);
+    if (age < config.baseReconnectDelay) return false;
+    if (_receivedMessageOnThisConnection) return true;
+    if (config.idleTimeout == Duration.zero) return false;
+    return age >= config.idleTimeout;
   }
 
   /// Disconnect from the WebSocket server
@@ -669,6 +732,7 @@ class WebSocketConnectionManager {
 
     resetReconnection();
     _shouldReconnect = true;
+    _consecutiveSelfHealReconnects = 0;
     // Neither resetReconnection nor _closeChannel touches the heartbeat, so
     // without this a reconnect that fails leaves the previous connection's
     // Timer.periodic running with nothing to beat on. disconnect() and

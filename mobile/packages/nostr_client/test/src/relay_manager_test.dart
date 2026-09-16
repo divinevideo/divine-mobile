@@ -39,13 +39,11 @@ const testCustomRelayUrl2 = 'wss://relay.custom2.com';
 RelayManagerConfig _createTestConfig({
   String? defaultRelayUrl,
   RelayStorage? storage,
-  bool autoReconnect = true,
   String? allowedRelayHost,
 }) {
   return RelayManagerConfig(
     defaultRelayUrl: defaultRelayUrl ?? testDefaultRelayUrl,
     storage: storage,
-    autoReconnect: autoReconnect,
     allowedRelayHost: allowedRelayHost,
   );
 }
@@ -2601,7 +2599,6 @@ void main() {
 
       expect(config.defaultRelayUrl, equals(testDefaultRelayUrl));
       expect(config.storage, isNull);
-      expect(config.autoReconnect, isTrue);
     });
 
     test('creates config with all fields', () {
@@ -2609,23 +2606,19 @@ void main() {
       final config = RelayManagerConfig(
         defaultRelayUrl: testDefaultRelayUrl,
         storage: storage,
-        autoReconnect: false,
-        maxReconnectAttempts: 10,
-        reconnectDelayMs: 5000,
+        allowedRelayHost: 'relay.divine.video',
       );
 
       expect(config.storage, equals(storage));
-      expect(config.autoReconnect, isFalse);
-      expect(config.maxReconnectAttempts, equals(10));
-      expect(config.reconnectDelayMs, equals(5000));
+      expect(config.allowedRelayHost, equals('relay.divine.video'));
     });
 
     test('copyWith creates new instance with updated fields', () {
       final original = RelayManagerConfig(defaultRelayUrl: testDefaultRelayUrl);
-      final copied = original.copyWith(autoReconnect: false);
+      final copied = original.copyWith(defaultRelayUrl: testCustomRelayUrl);
 
-      expect(copied.autoReconnect, isFalse);
-      expect(copied.defaultRelayUrl, equals(original.defaultRelayUrl));
+      expect(copied.defaultRelayUrl, equals(testCustomRelayUrl));
+      expect(copied.storage, equals(original.storage));
     });
   });
 

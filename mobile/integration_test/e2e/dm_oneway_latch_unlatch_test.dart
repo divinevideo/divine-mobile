@@ -90,7 +90,6 @@ void main() {
       config: RelayManagerConfig(
         defaultRelayUrl: relay.url,
         storage: InMemoryRelayStorage(),
-        autoReconnect: false,
       ),
       relayPool: nostr.relayPool,
     );

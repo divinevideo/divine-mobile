@@ -85,7 +85,6 @@ void main() {
       config: RelayManagerConfig(
         defaultRelayUrl: _poolRelay,
         storage: InMemoryRelayStorage(),
-        autoReconnect: false,
         // The manager dials pool relays with its own factory, so the pool's
         // public-looking URL needs the same redirect the temp relays get.
         webSocketChannelFactory: factory,

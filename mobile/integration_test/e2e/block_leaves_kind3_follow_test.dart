@@ -184,9 +184,6 @@ void main() {
       config: RelayManagerConfig(
         defaultRelayUrl: relay.url,
         storage: InMemoryRelayStorage(),
-        // A relay that drops at teardown would otherwise keep retrying and
-        // surface the failure against whichever test runs next.
-        autoReconnect: false,
       ),
       relayPool: nostr.relayPool,
     );

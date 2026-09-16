@@ -254,6 +254,34 @@ void main() {
       expect(notifications, 1);
     });
   });
+
+  group('relay-ready retry', () {
+    test(
+      'proactively retries disconnected relays when a subscribe finds none '
+      'connected',
+      () async {
+        when(() => nostrClient.connectedRelayCount).thenReturn(0);
+        when(
+          () => nostrClient.relayStatusStream,
+        ).thenAnswer((_) => const Stream.empty());
+        when(
+          () => nostrClient.retryDisconnectedRelays(),
+        ).thenAnswer((_) async {});
+
+        await expectLater(
+          service.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.homeFeed,
+          ),
+          throwsA(isA<RelayNotReadyException>()),
+        );
+
+        // A relay pool that idle-disconnected has nothing else prompting it
+        // to retry (#8992) — waiting only on relayStatusStream would leave
+        // this subscribe (and a user's pull-to-refresh) waiting forever.
+        verify(() => nostrClient.retryDisconnectedRelays()).called(1);
+      },
+    );
+  });
 }
 
 VideoEvent _video(

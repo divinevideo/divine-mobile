@@ -95,6 +95,12 @@ void main() {
     ).thenAnswer(
       (_) => const Stream<Map<String, RelayConnectionStatus>>.empty(),
     );
+    // An incomplete load with connectedRelayCount at 0 schedules a
+    // proactive retry (#8992); stub it so that path returns a real future
+    // instead of the mock's default null.
+    when(
+      () => mockNostrClient.retryDisconnectedRelays(),
+    ).thenAnswer((_) async {});
     // Default: the live tail (#8255) opens after a labeler latches loaded.
     // A never-closing broadcast stream so the tail stays open (no onDone) and
     // no reconnect timer is scheduled. Tests that exercise the tail override
@@ -1243,6 +1249,11 @@ void main() {
 
         await service.subscribeToLabeler(labeler);
         expect(service.getContentWarnings('no_relay_event'), isEmpty);
+
+        // A relay pool with nothing connected has nothing else prompting it
+        // to retry, so the service must kick it itself (#8992) rather than
+        // only waiting on relayStatusStream.
+        verify(() => mockNostrClient.retryDisconnectedRelays()).called(1);
 
         when(
           () => mockNostrClient.queryEventsDetailed(
