@@ -1,5 +1,5 @@
 // ABOUTME: Tests the selected-video audio reuse refresh contract.
-// ABOUTME: Ensures suppression and lease fields fail closed.
+// ABOUTME: Ensures authoritative decision and lease fields fail closed.
 
 import 'dart:convert';
 
@@ -31,6 +31,45 @@ void main() {
   tearDown(() => client.dispose());
 
   group('refreshAudioReusePolicy', () {
+    test('parses an unknown video as an explicit denial', () {
+      final policy = AudioReusePolicy.fromRefreshJson(const {
+        'policies': [
+          {
+            'video_found': false,
+            'verified_archive': false,
+            'archive_audio_reuse_enabled': false,
+            'audio_reuse_suppressed': false,
+            'allow_audio_reuse': false,
+          },
+        ],
+        'evaluated_at': '2026-09-10T00:00:00Z',
+        'valid_until': '2026-09-10T00:01:00Z',
+      }, elapsed: Duration.zero);
+
+      expect(policy.videoFound, isFalse);
+      expect(policy.allowAudioReuse, isFalse);
+    });
+
+    test('parses a disabled archive rollout as an explicit denial', () {
+      final policy = AudioReusePolicy.fromRefreshJson(const {
+        'policies': [
+          {
+            'video_found': true,
+            'verified_archive': true,
+            'archive_audio_reuse_enabled': false,
+            'audio_reuse_suppressed': false,
+            'allow_audio_reuse': false,
+          },
+        ],
+        'evaluated_at': '2026-09-10T00:00:00Z',
+        'valid_until': '2026-09-10T00:01:00Z',
+      }, elapsed: Duration.zero);
+
+      expect(policy.verifiedArchive, isTrue);
+      expect(policy.archiveAudioReuseEnabled, isFalse);
+      expect(policy.allowAudioReuse, isFalse);
+    });
+
     test(
       'posts the selected coordinate and parses a fresh suppression',
       () async {
@@ -42,7 +81,12 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => http.Response(
-            '{"policies":[{"audio_reuse_suppressed":true}],'
+            '{"policies":[{'
+            '"video_found":true,'
+            '"verified_archive":true,'
+            '"archive_audio_reuse_enabled":true,'
+            '"audio_reuse_suppressed":true,'
+            '"allow_audio_reuse":false}],'
             '"evaluated_at":"2026-09-10T00:00:00Z",'
             '"valid_until":"2026-09-10T00:01:00Z"}',
             200,
@@ -56,6 +100,10 @@ void main() {
         );
 
         expect(policy.audioReuseSuppressed, isTrue);
+        expect(policy.videoFound, isTrue);
+        expect(policy.verifiedArchive, isTrue);
+        expect(policy.archiveAudioReuseEnabled, isTrue);
+        expect(policy.allowAudioReuse, isFalse);
         expect(policy.validFor, greaterThan(Duration.zero));
         final captured = verify(
           () => httpClient.post(
@@ -86,9 +134,40 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => http.Response(
-          '{"policies":[{"audio_reuse_suppressed":false}],'
+          '{"policies":[{'
+          '"video_found":true,'
+          '"verified_archive":true,'
+          '"archive_audio_reuse_enabled":true,'
+          '"audio_reuse_suppressed":false,'
+          '"allow_audio_reuse":true}],'
           '"evaluated_at":"2026-09-10T00:01:00Z",'
           '"valid_until":"2026-09-10T00:00:00Z"}',
+          200,
+        ),
+      );
+
+      await expectLater(
+        client.refreshAudioReusePolicy(
+          kind: 34236,
+          pubkey: pubkey,
+          dTag: 'classic-id',
+        ),
+        throwsA(isA<FunnelcakeException>()),
+      );
+    });
+
+    test('rejects a policy missing any authoritative decision field', () async {
+      when(
+        () => httpClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response(
+          '{"policies":[{"audio_reuse_suppressed":false}],'
+          '"evaluated_at":"2026-09-10T00:00:00Z",'
+          '"valid_until":"2026-09-10T00:01:00Z"}',
           200,
         ),
       );
