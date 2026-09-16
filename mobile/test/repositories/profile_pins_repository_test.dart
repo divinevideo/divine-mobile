@@ -463,7 +463,9 @@ void main() {
           verifyNever(() => nostrClient.publishEventAwaitOk(any()));
         },
       );
+    });
 
+    group('serialization', () {
       test('mutations run one at a time', () async {
         stubRelayAnswer(const []);
         final order = <String>[];

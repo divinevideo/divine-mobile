@@ -87,6 +87,12 @@ DivineVideoDraft _createTestDraft({String title = 'Test Draft'}) {
   );
 }
 
+/// The grid tile numbered [number] (1-based), found by its semantic label
+/// resolved from l10n so a copy change cannot silently break these tests.
+Finder _thumbnail(int number) => find.bySemanticsLabel(
+  lookupAppLocalizations(const Locale('en')).profileVideoThumbnailLabel(number),
+);
+
 List<model.VideoEvent> _createTestVideos({
   required String pubkey,
   int count = 2,
@@ -263,7 +269,7 @@ void main() {
             ),
           );
 
-          await tester.tap(find.bySemanticsLabel('Video thumbnail 3'));
+          await tester.tap(_thumbnail(3));
           await tester.pumpAndSettle();
 
           final args = capturedExtra as ProfilePooledFullscreenVideoFeedArgs?;
@@ -330,7 +336,7 @@ void main() {
           );
 
           expect(find.byType(PartialCircleSpinner), findsOneWidget);
-          await tester.tap(find.bySemanticsLabel('Video thumbnail 3'));
+          await tester.tap(_thumbnail(3));
           await tester.pumpAndSettle();
 
           final args = capturedExtra as ProfilePooledFullscreenVideoFeedArgs?;
@@ -353,7 +359,7 @@ void main() {
             buildSubject(userIdHex: _ownPubkey, videos: videos),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.videoGridEditVideo), findsOneWidget);
@@ -403,7 +409,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.videoGridEditVideo), findsNothing);
@@ -422,9 +428,7 @@ void main() {
           buildSubject(userIdHex: _ownPubkey, videos: videos),
         );
 
-        final node = tester.getSemantics(
-          find.bySemanticsLabel('Video thumbnail 1'),
-        );
+        final node = tester.getSemantics(_thumbnail(1));
         expect(
           node.getSemanticsData().hasAction(SemanticsAction.longPress),
           isTrue,
@@ -477,7 +481,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.videoGridEditVideo), findsNothing);
@@ -531,7 +535,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridEditVideo));
           await tester.pumpAndSettle();
@@ -551,7 +555,7 @@ void main() {
             buildSubject(userIdHex: _ownPubkey, videos: videos),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridDeleteVideo));
           await tester.pumpAndSettle();
@@ -596,7 +600,7 @@ void main() {
               ],
             ),
           );
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridDeleteVideo));
           await tester.pumpAndSettle();
@@ -606,7 +610,7 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 300));
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           ListTile tileFor(String label) => tester.widget<ListTile>(
             find.ancestor(
@@ -626,7 +630,7 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tapAt(const Offset(10, 10));
           await tester.pumpAndSettle();
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           expect(tileFor(l10n.videoGridEditVideo).enabled, isTrue);
           expect(tileFor(l10n.videoGridDeleteVideo).enabled, isTrue);
@@ -928,21 +932,12 @@ void main() {
             ),
           );
 
-          final pinnedTile = find.bySemanticsLabel(
-            l10n.profileVideoThumbnailLabel(2),
-          );
+          final pinnedTile = _thumbnail(2);
           expect(
             tester.getSemantics(pinnedTile).value,
             l10n.profileVideoPinnedValue,
           );
-          expect(
-            tester
-                .getSemantics(
-                  find.bySemanticsLabel(l10n.profileVideoThumbnailLabel(1)),
-                )
-                .value,
-            isEmpty,
-          );
+          expect(tester.getSemantics(_thumbnail(1)).value, isEmpty);
           final badges = find.byWidgetPredicate(
             (widget) =>
                 widget is DivineIcon && widget.icon == DivineIconName.pushPin,
@@ -974,7 +969,7 @@ void main() {
           ),
         );
 
-        await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+        await tester.longPress(_thumbnail(1));
         await tester.pumpAndSettle();
         expect(find.text(l10n.videoGridPinVideo), findsOneWidget);
 
@@ -1009,7 +1004,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           expect(find.text(l10n.videoGridUnpinVideo), findsOneWidget);
           expect(find.text(l10n.videoGridPinVideo), findsNothing);
@@ -1051,7 +1046,7 @@ void main() {
             ),
           );
 
-          await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+          await tester.longPress(_thumbnail(1));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoGridPinVideo));
           await tester.pumpAndSettle();
@@ -1086,7 +1081,7 @@ void main() {
           ),
         );
 
-        await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+        await tester.longPress(_thumbnail(1));
         await tester.pumpAndSettle();
 
         final tile = tester.widget<ListTile>(
@@ -1112,7 +1107,7 @@ void main() {
           buildSubject(userIdHex: _ownPubkey, videos: videos),
         );
 
-        await tester.longPress(find.bySemanticsLabel('Video thumbnail 1'));
+        await tester.longPress(_thumbnail(1));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.videoGridEditVideo), findsOneWidget);
