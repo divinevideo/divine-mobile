@@ -58,10 +58,7 @@ void main() {
               .toList()
             ..sort((a, b) => a.path.compareTo(b.path));
 
-      const keys = [
-        'shareMenuDeleteConfirmation',
-        'videoGridDeleteVideoSubtitle',
-      ];
+      const keys = ['shareMenuDeleteConfirmation'];
 
       for (final file in arbFiles) {
         final arb = _readArb(file);

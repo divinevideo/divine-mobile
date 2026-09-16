@@ -697,6 +697,31 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => '고정됨';
+
+  @override
+  String get profilePinSuccess => '프로필 맨 위에 고정했어요.';
+
+  @override
+  String get profileUnpinSuccess => '고정을 해제했어요. 원래 자리로 돌아갔어요.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '영상은 최대 $count개까지 고정할 수 있어요. 하나를 해제해서 자리를 만드세요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => '영상을 고정하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get profileUnpinFailed => '영상 고정을 해제하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get profileShowMore => '더보기';
 
   @override
@@ -1147,14 +1172,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoGridEditVideo => '영상 편집';
 
   @override
-  String get videoGridEditVideoSubtitle => '제목, 설명, 해시태그 수정';
+  String get videoGridPinVideo => '영상 고정';
+
+  @override
+  String get videoGridUnpinVideo => '고정 해제';
 
   @override
   String get videoGridDeleteVideo => '영상 삭제';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      '이 영상을 Divine에서 삭제해요. 다른 Nostr 클라이언트에는 계속 표시될 수 있어요.';
 
   @override
   String get videoGridDeletingContent => '콘텐츠 삭제 중...';

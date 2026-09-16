@@ -70,3 +70,39 @@ final class ProfileFeedEnrichmentReady extends ProfileFeedEvent {
   @override
   List<Object?> get props => [enriched, sourceKeys];
 }
+
+/// Internal: the author's pin list arrived (cache, relay, or an accepted
+/// mutation); re-derive the pinned-first sequence and resolve any pinned video
+/// outside the loaded feed window.
+final class ProfileFeedPinsChanged extends ProfileFeedEvent {
+  const ProfileFeedPinsChanged(this.coordinates);
+
+  /// Managed kind-34236 coordinates in stored order.
+  final List<String> coordinates;
+
+  @override
+  List<Object?> get props => [coordinates];
+}
+
+/// A pin-list mutation for one of the viewer's own videos. Both variants share
+/// one `droppable` bucket: a request that lands while another is in flight is
+/// discarded, so a pin and an unpin can never interleave their
+/// read-modify-write and the sheet's disabled state stays truthful.
+sealed class ProfileFeedPinMutationRequested extends ProfileFeedEvent {
+  const ProfileFeedPinMutationRequested(this.video);
+
+  final VideoEvent video;
+
+  @override
+  List<Object?> get props => [video];
+}
+
+/// Pins [video] to the front of the viewer's own profile.
+final class ProfileFeedPinRequested extends ProfileFeedPinMutationRequested {
+  const ProfileFeedPinRequested(super.video);
+}
+
+/// Removes [video] from the viewer's own pinned videos.
+final class ProfileFeedUnpinRequested extends ProfileFeedPinMutationRequested {
+  const ProfileFeedUnpinRequested(super.video);
+}

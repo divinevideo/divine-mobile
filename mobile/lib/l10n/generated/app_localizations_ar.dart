@@ -776,6 +776,40 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'مثبّت';
+
+  @override
+  String get profilePinSuccess => 'تم التثبيت في أعلى ملفك الشخصي.';
+
+  @override
+  String get profileUnpinSuccess => 'تم إلغاء التثبيت. عاد إلى مكانه المعتاد.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'يمكن تثبيت $count فيديو كحدّ أقصى. ألغِ تثبيت أحدها لإفساح المجال.',
+      many:
+          'يمكن تثبيت $count فيديو كحدّ أقصى. ألغِ تثبيت أحدها لإفساح المجال.',
+      few:
+          'يمكن تثبيت $count فيديوهات كحدّ أقصى. ألغِ تثبيت أحدها لإفساح المجال.',
+      two:
+          'يمكن تثبيت فيديوهين ($count) كحدّ أقصى. ألغِ تثبيت أحدهما لإفساح المجال.',
+      one: 'يمكن تثبيت فيديو واحد ($count). ألغِ تثبيته لإفساح المجال.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'تعذّر تثبيت هذا الفيديو. حاول مرة أخرى.';
+
+  @override
+  String get profileUnpinFailed =>
+      'تعذّر إلغاء تثبيت هذا الفيديو. حاول مرة أخرى.';
+
+  @override
   String get profileShowMore => 'عرض المزيد';
 
   @override
@@ -1240,14 +1274,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoGridEditVideo => 'تعديل الفيديو';
 
   @override
-  String get videoGridEditVideoSubtitle => 'تحديث العنوان والوصف والوسوم';
+  String get videoGridPinVideo => 'تثبيت الفيديو';
+
+  @override
+  String get videoGridUnpinVideo => 'إلغاء تثبيت الفيديو';
 
   @override
   String get videoGridDeleteVideo => 'حذف الفيديو';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'أزل هذا الفيديو من Divine. قد يظل يظهر في عملاء Nostr آخرين.';
 
   @override
   String get videoGridDeletingContent => 'جاري حذف المحتوى...';

@@ -794,6 +794,35 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Vastgepind';
+
+  @override
+  String get profilePinSuccess => 'Bovenaan je profiel vastgepind.';
+
+  @override
+  String get profileUnpinSuccess => 'Losgemaakt. Weer op zijn gewone plek.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Je kunt maximaal $count video\'s vastpinnen. Maak er een los om ruimte te maken.',
+      one: 'Je kunt $count video vastpinnen. Maak hem los om ruimte te maken.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed =>
+      'Die video kon niet worden vastgepind. Probeer het opnieuw.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Die video kon niet worden losgemaakt. Probeer het opnieuw.';
+
+  @override
   String get profileShowMore => 'Meer weergeven';
 
   @override
@@ -1266,15 +1295,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoGridEditVideo => 'Video bewerken';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Titel, beschrijving en hashtags bijwerken';
+  String get videoGridPinVideo => 'Video vastpinnen';
+
+  @override
+  String get videoGridUnpinVideo => 'Video losmaken';
 
   @override
   String get videoGridDeleteVideo => 'Video verwijderen';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Deze video uit Divine verwijderen. Hij kan nog steeds verschijnen in andere Nostr-clients.';
 
   @override
   String get videoGridDeletingContent => 'Inhoud verwijderen...';

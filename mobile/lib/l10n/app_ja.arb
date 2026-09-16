@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "ピン留め済み",
+    "profilePinSuccess": "プロフィールの先頭にピン留めしました。",
+    "profileUnpinSuccess": "ピン留めを解除しました。元の位置に戻ります。",
+    "profilePinLimitReached": "{count, plural, other{ピン留めできるのは{count}本までです。どれか一本を解除すると空きができます。}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "この動画をピン留めできませんでした。もう一度お試しください。",
+    "profileUnpinFailed": "この動画のピン留めを解除できませんでした。もう一度お試しください。",
     "profileShowMore": "もっと見る",
     "profileShowLess": "閉じる",
     "dmMessageDisplayLimitReached": "このメッセージの残りは表示されません。",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "さらに動画を探し中",
     "videoGridOptionsTitle": "動画オプション",
     "videoGridEditVideo": "動画を編集",
-    "videoGridEditVideoSubtitle": "タイトル、説明、ハッシュタグを更新",
+    "videoGridPinVideo": "動画をピン留め",
+    "videoGridUnpinVideo": "ピン留めを解除",
     "videoGridDeleteVideo": "動画を削除",
-    "videoGridDeleteVideoSubtitle": "この動画をDivineから削除します。他のNostrクライアントには、まだ表示される場合があります。",
     "videoGridDeletingContent": "コンテンツを削除中...",
     "exploreTabFeatured": "おすすめ",
   "exploreTabClassics": "クラシック",

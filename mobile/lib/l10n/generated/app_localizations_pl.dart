@@ -816,6 +816,40 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Przypięty';
+
+  @override
+  String get profilePinSuccess => 'Przypięto na górze Twojego profilu.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Odpięto. Film wrócił na swoje zwykłe miejsce.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Możesz przypiąć maksymalnie $count filmu. Odepnij jeden, żeby zrobić miejsce.',
+      many:
+          'Możesz przypiąć maksymalnie $count filmów. Odepnij jeden, żeby zrobić miejsce.',
+      few:
+          'Możesz przypiąć maksymalnie $count filmy. Odepnij jeden, żeby zrobić miejsce.',
+      one: 'Możesz przypiąć $count film. Odepnij go, żeby zrobić miejsce.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed =>
+      'Nie udało się przypiąć tego filmu. Spróbuj ponownie.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Nie udało się odpiąć tego filmu. Spróbuj ponownie.';
+
+  @override
   String get profileShowMore => 'Pokaż więcej';
 
   @override
@@ -1290,14 +1324,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoGridEditVideo => 'Edytuj film';
 
   @override
-  String get videoGridEditVideoSubtitle => 'Zaktualizuj tytuł, opis i hashtagi';
+  String get videoGridPinVideo => 'Przypnij film';
+
+  @override
+  String get videoGridUnpinVideo => 'Odepnij film';
 
   @override
   String get videoGridDeleteVideo => 'Usuń film';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Usuń ten film z Divine. Może nadal pojawiać się w innych klientach Nostr.';
 
   @override
   String get videoGridDeletingContent => 'Usuwanie treści...';

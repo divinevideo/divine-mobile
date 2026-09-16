@@ -14,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:videos_repository/videos_repository.dart';
 
@@ -23,6 +24,9 @@ class _MockVideoEventService extends Mock implements VideoEventService {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockProfilePinsRepository extends Mock
+    implements ProfilePinsRepository {}
 
 /// In-memory [CacheDao] so the cubit's [CacheSync] reads/writes are isolated
 /// per test without touching disk.
@@ -65,6 +69,7 @@ VideoEvent _video(
   int createdAt = 1000,
   int? originalLikes,
   String? vineId,
+  String? dTag,
 }) {
   return VideoEvent(
     id: id,
@@ -75,8 +80,13 @@ VideoEvent _video(
     videoUrl: 'https://example.com/$id.mp4',
     originalLikes: originalLikes,
     vineId: vineId,
+    addressableDTag: dTag,
   );
 }
+
+/// The kind-34236 coordinate a pin list stores for a video with [dTag].
+String _coordinate(String dTag, {String pubkey = _author}) =>
+    '34236:$pubkey:$dTag';
 
 AuthorFeedResult _result(
   List<VideoEvent> videos, {
@@ -118,11 +128,20 @@ class _Harness {
       return () {};
     });
     when(() => blocklist.shouldFilterFromFeeds(any())).thenReturn(false);
+    when(() => pins.readCached(any())).thenAnswer((_) async => null);
+    when(() => pins.fetch(any())).thenAnswer((_) async => const []);
+    when(
+      () => repo.getVideosByAddressableIds(
+        any(),
+        cacheResults: any(named: 'cacheResults'),
+      ),
+    ).thenAnswer((_) async => const []);
   }
 
   final repo = _MockVideosRepository();
   final ves = _MockVideoEventService();
   final blocklist = _MockContentBlocklistRepository();
+  final pins = _MockProfilePinsRepository();
 
   void Function()? onChanged;
   void Function(VideoEvent)? onUpdate;
@@ -174,6 +193,7 @@ class _Harness {
     videosRepository: repo,
     videoEventService: ves,
     blocklistRepository: blocklist,
+    profilePinsRepository: pins,
     enrichVideos: enrichOverride ?? _noopEnrich,
   );
 }
@@ -184,6 +204,7 @@ void main() {
     registerFallbackValue(<VideoEvent>[]);
     registerFallbackValue(() {});
     registerFallbackValue((VideoEvent _) {});
+    registerFallbackValue(<String>[]);
   });
 
   group('ProfileFeedCubit', () {
@@ -1078,6 +1099,333 @@ void main() {
         expect(cubit.state.videos.single.originalLikes, isNull);
       },
     );
+
+    group('pinned videos', () {
+      test('cached pins lead the first emit; the relay list then replaces '
+          'them', () async {
+        when(
+          () => h.pins.readCached(_author),
+        ).thenAnswer((_) async => [_coordinate('c')]);
+        final relayFetch = Completer<List<String>?>();
+        when(() => h.pins.fetch(_author)).thenAnswer((_) => relayFetch.future);
+        h.stubAuthorFeed(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('b', createdAt: 2000, dTag: 'b'),
+            _video('c', dTag: 'c'),
+          ], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['c', 'a', 'b']);
+        expect(cubit.state.pinnedCoordinates, [_coordinate('c')]);
+        expect(cubit.state.isPinned(_video('c', dTag: 'c')), isTrue);
+        expect(cubit.state.isPinned(_video('a', dTag: 'a')), isFalse);
+
+        relayFetch.complete([_coordinate('b'), _coordinate('c')]);
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'c', 'a']);
+        expect(cubit.state.pinnedCoordinates, [
+          _coordinate('b'),
+          _coordinate('c'),
+        ]);
+      });
+
+      test('an inconclusive relay read keeps the cached pins', () async {
+        when(
+          () => h.pins.readCached(_author),
+        ).thenAnswer((_) async => [_coordinate('b')]);
+        when(() => h.pins.fetch(_author)).thenAnswer((_) async => null);
+        h.stubAuthorFeed(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('b', createdAt: 2000, dTag: 'b'),
+          ], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+      });
+
+      test('a pinned video outside the loaded window is fetched by '
+          'coordinate and placed first', () async {
+        final old = _video('old', createdAt: 10, dTag: 'old');
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('old')]);
+        when(
+          () => h.repo.getVideosByAddressableIds([
+            _coordinate('old'),
+          ], cacheResults: true),
+        ).thenAnswer((_) async => [old]);
+        h.stubAuthorFeed(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('b', createdAt: 2000, dTag: 'b'),
+          ], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['old', 'a', 'b']);
+        // The resolved copy is not part of the source window the snapshot
+        // persists: it is re-resolved by coordinate on the next open.
+        final snapshot = await readSnapshot();
+        expect(snapshot?.videos.map((v) => v.id), ['a', 'b']);
+      });
+
+      test('a pinned coordinate that resolves nowhere is skipped', () async {
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone'), _coordinate('b')]);
+        h.stubAuthorFeed(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('b', createdAt: 2000, dTag: 'b'),
+          ], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+        verify(
+          () => h.repo.getVideosByAddressableIds([
+            _coordinate('gone'),
+          ], cacheResults: true),
+        ).called(1);
+      });
+
+      test('pins survive every re-derivation: filter change, relay '
+          'snapshot and refresh', () async {
+        final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
+        ProfileFeedCubit.relaySnapshotAudit = const Duration(milliseconds: 20);
+        addTearDown(() => ProfileFeedCubit.relaySnapshotAudit = originalAudit);
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('b')]);
+        final cubit = await buildReady(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('b', createdAt: 2000, dTag: 'b'),
+          ], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+
+        cubit.add(const ProfileFeedFiltersChanged());
+        await pumpEventQueue();
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+
+        when(() => h.ves.authorVideos(_author)).thenReturn([
+          _video('c', createdAt: 4000, dTag: 'c'),
+          _video('a', createdAt: 3000, dTag: 'a'),
+          _video('b', createdAt: 2000, dTag: 'b'),
+        ]);
+        h.onChanged!();
+        await cubit.stream.firstWhere((s) => s.videos.length == 3);
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'c', 'a']);
+
+        // The mocked REST head has no 'c'; the refreshed window is [a, b]
+        // again and the pin still leads it.
+        cubit.add(const ProfileFeedRefreshRequested());
+        await pumpEventQueue();
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+      });
+
+      test('Nostr-fallback loadMore pages from the source window, not the '
+          'pinned display order', () async {
+        final old = _video('old', createdAt: 10, dTag: 'old');
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('old')]);
+        when(
+          () => h.repo.getVideosByAddressableIds(any(), cacheResults: true),
+        ).thenAnswer((_) async => [old]);
+        final cubit = await buildReady(
+          _result([_video('a', createdAt: 3000, dTag: 'a')], hasMore: true),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.nextOffset, isNull);
+        expect(cubit.state.videos.map((v) => v.id), ['old', 'a']);
+
+        cubit.add(const ProfileFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        verify(
+          () => h.ves.queryHistoricalUserVideos(_author, until: 3000),
+        ).called(1);
+      });
+
+      test(
+        'pin: publishes, adopts the accepted list, reports pinned',
+        () async {
+          final b = _video('b', createdAt: 2000, dTag: 'b');
+          when(
+            () => h.pins.pin(_coordinate('b')),
+          ).thenAnswer(
+            (_) async => ProfilePinMutation.succeeded([_coordinate('b')]),
+          );
+          final cubit = await buildReady(
+            _result([
+              _video('a', createdAt: 3000, dTag: 'a'),
+              b,
+            ], hasMore: false),
+          );
+          addTearDown(cubit.close);
+          final feedback = <ProfileFeedPinFeedback>[];
+          final sub = cubit.stream.listen((s) => feedback.add(s.pinFeedback));
+          addTearDown(sub.cancel);
+
+          cubit.add(ProfileFeedPinRequested(b));
+          await pumpEventQueue();
+
+          expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+          expect(cubit.state.pinnedCoordinates, [_coordinate('b')]);
+          expect(cubit.state.isPinMutationInFlight, isFalse);
+          expect(feedback, contains(ProfileFeedPinFeedback.pinned));
+        },
+      );
+
+      test('unpin: adopts the accepted list, reports unpinned', () async {
+        final b = _video('b', createdAt: 2000, dTag: 'b');
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('b')]);
+        when(
+          () => h.pins.unpin(_coordinate('b')),
+        ).thenAnswer((_) async => const ProfilePinMutation.succeeded([]));
+        final cubit = await buildReady(
+          _result([_video('a', createdAt: 3000, dTag: 'a'), b], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+
+        cubit.add(ProfileFeedUnpinRequested(b));
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
+        expect(cubit.state.pinnedCoordinates, isEmpty);
+        expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.unpinned);
+      });
+
+      test(
+        'pin failure leaves the order alone and reports the cause',
+        () async {
+          final b = _video('b', createdAt: 2000, dTag: 'b');
+          when(
+            () => h.pins.pin(_coordinate('b')),
+          ).thenAnswer(
+            (_) async =>
+                const ProfilePinMutation.failed(ProfilePinFailure.limitReached),
+          );
+          final cubit = await buildReady(
+            _result([
+              _video('a', createdAt: 3000, dTag: 'a'),
+              b,
+            ], hasMore: false),
+          );
+          addTearDown(cubit.close);
+
+          cubit.add(ProfileFeedPinRequested(b));
+          await pumpEventQueue();
+
+          expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
+          expect(cubit.state.pinnedCoordinates, isEmpty);
+          expect(
+            cubit.state.pinFeedback,
+            ProfileFeedPinFeedback.pinLimitReached,
+          );
+          expect(cubit.state.isPinMutationInFlight, isFalse);
+        },
+      );
+
+      test(
+        'pin at the cap reports the limit without a relay round trip',
+        () async {
+          final videos = [
+            for (var i = 0; i <= ProfilePinsRepository.maxPins; i++)
+              _video('v$i', createdAt: 3000 - i, dTag: 'v$i'),
+          ];
+          when(() => h.pins.fetch(_author)).thenAnswer(
+            (_) async => [for (final v in videos.skip(1)) v.addressableId!],
+          );
+          final cubit = await buildReady(_result(videos, hasMore: false));
+          addTearDown(cubit.close);
+          expect(cubit.state.canPinMore, isFalse);
+
+          cubit.add(ProfileFeedPinRequested(videos[0]));
+          await pumpEventQueue();
+
+          expect(
+            cubit.state.pinFeedback,
+            ProfileFeedPinFeedback.pinLimitReached,
+          );
+          expect(cubit.state.isPinMutationInFlight, isFalse);
+          verifyNever(() => h.pins.pin(any()));
+
+          // Unpin is still allowed at the cap.
+          when(() => h.pins.unpin(videos[1].addressableId!)).thenAnswer(
+            (_) async => ProfilePinMutation.succeeded([
+              for (final v in videos.skip(2)) v.addressableId!,
+            ]),
+          );
+          cubit.add(ProfileFeedUnpinRequested(videos[1]));
+          await pumpEventQueue();
+          expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.unpinned);
+          expect(cubit.state.canPinMore, isTrue);
+        },
+      );
+
+      test(
+        'a legacy video without a d tag is never sent to the repository',
+        () async {
+          final legacy = _video('legacy', createdAt: 2000);
+          final cubit = await buildReady(
+            _result([legacy], hasMore: false),
+          );
+          addTearDown(cubit.close);
+
+          cubit.add(ProfileFeedPinRequested(legacy));
+          await pumpEventQueue();
+
+          verifyNever(() => h.pins.pin(any()));
+          expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.none);
+        },
+      );
+
+      test('a second mutation while one is in flight is dropped', () async {
+        final a = _video('a', createdAt: 3000, dTag: 'a');
+        final b = _video('b', createdAt: 2000, dTag: 'b');
+        final inFlight = Completer<ProfilePinMutation>();
+        when(() => h.pins.pin(any())).thenAnswer((_) => inFlight.future);
+        final cubit = await buildReady(_result([a, b], hasMore: false));
+        addTearDown(cubit.close);
+
+        cubit
+          ..add(ProfileFeedPinRequested(a))
+          ..add(ProfileFeedPinRequested(b));
+        await pumpEventQueue();
+        expect(cubit.state.isPinMutationInFlight, isTrue);
+
+        inFlight.complete(ProfilePinMutation.succeeded([_coordinate('a')]));
+        await pumpEventQueue();
+
+        verify(() => h.pins.pin(_coordinate('a'))).called(1);
+        verifyNever(() => h.pins.pin(_coordinate('b')));
+        expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
+      });
+    });
 
     group('ProfileFeedRefreshRequested completer', () {
       test('fires once the refresh has settled', () async {

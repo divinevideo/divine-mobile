@@ -15,6 +15,18 @@ enum ProfileFeedStatus {
   failure,
 }
 
+/// One-shot outcome of the last pin mutation, consumed by a listener that
+/// shows the snackbar. Reset to [none] when the next mutation starts so two
+/// identical outcomes in a row still read as two transitions.
+enum ProfileFeedPinFeedback {
+  none,
+  pinned,
+  unpinned,
+  pinLimitReached,
+  pinFailed,
+  unpinFailed,
+}
+
 /// State for [ProfileFeedCubit].
 ///
 /// [videos] is the **filtered** list the UI renders. Errors are NOT stored as
@@ -33,6 +45,9 @@ class ProfileFeedState extends Equatable {
     this.totalVideoCount,
     this.nextOffset,
     this.lastUpdated,
+    this.pinnedCoordinates = const [],
+    this.isPinMutationInFlight = false,
+    this.pinFeedback = ProfileFeedPinFeedback.none,
   });
 
   /// Lifecycle status.
@@ -71,6 +86,29 @@ class ProfileFeedState extends Equatable {
   /// Timestamp of the last successful update.
   final DateTime? lastUpdated;
 
+  /// The author's pinned videos as kind-34236 coordinates, in stored order.
+  /// [videos] already leads with the ones that resolved; this is what tells a
+  /// tile to show the badge and the owner's sheet whether to offer Unpin.
+  final List<String> pinnedCoordinates;
+
+  /// A pin or unpin publish is in flight; the sheet disables the action.
+  final bool isPinMutationInFlight;
+
+  /// Outcome of the most recent pin mutation, for the feedback snackbar.
+  final ProfileFeedPinFeedback pinFeedback;
+
+  /// How many videos the owner may pin.
+  static const int maxPinnedVideos = ProfilePinsRepository.maxPins;
+
+  /// Whether the owner may pin one more video.
+  bool get canPinMore => pinnedCoordinates.length < maxPinnedVideos;
+
+  /// Whether [video] is on the author's pin list.
+  bool isPinned(VideoEvent video) {
+    final coordinate = video.addressableId;
+    return coordinate != null && pinnedCoordinates.contains(coordinate);
+  }
+
   static const Object _unset = Object();
 
   ProfileFeedState copyWith({
@@ -85,6 +123,9 @@ class ProfileFeedState extends Equatable {
     Object? totalVideoCount = _unset,
     Object? nextOffset = _unset,
     Object? lastUpdated = _unset,
+    List<String>? pinnedCoordinates,
+    bool? isPinMutationInFlight,
+    ProfileFeedPinFeedback? pinFeedback,
   }) {
     return ProfileFeedState(
       status: status ?? this.status,
@@ -104,6 +145,10 @@ class ProfileFeedState extends Equatable {
       lastUpdated: identical(lastUpdated, _unset)
           ? this.lastUpdated
           : lastUpdated as DateTime?,
+      pinnedCoordinates: pinnedCoordinates ?? this.pinnedCoordinates,
+      isPinMutationInFlight:
+          isPinMutationInFlight ?? this.isPinMutationInFlight,
+      pinFeedback: pinFeedback ?? this.pinFeedback,
     );
   }
 
@@ -120,5 +165,8 @@ class ProfileFeedState extends Equatable {
     totalVideoCount,
     nextOffset,
     lastUpdated,
+    pinnedCoordinates,
+    isPinMutationInFlight,
+    pinFeedback,
   ];
 }

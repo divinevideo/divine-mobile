@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "مثبّت",
+    "profilePinSuccess": "تم التثبيت في أعلى ملفك الشخصي.",
+    "profileUnpinSuccess": "تم إلغاء التثبيت. عاد إلى مكانه المعتاد.",
+    "profilePinLimitReached": "{count, plural, one{يمكن تثبيت فيديو واحد ({count}). ألغِ تثبيته لإفساح المجال.} two{يمكن تثبيت فيديوهين ({count}) كحدّ أقصى. ألغِ تثبيت أحدهما لإفساح المجال.} few{يمكن تثبيت {count} فيديوهات كحدّ أقصى. ألغِ تثبيت أحدها لإفساح المجال.} many{يمكن تثبيت {count} فيديو كحدّ أقصى. ألغِ تثبيت أحدها لإفساح المجال.} other{يمكن تثبيت {count} فيديو كحدّ أقصى. ألغِ تثبيت أحدها لإفساح المجال.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "تعذّر تثبيت هذا الفيديو. حاول مرة أخرى.",
+    "profileUnpinFailed": "تعذّر إلغاء تثبيت هذا الفيديو. حاول مرة أخرى.",
     "profileShowMore": "عرض المزيد",
     "profileShowLess": "عرض أقل",
     "dmMessageDisplayLimitReached": "لن يتم عرض بقية هذه الرسالة.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "البحث عن المزيد من الفيديوهات",
     "videoGridOptionsTitle": "خيارات الفيديو",
     "videoGridEditVideo": "تعديل الفيديو",
-    "videoGridEditVideoSubtitle": "تحديث العنوان والوصف والوسوم",
+    "videoGridPinVideo": "تثبيت الفيديو",
+    "videoGridUnpinVideo": "إلغاء تثبيت الفيديو",
     "videoGridDeleteVideo": "حذف الفيديو",
-    "videoGridDeleteVideoSubtitle": "أزل هذا الفيديو من Divine. قد يظل يظهر في عملاء Nostr آخرين.",
     "videoGridDeletingContent": "جاري حذف المحتوى...",
     "exploreTabFeatured": "مميز",
   "exploreTabClassics": "الكلاسيكيات",

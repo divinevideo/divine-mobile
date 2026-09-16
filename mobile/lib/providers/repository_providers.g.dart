@@ -848,6 +848,71 @@ final class BookmarksRepositoryProvider
 String _$bookmarksRepositoryHash() =>
     r'99bea35c4a70f1f2bfdfe51e10c1af14b702b71c';
 
+/// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).
+///
+/// Long-lived so the revision a mutation just got accepted survives the
+/// profile grid unmounting: the fullscreen feed builds its own
+/// `ProfileFeedCubit` a moment later and reads through the same instance.
+
+@ProviderFor(profilePinsRepository)
+final profilePinsRepositoryProvider = ProfilePinsRepositoryProvider._();
+
+/// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).
+///
+/// Long-lived so the revision a mutation just got accepted survives the
+/// profile grid unmounting: the fullscreen feed builds its own
+/// `ProfileFeedCubit` a moment later and reads through the same instance.
+
+final class ProfilePinsRepositoryProvider
+    extends
+        $FunctionalProvider<
+          ProfilePinsRepository,
+          ProfilePinsRepository,
+          ProfilePinsRepository
+        >
+    with $Provider<ProfilePinsRepository> {
+  /// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).
+  ///
+  /// Long-lived so the revision a mutation just got accepted survives the
+  /// profile grid unmounting: the fullscreen feed builds its own
+  /// `ProfileFeedCubit` a moment later and reads through the same instance.
+  ProfilePinsRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'profilePinsRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$profilePinsRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<ProfilePinsRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ProfilePinsRepository create(Ref ref) {
+    return profilePinsRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ProfilePinsRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ProfilePinsRepository>(value),
+    );
+  }
+}
+
+String _$profilePinsRepositoryHash() =>
+    r'd8bb59c2f5667a79bc72a5ad5aaab41a40856a03';
+
 /// Provider for NIP-17 DM repository.
 ///
 /// Creates a [DmRepository] that handles receiving, decrypting, persisting,

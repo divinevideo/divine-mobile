@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Fixat",
+    "profilePinSuccess": "Fixat în partea de sus a profilului tău.",
+    "profileUnpinSuccess": "Nu mai e fixat. S-a întors la locul lui obișnuit.",
+    "profilePinLimitReached": "{count, plural, one{Poți fixa {count} videoclip. Anulează-i fixarea ca să faci loc.} few{Poți fixa cel mult {count} videoclipuri. Anulează fixarea unuia ca să faci loc.} other{Poți fixa cel mult {count} de videoclipuri. Anulează fixarea unuia ca să faci loc.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Nu am putut fixa videoclipul. Încearcă din nou.",
+    "profileUnpinFailed": "Nu am putut anula fixarea videoclipului. Încearcă din nou.",
     "profileShowMore": "Arată mai mult",
     "profileShowLess": "Arată mai puțin",
     "dmMessageDisplayLimitReached": "Restul acestui mesaj nu este afișat.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Se caută mai multe videoclipuri",
     "videoGridOptionsTitle": "Opțiuni video",
     "videoGridEditVideo": "Editează videoclipul",
-    "videoGridEditVideoSubtitle": "Actualizează titlul, descrierea și hashtagurile",
+    "videoGridPinVideo": "Fixează videoclipul",
+    "videoGridUnpinVideo": "Anulează fixarea",
     "videoGridDeleteVideo": "Șterge videoclipul",
-    "videoGridDeleteVideoSubtitle": "Elimină acest videoclip din Divine. Poate apărea în continuare în alți clienți Nostr.",
     "videoGridDeletingContent": "Se șterge conținutul...",
     "exploreTabFeatured": "Recomandate",
   "exploreTabClassics": "Clasice",

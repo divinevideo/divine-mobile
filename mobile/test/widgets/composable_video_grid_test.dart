@@ -638,9 +638,10 @@ void main() {
         await tester.tap(find.text(l10n.shareMenuDelete));
         await tester.pumpAndSettle();
 
+        // The sheet closed on Delete; reopened mid-cleanup it disables both
+        // entries, and stays that way until it is opened again.
         await tester.longPress(tile);
         await tester.pump(const Duration(milliseconds: 500));
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
         var deleteTile = tester.widget<ListTile>(
           find.ancestor(
             of: find.text(l10n.videoGridDeleteVideo),
@@ -660,8 +661,11 @@ void main() {
           const CreatorDeleteEnforcementResult.confirmed(),
         );
         await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        await tester.longPress(tile);
+        await tester.pumpAndSettle();
 
-        expect(find.byType(CircularProgressIndicator), findsNothing);
         deleteTile = tester.widget<ListTile>(
           find.ancestor(
             of: find.text(l10n.videoGridDeleteVideo),

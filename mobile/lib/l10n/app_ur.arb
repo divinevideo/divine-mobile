@@ -393,6 +393,19 @@
       }
     }
   },
+  "profileVideoPinnedValue": "پن شدہ",
+  "profilePinSuccess": "آپ کے پروفائل کے اوپر پن ہو گئی۔",
+  "profileUnpinSuccess": "پن ہٹا دی گئی۔ اپنی معمول کی جگہ پر واپس آ گئی۔",
+  "profilePinLimitReached": "{count, plural, =1{آپ {count} ویڈیو پن کر سکتے ہیں۔ جگہ بنانے کے لیے اس کی پن ہٹائیں۔} other{آپ زیادہ سے زیادہ {count} ویڈیوز پن کر سکتے ہیں۔ جگہ بنانے کے لیے ایک کی پن ہٹائیں۔}}",
+  "@profilePinLimitReached": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profilePinFailed": "وہ ویڈیو پن نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+  "profileUnpinFailed": "اس ویڈیو کی پن نہیں ہٹ سکی۔ دوبارہ کوشش کریں۔",
   "profileShowMore": "مزید دکھائیں",
   "profileShowLess": "کم دکھائیں",
   "dmMessageDisplayLimitReached": "اس پیغام کا باقی حصہ نہیں دکھایا گیا۔",
@@ -556,9 +569,9 @@
   "videoGridRefreshLabel": "مزید ویڈیوز تلاش ہو رہی ہیں",
   "videoGridOptionsTitle": "ویڈیو اختیارات",
   "videoGridEditVideo": "ویڈیو میں ترمیم کریں",
-  "videoGridEditVideoSubtitle": "عنوان، تفصیل اور ہیش ٹیگز اپڈیٹ کریں",
+  "videoGridPinVideo": "ویڈیو پن کریں",
+  "videoGridUnpinVideo": "پن ہٹائیں",
   "videoGridDeleteVideo": "ویڈیو حذف کریں",
-  "videoGridDeleteVideoSubtitle": "یہ ویڈیو Divine سے ہٹائیں۔ یہ دیگر Nostr کلائنٹس پر پھر بھی نظر آ سکتی ہے۔",
   "videoGridDeletingContent": "مواد حذف ہو رہا ہے...",
   "exploreTabFeatured": "نمایاں",
   "exploreTabClassics": "کلاسکس",

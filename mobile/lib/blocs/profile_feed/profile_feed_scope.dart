@@ -9,6 +9,7 @@ import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/utils/video_nostr_enrichment.dart';
 
@@ -44,6 +45,7 @@ class ProfileFeedScope extends ConsumerWidget {
     final videosRepository = ref.watch(videosRepositoryProvider);
     final videoEventService = ref.watch(videoEventServiceProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
+    final profilePinsRepository = ref.watch(profilePinsRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return BlocProvider<ProfileFeedCubit>(
@@ -54,12 +56,14 @@ class ProfileFeedScope extends ConsumerWidget {
         videosRepository,
         videoEventService,
         blocklistRepository,
+        profilePinsRepository,
       )),
       create: (_) => ProfileFeedCubit(
         authorPubkey: userIdHex,
         videosRepository: videosRepository,
         videoEventService: videoEventService,
         blocklistRepository: blocklistRepository,
+        profilePinsRepository: profilePinsRepository,
         enrichVideos: (videos) => enrichVideosWithNostrTags(
           videos,
           nostrService: ref.read(nostrServiceProvider),
@@ -67,17 +71,56 @@ class ProfileFeedScope extends ConsumerWidget {
           attemptTracker: enrichmentAttemptTracker,
         ),
       ),
-      child: BlocListener<ProfileFeedCubit, ProfileFeedState>(
-        listenWhen: (previous, current) =>
-            !previous.hasLoadMoreError && current.hasLoadMoreError,
-        listener: (context, state) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            DivineSnackbarContainer.snackBar(
-              context.l10n.profileFeedLoadMoreError,
-              error: true,
-            ),
-          );
-        },
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<ProfileFeedCubit, ProfileFeedState>(
+            listenWhen: (previous, current) =>
+                !previous.hasLoadMoreError && current.hasLoadMoreError,
+            listener: (context, state) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                DivineSnackbarContainer.snackBar(
+                  context.l10n.profileFeedLoadMoreError,
+                  error: true,
+                ),
+              );
+            },
+          ),
+          BlocListener<ProfileFeedCubit, ProfileFeedState>(
+            listenWhen: (previous, current) =>
+                previous.pinFeedback != current.pinFeedback &&
+                current.pinFeedback != ProfileFeedPinFeedback.none,
+            listener: (context, state) {
+              final l10n = context.l10n;
+              final (message, isError) = switch (state.pinFeedback) {
+                ProfileFeedPinFeedback.pinned => (
+                  l10n.profilePinSuccess,
+                  false,
+                ),
+                ProfileFeedPinFeedback.unpinned => (
+                  l10n.profileUnpinSuccess,
+                  false,
+                ),
+                ProfileFeedPinFeedback.pinLimitReached => (
+                  l10n.profilePinLimitReached(ProfileFeedState.maxPinnedVideos),
+                  true,
+                ),
+                ProfileFeedPinFeedback.pinFailed => (
+                  l10n.profilePinFailed,
+                  true,
+                ),
+                ProfileFeedPinFeedback.unpinFailed => (
+                  l10n.profileUnpinFailed,
+                  true,
+                ),
+                ProfileFeedPinFeedback.none => (null, false),
+              };
+              if (message == null) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                DivineSnackbarContainer.snackBar(message, error: isError),
+              );
+            },
+          ),
+        ],
         child: _BlocklistVersionForwarder(
           version: blocklistVersion,
           child: child,

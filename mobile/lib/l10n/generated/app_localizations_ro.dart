@@ -829,6 +829,38 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Fixat';
+
+  @override
+  String get profilePinSuccess => 'Fixat în partea de sus a profilului tău.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Nu mai e fixat. S-a întors la locul lui obișnuit.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Poți fixa cel mult $count de videoclipuri. Anulează fixarea unuia ca să faci loc.',
+      few:
+          'Poți fixa cel mult $count videoclipuri. Anulează fixarea unuia ca să faci loc.',
+      one: 'Poți fixa $count videoclip. Anulează-i fixarea ca să faci loc.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed =>
+      'Nu am putut fixa videoclipul. Încearcă din nou.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Nu am putut anula fixarea videoclipului. Încearcă din nou.';
+
+  @override
   String get profileShowMore => 'Arată mai mult';
 
   @override
@@ -1301,15 +1333,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoGridEditVideo => 'Editează videoclipul';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Actualizează titlul, descrierea și hashtagurile';
+  String get videoGridPinVideo => 'Fixează videoclipul';
+
+  @override
+  String get videoGridUnpinVideo => 'Anulează fixarea';
 
   @override
   String get videoGridDeleteVideo => 'Șterge videoclipul';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Elimină acest videoclip din Divine. Poate apărea în continuare în alți clienți Nostr.';
 
   @override
   String get videoGridDeletingContent => 'Se șterge conținutul...';

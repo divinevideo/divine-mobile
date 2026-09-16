@@ -799,6 +799,35 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Fijado';
+
+  @override
+  String get profilePinSuccess => 'Fijado arriba de todo en tu perfil.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Ya no está fijado. Volvió a su lugar de siempre.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Podés fijar hasta $count videos. Dejá de fijar uno para hacer lugar.',
+      one: 'Podés fijar $count video. Dejá de fijarlo para hacer lugar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'No se pudo fijar ese video. Probá de nuevo.';
+
+  @override
+  String get profileUnpinFailed =>
+      'No se pudo dejar de fijar ese video. Probá de nuevo.';
+
+  @override
   String get profileShowMore => 'Ver más';
 
   @override
@@ -1274,15 +1303,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoGridEditVideo => 'Editar video';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Actualizá título, descripción y hashtags';
+  String get videoGridPinVideo => 'Fijar video';
+
+  @override
+  String get videoGridUnpinVideo => 'Dejar de fijar';
 
   @override
   String get videoGridDeleteVideo => 'Eliminar video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Sacá este video de Divine. Es posible que siga apareciendo en otros clientes Nostr.';
 
   @override
   String get videoGridDeletingContent => 'Eliminando contenido...';

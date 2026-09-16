@@ -731,6 +731,34 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Sabitlenmiş';
+
+  @override
+  String get profilePinSuccess => 'Profilinin en üstüne sabitlendi.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Sabitleme kaldırıldı. Her zamanki yerine döndü.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'En fazla $count video sabitleyebilirsin. Yer açmak için birinin sabitlemesini kaldır.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Bu video sabitlenemedi. Tekrar dene.';
+
+  @override
+  String get profileUnpinFailed =>
+      'Bu videonun sabitlemesi kaldırılamadı. Tekrar dene.';
+
+  @override
   String get profileShowMore => 'Daha fazla göster';
 
   @override
@@ -1200,15 +1228,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoGridEditVideo => 'Videoyu Düzenle';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Başlık, açıklama ve etiketleri güncelle';
+  String get videoGridPinVideo => 'Videoyu Sabitle';
+
+  @override
+  String get videoGridUnpinVideo => 'Sabitlemeyi Kaldır';
 
   @override
   String get videoGridDeleteVideo => 'Videoyu Sil';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Bu videoyu Divine\'dan kaldır. Diğer Nostr istemcilerinde hâlâ görünebilir.';
 
   @override
   String get videoGridDeletingContent => 'İçerik siliniyor...';

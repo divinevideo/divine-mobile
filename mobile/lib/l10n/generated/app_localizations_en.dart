@@ -802,6 +802,32 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Pinned';
+
+  @override
+  String get profilePinSuccess => 'Pinned to the top of your profile.';
+
+  @override
+  String get profileUnpinSuccess => 'Unpinned. Back in its usual spot.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You can pin up to $count videos. Unpin one to make room.',
+      one: 'You can pin $count video. Unpin it to make room.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Couldn\'t pin that video. Try again.';
+
+  @override
+  String get profileUnpinFailed => 'Couldn\'t unpin that video. Try again.';
+
+  @override
   String get profileShowMore => 'Show more';
 
   @override
@@ -1270,15 +1296,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoGridEditVideo => 'Edit Video';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Update title, description, and hashtags';
+  String get videoGridPinVideo => 'Pin Video';
+
+  @override
+  String get videoGridUnpinVideo => 'Unpin Video';
 
   @override
   String get videoGridDeleteVideo => 'Delete Video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Remove this video from Divine. It may still appear on other Nostr clients.';
 
   @override
   String get videoGridDeletingContent => 'Deleting content...';

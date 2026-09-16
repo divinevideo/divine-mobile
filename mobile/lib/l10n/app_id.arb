@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Disematkan",
+    "profilePinSuccess": "Disematkan di bagian atas profilmu.",
+    "profileUnpinSuccess": "Sematan dilepas. Kembali ke tempat biasanya.",
+    "profilePinLimitReached": "{count, plural, other{Kamu bisa menyematkan hingga {count} video. Lepas satu sematan untuk memberi ruang.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Video itu gagal disematkan. Coba lagi.",
+    "profileUnpinFailed": "Sematan video itu gagal dilepas. Coba lagi.",
     "profileShowMore": "Tampilkan lebih banyak",
     "profileShowLess": "Tampilkan lebih sedikit",
     "dmMessageDisplayLimitReached": "Sisa pesan ini tidak ditampilkan.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Mencari video lainnya",
     "videoGridOptionsTitle": "Opsi Video",
     "videoGridEditVideo": "Ubah Video",
-    "videoGridEditVideoSubtitle": "Perbarui judul, deskripsi, dan hashtag",
+    "videoGridPinVideo": "Sematkan Video",
+    "videoGridUnpinVideo": "Lepas Sematan",
     "videoGridDeleteVideo": "Hapus Video",
-    "videoGridDeleteVideoSubtitle": "Hapus video ini dari Divine. Video ini mungkin masih muncul di klien Nostr lain.",
     "videoGridDeletingContent": "Menghapus konten...",
     "exploreTabFeatured": "Unggulan",
   "exploreTabClassics": "Klasik",

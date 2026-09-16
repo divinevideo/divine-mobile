@@ -369,6 +369,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "የተሰካ",
+    "profilePinSuccess": "በመገለጫዎ አናት ላይ ተሰክቷል።",
+    "profileUnpinSuccess": "ተነስቷል። ወደ ተለመደው ቦታው ተመልሷል።",
+    "profilePinLimitReached": "{count, plural, =1{{count} ቪዲዮ መስካት ይችላሉ። ቦታ ለማስለቀቅ ያንሱት።} other{እስከ {count} ቪዲዮዎችን መስካት ይችላሉ። ቦታ ለማስለቀቅ አንዱን ያንሱ።}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "ያንን ቪዲዮ መስካት አልተቻለም። እንደገና ይሞክሩ።",
+    "profileUnpinFailed": "ያንን ቪዲዮ ማንሳት አልተቻለም። እንደገና ይሞክሩ።",
     "profileShowMore": "ተጨማሪ አሳይ",
     "profileShowLess": "ያነሰ አሳይ",
     "dmMessageDisplayLimitReached": "የቀረው መልዕክት አይታይም።",
@@ -519,9 +532,9 @@
     "videoGridRefreshLabel": "ተጨማሪ ቪዲዮዎችን በመፈለግ ላይ",
     "videoGridOptionsTitle": "የቪዲዮ አማራጮች",
     "videoGridEditVideo": "ቪዲዮ አርትዕ",
-    "videoGridEditVideoSubtitle": "ርዕስ፣ መግለጫ እና ሃሽታጎችን ያዘምኑ",
+    "videoGridPinVideo": "ቪዲዮ ስካ",
+    "videoGridUnpinVideo": "ቪዲዮ አንሳ",
     "videoGridDeleteVideo": "ቪዲዮ ሰርዝ",
-    "videoGridDeleteVideoSubtitle": "ይህን ቪዲዮ ከDivine አስወግድ። በሌሎች Nostr ደንበኞች ላይ አሁንም ሊታይ ይችላል።",
     "videoGridDeletingContent": "ይዘትን በመሰረዝ ላይ...",
     "exploreTabFeatured": "ተለይተው የቀረቡ",
   "exploreTabClassics": "ክላሲኮች",

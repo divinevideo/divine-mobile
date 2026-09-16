@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Sabitlenmiş",
+    "profilePinSuccess": "Profilinin en üstüne sabitlendi.",
+    "profileUnpinSuccess": "Sabitleme kaldırıldı. Her zamanki yerine döndü.",
+    "profilePinLimitReached": "{count, plural, other{En fazla {count} video sabitleyebilirsin. Yer açmak için birinin sabitlemesini kaldır.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Bu video sabitlenemedi. Tekrar dene.",
+    "profileUnpinFailed": "Bu videonun sabitlemesi kaldırılamadı. Tekrar dene.",
     "profileShowMore": "Daha fazla göster",
     "profileShowLess": "Daha az göster",
     "dmMessageDisplayLimitReached": "Bu mesajın geri kalanı gösterilmiyor.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Daha fazla video aranıyor",
     "videoGridOptionsTitle": "Video Seçenekleri",
     "videoGridEditVideo": "Videoyu Düzenle",
-    "videoGridEditVideoSubtitle": "Başlık, açıklama ve etiketleri güncelle",
+    "videoGridPinVideo": "Videoyu Sabitle",
+    "videoGridUnpinVideo": "Sabitlemeyi Kaldır",
     "videoGridDeleteVideo": "Videoyu Sil",
-    "videoGridDeleteVideoSubtitle": "Bu videoyu Divine'dan kaldır. Diğer Nostr istemcilerinde hâlâ görünebilir.",
     "videoGridDeletingContent": "İçerik siliniyor...",
     "exploreTabFeatured": "Öne çıkanlar",
   "exploreTabClassics": "Klasikler",

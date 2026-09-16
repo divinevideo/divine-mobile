@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Przypięty",
+    "profilePinSuccess": "Przypięto na górze Twojego profilu.",
+    "profileUnpinSuccess": "Odpięto. Film wrócił na swoje zwykłe miejsce.",
+    "profilePinLimitReached": "{count, plural, one{Możesz przypiąć {count} film. Odepnij go, żeby zrobić miejsce.} few{Możesz przypiąć maksymalnie {count} filmy. Odepnij jeden, żeby zrobić miejsce.} many{Możesz przypiąć maksymalnie {count} filmów. Odepnij jeden, żeby zrobić miejsce.} other{Możesz przypiąć maksymalnie {count} filmu. Odepnij jeden, żeby zrobić miejsce.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Nie udało się przypiąć tego filmu. Spróbuj ponownie.",
+    "profileUnpinFailed": "Nie udało się odpiąć tego filmu. Spróbuj ponownie.",
     "profileShowMore": "Pokaż więcej",
     "profileShowLess": "Pokaż mniej",
     "dmMessageDisplayLimitReached": "Pozostała część tej wiadomości nie jest wyświetlana.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Szukanie większej liczby filmów",
     "videoGridOptionsTitle": "Opcje filmu",
     "videoGridEditVideo": "Edytuj film",
-    "videoGridEditVideoSubtitle": "Zaktualizuj tytuł, opis i hashtagi",
+    "videoGridPinVideo": "Przypnij film",
+    "videoGridUnpinVideo": "Odepnij film",
     "videoGridDeleteVideo": "Usuń film",
-    "videoGridDeleteVideoSubtitle": "Usuń ten film z Divine. Może nadal pojawiać się w innych klientach Nostr.",
     "videoGridDeletingContent": "Usuwanie treści...",
     "exploreTabFeatured": "Polecane",
   "exploreTabClassics": "Klasyki",

@@ -770,6 +770,32 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Naka-pin';
+
+  @override
+  String get profilePinSuccess => 'Naka-pin na sa itaas ng profile mo.';
+
+  @override
+  String get profileUnpinSuccess => 'Na-unpin na. Bumalik na sa dating pwesto.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Hanggang $count video lang ang puwedeng i-pin. Mag-unpin ng isa para may lugar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Hindi na-pin ang video. Subukan ulit.';
+
+  @override
+  String get profileUnpinFailed => 'Hindi na-unpin ang video. Subukan ulit.';
+
+  @override
   String get profileShowMore => 'Ipakita pa';
 
   @override
@@ -1248,15 +1274,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoGridEditVideo => 'I-edit ang Video';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'I-update ang title, description, at hashtag';
+  String get videoGridPinVideo => 'I-pin ang Video';
+
+  @override
+  String get videoGridUnpinVideo => 'I-unpin ang Video';
 
   @override
   String get videoGridDeleteVideo => 'Burahin ang Video';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Tanggalin ang video na ito sa Divine. Maaari pa rin itong lumabas sa ibang Nostr client.';
 
   @override
   String get videoGridDeletingContent => 'Binubura ang content...';

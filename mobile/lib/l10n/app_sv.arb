@@ -320,6 +320,19 @@
             }
         }
     },
+    "profileVideoPinnedValue": "Fäst",
+    "profilePinSuccess": "Fäst högst upp på din profil.",
+    "profileUnpinSuccess": "Lossad. Tillbaka på sin vanliga plats.",
+    "profilePinLimitReached": "{count, plural, =1{Du kan fästa {count} video. Lossa den för att göra plats.} other{Du kan fästa upp till {count} videor. Lossa en för att göra plats.}}",
+    "@profilePinLimitReached": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "profilePinFailed": "Videon kunde inte fästas. Försök igen.",
+    "profileUnpinFailed": "Videon kunde inte lossas. Försök igen.",
     "profileShowMore": "Visa mer",
     "profileShowLess": "Visa mindre",
     "dmMessageDisplayLimitReached": "Resten av meddelandet visas inte.",
@@ -436,9 +449,9 @@
     "videoGridRefreshLabel": "Söker efter fler videor",
     "videoGridOptionsTitle": "Videoalternativ",
     "videoGridEditVideo": "Redigera video",
-    "videoGridEditVideoSubtitle": "Uppdatera titel, beskrivning och hashtags",
+    "videoGridPinVideo": "Fäst video",
+    "videoGridUnpinVideo": "Lossa video",
     "videoGridDeleteVideo": "Ta bort video",
-    "videoGridDeleteVideoSubtitle": "Ta bort den här videon från Divine. Den kan fortfarande visas i andra Nostr-klienter.",
     "videoGridDeletingContent": "Tar bort innehåll...",
     "exploreTabFeatured": "Utvalda",
   "exploreTabClassics": "Klassiker",

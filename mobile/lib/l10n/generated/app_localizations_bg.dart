@@ -802,6 +802,34 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get profileVideoPinnedValue => 'Закачено';
+
+  @override
+  String get profilePinSuccess => 'Закачено най-отгоре в профила ти.';
+
+  @override
+  String get profileUnpinSuccess =>
+      'Откачено. Върна се на обичайното си място.';
+
+  @override
+  String profilePinLimitReached(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Можеш да закачиш до $count видеа. Откачи едно, за да освободиш място.',
+      one: 'Можеш да закачиш $count видео. Откачи го, за да освободиш място.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePinFailed => 'Видеото не можа да се закачи. Опитай пак.';
+
+  @override
+  String get profileUnpinFailed => 'Видеото не можа да се откачи. Опитай пак.';
+
+  @override
   String get profileShowMore => 'Покажи повече';
 
   @override
@@ -1275,15 +1303,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoGridEditVideo => 'Редактирай видеото';
 
   @override
-  String get videoGridEditVideoSubtitle =>
-      'Актуализирай заглавие, описание и хаштагове';
+  String get videoGridPinVideo => 'Закачи видеото';
+
+  @override
+  String get videoGridUnpinVideo => 'Откачи видеото';
 
   @override
   String get videoGridDeleteVideo => 'Изтрий видеото';
-
-  @override
-  String get videoGridDeleteVideoSubtitle =>
-      'Премахни това видео от Divine. Може още да се вижда в други Nostr клиенти.';
 
   @override
   String get videoGridDeletingContent => 'Трием съдържанието...';
