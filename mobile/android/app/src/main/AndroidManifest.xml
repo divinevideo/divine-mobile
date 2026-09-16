@@ -157,6 +157,25 @@
                measurement was taken: profile build, feed scroll, watch
                raster time and whether video textures stay correct.
 
+             The raster work landed on 2026-09-16, re-profiled on a Galaxy
+             S26 (Exynos 2600, API 36) with Flutter 3.47.2. The 17-27ms
+             above was two costs, neither of them the blur passes alone:
+             the feed's legacy SurfaceTextureEntry, zero-copy under Skia
+             but a per-frame GL->Vulkan blit behind a synchronous fence
+             wait under Impeller (10-12ms, 16+ms mid-swipe), and the
+             action-rail / bottom-nav icon shadows, ImageFiltered blurs
+             that Skia's raster cache absorbed and Impeller re-rasterised
+             every frame (~8ms). The feed now creates its players on
+             SurfaceProducer and the icons paint through
+             ShadowedDivineIcon, a bitmap baked once per icon and colour.
+             Back-to-back on the same device and account, profile builds
+             of main and of the fix: 20 swipes at 1.5s took raster p50
+             from 23.5ms to 3.3ms and frames over 16.7ms from 89% to 2%;
+             30 swipes at 0.6s went 19.2ms -> 4.7ms and 85% -> 1%; at
+             rest 30.0ms -> 8.6ms and 97% -> 0%. 40 fast swipes produced
+             no Exynos ghost frame. If the feed regresses on Impeller,
+             those two are the first places to look.
+
              There is deliberately no `EnableImpeller` entry below.
              Impeller is the engine default on API 29+, so the entry is
              redundant; setting it to `true` would also work and would not
