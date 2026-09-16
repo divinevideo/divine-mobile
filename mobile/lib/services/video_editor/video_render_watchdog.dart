@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owns the liveness bound and failure reporting for final video exports.
@@ -50,10 +51,14 @@ class VideoRenderWatchdog {
   /// native failures commonly arrive as non-[Error] platform exceptions. Other
   /// render callers report only programming-invariant failures because their
   /// fallback paths may retry frequently (#7125).
+  ///
+  /// [reason] is the Crashlytics non-fatal reason. Callers that are not the
+  /// final export pass their own so the dashboard keeps them apart.
   static void reportFailure(
     Object error,
     StackTrace stackTrace, {
     required bool reportEveryFailure,
+    String reason = 'renderVideo failed',
   }) {
     if (!reportEveryFailure && error is! Error) return;
     final override = crashReporterOverride;
@@ -61,10 +66,11 @@ class VideoRenderWatchdog {
       override(error, stackTrace);
       return;
     }
-    crashReporter.recordError(
-      error,
-      stackTrace,
-      reason: 'renderVideo failed',
+    runDetached(
+      crashReporter.recordError(error, stackTrace, reason: reason),
+      'report a video render failure',
+      logName: 'VideoRenderWatchdog',
+      category: LogCategory.video,
     );
   }
 

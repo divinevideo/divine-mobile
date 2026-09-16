@@ -9,6 +9,7 @@ import 'package:iap_repository/iap_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/supporter_api_client.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -289,7 +290,12 @@ class SupporterRepository {
     if (entitlement == _current) return;
     _current = entitlement;
     if (!_controller.isClosed) _controller.add(entitlement);
-    _persist(entitlement);
+    runDetached(
+      _persist(entitlement),
+      'persist the supporter entitlement',
+      logName: 'SupporterRepository',
+      category: LogCategory.system,
+    );
   }
 
   void _handleValidatorError(Object error, StackTrace stackTrace) {
@@ -428,10 +434,29 @@ class SupporterRepository {
   /// Release the validator stream subscription. The validator itself is
   /// disposed by whoever owns it (the provider).
   void dispose() {
-    _subscription?.cancel();
+    if (_subscription != null) {
+      runDetached(
+        _subscription!.cancel(),
+        'cancel the entitlement subscription',
+        logName: 'SupporterRepository',
+        category: LogCategory.system,
+      );
+    }
     _subscription = null;
-    _proofSubscription?.cancel();
+    if (_proofSubscription != null) {
+      runDetached(
+        _proofSubscription!.cancel(),
+        'cancel the purchase-proof subscription',
+        logName: 'SupporterRepository',
+        category: LogCategory.system,
+      );
+    }
     _proofSubscription = null;
-    _controller.close();
+    runDetached(
+      _controller.close(),
+      'close the supporter entitlement stream',
+      logName: 'SupporterRepository',
+      category: LogCategory.system,
+    );
   }
 }

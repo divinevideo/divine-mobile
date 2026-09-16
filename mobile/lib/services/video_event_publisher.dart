@@ -984,7 +984,7 @@ class VideoEventPublisher {
     try {
       return await publish;
     } finally {
-      _inFlightDirectPublishes.remove(videoId);
+      final _ = _inFlightDirectPublishes.remove(videoId);
     }
   }
 

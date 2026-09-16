@@ -9,9 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -121,6 +123,26 @@ class _ImmediateRenderProVideoEditor extends ProVideoEditor {
   @override
   Future<void> cancel(String taskId) async {
     cancelCalls.add(taskId);
+  }
+}
+
+/// Records every non-fatal so a test can assert what reached Crashlytics.
+class _RecordingCrashReporter implements CrashReporter {
+  final reports = <({Object error, String? reason})>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    reports.add((error: error, reason: reason));
   }
 }
 
@@ -498,12 +520,17 @@ void main() {
   group('VideoEditorRenderService limitClipDuration', () {
     late ProVideoEditor originalProVideoEditor;
     late PathProviderPlatform originalPathProvider;
+    late CrashReporter originalCrashReporter;
+    late _RecordingCrashReporter crashReporter;
     late Directory tempDir;
 
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
       originalProVideoEditor = ProVideoEditor.instance;
       VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
+      originalCrashReporter = VideoRenderWatchdog.crashReporter;
+      crashReporter = _RecordingCrashReporter();
+      VideoRenderWatchdog.crashReporter = crashReporter;
 
       tempDir = Directory.systemTemp.createTempSync('limit_clip_duration_test');
       originalPathProvider = PathProviderPlatform.instance;
@@ -514,6 +541,7 @@ void main() {
     tearDown(() {
       VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
       ProVideoEditor.instance = originalProVideoEditor;
+      VideoRenderWatchdog.crashReporter = originalCrashReporter;
       PathProviderPlatform.instance = originalPathProvider;
       if (tempDir.existsSync()) {
         tempDir.deleteSync(recursive: true);
@@ -593,6 +621,11 @@ void main() {
         equals('original'),
         reason: 'a failed render must leave the source untouched',
       );
+      // The clip trim must keep its own Crashlytics reason so the dashboard
+      // does not fold it into final-export failures.
+      expect(crashReporter.reports, hasLength(1));
+      expect(crashReporter.reports.single.reason, 'limitClipDuration failed');
+      expect(crashReporter.reports.single.error, isA<Exception>());
     });
   });
 }

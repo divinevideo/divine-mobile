@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Signature of [VideoThumbnailService.generateStripThumbnails], injectable
 /// so tests can assert pause/resume behaviour on the produced subscriptions
@@ -113,7 +115,15 @@ class ClipThumbnailManager {
         .where((id) => !currentIds.contains(id))
         .toList();
     for (final id in staleIds) {
-      _subscriptions.remove(id)?.cancel();
+      final subscription = _subscriptions.remove(id);
+      if (subscription != null) {
+        runDetached(
+          subscription.cancel(),
+          'cancel a stale thumbnail subscription',
+          logName: 'ClipThumbnailManager',
+          category: LogCategory.video,
+        );
+      }
       final videoPath = _videoPaths.remove(id);
       final window = _windows.remove(id);
       final wasSeeded = _seeded.remove(id);
@@ -228,7 +238,15 @@ class ClipThumbnailManager {
         //
         // A reversed / transformed clip lands here: its file swaps to the
         // rendered output, so the subscription restarts against the new file.
-        _subscriptions.remove(clip.id)?.cancel();
+        final subscription = _subscriptions.remove(clip.id);
+        if (subscription != null) {
+          runDetached(
+            subscription.cancel(),
+            'restart a thumbnail subscription',
+            logName: 'ClipThumbnailManager',
+            category: LogCategory.video,
+          );
+        }
         _loadThumbnails(
           clip,
           devicePixelRatio,
@@ -569,7 +587,12 @@ class ClipThumbnailManager {
   /// Cancels all subscriptions and disposes all notifiers.
   void dispose() {
     for (final sub in _subscriptions.values) {
-      sub.cancel();
+      runDetached(
+        sub.cancel(),
+        'cancel a thumbnail subscription during disposal',
+        logName: 'ClipThumbnailManager',
+        category: LogCategory.video,
+      );
     }
     for (final notifier in _notifiers.values) {
       _deleteFiles(notifier.value);

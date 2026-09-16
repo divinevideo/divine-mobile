@@ -14,7 +14,6 @@ import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
@@ -81,12 +80,12 @@ class _RenderProgressTracker {
   /// Routes the native progress of the stop-motion assembly running under
   /// [assemblyTaskId] (step [step] of [stepCount]) into the assembly slice
   /// of the composite progress.
-  void startAssemblyStep({
+  Future<void> startAssemblyStep({
     required String assemblyTaskId,
     required int step,
     required int stepCount,
-  }) {
-    _assemblySubscription?.cancel();
+  }) async {
+    await _assemblySubscription?.cancel();
     _assemblySubscription = ProVideoEditor.instance
         .progressStreamById(assemblyTaskId)
         .listen((progressModel) {
@@ -140,7 +139,6 @@ class _RenderProgressTracker {
 /// Handles video rendering with aspect ratio cropping and clip concatenation.
 class VideoEditorRenderService {
   VideoEditorRenderService._();
-  static CrashReporter crashReporter = const SilentCrashReporter();
 
   static const _logName = 'VideoEditorRenderService';
 
@@ -341,7 +339,7 @@ class VideoEditorRenderService {
       for (final clip in clips) {
         if (clip.video == null && clip.isStopMotion) {
           final assemblyTaskId = '$effectiveTaskId-stop-motion-$assemblyStep';
-          progressTracker.startAssemblyStep(
+          await progressTracker.startAssemblyStep(
             assemblyTaskId: assemblyTaskId,
             step: assemblyStep,
             stepCount: assemblyStepCount,
@@ -814,7 +812,12 @@ class VideoEditorRenderService {
         name: 'VideoEditorRenderService',
         category: .video,
       );
-      crashReporter.recordError(e, stack, reason: 'limitClipDuration failed');
+      VideoRenderWatchdog.reportFailure(
+        e,
+        stack,
+        reportEveryFailure: true,
+        reason: 'limitClipDuration failed',
+      );
       onComplete(false);
     }
   }

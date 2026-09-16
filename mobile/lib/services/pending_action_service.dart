@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/utils/async_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -387,8 +388,21 @@ class PendingActionService extends ChangeNotifier {
     _async.dispose();
     _cancelSyncRetry();
     _connectionStatusService.removeListener(_onConnectivityChange);
-    _dbSubscription?.cancel();
-    _pendingActionsController.close();
+    if (_dbSubscription != null) {
+      runDetached(
+        _dbSubscription!.cancel(),
+        'cancel the pending-action database subscription',
+        logName: 'PendingActionService',
+        category: LogCategory.system,
+      );
+      _dbSubscription = null;
+    }
+    runDetached(
+      _pendingActionsController.close(),
+      'close the pending-action stream',
+      logName: 'PendingActionService',
+      category: LogCategory.system,
+    );
     super.dispose();
   }
 

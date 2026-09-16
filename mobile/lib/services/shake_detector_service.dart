@@ -5,7 +5,9 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Service that detects shake gestures on mobile devices
 class ShakeDetectorService {
@@ -40,13 +42,27 @@ class ShakeDetectorService {
       return;
     }
 
-    _subscription?.cancel();
+    if (_subscription != null) {
+      runDetached(
+        _subscription!.cancel(),
+        'cancel the previous accelerometer subscription',
+        logName: 'ShakeDetectorService',
+        category: LogCategory.system,
+      );
+    }
     _subscription = accelerometerEventStream().listen(_onAccelerometerEvent);
   }
 
   /// Stop listening for shake events
   void stop() {
-    _subscription?.cancel();
+    if (_subscription != null) {
+      runDetached(
+        _subscription!.cancel(),
+        'cancel the accelerometer subscription',
+        logName: 'ShakeDetectorService',
+        category: LogCategory.system,
+      );
+    }
     _subscription = null;
   }
 
@@ -79,6 +95,11 @@ class ShakeDetectorService {
   /// Dispose the service
   void dispose() {
     stop();
-    _shakeController.close();
+    runDetached(
+      _shakeController.close(),
+      'close the shake event stream',
+      logName: 'ShakeDetectorService',
+      category: LogCategory.system,
+    );
   }
 }

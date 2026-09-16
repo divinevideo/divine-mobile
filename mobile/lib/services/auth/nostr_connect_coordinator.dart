@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/auth_result.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Builds a [NostrConnectSession] for a set of [relays]. Injectable so tests
@@ -153,14 +154,23 @@ class NostrConnectCoordinator {
     final activeWait = _waitFuture;
     if (activeWait != null) return activeWait;
 
-    final waitFuture = _waitForResponse(timeout: timeout);
+    late final Future<AuthResult> waitFuture;
+    waitFuture = _waitForResponseAndClear(timeout, () => waitFuture);
     _waitFuture = waitFuture;
-    waitFuture.whenComplete(() {
-      if (identical(_waitFuture, waitFuture)) {
+    return waitFuture;
+  }
+
+  Future<AuthResult> _waitForResponseAndClear(
+    Duration timeout,
+    Future<AuthResult> Function() currentWait,
+  ) async {
+    try {
+      return await _waitForResponse(timeout: timeout);
+    } finally {
+      if (identical(_waitFuture, currentWait())) {
         _waitFuture = null;
       }
-    });
-    return waitFuture;
+    }
   }
 
   Future<AuthResult> _waitForResponse({required Duration timeout}) async {
@@ -343,7 +353,12 @@ class NostrConnectCoordinator {
         name: 'NostrConnectCoordinator',
         category: LogCategory.auth,
       );
-      _session!.ensureConnected();
+      runDetached(
+        _session!.ensureConnected(),
+        'reconnect nostrconnect relays',
+        logName: 'NostrConnectCoordinator',
+        category: LogCategory.auth,
+      );
     }
   }
 

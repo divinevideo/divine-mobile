@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Manages Nostr subscriptions for video events and other content
@@ -108,7 +109,12 @@ class SubscriptionManager {
     if (timeout != null) {
       Timer(timeout, () {
         if (_activeSubscriptions.containsKey(id)) {
-          cancelSubscription(id);
+          runDetached(
+            cancelSubscription(id),
+            'cancel timed-out subscription $id',
+            logName: 'SubscriptionManager',
+            category: LogCategory.system,
+          );
           onComplete?.call();
         }
       });
@@ -141,7 +147,12 @@ class SubscriptionManager {
           final cached = _getCachedEvent!(eventId);
           if (cached != null) {
             cachedIds.add(eventId);
-            Future.microtask(() => onEvent(cached));
+            runDetached(
+              Future.microtask(() => onEvent(cached)),
+              'deliver a cached event to a subscription',
+              logName: 'SubscriptionManager',
+              category: LogCategory.system,
+            );
           } else {
             missingIds.add(eventId);
           }

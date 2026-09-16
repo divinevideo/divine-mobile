@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -355,8 +356,21 @@ class DeepLinkService {
 
   /// Dispose the service
   void dispose() {
-    _subscription?.cancel();
-    _controller.close();
+    if (_subscription != null) {
+      runDetached(
+        _subscription!.cancel(),
+        'cancel the deep-link subscription',
+        logName: 'DeepLinkService',
+        category: LogCategory.ui,
+      );
+      _subscription = null;
+    }
+    runDetached(
+      _controller.close(),
+      'close the deep-link stream',
+      logName: 'DeepLinkService',
+      category: LogCategory.ui,
+    );
   }
 
   /// Programmatically push a [DeepLink] into the stream.

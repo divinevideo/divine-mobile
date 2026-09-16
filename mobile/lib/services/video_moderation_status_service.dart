@@ -186,11 +186,17 @@ class VideoModerationStatusService {
     final pending = _inflight[normalized];
     if (pending != null) return pending;
 
-    final request = _fetchFresh(normalized).whenComplete(() {
-      _inflight.remove(normalized);
-    });
+    final request = _fetchAndClear(normalized);
     _inflight[normalized] = request;
     return request;
+  }
+
+  Future<VideoModerationStatus?> _fetchAndClear(String sha256) async {
+    try {
+      return await _fetchFresh(sha256);
+    } finally {
+      final _ = _inflight.remove(sha256);
+    }
   }
 
   Future<VideoModerationStatus?> _fetchFresh(String sha256) async {

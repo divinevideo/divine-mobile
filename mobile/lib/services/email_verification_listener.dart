@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service to listen for email verification redirects (deeplinks)
@@ -27,12 +28,27 @@ class EmailVerificationListener {
     );
 
     // Handle link that launches the app from a closed state
-    _appLinks.getInitialLink().then((uri) {
-      if (uri != null) handleUri(uri);
-    });
+    runDetached(
+      _handleInitialLink(),
+      'handle the initial email-verification link',
+      logName: '$EmailVerificationListener',
+      category: LogCategory.auth,
+    );
 
     // Handle links while app is running in background
-    _subscription = _appLinks.uriLinkStream.listen(handleUri);
+    _subscription = _appLinks.uriLinkStream.listen((uri) {
+      runDetached(
+        handleUri(uri),
+        'handle an email-verification link',
+        logName: '$EmailVerificationListener',
+        category: LogCategory.auth,
+      );
+    });
+  }
+
+  Future<void> _handleInitialLink() async {
+    final uri = await _appLinks.getInitialLink();
+    if (uri != null) await handleUri(uri);
   }
 
   @visibleForTesting
@@ -71,7 +87,15 @@ class EmailVerificationListener {
   }
 
   void dispose() {
-    _subscription?.cancel();
+    if (_subscription != null) {
+      runDetached(
+        _subscription!.cancel(),
+        'cancel the email-verification link subscription',
+        logName: '$EmailVerificationListener',
+        category: LogCategory.auth,
+      );
+      _subscription = null;
+    }
     Log.info(
       '$EmailVerificationListener disposed',
       name: '$EmailVerificationListener',

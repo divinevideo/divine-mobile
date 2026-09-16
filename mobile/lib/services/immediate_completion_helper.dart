@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Completion mode for different types of queries
@@ -91,7 +92,12 @@ class ImmediateCompletionHelper {
         category: config.logCategory,
       );
 
-      subscription.cancel();
+      runDetached(
+        subscription.cancel(),
+        'cancel the completed event subscription',
+        logName: config.serviceName,
+        category: config.logCategory,
+      );
       completer.complete();
       onComplete(result);
     }
@@ -144,7 +150,12 @@ class ImmediateCompletionHelper {
         onError?.call(error);
         if (!completer.isCompleted) {
           fallbackTimer?.cancel();
-          subscription.cancel();
+          runDetached(
+            subscription.cancel(),
+            'cancel the failed event subscription',
+            logName: config.serviceName,
+            category: config.logCategory,
+          );
           completer.complete();
         }
       },
