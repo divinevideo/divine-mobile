@@ -467,11 +467,14 @@ void main() {
         },
       );
 
+      // The owner exception is what these three prove, so the consent checker
+      // must refuse: publisherWithConsent() denies by default, leaving the
+      // owner branch as the only way through.
       test('an explicit decline still permits the sound owner', () async {
         stubSignAndPublish();
         final ownDeclinedSound = withheldSound.copyWith(pubkey: testPubkey);
 
-        final result = await publisher.publishVideoEvent(
+        final result = await publisherWithConsent().publishVideoEvent(
           upload: createUpload(),
           selectedAudio: ownDeclinedSound,
           selectedAudioEventId: ownDeclinedSound.id,
@@ -489,7 +492,7 @@ void main() {
           allowsReuse: false,
         );
 
-        final result = await publisher.publishVideoEvent(
+        final result = await publisherWithConsent().publishVideoEvent(
           upload: createUpload(),
           selectedAudio: ownLegacySound,
           selectedAudioEventId: ownLegacySound.id,
@@ -513,7 +516,7 @@ void main() {
         );
 
         expect(
-          await publisher.publishVideoEvent(
+          await publisherWithConsent().publishVideoEvent(
             upload: createUpload(),
             selectedAudio: ownedSound,
             selectedAudioEventId: ownedSound.id,
