@@ -17,6 +17,14 @@ final FutureProviderFamily<bool, String> ogDivinerEligibilityProvider =
     FutureProvider.family<bool, String>((
       ref,
       pubkey,
-    ) {
-      return ref.watch(ogDivinerEligibilityServiceProvider).isEligible(pubkey);
+    ) async {
+      try {
+        return await ref
+            .watch(ogDivinerEligibilityServiceProvider)
+            .isEligible(pubkey);
+      } on Object {
+        // Eligibility is decorative. A transient lookup failure should hide
+        // the chit for this render without entering Riverpod's retry loop.
+        return false;
+      }
     }, retry: (_, _) => null);
