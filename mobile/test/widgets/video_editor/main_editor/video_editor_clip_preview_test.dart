@@ -129,8 +129,8 @@ void main() {
 
       await tickPlayhead(tester);
 
-      // Same widget instance ⇒ the position subscription really is scoped to
-      // the stop-motion branch, so video playback doesn't rebuild at tick rate.
+      // Same widget instance ⇒ the video branch's selector reads a ratio, not
+      // the position, so a tick that stays inside one clip rebuilds nothing.
       expect(identical(readPlayer(tester), before), isTrue);
     });
 

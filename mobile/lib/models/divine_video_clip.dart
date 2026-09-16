@@ -387,16 +387,18 @@ class DivineVideoClip {
   /// a layout box in `computeSurfaceSize`, where a 0 gives an infinite
   /// constraint and a NaN gives a NaN one, both of which are layout assertions
   /// rather than a wrong shape.
-  double get originalAspectRatio => _usableRatio(_originalAspectRatio) ?? 9 / 16;
+  double get originalAspectRatio =>
+      _usableRatio(_originalAspectRatio) ?? 9 / 16;
 
   /// Aspect ratio of the frames in [video].
   ///
   /// A crop / rotate transform bakes a new file whose shape no longer matches
   /// the recording, so the preview must fit *this* ratio rather than
-  /// [originalAspectRatio]. The latter stays untouched by a transform: the
-  /// first clip's value is the editor canvas's coordinate system for the whole
-  /// session (and every draft saved from it), so layers authored against it
-  /// would shift if a transform rewrote it.
+  /// [originalAspectRatio]. A timeline clip's transform leaves that one alone:
+  /// the first clip's value is the editor canvas's coordinate system for the
+  /// whole session (and every draft saved from it), so layers authored against
+  /// it would shift if a transform rewrote it. A detached clip is not on the
+  /// canvas, so its transform does rewrite it instead of setting this field.
   double get videoAspectRatio =>
       _usableRatio(_videoAspectRatio) ?? originalAspectRatio;
 
