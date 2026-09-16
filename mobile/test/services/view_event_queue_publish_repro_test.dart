@@ -126,7 +126,7 @@ void main() {
         pendingViewEventsDao: dao,
         userPubkey: userPubkey,
         appForegroundStream: const Stream<bool>.empty(),
-      );
+      )..setPublishingEnabled(true);
 
       await service.sweep();
 
@@ -157,7 +157,7 @@ void main() {
         pendingViewEventsDao: dao,
         userPubkey: userPubkey,
         appForegroundStream: const Stream<bool>.empty(),
-      );
+      )..setPublishingEnabled(true);
 
       await service.sweep();
 
@@ -194,7 +194,7 @@ void main() {
           pendingViewEventsDao: dao,
           userPubkey: userPubkey,
           appForegroundStream: const Stream<bool>.empty(),
-        );
+        )..setPublishingEnabled(true);
 
         await service.sweep();
 
@@ -226,12 +226,15 @@ void main() {
       appVersion: appVersion,
     );
 
-    Future<void> sweepWith(String appVersion) => ViewEventRetryService(
-      viewEventPublisher: publisherFor(appVersion),
-      pendingViewEventsDao: dao,
-      userPubkey: _userPubkey,
-      appForegroundStream: const Stream<bool>.empty(),
-    ).sweep();
+    Future<void> sweepWith(String appVersion) async {
+      final service = ViewEventRetryService(
+        viewEventPublisher: publisherFor(appVersion),
+        pendingViewEventsDao: dao,
+        userPubkey: _userPubkey,
+        appForegroundStream: const Stream<bool>.empty(),
+      )..setPublishingEnabled(true);
+      await service.sweep();
+    }
 
     Iterable<List<String>> versionTags(Event event) => event.tags
         .where((tag) => tag.first == 'version')
