@@ -3,7 +3,6 @@
 
 import 'dart:async';
 import 'dart:math' show pi;
-import 'dart:ui' show ImageFilter;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -591,13 +590,9 @@ class _IconTabButton extends StatelessWidget {
 }
 
 /// 24×24 [DivineIcon] that optionally paints the Figma `effects/shadow-10`
-/// drop-shadow pair underneath the glyph. The shadow copies are
-/// [DivineIcon]s tinted in [VineTheme.innerShadow] and blurred via
-/// [ImageFiltered] so the shadow silhouette tracks the glyph, not the
-/// bounding rect.
-///
-/// Same pattern as `_ShadowedIcon` in `video_action_button.dart` — when we
-/// consolidate those, move to a shared `divine_ui` widget.
+/// drop-shadow pair underneath the glyph, through [ShadowedDivineIcon] so
+/// the shadowed composite is rasterised once rather than blurred on every
+/// frame. Same treatment as the feed's `VideoActionButton` icons.
 class _ShadowedNavIcon extends StatelessWidget {
   const _ShadowedNavIcon({required this.icon, required this.showShadow});
 
@@ -606,47 +601,9 @@ class _ShadowedNavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final glyph = DivineIcon(icon: icon, color: context.vineColors.onNav);
-    if (!showShadow) return glyph;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        _NavIconShadow(icon: icon, offset: const Offset(1, 1), blurSigma: 1),
-        _NavIconShadow(
-          icon: icon,
-          offset: const Offset(0.4, 0.4),
-          blurSigma: 0.6,
-        ),
-        glyph,
-      ],
-    );
-  }
-}
-
-class _NavIconShadow extends StatelessWidget {
-  const _NavIconShadow({
-    required this.icon,
-    required this.offset,
-    required this.blurSigma,
-  });
-
-  final DivineIconName icon;
-  final Offset offset;
-  final double blurSigma;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: offset,
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        // Excluded from semantics — the foreground glyph carries the
-        // accessibility node; these are decorative shadow copies.
-        child: ExcludeSemantics(
-          child: DivineIcon(icon: icon, color: VineTheme.innerShadow),
-        ),
-      ),
-    );
+    final color = context.vineColors.onNav;
+    if (!showShadow) return DivineIcon(icon: icon, color: color);
+    return ShadowedDivineIcon(icon: icon, color: color);
   }
 }
 

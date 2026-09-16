@@ -63,13 +63,9 @@ void main() {
 
       expect(find.byType(MoreActionButton), findsOneWidget);
 
-      final divineIcons = tester
-          .widgetList<DivineIcon>(find.byType(DivineIcon))
-          .toList();
       expect(
-        divineIcons.any((icon) => icon.icon == DivineIconName.info),
-        isTrue,
-        reason: 'Should render the info DivineIcon',
+        tester.widget<ShadowedDivineIcon>(find.byType(ShadowedDivineIcon)).icon,
+        equals(DivineIconName.info),
       );
       expect(find.text('About'), findsOneWidget);
     });

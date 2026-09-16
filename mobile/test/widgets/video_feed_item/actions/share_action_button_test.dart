@@ -95,21 +95,18 @@ void main() {
       expect(find.byType(GestureDetector), findsOneWidget);
     });
 
-    testWidgets('renders $DivineIcon with shareFatDuo icon', (tester) async {
+    testWidgets('renders $ShadowedDivineIcon with shareFatDuo icon', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         testMaterialApp(
           home: Scaffold(body: ShareActionButton(video: testVideo)),
         ),
       );
 
-      final divineIcons = tester
-          .widgetList<DivineIcon>(find.byType(DivineIcon))
-          .toList();
-
       expect(
-        divineIcons.any((icon) => icon.icon == DivineIconName.shareFatDuo),
-        isTrue,
-        reason: 'Should render shareFatDuo DivineIcon',
+        tester.widget<ShadowedDivineIcon>(find.byType(ShadowedDivineIcon)).icon,
+        equals(DivineIconName.shareFatDuo),
       );
     });
 
