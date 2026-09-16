@@ -143,9 +143,10 @@ PR author, GitHub cannot accept its approval or change request: report that
 limitation and identify the eligible reviewer needed. Request their review only
 when the task or governing workflow authorizes it. Do not switch accounts to
 evade the restriction or describe a comment as approval. If the PR is merged or closed,
-use an authorized plain `COMMENT` review for useful retrospective feedback, or an
-authorized ordinary comment when a review cannot be submitted, instead of an
-approval or change request.
+use an authorized plain `COMMENT` review (`gh pr review <n> --comment
+--body-file <file>`) for useful retrospective feedback, or, only when a
+review cannot be submitted at all, an ordinary comment (`gh pr comment <n>
+--body-file <file>`), instead of an approval or change request.
 
 Pin the submission to the full commit SHA you actually reviewed. If the head
 moved, review the new changes before giving a current-head verdict. The REST
