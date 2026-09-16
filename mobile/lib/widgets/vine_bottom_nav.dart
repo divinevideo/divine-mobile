@@ -494,7 +494,7 @@ class _HomeTabButtonState extends State<_HomeTabButton>
                       angle: _rotationController.value * 2 * pi,
                       child: DivineIcon(
                         icon: DivineIconName.arrowClockwise,
-                        color: navIconColor(
+                        color: _navIconColor(
                           context,
                           isSelected: widget.isSelected,
                         ),
@@ -523,7 +523,7 @@ class _HomeTabButtonState extends State<_HomeTabButton>
 
 /// Tap target + Semantics wrapper shared by the Explore and Inbox tabs.
 ///
-/// The child gets the 32 %-opacity dim in the unselected state and the
+/// The child gets a 32 %-alpha tint in the unselected state and the
 /// glyph-shaped shadow pair in the selected state. See [_NavIcon].
 ///
 /// [tapTargetWidth] is the full width the GestureDetector occupies inside
@@ -587,7 +587,7 @@ class _IconTabButton extends StatelessWidget {
 /// One tab's 24×24 glyph, baked through [ShadowedDivineIcon] so it is one
 /// draw per frame rather than live layers under the video: selected tabs
 /// carry the Figma `effects/shadow-10` drop-shadow pair, unselected tabs are
-/// the bare glyph dimmed via [navIconColor]. Same treatment as the feed's
+/// the bare glyph dimmed via [_navIconColor]. Same treatment as the feed's
 /// `VideoActionButton` icons.
 class _NavIcon extends StatelessWidget {
   const _NavIcon({required this.icon, required this.isSelected});
@@ -597,7 +597,7 @@ class _NavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = navIconColor(context, isSelected: isSelected);
+    final color = _navIconColor(context, isSelected: isSelected);
     if (!isSelected) {
       // Baked without shadows: a live SVG glyph is a colour-filter
       // `saveLayer` on every video frame, the bitmap is one draw.
@@ -614,14 +614,13 @@ class _NavIcon extends StatelessWidget {
 /// pixel-identical to compositing it at 32 % — and it costs nothing per
 /// frame, where an [Opacity] below 100 % is an offscreen pass on every video
 /// frame the nav bar sits over.
-@visibleForTesting
-Color navIconColor(BuildContext context, {required bool isSelected}) {
+Color _navIconColor(BuildContext context, {required bool isSelected}) {
   final color = context.vineColors.onNav;
-  return isSelected ? color : color.withValues(alpha: kUnselectedNavIconAlpha);
+  return isSelected ? color : color.withValues(alpha: _kUnselectedNavIconAlpha);
 }
 
-/// Alpha of an unselected tab's glyph; see [navIconColor].
-const double kUnselectedNavIconAlpha = 0.32;
+/// Alpha of an unselected tab's glyph; see [_navIconColor].
+const double _kUnselectedNavIconAlpha = 0.32;
 
 /// Profile tab: 24×24 rounded-8 box with a lime fallback background and
 /// the currently-signed-in user's avatar on top. Selection state is

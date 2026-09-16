@@ -229,7 +229,11 @@ class _LayeredShadowedIcon extends StatelessWidget {
                 ),
               ),
             ),
-          DivineIcon(icon: icon, color: color, size: size),
+          // The owning control supplies the accessible label and role. Keep
+          // semantics stable when this live SVG is replaced by a RawImage.
+          ExcludeSemantics(
+            child: DivineIcon(icon: icon, color: color, size: size),
+          ),
         ],
       ),
     );
