@@ -23,8 +23,13 @@ void main() {
         ..closeSync();
     }
 
-    ProcessResult runGuard({String? site}) =>
-        Process.runSync('bash', [scriptPath, site ?? siteDirectory]);
+    ProcessResult runGuard({String? site, bool underActions = false}) {
+      return Process.runSync(
+        'bash',
+        [scriptPath, site ?? siteDirectory],
+        environment: {'GITHUB_ACTIONS': underActions ? 'true' : 'false'},
+      );
+    }
 
     setUp(() {
       temporaryDirectory = Directory.systemTemp.createTempSync(
@@ -38,7 +43,7 @@ void main() {
 
     tearDown(() => temporaryDirectory.deleteSync(recursive: true));
 
-    test('passes when every file is small', () {
+    test('passes and reports the largest file when every file is small', () {
       writeSiteFile('index.html', 512);
       writeSiteFile('main.dart.js', 21 * mib);
       writeSiteFile('assets/fonts/a.ttf', 2 * mib);
@@ -48,6 +53,10 @@ void main() {
       expect(result.exitCode, 0, reason: result.stdout.toString());
       expect(result.stdout, contains('✅ Every file in'));
       expect(result.stdout, isNot(contains('⚠️')));
+      expect(
+        result.stdout,
+        contains('Largest file: main.dart.js at 21.0 MiB, 84% of the limit.'),
+      );
     });
 
     test('warns but passes for a file within 10% of the limit', () {
@@ -64,6 +73,22 @@ void main() {
         ),
       );
       expect(result.stdout, contains('but see the warning above'));
+      expect(result.stdout, isNot(contains('::warning')));
+    });
+
+    test('surfaces the warning as an annotation under GitHub Actions', () {
+      writeSiteFile('main.dart.js', 23 * mib);
+
+      final result = runGuard(underActions: true);
+
+      expect(result.exitCode, 0, reason: result.stdout.toString());
+      expect(
+        result.stdout,
+        contains(
+          '::warning title=Web bundle file size::main.dart.js is 23.0 MiB, '
+          'within 10%25 of the 25.0 MiB per-file limit.',
+        ),
+      );
     });
 
     test('accepts a file of exactly the limit, as wrangler does', () {
@@ -80,7 +105,7 @@ void main() {
       writeSiteFile('assets/big.bin', 26 * mib);
       writeSiteFile('index.html', 512);
 
-      final result = runGuard();
+      final result = runGuard(underActions: true);
 
       expect(result.exitCode, 1, reason: result.stdout.toString());
       expect(
@@ -92,6 +117,10 @@ void main() {
       );
       expect(result.stdout, contains('❌ assets/big.bin is 26.0 MiB'));
       expect(result.stdout, isNot(contains('❌ index.html')));
+      expect(
+        result.stdout,
+        contains('::error title=Web bundle file size::main.dart.js is'),
+      );
       expect(
         result.stdout,
         contains('flutter build web --release --analyze-size'),

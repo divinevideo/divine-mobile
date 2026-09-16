@@ -20,6 +20,11 @@
 # The warning threshold exists because the hard limit alone gives no notice:
 # the bundle can creep to 24.9 MiB with CI green and then break on the next
 # commit. There is no baseline file -- the ceiling is Cloudflare's, not ours.
+#
+# Under GitHub Actions the warning and the failure are also emitted as
+# workflow-command annotations, so they show on the run summary and the pull
+# request's checks tab rather than only inside the log of a green step. The
+# largest file is always reported, so the trend is visible in every run.
 set -euo pipefail
 
 # Cloudflare Pages' documented per-file limit.
@@ -36,8 +41,19 @@ fi
 
 mib() { awk -v b="$1" 'BEGIN { printf "%.1f MiB", b / 1048576 }'; }
 
+# Prints a GitHub Actions annotation ($1 = warning|error, $2 = message) when
+# running under Actions; a no-op elsewhere. `%` is the command escape, so it
+# is encoded rather than left to be read as one.
+annotate() {
+  if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    echo "::$1 title=Web bundle file size::${2//%/%25}"
+  fi
+}
+
 fail=0
 warned=0
+largest_size=0
+largest_rel=""
 
 # `wc -c` rather than `stat`: the size flags differ between BSD and GNU stat,
 # and GNU's `-f` reports the filesystem instead of erroring, so a portable
@@ -45,11 +61,19 @@ warned=0
 while IFS= read -r file; do
   size="$(wc -c < "$file" | tr -d ' ')"
   rel="${file#"$site_dir"/}"
+  if [ "$size" -gt "$largest_size" ]; then
+    largest_size="$size"
+    largest_rel="$rel"
+  fi
   if [ "$size" -gt "$LIMIT_BYTES" ]; then
-    echo "❌ $rel is $(mib "$size"), over Cloudflare Pages' $(mib "$LIMIT_BYTES") per-file limit."
+    message="$rel is $(mib "$size"), over Cloudflare Pages' $(mib "$LIMIT_BYTES") per-file limit."
+    echo "❌ $message"
+    annotate error "$message"
     fail=1
   elif [ "$size" -gt "$WARN_BYTES" ]; then
-    echo "⚠️  $rel is $(mib "$size"), within 10% of the $(mib "$LIMIT_BYTES") per-file limit."
+    message="$rel is $(mib "$size"), within 10% of the $(mib "$LIMIT_BYTES") per-file limit."
+    echo "⚠️  $message"
+    annotate warning "$message"
     warned=1
   fi
 done < <(find "$site_dir" -type f)
@@ -69,7 +93,9 @@ fi
 
 if [ "$warned" -ne 0 ]; then
   echo "✅ Every file in $site_dir is under Cloudflare Pages' $(mib "$LIMIT_BYTES") per-file limit, but see the warning above."
-  exit 0
+else
+  echo "✅ Every file in $site_dir is under Cloudflare Pages' $(mib "$LIMIT_BYTES") per-file limit."
 fi
-
-echo "✅ Every file in $site_dir is under Cloudflare Pages' $(mib "$LIMIT_BYTES") per-file limit."
+if [ -n "$largest_rel" ]; then
+  echo "   Largest file: $largest_rel at $(mib "$largest_size"), $((largest_size * 100 / LIMIT_BYTES))% of the limit."
+fi
