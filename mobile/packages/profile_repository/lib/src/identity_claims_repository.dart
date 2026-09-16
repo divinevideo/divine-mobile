@@ -579,11 +579,12 @@ class IdentityClaimsRepository {
         'No relay is connected, so the current links cannot be read',
       );
     }
-    final identityEvent = await _newestEventOfKind(
+    final identityRead = await _newestEventOfKind(
       client,
       pubkey,
       identityEventKind,
     );
+    final identityEvent = identityRead.event;
     if (identityEvent != null) {
       final tags = _mergeWithLastPublished(
         pubkey,
@@ -614,7 +615,32 @@ class IdentityClaimsRepository {
       );
     }
 
-    final legacyEvent = await _newestEventOfKind(client, pubkey, 0);
+    // An inconclusive kind-10011 read is not evidence that the profile has no
+    // identity event, and the kind-0 fallback cannot tell the difference:
+    // every profile has a kind-0, so it answers either way and would report
+    // "no claims" for a profile whose claims simply did not arrive. Prefer the
+    // last-known-good snapshot instead of rendering an empty set (#6154).
+    if (!identityRead.conclusive) {
+      final cached = await _cachedIdentityTags(pubkey);
+      Log.warning(
+        'Inconclusive kind-$identityEventKind read for '
+        '${pubkeyForLogs(pubkey)}; falling back to snapshot with '
+        '${cached?.length ?? 0} claim tag(s) rather than kind-0',
+        name: 'IdentityClaimsRepository',
+      );
+      if (cached != null && cached.isNotEmpty) {
+        if (forWrite) {
+          throw const IdentityClaimReadException(
+            'The identity event read did not settle, but this profile is '
+            'known to have claims — refusing to publish over them',
+          );
+        }
+        return _IdentityEventBase(tags: cached, content: '');
+      }
+    }
+
+    final legacyRead = await _newestEventOfKind(client, pubkey, 0);
+    final legacyEvent = legacyRead.event;
     if (legacyEvent != null) {
       final tags = _mergeWithLastPublished(
         pubkey,
@@ -806,15 +832,33 @@ class IdentityClaimsRepository {
     }
   }
 
-  Future<Event?> _newestEventOfKind(
+  /// Reads the newest event of [kind] for [pubkey], reporting whether the
+  /// read was conclusive.
+  ///
+  /// `queryEventsDetailed` with `requireAllRelaysSettled`, not `queryEvents`:
+  /// the latter drops `timedOut` and `noRelays`, so a fan-out that settled on
+  /// whichever relay answered first returns `[]` and is indistinguishable from
+  /// "this profile has no identity event". Divine's identity events live on
+  /// `relay.divine.video`; a general-purpose relay in the pool answering
+  /// `EOSE` with nothing would end the read before the one relay that holds
+  /// the event ever replied, and the claims would vanish from the profile with
+  /// no error and no log (#6154).
+  Future<({Event? event, bool conclusive})> _newestEventOfKind(
     NostrClient client,
     String pubkey,
     int kind,
   ) async {
-    final events = await client.queryEvents([
-      Filter(kinds: [kind], authors: [pubkey], limit: 5),
-    ], useCache: false);
-    return newestIdentityEvent(events.where((e) => e.kind == kind).toList());
+    final result = await client.queryEventsDetailed(
+      [
+        Filter(kinds: [kind], authors: [pubkey], limit: 5),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+    );
+    final event = newestIdentityEvent(
+      result.events.where((e) => e.kind == kind).toList(),
+    );
+    return (event: event, conclusive: !result.timedOut && !result.noRelays);
   }
 
   /// Signs and publishes a kind-10011 event carrying [tags].

@@ -1199,8 +1199,14 @@ void main() {
         () => nostrClient.retryDisconnectedRelays(),
       ).thenAnswer((_) async {});
       when(
-        () => nostrClient.queryEvents(any(), useCache: any(named: 'useCache')),
-      ).thenAnswer((_) async => <Event>[]);
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
       when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
         invocation,
       ) async {
@@ -1258,10 +1264,15 @@ void main() {
       List<Event> kind0 = const [],
     }) {
       when(
-        () => nostrClient.queryEvents(any(), useCache: any(named: 'useCache')),
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
       ).thenAnswer((invocation) async {
         final filters = invocation.positionalArguments.single as List<Filter>;
-        return filters.first.kinds?.single == 10011 ? events : kind0;
+        final matched = filters.first.kinds?.single == 10011 ? events : kind0;
+        return (events: matched, timedOut: false, noRelays: false);
       });
     }
 
@@ -1442,6 +1453,90 @@ void main() {
 
         expect(status.claims.single.platform, equals('github'));
         expect(status.verifierReachable, isFalse);
+      });
+    });
+
+    group('when the identity read does not settle (#6154)', () {
+      // Divine's identity events live on relay.divine.video. A general-purpose
+      // relay in the pool answering EOSE with nothing used to end the read
+      // before that relay replied, and the kind-0 fallback — which every
+      // profile has — then reported "no claims", blanking the chips with no
+      // error and no log.
+      setUp(() {
+        when(() => client.verifyBatch(any())).thenAnswer(
+          (_) async => const [
+            VerificationResult(
+              platform: 'github',
+              identity: 'octocat',
+              verified: true,
+              checkedAt: 1,
+              cached: false,
+            ),
+          ],
+        );
+      });
+
+      void stubUnsettledIdentityRead({required List<Event> kind0}) {
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((invocation) async {
+          final filters = invocation.positionalArguments.single as List<Filter>;
+          final isIdentity = filters.first.kinds?.single == 10011;
+          return (
+            events: isIdentity ? <Event>[] : kind0,
+            timedOut: isIdentity,
+            noRelays: false,
+          );
+        });
+      }
+
+      test(
+        'asks every relay to settle before trusting an empty answer',
+        () async {
+          stubIdentityEvents([
+            _event(
+              id: _eventId(10),
+              kind: 10011,
+              tags: [
+                ['i', 'github:octocat', 'abc'],
+              ],
+            ),
+          ]);
+
+          await repo.claimsWithVerdicts(_pubkey);
+
+          final captured = verify(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: captureAny(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).captured;
+          expect(captured, isNotEmpty);
+          expect(captured.every((v) => v == true), isTrue);
+        },
+      );
+
+      test('keeps the snapshot claims instead of reporting none', () async {
+        stubUnsettledIdentityRead(kind0: [_event(id: _eventId(11))]);
+        when(() => identityEventsDao.getEvent(any())).thenAnswer(
+          (_) async => const IdentityEventRow(
+            pubkey: _pubkey,
+            tagsJson: '[["i","github:octocat","abc"]]',
+            sourceKind: 10011,
+          ),
+        );
+
+        final status = await repo.claimsWithVerdicts(_pubkey);
+
+        expect(status.claims, hasLength(1));
+        expect(status.claims.single.platform, equals('github'));
       });
     });
 
