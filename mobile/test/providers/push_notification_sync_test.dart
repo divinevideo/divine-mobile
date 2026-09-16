@@ -145,13 +145,15 @@ class _TestNostrSession extends NostrSession {
   }
 }
 
-/// Probe for the environment override in the account-switch cleanup test.
+/// Overrides [currentEnvironmentProvider] for the account-switch cleanup
+/// test below.
 ///
 /// [EnvironmentConfig] equality only compares [EnvironmentConfig.environment],
 /// so the switch in that test walks between two values that compare equal
-/// while differing in [EnvironmentConfig.pushServicePubkey]. The probe must
-/// publish every assignment regardless.
-class _EnvironmentProbe extends Notifier<EnvironmentConfig> {
+/// while differing in [EnvironmentConfig.pushServicePubkey]. Overriding
+/// [updateShouldNotify] to always return true publishes every assignment
+/// regardless of that equality gate.
+class _TestCurrentEnvironment extends CurrentEnvironmentNotifier {
   @override
   EnvironmentConfig build() => EnvironmentConfig.production;
 
@@ -160,16 +162,6 @@ class _EnvironmentProbe extends Notifier<EnvironmentConfig> {
     EnvironmentConfig previous,
     EnvironmentConfig next,
   ) => true;
-}
-
-final _currentEnvironmentProbe =
-    NotifierProvider<_EnvironmentProbe, EnvironmentConfig>(
-      _EnvironmentProbe.new,
-    );
-
-class _TestCurrentEnvironment extends CurrentEnvironmentNotifier {
-  @override
-  EnvironmentConfig build() => ref.watch(_currentEnvironmentProbe);
 }
 
 NotificationSettings _settings(AuthorizationStatus status) =>
@@ -2002,7 +1994,7 @@ void main() {
             ),
           ],
         );
-        container.read(_currentEnvironmentProbe.notifier).state =
+        container.read(currentEnvironmentProvider.notifier).state =
             pushEnvironment;
         final coordinator = container.read(pushNotificationSyncProvider)!;
 
@@ -2015,7 +2007,7 @@ void main() {
         );
         await pumpEventQueue(times: 2);
 
-        container.read(_currentEnvironmentProbe.notifier).state =
+        container.read(currentEnvironmentProvider.notifier).state =
             stagingEnvironment;
         nostrSession.setReadiness(
           NostrSessionReadiness.nostrReady(
