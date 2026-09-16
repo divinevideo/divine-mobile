@@ -161,7 +161,7 @@ class _ProfileHeaderNameRow extends ConsumerWidget {
         !isVanished &&
         !isOgViner &&
         !showCheckmark &&
-        isOgBetaTesterPubkey(userIdHex);
+        (ref.watch(ogDivinerEligibilityProvider(userIdHex)).value ?? false);
     final name = isVanished
         // Deliberately not a UserName: that widget re-resolves the profile
         // through its own provider and falls back to a generated handle, which

@@ -1490,6 +1490,35 @@ class KeycastOAuth {
     }
   }
 
+  /// Whether [pubkey] qualifies for Divine's frozen OG Beta Tester chit.
+  ///
+  /// Keycast deliberately returns only this boolean. Signup timestamps and
+  /// the complete eligible cohort never leave the authentication service.
+  Future<bool> isOgDiviner(String pubkey) async {
+    final normalized = pubkey.trim().toLowerCase();
+    final response = await _client
+        .get(
+          Uri.parse(
+            '${config.serverUrl}/api/public/users/$normalized/og-diviner',
+          ),
+        )
+        .timeout(requestTimeout);
+
+    if (response.statusCode != 200) {
+      throw http.ClientException(
+        'OG Diviner eligibility lookup failed (${response.statusCode})',
+        response.request?.url,
+      );
+    }
+
+    final json = _decodeJsonObject(response.body);
+    final eligible = json['eligible'];
+    if (eligible is! bool) {
+      throw const FormatException('Expected boolean eligible field');
+    }
+    return eligible;
+  }
+
   void close() {
     _client.close();
   }

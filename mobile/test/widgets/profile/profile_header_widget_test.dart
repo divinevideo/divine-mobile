@@ -23,7 +23,6 @@ import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/config/profile_metrics.dart';
-import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -34,6 +33,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
@@ -371,6 +371,7 @@ void main() {
       MockAuthService? authService,
       bool isVanished = false,
       OtherProfileState? otherProfileState,
+      bool isOgDiviner = false,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -477,6 +478,9 @@ void main() {
             mockFollowRepository: mockFollowRepository,
           ),
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
+          ogDivinerEligibilityProvider.overrideWith(
+            (ref, pubkey) async => isOgDiviner && pubkey == userIdHex,
+          ),
           fetchUserProfileProvider(userIdHex).overrideWith(
             profileIsLoading
                 ? (ref) => Completer<UserProfile?>().future
@@ -636,15 +640,17 @@ void main() {
       tester,
     ) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      final rosterPubkey = ogBetaTesterPubkeys.first;
+      const eligiblePubkey =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
       await tester.pumpWidget(
         buildTestWidget(
-          userIdHex: rosterPubkey,
+          userIdHex: eligiblePubkey,
           isOwnProfile: false,
+          isOgDiviner: true,
           suppliedProfile: createTestProfile(
             displayName: 'Beta User',
-            pubkey: rosterPubkey,
+            pubkey: eligiblePubkey,
           ),
         ),
       );
@@ -666,16 +672,16 @@ void main() {
       expect(find.text(l10n.commonClose), findsOneWidget);
     });
 
-    testWidgets('shows OG Beta Tester for a non-team roster member', (
+    testWidgets('shows OG Beta Tester for an eligible non-team member', (
       tester,
     ) async {
-      final pubkey = ogBetaTesterPubkeys.firstWhere(
-        (candidate) => !kDivineTeamPubkeys.contains(candidate),
-      );
+      const pubkey =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
       await tester.pumpWidget(
         buildTestWidget(
           userIdHex: pubkey,
           isOwnProfile: false,
+          isOgDiviner: true,
           suppliedProfile: createTestProfile(
             displayName: 'Beta User',
             pubkey: pubkey,
@@ -691,15 +697,13 @@ void main() {
     testWidgets('hides the OG Beta Tester chit behind the team checkmark', (
       tester,
     ) async {
-      // Many team accounts also appear on the beta roster, so this is the
-      // default state rather than an edge case. Without the guard the header
-      // renders two explainer buttons side by side.
-      final dualPubkey = kDivineTeamPubkeys.firstWhere(isOgBetaTesterPubkey);
+      final dualPubkey = kDivineTeamPubkeys.first;
 
       await tester.pumpWidget(
         buildTestWidget(
           userIdHex: dualPubkey,
           isOwnProfile: false,
+          isOgDiviner: true,
           suppliedProfile: createTestProfile(
             displayName: 'Team Member',
             pubkey: dualPubkey,
@@ -715,15 +719,17 @@ void main() {
     testWidgets('hides the OG Beta Tester chit on a vanished account', (
       tester,
     ) async {
-      final rosterPubkey = ogBetaTesterPubkeys.first;
+      const eligiblePubkey =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
       await tester.pumpWidget(
         buildTestWidget(
-          userIdHex: rosterPubkey,
+          userIdHex: eligiblePubkey,
           isOwnProfile: false,
+          isOgDiviner: true,
           suppliedProfile: createTestProfile(
             displayName: 'Beta User',
-            pubkey: rosterPubkey,
+            pubkey: eligiblePubkey,
           ),
           isVanished: true,
         ),
@@ -731,8 +737,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // A vanished account renders profileDeletedAccountName; a chit beside
-      // that is incoherent, and the compiled-in roster cannot drop someone
-      // who vanishes after release.
+      // that is incoherent even when the account is otherwise eligible.
       expect(find.byType(OgBetaBadge), findsNothing);
     });
 
