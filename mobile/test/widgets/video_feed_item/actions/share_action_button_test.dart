@@ -11,17 +11,23 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
+import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
+import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
+import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/video_sharing_service.dart';
+import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
 
+import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
@@ -359,6 +365,115 @@ void main() {
 
         expect(find.text('Save to Gallery'), findsOneWidget);
         expect(find.text('Save with Watermark'), findsOneWidget);
+      });
+
+      group('owner actions', () {
+        late AppLocalizations l10n;
+
+        setUp(() {
+          l10n = lookupAppLocalizations(const Locale('en'));
+        });
+
+        Future<void> pumpOwnerSheet(
+          WidgetTester tester, {
+          MockGoRouter? goRouter,
+        }) async {
+          final mockAuth = createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: ownPubkey,
+          );
+          final app = testMaterialApp(
+            home: Scaffold(body: ShareActionButton(video: testVideo)),
+            additionalOverrides: [
+              videoSharingServiceProvider.overrideWith(
+                (ref) => mockVideoSharingService,
+              ),
+            ],
+            mockAuthService: mockAuth,
+            mockProfileRepository: mockProfileRepository,
+            mockFollowRepository: mockFollowRepository,
+          );
+
+          await tester.pumpWidget(
+            goRouter == null
+                ? app
+                : MockGoRouterProvider(goRouter: goRouter, child: app),
+          );
+
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('tapping Edit Video pushes the metadata editor', (
+          tester,
+        ) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
+
+          await pumpOwnerSheet(tester, goRouter: goRouter);
+
+          await tester.tap(find.text(l10n.shareMenuEditVideo));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          verify(
+            () => goRouter.push<void>(
+              VideoMetadataEditScreen.pathFor(testVideo.id),
+              extra: testVideo,
+            ),
+          ).called(1);
+        });
+
+        testWidgets('tapping Add to List opens the list selection dialog', (
+          tester,
+        ) async {
+          await pumpOwnerSheet(tester);
+
+          await tester.tap(find.text(l10n.shareSheetAddToList));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          expect(find.byType(SelectListDialog), findsOneWidget);
+        });
+
+        testWidgets('loads crosspost connections for owned content', (
+          tester,
+        ) async {
+          await pumpOwnerSheet(tester);
+
+          final cubit = tester
+              .element(find.text('Share with'))
+              .read<VideoCrosspostCubit>();
+
+          expect(
+            cubit.state.status,
+            isNot(
+              anyOf(
+                VideoCrosspostStatus.initial,
+                VideoCrosspostStatus.loadingConnections,
+              ),
+            ),
+          );
+        });
+
+        testWidgets('dispose closes the owner and crosspost cubits', (
+          tester,
+        ) async {
+          await pumpOwnerSheet(tester);
+
+          final sheetContext = tester.element(find.text('Share with'));
+          final ownerCubit = sheetContext.read<OwnerVideoActionsCubit>();
+          final crosspostCubit = sheetContext.read<VideoCrosspostCubit>();
+          expect(ownerCubit.isClosed, isFalse);
+          expect(crosspostCubit.isClosed, isFalse);
+
+          await tester.pumpWidget(const SizedBox());
+
+          expect(ownerCubit.isClosed, isTrue);
+          expect(crosspostCubit.isClosed, isTrue);
+        });
       });
 
       group('recipient selection', () {
