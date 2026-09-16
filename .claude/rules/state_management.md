@@ -1241,6 +1241,70 @@ class TodoList extends _$TodoList {
 }
 ```
 
+### Never call `invalidateSelf` from a registered listener
+
+A one-shot refresh after a write, as above, is the legitimate use. A
+callback registered with `addListener` (directly or through
+`listenForProviderLifetime`) is not: invalidating there rebuilds
+the provider, which tears down the registration and installs a *new*
+listener on every notification, and resets whatever local state the body
+was holding. A version counter seeded in the body restarts at its initial
+value each time, so a dependent that compares versions sees no change and
+silently stops updating.
+
+**Bad — the listener rebuilds the provider that registered it:**
+```dart
+@riverpod
+int settingsVersion(Ref ref) {
+  final service = ref.watch(settingsServiceProvider);
+  void listener() => ref.invalidateSelf();   // WRONG
+  service.addListener(listener);
+  ref.onDispose(() => service.removeListener(listener));
+  return 0;
+}
+```
+
+**Good — the listener publishes a value the provider owns:**
+```dart
+@riverpod
+class SettingsStateNotifier extends _$SettingsStateNotifier {
+  @override
+  Settings build() {
+    final service = ref.watch(settingsServiceProvider);
+    void listener() => state = service.current;
+    service.addListener(listener);
+    ref.onDispose(() => service.removeListener(listener));
+    return service.current;
+  }
+}
+```
+
+A `StreamProvider` over a change stream, or an explicit monotonically
+increasing version provider the listener writes to, work equally well.
+`FeatureFlagStateNotifier` in
+`lib/features/feature_flags/providers/feature_flag_providers.dart` is the
+shipped example of the second form; #9154 converted four such listeners
+across that file, `environment_provider.dart` and
+`preferences_providers.dart`.
+
+Frozen at **zero** by `mobile/scripts/check_listener_invalidate_self.sh`
+(#9266) over `mobile/lib`. The detector
+(`mobile/scripts/lib/listener_invalidate_self_detector.dart`, pinned by
+`mobile/test/tools/listener_invalidate_self_detector_test.dart`) is a real
+Dart AST because it has to follow the callback: a tear-off of a method on the
+registering class, a named local function, and a closure bound to a variable
+or field all register the same body from a different place in the file. It
+matches direct `addListener` callbacks and callbacks passed to the shared
+`listenForProviderLifetime` helper: a `StreamSubscription.listen` or
+`ref.listen` callback that invalidates its own provider carries the same
+hazard but relies on review. List sites with:
+
+```bash
+cd mobile && dart run scripts/lib/listener_invalidate_self_detector.dart lib --path-prefix . --detail
+```
+
+There is no baseline to regenerate — fix the listener.
+
 ## Testing
 
 ```dart
