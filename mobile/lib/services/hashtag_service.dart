@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:models/models.dart';
 import 'package:openvine/services/hashtag_cache_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 /// Model for hashtag statistics
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
@@ -160,7 +161,12 @@ class HashtagService {
     if (_cacheService != null &&
         _cacheService.isInitialized &&
         hashtags.isNotEmpty) {
-      _cacheService.cachePopularHashtags(hashtags);
+      runDetached(
+        _cacheService.cachePopularHashtags(hashtags),
+        'cache popular hashtags',
+        logName: 'HashtagService',
+        category: LogCategory.system,
+      );
     }
 
     return hashtags;

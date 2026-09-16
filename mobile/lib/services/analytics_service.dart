@@ -636,7 +636,11 @@ class AnalyticsService implements BackgroundAwareService {
     VideoEvent video, {
     String source = 'mobile',
   }) async {
-    trackDetailedVideoView(video, source: source, eventType: 'view_start');
+    await trackDetailedVideoView(
+      video,
+      source: source,
+      eventType: 'view_start',
+    );
   }
 
   /// Track a video view with user identification for proper analytics.
@@ -645,7 +649,7 @@ class AnalyticsService implements BackgroundAwareService {
     required String? userId,
     String source = 'mobile',
   }) async {
-    trackDetailedVideoViewWithUser(
+    await trackDetailedVideoViewWithUser(
       video,
       userId: userId,
       source: source,
@@ -665,7 +669,7 @@ class AnalyticsService implements BackgroundAwareService {
     ViewTrafficSource trafficSource = ViewTrafficSource.unknown,
     String? sourceDetail,
   }) async {
-    trackDetailedVideoViewWithUser(
+    await trackDetailedVideoViewWithUser(
       video,
       userId: null,
       source: source,
@@ -887,33 +891,37 @@ class AnalyticsService implements BackgroundAwareService {
     }
 
     // Fire-and-forget: don't await, don't block
-    publisher
-        .publishViewEvent(
-          video: video,
-          startSeconds: 0,
-          endSeconds: watchDuration.inSeconds,
-          source: trafficSource,
-          sourceDetail: sourceDetail,
-          loopCount: loopCount,
-          phase: phase,
-        )
-        .then((success) {
-          if (success) {
-            Log.debug(
-              'Published Nostr view event for ${video.id}',
-              name: 'AnalyticsService',
-              category: LogCategory.video,
-            );
-          }
-        })
-        .catchError((Object error) {
-          // Silently ignore errors - view events are best-effort
-          Log.debug(
-            'Failed to publish Nostr view event: $error',
-            name: 'AnalyticsService',
-            category: LogCategory.video,
-          );
-        });
+    unawaited(
+      publisher
+          .publishViewEvent(
+            video: video,
+            startSeconds: 0,
+            endSeconds: watchDuration.inSeconds,
+            source: trafficSource,
+            sourceDetail: sourceDetail,
+            loopCount: loopCount,
+            phase: phase,
+          )
+          .then<void>(
+            (success) {
+              if (success) {
+                Log.debug(
+                  'Published Nostr view event for ${video.id}',
+                  name: 'AnalyticsService',
+                  category: LogCategory.video,
+                );
+              }
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              // View events are best-effort, but their failures are still observed.
+              Log.debug(
+                'Failed to publish Nostr view event: $error',
+                name: 'AnalyticsService',
+                category: LogCategory.video,
+              );
+            },
+          ),
+    );
   }
 
   /// Track multiple video views in batch (for feed loading).

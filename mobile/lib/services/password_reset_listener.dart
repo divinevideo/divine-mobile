@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service to listen for Password Reset redirects (deeplinks)
@@ -23,12 +24,27 @@ class PasswordResetListener {
     );
 
     // Handle link that launches the app from a closed state
-    _appLinks.getInitialLink().then((uri) {
-      if (uri != null) handleUri(uri);
-    });
+    runDetached(
+      _handleInitialLink(),
+      'handle the initial password-reset link',
+      logName: '$PasswordResetListener',
+      category: LogCategory.auth,
+    );
 
     // Handle links while app is running in background
-    _subscription = _appLinks.uriLinkStream.listen(handleUri);
+    _subscription = _appLinks.uriLinkStream.listen((uri) {
+      runDetached(
+        handleUri(uri),
+        'handle a password-reset link',
+        logName: '$PasswordResetListener',
+        category: LogCategory.auth,
+      );
+    });
+  }
+
+  Future<void> _handleInitialLink() async {
+    final uri = await _appLinks.getInitialLink();
+    if (uri != null) await handleUri(uri);
   }
 
   @visibleForTesting
@@ -68,7 +84,15 @@ class PasswordResetListener {
   }
 
   void dispose() {
-    _subscription?.cancel();
+    if (_subscription != null) {
+      runDetached(
+        _subscription!.cancel(),
+        'cancel the password-reset link subscription',
+        logName: '$PasswordResetListener',
+        category: LogCategory.auth,
+      );
+      _subscription = null;
+    }
     Log.info(
       '🔑 $PasswordResetListener disposed',
       name: '$PasswordResetListener',

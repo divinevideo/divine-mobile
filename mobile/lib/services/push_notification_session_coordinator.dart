@@ -11,6 +11,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/push_notification_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 typedef PushReadinessReader = NostrSessionReadiness Function();
@@ -91,7 +92,14 @@ class PushNotificationSessionCoordinator {
   CleanupClientFactory? _lastReadyCleanupClientFactory;
 
   void dispose() {
-    _tokenRefreshSubscription?.cancel();
+    if (_tokenRefreshSubscription != null) {
+      runDetached(
+        _tokenRefreshSubscription!.cancel(),
+        'cancel the push-token refresh subscription',
+        logName: 'PushNotificationSessionCoordinator',
+        category: LogCategory.system,
+      );
+    }
     _tokenRefreshSubscription = null;
     _invalidateActiveRegistrations();
   }
@@ -573,7 +581,7 @@ class PushNotificationSessionCoordinator {
         publishClient: cleanupClient,
       );
     } finally {
-      cleanupClient.dispose();
+      await cleanupClient.dispose();
     }
   }
 

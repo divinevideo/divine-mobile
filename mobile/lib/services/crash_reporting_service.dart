@@ -7,6 +7,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/firebase_initialization.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/platform_support.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -135,7 +136,12 @@ class CrashReportingService implements CrashReporter {
         );
 
         // Send to Crashlytics
-        crashlytics.recordFlutterFatalError(errorDetails);
+        runDetached(
+          crashlytics.recordFlutterFatalError(errorDetails),
+          'record a fatal Flutter framework error',
+          logName: 'CrashReporting',
+          category: LogCategory.system,
+        );
       };
 
       // Pass all uncaught asynchronous errors to Crashlytics
@@ -144,7 +150,12 @@ class CrashReportingService implements CrashReporter {
         Log.error('Async error: $error', name: 'CrashReporting');
 
         // Send to Crashlytics
-        crashlytics.recordError(error, stack, fatal: true);
+        runDetached(
+          crashlytics.recordError(error, stack, fatal: true),
+          'record a fatal asynchronous error',
+          logName: 'CrashReporting',
+          category: LogCategory.system,
+        );
         return true;
       };
 
@@ -181,7 +192,7 @@ class CrashReportingService implements CrashReporter {
 
       // Log a breadcrumb to prove connection works (visible in Crashlytics logs)
       if (isEnabled) {
-        crashlytics.log(
+        await crashlytics.log(
           'App started: kDebugMode=$kDebugMode, collection=$isEnabled',
         );
       }

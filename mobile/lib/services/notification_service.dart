@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show NotificationPayloadKeys, isRoutableNotificationPayload;
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Types of notifications
@@ -761,7 +762,15 @@ class NotificationService {
     if (_disposed) return;
 
     _disposed = true;
-    _notificationTapController?.close();
+    final notificationTapController = _notificationTapController;
+    if (notificationTapController != null) {
+      runDetached(
+        notificationTapController.close(),
+        'close the notification-tap stream',
+        logName: 'NotificationService',
+        category: LogCategory.system,
+      );
+    }
     _notifications.clear();
   }
 

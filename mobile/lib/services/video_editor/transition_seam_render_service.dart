@@ -211,7 +211,7 @@ class TransitionSeamRenderService {
       );
       return null;
     } finally {
-      _inFlight.remove(key);
+      final _ = _inFlight.remove(key);
     }
   }
 

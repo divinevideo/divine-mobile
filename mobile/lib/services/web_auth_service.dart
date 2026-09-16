@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:nostr_key_manager/nostr_key_manager.dart' show NsecBunkerClient;
 import 'package:openvine/services/nip07_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Available authentication methods for web
@@ -411,7 +412,12 @@ class WebAuthService {
   };
 
   void dispose() {
-    disconnect();
+    runDetached(
+      disconnect(),
+      'disconnect web authentication',
+      logName: 'WebAuthService',
+      category: LogCategory.auth,
+    );
   }
 
   // Test support methods

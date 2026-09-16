@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owns the liveness bound and failure reporting for final video exports.
@@ -61,10 +62,15 @@ class VideoRenderWatchdog {
       override(error, stackTrace);
       return;
     }
-    crashReporter.recordError(
-      error,
-      stackTrace,
-      reason: 'renderVideo failed',
+    runDetached(
+      crashReporter.recordError(
+        error,
+        stackTrace,
+        reason: 'renderVideo failed',
+      ),
+      'report a video render failure',
+      logName: 'VideoRenderWatchdog',
+      category: LogCategory.video,
     );
   }
 

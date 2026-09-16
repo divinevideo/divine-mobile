@@ -25,6 +25,7 @@ import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -86,7 +87,14 @@ class _RenderProgressTracker {
     required int step,
     required int stepCount,
   }) {
-    _assemblySubscription?.cancel();
+    if (_assemblySubscription != null) {
+      runDetached(
+        _assemblySubscription!.cancel(),
+        'cancel the previous assembly progress subscription',
+        logName: 'VideoEditorRenderService',
+        category: LogCategory.video,
+      );
+    }
     _assemblySubscription = ProVideoEditor.instance
         .progressStreamById(assemblyTaskId)
         .listen((progressModel) {
@@ -814,7 +822,16 @@ class VideoEditorRenderService {
         name: 'VideoEditorRenderService',
         category: .video,
       );
-      crashReporter.recordError(e, stack, reason: 'limitClipDuration failed');
+      runDetached(
+        crashReporter.recordError(
+          e,
+          stack,
+          reason: 'limitClipDuration failed',
+        ),
+        'report a clip-duration render failure',
+        logName: 'VideoEditorRenderService',
+        category: LogCategory.video,
+      );
       onComplete(false);
     }
   }

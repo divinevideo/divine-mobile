@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Tracks performance timing for different startup phases
@@ -142,7 +143,12 @@ class StartupPerformanceService {
     _crashReporting.logInitializationStep(
       'First frame: ${elapsed}ms',
     );
-    _crashReporting.setCustomKey('first_frame_ms', elapsed);
+    runDetached(
+      _crashReporting.setCustomKey('first_frame_ms', elapsed),
+      'record first-frame startup timing',
+      logName: 'StartupPerformance',
+      category: LogCategory.system,
+    );
   }
 
   DateTime? _authShellReadyTime;
@@ -176,7 +182,12 @@ class StartupPerformanceService {
     _crashReporting.logInitializationStep(
       'Auth shell ready: ${elapsed}ms',
     );
-    _crashReporting.setCustomKey('auth_shell_ready_ms', elapsed);
+    runDetached(
+      _crashReporting.setCustomKey('auth_shell_ready_ms', elapsed),
+      'record auth-shell startup timing',
+      logName: 'StartupPerformance',
+      category: LogCategory.system,
+    );
   }
 
   /// Mark when UI is ready for interaction
@@ -195,7 +206,12 @@ class StartupPerformanceService {
     _crashReporting.logInitializationStep(
       'UI ready: ${elapsed}ms',
     );
-    _crashReporting.setCustomKey('ui_ready_ms', elapsed);
+    runDetached(
+      _crashReporting.setCustomKey('ui_ready_ms', elapsed),
+      'record UI-ready startup timing',
+      logName: 'StartupPerformance',
+      category: LogCategory.system,
+    );
   }
 
   /// Mark when video system is ready
@@ -214,7 +230,12 @@ class StartupPerformanceService {
     _crashReporting.logInitializationStep(
       'Video ready: ${elapsed}ms',
     );
-    _crashReporting.setCustomKey('video_ready_ms', elapsed);
+    runDetached(
+      _crashReporting.setCustomKey('video_ready_ms', elapsed),
+      'record video-ready startup timing',
+      logName: 'StartupPerformance',
+      category: LogCategory.system,
+    );
 
     // Complete the total startup phase
     completePhase('total');

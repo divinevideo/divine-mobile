@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Callback type for reconnect events
@@ -131,7 +132,12 @@ class ConnectionStatusService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _statusController.close();
+    runDetached(
+      _statusController.close(),
+      'close the connection status stream',
+      logName: 'ConnectionStatusService',
+      category: LogCategory.system,
+    );
     super.dispose();
   }
 }

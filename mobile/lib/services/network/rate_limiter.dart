@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Configuration for rate limiting
@@ -200,7 +201,12 @@ class RateLimiter {
   /// Dispose resources
   void dispose() {
     _disposed = true;
-    _violationsController.close();
+    runDetached(
+      _violationsController.close(),
+      'close the rate-limit violation stream',
+      logName: 'RateLimiter',
+      category: LogCategory.system,
+    );
     _requests.clear();
   }
 

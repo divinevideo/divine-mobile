@@ -11,6 +11,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -326,10 +327,15 @@ class StopMotionRenderService {
       // (StateError/TypeError/RangeError — all `Error` subtypes) are worth
       // surfacing to Crashlytics.
       if (e is Error) {
-        crashReporter.recordError(
-          e,
-          stack,
-          reason: 'StopMotionRenderService.assemble failed',
+        runDetached(
+          crashReporter.recordError(
+            e,
+            stack,
+            reason: 'StopMotionRenderService.assemble failed',
+          ),
+          'report a stop-motion assembly failure',
+          logName: _logName,
+          category: LogCategory.video,
         );
       }
       await _deletePartialOutput(outputPath);

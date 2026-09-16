@@ -71,14 +71,24 @@ class ClipSpeedRenderService {
     if (cached != null) return Future<RenderedSpeedClip?>.value(cached);
     final inFlight = _inFlight[key];
     if (inFlight != null) return inFlight;
-    final render = _render(clip, key);
+    late final Future<RenderedSpeedClip?> render;
+    render = _renderAndClear(clip, key, () => render);
     _inFlight[key] = render;
-    render.whenComplete(() {
-      if (identical(_inFlight[key], render)) {
-        _inFlight.remove(key);
-      }
-    });
     return render;
+  }
+
+  Future<RenderedSpeedClip?> _renderAndClear(
+    DivineVideoClip clip,
+    String key,
+    Future<RenderedSpeedClip?> Function() currentRender,
+  ) async {
+    try {
+      return await _render(clip, key);
+    } finally {
+      if (identical(_inFlight[key], currentRender())) {
+        final _ = _inFlight.remove(key);
+      }
+    }
   }
 
   bool _needsRender(DivineVideoClip clip) {

@@ -83,9 +83,18 @@ class OutageDiagnosisService {
       return Future.value(cached.diagnosis);
     }
 
-    return _inFlight[cacheKey] ??= _diagnose(components).whenComplete(() {
-      _inFlight.remove(cacheKey);
-    });
+    return _inFlight[cacheKey] ??= _diagnoseAndClear(components, cacheKey);
+  }
+
+  Future<OutageDiagnosis> _diagnoseAndClear(
+    List<String> components,
+    String cacheKey,
+  ) async {
+    try {
+      return await _diagnose(components);
+    } finally {
+      final _ = _inFlight.remove(cacheKey);
+    }
   }
 
   Future<OutageDiagnosis> _diagnose(List<String> components) async {

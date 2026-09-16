@@ -149,24 +149,28 @@ class BackgroundActivityManager {
     // [_suspendGracePeriod] for why the .timeout() bound exists despite
     // never firing against the current sync `void` interface.
     for (final service in _registeredServices) {
-      Future.microtask(() async {
-        try {
-          await Future(service.onAppBackgrounded).timeout(_suspendGracePeriod);
-        } on TimeoutException {
-          Log.warning(
-            'Service ${service.serviceName} exceeded '
-            '${_suspendGracePeriod.inSeconds}s suspend grace period',
-            name: 'BackgroundActivityManager',
-            category: LogCategory.system,
-          );
-        } catch (e) {
-          Log.error(
-            'Error suspending service ${service.serviceName}: $e',
-            name: 'BackgroundActivityManager',
-            category: LogCategory.system,
-          );
-        }
-      });
+      unawaited(
+        Future.microtask(() async {
+          try {
+            await Future(
+              service.onAppBackgrounded,
+            ).timeout(_suspendGracePeriod);
+          } on TimeoutException {
+            Log.warning(
+              'Service ${service.serviceName} exceeded '
+              '${_suspendGracePeriod.inSeconds}s suspend grace period',
+              name: 'BackgroundActivityManager',
+              category: LogCategory.system,
+            );
+          } catch (e) {
+            Log.error(
+              'Error suspending service ${service.serviceName}: $e',
+              name: 'BackgroundActivityManager',
+              category: LogCategory.system,
+            );
+          }
+        }),
+      );
     }
   }
 

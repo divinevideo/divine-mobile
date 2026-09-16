@@ -112,7 +112,7 @@ class CuratedListService extends ChangeNotifier {
     } finally {
       completed.complete();
       if (identical(_listOperationTails[listId], tail)) {
-        _listOperationTails.remove(listId);
+        final _ = _listOperationTails.remove(listId);
       }
     }
   }
