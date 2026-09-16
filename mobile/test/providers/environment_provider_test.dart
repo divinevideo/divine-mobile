@@ -16,21 +16,21 @@ class _RecordingEnvironmentService extends EnvironmentService
 void main() {
   group('environment providers', () {
     late _RecordingEnvironmentService service;
+    late ProviderContainer container;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final prefs = await SharedPreferences.getInstance();
       service = _RecordingEnvironmentService();
       await service.initialize(sharedPreferences: prefs);
+      container = ProviderContainer(
+        overrides: [environmentServiceProvider.overrideWithValue(service)],
+      );
+      addTearDown(container.dispose);
     });
 
     group('currentEnvironmentProvider', () {
       test('publishes environment changes without resubscribing', () async {
-        final container = ProviderContainer(
-          overrides: [environmentServiceProvider.overrideWithValue(service)],
-        );
-        addTearDown(container.dispose);
-
         final environments = <AppEnvironment>[];
         final subscription = container.listen(
           currentEnvironmentProvider,
@@ -61,11 +61,6 @@ void main() {
 
     group('isDeveloperModeEnabledProvider', () {
       test('publishes developer mode changes without resubscribing', () async {
-        final container = ProviderContainer(
-          overrides: [environmentServiceProvider.overrideWithValue(service)],
-        );
-        addTearDown(container.dispose);
-
         final values = <bool>[];
         final subscription = container.listen(
           isDeveloperModeEnabledProvider,
