@@ -5635,7 +5635,7 @@
   },
   "videoEditorCaptionsSavedStyleSaved": "Saved as “{name}”",
   "@videoEditorCaptionsSavedStyleSaved": {
-    "description": "Snackbar shown after a caption style was saved from the custom style editor. {name} is the name the user gave it.",
+    "description": "Note shown under the Save style button after a caption style was saved from the custom style editor. {name} is the name the user gave it.",
     "placeholders": {
       "name": {
         "type": "String"
@@ -5644,7 +5644,7 @@
   },
   "videoEditorCaptionsSavedStyleSaveFailed": "Couldn't save the style.",
   "@videoEditorCaptionsSavedStyleSaveFailed": {
-    "description": "Snackbar shown when saving a caption style from the custom style editor failed."
+    "description": "Note shown under the Save style button when saving a caption style from the custom style editor failed."
   },
   "videoEditorCaptionsPresetClassic": "Classic",
   "videoEditorCaptionsPresetPop": "Pop",
