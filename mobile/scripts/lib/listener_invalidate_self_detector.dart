@@ -53,11 +53,15 @@ class _ListenerVisitor extends RecursiveAstVisitor<void> {
         finder.found = true;
       } else if (callback is SimpleIdentifier) {
         finder.follow(callback.name, callback);
-      } else if (callback is PrefixedIdentifier) {
-        finder.follow(callback.identifier.name, callback);
-      } else if (callback is PropertyAccess) {
+      } else if (callback is PropertyAccess &&
+          callback.target is ThisExpression) {
         finder.follow(callback.propertyName.name, callback);
       }
+      // A callback written `deps.onChange` (a PrefixedIdentifier) or `a.b.c`
+      // (a PropertyAccess on another receiver) names an object the detector
+      // cannot type. Following it by trailing name alone would instead
+      // resolve a same-named method on the registering class — a false
+      // positive on a zero floor — so those shapes are not followed.
       if (finder.found) {
         sites.add(
           ListenerInvalidateSelfSite(
@@ -80,10 +84,11 @@ class _InvalidateSelfFinder extends RecursiveAstVisitor<void> {
   bool found = false;
 
   void follow(String name, AstNode callSite) {
-    final body = _functions.resolve(name, callSite);
-    if (body == null || !_active.add(body)) return;
-    body.accept(this);
-    _active.remove(body);
+    for (final body in _functions.resolveAll(name, callSite)) {
+      if (!_active.add(body)) continue;
+      body.accept(this);
+      _active.remove(body);
+    }
   }
 
   @override
@@ -161,19 +166,33 @@ class _SameFileFunctions {
 
   final _byName = <String, List<_ScopedBody>>{};
 
-  FunctionBody? resolve(String name, AstNode callSite) {
+  /// Every body a callback named [name] can resolve to at the call site: the
+  /// bindings at the deepest visible scope.
+  ///
+  /// Two bindings can share that scope — a field assigned in two methods, a
+  /// variable reassigned in one block — and which one the program uses depends
+  /// on execution order, which the detector cannot know. Walking all of them
+  /// keeps a verdict from depending on method order.
+  List<FunctionBody> resolveAll(String name, AstNode callSite) {
     final candidates = _byName[name];
-    if (candidates == null) return null;
-    final visible =
-        candidates
-            .where(
-              (candidate) =>
-                  candidate.scope == null ||
-                  _isAncestor(candidate.scope!, callSite),
-            )
-            .toList()
-          ..sort((a, b) => _depth(b.scope).compareTo(_depth(a.scope)));
-    return visible.isEmpty ? null : visible.first.body;
+    if (candidates == null) return const [];
+    final visible = candidates
+        .where(
+          (candidate) =>
+              candidate.scope == null ||
+              _isAncestor(candidate.scope!, callSite),
+        )
+        .toList();
+    if (visible.isEmpty) return const [];
+    var deepest = 0;
+    for (final candidate in visible) {
+      final depth = _depth(candidate.scope);
+      if (depth > deepest) deepest = depth;
+    }
+    return visible
+        .where((candidate) => _depth(candidate.scope) == deepest)
+        .map((candidate) => candidate.body)
+        .toList();
   }
 
   static bool _isAncestor(AstNode ancestor, AstNode node) {
@@ -283,13 +302,13 @@ String? _assignedName(Expression expression) => switch (expression) {
 /// as a local. Anything else keeps its nearest block or function body, so an
 /// assignment made inside one method is not read as a binding for another.
 AstNode? _assignmentScope(AssignmentExpression node, String name) {
-  final classDeclaration = _enclosingClass(node);
+  final classLike = _enclosingClassOrMixin(node);
   final lhs = node.leftHandSide;
   final explicitField = lhs is PropertyAccess && lhs.target is ThisExpression;
-  if (classDeclaration != null &&
-      (explicitField || _declaresField(classDeclaration, name)) &&
-      !_enclosingBlockDeclaresLocal(node, name)) {
-    return classDeclaration;
+  if (classLike != null &&
+      (explicitField || _declaresField(classLike, name)) &&
+      !_enclosingScopeBindsLocal(node, name)) {
+    return classLike;
   }
   for (
     AstNode? current = node.parent;
@@ -298,26 +317,37 @@ AstNode? _assignmentScope(AssignmentExpression node, String name) {
   ) {
     if (current is Block ||
         current is FunctionBody ||
-        current is ClassDeclaration) {
+        current is ClassDeclaration ||
+        current is MixinDeclaration) {
       return current;
     }
   }
   return null;
 }
 
-ClassDeclaration? _enclosingClass(AstNode node) {
+AstNode? _enclosingClassOrMixin(AstNode node) {
   for (
     AstNode? current = node.parent;
     current != null;
     current = current.parent
   ) {
-    if (current is ClassDeclaration) return current;
+    if (current is ClassDeclaration || current is MixinDeclaration) {
+      return current;
+    }
   }
   return null;
 }
 
-bool _declaresField(ClassDeclaration node, String name) {
-  for (final member in node.body.members) {
+ClassBody? _classLikeBody(AstNode node) => switch (node) {
+  ClassDeclaration(:final body) => body,
+  MixinDeclaration(:final body) => body,
+  _ => null,
+};
+
+bool _declaresField(AstNode node, String name) {
+  final body = _classLikeBody(node);
+  if (body == null) return false;
+  for (final member in body.members) {
     if (member is FieldDeclaration) {
       for (final variable in member.fields.variables) {
         if (variable.name.lexeme == name) return true;
@@ -327,9 +357,11 @@ bool _declaresField(ClassDeclaration node, String name) {
   return false;
 }
 
-/// Whether a block between the assignment and its class declares [name] as a
-/// local, in which case the assignment binds the local and not a field.
-bool _enclosingBlockDeclaresLocal(AstNode node, String name) {
+/// Whether the assignment binds a local or a parameter rather than its class
+/// or mixin field: an enclosing block that declares [name], or an enclosing
+/// function whose parameters name it. The walk stops at the class or mixin,
+/// where a field is the binding.
+bool _enclosingScopeBindsLocal(AstNode node, String name) {
   for (
     AstNode? current = node.parent;
     current != null;
@@ -344,7 +376,34 @@ bool _enclosingBlockDeclaresLocal(AstNode node, String name) {
         }
       }
     }
-    if (current is ClassDeclaration) return false;
+    final parameters = _parametersOf(current);
+    if (parameters != null && _parameterBinds(parameters, name)) {
+      return true;
+    }
+    if (current is ClassDeclaration || current is MixinDeclaration) {
+      return false;
+    }
+  }
+  return false;
+}
+
+FormalParameterList? _parametersOf(AstNode node) => switch (node) {
+  MethodDeclaration(:final parameters) => parameters,
+  ConstructorDeclaration(:final parameters) => parameters,
+  FunctionDeclaration(:final functionExpression) =>
+    functionExpression.parameters,
+  FunctionExpression(:final parameters) => parameters,
+  _ => null,
+};
+
+bool _parameterBinds(FormalParameterList parameters, String name) {
+  for (final parameter in parameters.parameters) {
+    final normal = parameter is DefaultFormalParameter
+        ? parameter.parameter
+        : parameter;
+    if (normal is NormalFormalParameter && normal.name?.lexeme == name) {
+      return true;
+    }
   }
   return false;
 }

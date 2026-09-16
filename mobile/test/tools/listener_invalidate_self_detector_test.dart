@@ -285,6 +285,95 @@ int provider(Ref ref) {
       expect(sites, hasLength(1));
     });
 
+    test(
+      'follows a field rebound to an unsafe closure in any method order',
+      () {
+        final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void Function()? listener;
+
+  void install() {
+    listener = () => ref.state = 1;
+    service.addListener(listener!);
+  }
+
+  void dispose() {
+    listener = () => ref.invalidateSelf();
+  }
+}
+''');
+
+        expect(sites, hasLength(1));
+      },
+    );
+
+    test('does not treat a shadowing parameter as the field it shadows', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void Function()? listener;
+
+  void other(void Function()? listener) {
+    listener = () => ref.invalidateSelf();
+    listener!();
+  }
+
+  void install() {
+    listener = () => ref.state = 1;
+    service.addListener(listener!);
+  }
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
+    test('follows a field closure assigned in a mixin method', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+mixin Owner {
+  Ref get ref;
+  void Function()? listener;
+
+  void other() {
+    listener = () => ref.invalidateSelf();
+  }
+
+  void install() => service.addListener(listener!);
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('does not follow a method on another receiver', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void changed() => ref.invalidateSelf();
+  void install() => service.addListener(other.changed);
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
+    test('follows a this-qualified method tear-off', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void install() => service.addListener(this._changed);
+  void _changed() => ref.invalidateSelf();
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
     test('follows a class method tear-off', () {
       final sites = findListenerInvalidateSelfSitesInSource('''
 class Owner {
