@@ -55,5 +55,26 @@ void main() {
       );
       expect(requests, 1);
     });
+
+    test('does not cache a failed request', () async {
+      var requests = 0;
+      final service = OgDivinerEligibilityService(
+        keycast: KeycastOAuth(
+          config: config,
+          httpClient: MockClient((_) async {
+            requests++;
+            if (requests == 1) return http.Response('unavailable', 503);
+            return http.Response('{"eligible":true}', 200);
+          }),
+        ),
+      );
+
+      await expectLater(
+        service.isEligible(pubkey),
+        throwsA(isA<http.ClientException>()),
+      );
+      expect(await service.isEligible(pubkey), isTrue);
+      expect(requests, 2);
+    });
   });
 }
