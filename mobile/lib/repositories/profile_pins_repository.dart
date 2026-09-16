@@ -166,10 +166,19 @@ class ProfilePinsRepository {
   /// Returns `null` when the read was inconclusive (no reachable relay, or a
   /// timeout with nothing to show), so the caller keeps whatever it already
   /// has instead of clearing the grid's pins on a flaky connection.
+  ///
+  /// Settled on every relay for the same reason [_readAuthoritative] is: this
+  /// read replaces the cached list, and without the flag a relay that stays
+  /// connected without ever sending a terminal frame is skipped past the
+  /// settle window and still reported as `timedOut: false`. An unconfirmed
+  /// empty answer would then overwrite a real list with `[]`.
   Future<List<String>?> fetch(String ownerPubkey) async {
-    final result = await _nostrClient.queryEventsDetailed([
-      Filter(kinds: const [EventKind.pinList], authors: [ownerPubkey]),
-    ]);
+    final result = await _nostrClient.queryEventsDetailed(
+      [
+        Filter(kinds: const [EventKind.pinList], authors: [ownerPubkey]),
+      ],
+      requireAllRelaysSettled: true,
+    );
     final selected = _selectNewest(result.events, owner: ownerPubkey);
     if (selected == null && (result.noRelays || result.timedOut)) return null;
 

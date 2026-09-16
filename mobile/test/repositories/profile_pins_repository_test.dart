@@ -237,6 +237,27 @@ void main() {
         },
       );
 
+      test(
+        'asks every relay to settle, so a partial empty answer cannot '
+        'overwrite the cached list',
+        () async {
+          stubRelayAnswer(const []);
+
+          await repository.fetch(_owner);
+
+          final settled = verify(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: captureAny(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).captured;
+          expect(settled, [isTrue]);
+        },
+      );
+
       test('readCached is null before any fetch', () async {
         expect(await repository.readCached(_owner), isNull);
       });
