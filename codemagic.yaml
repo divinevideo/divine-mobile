@@ -619,14 +619,18 @@ definitions:
         fi
         echo "Publishing $TAG to Zapstore"
         # Pin the publisher: the runner image's zsp is not a version we chose,
-        # and an unpinned download is a supply-chain hole. darwin-arm64 matches
+        # and a version tag alone is not a content pin. darwin-arm64 matches
         # the mac_mini_m4 runner. The release asset name drops the tag's "v",
-        # so derive it from ZSP_VERSION instead of repeating the version.
+        # so derive it from ZSP_VERSION instead of repeating the version, and
+        # verify GitHub's published sha256 digest for that asset so a replaced
+        # binary cannot run with the release signing key in scope.
         ZSP_VERSION=v0.4.17
         ZSP_ASSET="zsp-${ZSP_VERSION#v}-darwin-arm64"
+        ZSP_SHA256=7846ff44db5cd9e29a35370ad6503c06875f594eacb1ede60bd5685116f4b2d4
         ZSP_BIN="$(mktemp -d)/zsp"
         curl -fsSL --retry 3 -o "$ZSP_BIN" \
           "https://github.com/zapstore/zsp/releases/download/${ZSP_VERSION}/${ZSP_ASSET}"
+        echo "${ZSP_SHA256}  ${ZSP_BIN}" | shasum -a 256 -c -
         chmod +x "$ZSP_BIN"
         # zapstore.yaml lives at the repo root and points its icon at
         # ./mobile/assets/icon/app_icon.png, so zsp must run from there.

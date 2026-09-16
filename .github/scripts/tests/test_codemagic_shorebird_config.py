@@ -305,7 +305,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
         # The release asset name drops the tag's leading "v"; deriving it from
         # ZSP_VERSION stops a version bump from downloading the previous asset
-        # (or 404ing) when only one of the two literals is updated.
+        # (or 404ing) when only one of the two literals is updated. The tag is
+        # not a content pin, so the downloaded bytes are verified against
+        # GitHub's published asset digest before zsp can run.
         self.assertIn("ZSP_VERSION=v0.4.17", definition)
         self.assertIn('ZSP_ASSET="zsp-${ZSP_VERSION#v}-darwin-arm64"', definition)
         self.assertIn(
@@ -314,6 +316,10 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             definition,
         )
         self.assertNotRegex(definition, r"zsp-\d+\.\d+\.\d+-darwin-arm64")
+        self.assertRegex(definition, r"ZSP_SHA256=[0-9a-f]{64}")
+        self.assertIn(
+            'echo "${ZSP_SHA256}  ${ZSP_BIN}" | shasum -a 256 -c -', definition
+        )
 
         # The nsec reaches zsp through the environment only: never an
         # argument, never echoed, and `set -x` would print it to the log.
