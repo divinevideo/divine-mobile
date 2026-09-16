@@ -320,9 +320,10 @@ internal class DivineVideoPlayerInstance(
      * can leak a stale frame onto a peer's surface. That ghost last
      * reproduced on the Exynos C2 driver and did not on Flutter 3.47.2,
      * where the feed — its long-time user — moved back to
-     * SurfaceProducer. Opt a screen in only when the ghost is observed
-     * there; under Impeller the legacy surface also costs a per-frame
-     * trampoline in the engine.
+     * SurfaceProducer. The editor's paired players still opt in for their
+     * own cross-player contamination case. Opt a screen in only when the
+     * ghost is observed there; under Impeller the legacy surface also
+     * costs a per-frame trampoline in the engine.
      */
     fun enableTextureOutput(
         registry: TextureRegistry,

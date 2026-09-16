@@ -65,8 +65,10 @@ class DivineVideoPlayerController {
   /// coexisted and a sibling decoder was released on the Exynos C2
   /// driver (the feed flicker). That ghost did not reproduce on Flutter
   /// 3.47.2, and the feed — the screen that opted in for it — moved back
-  /// to the producer; opt in only when the ghost is observed on the
-  /// device at hand. No effect on iOS/macOS. Defaults to `false`.
+  /// to the producer. The editor's paired players still opt in, for their
+  /// own cross-player contamination case. Opt in only when the ghost is
+  /// observed on the device at hand. No effect on iOS/macOS. Defaults to
+  /// `false`.
   ///
   /// [bufferProfile] caps how much media each native player buffers into
   /// memory. Defaults to [VideoBufferProfile.full] (platform defaults);
