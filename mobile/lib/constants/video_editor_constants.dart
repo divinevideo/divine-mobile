@@ -278,10 +278,11 @@ class VideoEditorConstants {
   /// The fonts of [textFontCatalogue], in catalogue order.
   ///
   /// Indices line up with [textFontCatalogue], which is what
-  /// `CaptionCustomStyle.fontIndex` persists.
-  static final List<TextFont> textFonts = [
+  /// `CaptionCustomStyle.fontIndex` persists, so the list is unmodifiable: a
+  /// runtime insert or removal would silently repoint saved drafts.
+  static final List<TextFont> textFonts = List.unmodifiable([
     for (final entry in textFontCatalogue) entry.font,
-  ];
+  ]);
 
   /// Width of drawing tool items in the draw editor toolbar.
   static const double drawItemWidth = 48.0;
