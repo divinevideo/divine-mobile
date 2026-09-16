@@ -59,6 +59,58 @@ int provider(Ref ref) {
       expect(sites, isEmpty);
     });
 
+    test('flags a `_ref` field receiver', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this._ref);
+  final Ref _ref;
+  void install() {
+    service.addListener(() {
+      _ref.invalidateSelf();
+    });
+  }
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('flags a `this.ref` receiver', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+class Owner {
+  Owner(this.ref);
+  final Ref ref;
+  void install() => service.addListener(() => this.ref.invalidateSelf());
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('flags a cascaded invalidateSelf', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  service.addListener(() {
+    ref..invalidateSelf();
+  });
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
+    test('allows invalidateSelf on an unrelated receiver', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  service.addListener(() => other.invalidateSelf());
+  return 0;
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
     test('follows a class method tear-off', () {
       final sites = findListenerInvalidateSelfSitesInSource('''
 class Owner {

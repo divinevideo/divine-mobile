@@ -86,15 +86,39 @@ class _InvalidateSelfFinder extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
-    if (node.methodName.name == 'invalidateSelf' &&
-        node.target is SimpleIdentifier &&
-        (node.target! as SimpleIdentifier).name == 'ref') {
-      found = true;
+    if (node.methodName.name == 'invalidateSelf') {
+      if (_isRefReceiver(_receiverOf(node))) found = true;
     } else if (!found && node.target == null) {
       follow(node.methodName.name, node);
     }
     super.visitMethodInvocation(node);
   }
+}
+
+/// The receiver `invalidateSelf()` was called on.
+///
+/// A cascade section carries no target of its own, so `ref..invalidateSelf()`
+/// has to read the receiver off the enclosing [CascadeExpression].
+Expression? _receiverOf(MethodInvocation node) {
+  if (node.target != null) return node.target;
+  final parent = node.parent;
+  return parent is CascadeExpression ? parent.target : null;
+}
+
+/// Whether [receiver] names a Riverpod `Ref`.
+///
+/// Both spellings this repository uses count: the `ref` parameter a provider
+/// body receives, and the `_ref` field a helper class holds (`_LiveDeps` in
+/// `lib/providers/list_providers.dart`, `feed_repository_impl.dart`). A
+/// trailing-identifier match also covers `this.ref` and `this._ref`.
+bool _isRefReceiver(Expression? receiver) {
+  final name = switch (receiver) {
+    SimpleIdentifier(:final name) => name,
+    PrefixedIdentifier(:final identifier) => identifier.name,
+    PropertyAccess(:final propertyName) => propertyName.name,
+    _ => null,
+  };
+  return name == 'ref' || name == '_ref';
 }
 
 class _SameFileFunctions {
