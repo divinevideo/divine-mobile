@@ -119,21 +119,11 @@ void main() {
       );
       addTearDown(subscription.close);
 
-      await container.read(popularVideosFeedProvider.future);
-      expect(requestedLanguages, hasLength(1));
-
-      await container
-          .read(languagePreferenceServiceProvider)
-          .setContentLanguage('es');
-      await pumpEventQueue();
-      await container.read(popularVideosFeedProvider.future);
-
-      expect(
-        requestedLanguages,
-        hasLength(2),
-        reason: 'the language change must trigger a second request',
+      await _expectRefetchesOnLanguageChange(
+        container: container,
+        requestedLanguages: requestedLanguages,
+        readFeed: () => container.read(popularVideosFeedProvider.future),
       );
-      expect(requestedLanguages.last?.first, equals('es'));
     });
 
     test('for you refetches with the newly chosen language', () async {
@@ -176,23 +166,38 @@ void main() {
       final subscription = container.listen(forYouFeedProvider, (_, _) {});
       addTearDown(subscription.close);
 
-      await container.read(forYouFeedProvider.future);
-      expect(requestedLanguages, hasLength(1));
-
-      await container
-          .read(languagePreferenceServiceProvider)
-          .setContentLanguage('es');
-      await pumpEventQueue();
-      await container.read(forYouFeedProvider.future);
-
-      expect(
-        requestedLanguages,
-        hasLength(2),
-        reason: 'the language change must trigger a second request',
+      await _expectRefetchesOnLanguageChange(
+        container: container,
+        requestedLanguages: requestedLanguages,
+        readFeed: () => container.read(forYouFeedProvider.future),
       );
-      expect(requestedLanguages.last?.first, equals('es'));
     });
   });
+}
+
+/// Reads [readFeed] once to prime the baseline request, changes the content
+/// language, then reads it again and asserts the change produced a second
+/// request carrying the new language.
+Future<void> _expectRefetchesOnLanguageChange({
+  required ProviderContainer container,
+  required List<List<String>?> requestedLanguages,
+  required Future<void> Function() readFeed,
+}) async {
+  await readFeed();
+  expect(requestedLanguages, hasLength(1));
+
+  await container
+      .read(languagePreferenceServiceProvider)
+      .setContentLanguage('es');
+  await pumpEventQueue();
+  await readFeed();
+
+  expect(
+    requestedLanguages,
+    hasLength(2),
+    reason: 'the language change must trigger a second request',
+  );
+  expect(requestedLanguages.last?.first, equals('es'));
 }
 
 HomeFeedResult _recommendedResult(List<String> ids) {
