@@ -14522,13 +14522,13 @@ abstract class AppLocalizations {
   /// **'Drag to reorder {name}'**
   String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name);
 
-  /// Snackbar shown after a caption style was saved from the custom style editor. {name} is the name the user gave it.
+  /// Note shown under the Save style button after a caption style was saved from the custom style editor. {name} is the name the user gave it.
   ///
   /// In en, this message translates to:
   /// **'Saved as “{name}”'**
   String videoEditorCaptionsSavedStyleSaved(String name);
 
-  /// Snackbar shown when saving a caption style from the custom style editor failed.
+  /// Note shown under the Save style button when saving a caption style from the custom style editor failed.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t save the style.'**
