@@ -14,7 +14,6 @@ import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
@@ -140,7 +139,6 @@ class _RenderProgressTracker {
 /// Handles video rendering with aspect ratio cropping and clip concatenation.
 class VideoEditorRenderService {
   VideoEditorRenderService._();
-  static CrashReporter crashReporter = const SilentCrashReporter();
 
   static const _logName = 'VideoEditorRenderService';
 
@@ -818,6 +816,7 @@ class VideoEditorRenderService {
         e,
         stack,
         reportEveryFailure: true,
+        reason: 'limitClipDuration failed',
       );
       onComplete(false);
     }

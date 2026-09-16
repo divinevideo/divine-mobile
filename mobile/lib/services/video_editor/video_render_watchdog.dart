@@ -51,10 +51,14 @@ class VideoRenderWatchdog {
   /// native failures commonly arrive as non-[Error] platform exceptions. Other
   /// render callers report only programming-invariant failures because their
   /// fallback paths may retry frequently (#7125).
+  ///
+  /// [reason] is the Crashlytics non-fatal reason. Callers that are not the
+  /// final export pass their own so the dashboard keeps them apart.
   static void reportFailure(
     Object error,
     StackTrace stackTrace, {
     required bool reportEveryFailure,
+    String reason = 'renderVideo failed',
   }) {
     if (!reportEveryFailure && error is! Error) return;
     final override = crashReporterOverride;
@@ -63,11 +67,7 @@ class VideoRenderWatchdog {
       return;
     }
     runDetached(
-      crashReporter.recordError(
-        error,
-        stackTrace,
-        reason: 'renderVideo failed',
-      ),
+      crashReporter.recordError(error, stackTrace, reason: reason),
       'report a video render failure',
       logName: 'VideoRenderWatchdog',
       category: LogCategory.video,

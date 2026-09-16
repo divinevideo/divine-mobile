@@ -48,7 +48,6 @@ import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/secure_storage_options.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
-import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
@@ -252,7 +251,6 @@ Future<void> startOpenVineApp({
   ZendeskSupportService.crashlytics = crashReporting;
   VideoRenderWatchdog.crashReporter = crashReporting;
   StopMotionRenderService.crashReporter = crashReporting;
-  VideoEditorRenderService.crashReporter = crashReporting;
   NotificationRefreshCoordinator.crashReporter = crashReporting;
 
   crashReporting.logInitializationStep('Bindings initialized');
