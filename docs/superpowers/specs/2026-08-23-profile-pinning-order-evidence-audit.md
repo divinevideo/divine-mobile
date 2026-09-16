@@ -96,9 +96,15 @@ NIP-01 defines an `a` reference as `kind:pubkey:d-tag`. NIP-71 defines kind
 replacement only while the author pubkey and `d` value remain unchanged.
 
 The codec must require an exact 64-character lowercase hexadecimal pubkey.
-Mobile must also require a nonempty `d` value because the current
-`VideoEvent.addressableId` and `getVideosByAddressableIds` paths reject an empty
-value; that is a current-mobile compatibility rule rather than explicit NIP-71
+Mobile must also require a nonempty `d` value, but only one current path
+enforces that. `VideoEvent.addressableId` returns null for an empty `d`
+(`video_event.dart:1359-1368`), while `getVideosByAddressableIds` does not
+reject one: it gates only on `AId.fromString` and `isVideoKind`
+(`videos_repository.dart:1511-1512`), so an empty-`d` coordinate is parsed
+into a filter and sent to relays, and is discarded only when the response is
+mapped (`videos_repository.dart:1552`). The requirement therefore has to be
+enforced by the pin coordinate type rather than inherited from the existing
+paths. It is a current-mobile compatibility rule rather than explicit NIP-71
 normative language. `AId.fromString` rejoins colons in a `d` value but does not
 enforce these validity rules.
 
