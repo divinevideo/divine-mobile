@@ -463,8 +463,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   late final _playheadInterpolator = PlayheadInterpolator(
     vsync: this,
     onTick: (position) => _setLayerPlayTime(_playerToTimeline(position)),
-    onAdvancingChanged: (advancing) =>
-        _setPlayheadAdvancing(advancing: advancing),
+    onAdvancingChanged: _setPlayheadAdvancing,
   );
 
   /// Drives playback of a frames-only stop-motion clip, which has no native
@@ -475,8 +474,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     vsync: this,
     totalDuration: () => _stopMotionTotalDuration,
     emitInterval: VideoEditorConstants.stopMotionPlayheadEmitInterval,
-    onAdvancingChanged: (advancing) =>
-        _setPlayheadAdvancing(advancing: advancing),
+    onAdvancingChanged: _setPlayheadAdvancing,
     onPlayTime: _setLayerPlayTime,
     onAudioSync: _syncStopMotionAudioTo,
     onAudioPause: _pauseStopMotionAudio,
@@ -1335,7 +1333,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// and the stop-motion clock — so anything following the playhead (a
   /// detached clip's companion player) stops the moment the editor does,
   /// instead of inferring a pause from ticks going quiet.
-  void _setPlayheadAdvancing({required bool advancing}) {
+  void _setPlayheadAdvancing(bool advancing) {
     // Captured in didChangeDependencies, not read here: this runs from ticker
     // and teardown paths, and an inherited-widget lookup outside build takes a
     // dependency (and asserts once the element is defunct).
