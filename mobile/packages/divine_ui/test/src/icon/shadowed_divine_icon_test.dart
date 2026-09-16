@@ -304,6 +304,51 @@ void main() {
       expect(cache.imageFor(key), isNull);
     });
 
+    testWidgets('drops the least recently drawn bake past maxEntries', (
+      tester,
+    ) async {
+      final cache = ShadowedIconRasterCache(
+        loaderFor: (_) => const SvgStringLoader(_squareSvg),
+      );
+      await tester.pumpWidget(_host(const SizedBox()));
+      final context = tester.element(find.byType(SizedBox));
+      ShadowedIconRasterKey key(int tint) => ShadowedIconRasterKey(
+        icon: DivineIconName.heart,
+        color: Color(0xFF000000 | tint),
+        dimension: 8,
+        devicePixelRatio: 1,
+        shadows: divineIconButtonShadows,
+      );
+
+      for (var i = 0; i <= ShadowedIconRasterCache.maxEntries; i++) {
+        expect(
+          await tester.runAsync(() => cache.rasterize(key(i), context)),
+          isNotNull,
+          reason: 'bake $i should resolve',
+        );
+      }
+      // One past the cap dropped the first, least recently drawn bake.
+      expect(cache.imageFor(key(0)), isNull);
+      expect(cache.imageFor(key(1)), isNotNull);
+
+      // A hit is a use, so the next overflow drops the next-oldest instead.
+      expect(
+        await tester.runAsync(
+          () => cache.rasterize(
+            key(ShadowedIconRasterCache.maxEntries + 1),
+            context,
+          ),
+        ),
+        isNotNull,
+      );
+      expect(
+        cache.imageFor(key(1)),
+        isNotNull,
+        reason: 'the refreshed entry survives the next overflow',
+      );
+      expect(cache.imageFor(key(2)), isNull);
+    });
+
     test(
       'the default loader is the asset lookup DivineIcon renders through',
       () {

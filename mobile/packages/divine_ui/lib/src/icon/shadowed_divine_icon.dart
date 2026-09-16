@@ -71,9 +71,13 @@ const List<DivineIconShadow> divineIconButtonShadows = [
 /// Until the raster is ready — the first frame or two after a cold start —
 /// the icon renders through the live-layer path so nothing flashes; every
 /// later mount of the same key paints the cached image on its first frame.
-/// Cached images are process-wide and are never disposed: the set is bounded
-/// by the icons × colours × scales the app actually shows, a few dozen
-/// 72 px bitmaps at most.
+/// Cached images are process-wide and capped at
+/// [ShadowedIconRasterCache.maxEntries] baked bitmaps; the least recently
+/// drawn entry is dropped when the cap is hit, and the engine frees the
+/// dropped bitmap once no widget is drawing it. The cap matters because the
+/// key includes the tint: an appearance switch lerps the nav's `onNav`
+/// through every intermediate value, so without a bound one theme toggle
+/// would retain a bitmap per intermediate tint for the process lifetime.
 class ShadowedDivineIcon extends StatefulWidget {
   /// Creates a shadowed icon.
   const ShadowedDivineIcon({
@@ -288,6 +292,17 @@ class ShadowedIconRasterCache {
   /// The cache production widgets share.
   static final ShadowedIconRasterCache instance = ShadowedIconRasterCache();
 
+  /// How many baked bitmaps a cache keeps before dropping the least recently
+  /// drawn one.
+  ///
+  /// The key includes the tint, and the theme framework lerps the nav's
+  /// `onNav` through every intermediate value during an appearance switch, so
+  /// an unbounded keyed cache would retain a bitmap per intermediate tint per
+  /// icon for the process lifetime. Dropping the map's reference is enough:
+  /// any widget still drawing a dropped bitmap holds its own reference, and
+  /// the engine frees the bitmap once the last one lets go.
+  static const int maxEntries = 64;
+
   /// The default loader: the same asset lookup [DivineIcon] renders through.
   static BytesLoader assetLoaderFor(DivineIconName icon) =>
       SvgAssetLoader(icon.assetPath);
@@ -297,20 +312,29 @@ class ShadowedIconRasterCache {
   final Map<ShadowedIconRasterKey, Future<ui.Image?>> _pending = {};
 
   /// The baked bitmap for [key], or `null` when it has not been baked yet.
-  ui.Image? imageFor(ShadowedIconRasterKey key) => _images[key];
+  ///
+  /// A hit counts as a use for the [maxEntries] bound.
+  ui.Image? imageFor(ShadowedIconRasterKey key) {
+    final image = _images.remove(key);
+    if (image != null) {
+      _images[key] = image;
+    }
+    return image;
+  }
 
   /// Bakes the bitmap for [key], sharing one in-flight bake per key.
   ///
   /// Resolves to `null` when the SVG cannot be loaded or rasterised; the
   /// caller keeps drawing the live layers and a later mount retries.
   Future<ui.Image?> rasterize(ShadowedIconRasterKey key, BuildContext context) {
-    final cached = _images[key];
+    final cached = imageFor(key);
     if (cached != null) return Future.value(cached);
     return _pending.putIfAbsent(key, () async {
       try {
         final info = await vg.loadPicture(_loaderFor(key.icon), context);
         final image = await _bake(key, info);
         _images[key] = image;
+        _dropOverflow();
         return image;
       } on Object {
         // A missing asset or a failed rasterisation only means this icon
@@ -320,6 +344,16 @@ class ShadowedIconRasterCache {
         unawaited(_pending.remove(key));
       }
     });
+  }
+
+  /// Drops the least recently drawn bakes down to [maxEntries].
+  ///
+  /// The map is insertion-ordered and [imageFor] reinserts on every hit, so
+  /// its first key is the least recently used.
+  void _dropOverflow() {
+    while (_images.length > maxEntries) {
+      _images.remove(_images.keys.first);
+    }
   }
 
   Future<ui.Image> _bake(ShadowedIconRasterKey key, PictureInfo info) async {
