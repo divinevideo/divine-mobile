@@ -548,17 +548,19 @@ void main() {
     });
   });
 
-  test('degenerate measured ratios fall back', () {
-    expect(ratioClip(0).videoAspectRatio, 9 / 16);
-    expect(ratioClip(double.nan).videoAspectRatio, 9 / 16);
-    expect(ratioClip(double.infinity).videoAspectRatio, 9 / 16);
-    expect(ratioClip(-1.5).videoAspectRatio, 9 / 16);
-    expect(ratioClip(1.0).videoAspectRatio, 1.0);
-  });
+  group('DivineVideoClip ratio fallbacks', () {
+    test('degenerate measured ratios fall back', () {
+      expect(ratioClip(0).videoAspectRatio, 9 / 16);
+      expect(ratioClip(double.nan).videoAspectRatio, 9 / 16);
+      expect(ratioClip(double.infinity).videoAspectRatio, 9 / 16);
+      expect(ratioClip(-1.5).videoAspectRatio, 9 / 16);
+      expect(ratioClip(1.0).videoAspectRatio, 1.0);
+    });
 
-  test('a degenerate persisted original ratio falls back too', () {
-    expect(ratioClip(null, orig: 0).originalAspectRatio, 9 / 16);
-    expect(ratioClip(null, orig: double.nan).originalAspectRatio, 9 / 16);
-    expect(ratioClip(null, orig: 3 / 4).originalAspectRatio, 3 / 4);
+    test('a degenerate persisted original ratio falls back too', () {
+      expect(ratioClip(null, orig: 0).originalAspectRatio, 9 / 16);
+      expect(ratioClip(null, orig: double.nan).originalAspectRatio, 9 / 16);
+      expect(ratioClip(null, orig: 3 / 4).originalAspectRatio, 3 / 4);
+    });
   });
 }
