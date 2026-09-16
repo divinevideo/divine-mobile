@@ -182,7 +182,10 @@ class _ShadowedDivineIconState extends State<ShadowedDivineIcon> {
 /// The live-layer rendering: shadow copies as blurred, tinted [DivineIcon]s
 /// under the foreground glyph. Costs a `saveLayer` per copy and a blur pass
 /// per shadow on every frame, so it only bridges the gap until the raster
-/// cache has an image.
+/// cache has an image — or, when a bake cannot complete, serves that icon for
+/// the process lifetime. The [RepaintBoundary] keeps those blurs off the
+/// video's layer on backends with a raster cache, which is what the original
+/// call sites relied on before the bake existed.
 class _LayeredShadowedIcon extends StatelessWidget {
   const _LayeredShadowedIcon({
     required this.icon,
@@ -198,26 +201,32 @@ class _LayeredShadowedIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        for (final shadow in shadows)
-          Transform.translate(
-            offset: shadow.offset,
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(
-                sigmaX: shadow.blurSigma,
-                sigmaY: shadow.blurSigma,
-              ),
-              // Decorative copies; the foreground glyph is the only node a
-              // screen reader should meet.
-              child: ExcludeSemantics(
-                child: DivineIcon(icon: icon, color: shadow.color, size: size),
+    return RepaintBoundary(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          for (final shadow in shadows)
+            Transform.translate(
+              offset: shadow.offset,
+              child: ImageFiltered(
+                imageFilter: ui.ImageFilter.blur(
+                  sigmaX: shadow.blurSigma,
+                  sigmaY: shadow.blurSigma,
+                ),
+                // Decorative copies; the foreground glyph is the only node a
+                // screen reader should meet.
+                child: ExcludeSemantics(
+                  child: DivineIcon(
+                    icon: icon,
+                    color: shadow.color,
+                    size: size,
+                  ),
+                ),
               ),
             ),
-          ),
-        DivineIcon(icon: icon, color: color, size: size),
-      ],
+          DivineIcon(icon: icon, color: color, size: size),
+        ],
+      ),
     );
   }
 }
