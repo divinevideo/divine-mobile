@@ -46,6 +46,9 @@ void main() {
         () => mockNostrService.relayStatusStream,
       ).thenAnswer((_) => relayStatusController.stream);
       when(
+        () => mockNostrService.retryDisconnectedRelays(),
+      ).thenAnswer((_) async {});
+      when(
         () => mockBlocklistRepository.shouldFilterFromFeeds(any()),
       ).thenReturn(false);
 

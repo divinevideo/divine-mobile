@@ -77,6 +77,9 @@ void main() {
         () => mockNostrService.relayStatusStream,
       ).thenAnswer((_) => relayStatusController.stream);
       when(
+        () => mockNostrService.retryDisconnectedRelays(),
+      ).thenAnswer((_) async {});
+      when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((invocation) {
         subscribeCalls.add(
