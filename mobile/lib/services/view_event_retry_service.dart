@@ -66,9 +66,9 @@ class ViewEventRetryService {
   /// publishing. Pushed in through [setPublishingEnabled] rather than read
   /// back from the owner, which already depends on this service for its
   /// immediate flush — a read in the other direction is a Riverpod dependency
-  /// cycle. Starts permitted, the owner's own answer until the stored decision
-  /// has loaded.
-  bool _publishingEnabled = true;
+  /// cycle. Starts disabled so an independently activated retry service cannot
+  /// publish before the owner has loaded and pushed the stored decision.
+  bool _publishingEnabled = false;
 
   bool get isInitialized => _isInitialized;
 

@@ -158,6 +158,22 @@ void main() {
       expect(await database.pendingViewEventsDao.getById('view-a'), isNull);
     });
 
+    test('does not replay before stored opt-out is applied', () async {
+      SharedPreferences.setMockInitialValues({'analytics_enabled': false});
+      await database.pendingViewEventsDao.enqueue(queuedView('view-a'));
+
+      // AppRootSideEffects activates the retry provider before any UI consumer
+      // constructs AnalyticsService and pushes the stored consent decision.
+      container.read(viewEventRetryServiceProvider);
+      await pumpEventQueue();
+
+      expectNothingPublished();
+      expect(
+        await database.pendingViewEventsDao.getById('view-a'),
+        isNotNull,
+      );
+    });
+
     test('publishes a tracked view immediately', () async {
       final analytics = container.read(analyticsServiceProvider);
       await analytics.initialize();
