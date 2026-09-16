@@ -21,6 +21,7 @@ class DivineVideoClip {
     required this.recordedAt,
     required this.targetAspectRatio,
     required double? originalAspectRatio,
+    double? videoAspectRatio,
     this.video,
     this.stopMotionFrames,
     this.libraryTitle,
@@ -63,7 +64,8 @@ class DivineVideoClip {
          sourceRelayHint: sourceRelayHint,
        ),
        _thumbnailTimestamp = thumbnailTimestamp,
-       _originalAspectRatio = originalAspectRatio;
+       _originalAspectRatio = originalAspectRatio,
+       _videoAspectRatio = videoAspectRatio;
 
   final String id;
 
@@ -86,6 +88,10 @@ class DivineVideoClip {
 
   /// Original aspect ratio from the recorded video (raw value, may be null)
   final double? _originalAspectRatio;
+
+  /// Frame ratio of [video] once a bake changed it from the recording's (raw
+  /// value, null while the file still has the recording's shape)
+  final double? _videoAspectRatio;
 
   final Completer<bool>? processingCompleter;
 
@@ -376,7 +382,32 @@ class DivineVideoClip {
   }
 
   /// Returns the original aspect ratio, or 9/16 as fallback if not set.
-  double get originalAspectRatio => _originalAspectRatio ?? 9 / 16;
+  ///
+  /// Non-positive and non-finite stored values fall back too: this now divides
+  /// a layout box in `computeSurfaceSize`, where a 0 gives an infinite
+  /// constraint and a NaN gives a NaN one, both of which are layout assertions
+  /// rather than a wrong shape.
+  double get originalAspectRatio =>
+      _usableRatio(_originalAspectRatio) ?? 9 / 16;
+
+  /// Aspect ratio of the frames in [video].
+  ///
+  /// A crop / rotate transform bakes a new file whose shape no longer matches
+  /// the recording, so the preview must fit *this* ratio rather than
+  /// [originalAspectRatio]. A timeline clip's transform leaves that one alone:
+  /// the first clip's value is the editor canvas's coordinate system for the
+  /// whole session (and every draft saved from it), so layers authored against
+  /// it would shift if a transform rewrote it. A detached clip is not on the
+  /// canvas, so its transform does rewrite it instead of setting this field.
+  double get videoAspectRatio =>
+      _usableRatio(_videoAspectRatio) ?? originalAspectRatio;
+
+  /// A ratio only counts when it can divide a box: finite and above zero.
+  ///
+  /// Both fields are persisted and one of them is measured off a file, so a
+  /// bad value survives in a draft rather than being recomputed.
+  static double? _usableRatio(double? ratio) =>
+      (ratio != null && ratio.isFinite && ratio > 0) ? ratio : null;
 
   DivineVideoClip copyWith({
     String? id,
@@ -390,6 +421,7 @@ class DivineVideoClip {
     String? thumbnailPath,
     Duration? thumbnailTimestamp,
     double? originalAspectRatio,
+    double? videoAspectRatio,
     model.AspectRatio? targetAspectRatio,
     Completer<bool>? processingCompleter,
     CameraLensMetadata? lensMetadata,
@@ -443,6 +475,7 @@ class DivineVideoClip {
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       thumbnailTimestamp: thumbnailTimestamp ?? _thumbnailTimestamp,
       originalAspectRatio: originalAspectRatio ?? _originalAspectRatio,
+      videoAspectRatio: videoAspectRatio ?? _videoAspectRatio,
       targetAspectRatio: targetAspectRatio ?? this.targetAspectRatio,
       processingCompleter: processingCompleter ?? this.processingCompleter,
       lensMetadata: lensMetadata ?? this.lensMetadata,
@@ -503,6 +536,7 @@ class DivineVideoClip {
           : null,
       'thumbnailTimestampMs': _thumbnailTimestamp?.inMilliseconds,
       'originalAspectRatio': _originalAspectRatio,
+      if (_videoAspectRatio != null) 'videoAspectRatio': _videoAspectRatio,
       'targetAspectRatio': targetAspectRatio.name,
       'lensMetadata': lensMetadata?.toMap(),
       'ghostFramePath': ghostFramePath != null
@@ -613,6 +647,7 @@ class DivineVideoClip {
           ? Duration(milliseconds: thumbnailTimestampMs)
           : null,
       originalAspectRatio: json['originalAspectRatio'] as double?,
+      videoAspectRatio: (json['videoAspectRatio'] as num?)?.toDouble(),
       targetAspectRatio: model.AspectRatio.values.firstWhere(
         (e) => e.name == aspectRatioName,
         orElse: () => model.AspectRatio.square,

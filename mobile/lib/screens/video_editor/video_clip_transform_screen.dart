@@ -75,6 +75,14 @@ class _VideoClipTransformScreenState extends State<VideoClipTransformScreen> {
       final metadata = await ProVideoEditor.instance.getMetadata(
         widget.clip.requireVideo,
       );
+      Log.info(
+        '🔳 Transform preview for clip ${widget.clip.id}: '
+        '${metadata.resolution.width.round()}x'
+        '${metadata.resolution.height.round()}, '
+        'rotation=${metadata.rotation}',
+        name: 'VideoClipTransformScreen',
+        category: LogCategory.video,
+      );
 
       final player = DivineVideoPlayerController(
         useTexture: true,

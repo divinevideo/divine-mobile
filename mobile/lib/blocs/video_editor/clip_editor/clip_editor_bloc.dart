@@ -1919,6 +1919,19 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         return;
       }
 
+      // The crop was locked to the composition's ratio, but the renderer
+      // rounds to even pixels and orders crop / rotate itself, so the file is
+      // the only dependable answer to what shape came out. The preview fits
+      // the clip's frames by this value; left at the recording's ratio, a
+      // square crop of a 9:16 recording plays back stretched to 9:16 (#9229).
+      final videoAspectRatio =
+          await _measureAspectRatio(transformedVideo) ??
+          clip.targetAspectRatio.value;
+      if (isClosed) {
+        _deferOrphanedPaths([transformedVideo.file?.path]);
+        return;
+      }
+
       final currentClips = state.clips;
       final currentIndex = currentClips.indexWhere((c) => c.id == clip.id);
       if (currentIndex == -1) {
@@ -1947,6 +1960,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       final currentClip = currentClips[currentIndex];
       final updatedClip = currentClip.copyWith(
         video: transformedVideo,
+        videoAspectRatio: videoAspectRatio,
         clearForwardVideoPath: true,
         clearReversedVideoPath: true,
         // The transform re-renders the clip's geometry, so a recorded

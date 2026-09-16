@@ -48,7 +48,11 @@ class VideoEditorTransformService {
     final outputFile = File(outputPath);
 
     Log.info(
-      '🔳 Rendering transformed clip ${sourceClip.id} to $outputPath',
+      '🔳 Rendering transformed clip ${sourceClip.id} to $outputPath '
+      '(crop x=${transform.x} y=${transform.y} '
+      '${transform.width}x${transform.height}, '
+      'rotateTurns=${transform.rotateTurns}, '
+      'flipX=${transform.flipX}, flipY=${transform.flipY})',
       name: 'VideoEditorTransformService',
       category: LogCategory.video,
     );

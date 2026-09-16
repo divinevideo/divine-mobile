@@ -129,9 +129,34 @@ void main() {
 
       await tickPlayhead(tester);
 
-      // Same widget instance ⇒ the position subscription really is scoped to
-      // the stop-motion branch, so video playback doesn't rebuild at tick rate.
+      // Same widget instance ⇒ the video branch's selector reads a ratio, not
+      // the position, so a tick that stays inside one clip rebuilds nothing.
       expect(identical(readPlayer(tester), before), isTrue);
+    });
+
+    testWidgets('lays the surface out at the ratio of the clip under the '
+        'playhead', (tester) async {
+      // Clip 2 went through a square crop / rotate transform, so its file is
+      // 1:1 while the recording (and clip 1) is 9:16 (#9229).
+      final first = normalClip();
+      final second = normalClip().copyWith(
+        id: 'clip-2',
+        video: EditorVideo.file('/tmp/clip-2.mp4'),
+        videoAspectRatio: 1,
+      );
+      createBlocs(ClipEditorState(clips: [first, second]));
+
+      await pumpPreview(tester, first);
+      expect(readPlayer(tester).videoAspectRatio, 9 / 16);
+
+      // Into clip 2 (clip 1 plays for 2s).
+      mainBloc.add(
+        const VideoEditorPositionChanged(Duration(milliseconds: 2500)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(readPlayer(tester).videoAspectRatio, 1);
     });
 
     testWidgets('a stop-motion clip forwards the editor position', (

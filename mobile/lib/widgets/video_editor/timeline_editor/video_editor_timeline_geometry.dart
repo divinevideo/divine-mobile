@@ -314,6 +314,27 @@ Duration? _audioSourceEnd(AudioEvent track) {
   return track.startTime + remaining;
 }
 
+/// The clip under the playhead at the timeline [position], or `null` when
+/// [clips] is empty.
+///
+/// Walks the clips in playback time, the axis the playhead and timeline
+/// markers share. A position on a boundary belongs to the clip that starts
+/// there; the last clip absorbs anything past the composition end, so a
+/// playhead resting on the final frame still resolves.
+DivineVideoClip? clipAtTimelinePosition(
+  List<DivineVideoClip> clips,
+  Duration position,
+) {
+  var cursor = Duration.zero;
+  for (var i = 0; i < clips.length; i++) {
+    final clip = clips[i];
+    final end = cursor + clip.playbackDuration;
+    if (position < end || i == clips.length - 1) return clip;
+    cursor = end;
+  }
+  return null;
+}
+
 _TimelineMarkerAnchor? _timelineMarkerAnchorForPosition(
   List<DivineVideoClip> clips,
   Duration marker,

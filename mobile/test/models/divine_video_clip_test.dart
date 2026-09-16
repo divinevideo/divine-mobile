@@ -8,6 +8,17 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
+  DivineVideoClip ratioClip(double? v, {double? orig = 9 / 16}) =>
+      DivineVideoClip(
+        id: 'c',
+        video: editor.EditorVideo.file(File('/tmp/x.mp4')),
+        duration: const Duration(seconds: 5),
+        recordedAt: DateTime(2024),
+        targetAspectRatio: model.AspectRatio.square,
+        originalAspectRatio: orig,
+        videoAspectRatio: v,
+      );
+
   DivineVideoClip clip(String videoPath) => DivineVideoClip(
     id: 'c1',
     video: editor.EditorVideo.file(File(videoPath)),
@@ -198,6 +209,44 @@ void main() {
         '/videos',
       );
       expect(legacy.minTrimStart, equals(Duration.zero));
+    });
+  });
+
+  group('DivineVideoClip.videoAspectRatio', () {
+    test("is the recording's ratio until a bake reshapes the file", () {
+      final recorded = clip('/videos/clip.mp4').copyWith(
+        originalAspectRatio: 9 / 16,
+      );
+
+      expect(recorded.videoAspectRatio, 9 / 16);
+      expect(recorded.toJson().containsKey('videoAspectRatio'), isFalse);
+    });
+
+    test('round-trips through JSON without touching originalAspectRatio', () {
+      // A square crop of a 9:16 recording: the file is 1:1, the canvas the
+      // session's layers were authored on stays 9:16.
+      final transformed = clip(
+        '/videos/clip.mp4',
+      ).copyWith(originalAspectRatio: 9 / 16, videoAspectRatio: 1);
+
+      final restored = DivineVideoClip.fromJson(
+        transformed.toJson(),
+        '/videos',
+      );
+
+      expect(restored.videoAspectRatio, 1);
+      expect(restored.originalAspectRatio, 9 / 16);
+    });
+
+    test('survives an unrelated copyWith', () {
+      final transformed = clip('/videos/clip.mp4').copyWith(
+        originalAspectRatio: 9 / 16,
+        videoAspectRatio: 1,
+      );
+
+      // A split or a reverse re-renders the same frames, so both halves keep
+      // the shape the transform gave them.
+      expect(transformed.copyWith(volume: 0.5).videoAspectRatio, 1);
     });
   });
 
@@ -496,6 +545,22 @@ void main() {
         ]).ownedFilePaths.nonNulls,
         <String>['/stills/a.jpg', '/stills/b.jpg'],
       );
+    });
+  });
+
+  group('DivineVideoClip ratio fallbacks', () {
+    test('degenerate measured ratios fall back', () {
+      expect(ratioClip(0).videoAspectRatio, 9 / 16);
+      expect(ratioClip(double.nan).videoAspectRatio, 9 / 16);
+      expect(ratioClip(double.infinity).videoAspectRatio, 9 / 16);
+      expect(ratioClip(-1.5).videoAspectRatio, 9 / 16);
+      expect(ratioClip(1.0).videoAspectRatio, 1.0);
+    });
+
+    test('a degenerate persisted original ratio falls back too', () {
+      expect(ratioClip(null, orig: 0).originalAspectRatio, 9 / 16);
+      expect(ratioClip(null, orig: double.nan).originalAspectRatio, 9 / 16);
+      expect(ratioClip(null, orig: 3 / 4).originalAspectRatio, 3 / 4);
     });
   });
 }

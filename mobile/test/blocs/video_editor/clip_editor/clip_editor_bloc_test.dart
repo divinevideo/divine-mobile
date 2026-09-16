@@ -302,6 +302,7 @@ void main() {
       SplitClipFn? splitClip,
       ReverseClipFn? reverseClip,
       TransformClipFn? transformClip,
+      MeasureAspectRatioFn? measureAspectRatio,
       ChromaKeyBakeFn? bakeChromaKey,
       MergeClipsFn? mergeClips,
       FlattenClipForLibraryFn? flattenClipForLibrary,
@@ -318,6 +319,9 @@ void main() {
         splitClip: splitClip,
         reverseClip: reverseClip,
         transformClip: transformClip,
+        // Defaults to "the file could not be read": the real reader probes
+        // the render through the plugin, which has no platform under test.
+        measureAspectRatio: measureAspectRatio ?? (_) async => null,
         bakeChromaKey: bakeChromaKey,
         mergeClips: mergeClips,
         flattenClipForLibrary: flattenClipForLibrary,
@@ -3001,6 +3005,60 @@ void main() {
             equals('/transformed/clip-local_clip-local_transform.mp4'),
           );
           expect(transformCleanupPaths, contains('/path/pre-key.mp4'));
+        },
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        "records the rendered file's frame ratio, leaving the recording's",
+        // A square crop of a 9:16 recording comes out 1:1; the preview lays
+        // the surface out by videoAspectRatio, so the stale 9:16 would show
+        // the square stretched to 9:16 (#9229). originalAspectRatio is the
+        // canvas's coordinate system for the session and must not move.
+        //
+        // The measured value deliberately differs from the square crop the
+        // fallback below would pick, so this proves the file was read.
+        build: () => buildBloc(
+          transformClip: _fakeTransformClip,
+          measureAspectRatio: (video) async =>
+              video.file?.path ==
+                  '/transformed/clip-local_clip-local_transform.mp4'
+              ? 0.98
+              : null,
+        ),
+        seed: () => ClipEditorState(
+          clips: [_createClipWithFile().copyWith(targetAspectRatio: .square)],
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorClipTransformRequested(
+            clipId: 'clip-local',
+            transform: ExportTransform(),
+          ),
+        ),
+        verify: (bloc) {
+          final clip = bloc.state.clips.first;
+          expect(clip.videoAspectRatio, 0.98);
+          expect(clip.originalAspectRatio, 9 / 16);
+        },
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'falls back to the crop ratio when the rendered file is unreadable',
+        // The crop box was locked to the composition's ratio, so that is the
+        // shape the render came out in even if its metadata cannot be read.
+        build: () => buildBloc(transformClip: _fakeTransformClip),
+        seed: () => ClipEditorState(
+          clips: [_createClipWithFile().copyWith(targetAspectRatio: .square)],
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorClipTransformRequested(
+            clipId: 'clip-local',
+            transform: ExportTransform(),
+          ),
+        ),
+        verify: (bloc) {
+          final clip = bloc.state.clips.first;
+          expect(clip.videoAspectRatio, 1);
+          expect(clip.originalAspectRatio, 9 / 16);
         },
       );
 
