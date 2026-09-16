@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for picking the caption style: built-in presets plus
-// ABOUTME: a Custom tile that opens the user-defined style editor.
+// ABOUTME: Custom (opens the style editor) and Saved (the user's saved styles).
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,6 +8,17 @@ import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_custom_style_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_caption_styles_sheet.dart';
+
+/// The preset a grid tile shows, or null for the two leading tiles.
+///
+/// Custom and Saved occupy 0 and 1, so the grid holds `presets.length + 2`
+/// items and a preset sits two places after its own index. Exposed so that
+/// offset has a test: drawing a tile needs real Google Fonts, which unit
+/// tests do not have.
+@visibleForTesting
+CaptionStylePreset? presetAtGridIndex(int index) =>
+    index < 2 ? null : CaptionStylePreset.presets[index - 2];
 
 /// The chosen caption style: a built-in preset or a user-defined custom style.
 sealed class CaptionStyleSelection {
@@ -78,7 +89,8 @@ Future<CaptionStyleSelection?> showCaptionStyleSheet(
   );
 }
 
-/// Vertically scrolling style grid: a Custom tile plus built-in presets.
+/// Vertically scrolling style grid: a Custom tile, a Saved tile, and the
+/// built-in presets.
 class CaptionPresetPickerView extends StatefulWidget {
   /// Creates the picker with the currently selected style highlighted.
   const CaptionPresetPickerView({
@@ -151,6 +163,18 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
     }
   }
 
+  /// Opens the saved styles; a picked one is applied as a custom style,
+  /// since that is what it was when it was saved.
+  Future<void> _openSavedStyles() async {
+    final style = await showSavedCaptionStylesSheet(
+      context,
+      currentCustomStyle: widget.currentCustomStyle,
+    );
+    if (style != null && mounted) {
+      Navigator.of(context).pop(CaptionCustomSelection(style));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -169,17 +193,29 @@ class _CaptionPresetPickerViewState extends State<CaptionPresetPickerView>
         crossAxisSpacing: 12,
         childAspectRatio: 1.15,
       ),
-      // The Custom tile leads; built-in presets follow.
-      itemCount: CaptionStylePreset.presets.length + 1,
+      // The Custom and Saved tiles lead; built-in presets follow.
+      itemCount: CaptionStylePreset.presets.length + 2,
       itemBuilder: (context, index) {
         if (index == 0) {
           return _CustomStyleTile(
             label: l10n.videoEditorCaptionsPresetCustom,
             selected: hasCustom,
             onTap: _openCustomEditor,
+            icon: DivineIconName.pencilSimple,
           );
         }
-        final preset = CaptionStylePreset.presets[index - 1];
+        if (index == 1) {
+          // An entry point rather than a style of its own, so it is never
+          // shown selected: a saved style applied to the track is a custom
+          // style, and the Custom tile carries that state.
+          return _CustomStyleTile(
+            label: l10n.videoEditorCaptionsPresetSaved,
+            selected: false,
+            onTap: _openSavedStyles,
+            icon: DivineIconName.bookmarkSimple,
+          );
+        }
+        final preset = presetAtGridIndex(index)!;
         final label = captionPresetDisplayName(l10n, preset.id);
         return _StyleTile(
           style: preset.style,
@@ -302,17 +338,20 @@ class _StyleTile extends StatelessWidget {
   }
 }
 
-/// The Custom tile: a static edit affordance (no animated preview).
+/// The Custom and Saved tiles: a static affordance (no animated preview)
+/// carrying [icon].
 class _CustomStyleTile extends StatelessWidget {
   const _CustomStyleTile({
     required this.label,
     required this.selected,
     required this.onTap,
+    required this.icon,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final DivineIconName icon;
 
   @override
   Widget build(BuildContext context) {
@@ -323,8 +362,8 @@ class _CustomStyleTile extends StatelessWidget {
       // Fixed colors in both appearance modes: this tile stands in for a
       // preset preview, so it repeats the dark stage `CaptionStylePreview`
       // paints its own previews on rather than following the palette.
-      preview: const DecoratedBox(
-        decoration: BoxDecoration(
+      preview: DecoratedBox(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -332,11 +371,7 @@ class _CustomStyleTile extends StatelessWidget {
           ),
         ),
         child: Center(
-          child: DivineIcon(
-            icon: DivineIconName.pencilSimple,
-            color: VineTheme.lightText,
-            size: 32,
-          ),
+          child: DivineIcon(icon: icon, color: VineTheme.lightText, size: 32),
         ),
       ),
     );

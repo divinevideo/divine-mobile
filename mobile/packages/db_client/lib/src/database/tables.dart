@@ -1926,3 +1926,44 @@ class VanishedProfiles extends Table {
   @override
   Set<Column> get primaryKey => {pubkey};
 }
+
+/// Caption styles the user saved from the video editor's caption style
+/// picker (#7742), so a custom look — font, colors, background mode, size
+/// and animation — can be applied to captions in later videos.
+///
+/// A custom caption style otherwise lives inside its draft's caption track and
+/// is lost to the next video; this table is the cross-draft home. The style
+/// fields are a JSON blob (`CaptionCustomStyle.toJson`), so a new style field
+/// is an app-level change rather than a migration.
+@TableIndex.sql(
+  'CREATE INDEX IF NOT EXISTS idx_saved_caption_style_owner_pubkey '
+  'ON saved_caption_styles (owner_pubkey)',
+)
+@DataClassName('SavedCaptionStyleRow')
+class SavedCaptionStyles extends Table {
+  @override
+  String get tableName => 'saved_caption_styles';
+
+  /// Unique style identifier.
+  TextColumn get id => text()();
+
+  /// User-entered display name. Not localized — it is the user's own text.
+  TextColumn get name => text()();
+
+  /// JSON-serialized `CaptionCustomStyle` payload.
+  TextColumn get style => text()();
+
+  /// Position of this style in the picker (0-based).
+  IntColumn get orderIndex =>
+      integer().withDefault(const Constant(0)).named('order_index')();
+
+  /// When the style was saved.
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  /// Hex public key of the account that owns this style.
+  /// NULL for styles saved before an account was known.
+  TextColumn get ownerPubkey => text().nullable().named('owner_pubkey')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

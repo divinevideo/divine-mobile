@@ -8520,6 +8520,72 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Ondertitelstijl';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Opgeslagen';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Opgeslagen stijlen';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'Huidige stijl opslaan';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Nog niets opgeslagen. Stel een eigen stijl samen, sla hem hier op en gebruik de look in je volgende video opnieuw.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Je opgeslagen stijlen konden niet worden geladen.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Naam van de stijl';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Stijl opslaan';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Opslaan';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'Stijl hernoemen';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Hernoemen';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '‘$name’ verwijderen?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Ondertitels die deze stijl al gebruiken, houden hun look.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name toepassen';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'Meer opties voor $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'Sleep om $name te verplaatsen';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Opgeslagen als ‘$name’';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'De stijl kon niet worden opgeslagen.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klassiek';
 
   @override

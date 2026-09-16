@@ -8064,6 +8064,69 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => '字幕スタイル';
 
   @override
+  String get videoEditorCaptionsPresetSaved => '保存済み';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => '保存したスタイル';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => '現在のスタイルを保存';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'まだ保存されたスタイルはありません。カスタムスタイルを作ってここに保存すると、次の動画でも同じ見た目を使えます。';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed => '保存したスタイルを読み込めませんでした。';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'スタイル名';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'スタイルを保存';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => '保存';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'スタイル名を変更';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => '名前を変更';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'このスタイルをすでに使っている字幕の見た目は変わりません。';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name を適用';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return '$name のその他のオプション';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'ドラッグして $name を並べ替え';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return '「$name」として保存しました';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => 'スタイルを保存できませんでした。';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'クラシック';
 
   @override

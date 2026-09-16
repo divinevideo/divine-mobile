@@ -8542,6 +8542,74 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Istilo ng subtitle';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Naka-save';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Mga naka-save na style';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'I-save ang kasalukuyang style';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Wala pang naka-save. Gumawa ng custom style, i-save dito, at gamitin ulit ang look sa susunod mong video.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Hindi ma-load ang mga naka-save mong style.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Pangalan ng style';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'I-save ang style';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'I-save';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle =>
+      'Palitan ang pangalan ng style';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction =>
+      'Palitan ang pangalan';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return 'I-delete ang “$name”?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Mananatili ang look ng mga caption na gumagamit na ng style na ito.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return 'I-apply ang $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'Iba pang opsyon para sa $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'I-drag para baguhin ang pagkakasunod-sunod ng $name';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'Na-save bilang “$name”';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed =>
+      'Hindi ma-save ang style.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasiko';
 
   @override

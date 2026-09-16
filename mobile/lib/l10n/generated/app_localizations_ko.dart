@@ -8078,6 +8078,69 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => '자막 스타일';
 
   @override
+  String get videoEditorCaptionsPresetSaved => '저장됨';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => '저장한 스타일';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => '현재 스타일 저장';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      '아직 저장된 스타일이 없어요. 커스텀 스타일을 만든 다음 여기에 저장하면 다음 영상에서도 같은 모습으로 쓸 수 있어요.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed => '저장한 스타일을 불러오지 못했어요.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => '스타일 이름';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => '스타일 저장';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => '저장';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => '스타일 이름 바꾸기';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => '이름 바꾸기';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '“$name”을(를) 삭제할까요?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      '이 스타일을 이미 쓰고 있는 자막은 그대로 유지돼요.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name 적용';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return '$name 옵션 더보기';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return '$name 순서를 바꾸려면 드래그하세요';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return '“$name”(으)로 저장했어요';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => '스타일을 저장하지 못했어요.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => '클래식';
 
   @override

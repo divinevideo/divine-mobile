@@ -8401,6 +8401,72 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'Altyazı stili';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'Kayıtlı';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'Kayıtlı stiller';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent =>
+      'Geçerli stili kaydet';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'Henüz kaydedilmiş bir şey yok. Kendi stilini oluştur, buraya kaydet ve aynı görünümü sonraki videonda kullan.';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'Kayıtlı stillerin yüklenemedi.';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'Stil adı';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'Stili kaydet';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'Kaydet';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle =>
+      'Stili yeniden adlandır';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'Yeniden adlandır';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '“$name” silinsin mi?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'Bu stili zaten kullanan altyazılar görünümünü korur.';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$name stilini uygula';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return '$name için daha fazla seçenek';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return 'Sıralamak için $name stilini sürükle';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return '“$name” olarak kaydedildi';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => 'Stil kaydedilemedi.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasik';
 
   @override

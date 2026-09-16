@@ -8286,6 +8286,70 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorCaptionsPresetTitle => 'የግርጌ ጽሑፍ ቅጥ';
 
   @override
+  String get videoEditorCaptionsPresetSaved => 'የተቀመጡ';
+
+  @override
+  String get videoEditorCaptionsSavedStylesTitle => 'የተቀመጡ ስታይሎች';
+
+  @override
+  String get videoEditorCaptionsSavedStylesSaveCurrent => 'አሁን ያለውን ስታይል ያስቀምጡ';
+
+  @override
+  String get videoEditorCaptionsSavedStylesEmpty =>
+      'እስካሁን ምንም አልተቀመጠም። የራስዎን ስታይል ያዘጋጁ፣ እዚህ ያስቀምጡት እና በሚቀጥለው ቪዲዮዎ ያንኑ መልክ እንደገና ይጠቀሙ።';
+
+  @override
+  String get videoEditorCaptionsSavedStylesLoadFailed =>
+      'የተቀመጡ ስታይሎችዎን መጫን አልተቻለም።';
+
+  @override
+  String get videoEditorCaptionsSavedStyleNameLabel => 'የስታይል ስም';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveTitle => 'ስታይል ያስቀምጡ';
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveAction => 'ያስቀምጡ';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameTitle => 'ስታይል ዳግም ይሰይሙ';
+
+  @override
+  String get videoEditorCaptionsSavedStyleRenameAction => 'ዳግም ይሰይሙ';
+
+  @override
+  String videoEditorCaptionsSavedStyleDeleteConfirmTitle(String name) {
+    return '“$name”ን ይሰረዝ?';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleDeleteConfirmMessage =>
+      'ይህን ስታይል አስቀድመው የሚጠቀሙ የግርጌ ጽሑፎች መልካቸውን ይይዛሉ።';
+
+  @override
+  String videoEditorCaptionsSavedStyleApplySemanticLabel(String name) {
+    return '$nameን ይተግብሩ';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleOptionsSemanticLabel(String name) {
+    return 'ለ $name ተጨማሪ አማራጮች';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleReorderSemanticLabel(String name) {
+    return '$nameን ለማስተካከል ይጎትቱ';
+  }
+
+  @override
+  String videoEditorCaptionsSavedStyleSaved(String name) {
+    return 'እንደ “$name” ተቀምጧል';
+  }
+
+  @override
+  String get videoEditorCaptionsSavedStyleSaveFailed => 'ስታይሉን ማስቀመጥ አልተቻለም።';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'ክላሲክ';
 
   @override
