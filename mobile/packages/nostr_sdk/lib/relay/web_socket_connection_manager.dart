@@ -115,9 +115,11 @@ class DefaultWebSocketChannelFactory implements WebSocketChannelFactory {
 /// error, a remote close, or an idle drop that the caller did not request also
 /// starts a bounded reconnect on its own, because a receive-only socket (a
 /// live REQ with nothing left to send) never reaches the send path (#8992).
-/// After [disconnect] or [dispose], or once the self-heal budget is spent on
-/// a relay that keeps dropping the socket, the connection stays down until
-/// the next send or explicit connect.
+/// After [disconnect] the connection stays down until an explicit [connect],
+/// and [dispose] ends reconnection for good — neither a send nor a connect
+/// revives it. Once the self-heal budget is spent on a relay that keeps
+/// dropping the socket, it stays down until the next send or explicit
+/// connect.
 ///
 /// Idle Detection (heartbeat):
 /// - Tracks when the last message was received
