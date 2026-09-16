@@ -96,6 +96,79 @@ late uploads and also filter event dates in `America/Los_Angeles` to match the
 console. Data arriving more than seven days late is excluded. Firebase sampling,
 rate limits, incomplete exports, and operations interrupted by process death
 mean these are observed samples, not exact request counts or completion rates.
+See [Emission rate, shared limits, and release decision](#emission-rate-shared-limits-and-release-decision)
+for what volume these traces add and how the two new populations are bounded.
+
+## Emission rate, shared limits, and release decision
+
+The two new custom traces are emitted at a fixed, bounded rate:
+
+- **`http_operation`** — exactly one `DURATION_TRACE` per instrumented request,
+  and only when the matching `NETWORK_REQUEST` metric was accepted
+  (`PerformanceHttpClient` returns the inner response untouched when the
+  recorder's `start` returns null). The population is therefore the same one
+  the app already sends through `FirebaseHttpMetricRecorder`; the custom trace
+  adds a sibling code trace per network request, not a new request event.
+- **`video_first_frame`** — exactly one `DURATION_TRACE` per completed
+  fullscreen-feed activation, i.e. per distinct active video that reached a
+  rendered native first frame. It is not per rendered frame, per buffering
+  event, or per cached byte.
+
+Neither trace is emitted per frame, per chunk, or per video byte, and
+third-party hosts stay excluded (see
+[Network performance monitoring](NETWORK_PERFORMANCE_MONITORING.md)).
+
+### Absolute emission rate is not recorded in this repository
+
+There is no checked-in measurement of instrumented requests per user or per
+session, so this document does not state one. The inputs exist and can be
+measured before or after rollout:
+
+- The pre-rollout request rate is the `NETWORK_REQUEST` count for the
+  instrumented hosts over a build and date range. `scripts/performance/network.sql`
+  reports it for the moderation host today; the same query extended to the
+  other hosts in `NETWORK_PERFORMANCE_MONITORING.md` gives the full population.
+- The activation rate is the completed `FeedFirstFrameMetric` count, observable
+  locally from the `FeedFirstFrame` logger and the feed TTFF harness
+  ([Network performance monitoring](NETWORK_PERFORMANCE_MONITORING.md)).
+- After rollout, `outcomes.sql` reports the `http_operation` sample count per
+  build and operation. Comparing that with the matching `NETWORK_REQUEST` count
+  is how to tell whether Firebase retained the population or sampled it down.
+
+### Effect on the existing performance traces
+
+Firebase sets no per-trace quota. Custom code traces and network request traces
+share one per-device budget — currently 300 events every 10 minutes — and one
+app-wide daily dynamic-sampling rate delivered through Remote Config; projects
+with the BigQuery export get a higher limit for network request traces. Firebase
+may also drop events server-side. The `http_operation` trace therefore draws
+from the same budget the existing `feed_load_*`, `video_publish`,
+`camera_startup`, and network metrics already use. Trace names cannot collide,
+but a device that reaches the shared cap has its excess dropped across trace
+names, so the busiest devices can see lower sample counts for existing traces
+once this ships. This is a sample-count cost, not a latency or behavior cost:
+nothing on the user path waits for these traces, and `PerformanceOperation`
+contains monitor failures and is never awaited.
+
+### Release decision
+
+Ship enabled, under the same gates as every other performance trace: release
+mode only and distributed builds only (Shorebird engine or a Zapstore
+installer), with debug and profile excluded both natively and in Dart. No
+separate sampler is added. The `http_operation` trace is 1:1 with a network
+metric that already ships unsampled; Firebase's on-device rate limit and
+dynamic sampling already bound the volume; and a second sample rate would
+decouple the custom trace from the network metric the reports compare it
+against.
+
+The safeguard is the comparison above plus a rollback that needs no store
+release: the per-request trace lives entirely in
+`mobile/lib/observability/network/performance_http_client.dart`, so sampling or
+removing it is a Dart-only change that Shorebird can push
+([Shorebird code push](SHOREBIRD_CODE_PUSH.md)). If `outcomes.sql` shows
+`http_operation` samples collapsing against the matching `NETWORK_REQUEST`
+count on a platform, or an existing trace's sample count falling after this
+ships, that is the signal to push the gate.
 
 ## Firebase dashboard and alerts
 
