@@ -1135,6 +1135,86 @@ void main() {
         ]);
       });
 
+      test('no emit orders the grid by a pin it does not also report as '
+          'pinned', () async {
+        await seedSnapshot(
+          ProfileVideoOffsetSnapshot(
+            videos: [
+              _video('a', createdAt: 3000, dTag: 'a'),
+              _video('b', createdAt: 2000, dTag: 'b'),
+              _video('c', createdAt: 1000, dTag: 'c'),
+            ],
+            nextOffset: 3,
+            totalVideoCount: 3,
+            hasMoreContent: false,
+          ),
+        );
+        when(
+          () => h.pins.readCached(_author),
+        ).thenAnswer((_) async => [_coordinate('c')]);
+        final relayFetch = Completer<List<String>?>();
+        when(() => h.pins.fetch(_author)).thenAnswer((_) => relayFetch.future);
+        h.stubAuthorFeed(
+          _result(
+            [
+              _video('a', createdAt: 3000, dTag: 'a'),
+            ],
+            totalCount: 3,
+            hasMore: false,
+          ),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        final emitted = <ProfileFeedState>[];
+        final sub = cubit.stream.listen(emitted.add);
+        addTearDown(sub.cancel);
+        await pumpEventQueue();
+
+        final ordered = emitted
+            .where((s) => s.videos.isNotEmpty && s.videos.first.id == 'c')
+            .toList();
+        expect(ordered, isNotEmpty);
+        for (final state in ordered) {
+          expect(state.pinnedCoordinates, [_coordinate('c')]);
+          expect(state.isPinned(_video('c', dTag: 'c')), isTrue);
+        }
+      });
+
+      test('a cold open seeded from the relay reports the cached pin on the '
+          'same emit that orders by it', () async {
+        when(() => h.ves.authorVideos(_author)).thenReturn([
+          _video('a', createdAt: 3000, dTag: 'a'),
+          _video('c', createdAt: 1000, dTag: 'c'),
+        ]);
+        when(
+          () => h.pins.readCached(_author),
+        ).thenAnswer((_) async => [_coordinate('c')]);
+        final relayFetch = Completer<List<String>?>();
+        when(() => h.pins.fetch(_author)).thenAnswer((_) => relayFetch.future);
+        h.stubAuthorFeed(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('c', createdAt: 1000, dTag: 'c'),
+          ], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        final emitted = <ProfileFeedState>[];
+        final sub = cubit.stream.listen(emitted.add);
+        addTearDown(sub.cancel);
+        await pumpEventQueue();
+
+        final ordered = emitted
+            .where((s) => s.videos.isNotEmpty && s.videos.first.id == 'c')
+            .toList();
+        expect(ordered, isNotEmpty);
+        for (final state in ordered) {
+          expect(state.pinnedCoordinates, [_coordinate('c')]);
+        }
+      });
+
       test('an inconclusive relay read keeps the cached pins', () async {
         when(
           () => h.pins.readCached(_author),

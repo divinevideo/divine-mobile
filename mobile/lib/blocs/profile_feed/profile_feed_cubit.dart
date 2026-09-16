@@ -232,6 +232,11 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       state.copyWith(
         status: ProfileFeedStatus.ready,
         videos: _applyFeedFilters(relaySeed),
+        // The cached list already ordered `videos`, so it has to reach state
+        // on the same emit: ProfileFeedPinsChanged is still queued behind
+        // this handler, and until it lands `isPinned` would contradict what
+        // the grid is already showing.
+        pinnedCoordinates: _pinnedCoordinates,
         hasMoreContent:
             relaySeed.length >= AppConstants.hasMoreContentThreshold,
         isInitialLoad: relaySeed.isEmpty,
@@ -283,6 +288,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       state.copyWith(
         status: ProfileFeedStatus.ready,
         videos: _applyFeedFilters(merged),
+        pinnedCoordinates: _pinnedCoordinates,
         nextOffset: cached.nextOffset,
         totalVideoCount: cached.totalVideoCount,
         hasMoreContent: cached.hasMoreContent,
