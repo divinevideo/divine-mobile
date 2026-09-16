@@ -41,6 +41,11 @@ void main() {
       subscription.close();
       container.dispose();
       expect(source.removeListenerCalls, equals(1));
+
+      // Counting removeListener calls cannot tell a matching removal from a
+      // mismatched one; only a post-dispose notification can.
+      source.notifyListeners();
+      expect(notifications, equals(1));
     });
   });
 }
