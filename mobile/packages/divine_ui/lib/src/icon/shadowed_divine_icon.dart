@@ -72,12 +72,13 @@ const List<DivineIconShadow> divineIconButtonShadows = [
 /// the icon renders through the live-layer path so nothing flashes; every
 /// later mount of the same key paints the cached image on its first frame.
 /// Cached images are process-wide and capped at
-/// [ShadowedIconRasterCache.maxEntries] baked bitmaps; the least recently
-/// drawn entry is dropped when the cap is hit, and the engine frees the
-/// dropped bitmap once no widget is drawing it. The cap matters because the
-/// key includes the tint: an appearance switch lerps the nav's `onNav`
-/// through every intermediate value, so without a bound one theme toggle
-/// would retain a bitmap per intermediate tint for the process lifetime.
+/// [ShadowedIconRasterCache.maxEntries] baked bitmaps; the entry that has
+/// gone longest without being resolved through the cache is dropped when the
+/// cap is hit, and a dropped bitmap is freed once its Dart handle is
+/// garbage-collected. The cap matters because the key includes the tint: an
+/// appearance switch lerps the nav's `onNav` through every intermediate
+/// value, so without a bound one theme toggle would retain a bitmap per
+/// intermediate tint for the process lifetime.
 class ShadowedDivineIcon extends StatefulWidget {
   /// Creates a shadowed icon.
   const ShadowedDivineIcon({
@@ -302,14 +303,16 @@ class ShadowedIconRasterCache {
   static final ShadowedIconRasterCache instance = ShadowedIconRasterCache();
 
   /// How many baked bitmaps a cache keeps before dropping the least recently
-  /// drawn one.
+  /// resolved one.
   ///
   /// The key includes the tint, and the theme framework lerps the nav's
   /// `onNav` through every intermediate value during an appearance switch, so
   /// an unbounded keyed cache would retain a bitmap per intermediate tint per
-  /// icon for the process lifetime. Dropping the map's reference is enough:
-  /// any widget still drawing a dropped bitmap holds its own reference, and
-  /// the engine frees the bitmap once the last one lets go.
+  /// icon for the process lifetime. Eviction drops the map's reference rather
+  /// than disposing the bitmap — widget state holds the handle it read from
+  /// here, and `RawImage` clones it on every update, so a cache-side dispose
+  /// could hand a disposed handle to a later clone. The dropped bitmap is
+  /// freed once its Dart handle is garbage-collected.
   static const int maxEntries = 64;
 
   /// The default loader: the same asset lookup [DivineIcon] renders through.
@@ -355,7 +358,7 @@ class ShadowedIconRasterCache {
     });
   }
 
-  /// Drops the least recently drawn bakes down to [maxEntries].
+  /// Drops the least recently resolved bakes down to [maxEntries].
   ///
   /// The map is insertion-ordered and [imageFor] reinserts on every hit, so
   /// its first key is the least recently used.
