@@ -77,6 +77,32 @@ rejected by `relay.divine.video` predates this policy and is not a description
 of the current relay code. Code policy alone does not prove the current
 production `disallowed_kinds` state.
 
+That older report was accurate when it was filed, and the interval it covers
+bounds how far the Divine Web precedent can be relied on. Before `7dcb41c6`
+the gate was an unconditional allowlist-membership test
+(`git show 7dcb41c6^:crates/relay/src/relay.rs`, `is_kind_allowed` returning
+`Ok(false)` to `KindNotAllowed`), and the seeded allowlist
+(`database/migrations/000015_seed_allowed_kinds.up.sql`) lists kinds `10000`
+and `10003` but not `10001`; no later migration adds it. Divine Web shipped
+profile video pins in
+[`0058e2f5`](https://github.com/divinevideo/divine-web/commit/0058e2f51091501e0cf04fe3018f05fff0460eb9)
+on 2026-03-01, so from that ship date until 2026-07-29 a kind-`10001` write
+was rejected by `relay.divine.video`.
+
+Web routing has not closed that gap since. `LIST_KINDS` in
+`src/lib/relayRouting.ts:11` is `[30000, 30001, 30005]`, so kind `10001`
+misses the primary-relay-only path that kind `10000` was given explicitly
+(`relayRouting.ts:139-143`) and falls through to the public preset fan-out,
+while the default read set is `wss://relay.divine.video` alone
+(`src/App.tsx:52-54`). A pin can therefore be accepted by a public relay the
+read path never queries.
+
+The precedent consequently establishes the event shape Divine Web uses. It is
+not evidence that a pinned-video list has ever been readable through Divine's
+own relay. Finding 24's release readback is what settles that, and it should
+run before the shape is treated as proven rather than only before Mobile
+ships.
+
 ## Primary Nostr findings
 
 ### Kind 10001 is standardized for pinned notes, not addressable videos
