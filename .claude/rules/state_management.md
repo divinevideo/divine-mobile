@@ -1244,7 +1244,8 @@ class TodoList extends _$TodoList {
 ### Never call `invalidateSelf` from a registered listener
 
 A one-shot refresh after a write, as above, is the legitimate use. A
-callback registered with `addListener` is not: invalidating there rebuilds
+callback registered with `addListener` (directly or through
+`listenForProviderLifetime`) is not: invalidating there rebuilds
 the provider, which tears down the registration and installs a *new*
 listener on every notification, and resets whatever local state the body
 was holding. A version counter seeded in the body restarts at its initial
@@ -1293,7 +1294,8 @@ Frozen at **zero** by `mobile/scripts/check_listener_invalidate_self.sh`
 Dart AST because it has to follow the callback: a tear-off of a method on the
 registering class, a named local function, and a closure bound to a variable
 or field all register the same body from a different place in the file. It
-matches `addListener` callbacks only: a `StreamSubscription.listen` or
+matches direct `addListener` callbacks and callbacks passed to the shared
+`listenForProviderLifetime` helper: a `StreamSubscription.listen` or
 `ref.listen` callback that invalidates its own provider carries the same
 hazard but relies on review. List sites with:
 

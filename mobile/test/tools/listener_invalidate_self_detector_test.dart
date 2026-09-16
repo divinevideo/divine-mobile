@@ -35,6 +35,34 @@ int provider(Ref ref) {
       expect(sites, hasLength(1));
     });
 
+    test('flags a named listenForProviderLifetime callback', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  void listener() => ref.invalidateSelf();
+  listenForProviderLifetime(ref, service, listener);
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
+    test('flags an inline listenForProviderLifetime callback', () {
+      final sites = findListenerInvalidateSelfSitesInSource('''
+int provider(Ref ref) {
+  listenForProviderLifetime(
+    ref,
+    service,
+    () => ref.invalidateSelf(),
+  );
+  return 0;
+}
+''');
+
+      expect(sites, hasLength(1));
+    });
+
     test('allows invalidateSelf outside a registered listener', () {
       final sites = findListenerInvalidateSelfSitesInSource('''
 Future<void> refresh(Ref ref) async {

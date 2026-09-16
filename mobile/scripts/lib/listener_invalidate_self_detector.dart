@@ -1,4 +1,4 @@
-// ABOUTME: Finds addListener callbacks that rebuild their own Riverpod provider.
+// ABOUTME: Finds registered listeners that rebuild their own Riverpod provider.
 // ABOUTME: This prevents listener accumulation and lost version-counter updates.
 
 import 'dart:io';
@@ -40,9 +40,8 @@ class _ListenerVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
-    if (node.methodName.name == 'addListener' &&
-        node.argumentList.arguments.isNotEmpty) {
-      final argument = node.argumentList.arguments.first;
+    final argument = _registeredCallback(node);
+    if (argument != null) {
       final callback = _unwrapCallback(
         argument is NamedExpression ? argument.expression : argument,
       );
@@ -73,6 +72,20 @@ class _ListenerVisitor extends RecursiveAstVisitor<void> {
     }
     super.visitMethodInvocation(node);
   }
+}
+
+/// The callback registered by the listener APIs used in production providers.
+///
+/// Most call `Listenable.addListener` directly. Providers that also need
+/// automatic removal use the shared `listenForProviderLifetime` helper, whose
+/// callback is its third argument.
+Expression? _registeredCallback(MethodInvocation node) {
+  final arguments = node.argumentList.arguments;
+  return switch (node.methodName.name) {
+    'addListener' when arguments.isNotEmpty => arguments.first,
+    'listenForProviderLifetime' when arguments.length >= 3 => arguments[2],
+    _ => null,
+  };
 }
 
 class _InvalidateSelfFinder extends RecursiveAstVisitor<void> {
@@ -148,7 +161,7 @@ Expression _unwrapCallback(Expression expression) {
   }
 }
 
-/// Whether the registered callback is `invalidateSelf` itself — `addListener`
+/// Whether the registered callback is `invalidateSelf` itself — a listener API
 /// handed `ref.invalidateSelf`, `_ref.invalidateSelf`, or a `this.ref` form.
 /// The listener *is* the provider rebuild, so there is no body to walk.
 bool _isInvalidateSelfTearOff(Expression expression) => switch (expression) {
