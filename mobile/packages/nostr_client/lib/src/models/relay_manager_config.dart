@@ -1,5 +1,5 @@
 // ABOUTME: Configuration for RelayManager initialization and behavior.
-// ABOUTME: Defines default relay, persistence, and reconnection settings.
+// ABOUTME: Defines the default relay, persistence, and connection factory.
 
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -65,9 +65,6 @@ class RelayManagerConfig {
   const RelayManagerConfig({
     required this.defaultRelayUrl,
     this.storage,
-    this.autoReconnect = true,
-    this.maxReconnectAttempts = 5,
-    this.reconnectDelayMs = 2000,
     this.webSocketChannelFactory,
     this.allowedRelayHost,
   });
@@ -86,16 +83,6 @@ class RelayManagerConfig {
   /// If null, relays are only kept in memory
   final RelayStorage? storage;
 
-  /// Whether to automatically reconnect when a relay disconnects
-  final bool autoReconnect;
-
-  /// Maximum number of reconnection attempts before giving up
-  final int maxReconnectAttempts;
-
-  /// Base delay in milliseconds between reconnection attempts
-  /// Uses exponential backoff: delay * 2^attempt
-  final int reconnectDelayMs;
-
   /// WebSocket channel factory for custom connection handling
   /// If null, uses the default WebSocket implementation
   final WebSocketChannelFactory? webSocketChannelFactory;
@@ -104,18 +91,12 @@ class RelayManagerConfig {
   RelayManagerConfig copyWith({
     String? defaultRelayUrl,
     RelayStorage? storage,
-    bool? autoReconnect,
-    int? maxReconnectAttempts,
-    int? reconnectDelayMs,
     WebSocketChannelFactory? webSocketChannelFactory,
     String? allowedRelayHost,
   }) {
     return RelayManagerConfig(
       defaultRelayUrl: defaultRelayUrl ?? this.defaultRelayUrl,
       storage: storage ?? this.storage,
-      autoReconnect: autoReconnect ?? this.autoReconnect,
-      maxReconnectAttempts: maxReconnectAttempts ?? this.maxReconnectAttempts,
-      reconnectDelayMs: reconnectDelayMs ?? this.reconnectDelayMs,
       webSocketChannelFactory:
           webSocketChannelFactory ?? this.webSocketChannelFactory,
       allowedRelayHost: allowedRelayHost ?? this.allowedRelayHost,

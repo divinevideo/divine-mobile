@@ -115,9 +115,6 @@ void main() {
       config: RelayManagerConfig(
         defaultRelayUrl: relay.url,
         storage: InMemoryRelayStorage(),
-        // Without this, a relay that drops at teardown keeps retrying and
-        // the failure surfaces against whichever test is running next.
-        autoReconnect: false,
         // Deliberately unset: this is the production shape, and setting it
         // would filter every `*.example` target away — `_allowedRelays`
         // collapses an all-filtered list to null, which falls back to the
