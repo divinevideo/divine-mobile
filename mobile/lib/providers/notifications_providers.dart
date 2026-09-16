@@ -12,6 +12,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/services/app_badge_service.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
@@ -178,18 +179,26 @@ notificationPreferencesDirtySyncBridgeProvider =
         final retryCount = retryCountsByPubkey[pubkey] ?? 0;
         if (retryCount >= maxDirtySyncRetries) return;
         retryCountsByPubkey[pubkey] = retryCount + 1;
-        Future<void>.microtask(() {
-          if (disposed || !isReadyForPubkey(pubkey)) return;
-          unawaited(drainDirtyPreferences(pubkey));
-        });
+        runProviderDetached(
+          Future<void>.microtask(() async {
+            if (disposed || !isReadyForPubkey(pubkey)) return;
+            await drainDirtyPreferences(pubkey);
+          }),
+          'retry dirty notification preferences',
+          logName: 'PushNotificationSync',
+        );
       }
 
       void scheduleDirtyPreferencesDrain(String pubkey) {
         if (disposed || !isReadyForPubkey(pubkey)) return;
-        Future<void>.microtask(() {
-          if (disposed || !isReadyForPubkey(pubkey)) return;
-          unawaited(drainDirtyPreferences(pubkey));
-        });
+        runProviderDetached(
+          Future<void>.microtask(() async {
+            if (disposed || !isReadyForPubkey(pubkey)) return;
+            await drainDirtyPreferences(pubkey);
+          }),
+          'schedule dirty notification preferences',
+          logName: 'PushNotificationSync',
+        );
       }
 
       void handleReadiness(NostrSessionReadiness readiness) {
@@ -203,7 +212,13 @@ notificationPreferencesDirtySyncBridgeProvider =
         handleReadiness(readiness);
       });
 
-      Future.microtask(() => handleReadiness(ref.read(nostrSessionProvider)));
+      runProviderDetached(
+        Future.microtask(
+          () => handleReadiness(ref.read(nostrSessionProvider)),
+        ),
+        'apply initial notification readiness',
+        logName: 'PushNotificationSync',
+      );
       return scheduleDirtyPreferencesDrain;
     });
 
@@ -299,8 +314,16 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   ref.onDispose(() {
     coordinator.dispose();
     unregisterBeforeSessionTeardown();
-    authStateSubscription.cancel();
-    onMessageSubscription.cancel();
+    runProviderDetached(
+      authStateSubscription.cancel(),
+      'cancel the notification auth subscription',
+      logName: 'PushNotificationSync',
+    );
+    runProviderDetached(
+      onMessageSubscription.cancel(),
+      'cancel the foreground notification subscription',
+      logName: 'PushNotificationSync',
+    );
   });
 
   return coordinator;

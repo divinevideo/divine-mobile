@@ -9,6 +9,7 @@ import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/feed_refresh_helpers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
@@ -133,7 +134,11 @@ class Curation extends _$Curation {
           : 0;
       final nextLength = (next.hasValue) ? (next.value?.length ?? 0) : 0;
       if (next.hasValue && prevLength != nextLength) {
-        _refreshCurationSets();
+        runProviderDetached(
+          _refreshCurationSets(),
+          'refresh curation sets after video changes',
+          logName: 'Curation',
+        );
       }
     });
 

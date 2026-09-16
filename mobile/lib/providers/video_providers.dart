@@ -22,6 +22,7 @@ import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -338,17 +339,21 @@ ViewEventPublisher viewEventPublisher(Ref ref) {
     appVersion: ref.watch(appVersionProvider),
     onDrop: (reason, {required String videoId, required String method}) {
       if (!reason.isStructural) return;
-      ref
-          .read(crashReportingServiceProvider)
-          .recordError(
-            Reportable(
-              ViewEventInvariantException(reason),
-              context: 'ViewEventPublisher.$method',
+      runProviderDetached(
+        ref
+            .read(crashReportingServiceProvider)
+            .recordError(
+              Reportable(
+                ViewEventInvariantException(reason),
+                context: 'ViewEventPublisher.$method',
+              ),
+              StackTrace.current,
+              reason:
+                  'ViewEventPublisher.$method.${reason.name}.videoId=$videoId',
             ),
-            StackTrace.current,
-            reason:
-                'ViewEventPublisher.$method.${reason.name}.videoId=$videoId',
-          );
+        'report a structural view-event drop',
+        logName: 'ViewEventPublisher',
+      );
     },
   );
 }
@@ -400,9 +405,11 @@ SubscribedListVideoCache? subscribedListVideoCache(Ref ref) {
   });
 
   // Sync all subscribed lists on initialization
-  Future.microtask(() async {
-    await cache.syncAllSubscribedLists();
-  });
+  runProviderDetached(
+    Future.microtask(cache.syncAllSubscribedLists),
+    'sync subscribed-list videos',
+    logName: 'SubscribedListVideoCache',
+  );
 
   ref.onDispose(() {
     // Clear callbacks when cache is disposed
@@ -772,12 +779,11 @@ LikesRepository likesRepository(Ref ref) {
   }
 
   // Initialize: load from local storage + set up persistent subscription
-  repository.initialize().catchError((Object e) {
-    Log.warning(
-      'Failed to initialize LikesRepository: $e',
-      name: 'LikesRepository',
-    );
-  });
+  runProviderDetached(
+    repository.initialize(),
+    'initialize likes',
+    logName: 'LikesRepository',
+  );
 
   ref.onDispose(repository.dispose);
 
@@ -884,12 +890,11 @@ RepostsRepository repostsRepository(Ref ref) {
   }
 
   // Initialize: load from local storage + set up persistent subscription
-  repository.initialize().catchError((Object e) {
-    Log.warning(
-      'Failed to initialize RepostsRepository: $e',
-      name: 'RepostsRepository',
-    );
-  });
+  runProviderDetached(
+    repository.initialize(),
+    'initialize reposts',
+    logName: 'RepostsRepository',
+  );
 
   ref.onDispose(repository.dispose);
 

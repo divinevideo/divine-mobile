@@ -4,6 +4,7 @@
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
@@ -32,7 +33,11 @@ SoundsRepository soundsRepository(Ref ref) {
   final repository = SoundsRepository(nostrClient: nostrClient);
 
   // Initialize asynchronously to start fetching sounds
-  repository.initialize();
+  runProviderDetached(
+    repository.initialize(),
+    'initialize the sounds repository',
+    logName: 'SoundsRepository',
+  );
 
   ref.onDispose(repository.dispose);
 

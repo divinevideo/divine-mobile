@@ -23,6 +23,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -244,13 +245,11 @@ PendingActionService? pendingActionService(Ref ref) {
   );
 
   // Initialize asynchronously
-  service.initialize().catchError((e) {
-    Log.error(
-      'Failed to initialize PendingActionService',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    service.initialize(),
+    'initialize pending social actions',
+    logName: 'PendingActionService',
+  );
 
   ref.onDispose(service.dispose);
   return service;
@@ -325,13 +324,11 @@ OutgoingDmRetryService? outgoingDmRetryService(Ref ref) {
   // (no await before the .listen call), so it is safe to register the
   // ref.listen below afterwards — fireImmediately will reach the
   // service's subscriber.
-  service.initialize().catchError((e) {
-    Log.error(
-      'Failed to initialize OutgoingDmRetryService',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    service.initialize(),
+    'initialize outgoing DM retries',
+    logName: 'OutgoingDmRetryService',
+  );
 
   ref.listen<bool>(appForegroundProvider, (_, next) {
     if (!foregroundController.isClosed) {
@@ -387,13 +384,11 @@ final profileSaveRetryServiceProvider = Provider<ProfileSaveRetryService?>((
     retryTriggerStream: _dmRetryConnectivityTriggerStream(),
   );
 
-  service.initialize().catchError((Object e) {
-    Log.error(
-      'Failed to initialize ProfileSaveRetryService',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    service.initialize(),
+    'initialize profile-save retries',
+    logName: 'ProfileSaveRetryService',
+  );
 
   ref.listen<bool>(appForegroundProvider, (_, next) {
     if (!foregroundController.isClosed) {
@@ -462,13 +457,11 @@ DmReactionRetryService? dmReactionRetryService(Ref ref) {
     isOffline: dmSendConnectivityIsOffline,
   );
 
-  service.initialize().catchError((e) {
-    Log.error(
-      'Failed to initialize DmReactionRetryService',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    service.initialize(),
+    'initialize DM reaction retries',
+    logName: 'DmReactionRetryService',
+  );
 
   ref.listen<bool>(appForegroundProvider, (_, next) {
     if (!foregroundController.isClosed) {
@@ -513,13 +506,11 @@ ViewEventRetryService? viewEventRetryService(Ref ref) {
         ref.read(analyticsServiceProvider).analyticsEnabled,
   );
 
-  service.initialize().catchError((e) {
-    Log.error(
-      'Failed to initialize ViewEventRetryService',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    service.initialize(),
+    'initialize view-event retries',
+    logName: 'ViewEventRetryService',
+  );
 
   ref.listen<bool>(appForegroundProvider, (_, next) {
     if (!foregroundController.isClosed) {
@@ -557,13 +548,11 @@ ProductEventQueue productEventQueue(Ref ref) {
 
   ref.listen<bool>(appForegroundProvider, (_, next) {
     if (next) {
-      queue.flush().catchError((Object e) {
-        Log.debug(
-          'Foreground ProductEventQueue flush failed: $e',
-          name: 'AppProviders',
-          category: LogCategory.system,
-        );
-      });
+      runProviderDetached(
+        queue.flush(),
+        'flush foreground product events',
+        logName: 'ProductEventQueue',
+      );
     }
   }, fireImmediately: true);
 
@@ -639,7 +628,11 @@ AnalyticsService analyticsService(Ref ref) {
   });
 
   // Initialize asynchronously but don't block the provider
-  Future.microtask(service.initialize);
+  runProviderDetached(
+    Future.microtask(service.initialize),
+    'initialize product analytics',
+    logName: 'AnalyticsService',
+  );
 
   return service;
 }
@@ -649,13 +642,11 @@ AnalyticsService analyticsService(Ref ref) {
 HashtagCacheService hashtagCacheService(Ref ref) {
   final service = HashtagCacheService();
   // Initialize asynchronously to avoid blocking UI
-  service.initialize().catchError((e) {
-    Log.error(
-      'Failed to initialize HashtagCacheService',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    service.initialize(),
+    'initialize the hashtag cache',
+    logName: 'HashtagCacheService',
+  );
   return service;
 }
 

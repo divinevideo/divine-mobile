@@ -15,6 +15,7 @@ import 'package:nostr_client/nostr_client.dart'
         RelayRemoveSource,
         RelayState;
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/connection_status_service.dart';
@@ -572,7 +573,11 @@ Stream<Map<String, RelayStatistics>> relayStatisticsStream(Ref ref) async* {
   service.addListener(listener);
   ref.onDispose(() {
     service.removeListener(listener);
-    controller.close();
+    runProviderDetached(
+      controller.close(),
+      'close relay-statistics updates',
+      logName: 'RelayStatistics',
+    );
   });
 
   yield* controller.stream;
@@ -641,7 +646,11 @@ void relayStatisticsBridge(Ref ref) {
 
   ref.onDispose(() {
     syncTimer.cancel();
-    subscription.cancel();
+    runProviderDetached(
+      subscription.cancel(),
+      'cancel relay-statistics synchronization',
+      logName: 'RelayStatistics',
+    );
   });
 }
 
@@ -721,7 +730,11 @@ void relaySetChangeBridge(Ref ref) {
 
   ref.onDispose(() {
     disposed = true;
-    subscription.cancel();
+    runProviderDetached(
+      subscription.cancel(),
+      'cancel relay-status synchronization',
+      logName: 'RelayStatusSync',
+    );
   });
 }
 

@@ -11,6 +11,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/account_label_service.dart';
@@ -162,7 +163,11 @@ AgeVerificationService ageVerificationService(Ref ref) {
       }
     },
   );
-  service.initialize(); // Initialize asynchronously
+  runProviderDetached(
+    service.initialize(),
+    'initialize age verification',
+    logName: 'AgeVerificationService',
+  );
   return service;
 }
 
@@ -175,7 +180,11 @@ ContentFilterService contentFilterService(Ref ref) {
     ageVerificationService: ageVerificationService,
     onAdultMediaAccessRevoked: () => _clearAdultMediaAccessCaches(ref),
   );
-  service.initialize(); // Initialize asynchronously
+  runProviderDetached(
+    service.initialize(),
+    'initialize content filters',
+    logName: 'ContentFilterService',
+  );
   ref.onDispose(service.dispose);
   return service;
 }
@@ -213,7 +222,11 @@ AccountLabelService accountLabelService(Ref ref) {
     authService: authService,
     nostrClient: nostrClient,
   );
-  service.initialize();
+  runProviderDetached(
+    service.initialize(),
+    'initialize account labels',
+    logName: 'AccountLabelService',
+  );
   return service;
 }
 

@@ -96,7 +96,7 @@ final class SoundsRepositoryProvider
   }
 }
 
-String _$soundsRepositoryHash() => r'd60c97024c6ebb820c3b5e67c8aeb3934df22888';
+String _$soundsRepositoryHash() => r'7bd99174c8279fd85e52ee3f60bbb889f6e943be';
 
 /// Async provider for trending sounds.
 ///

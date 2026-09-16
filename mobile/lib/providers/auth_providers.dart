@@ -20,6 +20,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -369,10 +370,14 @@ void zendeskIdentitySync(Ref ref) {
 
   // Set initial identity if already authenticated
   if (authService.isAuthenticated && authService.currentPublicKeyHex != null) {
-    _setZendeskIdentity(
-      authService.currentPublicKeyHex!,
-      profileRepository,
-      ref,
+    runProviderDetached(
+      _setZendeskIdentity(
+        authService.currentPublicKeyHex!,
+        profileRepository,
+        ref,
+      ),
+      'set the initial Zendesk identity',
+      logName: 'ZendeskIdentitySync',
     );
   }
 

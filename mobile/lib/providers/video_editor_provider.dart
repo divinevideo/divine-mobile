@@ -35,6 +35,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/preferences_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
@@ -223,7 +224,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       category: LogCategory.video,
     );
     if (state.isProcessing) {
-      cancelRenderVideo();
+      runProviderDetached(
+        cancelRenderVideo(),
+        'cancel the invalidated video render',
+        logName: 'VideoEditorNotifier',
+      );
     }
 
     state = state.copyWith(clearFinalRenderedClip: true);
@@ -831,7 +836,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         name: 'VideoEditorNotifier',
         category: LogCategory.video,
       );
-      autosaveChanges();
+      runProviderDetached(
+        autosaveChanges(),
+        'autosave debounced editor changes',
+        logName: 'VideoEditorNotifier',
+      );
     });
   }
 
@@ -1313,7 +1322,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       name: 'VideoEditorNotifier',
       category: .video,
     );
-    autosaveChanges();
+    runProviderDetached(
+      autosaveChanges(),
+      'autosave the updated cover thumbnail',
+      logName: 'VideoEditorNotifier',
+    );
   }
 
   /// Set the processing state.
@@ -1425,7 +1438,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         finalRenderedClip: finalRenderedClip,
         proofManifestJson: proofManifestJson,
       );
-      autosaveChanges();
+      await autosaveChanges();
     } on VideoRenderFailedException catch (error) {
       // A newer render owns the processing flag now — leave it alone.
       if (generation != _renderGeneration) {
@@ -1567,7 +1580,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
           proofManifestJson: proofManifestJson,
         ),
       );
-      autosaveChanges();
+      await autosaveChanges();
     } catch (error, stackTrace) {
       if (generation != _renderGeneration) return;
       Log.error(

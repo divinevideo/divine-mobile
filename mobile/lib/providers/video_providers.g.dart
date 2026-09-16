@@ -435,7 +435,7 @@ final class ViewEventPublisherProvider
 }
 
 String _$viewEventPublisherHash() =>
-    r'd8502c00768c8f3c7577d29ab8c1f0e97c958bf5';
+    r'df9cf4b7bc80b36b4867e0bef308f12977ac45cd';
 
 /// Subscribed list video cache for merging subscribed list videos into home feed
 /// Depends on CuratedListService which is async, so watch the state provider
@@ -491,7 +491,7 @@ final class SubscribedListVideoCacheProvider
 }
 
 String _$subscribedListVideoCacheHash() =>
-    r'e7d9c2f15e09ab7d3848597e7d288749e3050f08';
+    r'dfe035c7b2e45278ef7839ef001ef6abfed73191';
 
 /// Video sharing service
 ///
@@ -1180,4 +1180,4 @@ final class LikesRepositoryProvider
   }
 }
 
-String _$likesRepositoryHash() => r'8fde317eb74b77ef2ab6e5f985753b53c666c622';
+String _$likesRepositoryHash() => r'59f2753487199775c904ff2ac02ad09eed652b48';
