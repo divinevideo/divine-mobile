@@ -404,7 +404,11 @@ class ShadowedIconRasterCache {
     try {
       return await picture.toImage(pixels, pixels);
     } finally {
+      // Both pictures have been consumed by toImage: the recorder's own, and
+      // the SVG's decoded picture, which vg.loadPicture hands to the caller
+      // to dispose.
       picture.dispose();
+      info.picture.dispose();
     }
   }
 
