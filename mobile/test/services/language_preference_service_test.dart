@@ -175,8 +175,21 @@ void main() {
         expect(notifications, equals(1));
       });
 
+      test('does not notify when no custom language is set', () async {
+        await service.initialize();
+        var notifications = 0;
+        service.addListener(() {
+          notifications++;
+        });
+
+        await service.clearContentLanguage();
+
+        expect(notifications, isZero);
+      });
+
       test('does not notify listeners after dispose', () async {
         await service.initialize();
+        await service.setContentLanguage('de');
         var notifications = 0;
         service.addListener(() {
           notifications++;

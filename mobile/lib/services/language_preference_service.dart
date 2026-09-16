@@ -85,6 +85,9 @@ class LanguagePreferenceService {
   /// Clear the custom language preference, reverting to device default.
   Future<void> clearContentLanguage() async {
     try {
+      await initialize();
+      if (_customLanguage == null) return;
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(prefsKey);
       _customLanguage = null;
