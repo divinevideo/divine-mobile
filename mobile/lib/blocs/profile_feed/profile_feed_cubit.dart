@@ -796,10 +796,11 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       );
       return;
     }
+    // A quiet request never touches pinFeedback: no reset, no outcome.
     emit(
       state.copyWith(
         isPinMutationInFlight: true,
-        pinFeedback: ProfileFeedPinFeedback.none,
+        pinFeedback: event.quiet ? null : ProfileFeedPinFeedback.none,
       ),
     );
 
@@ -822,12 +823,14 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       emit(
         state.copyWith(
           isPinMutationInFlight: false,
-          pinFeedback: switch (result.failure) {
-            ProfilePinFailure.limitReached =>
-              ProfileFeedPinFeedback.pinLimitReached,
-            _ when isPin => ProfileFeedPinFeedback.pinFailed,
-            _ => ProfileFeedPinFeedback.unpinFailed,
-          },
+          pinFeedback: event.quiet
+              ? null
+              : switch (result.failure) {
+                  ProfilePinFailure.limitReached =>
+                    ProfileFeedPinFeedback.pinLimitReached,
+                  _ when isPin => ProfileFeedPinFeedback.pinFailed,
+                  _ => ProfileFeedPinFeedback.unpinFailed,
+                },
         ),
       );
       return;
@@ -842,9 +845,12 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
         videos: _applyFeedFilters(_unfilteredVideos),
         pinnedCoordinates: coordinates,
         isPinMutationInFlight: false,
-        pinFeedback: isPin
-            ? ProfileFeedPinFeedback.pinned
-            : ProfileFeedPinFeedback.unpinned,
+        pinFeedback: event.quiet
+            ? null
+            : switch (event) {
+                ProfileFeedPinRequested() => ProfileFeedPinFeedback.pinned,
+                ProfileFeedUnpinRequested() => ProfileFeedPinFeedback.unpinned,
+              },
       ),
     );
   }

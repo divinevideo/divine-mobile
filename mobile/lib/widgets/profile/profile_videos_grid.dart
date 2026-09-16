@@ -199,11 +199,17 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
           extra: video,
         ),
         onDeleted: () async {
+          final feedCubit = context.read<ProfileFeedCubit>();
           // The service marks the video locally deleted; a refresh drops the
           // tile from the grid without waiting for relay propagation.
-          context.read<ProfileFeedCubit>().add(
-            const ProfileFeedRefreshRequested(),
-          );
+          feedCubit.add(const ProfileFeedRefreshRequested());
+          // The deleted video's coordinate would otherwise keep one of the
+          // pin slots with no tile left to free it from. Quiet: the delete
+          // already reported, and a stale reference is not worth a second
+          // snackbar either way.
+          if (feedCubit.state.isPinned(video)) {
+            feedCubit.add(ProfileFeedUnpinRequested(video, quiet: true));
+          }
         },
         pinAction: _pinActionFor(video),
       );

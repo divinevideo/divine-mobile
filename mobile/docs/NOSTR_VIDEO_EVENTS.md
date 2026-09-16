@@ -443,7 +443,9 @@ clients ignore them. Mobile (`ProfilePinsRepository`) therefore:
   deviation), and removes every copy of a coordinate on unpin
 - caps the list at 6 owner-authored coordinates, counting stored references
   whether or not their video still resolves; an imported longer list is never
-  truncated
+  truncated. A successful delete of a pinned video from the profile grid is
+  followed by a best-effort, unannounced unpin so the deleted coordinate does
+  not keep occupying a slot with no tile left to free it from
 - reads the list with full relay settlement before every write and refuses to
   publish over an inconclusive read, because a replaceable event republished
   from a partial read silently drops items

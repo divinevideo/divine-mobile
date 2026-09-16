@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -92,6 +93,17 @@ DivineVideoDraft _createTestDraft({String title = 'Test Draft'}) {
 Finder _thumbnail(int number) => find.bySemanticsLabel(
   lookupAppLocalizations(const Locale('en')).profileVideoThumbnailLabel(number),
 );
+
+/// The kind-5 a successful delete carries, handed on to enforcement.
+final _deletionEvent = Event.fromJson({
+  'id': 'delete-event-id',
+  'pubkey': _ownPubkey,
+  'created_at': 1757385263,
+  'kind': 5,
+  'tags': <List<String>>[],
+  'content': '',
+  'sig': '12' * 64,
+});
 
 List<model.VideoEvent> _createTestVideos({
   required String pubkey,
@@ -1113,6 +1125,140 @@ void main() {
         expect(find.text(l10n.videoGridEditVideo), findsOneWidget);
         expect(find.text(l10n.videoGridPinVideo), findsNothing);
         expect(find.text(l10n.videoGridUnpinVideo), findsNothing);
+      });
+
+      testWidgets(
+        'deleting a pinned video quietly unpins it once the delete succeeds',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final videos = _createTestVideos(
+            pubkey: _ownPubkey,
+            addressable: true,
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final cubit = _stubbedProfileFeedCubit(
+            state: ProfileFeedState(
+              status: ProfileFeedStatus.ready,
+              pinnedCoordinates: [videos[0].addressableId!],
+            ),
+          );
+          final deletionService = _MockContentDeletionService();
+          final enforcementRepository = _MockEnforcementRepository();
+          when(
+            () => deletionService.quickDelete(
+              video: videos[0],
+              reason: DeleteReason.personalChoice,
+            ),
+          ).thenAnswer(
+            (_) async => DeleteResult.createSuccess(
+              'delete-event-id',
+              acceptance: DeleteAcceptance.everyRelay,
+              deleteEvent: _deletionEvent,
+            ),
+          );
+          when(
+            () => enforcementRepository.enforce(
+              'delete-event-id',
+              deletionEvent: _deletionEvent,
+            ),
+          ).thenAnswer(
+            (_) async => const CreatorDeleteEnforcementResult.confirmed(),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              userIdHex: _ownPubkey,
+              videos: videos,
+              profileFeedCubit: cubit,
+              additionalOverrides: [
+                contentDeletionServiceProvider.overrideWith(
+                  (ref) async => deletionService,
+                ),
+                creatorDeleteEnforcementRepositoryProvider.overrideWithValue(
+                  enforcementRepository,
+                ),
+              ],
+            ),
+          );
+          await tester.longPress(_thumbnail(1));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoGridDeleteVideo));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+
+          verify(() => cubit.add(const ProfileFeedRefreshRequested()))
+              .called(1);
+          verify(
+            () => cubit.add(ProfileFeedUnpinRequested(videos[0], quiet: true)),
+          ).called(1);
+        },
+      );
+
+      testWidgets('deleting an unpinned video leaves the pin list alone', (
+        tester,
+      ) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(
+          pubkey: _ownPubkey,
+          addressable: true,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _stubbedProfileFeedCubit(
+          state: ProfileFeedState(
+            status: ProfileFeedStatus.ready,
+            pinnedCoordinates: [videos[1].addressableId!],
+          ),
+        );
+        final deletionService = _MockContentDeletionService();
+        final enforcementRepository = _MockEnforcementRepository();
+        when(
+          () => deletionService.quickDelete(
+            video: videos[0],
+            reason: DeleteReason.personalChoice,
+          ),
+        ).thenAnswer(
+          (_) async => DeleteResult.createSuccess(
+            'delete-event-id',
+            acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: _deletionEvent,
+          ),
+        );
+        when(
+          () => enforcementRepository.enforce(
+            'delete-event-id',
+            deletionEvent: _deletionEvent,
+          ),
+        ).thenAnswer(
+          (_) async => const CreatorDeleteEnforcementResult.confirmed(),
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _ownPubkey,
+            videos: videos,
+            profileFeedCubit: cubit,
+            additionalOverrides: [
+              contentDeletionServiceProvider.overrideWith(
+                (ref) async => deletionService,
+              ),
+              creatorDeleteEnforcementRepositoryProvider.overrideWithValue(
+                enforcementRepository,
+              ),
+            ],
+          ),
+        );
+        await tester.longPress(_thumbnail(1));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoGridDeleteVideo));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.shareMenuDelete));
+        await tester.pumpAndSettle();
+
+        verify(() => cubit.add(const ProfileFeedRefreshRequested())).called(1);
+        verifyNever(
+          () => cubit.add(any(that: isA<ProfileFeedUnpinRequested>())),
+        );
       });
     });
 

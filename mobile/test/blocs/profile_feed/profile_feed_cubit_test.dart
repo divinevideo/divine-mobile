@@ -1319,6 +1319,72 @@ void main() {
         expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.unpinned);
       });
 
+      test('a quiet unpin adopts the accepted list and leaves the last '
+          'feedback in place', () async {
+        final b = _video('b', createdAt: 2000, dTag: 'b');
+        when(
+          () => h.pins.pin(_coordinate('b')),
+        ).thenAnswer(
+          (_) async => ProfilePinMutation.succeeded([_coordinate('b')]),
+        );
+        when(
+          () => h.pins.unpin(_coordinate('b')),
+        ).thenAnswer((_) async => const ProfilePinMutation.succeeded([]));
+        final cubit = await buildReady(
+          _result([_video('a', createdAt: 3000, dTag: 'a'), b], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        cubit.add(ProfileFeedPinRequested(b));
+        await pumpEventQueue();
+        expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.pinned);
+        final feedback = <ProfileFeedPinFeedback>[];
+        final sub = cubit.stream.listen((s) => feedback.add(s.pinFeedback));
+        addTearDown(sub.cancel);
+
+        cubit.add(ProfileFeedUnpinRequested(b, quiet: true));
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['a', 'b']);
+        expect(cubit.state.pinnedCoordinates, isEmpty);
+        expect(cubit.state.isPinMutationInFlight, isFalse);
+        // Neither the reset a loud request starts with nor an outcome.
+        expect(feedback, isNotEmpty);
+        expect(feedback, everyElement(ProfileFeedPinFeedback.pinned));
+      });
+
+      test('a quiet unpin that fails reports nothing either', () async {
+        final b = _video('b', createdAt: 2000, dTag: 'b');
+        when(
+          () => h.pins.pin(_coordinate('b')),
+        ).thenAnswer(
+          (_) async => ProfilePinMutation.succeeded([_coordinate('b')]),
+        );
+        when(() => h.pins.unpin(_coordinate('b'))).thenAnswer(
+          (_) async => const ProfilePinMutation.failed(
+            ProfilePinFailure.couldNotReachRelays,
+          ),
+        );
+        final cubit = await buildReady(
+          _result([_video('a', createdAt: 3000, dTag: 'a'), b], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        cubit.add(ProfileFeedPinRequested(b));
+        await pumpEventQueue();
+        expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.pinned);
+        final feedback = <ProfileFeedPinFeedback>[];
+        final sub = cubit.stream.listen((s) => feedback.add(s.pinFeedback));
+        addTearDown(sub.cancel);
+
+        cubit.add(ProfileFeedUnpinRequested(b, quiet: true));
+        await pumpEventQueue();
+
+        expect(cubit.state.pinnedCoordinates, [_coordinate('b')]);
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+        expect(cubit.state.isPinMutationInFlight, isFalse);
+        expect(feedback, isNotEmpty);
+        expect(feedback, everyElement(ProfileFeedPinFeedback.pinned));
+      });
+
       test(
         'pin failure leaves the order alone and reports the cause',
         () async {

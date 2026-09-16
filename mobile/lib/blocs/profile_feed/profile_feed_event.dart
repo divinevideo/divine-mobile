@@ -89,12 +89,16 @@ final class ProfileFeedPinsChanged extends ProfileFeedEvent {
 /// discarded, so a pin and an unpin can never interleave their
 /// read-modify-write and the sheet's disabled state stays truthful.
 sealed class ProfileFeedPinMutationRequested extends ProfileFeedEvent {
-  const ProfileFeedPinMutationRequested(this.video);
+  const ProfileFeedPinMutationRequested(this.video, {this.quiet = false});
 
   final VideoEvent video;
 
+  /// Leave [ProfileFeedState.pinFeedback] untouched whatever the outcome, for
+  /// a mutation the viewer did not ask for by name.
+  final bool quiet;
+
   @override
-  List<Object?> get props => [video];
+  List<Object?> get props => [video, quiet];
 }
 
 /// Pins [video] to the front of the viewer's own profile.
@@ -103,6 +107,11 @@ final class ProfileFeedPinRequested extends ProfileFeedPinMutationRequested {
 }
 
 /// Removes [video] from the viewer's own pinned videos.
+///
+/// The grid sends it [quiet] after a successful delete of a pinned video:
+/// the deleted coordinate would otherwise keep occupying one of the pin
+/// slots with no tile left to unpin it from. That cleanup is best-effort and
+/// rides on the delete's own snackbar, so neither outcome announces itself.
 final class ProfileFeedUnpinRequested extends ProfileFeedPinMutationRequested {
-  const ProfileFeedUnpinRequested(super.video);
+  const ProfileFeedUnpinRequested(super.video, {super.quiet});
 }
