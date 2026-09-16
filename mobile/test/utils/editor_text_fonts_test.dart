@@ -33,7 +33,7 @@ void main() {
 
   group('VideoEditorConstants.textFonts', () {
     test('holds no font twice', () {
-      const fonts = VideoEditorConstants.textFonts;
+      final fonts = VideoEditorConstants.textFonts;
       expect(fonts.toSet(), hasLength(fonts.length));
     });
   });

@@ -55,6 +55,9 @@ jobs:
             --dart-define=ENVIRONMENT=production \
             --no-source-maps
 
+      - name: Check web bundle file sizes
+        run: bash scripts/check_web_bundle_file_size.sh build/web
+
       - name: Bundle preview artifact
         run: |
           tar -C build -czf pr-web-preview-site.tar.gz web
