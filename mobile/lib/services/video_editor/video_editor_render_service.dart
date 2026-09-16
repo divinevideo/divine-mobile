@@ -80,12 +80,12 @@ class _RenderProgressTracker {
   /// Routes the native progress of the stop-motion assembly running under
   /// [assemblyTaskId] (step [step] of [stepCount]) into the assembly slice
   /// of the composite progress.
-  void startAssemblyStep({
+  Future<void> startAssemblyStep({
     required String assemblyTaskId,
     required int step,
     required int stepCount,
-  }) {
-    final _ = _assemblySubscription?.cancel();
+  }) async {
+    await _assemblySubscription?.cancel();
     _assemblySubscription = ProVideoEditor.instance
         .progressStreamById(assemblyTaskId)
         .listen((progressModel) {
@@ -339,7 +339,7 @@ class VideoEditorRenderService {
       for (final clip in clips) {
         if (clip.video == null && clip.isStopMotion) {
           final assemblyTaskId = '$effectiveTaskId-stop-motion-$assemblyStep';
-          progressTracker.startAssemblyStep(
+          await progressTracker.startAssemblyStep(
             assemblyTaskId: assemblyTaskId,
             step: assemblyStep,
             stepCount: assemblyStepCount,
