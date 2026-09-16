@@ -1352,7 +1352,7 @@ abstract class AppLocalizations {
   /// **'Unpinned. Back in its usual spot.'**
   String get profileUnpinSuccess;
 
-  /// Snackbar and sheet subtitle when the creator already has the maximum number of pinned videos. {count} is that maximum.
+  /// Snackbar when the creator taps Pin Video while already at the maximum number of pinned videos. {count} is that maximum.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{You can pin {count} video. Unpin it to make room.} other{You can pin up to {count} videos. Unpin one to make room.}}'**
