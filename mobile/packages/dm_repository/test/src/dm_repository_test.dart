@@ -22224,11 +22224,13 @@ void main() {
         'a server-side policy block after enqueue drops the row, '
         'not marks it failed (#6067)',
         () async {
-          // The client canSendTo gate passed — the block is server-side and
-          // the client did not predict it — so the row is enqueued and sent,
-          // then Keycast refuses with a 403 that sendRumor classifies as
-          // blocked. A policy block is terminal, so the row must be dropped
-          // (no doomed Resend bubble), the same as the group and drain arms.
+          // A genuine `.blocked` result now only originates from the
+          // client-side `DmSendPolicy` pre-gate inside sendRumor (e.g. a
+          // retired moderation recipient) — a bare Keycast 403 marker match
+          // no longer terminalizes as blocked (#7337), since the client
+          // cannot tell that ambiguous refusal from a real recipient block.
+          // A policy block is terminal, so the row must be dropped (no doomed
+          // Resend bubble), the same as the group and drain arms.
           stubSendRumor(
             (_, _) async => const NIP17SendResult.blocked(
               'blocked: recipient not permitted by send policy',

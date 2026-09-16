@@ -394,12 +394,17 @@ void main() {
 
     group('Keycast policy-denial classification (#6067)', () {
       test(
-        'a 403 "operation denied by policy" refusal terminalizes as blocked',
+        'a 403 "operation denied by policy" refusal classifies as a hard '
+        'failure, not a block (#7337)',
         () async {
-          // Keycast's server-side verified_minor gate refuses to sign/encrypt
-          // and surfaces as an RpcException whose 403 body carries this
-          // marker. A remote signer is not isolate-capable, so sendRumor's
-          // _buildWrap goes straight to the injected main-isolate builder;
+          // This body is not unique to the verified_minor gate it was
+          // originally written for (#6067) — Keycast returns the identical
+          // string for any authorization whose allowed-kinds policy scope
+          // excludes the kind being signed, e.g. `policy:social` signing a
+          // kind-13 seal. The client cannot tell those causes apart from the
+          // body alone, so it must not classify as a recipient block. A
+          // remote signer is not isolate-capable, so sendRumor's _buildWrap
+          // goes straight to the injected main-isolate builder;
           // LocalNostrSigner stands in for that not-isolate-capable signer,
           // and the builder raises the refusal. The real RpcException string
           // shape is reproduced so the substring match is tested against the
@@ -414,7 +419,7 @@ void main() {
           );
           final rumor = refusing.buildRumor(
             recipientPubkey: _recipientPubkey,
-            content: 'should terminalize, not retry',
+            content: 'should hard-fail, not be silently dropped',
           );
 
           final result = await refusing.sendRumor(
@@ -422,7 +427,10 @@ void main() {
             recipientPubkey: _recipientPubkey,
           );
 
-          expect(result.blocked, isTrue);
+          // NOT blocked — a block deletes the queued row (#7337); an
+          // ambiguous policy refusal must leave it as a hard-failed row the
+          // sweep re-drives and the user can retry or delete.
+          expect(result.blocked, isFalse);
           expect(result.success, isFalse);
           expect(result.retryablePending, isFalse);
           verifyNever(() => mockNostrClient.publishEvent(any()));
@@ -499,33 +507,40 @@ void main() {
         },
       );
 
-      test('a policy refusal still wins over the transient marker', () async {
-        // Ordering guard. A Keycast response could in principle be both a
-        // 5xx-shaped transient and carry the verified_minor denial marker;
-        // terminalizing must win, because a blocked send re-driven until
-        // maxRetries deterministically re-fails (#6028).
-        final blocked = NIP17MessageService(
-          signer: LocalNostrSigner(_testPrivateKey),
-          senderPublicKey: _testPublicKey,
-          nostrService: mockNostrClient,
-          giftWrapBuilder: (_, _, _) async =>
-              throw _TransientRpcExceptionDouble(
-                'HTTP 504: {"error":"Operation denied by policy"}',
-              ),
-        );
-        final rumor = blocked.buildRumor(
-          recipientPubkey: _recipientPubkey,
-          content: 'denial beats transience',
-        );
+      test(
+        'a policy refusal still classifies as a hard failure over the '
+        'transient marker (not retryable-pending, not blocked)',
+        () async {
+          // Ordering guard. A Keycast response could in principle be both a
+          // 5xx-shaped transient and carry the ambiguous policy-denial
+          // marker; the hard-failure classification must win. Both lanes are
+          // re-driven by the sweep, but retryable-pending keeps the row
+          // `pending` — a bubble that looks in-flight — while a policy
+          // refusal never clears on its own and must surface as a red
+          // failure the user can act on (#6028, #7337).
+          final policyDenied = NIP17MessageService(
+            signer: LocalNostrSigner(_testPrivateKey),
+            senderPublicKey: _testPublicKey,
+            nostrService: mockNostrClient,
+            giftWrapBuilder: (_, _, _) async =>
+                throw _TransientRpcExceptionDouble(
+                  'HTTP 504: {"error":"Operation denied by policy"}',
+                ),
+          );
+          final rumor = policyDenied.buildRumor(
+            recipientPubkey: _recipientPubkey,
+            content: 'denial beats transience',
+          );
 
-        final result = await blocked.sendRumor(
-          rumorEvent: rumor,
-          recipientPubkey: _recipientPubkey,
-        );
+          final result = await policyDenied.sendRumor(
+            rumorEvent: rumor,
+            recipientPubkey: _recipientPubkey,
+          );
 
-        expect(result.blocked, isTrue);
-        expect(result.retryablePending, isFalse);
-      });
+          expect(result.blocked, isFalse);
+          expect(result.retryablePending, isFalse);
+        },
+      );
     });
 
     group('sendRumor relay targeting', () {
@@ -2868,11 +2883,14 @@ void main() {
         expect(signer.batchCalls, equals(2));
       });
 
-      test('a policy refusal thrown by the batch still terminalizes as '
-          'blocked', () async {
-        // Keycast's verified_minor gate answers 403 "Operation denied by
-        // policy". The batch rethrows it, the fallback's own encrypt re-hits
-        // it, and sendRumor must classify it terminal rather than retryable.
+      test('a policy refusal thrown by the batch still classifies as a '
+          'hard failure, not blocked (#7337)', () async {
+        // Keycast answers 403 "Operation denied by policy" for several
+        // unrelated denials (#7337), not only the verified_minor gate this
+        // was originally written for. The batch rethrows it, the fallback's
+        // own encrypt re-hits it, and sendRumor must classify it as a hard
+        // failure rather than retryable-pending — but not as a recipient
+        // block, since the client cannot tell the causes apart.
         final signer = _BatchWrapSigner(
           localPrivateKey,
           onBatch: (rumor, recipients) async =>
@@ -2889,12 +2907,14 @@ void main() {
         final result = await service.sendRumor(
           rumorEvent: service.buildRumor(
             recipientPubkey: _recipientPubkey,
-            content: 'minor gate',
+            content: 'ambiguous policy denial',
           ),
           recipientPubkey: _recipientPubkey,
         );
 
-        expect(result.blocked, isTrue);
+        expect(result.blocked, isFalse);
+        expect(result.success, isFalse);
+        expect(result.retryablePending, isFalse);
       });
 
       for (final (label, kind) in [
