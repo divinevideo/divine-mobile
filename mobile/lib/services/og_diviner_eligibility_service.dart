@@ -24,7 +24,7 @@ class OgDivinerEligibilityService {
         _eligibility[normalized] = eligible;
         return eligible;
       } finally {
-        _inFlight.remove(normalized);
+        _inFlight.removeWhere((key, _) => key == normalized);
       }
     });
   }
