@@ -19,4 +19,4 @@ final FutureProviderFamily<bool, String> ogDivinerEligibilityProvider =
       pubkey,
     ) {
       return ref.watch(ogDivinerEligibilityServiceProvider).isEligible(pubkey);
-    });
+    }, retry: (_, _) => null);
