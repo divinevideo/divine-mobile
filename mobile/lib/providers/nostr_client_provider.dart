@@ -11,6 +11,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
@@ -238,7 +239,7 @@ class NostrService extends _$NostrService {
 
     final initialPubkey = authService.currentIdentity?.pubkey;
 
-    _authSubscription?.cancel();
+    unawaited(_authSubscription?.cancel());
     _authSubscription = authService.authStateStream.listen(
       _enqueueAuthStateChanged,
     );
@@ -268,14 +269,18 @@ class NostrService extends _$NostrService {
 
       // Schedule initialization after build completes.
       // Add user relays BEFORE initialize() to avoid race condition.
-      Future.microtask(
-        () => _initializeClient(
-          client: client,
-          pubkey: initialPubkey,
-          clientGeneration: clientGeneration,
-          userRelayUrls: userRelayUrls,
-          source: 'build',
+      runProviderDetached(
+        Future.microtask(
+          () => _initializeClient(
+            client: client,
+            pubkey: initialPubkey,
+            clientGeneration: clientGeneration,
+            userRelayUrls: userRelayUrls,
+            source: 'build',
+          ),
         ),
+        'initialize the Nostr client after provider build',
+        logName: 'NostrService',
       );
     }
 
@@ -284,10 +289,14 @@ class NostrService extends _$NostrService {
       _initializationRetryTimer = null;
       authService.registerUserRelaysDiscoveredCallback(null);
       authService.registerBootstrapRelayListCallback(null);
-      _authSubscription?.cancel();
+      unawaited(_authSubscription?.cancel());
       _invalidateClientGeneration();
       for (final trackedClient in _trackedClients.toList()) {
-        trackedClient.dispose();
+        runProviderDetached(
+          trackedClient.dispose(),
+          'dispose a tracked Nostr client',
+          logName: 'NostrService',
+        );
       }
       _trackedClients.clear();
     });
@@ -311,7 +320,11 @@ class NostrService extends _$NostrService {
 
   void _disposeClient(NostrClient client) {
     if (_trackedClients.remove(client)) {
-      client.dispose();
+      runProviderDetached(
+        client.dispose(),
+        'dispose a superseded Nostr client',
+        logName: 'NostrService',
+      );
     }
   }
 
@@ -743,31 +756,35 @@ class NostrService extends _$NostrService {
         ),
       );
       if (admitted.isEmpty) return;
-      Future.microtask(() async {
-        try {
-          if (!_isCurrentClientForPubkey(
-            client,
-            targetPubkey,
-            clientGeneration,
-          )) {
-            return;
-          }
-          final added = await client.addRelays(admitted);
-          if (added > 0) {
-            Log.info(
-              '[NostrService] Added $added discovered relay(s) after NIP-65 discovery',
+      runProviderDetached(
+        Future.microtask(() async {
+          try {
+            if (!_isCurrentClientForPubkey(
+              client,
+              targetPubkey,
+              clientGeneration,
+            )) {
+              return;
+            }
+            final added = await client.addRelays(admitted);
+            if (added > 0) {
+              Log.info(
+                '[NostrService] Added $added discovered relay(s) after NIP-65 discovery',
+                name: 'NostrService',
+                category: LogCategory.system,
+              );
+            }
+          } catch (e) {
+            Log.warning(
+              '[NostrService] Failed to add discovered relays: $e',
               name: 'NostrService',
               category: LogCategory.system,
             );
           }
-        } catch (e) {
-          Log.warning(
-            '[NostrService] Failed to add discovered relays: $e',
-            name: 'NostrService',
-            category: LogCategory.system,
-          );
-        }
-      });
+        }),
+        'add discovered relays',
+        logName: 'NostrService',
+      );
     };
   }
 

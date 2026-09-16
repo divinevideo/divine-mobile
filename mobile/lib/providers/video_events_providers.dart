@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -154,7 +155,14 @@ class VideoEvents extends _$VideoEvents {
       _debounceTimer?.cancel();
       videoEventService.removeListener(_onVideoEventServiceChange);
       unregisterVideoUpdate(); // Clean up video update callback
-      _subject?.close();
+      final subject = _subject;
+      if (subject != null) {
+        runProviderDetached(
+          subject.close(),
+          'close the video-events stream',
+          logName: 'VideoEventsProvider',
+        );
+      }
       _subject = null;
     });
 
@@ -321,29 +329,33 @@ class VideoEvents extends _$VideoEvents {
       category: LogCategory.video,
     );
 
-    Future.microtask(() {
-      Log.debug(
-        'VideoEvents: emitting on microtask (canEmit: $_canEmit)',
-        name: 'VideoEventsProvider',
-        category: LogCategory.video,
-      );
-      if (_canEmit && !_listEquals(currentEvents, _lastEmittedEvents)) {
-        // The subject keeps the reference, not a copy, so identical() checks
-        // downstream still hold.
-        _subject!.add(currentEvents);
+    runProviderDetached(
+      Future.microtask(() {
         Log.debug(
-          'VideoEvents: emitted ${currentEvents.length} events',
+          'VideoEvents: emitting on microtask (canEmit: $_canEmit)',
           name: 'VideoEventsProvider',
           category: LogCategory.video,
         );
-      } else {
-        Log.debug(
-          'VideoEvents: skipped emission (canEmit: $_canEmit, listsEqual: ${_listEquals(currentEvents, _lastEmittedEvents)})',
-          name: 'VideoEventsProvider',
-          category: LogCategory.video,
-        );
-      }
-    });
+        if (_canEmit && !_listEquals(currentEvents, _lastEmittedEvents)) {
+          // The subject keeps the reference, not a copy, so identical() checks
+          // downstream still hold.
+          _subject!.add(currentEvents);
+          Log.debug(
+            'VideoEvents: emitted ${currentEvents.length} events',
+            name: 'VideoEventsProvider',
+            category: LogCategory.video,
+          );
+        } else {
+          Log.debug(
+            'VideoEvents: skipped emission (canEmit: $_canEmit, listsEqual: ${_listEquals(currentEvents, _lastEmittedEvents)})',
+            name: 'VideoEventsProvider',
+            category: LogCategory.video,
+          );
+        }
+      }),
+      'emit refreshed video events',
+      logName: 'VideoEventsProvider',
+    );
   }
 
   /// Stop subscription and remove listeners

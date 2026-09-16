@@ -140,7 +140,7 @@ final class FollowRepositoryProvider
   }
 }
 
-String _$followRepositoryHash() => r'd2574431abdc640b6e7bc9e620de2d7ad7b59b5e';
+String _$followRepositoryHash() => r'5a671ceb5e8e6c4251be5b476e35a819dd0ed682';
 
 /// Provider for [CuratedListRepository] instance.
 ///
@@ -266,7 +266,7 @@ final class HashtagRepositoryProvider
   }
 }
 
-String _$hashtagRepositoryHash() => r'9bb8a737619e6dbf039bd8d0dd218c94a6ca17e6';
+String _$hashtagRepositoryHash() => r'd26b4a4e5299cec2ab1098e621e0dc5c97e9ddc6';
 
 /// Provider for CategoriesRepository instance.
 ///

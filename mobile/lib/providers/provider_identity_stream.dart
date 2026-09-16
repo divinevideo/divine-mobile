@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 
 /// Wraps [source] in a provider whose value is a stream of [source]'s
 /// successive values, seeded with the value current at subscribe time.
@@ -58,7 +59,11 @@ Provider<Stream<T>> identityStreamOf<T>(ProviderListenable<T> source) {
     });
     ref.onDispose(() {
       subscription.close();
-      controller.close();
+      runProviderDetached(
+        controller.close(),
+        'close the provider identity stream',
+        logName: 'ProviderIdentityStream',
+      );
     });
 
     // Stream.multi, not an `async*` generator: a generator returns a
@@ -68,7 +73,11 @@ Provider<Stream<T>> identityStreamOf<T>(ProviderListenable<T> source) {
     // subscribe time.
     return Stream<T>.multi((listener) {
       if (controller.isClosed) {
-        listener.close();
+        runProviderDetached(
+          listener.close(),
+          'close an expired provider identity listener',
+          logName: 'ProviderIdentityStream',
+        );
         return;
       }
       listener.add(ref.read(source));

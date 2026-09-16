@@ -244,7 +244,7 @@ final class AgeVerificationServiceProvider
 }
 
 String _$ageVerificationServiceHash() =>
-    r'2b83bb9538d76af5d6c9c0a67255e983a346dc93';
+    r'8dc893d3d6efc3c11a01f4f6b0df4396cd896af2';
 
 /// Content filter service for per-category Show/Warn/Hide preferences.
 /// keepAlive ensures preferences persist and are consistent across the app.
@@ -300,7 +300,7 @@ final class ContentFilterServiceProvider
 }
 
 String _$contentFilterServiceHash() =>
-    r'5a65a3122d6eed3dfa908e99ec098562b6d33b82';
+    r'd96a2c0d3c6e169aa29b29fa518733799b5a7463';
 
 /// Account label service for self-labeling content (NIP-32 Kind 1985).
 
@@ -353,7 +353,7 @@ final class AccountLabelServiceProvider
 }
 
 String _$accountLabelServiceHash() =>
-    r'c72d91b64d2c4522a482868be6bd053eba21a24b';
+    r'c21ef2515c638daa0057efce40ebf4e214625e86';
 
 /// Moderation label service for subscribing to Kind 1985 labeler events.
 

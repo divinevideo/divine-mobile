@@ -33,6 +33,7 @@ import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/profile_pins_signer_adapter.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -169,13 +170,11 @@ FollowRepository followRepository(Ref ref) {
   }
 
   // Initialize asynchronously
-  repository.initialize().catchError((e) {
-    Log.error(
-      'Failed to initialize FollowRepository',
-      name: 'AppProviders',
-      error: e,
-    );
-  });
+  runProviderDetached(
+    repository.initialize(),
+    'initialize the follow repository',
+    logName: 'FollowRepository',
+  );
 
   // Listen for Nostr session readiness changes to re-initialize when keys become
   // available. This handles the case where the provider was created before keys
@@ -189,13 +188,11 @@ FollowRepository followRepository(Ref ref) {
         name: 'AppProviders',
         category: LogCategory.system,
       );
-      repository.initialize().catchError((e) {
-        Log.error(
-          'Failed to re-initialize FollowRepository after keys ready',
-          name: 'AppProviders',
-          error: e,
-        );
-      });
+      runProviderDetached(
+        repository.initialize(),
+        'reinitialize the follow repository after keys become ready',
+        logName: 'FollowRepository',
+      );
     }
   });
 
@@ -295,7 +292,11 @@ HashtagRepository hashtagRepository(Ref ref) {
 
   // Ensure static hashtags are loaded before any local search callback runs.
   // loadTopHashtags is idempotent and no-ops if already loaded.
-  topHashtags.loadTopHashtags();
+  runProviderDetached(
+    topHashtags.loadTopHashtags(),
+    'load top hashtags',
+    logName: 'HashtagRepository',
+  );
 
   return HashtagRepository(
     funnelcakeApiClient: funnelcakeClient,

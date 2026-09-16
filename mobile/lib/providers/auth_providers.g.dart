@@ -659,7 +659,7 @@ final class ZendeskIdentitySyncProvider
 }
 
 String _$zendeskIdentitySyncHash() =>
-    r'e49d4f9cedf56ec4131b30a6f1d9d45dada68bed';
+    r'554890a66c75af325c622e86e5d580b8ec96a638';
 
 /// Provider that mirrors the authenticated identity into Firebase Analytics
 /// and Crashlytics.

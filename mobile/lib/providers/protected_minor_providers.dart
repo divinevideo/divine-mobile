@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/protected_minor_repository.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -134,7 +135,11 @@ final isProtectedMinorProvider = Provider<bool>((ref) {
   );
   if (trusted != null) {
     // Persist trusted transitions for future cold starts (fire-and-forget).
-    store.applyLiveStatus(pubkey, trusted);
+    runProviderDetached(
+      store.applyLiveStatus(pubkey, trusted),
+      'persist protected-minor status',
+      logName: 'ProtectedMinorProviders',
+    );
     if (trusted.kind == ProtectedMinorStatusKind.protected) return true;
     if (trusted.kind == ProtectedMinorStatusKind.notProtected) return false;
   }
@@ -228,7 +233,11 @@ final isKeyManagementRestrictedProvider = Provider<bool>((ref) {
     // Intentional fire-and-forget monotonic marker; SharedPreferences updates
     // its in-memory cache before the Future completes, so later synchronous
     // wasKeycastAccountFor() reads see it in-session.
-    store.markKeycastAccount(pubkey);
+    runProviderDetached(
+      store.markKeycastAccount(pubkey),
+      'persist Keycast account history',
+      logName: 'ProtectedMinorProviders',
+    );
   }
 
   final trusted = trustedProtectedMinorStatus(
@@ -238,7 +247,11 @@ final isKeyManagementRestrictedProvider = Provider<bool>((ref) {
   if (trusted != null) {
     // Same fire-and-forget persistence as isProtectedMinorProvider (idempotent
     // there and here; whichever seam resolves first records the verdict).
-    store.applyLiveStatus(pubkey, trusted);
+    runProviderDetached(
+      store.applyLiveStatus(pubkey, trusted),
+      'persist key-management minor status',
+      logName: 'ProtectedMinorProviders',
+    );
     if (trusted.kind == ProtectedMinorStatusKind.protected) return true;
     if (trusted.kind == ProtectedMinorStatusKind.notProtected) return false;
   }

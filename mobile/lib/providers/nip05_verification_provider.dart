@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/nip05_verification_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -56,7 +57,11 @@ Nip05VerificationService nip05VerificationService(Ref ref) {
   final service = Nip05VerificationService(db.nip05VerificationsDao);
 
   // Clean up expired entries on startup
-  Future.microtask(service.deleteExpired);
+  runProviderDetached(
+    Future.microtask(service.deleteExpired),
+    'delete expired NIP-05 verifications',
+    logName: 'Nip05VerificationService',
+  );
 
   ref.onDispose(service.dispose);
 
@@ -195,7 +200,11 @@ Stream<Nip05VerificationStatus> nip05VerificationStream(
 
     ref.onDispose(() {
       verificationService.removeListener(listener);
-      controller.close();
+      runProviderDetached(
+        controller.close(),
+        'close the NIP-05 status stream',
+        logName: 'Nip05Verification',
+      );
     });
 
     yield* controller.stream;

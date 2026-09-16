@@ -11,6 +11,7 @@ import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/providers/popular_videos_feed_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/services/foreground_idle_warmup_coordinator.dart';
 
 /// Tracks whether foreground feeds have recently been under user control.
@@ -47,7 +48,11 @@ class ForegroundFeedActivityGate {
   /// Releases resources owned by the gate.
   void dispose() {
     _idleTimer?.cancel();
-    _changes.close();
+    runProviderDetached(
+      _changes.close(),
+      'close the foreground activity stream',
+      logName: 'ForegroundFeedActivityGate',
+    );
   }
 }
 

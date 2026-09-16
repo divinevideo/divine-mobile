@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/nostr_signature_verification_policy.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/audio_device_preference_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
@@ -64,7 +65,11 @@ final nostrSignatureVerificationPolicyProvider =
 @Riverpod(keepAlive: true)
 AudioDevicePreferenceService audioDevicePreferenceService(Ref ref) {
   final service = AudioDevicePreferenceService();
-  service.initialize(); // Initialize asynchronously
+  runProviderDetached(
+    service.initialize(),
+    'initialize audio-device preferences',
+    logName: 'AudioDevicePreferenceService',
+  );
   return service;
 }
 
@@ -74,7 +79,11 @@ AudioDevicePreferenceService audioDevicePreferenceService(Ref ref) {
 @Riverpod(keepAlive: true)
 LanguagePreferenceService languagePreferenceService(Ref ref) {
   final service = LanguagePreferenceService();
-  service.initialize(); // Initialize asynchronously
+  runProviderDetached(
+    service.initialize(),
+    'initialize language preferences',
+    logName: 'LanguagePreferenceService',
+  );
   ref.onDispose(service.dispose);
   return service;
 }

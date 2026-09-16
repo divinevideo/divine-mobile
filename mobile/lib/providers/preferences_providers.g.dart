@@ -122,7 +122,7 @@ final class AudioDevicePreferenceServiceProvider
 }
 
 String _$audioDevicePreferenceServiceHash() =>
-    r'9880cf38a5d5ae812a798e7a5c4fa96ffa3578d6';
+    r'cd3fc12de7e106a47976b9726f8626aa9dd523a9';
 
 /// Language preference service for managing the user's preferred content
 /// language. Used for NIP-32 self-labeling on published video events.
@@ -181,7 +181,7 @@ final class LanguagePreferenceServiceProvider
 }
 
 String _$languagePreferenceServiceHash() =>
-    r'a6e5b3c32d40108a2c44f422fcb95f64e4a68214';
+    r'97066a39a87e568a25bf048686701348e237bdaa';
 
 /// Rebuild trigger for consumers that need the latest content-language
 /// preference in request parameters.

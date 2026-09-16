@@ -22,14 +22,22 @@ void runDetached(
   required String logName,
   required LogCategory category,
 }) {
+  // `then<void>` rather than `catchError`: the latter completes a future of
+  // [operation]'s reified type, so a `Future<bool>` handed in as
+  // `Future<void>` would log the failure and then reject again with
+  // "The error handler of Future.catchError must return a value of the
+  // future's type" — the unhandled rejection this helper exists to prevent.
   unawaited(
-    operation.catchError((Object error, StackTrace stackTrace) {
-      Log.error(
-        'Failed to $description: $error',
-        name: logName,
-        category: category,
-        stackTrace: stackTrace,
-      );
-    }),
+    operation.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        Log.error(
+          'Failed to $description: $error',
+          name: logName,
+          category: category,
+          stackTrace: stackTrace,
+        );
+      },
+    ),
   );
 }

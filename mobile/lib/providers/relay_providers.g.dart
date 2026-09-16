@@ -215,7 +215,7 @@ final class RelayStatisticsStreamProvider
 }
 
 String _$relayStatisticsStreamHash() =>
-    r'0ab9617467aabccc62b36b0de4d79a0ce9d01c5e';
+    r'b8256f2ad21b0ca38274fbd80a93049e8bd59858';
 
 /// Bridge provider that connects NostrClient relay status updates to
 /// RelayStatisticsService.
@@ -286,7 +286,7 @@ final class RelayStatisticsBridgeProvider
 }
 
 String _$relayStatisticsBridgeHash() =>
-    r'4c105f2e370e769b48b77ac90ca08bca6f95a385';
+    r'4c54f742c7d5dcc916ef7a3c0e36a1d1b5d26e5a';
 
 /// Bridge provider that detects when the configured relay set changes
 /// (relays added or removed) and triggers a full feed reset+resubscribe.
@@ -342,4 +342,4 @@ final class RelaySetChangeBridgeProvider
 }
 
 String _$relaySetChangeBridgeHash() =>
-    r'8bede2eaa43817158fa03820fe7d43f07a6bf988';
+    r'09def62980a90972f23d5b1143b934d00b4bc091';
