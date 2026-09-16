@@ -376,6 +376,18 @@ across sources before applying visibility exactly once. The same coordinate
 suppression must cover stale copies already present in the base feed, not only
 Funnelcake fallback.
 
+That comparator is necessary but not sufficient on its own, because a client
+can only order candidates it receives. Funnelcake's serving path resolves a
+coordinate with `argMax(id, created_at)`, which its own source describes as
+picking "an arbitrary row among ties", and a test there forbids restoring the
+NIP-01 lexical rule "without aligning both sides"
+(`crates/clickhouse/src/client.rs:14471-14484,19596` at the pinned commit).
+Where a coordinate arrives through that path — including the
+`_fetchMissingVideosFromFunnelcake` fallback this design keeps — the tie is
+already collapsed before Mobile sees it. Treat deterministic selection as
+guaranteed over the raw relay-event path, and treat backend alignment as a
+release dependency rather than something the Mobile comparator can supply.
+
 The exact cache backend, package boundary, and same-event enrichment merge are
 engineering choices, not product facts. They should follow the repository's
 existing UI → BLoC → Repository → Client architecture and CI package rules.
@@ -509,6 +521,11 @@ The report recommends coverage for:
   and opaque `content`, then publish an empty replacement as cleanup while
   assuming old signed revisions may remain on some relays. Minority-relay
   success alone does not prove the normal read path will surface pins.
+- Confirm before release whether Funnelcake's serving path still collapses
+  equal-`created_at` candidates with `argMax(id, created_at)`. Until both
+  sides share one tie-break rule, the deterministic-winner guarantee holds
+  only for the raw relay-event path, and that limit belongs in the shipped
+  behaviour rather than in the comparator's description.
 - Mirror every new ARB key into all locales or record it through the repository's
   explicit untranslated-debt mechanism, regenerate localization outputs, and
   run `flutter test test/l10n/arb_consistency_test.dart` from `mobile/`. Wire
