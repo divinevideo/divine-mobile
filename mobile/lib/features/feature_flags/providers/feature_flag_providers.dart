@@ -1,6 +1,7 @@
 // ABOUTME: Riverpod providers for feature flag service and state management
 // ABOUTME: Provides dependency injection for feature flag system with proper lifecycle management
 
+import 'package:collection/collection.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
@@ -42,22 +43,32 @@ FeatureFlagService featureFlagService(Ref ref) {
   return service;
 }
 
-/// Feature flag state provider (reactive to service changes)
+/// Feature flag state provider that publishes service changes to its state.
+///
+/// The subscription is installed once per provider lifetime; a notification
+/// assigns the new flags to this notifier's state instead of rebuilding it.
 @riverpod
-Map<FeatureFlag, bool> featureFlagState(Ref ref) {
-  final service = ref.watch(featureFlagServiceProvider);
+class FeatureFlagStateNotifier extends _$FeatureFlagStateNotifier {
+  @override
+  Map<FeatureFlag, bool> build() {
+    final service = ref.watch(featureFlagServiceProvider);
 
-  // Set up listener to invalidate provider when service changes
-  void listener() {
-    ref.invalidateSelf();
+    void listener() => state = service.currentState.allFlags;
+
+    service.addListener(listener);
+    ref.onDispose(() => service.removeListener(listener));
+
+    return service.currentState.allFlags;
   }
 
-  service.addListener(listener);
-  ref.onDispose(() {
-    service.removeListener(listener);
-  });
-
-  return service.currentState.allFlags;
+  // service.currentState.allFlags allocates a fresh Map.unmodifiable on every
+  // call, so the default identity-based updateShouldNotify would renotify
+  // every dependent on every service change, even one that changed no flag.
+  @override
+  bool updateShouldNotify(
+    Map<FeatureFlag, bool> previous,
+    Map<FeatureFlag, bool> next,
+  ) => !const MapEquality<FeatureFlag, bool>().equals(previous, next);
 }
 
 /// Individual feature flag check provider family

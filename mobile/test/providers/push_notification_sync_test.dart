@@ -145,6 +145,25 @@ class _TestNostrSession extends NostrSession {
   }
 }
 
+/// Overrides [currentEnvironmentProvider] for the account-switch cleanup
+/// test below.
+///
+/// [EnvironmentConfig] equality only compares [EnvironmentConfig.environment],
+/// so the switch in that test walks between two values that compare equal
+/// while differing in [EnvironmentConfig.pushServicePubkey]. Overriding
+/// [updateShouldNotify] to always return true publishes every assignment
+/// regardless of that equality gate.
+class _TestCurrentEnvironment extends CurrentEnvironmentNotifier {
+  @override
+  EnvironmentConfig build() => EnvironmentConfig.production;
+
+  @override
+  bool updateShouldNotify(
+    EnvironmentConfig previous,
+    EnvironmentConfig next,
+  ) => true;
+}
+
 NotificationSettings _settings(AuthorizationStatus status) =>
     NotificationSettings(
       alert: AppleNotificationSetting.enabled,
@@ -459,9 +478,8 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
-            currentEnvironmentProvider.overrideWith(
-              (_) =>
-                  const EnvironmentConfig(environment: AppEnvironment.staging),
+            currentEnvironmentProvider.overrideWithValue(
+              const EnvironmentConfig(environment: AppEnvironment.staging),
             ),
             nostrSessionProvider.overrideWith(() => nostrSession),
           ],
@@ -1772,7 +1790,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
-            currentEnvironmentProvider.overrideWith((_) => pushEnvironment),
+            currentEnvironmentProvider.overrideWithValue(pushEnvironment),
             nostrSessionProvider.overrideWith(() => nostrSession),
             nostrClientFactoryProvider.overrideWithValue(
               ({dbClient, environmentConfig, signer, statisticsService}) =>
@@ -1862,7 +1880,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
-            currentEnvironmentProvider.overrideWith((_) => pushEnvironment),
+            currentEnvironmentProvider.overrideWithValue(pushEnvironment),
             nostrSessionProvider.overrideWith(() => nostrSession),
             nostrClientFactoryProvider.overrideWithValue(
               ({dbClient, environmentConfig, signer, statisticsService}) =>
@@ -1948,7 +1966,6 @@ void main() {
         // ignore: unnecessary_lambdas
         when(() => cleanupClient.dispose()).thenAnswer((_) async {});
 
-        var currentEnvironment = pushEnvironment;
         EnvironmentConfig? cleanupEnvironment;
         Object? cleanupStatisticsService;
         final nostrSession = _TestNostrSession(
@@ -1964,7 +1981,9 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
-            currentEnvironmentProvider.overrideWith((_) => currentEnvironment),
+            currentEnvironmentProvider.overrideWith(
+              _TestCurrentEnvironment.new,
+            ),
             nostrSessionProvider.overrideWith(() => nostrSession),
             nostrClientFactoryProvider.overrideWithValue(
               ({dbClient, environmentConfig, signer, statisticsService}) {
@@ -1975,6 +1994,8 @@ void main() {
             ),
           ],
         );
+        container.read(currentEnvironmentProvider.notifier).state =
+            pushEnvironment;
         final coordinator = container.read(pushNotificationSyncProvider)!;
 
         when(() => nostrClient.publicKey).thenReturn(pubkeyA);
@@ -1986,8 +2007,8 @@ void main() {
         );
         await pumpEventQueue(times: 2);
 
-        currentEnvironment = stagingEnvironment;
-        container.invalidate(currentEnvironmentProvider);
+        container.read(currentEnvironmentProvider.notifier).state =
+            stagingEnvironment;
         nostrSession.setReadiness(
           NostrSessionReadiness.nostrReady(
             pubkey: pubkeyA,
@@ -2108,7 +2129,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
-            currentEnvironmentProvider.overrideWith((_) => pushEnvironment),
+            currentEnvironmentProvider.overrideWithValue(pushEnvironment),
             nostrSessionProvider.overrideWith(() => nostrSession),
             nostrClientFactoryProvider.overrideWithValue(
               ({dbClient, environmentConfig, signer, statisticsService}) =>
@@ -2240,7 +2261,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(
               _MockNotificationService(),
             ),
-            currentEnvironmentProvider.overrideWith((_) => pushEnvironment),
+            currentEnvironmentProvider.overrideWithValue(pushEnvironment),
             nostrSessionProvider.overrideWith(() => nostrSession),
             nostrClientFactoryProvider.overrideWithValue(
               ({dbClient, environmentConfig, signer, statisticsService}) =>
