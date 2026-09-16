@@ -149,6 +149,15 @@ class WebSocketConnectionManager {
   int _reconnectAttempts = 0;
   bool _shouldReconnect = true;
 
+  /// Self-heal reconnects attempted back-to-back after short-lived
+  /// connections. Reset by a stable connection or an explicit connect, so
+  /// only a relay that keeps accepting and then immediately dropping the
+  /// socket can exhaust it (#8992).
+  int _consecutiveSelfHealReconnects = 0;
+
+  /// Whether the current connection received at least one inbound frame.
+  bool _receivedMessageOnThisConnection = false;
+
   /// Set by [dispose] before its first await, so a connect that is already
   /// in flight can tell that its owner is gone by the time it resumes.
   bool _disposed = false;
@@ -225,6 +234,7 @@ class WebSocketConnectionManager {
     }
 
     _shouldReconnect = true;
+    _consecutiveSelfHealReconnects = 0;
     return _doConnect();
   }
 
@@ -288,6 +298,7 @@ class WebSocketConnectionManager {
 
       _setState(ConnectionState.connected);
       _reconnectAttempts = 0;
+      _receivedMessageOnThisConnection = false;
 
       // Track connection time as initial activity
       _lastActivityAt = DateTime.now();
@@ -366,6 +377,7 @@ class WebSocketConnectionManager {
 
   void _onMessage(dynamic message) {
     _lastActivityAt = DateTime.now();
+    _receivedMessageOnThisConnection = true;
     if (_messageController.isClosed) return;
     if (message is String) {
       _messageController.add(message);
@@ -398,11 +410,39 @@ class WebSocketConnectionManager {
 
     _setState(ConnectionState.disconnected);
 
+    if (!_shouldReconnect) return;
+
+    // A connection that carried a message or outlived the idle timeout was
+    // stable: the next self-heal starts a fresh budget. One that accepted and
+    // immediately closed is not stable, and repeated short-lived cycles are
+    // capped at [WebSocketConfig.maxReconnectAttempts] so a relay that keeps
+    // dropping the socket cannot drive an unbounded dial loop (#8992).
+    if (_closedConnectionWasStable()) {
+      _consecutiveSelfHealReconnects = 0;
+    } else {
+      _consecutiveSelfHealReconnects++;
+    }
+    if (_consecutiveSelfHealReconnects > config.maxReconnectAttempts) {
+      log('Self-heal reconnect budget exhausted for $url');
+      return;
+    }
+
     // A receive-only socket (a live REQ with nothing left to send) never
     // reaches the on-demand reconnect in send(), so repair it here (#8992).
-    if (_shouldReconnect) {
-      unawaited(_tryReconnect());
-    }
+    unawaited(_tryReconnect());
+  }
+
+  /// Whether the connection that just closed proved stable enough to clear
+  /// the self-heal budget.
+  ///
+  /// A connection that received inbound traffic, or that stayed up at least
+  /// as long as the idle timeout, is doing useful work; only a socket that
+  /// came and went without either counts toward the budget.
+  bool _closedConnectionWasStable() {
+    if (_receivedMessageOnThisConnection) return true;
+    if (config.idleTimeout == Duration.zero) return false;
+    final idle = idleDuration;
+    return idle != null && idle >= config.idleTimeout;
   }
 
   /// Disconnect from the WebSocket server
@@ -674,6 +714,7 @@ class WebSocketConnectionManager {
 
     resetReconnection();
     _shouldReconnect = true;
+    _consecutiveSelfHealReconnects = 0;
     // Neither resetReconnection nor _closeChannel touches the heartbeat, so
     // without this a reconnect that fails leaves the previous connection's
     // Timer.periodic running with nothing to beat on. disconnect() and

@@ -134,6 +134,10 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
   /// A real handshake is a network round trip that other work can run inside.
   Completer<void>? readyGate;
 
+  /// When true, every created channel closes right away, modelling a relay
+  /// that accepts the handshake and then drops the socket.
+  bool closeOnCreate = false;
+
   @override
   WebSocketChannel create(Uri uri) {
     if (shouldFail) {
@@ -145,6 +149,9 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
           : (readyGate?.future ?? Future.value()),
     );
     createdChannels.add(channel);
+    if (closeOnCreate) {
+      scheduleMicrotask(channel.simulateClose);
+    }
     final signal = createdSignal;
     if (signal != null && !signal.isCompleted) signal.complete();
     return channel;
@@ -160,6 +167,7 @@ class MockWebSocketChannelFactory implements WebSocketChannelFactory {
     readyError = null;
     readyGate = null;
     createdSignal = null;
+    closeOnCreate = false;
   }
 }
 
@@ -441,6 +449,71 @@ void main() {
         // well inside this 50ms window.
         expect(manager.state, equals(ConnectionState.connected));
         expect(mockFactory.createdChannels.length, greaterThan(1));
+      });
+
+      test('stops self-healing after repeated immediate closes', () async {
+        final factory = MockWebSocketChannelFactory()..closeOnCreate = true;
+        final flappingManager = WebSocketConnectionManager(
+          url: 'wss://flapping.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 3,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration.zero,
+            idleTimeout: Duration.zero,
+          ),
+        );
+        addTearDown(flappingManager.dispose);
+
+        await flappingManager.connect();
+
+        // One initial dial plus maxReconnectAttempts self-heals, then the
+        // budget is exhausted: the manager waits for an on-demand path
+        // instead of dialling a relay that keeps dropping the socket
+        // forever (#8992).
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        expect(factory.createdChannels, hasLength(4));
+        expect(flappingManager.state, equals(ConnectionState.disconnected));
+      });
+
+      test('a connection that carried traffic resets the self-heal '
+          'budget', () async {
+        final factory = MockWebSocketChannelFactory()..closeOnCreate = true;
+        final flappingManager = WebSocketConnectionManager(
+          url: 'wss://flapping.relay.com',
+          channelFactory: factory,
+          logger: logMessages.add,
+          config: const WebSocketConfig(
+            maxReconnectAttempts: 2,
+            baseReconnectDelay: Duration(milliseconds: 10),
+            maxReconnectDelay: Duration(milliseconds: 10),
+            heartbeatInterval: Duration.zero,
+            idleTimeout: Duration.zero,
+          ),
+        );
+        addTearDown(flappingManager.dispose);
+
+        await flappingManager.connect();
+
+        // One initial dial plus maxReconnectAttempts self-heals exhaust the
+        // budget; the relay continues to be retried on demand only.
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+        expect(factory.createdChannels, hasLength(3));
+
+        // An on-demand dial that then receives a message proves the link is
+        // usable, so the next remote close starts a fresh self-heal budget
+        // and dials again instead of staying parked at the exhausted cap.
+        factory.closeOnCreate = false;
+        await flappingManager.send('["REQ","sub"]');
+        factory.lastChannel!.simulateMessage('["EOSE","sub"]');
+        factory.lastChannel!.simulateClose();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        expect(factory.createdChannels, hasLength(5));
+        expect(flappingManager.state, equals(ConnectionState.connected));
       });
     });
 
