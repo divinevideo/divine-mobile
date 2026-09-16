@@ -1,7 +1,10 @@
 // ABOUTME: Tests fail-closed device authentication result mapping
 // ABOUTME: Covers granted, denied, unsupported, and unconfigured devices
 
+import 'dart:async';
+
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:mocktail/mocktail.dart';
@@ -49,6 +52,58 @@ void main() {
       expect(result, DeviceAuthenticationResult.denied);
     });
 
+    testWidgets(
+      'retries once after authentication is canceled while backgrounded',
+      (tester) async {
+        final firstAttempt = Completer<bool>();
+        final secondAttempt = Completer<bool>();
+        when(
+          () => localAuthentication.isDeviceSupported(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => localAuthentication.authenticate(
+            localizedReason: any(named: 'localizedReason'),
+            persistAcrossBackgrounding: true,
+          ),
+        ).thenAnswer((_) => firstAttempt.future);
+
+        final resultFuture = authentication.authenticate(reason: 'Verify');
+        await tester.pump();
+
+        firstAttempt.completeError(
+          const LocalAuthException(
+            code: LocalAuthExceptionCode.systemCanceled,
+          ),
+        );
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+
+        when(
+          () => localAuthentication.authenticate(
+            localizedReason: any(named: 'localizedReason'),
+            persistAcrossBackgrounding: true,
+          ),
+        ).thenAnswer((_) => secondAttempt.future);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        secondAttempt.complete(true);
+
+        expect(
+          await resultFuture,
+          DeviceAuthenticationResult.authenticated,
+        );
+        verify(
+          () => localAuthentication.authenticate(
+            localizedReason: 'Verify',
+            persistAcrossBackgrounding: true,
+          ),
+        ).called(2);
+      },
+    );
+
     test(
       'returns unavailable when device authentication is unsupported',
       () async {
@@ -94,9 +149,12 @@ void main() {
       },
     );
 
-    test(
+    testWidgets(
       'returns denied when the platform reports an unmapped failure code',
-      () async {
+      (tester) async {
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
         when(
           () => localAuthentication.isDeviceSupported(),
         ).thenAnswer((_) async => true);
@@ -109,7 +167,10 @@ void main() {
           const LocalAuthException(code: LocalAuthExceptionCode.userCanceled),
         );
 
-        final result = await authentication.authenticate(reason: 'Verify');
+        final resultFuture = authentication.authenticate(reason: 'Verify');
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 251));
+        final result = await resultFuture;
 
         expect(result, DeviceAuthenticationResult.denied);
       },
