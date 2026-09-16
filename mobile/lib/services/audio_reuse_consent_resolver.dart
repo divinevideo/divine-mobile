@@ -34,16 +34,13 @@ class AudioReuseConsentResolver {
           .where((video) => video.addressableId == sourceAddress)
           .toList();
       if (matching.isEmpty) return false;
-      // `allow_audio_reuse` is rebuilt on every edit and an addressable read
-      // resolves to the current revision, so this is the live answer. A
-      // revision predating the
-      // sound cannot speak for it. This does not lock out the legacy population:
+      // A revision predating the sound cannot speak for it. This does not lock
+      // out the legacy population:
       // `VideoEventPublisher` publishes the Kind 1063 before the video event
       // because the video needs the audio id for its `e` tag, so an unedited
       // source is never older than its own sound.
       source = matching.first;
       if (source.createdAt < sound.createdAt) return false;
-      if (originalSoundReuseTerms(source) != true) return false;
     } catch (error) {
       Log.warning(
         'Reuse consent lookup failed for source $sourceAddress: $error',
@@ -55,7 +52,11 @@ class AudioReuseConsentResolver {
 
     try {
       final policy = await _videosRepository.refreshAudioReusePolicy(source);
-      return !policy.audioReuseSuppressed;
+      // Funnelcake resolves the current logical video, signed ordinary-video
+      // terms, server-owned archive provenance and rollout, and takedowns in
+      // one no-store response. Relay metadata is not authoritative for any of
+      // those action-time decisions.
+      return policy.allowAudioReuse;
     } catch (error) {
       Log.warning(
         'Audio reuse policy lookup failed; blocking reuse: $error',

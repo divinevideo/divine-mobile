@@ -5,10 +5,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -76,7 +82,11 @@ void main() {
     resolver = AudioReuseConsentResolver(videosRepository: videosRepository);
     when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
       (_) async => const AudioReusePolicy(
+        videoFound: true,
+        verifiedArchive: true,
+        archiveAudioReuseEnabled: true,
         audioReuseSuppressed: false,
+        allowAudioReuse: true,
         validFor: Duration(seconds: 60),
       ),
     );
@@ -86,6 +96,19 @@ void main() {
     when(
       () => videosRepository.getVideosByAddressableIds([_sourceAddress]),
     ).thenAnswer((_) async => videos);
+  }
+
+  void stubPolicy({required bool allowAudioReuse}) {
+    when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
+      (_) async => AudioReusePolicy(
+        videoFound: true,
+        verifiedArchive: false,
+        archiveAudioReuseEnabled: false,
+        audioReuseSuppressed: !allowAudioReuse,
+        allowAudioReuse: allowAudioReuse,
+        validFor: const Duration(seconds: 60),
+      ),
+    );
   }
 
   group('verify', () {
@@ -110,7 +133,11 @@ void main() {
       stubSource([_video()]);
       when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
         (_) async => const AudioReusePolicy(
+          videoFound: true,
+          verifiedArchive: true,
+          archiveAudioReuseEnabled: true,
           audioReuseSuppressed: true,
+          allowAudioReuse: false,
           validFor: Duration(seconds: 60),
         ),
       );
@@ -123,11 +150,12 @@ void main() {
 
     test('honors explicit false on the current ordinary source', () async {
       stubSource([_video(reuseMarker: 'false')]);
+      stubPolicy(allowAudioReuse: false);
       expect(
         await resolver.verify(_sound(hasExplicitReuseConsent: true)),
         isFalse,
       );
-      verifyNever(() => videosRepository.refreshAudioReusePolicy(any()));
+      verify(() => videosRepository.refreshAudioReusePolicy(any())).called(1);
     });
 
     test('grants reuse from the source video the sound points at', () async {
@@ -142,21 +170,91 @@ void main() {
 
     test('honours a revocation on the current revision', () async {
       stubSource([_video(createdAt: 120, reuseMarker: 'false')]);
+      stubPolicy(allowAudioReuse: false);
 
       expect(await resolver.verify(_sound()), isFalse);
     });
 
+    test('allows an enabled verified classic without an event grant', () async {
+      stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
+
+      expect(await resolver.verify(_sound()), isTrue);
+    });
+
     test(
-      'allows an enabled verified classic without an event grant',
+      'uses authoritative policy when a relay classic lacks archive flags',
       () async {
-        stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
+        stubSource([_video(reuseMarker: null)]);
 
         expect(await resolver.verify(_sound()), isTrue);
+        verify(() => videosRepository.refreshAudioReusePolicy(any())).called(1);
+      },
+    );
+
+    test(
+      'allows a relay-parsed classic through the real repository pipeline',
+      () async {
+        final nostrClient = _MockNostrClient();
+        final funnelcakeClient = _MockFunnelcakeApiClient();
+        final relayEvent = Event.fromJson({
+          'id': 'd' * 64,
+          'pubkey': _pubkey,
+          'created_at': 101,
+          'kind': EventKind.videoVertical,
+          'tags': [
+            ['d', 'source-video'],
+            ['url', 'https://cdn.example.com/video.mp4'],
+          ],
+          'content': '',
+          'sig': '',
+        });
+        when(
+          () => nostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [relayEvent]);
+        when(() => funnelcakeClient.isAvailable).thenReturn(true);
+        when(
+          () => funnelcakeClient.getBulkVideoStats(any()),
+        ).thenAnswer(
+          (_) async => const BulkVideoStatsResponse(stats: {}),
+        );
+        when(
+          () => funnelcakeClient.refreshAudioReusePolicy(
+            kind: EventKind.videoVertical,
+            pubkey: _pubkey,
+            dTag: 'source-video',
+          ),
+        ).thenAnswer(
+          (_) async => const AudioReusePolicy(
+            videoFound: true,
+            verifiedArchive: true,
+            archiveAudioReuseEnabled: true,
+            audioReuseSuppressed: false,
+            allowAudioReuse: true,
+            validFor: Duration(seconds: 60),
+          ),
+        );
+        final realRepository = VideosRepository(
+          nostrClient: nostrClient,
+          funnelcakeApiClient: funnelcakeClient,
+        );
+        final realResolver = AudioReuseConsentResolver(
+          videosRepository: realRepository,
+        );
+
+        expect(await realResolver.verify(_sound()), isTrue);
+        verify(
+          () => funnelcakeClient.refreshAudioReusePolicy(
+            kind: EventKind.videoVertical,
+            pubkey: _pubkey,
+            dTag: 'source-video',
+          ),
+        ).called(1);
       },
     );
 
     test('fails closed for an unmarked ordinary source', () async {
       stubSource([_video(reuseMarker: null)]);
+      stubPolicy(allowAudioReuse: false);
 
       expect(await resolver.verify(_sound()), isFalse);
     });
@@ -201,7 +299,7 @@ void main() {
       expect(await resolver.verify(_sound()), isFalse);
     });
 
-    test('fails closed when the suppression lookup throws', () async {
+    test('fails closed when the policy lookup throws', () async {
       when(
         () => videosRepository.refreshAudioReusePolicy(any()),
       ).thenThrow(StateError('policy unavailable'));

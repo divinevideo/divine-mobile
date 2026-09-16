@@ -166,7 +166,11 @@ void main() {
         addressableDTag: 'classic-id',
       );
       const policy = AudioReusePolicy(
+        videoFound: true,
+        verifiedArchive: true,
+        archiveAudioReuseEnabled: true,
         audioReuseSuppressed: false,
+        allowAudioReuse: true,
         validFor: Duration(seconds: 60),
       );
 
