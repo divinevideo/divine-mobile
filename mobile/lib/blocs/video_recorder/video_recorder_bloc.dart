@@ -68,6 +68,15 @@ typedef CountdownSoundServiceFactory = CountdownSoundService Function();
 /// Factory for creating an [AudioPlaybackService].
 typedef AudioPlaybackServiceFactory = AudioPlaybackService Function();
 
+/// Factory for creating the platform-specific [CameraService].
+///
+/// Injectable so tests can exercise the callback wiring performed by the
+/// bloc constructor instead of bypassing it with a service override.
+typedef CameraServiceFactory = CameraService Function({
+  required void Function({bool? forceCameraRebuild}) onUpdateState,
+  required void Function(EditorVideo video) onAutoStopped,
+});
+
 /// Accessor for the [ClipManagerNotifier] (method-call + public-getter
 /// side) living in the surrounding Riverpod scope. The bloc never
 /// imports flutter_riverpod; the wiring site passes
@@ -144,10 +153,10 @@ class VideoRecorderBloc
   /// migration (the sibling providers are out of scope for #4744 —
   /// see `tasks/plan_4744.md` §4 WS-2 PR3).
   ///
-  /// [cameraService] is an optional override for tests. When omitted
-  /// the bloc creates the platform-appropriate [CameraService] via
-  /// `CameraService.create`, wiring its update / auto-stop / remote
-  /// callbacks to internal events.
+  /// [cameraService] and [cameraServiceFactory] are test seams. When the
+  /// service override is omitted, the factory creates the platform-appropriate
+  /// [CameraService] and wires its update / auto-stop / remote callbacks to
+  /// internal events.
   ///
   /// [countdownSoundServiceFactory] and [audioPlaybackServiceFactory]
   /// are optional test overrides. Defaults preserve the iOS
@@ -158,6 +167,7 @@ class VideoRecorderBloc
     required ReadVideoEditorState readVideoEditorState,
     required ReadSharedPreferences readSharedPreferences,
     CameraService? cameraService,
+    CameraServiceFactory cameraServiceFactory = CameraService.create,
     CountdownSoundServiceFactory? countdownSoundServiceFactory,
     AudioPlaybackServiceFactory? audioPlaybackServiceFactory,
     PerformanceTraceMonitor? performanceMonitor,
@@ -177,7 +187,7 @@ class VideoRecorderBloc
        super(const VideoRecorderBlocState()) {
     _cameraService =
         _cameraServiceOverride ??
-        CameraService.create(
+        cameraServiceFactory(
           onUpdateState: ({forceCameraRebuild}) {
             if (isClosed) return;
             addIfOpen(

@@ -234,13 +234,17 @@ void main() {
   });
 
   /// Builds a bloc with all dependencies wired to the mocks.
-  VideoRecorderBloc buildBloc({RecordingStartedCallback? onRecordingStarted}) {
+  VideoRecorderBloc buildBloc({
+    RecordingStartedCallback? onRecordingStarted,
+    CameraServiceFactory? cameraServiceFactory,
+  }) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
       readVideoEditor: () => videoEditor,
       readVideoEditorState: VideoEditorProviderState.new,
       readSharedPreferences: () => prefs,
-      cameraService: cameraService,
+      cameraService: cameraServiceFactory == null ? cameraService : null,
+      cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
       onRecordingStarted: onRecordingStarted,
     );
   }
@@ -1541,6 +1545,68 @@ void main() {
           verify(() => cameraService.stopRecording()).called(2);
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
+        },
+      );
+    });
+
+    group('native auto-stop callback', () {
+      test(
+        'processes a recovered clip outside recording-limit modes (#9210)',
+        () async {
+          late void Function(EditorVideo video) autoStopCallback;
+          final recoveredVideo = _MockEditorVideo();
+          when(
+            recoveredVideo.safeFilePath,
+          ).thenAnswer((_) => Completer<String>().future);
+          when(
+            () => clipManager.addClip(
+              video: recoveredVideo,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: false,
+            ),
+          ).thenReturn(
+            DivineVideoClip(
+              id: 'recovered-clip',
+              video: recoveredVideo,
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
+
+          final bloc =
+              buildBloc(
+                cameraServiceFactory:
+                    ({required onUpdateState, required onAutoStopped}) {
+                      autoStopCallback = onAutoStopped;
+                      return cameraService;
+                    },
+              )..emit(
+                const VideoRecorderBlocState(
+                  recordingState: VideoRecorderState.recording,
+                ),
+              );
+          addTearDown(bloc.close);
+
+          autoStopCallback(recoveredVideo);
+          await pumpEventQueue();
+
+          verify(
+            () => clipManager.addClip(
+              video: recoveredVideo,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: false,
+            ),
+          ).called(1);
+          verifyNever(() => cameraService.stopRecording());
         },
       );
     });

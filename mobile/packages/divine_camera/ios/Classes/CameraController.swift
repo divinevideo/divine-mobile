@@ -2890,6 +2890,11 @@ class CameraController: NSObject {
         
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
+            // Stopping an interrupted session during backgrounding can consume
+            // the interruption without a matching `.ended` notification. Clear
+            // the stale gate before restarting so captureOutput can deliver the
+            // resumed preview and recording frames.
+            self.captureSessionInterrupted = false
             self.captureSession?.startRunning()
 
             DispatchQueue.main.async { [weak self] in
