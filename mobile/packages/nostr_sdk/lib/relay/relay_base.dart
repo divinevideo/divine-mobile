@@ -166,6 +166,13 @@ class RelayBase extends Relay {
           relayStatus.connected = ClientConnected.connecting;
         case ConnectionState.disconnected:
           relayStatus.connected = ClientConnected.disconnect;
+          // NIP-42 state belongs to one socket. The manager reconnects on its
+          // own after an idle or remote drop without passing through
+          // [Relay.connect] or [forceReconnect], the two paths that reset
+          // this flag, so without this a self-healed socket would start life
+          // reading as authenticated and the pool would write auth-gated
+          // frames to it instead of parking them for the handshake (#8992).
+          relayStatus.authed = false;
       }
       if (relayStatusCallback != null) {
         relayStatusCallback!();
