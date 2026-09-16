@@ -160,11 +160,16 @@ gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
 ```
 
 Verify its `state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as
-intended, its `commit_id` equals the reviewed SHA, and `submitted_at` is
-present. A review submitted with `gh pr review` carries the head GitHub saw at
-submission; only the REST form pins the SHA you chose. If the head changed
-during submission, report that the verdict covers the older commit and
-re-review before claiming the current head is approved.
+intended, and that `submitted_at` is present. Then check `commit_id` against
+the SHA you actually reviewed. A review submitted with `gh pr review` carries
+no explicit commit, and GitHub defaults an omitted `commit_id` to the pull
+request's most recent commit as of when the submission is processed — so if
+the head moved between your review and submission, the saved review attaches
+to that newer, unreviewed commit, not the one you read. That is worse than
+stale: the verdict now certifies code nobody looked at. Only the REST form
+lets you pin the exact SHA you chose. If `commit_id` does not equal the SHA
+you reviewed, treat the verdict as covering the wrong commit — re-review the
+current head before relying on it.
 
 Return the review URL, saved verdict, and reviewed SHA. A successful CLI exit
 or an overall `reviewDecision` alone is insufficient: other reviewers and
