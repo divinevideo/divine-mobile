@@ -24,21 +24,23 @@ class _RecordingListenable extends ChangeNotifier {
 }
 
 void main() {
-  test('registers once, forwards notifications, and removes on disposal', () {
-    final source = _RecordingListenable();
-    var notifications = 0;
-    final provider = Provider.autoDispose<void>((ref) {
-      listenForProviderLifetime(ref, source, () => notifications++);
+  group('listenForProviderLifetime', () {
+    test('registers once, forwards notifications, and removes on disposal', () {
+      final source = _RecordingListenable();
+      var notifications = 0;
+      final provider = Provider.autoDispose<void>((ref) {
+        listenForProviderLifetime(ref, source, () => notifications++);
+      });
+      final container = ProviderContainer();
+      final subscription = container.listen(provider, (_, _) {});
+
+      expect(source.addListenerCalls, equals(1));
+      source.notifyListeners();
+      expect(notifications, equals(1));
+
+      subscription.close();
+      container.dispose();
+      expect(source.removeListenerCalls, equals(1));
     });
-    final container = ProviderContainer();
-    final subscription = container.listen(provider, (_, _) {});
-
-    expect(source.addListenerCalls, equals(1));
-    source.notifyListeners();
-    expect(notifications, equals(1));
-
-    subscription.close();
-    container.dispose();
-    expect(source.removeListenerCalls, equals(1));
   });
 }
