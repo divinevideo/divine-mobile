@@ -153,9 +153,6 @@ discarded_futures|lib/widgets/popular_videos_tab.dart	1
 discarded_futures|lib/widgets/profile/profile_action_buttons_widget.dart	2
 discarded_futures|lib/widgets/profile/profile_actions_sheet/profile_actions_sheet_content.dart	1
 discarded_futures|lib/widgets/profile/profile_collabs_grid.dart	1
-discarded_futures|lib/widgets/profile/profile_grid.dart	14
-discarded_futures|lib/widgets/profile/profile_header_identity.dart	5
-discarded_futures|lib/widgets/profile/profile_header_widget.dart	2
 discarded_futures|lib/widgets/profile/profile_liked_grid.dart	1
 discarded_futures|lib/widgets/profile/profile_reposts_grid.dart	1
 discarded_futures|lib/widgets/profile/profile_saved_grid.dart	1

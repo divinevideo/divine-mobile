@@ -39,6 +39,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/secure_account_prompt_dismissal.dart';
@@ -66,6 +67,19 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 part 'profile_header_identity.dart';
 part 'profile_header_media.dart';
+
+void _runProfileDetached(Future<void> operation, String description) {
+  runDetached(
+    operation,
+    description,
+    logName: 'ProfileHeaderWidget',
+    category: LogCategory.ui,
+  );
+}
+
+Future<void> _awaitProfileResult(Future<Object?> operation) async {
+  await operation;
+}
 
 /// Profile header widget displaying avatar, stats, name, and bio.
 class ProfileHeaderWidget extends ConsumerStatefulWidget {
@@ -560,21 +574,29 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
     List<ProfileActionType> actions,
     SecureAccountPromptDismissalStore secureAccountPromptDismissal,
   ) {
-    VineBottomSheet.show<void>(
-      context: context,
-      scrollable: false,
-      showHeaderDivider: false,
-      body: ProfileActionsSheetContent(
-        actions: actions,
-        onMaybeLater: (action) {
-          if (action != ProfileActionType.secureAccount) return;
-          // The write lands in the in-memory SharedPreferences cache before
-          // the future completes, so an empty setState is enough to drop the
-          // action from the next build.
-          unawaited(secureAccountPromptDismissal.dismiss());
-          if (mounted) setState(() {});
-        },
+    _runProfileDetached(
+      _awaitProfileResult(
+        VineBottomSheet.show<void>(
+          context: context,
+          scrollable: false,
+          showHeaderDivider: false,
+          body: ProfileActionsSheetContent(
+            actions: actions,
+            onMaybeLater: (action) {
+              if (action != ProfileActionType.secureAccount) return;
+              // The write lands in the in-memory SharedPreferences cache before
+              // the future completes, so an empty setState is enough to drop the
+              // action from the next build.
+              _runProfileDetached(
+                secureAccountPromptDismissal.dismiss(),
+                'persist secure-account prompt dismissal',
+              );
+              if (mounted) setState(() {});
+            },
+          ),
+        ),
       ),
+      'show profile actions sheet',
     );
   }
 }
@@ -693,7 +715,16 @@ void _openSupportSheet(
 ) {
   final analytics = ref.read(analyticsEventSinkProvider);
   trackMonetizationAffordanceTapped(analytics: analytics, links: links);
-  showProfileSupportSheet(context: context, links: links, analytics: analytics);
+  _runProfileDetached(
+    _awaitProfileResult(
+      showProfileSupportSheet(
+        context: context,
+        links: links,
+        analytics: analytics,
+      ),
+    ),
+    'show profile support sheet',
+  );
 }
 
 /// Profile name, NIP-05, bio, and public key display.
