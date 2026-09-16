@@ -23,10 +23,11 @@ String httpOperation(Uri url) {
         }
         return 'profile_feed';
       case 'v2':
+        // Unmatched v2 routes fall out of the switch to the host fallback,
+        // so a known service host keeps its bounded `*_other` category.
         if (path.length > 2 && path[2] == 'search') return 'search';
         if (path.length > 4 && path[4] == 'comments') return 'comments';
         if (path.length > 2 && path[2] == 'videos') return 'feed_video';
-        return 'other';
       case 'featured-tabs':
       case 'leaderboard':
       case 'categories':

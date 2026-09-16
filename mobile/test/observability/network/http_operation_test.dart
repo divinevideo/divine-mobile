@@ -30,5 +30,43 @@ void main() {
         }
       },
     );
+
+    test(
+      'unknown moderation routes share the bounded moderation_other group',
+      () {
+        const unknownRoutes = [
+          '/api/unknown-private-word',
+          '/api/v2/unknown-private-word',
+        ];
+        for (final route in unknownRoutes) {
+          expect(
+            httpOperation(
+              Uri.parse('https://moderation-api.divine.video$route'),
+            ),
+            'moderation_other',
+            reason: route,
+          );
+        }
+      },
+    );
+
+    test('known moderation routes keep their own categories', () {
+      expect(
+        httpOperation(
+          Uri.parse(
+            'https://moderation-api.divine.video/check-result/private-id',
+          ),
+        ),
+        'moderation_lookup',
+      );
+      expect(
+        httpOperation(
+          Uri.parse(
+            'https://moderation-api.divine.video/api/delete/private-id',
+          ),
+        ),
+        'creator_delete',
+      );
+    });
   });
 }
