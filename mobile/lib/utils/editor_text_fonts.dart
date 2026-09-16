@@ -5,18 +5,19 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 
-/// Google Fonts family names keyed by the font's static tear-off.
+/// Published Google Fonts family names keyed by the font's static tear-off.
 ///
-/// `GoogleFonts.asMap()` is a const map from the published family name
-/// ("Shadows Into Light") to the same tear-off `VideoEditorConstants.textFonts`
-/// holds, so reversing it recovers the name without calling the font — which
-/// would register a load.
+/// Built from [VideoEditorConstants.textFontCatalogue], which carries the name
+/// beside each tear-off, rather than by reversing `GoogleFonts.asMap()`. That
+/// map is const over the package's whole catalogue, so referencing it retains
+/// every one of its ~1700 font descriptors — see [EditorTextFont].
 final Map<Object, String> _googleFontFamilyNames = {
-  for (final entry in GoogleFonts.asMap().entries) entry.value: entry.key,
+  for (final entry in VideoEditorConstants.textFontCatalogue)
+    entry.font: entry.familyName,
 };
 
 /// The published Google Fonts family name of [font] ("Bebas Neue"), or `null`
-/// when [font] is not one of the package's static fonts.
+/// when [font] is not one of the editor's catalogue fonts.
 String? googleFontFamilyName(TextFont font) => _googleFontFamilyNames[font];
 
 /// The `TextStyle.fontFamily` google_fonts assigns to the regular face of the

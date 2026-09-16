@@ -49,6 +49,9 @@ jobs:
             --dart-define=BACKEND_URL=https://api.divine.video \
             --no-source-maps
 
+      - name: Check web bundle file sizes
+        run: bash scripts/check_web_bundle_file_size.sh build/web
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:

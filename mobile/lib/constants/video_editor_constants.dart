@@ -8,6 +8,16 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// A text font with its style getter.
 typedef TextFont = TextStyle Function({double? fontSize, Color? color});
 
+/// An editor text-overlay font: the google_fonts tear-off that registers it,
+/// paired with the family name it is published under ("Shadows Into Light").
+///
+/// The name is written out rather than read back from `GoogleFonts.asMap()`.
+/// That map is a const map over the whole google_fonts catalogue, so any
+/// reference to it retains all ~1700 font descriptors and defeats the
+/// package's per-font tree shaking — worth 6.6 MiB of `main.dart.js`, which
+/// pushed the web bundle past Cloudflare Pages' 25 MiB per-file limit (#9269).
+typedef EditorTextFont = ({TextFont font, String familyName});
+
 /// Constants for the video editor feature.
 class VideoEditorConstants {
   /// Key used to identify autosaved drafts in storage.
@@ -156,7 +166,8 @@ class VideoEditorConstants {
     Color(0xFF34BBF1),
   ];
 
-  /// Available text fonts for text overlays.
+  /// Available text fonts for text overlays, with the family name each one is
+  /// published under.
   ///
   /// The first 35 are sorted by popularity; every later addition is appended
   /// in category groups. **Append only, never reorder or remove**: a caption
@@ -164,97 +175,114 @@ class VideoEditorConstants {
   /// (`CaptionCustomStyle.fontIndex`), so a moved entry silently changes the
   /// font of every saved draft.
   ///
+  /// `familyName` is the name google_fonts publishes the family under, spaces
+  /// and capitalisation included ('Press Start 2P', not 'PressStart2p'); it is
+  /// also the label the font picker shows. `editorTextFontIndexFor` derives the
+  /// serialized `fontFamily` identifier from it with the spaces stripped, so
+  /// the round-trip test in `test/utils/editor_text_fonts_test.dart` pins the
+  /// spelling and capitalisation but cannot see a spacing error. Copy the name
+  /// from the google_fonts source instead of retyping it.
+  ///
   /// Every entry ships under the SIL Open Font License 1.1, Apache 2.0 or the
   /// Ubuntu Font License, all of which permit commercial use. Before adding a
   /// font, confirm it lives under `ofl/`, `apache/` or `ufl/` in
   /// https://github.com/google/fonts — nothing else is acceptable here.
-  static const List<TextFont> textFonts = [
-    GoogleFonts.inter,
-    GoogleFonts.bricolageGrotesque,
-    GoogleFonts.roboto,
-    GoogleFonts.openSans,
-    GoogleFonts.notoSans,
-    GoogleFonts.montserrat,
-    GoogleFonts.lato,
-    GoogleFonts.poppins,
-    GoogleFonts.robotoMono,
-    GoogleFonts.oswald,
-    GoogleFonts.raleway,
-    GoogleFonts.ubuntu,
-    GoogleFonts.nunito,
-    GoogleFonts.rubik,
-    GoogleFonts.merriweather,
-    GoogleFonts.playfairDisplay,
-    GoogleFonts.nunitoSans,
-    GoogleFonts.lora,
-    GoogleFonts.ptSans,
-    GoogleFonts.workSans,
-    GoogleFonts.barlow,
-    GoogleFonts.quicksand,
-    GoogleFonts.mulish,
-    GoogleFonts.titilliumWeb,
-    GoogleFonts.josefinSans,
-    GoogleFonts.bebasNeue,
-    GoogleFonts.comfortaa,
-    GoogleFonts.lobster,
-    GoogleFonts.pacifico,
-    GoogleFonts.dancingScript,
-    GoogleFonts.caveat,
-    GoogleFonts.permanentMarker,
-    GoogleFonts.crimsonText,
-    GoogleFonts.ibmPlexMono,
-    GoogleFonts.anonymousPro,
+  static const List<EditorTextFont> textFontCatalogue = [
+    (font: GoogleFonts.inter, familyName: 'Inter'),
+    (font: GoogleFonts.bricolageGrotesque, familyName: 'Bricolage Grotesque'),
+    (font: GoogleFonts.roboto, familyName: 'Roboto'),
+    (font: GoogleFonts.openSans, familyName: 'Open Sans'),
+    (font: GoogleFonts.notoSans, familyName: 'Noto Sans'),
+    (font: GoogleFonts.montserrat, familyName: 'Montserrat'),
+    (font: GoogleFonts.lato, familyName: 'Lato'),
+    (font: GoogleFonts.poppins, familyName: 'Poppins'),
+    (font: GoogleFonts.robotoMono, familyName: 'Roboto Mono'),
+    (font: GoogleFonts.oswald, familyName: 'Oswald'),
+    (font: GoogleFonts.raleway, familyName: 'Raleway'),
+    (font: GoogleFonts.ubuntu, familyName: 'Ubuntu'),
+    (font: GoogleFonts.nunito, familyName: 'Nunito'),
+    (font: GoogleFonts.rubik, familyName: 'Rubik'),
+    (font: GoogleFonts.merriweather, familyName: 'Merriweather'),
+    (font: GoogleFonts.playfairDisplay, familyName: 'Playfair Display'),
+    (font: GoogleFonts.nunitoSans, familyName: 'Nunito Sans'),
+    (font: GoogleFonts.lora, familyName: 'Lora'),
+    (font: GoogleFonts.ptSans, familyName: 'PT Sans'),
+    (font: GoogleFonts.workSans, familyName: 'Work Sans'),
+    (font: GoogleFonts.barlow, familyName: 'Barlow'),
+    (font: GoogleFonts.quicksand, familyName: 'Quicksand'),
+    (font: GoogleFonts.mulish, familyName: 'Mulish'),
+    (font: GoogleFonts.titilliumWeb, familyName: 'Titillium Web'),
+    (font: GoogleFonts.josefinSans, familyName: 'Josefin Sans'),
+    (font: GoogleFonts.bebasNeue, familyName: 'Bebas Neue'),
+    (font: GoogleFonts.comfortaa, familyName: 'Comfortaa'),
+    (font: GoogleFonts.lobster, familyName: 'Lobster'),
+    (font: GoogleFonts.pacifico, familyName: 'Pacifico'),
+    (font: GoogleFonts.dancingScript, familyName: 'Dancing Script'),
+    (font: GoogleFonts.caveat, familyName: 'Caveat'),
+    (font: GoogleFonts.permanentMarker, familyName: 'Permanent Marker'),
+    (font: GoogleFonts.crimsonText, familyName: 'Crimson Text'),
+    (font: GoogleFonts.ibmPlexMono, familyName: 'IBM Plex Mono'),
+    (font: GoogleFonts.anonymousPro, familyName: 'Anonymous Pro'),
     // Display and headline faces.
-    GoogleFonts.anton,
-    GoogleFonts.bangers,
-    GoogleFonts.archivoBlack,
-    GoogleFonts.alfaSlabOne,
-    GoogleFonts.luckiestGuy,
-    GoogleFonts.lilitaOne,
-    GoogleFonts.righteous,
-    GoogleFonts.russoOne,
-    GoogleFonts.blackOpsOne,
-    GoogleFonts.bungee,
-    GoogleFonts.fredoka,
-    GoogleFonts.abrilFatface,
+    (font: GoogleFonts.anton, familyName: 'Anton'),
+    (font: GoogleFonts.bangers, familyName: 'Bangers'),
+    (font: GoogleFonts.archivoBlack, familyName: 'Archivo Black'),
+    (font: GoogleFonts.alfaSlabOne, familyName: 'Alfa Slab One'),
+    (font: GoogleFonts.luckiestGuy, familyName: 'Luckiest Guy'),
+    (font: GoogleFonts.lilitaOne, familyName: 'Lilita One'),
+    (font: GoogleFonts.righteous, familyName: 'Righteous'),
+    (font: GoogleFonts.russoOne, familyName: 'Russo One'),
+    (font: GoogleFonts.blackOpsOne, familyName: 'Black Ops One'),
+    (font: GoogleFonts.bungee, familyName: 'Bungee'),
+    (font: GoogleFonts.fredoka, familyName: 'Fredoka'),
+    (font: GoogleFonts.abrilFatface, familyName: 'Abril Fatface'),
     // Script and handwriting.
-    GoogleFonts.satisfy,
-    GoogleFonts.greatVibes,
-    GoogleFonts.sacramento,
-    GoogleFonts.amaticSc,
-    GoogleFonts.shadowsIntoLight,
-    GoogleFonts.indieFlower,
-    GoogleFonts.patrickHand,
-    GoogleFonts.kalam,
-    GoogleFonts.courgette,
-    GoogleFonts.rockSalt,
+    (font: GoogleFonts.satisfy, familyName: 'Satisfy'),
+    (font: GoogleFonts.greatVibes, familyName: 'Great Vibes'),
+    (font: GoogleFonts.sacramento, familyName: 'Sacramento'),
+    (font: GoogleFonts.amaticSc, familyName: 'Amatic SC'),
+    (font: GoogleFonts.shadowsIntoLight, familyName: 'Shadows Into Light'),
+    (font: GoogleFonts.indieFlower, familyName: 'Indie Flower'),
+    (font: GoogleFonts.patrickHand, familyName: 'Patrick Hand'),
+    (font: GoogleFonts.kalam, familyName: 'Kalam'),
+    (font: GoogleFonts.courgette, familyName: 'Courgette'),
+    (font: GoogleFonts.rockSalt, familyName: 'Rock Salt'),
     // Serif.
-    GoogleFonts.cormorantGaramond,
-    GoogleFonts.ebGaramond,
-    GoogleFonts.libreBaskerville,
-    GoogleFonts.dmSerifDisplay,
-    GoogleFonts.cinzel,
-    GoogleFonts.robotoSlab,
+    (font: GoogleFonts.cormorantGaramond, familyName: 'Cormorant Garamond'),
+    (font: GoogleFonts.ebGaramond, familyName: 'EB Garamond'),
+    (font: GoogleFonts.libreBaskerville, familyName: 'Libre Baskerville'),
+    (font: GoogleFonts.dmSerifDisplay, familyName: 'DM Serif Display'),
+    (font: GoogleFonts.cinzel, familyName: 'Cinzel'),
+    (font: GoogleFonts.robotoSlab, familyName: 'Roboto Slab'),
     // Modern sans.
-    GoogleFonts.dmSans,
-    GoogleFonts.manrope,
-    GoogleFonts.plusJakartaSans,
-    GoogleFonts.figtree,
-    GoogleFonts.spaceGrotesk,
-    GoogleFonts.outfit,
+    (font: GoogleFonts.dmSans, familyName: 'DM Sans'),
+    (font: GoogleFonts.manrope, familyName: 'Manrope'),
+    (font: GoogleFonts.plusJakartaSans, familyName: 'Plus Jakarta Sans'),
+    (font: GoogleFonts.figtree, familyName: 'Figtree'),
+    (font: GoogleFonts.spaceGrotesk, familyName: 'Space Grotesk'),
+    (font: GoogleFonts.outfit, familyName: 'Outfit'),
     // Retro, typewriter and tech.
-    GoogleFonts.spaceMono,
-    GoogleFonts.courierPrime,
-    GoogleFonts.specialElite,
-    GoogleFonts.vt323,
-    GoogleFonts.pressStart2p,
-    GoogleFonts.orbitron,
+    (font: GoogleFonts.spaceMono, familyName: 'Space Mono'),
+    (font: GoogleFonts.courierPrime, familyName: 'Courier Prime'),
+    (font: GoogleFonts.specialElite, familyName: 'Special Elite'),
+    (font: GoogleFonts.vt323, familyName: 'VT323'),
+    (font: GoogleFonts.pressStart2p, familyName: 'Press Start 2P'),
+    (font: GoogleFonts.orbitron, familyName: 'Orbitron'),
     // Themed.
-    GoogleFonts.creepster,
-    GoogleFonts.monoton,
-    GoogleFonts.pirataOne,
-    GoogleFonts.unifrakturMaguntia,
+    (font: GoogleFonts.creepster, familyName: 'Creepster'),
+    (font: GoogleFonts.monoton, familyName: 'Monoton'),
+    (font: GoogleFonts.pirataOne, familyName: 'Pirata One'),
+    (font: GoogleFonts.unifrakturMaguntia, familyName: 'UnifrakturMaguntia'),
   ];
+
+  /// The fonts of [textFontCatalogue], in catalogue order.
+  ///
+  /// Indices line up with [textFontCatalogue], which is what
+  /// `CaptionCustomStyle.fontIndex` persists, so the list is unmodifiable: a
+  /// runtime insert or removal would silently repoint saved drafts.
+  static final List<TextFont> textFonts = List.unmodifiable([
+    for (final entry in textFontCatalogue) entry.font,
+  ]);
 
   /// Width of drawing tool items in the draw editor toolbar.
   static const double drawItemWidth = 48.0;
