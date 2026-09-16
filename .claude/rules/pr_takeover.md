@@ -230,8 +230,8 @@ gh api graphql -f query='
 
 `gh pr view --json reviews` already paginates internally and returns every
 review regardless of count; the REST form above is here because the
-verification step later in this file needs REST's field names (`commit_id`,
-`submitted_at`), which `--json reviews` does not expose the same way. For
+verification step later in this file returns the review's `html_url`, which
+`--json reviews` does not expose at all. For
 `reviewThreads` itself, page with `pageInfo.hasNextPage` / `endCursor` as
 shown. The nested `comments` connection is different: it is a separate
 connection *per thread node*, so adding `after:` to the shared
