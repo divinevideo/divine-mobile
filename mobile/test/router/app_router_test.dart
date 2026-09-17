@@ -2,6 +2,7 @@
 // ABOUTME: Verifies stale auth refreshes do not reach a disposed container
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
@@ -48,6 +49,8 @@ class _MockDmReactionsRepository extends Mock
 class _AuthStateBus {
   AuthState state = AuthState.unauthenticated;
 }
+
+class _TypedRouteExtra {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -815,6 +818,39 @@ void main() {
         router.routeInformationProvider.value.uri.toString(),
         RequestPreviewPage.pathPattern.replaceFirst(':id', conversationId),
       );
+    });
+  });
+
+  group('route state', () {
+    test('keeps a non-JSON extra across a route state round trip', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final sharedPreferences = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          authServiceProvider.overrideWith((ref) {
+            final authService = _MockAuthService();
+            when(
+              () => authService.authStateStream,
+            ).thenAnswer((_) => const Stream<AuthState>.empty());
+            when(
+              () => authService.authState,
+            ).thenReturn(AuthState.unauthenticated);
+            return authService;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final codec = container.read(goRouterProvider).configuration.extraCodec;
+      final extra = _TypedRouteExtra();
+
+      // go_router hands its route state to the platform as JSON and decodes
+      // it again on every refresh (#9292).
+      final restored = codec?.decode(
+        jsonDecode(jsonEncode(codec.encode(extra))),
+      );
+
+      expect(restored, same(extra));
     });
   });
 }
