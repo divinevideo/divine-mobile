@@ -216,6 +216,9 @@ void main() {
       expect(span.requestPayloadSize, 14);
       expect(span.responsePayloadSize, 13);
       expect(span.responseContentType, 'application/json');
+      // A fully read body finishes on done, and the consumer's automatic
+      // cancel then reaches onCancel. The span must still complete once.
+      expect(span.completions, 1);
     });
 
     test('records an error status, and tolerates no content type', () async {
