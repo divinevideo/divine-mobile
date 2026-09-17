@@ -280,10 +280,10 @@ void main() {
       final compact = compactEditorStateHistory(export);
 
       final weird =
-          (_entriesOf(compact)[0]['meta'] as Map)['weird']
+          (_entriesOf(compact)[0]['meta']! as Map)['weird']!
               as Map<Object?, Object?>;
       expect(weird[1], 'int-key');
-      expect((weird['clip'] as Map)['proofManifestJson'], _manifestA);
+      expect((weird['clip']! as Map)['proofManifestJson'], _manifestA);
     });
 
     test('does not mutate its input', () {
@@ -443,7 +443,7 @@ void main() {
     });
 
     test('does not resolve a reference pointing at itself', () {
-      final export = _export([_entry(layer: 0)..[historyMetaRefKey] = 0]);
+      final export = _export([_entry()..[historyMetaRefKey] = 0]);
 
       final entries = _entriesOf(expandEditorStateHistory(export));
 
