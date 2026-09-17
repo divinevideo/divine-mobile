@@ -12,6 +12,7 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 // Mock classes
 class MockNostrService extends Mock implements NostrClient {}
@@ -65,12 +66,14 @@ void main() {
       ).thenAnswer((invocation) {
         subscribeCallCount++;
         // Simulate EOSE immediately
-        Future.microtask(() {
-          final onEose =
-              invocation.namedArguments[const Symbol('onEose')]
-                  as void Function()?;
-          onEose?.call();
-        });
+        unawaited(
+          Future.microtask(() {
+            final onEose =
+                invocation.namedArguments[const Symbol('onEose')]
+                    as void Function()?;
+            onEose?.call();
+          }),
+        );
         return eventStreamController.stream;
       });
 
@@ -80,8 +83,8 @@ void main() {
       );
     });
 
-    tearDown(() {
-      eventStreamController.close();
+    tearDown(() async {
+      await eventStreamController.close();
       videoEventService.dispose();
     });
 
@@ -208,19 +211,30 @@ void main() {
       expect(callsBefore, greaterThan(0));
 
       // Dispose and close stream first (to avoid double-dispose in tearDown)
-      eventStreamController.close();
+      await eventStreamController.close();
       videoEventService.dispose();
 
       // Create a new stream controller for tearDown to close without error
       eventStreamController = StreamController<Event>.broadcast();
 
       // Should not throw and should not subscribe when called on disposed service
+      await LogCaptureService().clearAllLogs();
       await videoEventService.resetAndResubscribeAll();
 
       expect(
         subscribeCallCount,
         equals(callsBefore),
         reason: 'Should not subscribe when disposed',
+      );
+      // The count alone stays equal even with the disposed check removed, so
+      // pin the return itself: the method logs as its first act after it.
+      expect(
+        [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ],
+        isNot(contains(contains('Relay set changed'))),
+        reason: 'a disposed service must return before doing any reset work',
       );
 
       // Re-create service for tearDown

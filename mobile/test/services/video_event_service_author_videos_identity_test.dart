@@ -168,11 +168,11 @@ void main() {
       },
     );
 
-    test('does not capture logs when reading authorVideos', () {
+    test('does not capture logs when reading authorVideos', () async {
       service.debugSeedAuthorBucket(_authorA, [
         _video('a-old', pubkey: _authorA, createdAt: 100),
       ]);
-      LogCaptureService().clearAllLogs();
+      await LogCaptureService().clearAllLogs();
 
       service.authorVideos(_authorA);
       service.authorVideos(_authorA);

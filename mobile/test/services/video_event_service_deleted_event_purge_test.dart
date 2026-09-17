@@ -37,7 +37,7 @@ class _StreamingNostrService implements NostrClient {
     bool closeOnEose = false,
   }) {
     if (onEose != null) {
-      Future.microtask(onEose);
+      unawaited(Future.microtask(onEose));
     }
     return _events.stream;
   }

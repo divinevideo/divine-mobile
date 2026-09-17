@@ -60,12 +60,14 @@ void main() {
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((invocation) {
         // Simulate EOSE immediately
-        Future.microtask(() {
-          final onEose =
-              invocation.namedArguments[const Symbol('onEose')]
-                  as void Function()?;
-          onEose?.call();
-        });
+        unawaited(
+          Future.microtask(() {
+            final onEose =
+                invocation.namedArguments[const Symbol('onEose')]
+                    as void Function()?;
+            onEose?.call();
+          }),
+        );
         return eventStreamController.stream;
       });
 
@@ -75,8 +77,8 @@ void main() {
       );
     });
 
-    tearDown(() {
-      eventStreamController.close();
+    tearDown(() async {
+      await eventStreamController.close();
       videoEventService.dispose();
     });
 

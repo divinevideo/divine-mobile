@@ -69,9 +69,11 @@ void main() {
       });
 
       fakeAsync((async) {
-        videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.hashtag,
-          hashtags: ['comedyvine'],
+        unawaited(
+          videoEventService.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.hashtag,
+            hashtags: ['comedyvine'],
+          ),
         );
 
         async.flushMicrotasks();
@@ -122,8 +124,10 @@ void main() {
       });
 
       fakeAsync((async) {
-        videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.search,
+        unawaited(
+          videoEventService.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.search,
+          ),
         );
 
         async.flushMicrotasks();
@@ -158,9 +162,11 @@ void main() {
       });
 
       fakeAsync((async) {
-        videoEventService.subscribeToVideoFeed(
-          subscriptionType: SubscriptionType.hashtag,
-          hashtags: ['empty'],
+        unawaited(
+          videoEventService.subscribeToVideoFeed(
+            subscriptionType: SubscriptionType.hashtag,
+            hashtags: ['empty'],
+          ),
         );
 
         async.flushMicrotasks();

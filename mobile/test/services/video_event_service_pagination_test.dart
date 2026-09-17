@@ -118,7 +118,7 @@ void main() {
             DateTime.now().millisecondsSinceEpoch ~/ 1000,
           ),
         );
-        streamController.close();
+        await streamController.close();
 
         await firstLoad;
         await Future.delayed(const Duration(milliseconds: 100));
@@ -134,7 +134,7 @@ void main() {
           limit: 50,
         );
 
-        secondController.close();
+        await secondController.close();
         await secondLoad;
 
         // Assert - should have made two subscription calls
@@ -157,7 +157,7 @@ void main() {
       );
 
       // Close stream immediately without emitting events
-      streamController.close();
+      await streamController.close();
 
       // Should complete without error
       await expectLater(loadMoreFuture, completes);

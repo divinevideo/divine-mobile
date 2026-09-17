@@ -42,7 +42,7 @@ class MockNostrService implements NostrClient {
 
     // Call onEose immediately for testing
     if (onEose != null) {
-      Future.microtask(() => onEose());
+      unawaited(Future.microtask(onEose));
     }
 
     return _eventController.stream;

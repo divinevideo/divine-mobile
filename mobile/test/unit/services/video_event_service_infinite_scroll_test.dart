@@ -79,7 +79,12 @@ void main() {
         });
 
         // Act - Load more events (simulating reaching end of feed)
-        videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
+        unawaited(
+          videoEventService.loadMoreEvents(
+            SubscriptionType.discovery,
+            limit: 50,
+          ),
+        );
 
         await pumpEventQueue();
 
@@ -119,7 +124,12 @@ void main() {
       });
 
       // Act - Load more events with empty feed
-      videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 50);
+      unawaited(
+        videoEventService.loadMoreEvents(
+          SubscriptionType.discovery,
+          limit: 50,
+        ),
+      );
 
       await pumpEventQueue();
 
@@ -163,7 +173,12 @@ void main() {
         ).thenAnswer((_) => streamController.stream);
 
         // Act - Load more and simulate receiving older events
-        videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 3);
+        unawaited(
+          videoEventService.loadMoreEvents(
+            SubscriptionType.discovery,
+            limit: 3,
+          ),
+        );
         discoveryState.startQuery();
 
         // Simulate receiving 3 older events through the stream
@@ -213,7 +228,12 @@ void main() {
         ).thenAnswer((_) => streamController.stream);
 
         // Act - Request 10 events but only receive 2
-        videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 10);
+        unawaited(
+          videoEventService.loadMoreEvents(
+            SubscriptionType.discovery,
+            limit: 10,
+          ),
+        );
         discoveryState.startQuery();
 
         // Simulate receiving only 2 events (less than requested)
@@ -263,7 +283,12 @@ void main() {
         });
 
         // First load - no until filter since no events yet
-        videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 2);
+        unawaited(
+          videoEventService.loadMoreEvents(
+            SubscriptionType.discovery,
+            limit: 2,
+          ),
+        );
         await pumpEventQueue();
 
         // Simulate receiving events and updating oldest timestamp
@@ -279,7 +304,12 @@ void main() {
         discoveryState.hasMore = true;
 
         // Second load - should use until=1704067200
-        videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 2);
+        unawaited(
+          videoEventService.loadMoreEvents(
+            SubscriptionType.discovery,
+            limit: 2,
+          ),
+        );
         await pumpEventQueue();
 
         // Add more events with older timestamp
@@ -295,7 +325,12 @@ void main() {
         discoveryState.hasMore = true;
 
         // Third load - should use until=1704060000
-        videoEventService.loadMoreEvents(SubscriptionType.discovery, limit: 2);
+        unawaited(
+          videoEventService.loadMoreEvents(
+            SubscriptionType.discovery,
+            limit: 2,
+          ),
+        );
         await pumpEventQueue();
 
         // Assert - Check the progression of until filters
