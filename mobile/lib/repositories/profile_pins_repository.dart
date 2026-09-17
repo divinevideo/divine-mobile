@@ -245,12 +245,14 @@ class ProfilePinsRepository {
   /// the signer does not own are ignored without a relay round trip, so a
   /// viewer on another creator's profile never touches that creator's list.
   ///
-  /// The released coordinates leave in one rewrite. Returns the reconciled
-  /// list afterwards, or `null` when nothing was released: no candidate is
-  /// known deleted, the deletion lookup was inconclusive, or the rewrite
-  /// failed. The caller keeps its list either way and asks again on the next
-  /// profile open, which is how a quiet unpin that never landed after an
-  /// in-app delete is retried.
+  /// The released coordinates leave in one rewrite. A non-null answer is the
+  /// reconciled list, not proof that anything left it: when the authoritative
+  /// list no longer holds any of the deleted coordinates it comes back
+  /// unchanged, with no rewrite published. `null` means the list could not be
+  /// reconciled at all — no candidate is known deleted, the deletion lookup
+  /// was inconclusive, or the rewrite failed. The caller keeps its list either
+  /// way and asks again on the next profile open, which is how a quiet unpin
+  /// that never landed after an in-app delete is retried.
   Future<List<String>?> releaseDeleted(List<String> unavailable) async {
     final owner = _signer.currentPublicKeyHex;
     if (owner == null) return null;
