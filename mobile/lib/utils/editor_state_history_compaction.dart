@@ -69,20 +69,6 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
   final entries = history[_historyKey];
   if (entries is! List || entries.isEmpty) return history;
 
-  final manifests = <String>[];
-  final manifestIndexByContent = <String, int>{};
-  Object? intern(Object? node) => rewriteJsonMaps(node, (map) {
-    final manifest = map[_proofManifestJsonKey];
-    if (manifest is! String) return null;
-    final index = manifestIndexByContent.putIfAbsent(manifest, () {
-      manifests.add(manifest);
-      return manifests.length - 1;
-    });
-    return Map<String, dynamic>.from(map)
-      ..remove(_proofManifestJsonKey)
-      ..[proofManifestRefKey] = index;
-  });
-
   Map<Object?, Object?>? lastMeta;
   var lastMetaIndex = -1;
   final compactEntries = <Object?>[];
@@ -106,13 +92,83 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
     compactEntries.add(entry);
   }
 
-  final compact = Map<String, dynamic>.from(history)
-    ..[_historyKey] = compactEntries;
-  // Intern after the run-length pass so the shared meta maps are compared
+  // Interned after the run-length pass so the shared meta maps are compared
   // as the editor produced them, then rewritten once each.
-  final interned = intern(compact)! as Map<String, dynamic>;
-  if (manifests.isNotEmpty) interned[proofManifestsKey] = manifests;
-  return interned;
+  return compactProofManifests(
+    Map<String, dynamic>.from(history)..[_historyKey] = compactEntries,
+  );
+}
+
+/// [tree] with every `proofManifestJson` string stored once under
+/// [proofManifestsKey] and each occurrence replaced by a
+/// [proofManifestRefKey] index into it.
+///
+/// Split out from [compactEditorStateHistory] because a draft holds the same
+/// attestations twice: the editor hands `CompleteParameters` the active meta
+/// verbatim, so `editorEditingParameters` carries its own full copy of every
+/// clip's manifest, re-encoded on every autosave. That field is not a history
+/// and has no entries to dedup, but it interns exactly the same way.
+///
+/// Returns [tree] itself when nothing carries a manifest, so a draft saved
+/// with ProofMode off keeps the legacy no-op path on load.
+Map<String, dynamic> compactProofManifests(Map<String, dynamic> tree) {
+  final manifests = <String>[];
+  final indexByContent = <String, int>{};
+  final interned =
+      rewriteJsonMaps(tree, (map) {
+            final manifest = map[_proofManifestJsonKey];
+            if (manifest is! String) return null;
+            final index = indexByContent.putIfAbsent(manifest, () {
+              manifests.add(manifest);
+              return manifests.length - 1;
+            });
+            return Map<String, dynamic>.from(map)
+              ..remove(_proofManifestJsonKey)
+              ..[proofManifestRefKey] = index;
+          })!
+          as Map<String, dynamic>;
+  if (manifests.isEmpty) return interned;
+  return interned..[proofManifestsKey] = manifests;
+}
+
+/// [stored] with every [proofManifestRefKey] resolved back to the manifest it
+/// indexes, and the table itself removed.
+///
+/// Returns [stored] itself when it carries no table. A reference the table
+/// cannot answer is dropped rather than kept: the table is rebuilt from
+/// scratch on every save, so a stale index that survived could later land
+/// inside a larger one and resolve to a different clip's attestation.
+Map<String, dynamic> expandProofManifests(Map<String, dynamic> stored) {
+  final manifests = stored[proofManifestsKey];
+  if (manifests is! List) return stored;
+  final unresolved = <int>[];
+  final resolved =
+      rewriteJsonMaps(stored, (map) {
+            final ref = map[proofManifestRefKey];
+            if (ref is! int) return null;
+            final manifest = ref >= 0 && ref < manifests.length
+                ? manifests[ref]
+                : null;
+            if (manifest is! String) {
+              unresolved.add(ref);
+              return Map<String, dynamic>.from(map)
+                ..remove(proofManifestRefKey);
+            }
+            return Map<String, dynamic>.from(map)
+              ..remove(proofManifestRefKey)
+              ..[_proofManifestJsonKey] = manifest;
+          })!
+          as Map<String, dynamic>;
+  if (unresolved.isNotEmpty) {
+    Log.error(
+      'Draft references proof manifests that are not in its table: indexes '
+      '$unresolved into ${manifests.length} stored manifest(s). Those clips '
+      'load without their attestation.',
+      name: _logName,
+      category: LogCategory.video,
+    );
+  }
+  return Map<String, dynamic>.from(resolved)..remove(proofManifestsKey);
 }
 
 /// The full editor history behind a [stored] form written by
@@ -135,52 +191,14 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
 /// looking like an entry that never had a meta. [stored] itself is never
 /// mutated.
 Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
-  final manifests = stored[proofManifestsKey];
-  final manifestList = manifests is List ? manifests : const <Object?>[];
-  final unresolvedManifestRefs = <int>[];
-  final restored =
-      rewriteJsonMaps(stored, (map) {
-            final ref = map[proofManifestRefKey];
-            if (ref is! int) return null;
-            final manifest = ref >= 0 && ref < manifestList.length
-                ? manifestList[ref]
-                : null;
-            if (manifest is! String) {
-              // Dropped rather than kept: the manifest table is rebuilt from
-              // scratch on every save, so a stale index that survives could
-              // later land inside a larger table and resolve to a different
-              // clip's attestation. `divineMetaRef` below indexes `history`
-              // positions, which compaction preserves, so that one is kept.
-              unresolvedManifestRefs.add(ref);
-              return Map<String, dynamic>.from(map)
-                ..remove(proofManifestRefKey);
-            }
-            return Map<String, dynamic>.from(map)
-              ..remove(proofManifestRefKey)
-              ..[_proofManifestJsonKey] = manifest;
-          })!
-          as Map<String, dynamic>;
-  if (unresolvedManifestRefs.isNotEmpty) {
-    Log.error(
-      'Draft editor history references proof manifests that are not in its '
-      'table: indexes $unresolvedManifestRefs into ${manifestList.length} '
-      'stored manifest(s). Those clips load without their attestation.',
-      name: _logName,
-      category: LogCategory.video,
-    );
-  }
-
+  final restored = expandProofManifests(stored);
   final entries = restored[_historyKey];
-  final hasManifests = restored.containsKey(proofManifestsKey);
   final hasMetaRefs =
       entries is List &&
       entries.any((e) => e is Map && e.containsKey(historyMetaRefKey));
-  if (!hasManifests && !hasMetaRefs) return restored;
+  if (!hasMetaRefs) return restored;
 
-  final expanded = Map<String, dynamic>.from(restored)
-    ..remove(proofManifestsKey);
-  if (!hasMetaRefs) return expanded;
-
+  final expanded = Map<String, dynamic>.from(restored);
   final expandedEntries = List<Object?>.from(entries);
   var unresolvedMetaRefs = 0;
   for (var i = 0; i < expandedEntries.length; i++) {

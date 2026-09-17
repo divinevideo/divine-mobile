@@ -48,6 +48,15 @@ Map<String, dynamic> _meta() => {
   'audio': [_voiceOver().toJson()],
 };
 
+/// What the editor hands back on Done: `CompleteParameters` is built with
+/// `meta: stateManager.activeMeta`, so the editing parameters carry their own
+/// full copy of every clip's manifest.
+Map<String, dynamic> _editingParameters() => {
+  'meta': _meta(),
+  'layers': <Object?>[],
+  'image': <Object?>[],
+};
+
 DivineVideoDraft _draft({required int entries}) => DivineVideoDraft(
   id: 'draft_1',
   clips: [_clip()],
@@ -264,6 +273,84 @@ void main() {
         final twenty = jsonEncode(_realisticDraft(entries: 20).toJson()).length;
 
         expect(twenty - six, lessThan(2000));
+      });
+    });
+
+    group('editorEditingParameters', () {
+      // Sticky once the user taps Done: it stays in provider state and is
+      // rewritten on every later autosave, so an uninterned copy of every
+      // attestation was re-encoded on each one.
+      test('interns its manifests against the same table', () {
+        final draft = DivineVideoDraft(
+          id: 'draft_3',
+          clips: [_clip()],
+          title: 'Test Draft',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'camera',
+          createdAt: DateTime(2025),
+          lastModified: DateTime(2025),
+          publishStatus: PublishStatus.draft,
+          publishAttempts: 0,
+          editorEditingParameters: _editingParameters(),
+        );
+
+        final json = draft.toJson();
+        final stored = json['editorEditingParameters']! as Map<String, dynamic>;
+        final clip = ((stored['meta']! as Map)['clips']! as List).single as Map;
+
+        expect(clip[proofManifestRefKey], 0);
+        expect(clip, isNot(contains('proofManifestJson')));
+        expect(stored[proofManifestsKey], [_manifest]);
+
+        final restored = DivineVideoDraft.fromJson(
+          jsonDecode(jsonEncode(json)) as Map<String, dynamic>,
+          _oldDocs,
+        );
+
+        expect(
+          _deepEquals.equals(
+            restored.editorEditingParameters,
+            draft.editorEditingParameters,
+          ),
+          isTrue,
+        );
+      });
+
+      test('stores one manifest for a clip it shares with the history', () {
+        final draft = DivineVideoDraft(
+          id: 'draft_4',
+          clips: [_clip()],
+          title: 'Test Draft',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'camera',
+          createdAt: DateTime(2025),
+          lastModified: DateTime(2025),
+          publishStatus: PublishStatus.draft,
+          publishAttempts: 0,
+          editorStateHistory: _draft(entries: 4).editorStateHistory,
+          editorEditingParameters: _editingParameters(),
+        );
+
+        final json = draft.toJson();
+
+        // The manifest is JSON-escaped once nested, so count the attestation
+        // payload, which survives escaping unchanged. Four history entries
+        // and the editing parameters all name the same clip; each field
+        // should store the attestation once.
+        expect(
+          ('A' * 10000)
+              .allMatches(jsonEncode(json['editorStateHistory']))
+              .length,
+          1,
+        );
+        expect(
+          ('A' * 10000)
+              .allMatches(jsonEncode(json['editorEditingParameters']))
+              .length,
+          1,
+        );
       });
     });
 

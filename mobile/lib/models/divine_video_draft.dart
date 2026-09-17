@@ -193,10 +193,14 @@ class DivineVideoDraft {
           useOriginalPath: useOriginalPath,
         ),
       ),
-      editorEditingParameters: resolveAudioPaths(
-        (json['editorEditingParameters'] as Map<String, dynamic>?) ?? const {},
-        documentsPath,
-        useOriginalPath: useOriginalPath,
+      // Carries its own copy of every clip's manifest, interned the same way.
+      editorEditingParameters: expandProofManifests(
+        resolveAudioPaths(
+          (json['editorEditingParameters'] as Map<String, dynamic>?) ??
+              const {},
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
       ),
       finalRenderedClip: json['finalRenderedClip'] != null
           ? DivineVideoClip.fromJson(
@@ -549,7 +553,9 @@ class DivineVideoDraft {
         compactEditorStateHistory(editorStateHistory),
       ),
     if (editorEditingParameters.isNotEmpty)
-      'editorEditingParameters': toPortableAudioPaths(editorEditingParameters),
+      'editorEditingParameters': toPortableAudioPaths(
+        compactProofManifests(editorEditingParameters),
+      ),
     if (finalRenderedClip != null)
       'finalRenderedClip': finalRenderedClip!.toJson(),
     if (collaboratorPubkeys.isNotEmpty)
