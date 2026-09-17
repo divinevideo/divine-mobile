@@ -21,8 +21,6 @@ import 'package:material_ui/material_ui.dart';
 /// - `scrollable: false` - Fixed height based on content, not draggable
 class VineBottomSheet extends StatelessWidget {
   /// Creates a [VineBottomSheet] with the given parameters.
-  ///
-  /// Set [expanded] to false for content that should wrap (not fill space).
   const VineBottomSheet({
     this.scrollable = true,
     this.showHeader = true,
@@ -38,7 +36,6 @@ class VineBottomSheet extends StatelessWidget {
     this.closeSemanticLabel = 'Close',
     this.completeSemanticLabel = 'Done',
     this.bottomInput,
-    this.expanded = true,
     this.showHeaderDivider = true,
     this.showDragHandle = true,
     this.headerPadding,
@@ -123,10 +120,6 @@ class VineBottomSheet extends StatelessWidget {
   /// Optional bottom input section (e.g., comment input)
   final Widget? bottomInput;
 
-  /// Whether the body should expand to fill available space.
-  /// Set to false for simple content that should wrap.
-  final bool expanded;
-
   /// Whether to show the divider below the header.
   ///
   /// Defaults to true.
@@ -198,6 +191,10 @@ class VineBottomSheet extends StatelessWidget {
   /// handle advertises the modal route's drag gesture, so a non-draggable
   /// sheet does not show an inert affordance by default. Pass an explicit
   /// value to override this behavior.
+  ///
+  /// In fixed mode, [expanded] is the legacy default for
+  /// [isScrollControlled]. It does not change the body's layout and is ignored
+  /// in scrollable mode.
   static Future<T?> show<T>({
     required BuildContext context,
     List<Widget>? children,
@@ -284,7 +281,6 @@ class VineBottomSheet extends StatelessWidget {
               closeSemanticLabel: closeSemanticLabel,
               completeSemanticLabel: completeSemanticLabel,
               bottomInput: bottomInput,
-              expanded: expanded,
               showHeaderDivider: showHeaderDivider,
               showDragHandle: effectiveShowDragHandle,
               headerPadding: headerPadding,
@@ -385,7 +381,6 @@ class VineBottomSheet extends StatelessWidget {
             closeSemanticLabel: closeSemanticLabel,
             completeSemanticLabel: completeSemanticLabel,
             bottomInput: bottomInput,
-            expanded: expanded,
             showHeaderDivider: showHeaderDivider,
             showDragHandle: effectiveShowDragHandle,
             headerPadding: headerPadding,
