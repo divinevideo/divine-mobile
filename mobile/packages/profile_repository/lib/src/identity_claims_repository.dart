@@ -617,10 +617,13 @@ class IdentityClaimsRepository {
 
     // An inconclusive kind-10011 read is not evidence that the profile has no
     // identity event, and the kind-0 fallback cannot tell the difference:
+    // (ProfileRepository._fetchIdentityEvent answers the partial-read question
+    // the other way for display, on purpose — see the note there.)
     // every profile has a kind-0, so it answers either way and would report
     // "no claims" for a profile whose claims simply did not arrive. Prefer the
     // last-known-good snapshot instead of rendering an empty set (#6154).
     if (!identityRead.conclusive) {
+      final cachedRow = await _cachedIdentityRow(pubkey);
       final cached = await _cachedIdentityTags(pubkey);
       if (cached != null && cached.isNotEmpty) {
         Log.warning(
@@ -629,13 +632,18 @@ class IdentityClaimsRepository {
           '${cached.length} claim tag(s) rather than the kind-0 fallback',
           name: 'IdentityClaimsRepository',
         );
-        if (forWrite) {
+        // Only a kind-10011-sourced snapshot is evidence that the unsettled
+        // read was lagging. A kind-0-sourced row is what the fallback itself
+        // wrote (profile_repository.dart caches kind-0 tags with sourceKind 0),
+        // so refusing on it would block a legitimate first link for a
+        // pre-migration profile every time one relay failed to settle.
+        if (forWrite && cachedRow?.sourceKind == identityEventKind) {
           throw const IdentityClaimReadException(
             'The identity event read did not settle, but this profile is '
             'known to have claims — refusing to publish over them',
           );
         }
-        return _IdentityEventBase(tags: cached, content: '');
+        if (!forWrite) return _IdentityEventBase(tags: cached, content: '');
       }
       // No snapshot to prefer, so the kind-0 fallback below is all there is.
       // Say so plainly: a later empty result is not evidence of no claims.

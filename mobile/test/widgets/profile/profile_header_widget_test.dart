@@ -3640,45 +3640,45 @@ void main() {
         expect(find.byType(VerifiedAccountsRow), findsNothing);
       });
     });
+  });
 
-    group('buildProfileUrl', () {
-      const testNpub =
-          'npub10z98cqe5kehs5wfnax59vqzuyd7puhr2dyy0g5ha5kxc83h38yts0z3mgg';
+  group('buildProfileUrl', () {
+    const testNpub =
+        'npub10z98cqe5kehs5wfnax59vqzuyd7puhr2dyy0g5ha5kxc83h38yts0z3mgg';
 
-      test('returns subdomain URL for divine.video NIP-05', () {
-        expect(
-          buildProfileUrl('_@thomassanders.divine.video', testNpub),
-          equals('https://thomassanders.divine.video'),
-        );
-      });
+    test('returns subdomain URL for divine.video NIP-05', () {
+      expect(
+        buildProfileUrl('_@thomassanders.divine.video', testNpub),
+        equals('https://thomassanders.divine.video'),
+      );
+    });
 
-      test('returns subdomain URL for user@subdomain.divine.video NIP-05', () {
-        expect(
-          buildProfileUrl('user@rabble.divine.video', testNpub),
-          equals('https://rabble.divine.video'),
-        );
-      });
+    test('returns subdomain URL for user@subdomain.divine.video NIP-05', () {
+      expect(
+        buildProfileUrl('user@rabble.divine.video', testNpub),
+        equals('https://rabble.divine.video'),
+      );
+    });
 
-      test('returns npub profile URL for non-divine.video NIP-05', () {
-        expect(
-          buildProfileUrl('alice@example.com', testNpub),
-          equals('https://divine.video/profile/$testNpub'),
-        );
-      });
+    test('returns npub profile URL for non-divine.video NIP-05', () {
+      expect(
+        buildProfileUrl('alice@example.com', testNpub),
+        equals('https://divine.video/profile/$testNpub'),
+      );
+    });
 
-      test('returns npub profile URL when NIP-05 is null', () {
-        expect(
-          buildProfileUrl(null, testNpub),
-          equals('https://divine.video/profile/$testNpub'),
-        );
-      });
+    test('returns npub profile URL when NIP-05 is null', () {
+      expect(
+        buildProfileUrl(null, testNpub),
+        equals('https://divine.video/profile/$testNpub'),
+      );
+    });
 
-      test('returns npub profile URL when NIP-05 is empty', () {
-        expect(
-          buildProfileUrl('', testNpub),
-          equals('https://divine.video/profile/$testNpub'),
-        );
-      });
+    test('returns npub profile URL when NIP-05 is empty', () {
+      expect(
+        buildProfileUrl('', testNpub),
+        equals('https://divine.video/profile/$testNpub'),
+      );
     });
   });
 }

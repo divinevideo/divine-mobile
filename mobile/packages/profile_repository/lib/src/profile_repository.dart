@@ -714,7 +714,21 @@ class ProfileRepository implements ProfileReader {
         // an empty result already falls through to the cached kind-10011 row,
         // and a partial one is reconciled by _cachedTagsSuperseding (#7081),
         // which is the right owner of "is this live event actually newer".
-        // Discarding a partial read would throw away a genuinely newer event.
+        // Discarding a partial read would throw away a genuinely newer event
+        // — the likely shape here, since the failure is relay.divine.video
+        // answering late rather than not at all.
+        //
+        // The one gap: _cachedTagsSuperseding can only compare rows that have
+        // source coordinates, so a pre-coordinates kind-10011 row lets an
+        // older partial read win and drop a claim. It self-heals on the next
+        // settled read and that population only shrinks, so it does not earn
+        // a guard here.
+        //
+        // Note the write path in IdentityClaimsRepository answers the same
+        // question the other way, deliberately: there a partial read is
+        // authoritative as a publish base, because publishing on a stale one
+        // silently unlinks claims. Display prefers completeness, the write
+        // path prefers caution.
         Log.warning(
           'Kind-$identityEventKind read did not settle for '
           '${pubkeyForLogs(pubkey)} (${result.events.length} event(s) '

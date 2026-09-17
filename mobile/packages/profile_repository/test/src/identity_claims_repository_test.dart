@@ -1575,6 +1575,44 @@ void main() {
         verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
 
+      test(
+        'still links a kind-0-sourced profile when the read is unsettled',
+        () async {
+          // The snapshot here is what the kind-0 fallback itself wrote, not
+          // evidence of a lagging kind-10011 read. Refusing on it would block a
+          // legitimate first link for a pre-migration profile whenever a single
+          // relay failed to settle.
+          stubUnsettledIdentityRead(
+            kind0: [
+              _event(
+                id: _eventId(14),
+                tags: [
+                  ['i', 'github:octocat', 'abc'],
+                ],
+              ),
+            ],
+          );
+          when(() => identityEventsDao.getEvent(any())).thenAnswer(
+            (_) async => const IdentityEventRow(
+              pubkey: _pubkey,
+              tagsJson: '[["i","github:octocat","abc"]]',
+              sourceKind: 0,
+            ),
+          );
+
+          await repo.publishClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'someone',
+              proof: '123',
+            ),
+          );
+
+          verify(() => nostrClient.publishEventAwaitOk(any())).called(1);
+        },
+      );
+
       test('keeps the snapshot claims instead of reporting none', () async {
         stubUnsettledIdentityRead(kind0: [_event(id: _eventId(11))]);
         when(() => identityEventsDao.getEvent(any())).thenAnswer(
