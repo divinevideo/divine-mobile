@@ -195,11 +195,14 @@ gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
              then error("no review found for <authenticated-login>")
              else .[-1] end
            | {state, commit_id, submitted_at, html_url}'
+gh pr view NUMBER --repo OWNER/REPO --json headRefOid --jq .headRefOid
 ```
 
 Verify its `state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as
-intended, and that `submitted_at` is present. Then check `commit_id` against
-the SHA you actually reviewed. A review submitted with `gh pr review` carries
+intended, and that `submitted_at` is present. Then compare three values: the
+SHA you reviewed, the review's saved `commit_id`, and the live `headRefOid`.
+
+A review submitted with `gh pr review` carries
 no explicit commit, and GitHub defaults an omitted `commit_id` to the pull
 request's most recent commit as of when the submission is processed — so if
 the head moved between your review and submission, the saved review attaches
@@ -207,9 +210,19 @@ to that newer, unreviewed commit, not the one you read. That is worse than
 stale: the verdict now certifies code nobody looked at. It is the `gh pr
 review` CLI that cannot pin a commit, not the API: the REST body above and
 GraphQL `addPullRequestReview`'s `commitOID` input both take an explicit
-SHA, so either one works where the CLI does not. If `commit_id` does not equal the SHA
-you reviewed, treat the verdict as covering the wrong commit — re-review the
-current head before relying on it.
+SHA, so either one works where the CLI does not.
+
+Pinning is necessary but not sufficient, and the failure it leaves behind is
+the quiet one. A `commit_id` equal to the SHA you reviewed proves only that
+the verdict landed where you aimed it; it says nothing about whether that
+commit is still the head. GitHub carries a stale pin forward as a current
+approval — #9144 merged with `reviewDecision: APPROVED` whose only approval
+was pinned to a commit that was no longer the head — so the newer commits
+merge uncertified while this verification passes. Check both directions: if
+`commit_id` does not equal the SHA you reviewed, the verdict covers the wrong
+commit; if it equals it but `headRefOid` has moved since, the verdict covers a
+commit that is no longer current. Either way, review the new head and submit a
+verdict pinned to it before treating the review as covering the pull request.
 
 Return the review URL, saved verdict, and reviewed SHA. A successful CLI exit
 or an overall `reviewDecision` alone is insufficient: other reviewers and
