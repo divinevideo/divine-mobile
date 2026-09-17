@@ -226,7 +226,24 @@ verdict pinned to it before treating the review as covering the pull request.
 
 Return the review URL, saved verdict, and reviewed SHA. A successful CLI exit
 or an overall `reviewDecision` alone is insufficient: other reviewers and
-branch rules affect the aggregate. If submission fails, report the actual
+branch rules affect the aggregate. For who currently blocks or clears the pull
+request, read `latestReviews`, which is GitHub's per-reviewer *current* state,
+rather than reasoning from the `reviews` history:
+
+```bash
+gh pr view NUMBER --repo OWNER/REPO --json latestReviews,reviewRequests \
+  --jq '{effective: [.latestReviews[] | {who: .author.login, state: .state}],
+         pending: [.reviewRequests[] | (.login // .name)]}'
+```
+
+The two disagree whenever a re-request supersedes an earlier verdict: once a
+new review is requested from an account, GitHub drops that account's previous
+approval from `latestReviews` and lists it under `reviewRequests` instead,
+while the full `reviews` history still shows the `APPROVED`. So the
+`.[-1]`-by-login filter above answers only "what did I last submit", which is
+a different question from "does my verdict still count". `reviewRequests`
+carries users as `.login` and teams as `.name`, hence the fallback in the
+filter. If submission fails, report the actual
 error and remaining action; do not silently fall back to a comment and call
 the review delivered. If retrying after an uncertain response, inspect existing
 reviews first to avoid duplicate submissions. On an authorized re-review, if
