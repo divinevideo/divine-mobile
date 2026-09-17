@@ -465,7 +465,12 @@ class _ClearLogsTileView extends StatelessWidget {
         icon: DivineIconName.trashSimple,
         title: l10n.supportClearLogs,
         subtitle: l10n.supportClearLogsSubtitle,
-        onTap: () => _confirmAndClear(context),
+        onTap: () => runDetached(
+          _confirmAndClear(context),
+          'confirm and clear logs',
+          logName: 'SupportCenterScreen',
+          category: LogCategory.ui,
+        ),
       ),
     );
   }

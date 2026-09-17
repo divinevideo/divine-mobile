@@ -65,12 +65,14 @@ void main() {
       ).thenAnswer((invocation) {
         subscribeCallCount++;
         // Simulate EOSE immediately
-        Future.microtask(() {
-          final onEose =
-              invocation.namedArguments[const Symbol('onEose')]
-                  as void Function()?;
-          onEose?.call();
-        });
+        unawaited(
+          Future.microtask(() {
+            final onEose =
+                invocation.namedArguments[const Symbol('onEose')]
+                    as void Function()?;
+            onEose?.call();
+          }),
+        );
         return eventStreamController.stream;
       });
 
@@ -80,8 +82,8 @@ void main() {
       );
     });
 
-    tearDown(() {
-      eventStreamController.close();
+    tearDown(() async {
+      await eventStreamController.close();
       videoEventService.dispose();
     });
 
@@ -208,7 +210,7 @@ void main() {
       expect(callsBefore, greaterThan(0));
 
       // Dispose and close stream first (to avoid double-dispose in tearDown)
-      eventStreamController.close();
+      await eventStreamController.close();
       videoEventService.dispose();
 
       // Create a new stream controller for tearDown to close without error

@@ -328,9 +328,11 @@ void main() {
         withEmptyCache();
 
         fakeAsync((async) {
-          videoEventService.subscribeToVideoFeed(
-            subscriptionType: SubscriptionType.profile,
-            authors: ['a' * 64],
+          unawaited(
+            videoEventService.subscribeToVideoFeed(
+              subscriptionType: SubscriptionType.profile,
+              authors: ['a' * 64],
+            ),
           );
           async.flushMicrotasks();
 

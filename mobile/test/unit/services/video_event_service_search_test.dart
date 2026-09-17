@@ -228,7 +228,7 @@ void main() {
       test('should filter blocked user videos from search results', () async {
         // Create a real blocklist service and block a user
         final blocklistRepository = ContentBlocklistRepository();
-        blocklistRepository.blockUser(blockedPubkey);
+        await blocklistRepository.blockUser(blockedPubkey);
 
         // Set the blocklist service on the video event service
         videoEventService.setBlocklistRepository(blocklistRepository);
@@ -268,7 +268,7 @@ void main() {
           final blocklistRepository = ContentBlocklistRepository();
 
           // Block a different user (not normalPubkey)
-          blocklistRepository.blockUser(otherBlockedPubkey);
+          await blocklistRepository.blockUser(otherBlockedPubkey);
 
           // Set the blocklist service on the video event service
           videoEventService.setBlocklistRepository(blocklistRepository);

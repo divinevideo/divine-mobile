@@ -75,8 +75,10 @@ void main() {
 
         fakeAsync((async) {
           // 1. Initial subscription
-          videoEventService.subscribeToVideoFeed(
-            subscriptionType: SubscriptionType.discovery,
+          unawaited(
+            videoEventService.subscribeToVideoFeed(
+              subscriptionType: SubscriptionType.discovery,
+            ),
           );
 
           async.flushMicrotasks();
@@ -140,8 +142,10 @@ void main() {
           );
 
           // 3. Try to subscribe again (simulate user coming back)
-          videoEventService.subscribeToVideoFeed(
-            subscriptionType: SubscriptionType.discovery,
+          unawaited(
+            videoEventService.subscribeToVideoFeed(
+              subscriptionType: SubscriptionType.discovery,
+            ),
           );
 
           async.flushMicrotasks();

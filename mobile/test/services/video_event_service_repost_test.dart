@@ -44,8 +44,8 @@ void main() {
       );
     });
 
-    tearDown(() {
-      eventStreamController.close();
+    tearDown(() async {
+      await eventStreamController.close();
       videoEventService.dispose();
     });
 
@@ -266,7 +266,7 @@ void main() {
       // Verify no events were added since original is not a video
       expect(videoEventService.discoveryVideos.length, 0);
 
-      fetchStreamController.close();
+      await fetchStreamController.close();
     });
 
     test('should apply hashtag filter to Kind 16 reposts', () async {

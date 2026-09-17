@@ -76,8 +76,8 @@ void main() {
       );
     });
 
-    tearDown(() {
-      eventStreamController.close();
+    tearDown(() async {
+      await eventStreamController.close();
       service.dispose();
     });
 

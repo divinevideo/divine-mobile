@@ -28,13 +28,13 @@ void main() {
       service.dispose();
     });
 
-    test('filters out expired events when adding to discovery feed', () {
+    test('filters out expired events when adding to discovery feed', () async {
       when(() => nostrService.isInitialized).thenReturn(true);
       when(() => nostrService.connectedRelayCount).thenReturn(1);
 
       // Before fix: This would add the video to discovery
       // After fix: This should NOT add expired video
-      service.subscribeToDiscovery();
+      await service.subscribeToDiscovery();
 
       // Manually call internal _addVideoToSubscription
       //(testing private method behavior through public API)
@@ -42,7 +42,7 @@ void main() {
 
       // This would normally be called internally, but we're testing the filtering logic
       // In practice, expired events should never make it into the feed
-      service.subscribeToDiscovery();
+      await service.subscribeToDiscovery();
 
       // Verify no expired events in the list
       final discoveryVideos = service.getVideos(SubscriptionType.discovery);
