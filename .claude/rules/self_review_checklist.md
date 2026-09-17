@@ -39,9 +39,10 @@ a fix. See [`pr_takeover.md`](pr_takeover.md).
 - [ ] **Completing a review means submitting a matching GitHub verdict** —
   `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` — not just posting findings or a
   body saying "no actionable findings" as `COMMENTED`. The review request is
-  itself the authorization to post it, so post by default rather than asking;
-  an explicit instruction may keep the review private or hold one verdict for
-  a named owner, and the conclusion then goes out as a non-approving review.
+  itself the authorization to post it, so post by default rather than asking.
+  An explicit instruction to keep the review private withholds it; one that
+  holds a single verdict for a named owner still sends the conclusion as a
+  non-approving review.
   Pick the verdict from the table in
   [`pr_takeover.md`](pr_takeover.md#submit-an-explicit-review-verdict), pin the
   reviewed SHA, and verify the saved review's `state`, `commit_id`, and
