@@ -2,6 +2,7 @@
 // ABOUTME: Renders layer / filter / sound items in rows with long-press
 // ABOUTME: drag to reposition (time + row) and trim handles on selection.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
@@ -397,7 +398,7 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     if (widget.isLayerMultiSelectMode) return;
     final mainBloc = context.read<VideoEditorMainBloc?>();
     if (mainBloc?.state.isVolumeEditMode == true) return;
-    HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
     _dragSnap.reset();
     _dragSnap.begin(
       item.startTime.inMilliseconds,

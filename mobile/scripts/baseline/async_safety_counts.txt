@@ -56,7 +56,6 @@ discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
 discarded_futures|lib/screens/user_list_people_screen.dart	5
 discarded_futures|lib/screens/verify/verify_screen.dart	1
 discarded_futures|lib/screens/video_detail_screen.dart	6
-discarded_futures|lib/screens/video_editor/voice_over_recorder_screen.dart	1
 discarded_futures|lib/screens/video_metadata/video_metadata_cover_screen.dart	2
 discarded_futures|lib/screens/video_metadata/video_metadata_edit_screen.dart	1
 discarded_futures|lib/screens/video_metadata/video_metadata_preview_screen.dart	1
@@ -107,19 +106,6 @@ discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/user_avatar.dart	1
 discarded_futures|lib/widgets/user_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
-discarded_futures|lib/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart	1
-discarded_futures|lib/widgets/video_editor/chroma_key/chroma_key_controls.dart	1
-discarded_futures|lib/widgets/video_editor/chroma_key/chroma_keyed_video.dart	1
-discarded_futures|lib/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart	2
-discarded_futures|lib/widgets/video_editor/timeline_editor/strips/video_editor_stop_motion_frame_strip.dart	4
-discarded_futures|lib/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart	6
-discarded_futures|lib/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip_tiles.dart	2
-discarded_futures|lib/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart	1
-discarded_futures|lib/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart	2
-discarded_futures|lib/widgets/video_editor/timeline_editor/timeline_snap_controller.dart	1
-discarded_futures|lib/widgets/video_editor/timeline_editor/video_editor_timeline_volume.dart	1
-discarded_futures|lib/widgets/video_editor/timeline_editor/video_editor_volume_mute_toggle.dart	1
-discarded_futures|lib/widgets/video_editor/video_editor_color_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_feed_item/actions/comment_action_button.dart	1
 discarded_futures|lib/widgets/video_feed_item/actions/help_classify_action_button.dart	1
 discarded_futures|lib/widgets/video_feed_item/actions/like_action_button.dart	1
@@ -181,13 +167,6 @@ discarded_futures|test/blocs/tags_picker/tags_picker_bloc_test.dart	1
 discarded_futures|test/blocs/upload_progress/upload_progress_cubit_test.dart	1
 discarded_futures|test/blocs/user_search/user_search_bloc_test.dart	1
 discarded_futures|test/blocs/verify/verify_connect_cubit_test.dart	3
-discarded_futures|test/blocs/video_editor/audio_timing/audio_timing_cubit_test.dart	6
-discarded_futures|test/blocs/video_editor/clip_editor/clip_editor_bloc_test.dart	1
-discarded_futures|test/blocs/video_editor/draw_editor/video_editor_draw_bloc_test.dart	1
-discarded_futures|test/blocs/video_editor/filter_editor/video_editor_filter_bloc_test.dart	1
-discarded_futures|test/blocs/video_editor/main_editor/video_editor_main_bloc_test.dart	1
-discarded_futures|test/blocs/video_editor/text_editor/video_editor_text_bloc_test.dart	2
-discarded_futures|test/blocs/video_editor/tune_editor/video_editor_tune_bloc_test.dart	1
 discarded_futures|test/blocs/video_engagement/video_engagement_bloc_test.dart	1
 discarded_futures|test/blocs/video_feed/video_feed_bloc_test.dart	5
 discarded_futures|test/blocs/video_interactions/video_interactions_bloc_test.dart	5
@@ -205,7 +184,6 @@ discarded_futures|test/notifications/view/pending_badge_awards_view_test.dart	1
 discarded_futures|test/providers/deep_link_provider_test.dart	2
 discarded_futures|test/providers/sounds_providers_test.dart	1
 discarded_futures|test/providers/subtitle_visibility_test.dart	1
-discarded_futures|test/providers/video_editor_provider_test.dart	8
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
@@ -231,7 +209,6 @@ discarded_futures|test/services/subscribed_list_video_cache_test.dart	1
 discarded_futures|test/services/subscription_manager_cache_test.dart	1
 discarded_futures|test/services/supporter_repository_test.dart	1
 discarded_futures|test/services/upload_manager_recovery_test.dart	1
-discarded_futures|test/services/video_editor/video_render_watchdog_test.dart	3
 discarded_futures|test/services/video_event_publisher_retry_test.dart	9
 discarded_futures|test/services/video_event_service_home_feed_streaming_test.dart	3
 discarded_futures|test/unit/providers/relay_set_change_bridge_test.dart	13
@@ -241,8 +218,6 @@ discarded_futures|test/widgets/profile/profile_actions_sheet/profile_actions_she
 discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
 discarded_futures|test/widgets/upload_failure_listener_test.dart	1
 discarded_futures|test/widgets/upload_progress_dialog_test.dart	1
-discarded_futures|test/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip_test.dart	1
-discarded_futures|test/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strips_test.dart	1
 discarded_futures|test/widgets/video_feed_item/inline_comment_composer_bar_test.dart	2
 discarded_futures|test/widgets/video_metadata/video_metadata_help_sheet_test.dart	1
 discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
@@ -262,7 +237,6 @@ unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1
 unawaited_futures|lib/widgets/image_attachment_picker.dart	1
 unawaited_futures|lib/widgets/library/sounds_tab.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
-unawaited_futures|lib/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart	1
 unawaited_futures|lib/widgets/video_recorder/video_recorder_library_button.dart	1
 unawaited_futures|lib/widgets/video_recorder/video_recorder_navigation.dart	1
 unawaited_futures|test/blocs/account_deletion_recovery/account_deletion_recovery_cubit_test.dart	3

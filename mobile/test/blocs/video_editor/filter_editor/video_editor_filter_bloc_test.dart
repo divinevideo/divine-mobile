@@ -15,14 +15,17 @@ void main() {
       return VideoEditorFilterBloc();
     }
 
-    test('initial state has filters from [VideoEditorConstants.filters]', () {
-      final bloc = buildBloc();
-      expect(bloc.state.filters, equals(VideoEditorConstants.filters));
-      expect(bloc.state.selectedFilter, isNull);
-      expect(bloc.state.opacity, 1.0);
-      expect(bloc.state.hasFilter, isFalse);
-      bloc.close();
-    });
+    test(
+      'initial state has filters from [VideoEditorConstants.filters]',
+      () async {
+        final bloc = buildBloc();
+        expect(bloc.state.filters, equals(VideoEditorConstants.filters));
+        expect(bloc.state.selectedFilter, isNull);
+        expect(bloc.state.opacity, 1.0);
+        expect(bloc.state.hasFilter, isFalse);
+        await bloc.close();
+      },
+    );
 
     group('VideoEditorFilterSelected', () {
       final testFilter =

@@ -6,8 +6,10 @@ import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Applies [chromaKey] to [child] for preview, without rendering anything.
 ///
@@ -88,9 +90,14 @@ class _ChromaKeyedVideoState extends State<ChromaKeyedVideo> {
       // request it again, forever.
       if (_awaitedProgram) return;
       _awaitedProgram = true;
-      ChromaKeyShader.ensureLoaded().then((_) {
-        if (mounted) setState(_prepare);
-      });
+      runDetached(
+        ChromaKeyShader.ensureLoaded().then((_) {
+          if (mounted) setState(_prepare);
+        }),
+        'load chroma-key shader',
+        logName: 'ChromaKeyedVideo',
+        category: LogCategory.video,
+      );
       return;
     }
 

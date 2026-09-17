@@ -337,7 +337,7 @@ void main() {
       );
     }
 
-    test('initial state has correct defaults', () {
+    test('initial state has correct defaults', () async {
       final bloc = buildBloc();
       expect(bloc.state.clips, isEmpty);
       expect(bloc.state.currentClipIndex, equals(0));
@@ -346,7 +346,7 @@ void main() {
       expect(bloc.state.isTrimDragging, isFalse);
       expect(bloc.state.isReversing, isFalse);
       expect(bloc.state.totalDuration, equals(Duration.zero));
-      bloc.close();
+      await bloc.close();
     });
 
     // =========================================================

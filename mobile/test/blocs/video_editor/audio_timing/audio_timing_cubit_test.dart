@@ -125,13 +125,13 @@ void main() {
       );
     }
 
-    test('initial state is default $AudioTimingState', () {
+    test('initial state is default $AudioTimingState', () async {
       final cubit = buildCubit();
       expect(cubit.state, equals(const AudioTimingState()));
       expect(cubit.state.startOffset, equals(0));
       expect(cubit.state.audioDuration, isNull);
       expect(cubit.state.isPlaying, isFalse);
-      cubit.close();
+      await cubit.close();
     });
 
     group('initialize', () {
@@ -502,19 +502,22 @@ void main() {
     });
 
     group('calculateStartOffset', () {
-      test('returns Duration.zero when audio is shorter than minRemaining', () {
-        final cubit = buildCubit(sound: _createTestSound(duration: 0.3));
-        // audioDuration (0.3s) <= minRemainingAudioSecs (0.5s),
-        // so scrollable = 0 → always zero
-        cubit.emit(
-          const AudioTimingState(audioDuration: 0.3, startOffset: 0.5),
-        );
+      test(
+        'returns Duration.zero when audio is shorter than minRemaining',
+        () async {
+          final cubit = buildCubit(sound: _createTestSound(duration: 0.3));
+          // audioDuration (0.3s) <= minRemainingAudioSecs (0.5s),
+          // so scrollable = 0 → always zero
+          cubit.emit(
+            const AudioTimingState(audioDuration: 0.3, startOffset: 0.5),
+          );
 
-        expect(cubit.calculateStartOffset(), equals(Duration.zero));
-        cubit.close();
-      });
+          expect(cubit.calculateStartOffset(), equals(Duration.zero));
+          await cubit.close();
+        },
+      );
 
-      test('returns correct offset for 20s audio at midpoint', () {
+      test('returns correct offset for 20s audio at midpoint', () async {
         final cubit = buildCubit(sound: _createTestSound());
         // minRemaining = 0.5s, scrollable = 20 - 0.5 = 19.5s
         // At offset 0.5: startTime = 0.5 * 19.5 = 9.75s = 9750ms
@@ -524,18 +527,18 @@ void main() {
           cubit.calculateStartOffset(),
           equals(const Duration(milliseconds: 9750)),
         );
-        cubit.close();
+        await cubit.close();
       });
 
-      test('returns Duration.zero at offset 0', () {
+      test('returns Duration.zero at offset 0', () async {
         final cubit = buildCubit(sound: _createTestSound());
         cubit.emit(const AudioTimingState(audioDuration: 20));
 
         expect(cubit.calculateStartOffset(), equals(Duration.zero));
-        cubit.close();
+        await cubit.close();
       });
 
-      test('returns maximum offset at 1.0', () {
+      test('returns maximum offset at 1.0', () async {
         final cubit = buildCubit(sound: _createTestSound());
         // scrollable = 20 - 0.5 = 19.5s
         cubit.emit(const AudioTimingState(audioDuration: 20, startOffset: 1.0));
@@ -544,13 +547,13 @@ void main() {
           cubit.calculateStartOffset(),
           equals(const Duration(milliseconds: 19500)),
         );
-        cubit.close();
+        await cubit.close();
       });
 
       test(
         'allows start offset past audioDuration - maxDuration '
         '(short remainder)',
-        () {
+        () async {
           // 10s audio, video maxDuration = 6.3s.
           // Old behaviour capped startOffset at 10 - 6.3 = 3.7s.
           // New behaviour allows up to 10 - 0.5 = 9.5s, leaving 0.5s of
@@ -564,7 +567,7 @@ void main() {
             cubit.calculateStartOffset(),
             equals(const Duration(milliseconds: 9500)),
           );
-          cubit.close();
+          await cubit.close();
         },
       );
     });

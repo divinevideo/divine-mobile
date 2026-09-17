@@ -39,9 +39,9 @@ void main() {
       mainBloc = VideoEditorMainBloc();
     });
 
-    tearDown(() {
+    tearDown(() async {
       scrollController.dispose();
-      mainBloc.close();
+      await mainBloc.close();
     });
 
     Widget buildWidget({

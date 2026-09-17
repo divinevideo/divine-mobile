@@ -153,7 +153,7 @@ void main() {
     });
 
     group('reset', () {
-      test('should reset all state to defaults', () {
+      test('should reset all state to defaults', () async {
         // Modify some provider-owned state
         container
             .read(videoEditorProvider.notifier)
@@ -164,7 +164,7 @@ void main() {
         expect(state.title, 'Test Title');
 
         // Reset
-        container.read(videoEditorProvider.notifier).reset();
+        await container.read(videoEditorProvider.notifier).reset();
         state = container.read(videoEditorProvider);
 
         expect(state.title, isEmpty, reason: 'title should reset to empty');
@@ -3011,10 +3011,12 @@ void main() {
 
           fakeAsync((async) {
             bool? result;
-            container
-                .read(videoEditorProvider.notifier)
-                .restoreDraft('draft-1')
-                .then((value) => result = value);
+            unawaited(
+              container
+                  .read(videoEditorProvider.notifier)
+                  .restoreDraft('draft-1')
+                  .then((value) => result = value),
+            );
             async.flushMicrotasks();
             expect(result, isTrue);
 
@@ -3524,9 +3526,11 @@ void main() {
       fakeAsync((async) {
         final notifier = container.read(videoEditorProvider.notifier);
         DraftSaveOutcome? result;
-        notifier
-            .saveAsDraft(enforceCreateNewDraft: true)
-            .then((value) => result = value);
+        unawaited(
+          notifier
+              .saveAsDraft(enforceCreateNewDraft: true)
+              .then((value) => result = value),
+        );
 
         expect(
           container.read(videoEditorProvider).isSavingDraft,
@@ -3564,9 +3568,11 @@ void main() {
       fakeAsync((async) {
         final notifier = container.read(videoEditorProvider.notifier);
         DraftSaveOutcome? result;
-        notifier
-            .saveAsDraft(enforceCreateNewDraft: true)
-            .then((value) => result = value);
+        unawaited(
+          notifier
+              .saveAsDraft(enforceCreateNewDraft: true)
+              .then((value) => result = value),
+        );
         async.flushMicrotasks();
 
         expect(result, equals(DraftSaveOutcome.failed));
@@ -3591,9 +3597,11 @@ void main() {
           async.flushMicrotasks();
 
           DraftSaveOutcome? secondResult;
-          notifier
-              .saveAsDraft(enforceCreateNewDraft: true)
-              .then((value) => secondResult = value);
+          unawaited(
+            notifier
+                .saveAsDraft(enforceCreateNewDraft: true)
+                .then((value) => secondResult = value),
+          );
           async.flushMicrotasks();
 
           expect(
@@ -3624,9 +3632,11 @@ void main() {
 
         final notifier = container.read(videoEditorProvider.notifier);
         DraftSaveOutcome? result;
-        notifier
-            .saveAsDraft(enforceCreateNewDraft: true)
-            .then((value) => result = value);
+        unawaited(
+          notifier
+              .saveAsDraft(enforceCreateNewDraft: true)
+              .then((value) => result = value),
+        );
 
         // Let the write resolve so we are parked on the pending cleanup.
         async.flushMicrotasks();
@@ -3739,7 +3749,9 @@ void main() {
         notifier.updateMetadata(title: 'Almost lost');
 
         bool? result;
-        notifier.flushPendingAutosave().then((value) => result = value);
+        unawaited(
+          notifier.flushPendingAutosave().then((value) => result = value),
+        );
         async.flushMicrotasks();
 
         expect(result, isTrue);
@@ -4064,7 +4076,7 @@ void main() {
 
         unawaited(notifier.reset(keepAutosavedDraft: true));
         var cleanupSettled = false;
-        backgroundWork.settle().then((_) => cleanupSettled = true);
+        unawaited(backgroundWork.settle().then((_) => cleanupSettled = true));
         async.flushMicrotasks();
         expect(
           cleanupSettled,

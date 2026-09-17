@@ -16,6 +16,7 @@ import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
@@ -124,7 +125,12 @@ class _AudioSelectionBottomSheetState
 
   @override
   void dispose() {
-    _audioService.dispose();
+    runDetached(
+      _audioService.dispose(),
+      'dispose audio playback service',
+      logName: 'AudioSelectionBottomSheet',
+      category: LogCategory.ui,
+    );
     _searchController.dispose();
     super.dispose();
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 
@@ -253,7 +255,7 @@ class TimelineSnapController {
 
   void _fireHaptic({required bool isSnapped}) {
     if (isSnapped && !_wasSnapped) {
-      HapticFeedback.selectionClick();
+      unawaited(HapticFeedback.selectionClick());
     }
     _wasSnapped = isSnapped;
   }

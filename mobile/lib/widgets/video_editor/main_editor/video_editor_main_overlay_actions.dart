@@ -1,8 +1,6 @@
 // ABOUTME: Top overlay actions for the video editor with close and done buttons.
 // ABOUTME: Hides when the music sub-editor is open.
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,9 +13,11 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Top action bar for the video editor.
 ///
@@ -161,17 +161,22 @@ class _TopActions extends ConsumerWidget {
       return;
     }
 
-    VineBottomSheetPrompt.show(
-      context: context,
-      sticker: .videoClapBoard,
-      title: context.l10n.videoEditorSaveDraftTitle,
-      subtitle: context.l10n.videoEditorSaveDraftSubtitle,
-      primaryButtonText: context.l10n.videoEditorSaveDraftButton,
-      secondaryButtonText: context.l10n.videoEditorDiscardChangesButton,
-      tertiaryButtonText: context.l10n.videoEditorKeepEditingButton,
-      onPrimaryPressed: () => _onSaveDraftPressed(context: context, ref: ref),
-      onSecondaryPressed: () => _onDiscardPressed(context: context, ref: ref),
-      onTertiaryPressed: context.pop,
+    runDetached(
+      VineBottomSheetPrompt.show(
+        context: context,
+        sticker: .videoClapBoard,
+        title: context.l10n.videoEditorSaveDraftTitle,
+        subtitle: context.l10n.videoEditorSaveDraftSubtitle,
+        primaryButtonText: context.l10n.videoEditorSaveDraftButton,
+        secondaryButtonText: context.l10n.videoEditorDiscardChangesButton,
+        tertiaryButtonText: context.l10n.videoEditorKeepEditingButton,
+        onPrimaryPressed: () => _onSaveDraftPressed(context: context, ref: ref),
+        onSecondaryPressed: () => _onDiscardPressed(context: context, ref: ref),
+        onTertiaryPressed: context.pop,
+      ),
+      'show unsaved changes prompt',
+      logName: 'VideoEditorMainOverlayActions',
+      category: LogCategory.video,
     );
   }
 
@@ -201,10 +206,13 @@ class _TopActions extends ConsumerWidget {
       // targets the fixed autosave id, so landing late would wipe the recovery
       // point of whatever session is active by then (adding a clip back on the
       // recorder writes one).
-      unawaited(
+      runDetached(
         ref
             .read(videoPublishProvider.notifier)
             .clearAll(keepAutosavedDraft: true),
+        'clear saved editor session',
+        logName: 'VideoEditorMainOverlayActions',
+        category: LogCategory.video,
       );
       // Success: close prompt + close editor.
       context.pop();
@@ -228,7 +236,12 @@ class _TopActions extends ConsumerWidget {
     required BuildContext context,
     required WidgetRef ref,
   }) {
-    ref.read(videoPublishProvider.notifier).clearAll();
+    runDetached(
+      ref.read(videoPublishProvider.notifier).clearAll(),
+      'discard editor session',
+      logName: 'VideoEditorMainOverlayActions',
+      category: LogCategory.video,
+    );
     context.pop();
     context.pop();
   }

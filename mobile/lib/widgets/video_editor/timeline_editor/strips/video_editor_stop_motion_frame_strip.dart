@@ -230,7 +230,7 @@ class _VideoEditorStopMotionFrameStripState
         ? ((fingerX - tileLeft) / tileWidth).clamp(0.0, 1.0)
         : 0.5;
 
-    HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
     widget.onReorderChanged?.call(true);
     setState(() {
       _isReordering = true;
@@ -281,7 +281,7 @@ class _VideoEditorStopMotionFrameStripState
         if (selection.contains(i)) widget.frames[i],
     ];
 
-    HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
     widget.onReorderChanged?.call(true);
     setState(() {
       _isReordering = true;
@@ -311,14 +311,14 @@ class _VideoEditorStopMotionFrameStripState
     if (_isBlockDrag) {
       final slot = _slotAtX(_effectiveLocalX, widths);
       if (slot != _blockSlot) {
-        HapticFeedback.selectionClick();
+        unawaited(HapticFeedback.selectionClick());
         _blockSlot = slot;
       }
       return;
     }
     final target = _indexAtX(_effectiveLocalX - _dragTargetOffsetX, widths);
     if (target != _dragIndex) {
-      HapticFeedback.selectionClick();
+      unawaited(HapticFeedback.selectionClick());
       final frame = _orderedFrames.removeAt(_dragIndex!);
       _orderedFrames.insert(target, frame);
       _dragIndex = target;

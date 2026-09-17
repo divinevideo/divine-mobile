@@ -9,8 +9,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/color_swatch_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Shows the full HSV color picker as a bottom sheet, resolving with the
 /// picked color, or `null` when dismissed.
@@ -89,26 +91,36 @@ class _VideoEditorColorPickerSheetState
     if (_recentColors.length > _crossAxisCount) {
       _recentColors = _recentColors.sublist(0, _crossAxisCount);
     }
-    prefs.setStringList(
-      _recentColorsKey,
-      _recentColors.map((c) => c.toARGB32().toString()).toList(),
+    runDetached(
+      prefs.setStringList(
+        _recentColorsKey,
+        _recentColors.map((c) => c.toARGB32().toString()).toList(),
+      ),
+      'save recent editor colors',
+      logName: 'VideoEditorColorPickerSheet',
+      category: LogCategory.ui,
     );
     setState(() {});
   }
 
   void _openColorPicker(BuildContext context) {
-    VineBottomSheet.show(
-      context: context,
-      expanded: false,
-      scrollable: false,
-      isScrollControlled: true,
-      body: _FullColorPickerSheet(
-        initialColor: VineTheme.primary,
-        onColorSelected: (color) {
-          _saveRecentColor(color);
-          widget.onColorSelected(color);
-        },
+    runDetached(
+      VineBottomSheet.show<void>(
+        context: context,
+        expanded: false,
+        scrollable: false,
+        isScrollControlled: true,
+        body: _FullColorPickerSheet(
+          initialColor: VineTheme.primary,
+          onColorSelected: (color) {
+            _saveRecentColor(color);
+            widget.onColorSelected(color);
+          },
+        ),
       ),
+      'show editor color picker',
+      logName: 'VideoEditorColorPickerSheet',
+      category: LogCategory.ui,
     );
   }
 

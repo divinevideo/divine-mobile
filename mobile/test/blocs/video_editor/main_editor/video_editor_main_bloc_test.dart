@@ -9,7 +9,7 @@ void main() {
   group(VideoEditorMainBloc, () {
     VideoEditorMainBloc buildBloc() => VideoEditorMainBloc();
 
-    test('initial state has correct defaults', () {
+    test('initial state has correct defaults', () async {
       final bloc = buildBloc();
       expect(bloc.state.canUndo, isFalse);
       expect(bloc.state.canRedo, isFalse);
@@ -29,7 +29,7 @@ void main() {
       expect(bloc.state.isVolumeEditMode, isFalse);
       expect(bloc.state.isReordering, isFalse);
       expect(bloc.state.isMarkerMode, isFalse);
-      bloc.close();
+      await bloc.close();
     });
 
     group(VideoEditorMainCapabilitiesChanged, () {

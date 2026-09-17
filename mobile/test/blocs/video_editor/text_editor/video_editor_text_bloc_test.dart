@@ -15,7 +15,7 @@ void main() {
       return VideoEditorTextBloc(initialState: initialState);
     }
 
-    test('initial state has correct default values', () {
+    test('initial state has correct default values', () async {
       final bloc = buildBloc();
       expect(bloc.state.text, isEmpty);
       expect(bloc.state.selectedFontIndex, 0);
@@ -28,10 +28,10 @@ void main() {
       expect(bloc.state.fontSize, 0.5);
       expect(bloc.state.showFontSelector, isFalse);
       expect(bloc.state.showColorPicker, isFalse);
-      bloc.close();
+      await bloc.close();
     });
 
-    test('can be created with initial state', () {
+    test('can be created with initial state', () async {
       final bloc = buildBloc(
         initialState: const VideoEditorTextState(
           text: 'Hello',
@@ -48,7 +48,7 @@ void main() {
       expect(bloc.state.color, Colors.red);
       expect(bloc.state.backgroundStyle, LayerBackgroundMode.onlyColor);
       expect(bloc.state.fontSize, 0.8);
-      bloc.close();
+      await bloc.close();
     });
 
     group('VideoEditorTextContentChanged', () {

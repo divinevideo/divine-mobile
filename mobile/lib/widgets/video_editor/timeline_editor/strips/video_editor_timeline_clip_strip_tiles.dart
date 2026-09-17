@@ -132,7 +132,7 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     }
 
     if (atLimit && !_leftAtLimit) {
-      HapticFeedback.mediumImpact();
+      unawaited(HapticFeedback.mediumImpact());
     }
     _leftAtLimit = atLimit;
     _dragTrimStart = newTrimStart;
@@ -165,7 +165,7 @@ class _TrimmableClipTileState extends State<_TrimmableClipTile> {
     }
 
     if (atLimit && !_rightAtLimit) {
-      HapticFeedback.mediumImpact();
+      unawaited(HapticFeedback.mediumImpact());
     }
     _rightAtLimit = atLimit;
     _dragTrimEnd = newTrimEnd;

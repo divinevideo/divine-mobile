@@ -22,13 +22,15 @@ void main() {
         VideoRenderWatchdog.crashReporterOverride = (error, stackTrace) =>
             reportedFailure = error;
 
-        VideoRenderWatchdog.run<void>(
-          render: hung.future,
-          taskId: 'stalled-final-export',
-          cancelTask: (taskId) async => cancelledTaskId = taskId,
-        ).then<void>(
-          (_) => fail('the stalled export must not complete successfully'),
-          onError: (Object error, StackTrace stackTrace) => failure = error,
+        unawaited(
+          VideoRenderWatchdog.run<void>(
+            render: hung.future,
+            taskId: 'stalled-final-export',
+            cancelTask: (taskId) async => cancelledTaskId = taskId,
+          ).then<void>(
+            (_) => fail('the stalled export must not complete successfully'),
+            onError: (Object error, StackTrace stackTrace) => failure = error,
+          ),
         );
 
         async.elapse(VideoEditorConstants.renderWatchdogTimeout);
@@ -58,11 +60,13 @@ void main() {
         VideoRenderWatchdog.crashReporterOverride = (_, _) => reported = true;
 
         int? result;
-        VideoRenderWatchdog.run<int>(
-          render: Future<int>.value(7),
-          taskId: 'fast-export',
-          cancelTask: (_) async => cancelled = true,
-        ).then<void>((value) => result = value);
+        unawaited(
+          VideoRenderWatchdog.run<int>(
+            render: Future<int>.value(7),
+            taskId: 'fast-export',
+            cancelTask: (_) async => cancelled = true,
+          ).then<void>((value) => result = value),
+        );
 
         async.flushMicrotasks();
         // Elapse past the bound to prove the timer was cancelled on success
@@ -86,13 +90,15 @@ void main() {
             reportedFailure = error;
 
         Object? failure;
-        VideoRenderWatchdog.run<void>(
-          render: hung.future,
-          taskId: null,
-          cancelTask: (_) async => cancelCalled = true,
-        ).then<void>(
-          (_) => fail('the stalled export must not complete successfully'),
-          onError: (Object error, StackTrace _) => failure = error,
+        unawaited(
+          VideoRenderWatchdog.run<void>(
+            render: hung.future,
+            taskId: null,
+            cancelTask: (_) async => cancelCalled = true,
+          ).then<void>(
+            (_) => fail('the stalled export must not complete successfully'),
+            onError: (Object error, StackTrace _) => failure = error,
+          ),
         );
 
         async.elapse(VideoEditorConstants.renderWatchdogTimeout);
