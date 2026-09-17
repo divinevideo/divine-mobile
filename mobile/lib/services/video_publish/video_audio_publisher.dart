@@ -116,11 +116,16 @@ class VideoAudioPublisher {
   /// Returns [VideoAudioBlocked] when the publish must stop, and
   /// [VideoAudioResolved] with the tags to append otherwise.
   ///
-  /// Throws [AudioReuseNotPermittedException] when [selectedAudio]'s own
-  /// event forbids reuse ([AudioEvent.hasExplicitReuseConsent] without
-  /// [AudioEvent.allowsReuse]). That evidence needs no relay, so it is a
-  /// refusal rather than a transport failure and is raised instead of folded
-  /// into [VideoAudioBlocked].
+  /// Throws:
+  ///
+  /// * [AudioReuseNotPermittedException] when [selectedAudio]'s own event
+  ///   forbids reuse ([AudioEvent.hasExplicitReuseConsent] without
+  ///   [AudioEvent.allowsReuse]). That evidence needs no relay, so it is a
+  ///   refusal rather than a transport failure and is raised instead of
+  ///   folded into [VideoAudioBlocked].
+  /// * [AccountRestrictedPublishException] when the authoritative relay
+  ///   reports the account suspended or banned while an imported or
+  ///   provider sound's Kind 1063 is published.
   Future<VideoAudioResolution> resolveForPublish({
     required PendingUpload upload,
     required String videoDTag,
@@ -209,7 +214,15 @@ class VideoAudioPublisher {
     } else if (selectedAudio?.isExternalProviderSound == true) {
       final userPubkey = _authService?.currentPublicKeyHex;
       final relayHint = _relayHint();
-      if (userPubkey == null) return const VideoAudioBlocked();
+      if (userPubkey == null) {
+        Log.error(
+          'Cannot publish provider audio credit without an authenticated '
+          'pubkey',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        return const VideoAudioBlocked();
+      }
       selectedAudioReferenceId = await _publishProviderAudioBridge(
         audio: selectedAudio!,
         allowAudioReuse: allowAudioReuse,
@@ -408,7 +421,10 @@ class VideoAudioPublisher {
   /// Uploads an imported local sound to Blossom and publishes it as a Kind
   /// 1063 credited with [attribution].
   ///
-  /// Returns the published event id, or `null` when any step fails.
+  /// Returns the published event id, or `null` when a step fails.
+  ///
+  /// Throws [AccountRestrictedPublishException] when the authoritative relay
+  /// reports the account suspended or banned.
   Future<String?> _publishImportedAudioEvent({
     required AudioEvent audio,
     required AudioShareAttribution attribution,
@@ -534,7 +550,10 @@ class VideoAudioPublisher {
   /// with the provider's own creator, source, and license metadata.
   ///
   /// Returns the published event id, or `null` when the sound lacks durable
-  /// public credit or any step fails.
+  /// public credit or a step fails.
+  ///
+  /// Throws [AccountRestrictedPublishException] when the authoritative relay
+  /// reports the account suspended or banned.
   Future<String?> _publishProviderAudioBridge({
     required AudioEvent audio,
     required bool allowAudioReuse,

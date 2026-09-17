@@ -6,7 +6,8 @@ import 'dart:io';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart'
+    show AudioEvent, AudioExternalSource, AudioLicenseMetadata;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/services/video_publish/video_audio_publisher.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -54,6 +56,27 @@ AudioEvent _publishedSound({
   url: 'https://cdn.example/sound.mp3',
   allowsReuse: allowsReuse,
   hasExplicitReuseConsent: hasExplicitReuseConsent,
+);
+
+AudioEvent _providerSound() => AudioEvent(
+  id: 'freesound-1',
+  pubkey: _other,
+  createdAt: 0,
+  url: 'https://cdn.example/provider.mp3',
+  externalSource: AudioExternalSource(
+    provider: 'freesound',
+    providerSoundId: '1',
+    providerName: 'Freesound',
+    sourceUrl: 'https://freesound.example/sounds/1',
+    license: AudioLicenseMetadata(
+      type: 'cc0',
+      name: 'CC0',
+      url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+      allowsCommercialUse: true,
+      allowsDerivatives: true,
+      requiresAttribution: false,
+    ),
+  ),
 );
 
 void main() {
@@ -235,6 +258,33 @@ void main() {
         },
       );
 
+      test(
+        'logs why it blocks a provider sound with no account to sign with',
+        () async {
+          await LogCaptureService().clearAllLogs();
+          when(() => authService.currentPublicKeyHex).thenReturn(null);
+
+          final resolution = await publisher().resolveForPublish(
+            upload: upload,
+            videoDTag: 'vine-1',
+            allowAudioReuse: false,
+            selectedAudio: _providerSound(),
+          );
+
+          expect(resolution, isA<VideoAudioBlocked>());
+          expect(
+            LogCaptureService()
+                .getRecentLogs(minLevel: LogLevel.error)
+                .where(
+                  (entry) => entry.name == 'VideoAudioPublisher',
+                ),
+            isNotEmpty,
+            reason: 'VideoAudioBlocked promises its reason was logged',
+          );
+          verifyNever(() => relayPublisher.publishViaWebSocket(any()));
+        },
+      );
+
       test('blocks a reusable imported sound without attribution', () async {
         final resolution = await publisher().resolveForPublish(
           upload: upload,
@@ -323,6 +373,34 @@ void main() {
 
           expect(resolution, isA<VideoAudioResolved>());
         });
+
+        test(
+          'surfaces an account restriction instead of blocking the import',
+          () async {
+            when(() => relayPublisher.publishViaWebSocket(any())).thenThrow(
+              const AccountRestrictedPublishException(
+                reason: 'blocked: pubkey is suspended',
+                source: AccountRestrictionSource.webSocket,
+              ),
+            );
+
+            await expectLater(
+              importPublisher().resolveForPublish(
+                upload: upload,
+                videoDTag: 'vine-1',
+                allowAudioReuse: true,
+                selectedAudio: importedSound(),
+                audioShareAttribution: const AudioShareAttribution(
+                  title: 'Take 1',
+                  creatorName: 'Someone',
+                  publicTags: [],
+                  confirmedOwnWork: true,
+                ),
+              ),
+              throwsA(isA<AccountRestrictedPublishException>()),
+            );
+          },
+        );
 
         test('blocks the import when the attribution is incomplete', () async {
           final resolution = await importPublisher().resolveForPublish(
