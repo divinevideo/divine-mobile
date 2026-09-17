@@ -59,13 +59,14 @@ const String _logName = 'EditorStateHistory';
 ///    length and back, muting and unmuting, adding and removing a marker —
 ///    returns the timeline to a state it already stored, and nothing in the
 ///    meta is monotonic, so those metas are equal again. Entries without a
-///    `meta` are left alone and do not break the run.
+///    `meta` are left alone and are not what later entries match against.
 ///  * Every `proofManifestJson` string in the tree is stored once under
 ///    [proofManifestsKey] and each occurrence becomes `proofManifestRef`.
 ///
-/// Comparing metas is cheap because `addHistory` copies the map structure but
-/// shares the leaf values, so [_sameTree] settles a ~10 KB manifest string on
-/// a pointer compare rather than reading it.
+/// Matching is by [_treeHash] then [_sameTree]. The hash reads every leaf
+/// once per entry; the comparison that confirms a hit does not, because
+/// `addHistory` shares the leaf values and [_sameTree] settles a ~10 KB
+/// manifest string on a pointer compare.
 ///
 /// A minified export uses different key names, so it is returned unchanged.
 /// [history] itself is never mutated.
@@ -99,8 +100,8 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
     compactEntries.add(entry);
   }
 
-  // Interned after the run-length pass so the shared meta maps are compared
-  // as the editor produced them, then rewritten once each.
+  // Interned after the dedup pass so the repeated metas are matched as the
+  // editor produced them, then rewritten once each rather than per entry.
   return compactProofManifests(
     Map<String, dynamic>.from(history)..[_historyKey] = compactEntries,
   );
@@ -135,6 +136,8 @@ Map<String, dynamic> compactProofManifests(Map<String, dynamic> tree) {
           })!
           as Map<String, dynamic>;
   if (manifests.isEmpty) return interned;
+  // Safe to write in place: finding a manifest replaced a map, and that copy
+  // propagates to the root, so `interned` is never `tree` itself here.
   return interned..[proofManifestsKey] = manifests;
 }
 
