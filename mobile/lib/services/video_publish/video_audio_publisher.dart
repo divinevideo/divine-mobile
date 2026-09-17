@@ -64,7 +64,10 @@ final class VideoAudioResolved extends VideoAudioResolution {
 /// * the video's own rendered audio, extracted and published as the
 ///   creator's reusable original sound ([publishExtractedAudioEvent]).
 ///
-/// [resolveForPublish] applies the consent rules and picks the path.
+/// [resolveForPublish] applies the consent rules and picks the path. It is the
+/// only place reuse consent is checked: the three publish methods above mint a
+/// Kind 1063 whatever the sound's creator allowed. Reach them through
+/// [resolveForPublish], or a sound gets republished without that consent.
 class VideoAudioPublisher {
   VideoAudioPublisher({
     required NostrClient nostrClient,
