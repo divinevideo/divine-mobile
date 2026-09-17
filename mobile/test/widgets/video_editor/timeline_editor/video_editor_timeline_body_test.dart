@@ -54,12 +54,8 @@ void main() {
       mainBloc = _MockVideoEditorMainBloc();
       overlayBloc = _MockTimelineOverlayBloc();
 
-      when(
-        () => mainBloc.stream,
-      ).thenAnswer((_) => const Stream<VideoEditorMainState>.empty());
-      when(
-        () => overlayBloc.stream,
-      ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
+      // MockBloc's own constructor already stubs `stream` and `close`;
+      // only `state` needs one.
       when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
     });
 
