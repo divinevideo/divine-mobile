@@ -1,5 +1,6 @@
 // ABOUTME: Tests for ProfilePinsRepository — kind-10001 parsing, cached and
-// ABOUTME: relay reads, and the pin/unpin read-modify-write against relays.
+// ABOUTME: relay reads, the pin/unpin read-modify-write against relays, and
+// ABOUTME: the deletion-confirmed release of pinned coordinates.
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
