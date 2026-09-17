@@ -132,9 +132,10 @@ class SignedEventRelayPublisher {
   final NostrClient _nostrClient;
 
   /// REST-first publish client. When non-null, video events are published
-  /// via `POST /api/events` first and only fall back to the WebSocket relay
-  /// pool on transient REST failures. When null (legacy / test wiring), the
-  /// publisher uses the WebSocket-only retry path.
+  /// via `POST /api/events` first and fall back to the WebSocket relay pool
+  /// on every REST failure except an account restriction, 4xx rejections
+  /// included. When null (legacy / test wiring), the publisher uses the
+  /// WebSocket-only retry path.
   final EventApiClient? _eventApiClient;
   final String _trustedRelayUrl;
   final AsyncScope _async = AsyncScope(debugName: _logName);
@@ -162,8 +163,8 @@ class SignedEventRelayPublisher {
   ///    published and stop (avoids re-publishing a previously accepted
   ///    event whose `OK` was lost).
   /// 2. Up to 3 attempts of `POST /api/events`. A 200 acceptance is
-  ///    published; any retryable REST failure falls back to a WebSocket
-  ///    publish that waits for relay `OK` frames.
+  ///    published; any other REST result except an account restriction
+  ///    falls back to a WebSocket publish that waits for relay `OK` frames.
   /// 3. Before each retry, re-check relay presence so a false-negative
   ///    WebSocket `OK` does not produce a duplicate publish.
   ///
