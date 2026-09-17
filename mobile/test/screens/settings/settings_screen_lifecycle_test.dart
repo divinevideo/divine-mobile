@@ -41,6 +41,8 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       preferences = await SharedPreferences.getInstance();
+      final originalPackageInfo = PackageInfoPlatform.instance;
+      addTearDown(() => PackageInfoPlatform.instance = originalPackageInfo);
       packageInfo = _PendingPackageInfo();
       PackageInfoPlatform.instance = packageInfo;
       authService = _MockAuthService();
