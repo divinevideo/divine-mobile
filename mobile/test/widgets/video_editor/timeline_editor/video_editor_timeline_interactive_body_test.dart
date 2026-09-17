@@ -169,7 +169,7 @@ void main() {
             )
             .firstWhere((s) => identical(s.controller, vertical));
 
-        // _scrollBottomPadding (100) + bottom safe-area inset (34).
+        // TimelineConstants.scrollBottomPadding (100) + safe-area inset (34).
         expect(
           outerScrollView.padding,
           equals(const EdgeInsets.only(bottom: 134)),

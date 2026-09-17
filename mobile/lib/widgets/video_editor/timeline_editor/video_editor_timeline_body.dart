@@ -75,8 +75,6 @@ class VideoEditorTimelineBody extends StatelessWidget {
   final double totalWidth;
   final bool isInteracting;
 
-  static const _scrollBottomPadding = 100;
-
   final ValueChanged<List<DivineVideoClip>>? onReorder;
   final ValueChanged<bool>? onReorderChanged;
   final String? trimmingClipId;
@@ -228,7 +226,7 @@ class VideoEditorTimelineBody extends StatelessWidget {
                     padding: compositionPadding.copyWith(
                       top: 4,
                       bottom:
-                          _scrollBottomPadding +
+                          TimelineConstants.scrollBottomPadding +
                           MediaQuery.paddingOf(context).bottom,
                     ),
                     // The strips are exactly totalWidth wide, so a handle on

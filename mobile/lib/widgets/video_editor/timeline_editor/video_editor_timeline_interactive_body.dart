@@ -94,8 +94,6 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
   final ScrollController overlayStripsScrollController;
   final ValueNotifier<double?> volumePreviewNotifier;
 
-  static const _scrollBottomPadding = 100;
-
   @override
   Widget build(BuildContext context) {
     final isVolumeEditMode = context.select(
@@ -130,7 +128,9 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
               ? const ClampingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
           padding: .only(
-            bottom: _scrollBottomPadding + MediaQuery.paddingOf(context).bottom,
+            bottom:
+                TimelineConstants.scrollBottomPadding +
+                MediaQuery.paddingOf(context).bottom,
           ),
           child: ClipRect(
             child: AnimatedContainer(
