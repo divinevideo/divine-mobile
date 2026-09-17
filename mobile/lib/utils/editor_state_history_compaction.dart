@@ -3,6 +3,7 @@
 
 import 'dart:typed_data';
 
+import 'package:openvine/utils/json_tree_rewrite.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Key the persisted form puts on a history entry whose `meta` is identical to
@@ -70,7 +71,7 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
 
   final manifests = <String>[];
   final manifestIndexByContent = <String, int>{};
-  Object? intern(Object? node) => _rewriteMaps(node, (map) {
+  Object? intern(Object? node) => rewriteJsonMaps(node, (map) {
     final manifest = map[_proofManifestJsonKey];
     if (manifest is! String) return null;
     final index = manifestIndexByContent.putIfAbsent(manifest, () {
@@ -138,7 +139,7 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
   final manifestList = manifests is List ? manifests : const <Object?>[];
   final unresolvedManifestRefs = <int>[];
   final restored =
-      _rewriteMaps(stored, (map) {
+      rewriteJsonMaps(stored, (map) {
             final ref = map[proofManifestRefKey];
             if (ref is! int) return null;
             final manifest = ref >= 0 && ref < manifestList.length
@@ -215,15 +216,6 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
   return expanded..[_historyKey] = expandedEntries;
 }
 
-/// [node] with every map [transform] returns a replacement for swapped in,
-/// returning [node] itself when nothing below it changed.
-///
-/// [transform] sees a map before its children are visited; a replacement's
-/// children are visited too. Typed lists such as sticker captures are opaque
-/// bytes rather than trees and are skipped, and so is a map holding any
-/// non-String key: this tree is persisted as JSON, where object keys are
-/// Strings by construction, so such a map cannot round-trip and is returned
-/// as it came rather than rewritten.
 /// Whether [a] and [b] are the same JSON tree.
 ///
 /// Two differences from `DeepCollectionEquality`, which this replaced:
@@ -266,7 +258,7 @@ bool _sameTree(Object? a, Object? b) {
 /// Leaves are strings, numbers and booleans, which are immutable and safe to
 /// share. Typed lists are opaque bytes, and a map holding a non-String key
 /// cannot round-trip as JSON; both are returned as they came, matching
-/// [_rewriteMaps].
+/// [rewriteJsonMaps].
 Object? _deepCopy(Object? node) {
   if (node is Map) {
     if (node.keys.any((key) => key is! String)) return node;
@@ -280,38 +272,6 @@ Object? _deepCopy(Object? node) {
     return List<Object?>.generate(node.length, (i) => _deepCopy(node[i]));
   }
   return node;
-}
-
-Object? _rewriteMaps(
-  Object? node,
-  Map<String, dynamic>? Function(Map<Object?, Object?> map) transform,
-) {
-  if (node is List) {
-    if (node is TypedData) return node;
-    List<Object?>? copy;
-    for (var i = 0; i < node.length; i++) {
-      final rewritten = _rewriteMaps(node[i], transform);
-      if (identical(rewritten, node[i])) continue;
-      (copy ??= List<Object?>.of(node))[i] = rewritten;
-    }
-    return copy ?? node;
-  }
-  if (node is! Map) return node;
-  // Skipping the key rather than the map used to leave `Map.from` below to
-  // cast it anyway, so a single non-String key threw out of `toJson` during
-  // an autosave — and only once a String-keyed sibling happened to change.
-  if (node.keys.any((key) => key is! String)) return node;
-
-  final replaced = transform(node);
-  final source = replaced ?? node;
-  Map<String, dynamic>? copy = replaced;
-  for (final entry in source.entries) {
-    final rewritten = _rewriteMaps(entry.value, transform);
-    if (identical(rewritten, entry.value)) continue;
-    (copy ??= Map<String, dynamic>.from(source))[entry.key! as String] =
-        rewritten;
-  }
-  return copy ?? node;
 }
 
 /// Whether [history] — already through [expandEditorStateHistory] — still has
