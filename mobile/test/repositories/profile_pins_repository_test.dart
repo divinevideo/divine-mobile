@@ -709,6 +709,9 @@ void main() {
 
         expect(released, [_coordinate('keep')]);
         verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        // No rewrite, but the read was authoritative: the cache tracks it, or
+        // the next open leads with the coordinate that is already gone.
+        expect(await repository.readCached(_owner), [_coordinate('keep')]);
       });
 
       test('reports nothing when no relay accepts the rewrite', () async {

@@ -413,7 +413,13 @@ class ProfilePinsRepository {
     final current = base == null ? const <String>[] : managedCoordinates(base);
 
     final replacement = rewrite(base?.tags ?? const [], current, owner);
-    if (replacement == null) return ProfilePinMutation.succeeded(current);
+    if (replacement == null) {
+      // Nothing to publish, but the read was authoritative and conclusive:
+      // leaving the cache alone keeps serving a list the relays have moved
+      // past, which is how a released coordinate comes back on the next open.
+      await _writeCache(owner, current);
+      return ProfilePinMutation.succeeded(current);
+    }
     if (replacement is ProfilePinFailure) {
       return ProfilePinMutation.failed(replacement);
     }
