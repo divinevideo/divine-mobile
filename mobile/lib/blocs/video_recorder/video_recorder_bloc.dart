@@ -104,11 +104,13 @@ typedef RecordingStartedCallback = void Function(VideoRecorderMode mode);
 ///
 /// Forwards `handleAudioSessionActivation: false` to [JustAudioSimplePlayer]
 /// so just_audio never calls `setCategory(.playback)` on the shared
-/// AVAudioSession — the camera already owns it in `.playAndRecord`
-/// mode. Interference would trigger `attachAudioToSessionIfNeeded()`
-/// on the native camera controller, restarting the audio capture
-/// pipeline and resetting VPIO/AGC. That manifested as the progressive
-/// mic-volume ramp-up reported in #4539.
+/// AVAudioSession — the camera owns it in `.playAndRecord` mode, and a
+/// category flip mid-countdown would drop the mic's route and force the
+/// native controller through its deactivate/reconfigure/activate cycle on
+/// the record tap (#4548). The beeps themselves are kept off the input
+/// path by closing the mic around the countdown — see
+/// `CameraService.suspendAudioCapture` — which is what stops a countdown
+/// clip from starting quiet and growing louder (#4539).
 CountdownSoundService defaultCountdownSoundServiceFactory() =>
     CountdownSoundService(
       audioPlayerFactory: () =>
@@ -839,6 +841,12 @@ class VideoRecorderBloc
       }
 
       await _cameraService.setVolumeKeysEnabled(enabled: false);
+      // The beeps play out of the speaker centimetres from the mic. With
+      // the mic open through them, iOS takes seconds to recover its input
+      // level, so the clip starts quiet and grows louder (#4539). Closing
+      // the mic for the countdown keeps the beeps off the input path; it
+      // reopens after the last beep, ahead of the recording.
+      await _cameraService.suspendAudioCapture();
 
       emit(state.copyWith(recordingState: VideoRecorderState.recording));
 
@@ -870,6 +878,11 @@ class VideoRecorderBloc
       unawaited(HapticService.recordingFeedback());
 
       await _countdownSoundService!.playLongBeepAndWait();
+
+      // Reopen the mic before the record call so the capture-session
+      // restart does not delay the recording itself. A cancelled countdown
+      // skips this; the next record tap reopens the mic on its own.
+      await _cameraService.resumeAudioCapture();
 
       if (!_remoteRecordPausedForSound) {
         await _cameraService.setVolumeKeysEnabled(enabled: true);

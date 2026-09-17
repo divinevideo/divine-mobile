@@ -130,6 +130,9 @@ class _MockProVideoEditor extends Mock
 
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 
+class _MockCountdownSoundService extends Mock
+    implements CountdownSoundService {}
+
 void main() {
   late _MockCameraService cameraService;
   late _MockClipManager clipManager;
@@ -1346,6 +1349,106 @@ void main() {
           ).called(1);
         },
       );
+    });
+
+    group('RecordingStartRequested → countdown mic release (#4539)', () {
+      late _MockCountdownSoundService countdownSounds;
+
+      setUp(() {
+        countdownSounds = _MockCountdownSoundService();
+        when(countdownSounds.preload).thenAnswer((_) async {});
+        when(countdownSounds.playShortBeep).thenAnswer((_) async {});
+        when(countdownSounds.playLongBeepAndWait).thenAnswer((_) async {});
+        when(countdownSounds.dispose).thenAnswer((_) async {});
+        when(
+          () => cameraService.setVolumeKeysEnabled(
+            enabled: any(named: 'enabled'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(cameraService.suspendAudioCapture).thenAnswer((_) async {});
+        when(cameraService.resumeAudioCapture).thenAnswer((_) async {});
+        when(
+          () => cameraService.startRecording(
+            maxDuration: any(named: 'maxDuration'),
+          ),
+        ).thenAnswer((_) async => true);
+      });
+
+      VideoRecorderBloc buildCountdownBloc() =>
+          VideoRecorderBloc(
+            readClipManager: () => clipManager,
+            readVideoEditor: () => videoEditor,
+            readVideoEditorState: VideoEditorProviderState.new,
+            readSharedPreferences: () => prefs,
+            cameraService: cameraService,
+            countdownSoundServiceFactory: () => countdownSounds,
+          )..emit(
+            const VideoRecorderBlocState(timerDuration: TimerDuration.three),
+          );
+
+      test(
+        'closes the mic before the first beep and reopens it after the last, '
+        'ahead of the record call',
+        () {
+          fakeAsync((async) {
+            final bloc = buildCountdownBloc();
+            bloc.add(const VideoRecorderRecordingStartRequested());
+            async.flushMicrotasks();
+
+            // The mic is closed before any beep reaches the speaker, and it
+            // stays closed for the whole countdown.
+            verifyInOrder([
+              cameraService.suspendAudioCapture,
+              countdownSounds.playShortBeep,
+            ]);
+            verifyNever(cameraService.resumeAudioCapture);
+            verifyNever(
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            );
+
+            async.elapse(const Duration(seconds: 3));
+            async.flushMicrotasks();
+
+            // Reopened only once the "go" beep has finished, and before the
+            // record call so the reopen never delays the recording itself.
+            verifyInOrder([
+              countdownSounds.playLongBeepAndWait,
+              cameraService.resumeAudioCapture,
+              () => cameraService.startRecording(
+                maxDuration: any(named: 'maxDuration'),
+              ),
+            ]);
+            expect(bloc.state.recordingState, VideoRecorderState.recording);
+            expect(bloc.state.isStartingRecording, isFalse);
+
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test('leaves the mic alone when the timer is off', () {
+        fakeAsync((async) {
+          // Same wiring, but the default state has no timer set.
+          final bloc = buildCountdownBloc()
+            ..emit(const VideoRecorderBlocState());
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          async.flushMicrotasks();
+
+          verifyNever(cameraService.suspendAudioCapture);
+          verifyNever(cameraService.resumeAudioCapture);
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      });
     });
 
     group('RecordingStopRequested → start-cancel fast path', () {

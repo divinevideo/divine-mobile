@@ -112,6 +112,21 @@ abstract class CameraService {
   /// Handles app lifecycle changes (pause, resume, etc.).
   Future<void> handleAppLifecycleState(AppLifecycleState state);
 
+  /// Releases the microphone until [resumeAudioCapture] or the next
+  /// recording, leaving the preview running.
+  ///
+  /// Call it before the countdown beeps play out of the speaker: on iOS the
+  /// mic is kept open between recordings, and the input level it settles on
+  /// during the beeps takes seconds to recover, so a clip started right
+  /// after them begins quiet and grows louder (#4539).
+  Future<void> suspendAudioCapture();
+
+  /// Reopens the microphone released by [suspendAudioCapture].
+  ///
+  /// Starting a recording reopens it as well, so a missed resume only moves
+  /// the reopen onto the record tap.
+  Future<void> resumeAudioCapture();
+
   /// The aspect ratio of the camera sensor.
   double get cameraAspectRatio;
 

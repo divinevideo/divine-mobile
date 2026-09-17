@@ -56,3 +56,27 @@ Ownership is bound to the UI lifecycle as closely as each platform allows:
 Teardown is always ownership-guarded: a plugin instance only clears the sink
 when it still points at that instance, so one engine cannot silence another's
 diagnostics.
+
+## Microphone lifecycle on iOS
+
+iOS runs a dedicated audio `AVCaptureSession` next to the video one and keeps
+it open between recordings so the record tap is instant; Android opens the mic
+per recording through CameraX. Three rules govern when the iOS mic is open:
+
+- **Pre-warm** — built and started about 1s after the first preview frame
+  (`completeInitializationIfNeeded`), so the attach cost (`setCategory`,
+  AudioToolbox load, `startRunning`) is paid off the record tap.
+- **Released on pause** — `pausePreview(releaseAudio: true)` stops it and
+  deactivates the shared `AVAudioSession`, so a locked phone shows no recording
+  indicator (#5869). `resumePreview()` reattaches.
+- **Closed for the countdown** — `suspendAudioCapture()` stops it before the
+  countdown beeps play out of the speaker and `resumeAudioCapture()` reopens
+  it after the last beep (#4539). With the mic open through the beeps, the
+  input level iOS settles on takes seconds to recover and a countdown clip
+  starts quiet and grows louder. Only the capture session stops; the audio
+  session stays active so the beeps keep playing and the reopen takes the
+  cheap restart path. A record tap reopens the mic on its own, so a cancelled
+  countdown never records without audio.
+
+`attachAudioToSessionIfNeeded()` is the single reopen path for all three, and
+`ios_countdown_mic_release_contract_test.dart` pins the countdown rules.

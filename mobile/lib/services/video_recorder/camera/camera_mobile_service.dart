@@ -395,6 +395,37 @@ class CameraMobileService extends CameraService {
     return _camera.handleAppLifecycleState(state);
   }
 
+  @override
+  Future<void> suspendAudioCapture() async {
+    if (!_isInitialized) return;
+    try {
+      await _camera.suspendAudioCapture();
+    } catch (e) {
+      // The countdown still runs; the clip just keeps today's audio path.
+      Log.warning(
+        '📷 Failed to suspend audio capture: $e',
+        name: 'CameraMobileService',
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  @override
+  Future<void> resumeAudioCapture() async {
+    if (!_isInitialized) return;
+    try {
+      await _camera.resumeAudioCapture();
+    } catch (e) {
+      // startRecording reopens the mic itself, so the recording still gets
+      // audio; only the reopen moves onto the record tap.
+      Log.warning(
+        '📷 Failed to resume audio capture: $e',
+        name: 'CameraMobileService',
+        category: LogCategory.video,
+      );
+    }
+  }
+
   /// Converts [DivineFlashMode] to [DivineCameraFlashMode] mode.
   DivineCameraFlashMode _getFlashMode(DivineFlashMode mode) {
     return switch (mode) {

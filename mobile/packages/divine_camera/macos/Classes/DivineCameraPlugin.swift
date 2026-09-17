@@ -188,6 +188,13 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         case "resumePreview":
             resumePreview(result: result)
 
+        case "suspendAudioCapture", "resumeAudioCapture":
+            // macOS keeps the audio input inside the single video+audio
+            // capture session, so releasing it would restart the preview,
+            // and the speaker-into-mic gain recovery these calls work
+            // around is an iPhone behaviour; see the iOS CameraController.
+            result(nil)
+
         case "getCameraState":
             getCameraState(result: result)
 

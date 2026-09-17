@@ -216,6 +216,13 @@ class CameraController: NSObject {
     private var currentTorchMode: AVCaptureDevice.TorchMode = .off
     private var isRecording: Bool = false
     private var isPaused: Bool = false
+    /// Set by `suspendAudioCapture()` and cleared by everything that reopens
+    /// the mic on purpose — `resumeAudioCapture()`, the record tap and
+    /// `resumePreview()`. While set, the deferred pre-warm and the
+    /// interruption-ended recovery leave the mic closed, so nothing reopens
+    /// it while the countdown beeps are still playing. Read and written on
+    /// `sessionQueue` only.
+    private var isAudioCaptureSuspended = false
     
     // Screen brightness for front camera "torch" mode
     private var originalBrightness: CGFloat?
@@ -587,8 +594,11 @@ class CameraController: NSObject {
             sessionQueue.async { [weak self] in
                 guard let self = self else { return }
                 // While paused (app locked / backgrounded) don't re-grab
-                // the mic; resumePreview() recovers instead.
-                guard !self.isPaused else { return }
+                // the mic; resumePreview() recovers instead. While the
+                // countdown holds it closed, resumeAudioCapture() or the
+                // record tap recovers — the latter clears the stale flag
+                // itself.
+                guard !self.isPaused, !self.isAudioCaptureSuspended else { return }
                 if self.attachAudioToSessionIfNeeded() {
                     self.audioInterrupted = false
                 } else {
@@ -1471,7 +1481,11 @@ class CameraController: NSObject {
             // (locked / backgrounded within 1s of the first frame) —
             // attaching would grab the mic while the app isn't visible.
             // resumePreview() / startRecording() attach on demand instead.
-            guard let self = self, !self.isPaused else { return }
+            // Likewise when a countdown already closed the mic: reopening
+            // it here would put the beeps back on the input path.
+            guard let self = self, !self.isPaused, !self.isAudioCaptureSuspended else {
+                return
+            }
             _ = self.attachAudioToSessionIfNeeded()
         }
     }
@@ -2432,6 +2446,10 @@ class CameraController: NSObject {
             // require a writer-level lock that is not worth the added
             // complexity here.
             self.recordRequestTime = recordRequestedAt
+            // A countdown that closed the mic and never reopened it (cancelled,
+            // or its resume raced this tap) is restored here, on the attach
+            // below.
+            self.isAudioCaptureSuspended = false
             let attachStart = Date()
             let audioAttached = self.attachAudioToSessionIfNeeded()
             self.lastAudioAttachMs = Date().timeIntervalSince(attachStart) * 1000
@@ -2926,16 +2944,94 @@ class CameraController: NSObject {
                 completion(self.getCameraState(), nil)
             }
 
-            // Restore the audio path released by releaseAudioForPause().
-            // A successful attach proves the path is live again, so also
+            // Restore the audio path released by releaseAudioForPause(),
+            // and any countdown suspension the pause interrupted. A
+            // successful attach proves the path is live again, so also
             // clear a stale interruption flag — iOS delivers no `.ended`
             // for lock-screen interruptions, and a stuck flag would drop
             // the audio track from every later recording in this session.
             // Skip the never-built case (paused before the pre-build
             // fired); startRecording() builds on demand.
+            self.isAudioCaptureSuspended = false
             if self.audioCaptureSession != nil, self.attachAudioToSessionIfNeeded() {
                 self.audioInterrupted = false
             }
+        }
+    }
+
+    /// Closes the microphone until `resumeAudioCapture()` or the next
+    /// recording, leaving the preview running.
+    ///
+    /// The dedicated audio capture session normally runs from ~1s after the
+    /// first preview frame so the record tap is instant — which leaves the
+    /// mic open while the countdown beeps play out of the speaker,
+    /// centimetres from the bottom mic. A countdown clip from an affected
+    /// device (iPhone 15 Pro, iOS 26) measured speech RMS climbing from
+    /// -50.8 dB to -24.7 dB across its first five seconds, and the same
+    /// scene without the countdown was flat (#4539): whatever input level
+    /// iOS settles on during the beeps takes seconds to recover, and the
+    /// recording rides that recovery. Stopping the capture session while
+    /// the beeps play keeps them off the input path entirely; reopening it
+    /// after the last beep starts the recording on a fresh one. Android is
+    /// unaffected because CameraX opens the mic per recording, which is the
+    /// shape this reproduces.
+    ///
+    /// Only the AVCaptureSession stops. The shared AVAudioSession stays
+    /// active and configured, so the beeps keep playing and the reopen takes
+    /// the cheap "restart" path in `attachAudioToSessionIfNeeded()` instead
+    /// of the deactivate/reconfigure/activate cycle. No-op while recording:
+    /// the writer needs the buffers.
+    ///
+    /// `completion` fires on the main queue once the mic is actually closed,
+    /// so the caller can start the beeps knowing nothing is listening.
+    func suspendAudioCapture(completion: @escaping () -> Void) {
+        sessionQueue.async { [weak self] in
+            defer { DispatchQueue.main.async(execute: completion) }
+            guard let self = self, !self.isRecording else { return }
+            self.isAudioCaptureSuspended = true
+            guard let session = self.audioCaptureSession, session.isRunning else {
+                return
+            }
+            session.stopRunning()
+            DivineCameraLog.shared.info(
+                "Suspended audio capture — mic closed until resume or record",
+                name: "DivineCamera.AudioSession"
+            )
+        }
+    }
+
+    /// Reopens the microphone closed by `suspendAudioCapture()`.
+    ///
+    /// Goes through the same attach as the record tap, so a resume that
+    /// never arrives (countdown cancelled) costs nothing but a slower next
+    /// tap: `startRecording()` restores the mic itself. Calling this right
+    /// after the last countdown beep moves the capture-session restart off
+    /// the record tap, where it would delay the whole recording, video
+    /// included. Skipped while the preview is paused — the app is not
+    /// visible, and `resumePreview()` reattaches on return. A successful
+    /// attach proves the path is live, so a stale interruption flag is
+    /// cleared here the same way `resumePreview()` clears it.
+    ///
+    /// `completion` always fires, on the main queue, so the Dart caller
+    /// never hangs on a controller that was released mid-countdown.
+    func resumeAudioCapture(completion: @escaping () -> Void) {
+        sessionQueue.async { [weak self] in
+            defer { DispatchQueue.main.async(execute: completion) }
+            guard let self = self else { return }
+            self.isAudioCaptureSuspended = false
+            guard !self.isPaused, !self.isRecording else { return }
+            let attachStart = Date()
+            let attached = self.attachAudioToSessionIfNeeded()
+            let attachMs = Date().timeIntervalSince(attachStart) * 1000
+            if attached {
+                self.audioInterrupted = false
+            }
+            DivineCameraLog.shared.info(
+                "Resumed audio capture after countdown: attached=\(attached), "
+                    + "path=\(self.lastAudioAttachPath), "
+                    + "attachMs=\(String(format: "%.0f", attachMs))",
+                name: "DivineCamera.AudioSession"
+            )
         }
     }
     

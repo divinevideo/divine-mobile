@@ -410,6 +410,31 @@ class DivineCamera {
     }
   }
 
+  /// Releases the microphone until [resumeAudioCapture] or the next
+  /// recording, leaving the preview running.
+  ///
+  /// Call it before playing sound out of the speaker ahead of a recording
+  /// (the countdown beeps). iOS keeps the mic open between recordings so
+  /// the record tap is instant, and the input level it settles on while
+  /// the speaker plays into the mic takes seconds to recover — a clip
+  /// started right after the beeps begins quiet and grows louder. Closing
+  /// the mic for the beeps and reopening it afterwards starts the recording
+  /// on a fresh input path. No-op while recording or before [initialize].
+  Future<void> suspendAudioCapture() async {
+    if (!_state.isInitialized || _state.isRecording) return;
+    await _platform.suspendAudioCapture();
+  }
+
+  /// Reopens the microphone released by [suspendAudioCapture].
+  ///
+  /// [startRecording] reopens it as well, so skipping this only moves the
+  /// reopen onto the record tap, where it delays the whole recording.
+  /// No-op before [initialize].
+  Future<void> resumeAudioCapture() async {
+    if (!_state.isInitialized) return;
+    await _platform.resumeAudioCapture();
+  }
+
   /// Enables or disables remote record control via volume buttons.
   ///
   /// When enabled, volume button presses will trigger the
