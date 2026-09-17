@@ -617,14 +617,15 @@ class IdentityClaimsRepository {
 
     // An inconclusive kind-10011 read is not evidence that the profile has no
     // identity event, and the kind-0 fallback cannot tell the difference:
-    // (ProfileRepository._fetchIdentityEvent answers the partial-read question
-    // the other way for display, on purpose — see the note there.)
     // every profile has a kind-0, so it answers either way and would report
     // "no claims" for a profile whose claims simply did not arrive. Prefer the
     // last-known-good snapshot instead of rendering an empty set (#6154).
+    //
+    // ProfileRepository._fetchIdentityEvent answers the partial-read question
+    // the other way for display, on purpose — see the note there.
     if (!identityRead.conclusive) {
       final cachedRow = await _cachedIdentityRow(pubkey);
-      final cached = await _cachedIdentityTags(pubkey);
+      final cached = _decodeSnapshotRow(cachedRow, pubkey);
       if (cached != null && cached.isNotEmpty) {
         Log.warning(
           'Inconclusive kind-$identityEventKind read for '
@@ -806,8 +807,14 @@ class IdentityClaimsRepository {
   ///
   /// Any source kind counts: a kind-0 row still proves the profile had claims,
   /// which is all this is asked for.
-  Future<List<List<String>>?> _cachedIdentityTags(String pubkey) async {
-    final row = await _cachedIdentityRow(pubkey);
+  Future<List<List<String>>?> _cachedIdentityTags(String pubkey) async =>
+      _decodeSnapshotRow(await _cachedIdentityRow(pubkey), pubkey);
+
+  /// Decodes [row]'s `i` tags, or null when absent or unreadable.
+  ///
+  /// Split out so a caller that already needs the row (to check its source
+  /// kind) does not read the same row from the DAO twice.
+  List<List<String>>? _decodeSnapshotRow(IdentityEventRow? row, String pubkey) {
     if (row == null) return null;
     try {
       final decoded = jsonDecode(row.tagsJson) as List<dynamic>;
