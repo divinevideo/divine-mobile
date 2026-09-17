@@ -27,16 +27,16 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('divine_camera');
 
-  /// Callback for when recording auto-stops due to max duration.
-  void Function(VideoRecordingResult result)? _onRecordingAutoStopped;
+  /// Callback for when the native layer stops a recording on its own.
+  void Function(VideoRecordingResult? result)? _onRecordingAutoStopped;
 
   @override
-  void Function(VideoRecordingResult result)? get onRecordingAutoStopped =>
+  void Function(VideoRecordingResult? result)? get onRecordingAutoStopped =>
       _onRecordingAutoStopped;
 
   @override
   set onRecordingAutoStopped(
-    void Function(VideoRecordingResult result)? callback,
+    void Function(VideoRecordingResult? result)? callback,
   ) {
     _onRecordingAutoStopped = callback;
   }
@@ -61,7 +61,10 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
       case 'onRecordingAutoStopped':
         final args = call.arguments as Map<dynamic, dynamic>?;
         if (args != null && onRecordingAutoStopped != null) {
-          final result = VideoRecordingResult.fromMap(args);
+          // No filePath: native ended the recording but captured nothing.
+          final result = args['filePath'] == null
+              ? null
+              : VideoRecordingResult.fromMap(args);
           onRecordingAutoStopped!(result);
         }
         return null;

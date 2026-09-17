@@ -2439,8 +2439,15 @@ class CameraController(
         autoStopCallback = { result, error ->
             if (result != null) {
                 DivineCameraLog.d(TAG, "Auto-stop completed, notifying listener: $result")
-                onAutoStopListener?.invoke(result)
+            } else {
+                DivineCameraLog.error(
+                    "Auto-stop finished with nothing to save: $error",
+                    name = "DivineCamera.Recording"
+                )
             }
+            // Sent even when nothing was saved: an empty map has no filePath,
+            // which tells Dart the recording is over (#9261).
+            onAutoStopListener?.invoke(result ?: emptyMap())
         }
 
         currentRecording.stop()

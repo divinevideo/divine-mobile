@@ -174,7 +174,9 @@ final class VideoRecorderRecordingStartRequested extends VideoRecorderEvent {
 /// thumbnail, ghost frame). When [result] is supplied, the camera
 /// auto-stopped (e.g. recording limit reached, or the capture session
 /// was interrupted and native salvaged what it could) and the recording
-/// itself is already finalized.
+/// itself is already finalized. Without one, the camera service is asked
+/// for the file: after a Stop tap, or after an auto-stop that captured
+/// nothing, in which case the service reports no file.
 ///
 /// Registered with `transformer: sequential()` — see
 /// [VideoRecorderRecordingStartRequested].
@@ -352,12 +354,13 @@ final class _VideoRecorderRemoteRecordTriggered extends VideoRecorderEvent {
 /// Internal event: the camera auto-stopped recording on its own, without a
 /// user Stop tap — e.g. it hit the recording limit, or the capture session
 /// was interrupted (the app was backgrounded mid-recording) and the native
-/// layer salvaged whatever was captured before the interruption. Dispatched
-/// from the `CameraService.onAutoStopped` callback.
+/// layer salvaged whatever was captured before the interruption. [video] is
+/// null when nothing was captured. Dispatched from the
+/// `CameraService.onAutoStopped` callback.
 final class _VideoRecorderAutoStopped extends VideoRecorderEvent {
   const _VideoRecorderAutoStopped(this.video);
 
-  final EditorVideo video;
+  final EditorVideo? video;
 
   @override
   List<Object?> get props => [video];

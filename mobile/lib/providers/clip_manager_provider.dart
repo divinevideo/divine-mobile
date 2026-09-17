@@ -174,9 +174,11 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     );
   }
 
-  /// Reset recording stopwatch to zero.
+  /// Reset recording stopwatch to zero and clear the in-progress duration, so
+  /// a recording that produced no clip leaves no segment in the progress bars.
   void resetRecording() {
     _recordStopwatch.reset();
+    state = state.copyWith(activeRecordingDuration: .zero);
     Log.debug(
       '🔄 Recording timer reset',
       name: 'ClipManagerNotifier',

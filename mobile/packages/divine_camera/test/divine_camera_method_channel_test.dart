@@ -503,7 +503,7 @@ void main() {
     });
 
     test('onRecordingAutoStopped getter and setter work', () {
-      void Function(VideoRecordingResult)? callback;
+      void Function(VideoRecordingResult?)? callback;
       callback = (result) {};
 
       platform.onRecordingAutoStopped = callback;
@@ -655,8 +655,40 @@ void main() {
       expect(receivedResult!.durationMs, 30000);
     });
 
-    test('handles onRecordingAutoStopped with null args', () async {
-      platform.onRecordingAutoStopped = (result) {};
+    test(
+      'handles onRecordingAutoStopped without a filePath as a stop with no '
+      'video',
+      () async {
+        var callCount = 0;
+        VideoRecordingResult? receivedResult = const VideoRecordingResult(
+          filePath: '/sentinel.mp4',
+        );
+        platform.onRecordingAutoStopped = (result) {
+          callCount++;
+          receivedResult = result;
+        };
+
+        // Native sends a payload with no filePath when the recording ended
+        // but nothing was captured, so Dart can leave its recording state.
+        const codec = StandardMethodCodec();
+        final envelope = codec.encodeMethodCall(
+          const MethodCall('onRecordingAutoStopped', <String, Object?>{}),
+        );
+
+        await expectLater(
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .handlePlatformMessage('divine_camera', envelope, (data) {}),
+          completes,
+        );
+
+        expect(callCount, 1);
+        expect(receivedResult, isNull);
+      },
+    );
+
+    test('ignores onRecordingAutoStopped with null args', () async {
+      var callCount = 0;
+      platform.onRecordingAutoStopped = (result) => callCount++;
 
       const codec = StandardMethodCodec();
       final envelope = codec.encodeMethodCall(
@@ -669,6 +701,7 @@ void main() {
             .handlePlatformMessage('divine_camera', envelope, (data) {}),
         completes,
       );
+      expect(callCount, 0);
     });
 
     test('handles onRecordingAutoStopped with no callback set', () async {

@@ -1750,6 +1750,71 @@ void main() {
           verifyNever(() => cameraService.stopRecording());
         },
       );
+
+      group('when nothing was captured', () {
+        late void Function(EditorVideo? video) autoStopCallback;
+
+        VideoRecorderBloc buildBlocCapturingAutoStop() => buildBloc(
+          cameraServiceFactory:
+              ({required onUpdateState, required onAutoStopped}) {
+                autoStopCallback = onAutoStopped;
+                return cameraService;
+              },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'leaves the recording state and reports the empty recording '
+          '(#9261)',
+          setUp: () {
+            when(
+              () => cameraService.stopRecording(),
+            ).thenAnswer((_) async => null);
+          },
+          build: () => buildBlocCapturingAutoStop()
+            ..emit(
+              const VideoRecorderBlocState(
+                recordingState: VideoRecorderState.recording,
+              ),
+            ),
+          act: (_) async {
+            autoStopCallback(null);
+            await pumpEventQueue();
+          },
+          errors: () => [isA<RecordingProducedNoVideoException>()],
+          verify: (bloc) {
+            expect(bloc.state.recordingState, VideoRecorderState.idle);
+            expect(bloc.state.isStoppingRecording, isFalse);
+            // Stops the recording clock and drops the in-progress segment.
+            verify(() => clipManager.stopRecording()).called(1);
+            verify(() => clipManager.resetRecording()).called(1);
+            verifyNever(
+              () => clipManager.addClip(
+                video: any(named: 'video'),
+                originalAspectRatio: any(named: 'originalAspectRatio'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                lensMetadata: any(named: 'lensMetadata'),
+                limitClipDuration: any(named: 'limitClipDuration'),
+              ),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'is ignored when the recorder has already left the recording '
+          'state',
+          build: buildBlocCapturingAutoStop,
+          act: (_) async {
+            autoStopCallback(null);
+            await pumpEventQueue();
+          },
+          expect: () => const <VideoRecorderBlocState>[],
+          errors: () => const <Object>[],
+          verify: (_) {
+            verifyNever(() => cameraService.stopRecording());
+            verifyNever(() => clipManager.stopRecording());
+          },
+        );
+      });
     });
 
     group('sequential() transformer contract', () {

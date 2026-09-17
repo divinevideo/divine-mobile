@@ -74,15 +74,15 @@ class TestDivineCameraPlatform extends DivineCameraPlatform
   @override
   Widget buildPreview(int textureId) => Container();
 
-  void Function(VideoRecordingResult result)? _callback;
+  void Function(VideoRecordingResult? result)? _callback;
 
   @override
-  void Function(VideoRecordingResult result)? get onRecordingAutoStopped =>
+  void Function(VideoRecordingResult? result)? get onRecordingAutoStopped =>
       _callback;
 
   @override
   set onRecordingAutoStopped(
-    void Function(VideoRecordingResult result)? callback,
+    void Function(VideoRecordingResult? result)? callback,
   ) {
     _callback = callback;
   }

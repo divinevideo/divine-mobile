@@ -193,16 +193,19 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     throw UnimplementedError('buildPreview() has not been implemented.');
   }
 
-  /// Callback for when recording auto-stops due to max duration.
-  void Function(VideoRecordingResult result)? get onRecordingAutoStopped {
+  /// Callback for when the native layer stops a recording on its own — the
+  /// max duration was reached, or (iOS only) the camera was interrupted. The
+  /// result is null when nothing was captured.
+  void Function(VideoRecordingResult? result)? get onRecordingAutoStopped {
     throw UnimplementedError(
       'onRecordingAutoStopped has not been implemented.',
     );
   }
 
-  /// Sets the callback for when recording auto-stops due to max duration.
+  /// Sets the callback for when the native layer stops a recording on its
+  /// own. See [onRecordingAutoStopped].
   set onRecordingAutoStopped(
-    void Function(VideoRecordingResult result)? callback,
+    void Function(VideoRecordingResult? result)? callback,
   ) {
     throw UnimplementedError(
       'onRecordingAutoStopped has not been implemented.',

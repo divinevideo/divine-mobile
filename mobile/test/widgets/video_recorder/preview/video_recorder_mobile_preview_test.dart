@@ -20,7 +20,7 @@ class _MockVideoRecorderBloc
 /// tell an excluded preview from an unexcluded one.
 class _FakeCameraPlatform extends DivineCameraPlatform {
   @override
-  void Function(VideoRecordingResult result)? onRecordingAutoStopped;
+  void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
 
   @override
   void Function(RemoteRecordTrigger trigger)? onRemoteRecordTrigger;

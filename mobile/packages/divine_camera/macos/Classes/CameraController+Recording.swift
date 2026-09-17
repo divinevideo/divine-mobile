@@ -217,14 +217,22 @@ extension CameraController {
         maxDurationTimer?.invalidate()
         maxDurationTimer = nil
 
-        stopRecording { result, _ in
-            if let result = result {
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("DivineCameraAutoStop"),
-                    object: nil,
-                    userInfo: result
+        stopRecording { result, error in
+            if result == nil {
+                DivineCameraLog.shared.error(
+                    "Auto-stop finished with nothing to save: "
+                        + "\(error ?? "unknown error")",
+                    name: "DivineCamera.Recording"
                 )
             }
+            // Sent even when nothing was saved: an empty payload has no
+            // filePath, which tells Dart the recording is over (#9261). The
+            // plugin drops a nil userInfo, not an empty one.
+            NotificationCenter.default.post(
+                name: NSNotification.Name("DivineCameraAutoStop"),
+                object: nil,
+                userInfo: result ?? [:]
+            )
         }
     }
 
