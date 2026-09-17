@@ -160,12 +160,12 @@ PR author, GitHub cannot accept its approval or change request. That limits
 the *state*, not the delivery: submit the conclusion as a `COMMENT`-state
 review — or a plain top-level comment when no review can be submitted — say
 plainly that the state is a delivery mechanism and not an approval, and
-identify the eligible reviewer needed. Request their review only
-when the task or governing workflow authorizes it. Do not switch accounts to
-evade the restriction or describe a comment as approval. If the PR is merged or closed,
+identify the eligible reviewer needed. Request their review only when the task
+or governing workflow authorizes it. Do not switch accounts to evade the
+restriction or describe a comment as approval. If the PR is merged or closed,
 use an authorized plain `COMMENT` review (`gh pr review <n> --comment
---body-file <file>`) for useful retrospective feedback, or, only when a
-review cannot be submitted at all, an ordinary comment (`gh pr comment <n>
+--body-file <file>`) for useful retrospective feedback, or, only when a review
+cannot be submitted at all, an ordinary comment (`gh pr comment <n>
 --body-file <file>`), instead of an approval or change request.
 
 Pin the submission to the full commit SHA you actually reviewed. If the head
@@ -209,15 +209,14 @@ Verify its `state` is `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` as
 intended, and that `submitted_at` is present. Then compare three values: the
 SHA you reviewed, the review's saved `commit_id`, and the live `headRefOid`.
 
-A review submitted with `gh pr review` carries
-no explicit commit, and GitHub defaults an omitted `commit_id` to the pull
-request's most recent commit as of when the submission is processed — so if
-the head moved between your review and submission, the saved review attaches
-to that newer, unreviewed commit, not the one you read. That is worse than
-stale: the verdict now certifies code nobody looked at. It is the `gh pr
-review` CLI that cannot pin a commit, not the API: the REST body above and
-GraphQL `addPullRequestReview`'s `commitOID` input both take an explicit
-SHA, so either one works where the CLI does not.
+A review submitted with `gh pr review` carries no explicit commit, and GitHub
+defaults an omitted `commit_id` to the pull request's most recent commit as of
+when the submission is processed — so if the head moved between your review
+and submission, the saved review attaches to that newer, unreviewed commit,
+not the one you read. That is worse than stale: the verdict now certifies code
+nobody looked at. It is the `gh pr review` CLI that cannot pin a commit, not
+the API: the REST body above and GraphQL `addPullRequestReview`'s `commitOID`
+input both take an explicit SHA, so either one works where the CLI does not.
 
 Pinning is necessary but not sufficient, and the failure it leaves behind is
 the quiet one. A `commit_id` equal to the SHA you reviewed proves only that
@@ -257,7 +256,6 @@ reviews first to avoid duplicate submissions. On an authorized re-review, if
 previous blockers are resolved, submit a new approval for the reviewed head
 instead of only commenting "fixed"; do not dismiss another reviewer's decision.
 
-
 ---
 
 ## 2. Answer every review item, or say why not
@@ -282,8 +280,8 @@ gh api graphql -f query='
 
 `gh pr view --json reviews` already paginates internally and returns every
 review regardless of count; the REST form above is here because the
-verification step later in this file returns the review's `html_url`, which
-`--json reviews` does not expose at all. For
+verification step later in this file reads the review's `html_url`, which the
+REST payload carries and `--json reviews` does not expose at all. For
 `reviewThreads` itself, page with `pageInfo.hasNextPage` / `endCursor` as
 shown. The nested `comments` connection is different: it is a separate
 connection *per thread node*, so adding `after:` to the shared
@@ -335,11 +333,12 @@ thread merely because a fix was pushed.
 **Reviewer returning to their findings:**
 
 1. Fetch the current head, open/closed and draft state, previous verdict,
-   every original finding and the author's responses. Inspect the actual fixes and all intervening changes,
-   with enough surrounding code and validation to check for regressions. Do
-   not approve solely from "fixed," green CI, a resolved/outdated thread, or
-   the fact that another reviewer approved. A scoped check of your findings
-   alone must not be presented as approval of an otherwise unreviewed PR.
+   every original finding and the author's responses. Inspect the actual
+   fixes and all intervening changes, with enough surrounding code and
+   validation to check for regressions. Do not approve solely from "fixed,"
+   green CI, a resolved/outdated thread, or the fact that another reviewer
+   approved. A scoped check of your findings alone must not be presented as
+   approval of an otherwise unreviewed PR.
 2. Give each original finding a disposition: **verified fixed** (commit and
    evidence), **withdrawn** (explain why the finding was wrong), **accepted as
    nonblocking** (explain the remaining risk and any required owner decision),
@@ -364,19 +363,18 @@ thread merely because a fix was pushed.
    write access or a shared posting account alone is not delegation.
 4. When the PR is open and non-draft, and the complete current-head review has
    sufficient evidence and no unresolved merge blockers, submit a new `APPROVE`
-   review through the same
-   GitHub identity that requested changes, if that is the authorized identity
-   available. This is the normal way to supersede your own change request;
-   do not merely comment "fixed" or dismiss the old review. Recheck the live
-   head immediately before submitting, and prefer the SHA-pinned REST form from
-   [Submit an explicit review verdict](#submit-an-explicit-review-verdict) when
-   the head could move — an unpinned `gh pr review` attaches to whatever is
-   newest at submission time, not the commit you just re-reviewed. Keep the
+   review through the same GitHub identity that requested changes, if that is
+   the authorized identity available. This is the normal way to supersede your
+   own change request; do not merely comment "fixed" or dismiss the old
+   review. Recheck the live head immediately before submitting, and prefer the
+   SHA-pinned REST form from
+   [Submit an explicit review verdict](#submit-an-explicit-review-verdict)
+   when the head could move — an unpinned `gh pr review` attaches to whatever
+   is newest at submission time, not the commit you just re-reviewed. Keep the
    historical review as the audit trail. If another identity owns the blocking
-   verdict,
-   identify that reviewer and request their re-review when authorized; your
-   approval does not clear their change request. Never switch credentials to
-   impersonate the original reviewer.
+   verdict, identify that reviewer and request their re-review when
+   authorized; your approval does not clear their change request. Never switch
+   credentials to impersonate the original reviewer.
 5. If verified blockers remain, retain or submit `REQUEST_CHANGES` and update
    the outstanding list. If re-review is incomplete, explain the missing
    evidence without clearing the prior blocker. Do not submit a duplicate
@@ -397,7 +395,6 @@ and action**. Distinguish "my findings are closed" from "the PR is ready to
 merge." Closing a review is not closing the PR, merging it, closing a linked
 issue, or waiving CI, independent review, or owner approval. Those retain their
 own authorization and verification requirements.
-
 
 ---
 
