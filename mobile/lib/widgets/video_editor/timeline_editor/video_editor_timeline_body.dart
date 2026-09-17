@@ -128,6 +128,10 @@ class VideoEditorTimelineBody extends StatelessWidget {
             1000 *
             pixelsPerSecond;
 
+    // Every row below carries compositionPadding, so the Stack is exactly as
+    // wide as the horizontal scroll content and the overlays' `right: 0`
+    // lands on its far end. A row added without that padding narrows the
+    // Stack and leaves an un-banded strip past the last one that has it.
     return Stack(
       fit: .passthrough,
       clipBehavior: .none,
