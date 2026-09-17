@@ -75,7 +75,7 @@ and `##[warning]` markers are mapped to lnav levels. Step timings:
    FROM gha_log GROUP BY step ORDER BY secs DESC LIMIT 10;
 ```
 
-Note the ratchet scripts in the `Generated Files` job emit free-form text with
+Note the ratchet scripts in the `Guards` job emit free-form text with
 no `::error` annotations, so their failures stay at `info`. Adding annotations
 there would improve the GitHub UI and this view together.
 

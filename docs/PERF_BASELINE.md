@@ -238,6 +238,85 @@ as inconclusive and re-run before attributing it to a diff.
 
 ---
 
+## Addendum 2026-09-17: the guard steps became the critical path
+
+`Tests` dropped to ~219s when #6375 sharded it, which made `Generated Files`
+the ceiling exactly as [Critical path](#critical-path) predicted. It then grew
+every week. Median successful PR run of `Mobile CI`, by ISO week, from every
+run between 2026-07-13 and 2026-09-17 (n ≈ 180–590 per week):
+
+| Week | Run wall | Generated Files | Tests (per shard) | Guard steps in the job |
+|---|---:|---:|---:|---:|
+| 31 (after sharding) | 4.0m | 3.1m | 3.2m | 33 |
+| 34 | 5.3m | 4.3m | 4.2m | 48 |
+| 36 | 6.7m | 6.2m | 4.3m | 56 |
+| 37 (Flutter 3.47.2, #8870) | 9.0m | 8.6m | 5.2m | 66 |
+| 38 | 9.7m | 9.0m | 5.1m | 68 |
+
+Queue wait stayed at 0s throughout; runners were unchanged. Inside the job,
+setup (~40s) and the build_runner verification (~105s) were flat. The growth
+was all guard steps: 45s in week 31, 398s in week 38. Two shapes account for
+it:
+
+- **20 Dart-AST detectors at 7–26s each.** Every one is its own `dart run`,
+  and on the runner that is ~8s of VM start plus `package:analyzer` JIT before
+  the first file is parsed. Measured locally on Apple Silicon: VM start plus
+  analyzer JIT 2.9s; parsing every Dart file in the repo once (4,896 files,
+  66 MB) 2.5s. The detectors were paying the fixed cost twenty times.
+- **`check_async_safety_ceiling.sh` (#8870) at 67–80s.** A full second
+  `dart analyze` of lib, test, integration_test and tools.
+
+The 4-shard `Tests` legs grew 142s → 230s over the same window from test
+volume alone (1,271 → 1,648 files, 14.7 → 19.8 MB), plus roughly 20% at the
+Flutter 3.47.2 upgrade.
+
+### What changed
+
+- `Generated Files` now holds only the build_runner and gen-l10n
+  verification (~2.5m expected).
+- `Guards` runs every guard script through `mobile/scripts/ci/run_guards.sh`
+  from the manifest `mobile/scripts/ci/guards.tsv`, four wide on the 4-vCPU
+  runner, and replays each guard's output in manifest order. Locally, all 62
+  guards at `--jobs 4`: **85s wall for 315s of summed guard time**.
+- `Async Safety` is its own job, because it rewrites `analysis_options.yaml`
+  in place while it runs.
+- `Tests` runs 8 shards instead of 4. Byte-weighted, the heaviest 8-shard
+  bucket carries 55% of the heaviest 4-shard bucket (3.2 MB vs 5.8 MB).
+
+First run on the PR (run 35238630335, every scope on, so all 62 guards
+including the three native-gated ones):
+
+| Job | Before (week 38 median) | After |
+|---|---:|---:|
+| `Mobile CI` wall | 9.7m | **5.0m** (299s) |
+| `Generated Files` | 540s | 148s |
+| `Guards` | — | 224s (driver 179s wall for 706s summed) |
+| `Async Safety` | — | 120s |
+| `Tests`, slowest leg | 306s (4 shards) | 278s (8 shards; legs 151–278s) |
+| `Web Bundle Size` | 246s | 271s |
+
+The critical path is now the slowest `Tests` leg and `Web Bundle Size`, within
+seconds of each other. Two things the run shows that estimates did not: four
+guard workers on four vCPUs inflate the summed guard time from 398s to 706s
+(the Dart front-end compiles on more than one thread, so four `dart run`s
+oversubscribe the runner), which is why the driver lands at 2.2× rather than
+4×; and the hash-bucket shards are balanced by bytes but not by runtime —
+shard 3 spends 212s in `very_good test` against shard 6's 91s. Neither is
+worth tuning while `Web Bundle Size` sits at the same height. Re-measure with
+`report_mobile_ci_run.py` and recalibrate `.github/ci-timing-budgets.json`
+once a week of runs has landed; the budgets committed here held on this run.
+
+Runner minutes are not a cost here: the repository is public, every
+`runs-on` is a standard label, and the `timing` endpoint reports
+`billable.total_ms = 0` on every run sampled. The 60-concurrent-job cap of
+the org's plan is the only thing runner minutes spend.
+
+Not done, and worth doing next: the detectors are all syntactic
+(`parseString`) libraries that `test/tools/` already imports, so one Dart
+entrypoint could parse each file once and hand the unit to every detector —
+~200s of summed guard time would become ~15s. And retiring the async-safety
+baseline to zero (#9118) retires its job.
+
 ## How these were measured
 
 ```bash

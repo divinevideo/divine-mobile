@@ -595,7 +595,7 @@ reviewed change:
    UPDATE_BASELINE=1 bash mobile/scripts/check_package_coverage_floor.sh
    ```
 
-The guard runs in CI in the `generated-files` job. The pre-push hook
+The guard runs in CI in the `guards` job. The pre-push hook
 installed by `scripts/install-hooks.sh` runs it too, but only when a
 `.github/workflows/*.yaml` / `*.yml` file or the coverage baseline itself
 changed — CI stays the authority.
@@ -654,7 +654,7 @@ After grouping the loose ones, lock the win and commit the baseline:
 UPDATE_BASELINE=1 bash mobile/scripts/check_ungrouped_tests.sh
 ```
 
-Runs in CI only, in the `generated-files` job; the pre-push hook does not
+Runs in CI only, in the `guards` job; the pre-push hook does not
 cover it.
 
 ### Skip ceiling
@@ -694,7 +694,7 @@ cd mobile && dart run scripts/lib/skipped_test_detector.dart test integration_te
 UPDATE_BASELINE=1 bash mobile/scripts/check_skip_ceiling.sh
 ```
 
-Runs in CI only, in the `Generated Files` job; the pre-push hook does not
+Runs in CI only, in the `Guards` job; the pre-push hook does not
 cover it.
 
 ### Shared-setup stub ceiling
@@ -718,7 +718,7 @@ dart run scripts/lib/shared_setup_stub_detector.dart test integration_test packa
 UPDATE_BASELINE=1 bash scripts/check_shared_setup_stubs.sh
 ```
 
-Runs in CI only, in the `Generated Files` job; the pre-push hook does not cover
+Runs in CI only, in the `Guards` job; the pre-push hook does not cover
 it.
 
 ---
@@ -770,7 +770,7 @@ never satisfy the app's delegate.
 some other delegate list, such as `GlobalMaterialLocalizations.delegates`,
 does not clear the count — in
 `mobile/scripts/baseline/l10n_delegates.txt` — a ceiling that may only
-shrink. It runs in CI (the `generated-files` job), not the pre-push hook.
+shrink. It runs in CI (the `guards` job), not the pre-push hook.
 
 ```bash
 cd mobile && dart run scripts/lib/l10n_delegate_detector.dart test --detail
@@ -810,7 +810,7 @@ process-global isolation is enforced by two static guards:
 `check_package_channel_isolation.sh` for channel handlers (baseline
 `mobile/scripts/baseline/package_channel_raw_installs.txt`, shrink-only) and
 `check_process_global_mutations.sh` for singletons, irreversible
-initializers and owned initializers. Both run in CI in the `Generated Files`
+initializers and owned initializers. Both run in CI in the `Guards`
 job. A package test that
 trips the channel ratchet should null its handler in `tearDown`; regenerate the
 baseline only when an entry is genuinely removed.
@@ -943,5 +943,5 @@ fixing a baselined entry, regenerate the baseline to lock the reduction:
 UPDATE_BASELINE=1 bash mobile/scripts/check_package_channel_isolation.sh
 ```
 
-The guard runs in Mobile CI's `generated-files` job; the pre-push hook does not
+The guard runs in Mobile CI's `guards` job; the pre-push hook does not
 run it.

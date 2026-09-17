@@ -73,7 +73,7 @@ assertion, which is a test *proving* the string is not on screen.
 So the set is frozen by a shrink-only ratchet (#3630),
 `mobile/scripts/check_orphaned_arb_key_floor.sh`, baseline
 `mobile/scripts/baseline/orphaned_arb_keys.txt`. It runs in CI in the
-`generated-files` job. Left unguarded the set grew 94 → 276 in four months,
+`guards` job. Left unguarded the set grew 94 → 276 in four months,
 which is the argument for the ratchet rather than a one-off sweep.
 
 The detector (`mobile/scripts/lib/orphaned_arb_key_detector.dart`) is an

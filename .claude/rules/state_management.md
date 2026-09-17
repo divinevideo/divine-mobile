@@ -342,7 +342,7 @@ either; it just forwards to `onError`.
 `scripts/check_post_close_emit_ceiling.sh` freezes the per-file count of
 unguarded sites under `mobile/lib` in
 `mobile/scripts/baseline/post_close_emit.txt` — a ceiling that may only
-shrink. It runs in CI (the `generated-files` job), not in the pre-push
+shrink. It runs in CI (the `guards` job), not in the pre-push
 hook. To see the individual sites in a file:
 
 ```bash

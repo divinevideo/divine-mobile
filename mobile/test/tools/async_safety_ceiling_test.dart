@@ -154,7 +154,7 @@ INFO|LINT|UNAWAITED_FUTURES|${Directory.current.path}/test/b_test.dart|5|1|1|mes
         File('../.github/workflows/mobile_ci.yaml').readAsStringSync(),
       ) as Map<dynamic, dynamic>;
       final steps =
-          ((workflow['jobs'] as Map<dynamic, dynamic>)['generated-files']
+          ((workflow['jobs'] as Map<dynamic, dynamic>)['async-safety']
                   as Map<dynamic, dynamic>)['steps']
               as List<dynamic>;
       final run = steps

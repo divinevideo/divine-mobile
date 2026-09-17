@@ -133,8 +133,8 @@ jobs:
       #
       # The lists are explicit rather than a glob over integration_test/e2e/,
       # because `service` and "runnable on a Linux CI runner" are different
-      # axes. The generated-files guard accounts for every suite against these
-      # lists or service_suite_exclusions.txt.
+      # axes. The Guards job's service-suite guard accounts for every suite
+      # against these lists or service_suite_exclusions.txt.
       #
       # The suites below need no local stack — they stand up their own in-process relay
       # (integration_test/helpers/fake_relay.dart).
