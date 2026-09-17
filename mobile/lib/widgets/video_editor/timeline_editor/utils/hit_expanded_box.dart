@@ -1,6 +1,6 @@
 // ABOUTME: Shared render widget that expands the hit-test area horizontally.
-// ABOUTME: Used by the clip strip, overlay strips, and overlay scroll wrapper
-// ABOUTME: to let trim handles positioned outside layout bounds receive touches.
+// ABOUTME: Used by the clip strip and the overlay strips to let trim handles
+// ABOUTME: positioned outside layout bounds receive touches.
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -92,15 +92,21 @@ class RenderHitExpandedBox extends RenderProxyBox {
   }
 
   /// Recursively traverses the render tree, bypassing `size.contains`
-  /// checks on intermediate render nodes so that touches in the
-  /// expanded margin can reach inner [HitExpandedBox] widgets through
-  /// Stacks, Columns, and other multi-child layouts.
+  /// checks on intermediate render nodes so that touches in the expanded
+  /// margin reach the trim handles through Stacks, Columns, and other
+  /// multi-child layouts.
   ///
   /// Handles both [RenderProxyBox] (e.g. AnimatedOpacity, IgnorePointer)
   /// and non-proxy single-child nodes (e.g. scroll views) by checking
   /// [RenderObjectWithChildMixin]. Multi-child nodes (Stack, Column,
   /// Row) are iterated in reverse paint order with recursive
   /// [_hitTestDeep] calls so bounds checks are skipped at every level.
+  ///
+  /// The two [HitExpandedBox] widgets in the timeline are siblings rather
+  /// than nested, so the [RenderHitExpandedBox] branch below carries no
+  /// live call site today. It stays because it is what makes this a
+  /// general traversal rather than one that silently stops at the first
+  /// nested instance someone adds.
   ///
   /// Applies each child's paint offset via
   /// [BoxHitTestResult.addWithPaintOffset] for correct coordinate
