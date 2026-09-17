@@ -1523,6 +1523,30 @@ void main() {
         },
       );
 
+      test(
+        'falls through to kind-0 when there is no snapshot to prefer',
+        () async {
+          stubUnsettledIdentityRead(
+            kind0: [
+              _event(
+                id: _eventId(12),
+                tags: [
+                  ['i', 'github:octocat', 'abc'],
+                ],
+              ),
+            ],
+          );
+          when(
+            () => identityEventsDao.getEvent(any()),
+          ).thenAnswer((_) async => null);
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(status.claims, hasLength(1));
+          expect(status.claims.single.platform, equals('github'));
+        },
+      );
+
       test('keeps the snapshot claims instead of reporting none', () async {
         stubUnsettledIdentityRead(kind0: [_event(id: _eventId(11))]);
         when(() => identityEventsDao.getEvent(any())).thenAnswer(
