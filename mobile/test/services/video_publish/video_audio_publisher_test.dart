@@ -1,12 +1,16 @@
 // ABOUTME: Tests for VideoAudioPublisher: reuse-consent gating and which sound
 // ABOUTME: reference a video publish ends up carrying
 
+import 'dart:io';
+
+import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
+import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
@@ -19,6 +23,18 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockRelayPublisher extends Mock implements SignedEventRelayPublisher {}
 
 class _FakeEvent extends Fake implements Event {}
+
+class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+
+Event _signedAudioEvent() => Event.fromJson({
+  'id': _soundEventId,
+  'pubkey': _self,
+  'created_at': 0,
+  'kind': 1063,
+  'tags': <List<String>>[],
+  'content': '',
+  'sig': 'sig',
+});
 
 const _self =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -51,7 +67,10 @@ void main() {
     title: 'Plants',
   );
 
-  setUpAll(() => registerFallbackValue(_FakeEvent()));
+  setUpAll(() {
+    registerFallbackValue(_FakeEvent());
+    registerFallbackValue(File('unused'));
+  });
 
   setUp(() {
     nostrClient = _MockNostrClient();
@@ -231,6 +250,102 @@ void main() {
 
         expect(resolution, isA<VideoAudioBlocked>());
         verifyNever(() => relayPublisher.publishViaWebSocket(any()));
+      });
+
+      // These two share a fixture where the import would otherwise publish, so
+      // the only difference between them is whether the attribution is valid.
+      // Without that, both outcomes collapse to VideoAudioBlocked for unrelated
+      // reasons (no Blossom service, no file) and the gate goes untested.
+      group('imported-sound attribution gate', () {
+        late Directory tempDir;
+        late File audioFile;
+        late _MockBlossomUploadService blossom;
+
+        AudioEvent importedSound() => AudioEvent(
+          id: '${AudioEvent.localImportMarker}_take-1',
+          pubkey: AudioEvent.localImportMarker,
+          createdAt: 0,
+          url: audioFile.path,
+        );
+
+        setUp(() {
+          tempDir = Directory.systemTemp.createTempSync('audio-attr-test');
+          audioFile = File('${tempDir.path}/take-1.m4a')
+            ..writeAsBytesSync(const [1, 2, 3]);
+          blossom = _MockBlossomUploadService();
+          when(
+            () => blossom.uploadAudio(
+              audioFile: any(named: 'audioFile'),
+              mimeType: any(named: 'mimeType'),
+            ),
+          ).thenAnswer(
+            (_) async => const BlossomUploadResult(
+              success: true,
+              videoId: _soundEventId,
+              fallbackUrl: 'https://cdn.example/uploaded.m4a',
+            ),
+          );
+          when(
+            () => relayPublisher.publishViaWebSocket(any()),
+          ).thenAnswer((_) async => EventPublishOutcome.published);
+          when(() => authService.isAuthenticated).thenReturn(true);
+          when(
+            () => authService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => _signedAudioEvent());
+        });
+
+        tearDown(() => tempDir.deleteSync(recursive: true));
+
+        VideoAudioPublisher importPublisher() => VideoAudioPublisher(
+          nostrClient: nostrClient,
+          relayPublisher: relayPublisher,
+          authService: authService,
+          blossomUploadService: blossom,
+        );
+
+        test('publishes the import when the attribution is complete', () async {
+          final resolution = await importPublisher().resolveForPublish(
+            upload: upload,
+            videoDTag: 'vine-1',
+            allowAudioReuse: true,
+            selectedAudio: importedSound(),
+            audioShareAttribution: const AudioShareAttribution(
+              title: 'Take 1',
+              creatorName: 'Someone',
+              publicTags: [],
+              confirmedOwnWork: true,
+            ),
+          );
+
+          expect(resolution, isA<VideoAudioResolved>());
+        });
+
+        test('blocks the import when the attribution is incomplete', () async {
+          final resolution = await importPublisher().resolveForPublish(
+            upload: upload,
+            videoDTag: 'vine-1',
+            allowAudioReuse: true,
+            selectedAudio: importedSound(),
+            audioShareAttribution: const AudioShareAttribution(
+              title: '   ',
+              creatorName: 'Someone',
+              publicTags: [],
+              confirmedOwnWork: true,
+            ),
+          );
+
+          expect(resolution, isA<VideoAudioBlocked>());
+          verifyNever(
+            () => blossom.uploadAudio(
+              audioFile: any(named: 'audioFile'),
+              mimeType: any(named: 'mimeType'),
+            ),
+          );
+        });
       });
     });
   });
