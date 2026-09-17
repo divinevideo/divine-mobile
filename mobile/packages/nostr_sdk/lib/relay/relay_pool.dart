@@ -64,8 +64,8 @@ class RelayPool {
   /// in their own outer guard can size that guard against the worst-case
   /// fan-out duration (`perRelaySendTimeout * configuredRelays.length`)
   /// rather than duplicating the literal. See
-  /// `mobile/lib/services/video_event_publisher.dart` for the canonical
-  /// caller-side derivation.
+  /// `mobile/lib/services/video_publish/signed_event_relay_publisher.dart`
+  /// for the canonical caller-side derivation.
   static const Duration perRelaySendTimeout = Duration(seconds: 5);
 
   Nostr localNostr;

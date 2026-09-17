@@ -67,7 +67,7 @@ void main() {
       videoEventService: mockVideoEventService,
     );
 
-    // Stub NostrClient properties used by _publishEventToNostr
+    // Stub NostrClient properties used by publishViaWebSocket
     when(() => mockNostrClient.isInitialized).thenReturn(true);
     when(() => mockNostrClient.configuredRelayCount).thenReturn(1);
     when(() => mockNostrClient.connectedRelayCount).thenReturn(1);
