@@ -37,6 +37,11 @@ import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+export 'package:openvine/services/video_publish/signed_event_relay_publisher.dart'
+    show outerPublishTimeoutFor;
+export 'package:openvine/services/video_publish/video_audio_publisher.dart'
+    show AudioReuseConsentChecker;
+
 /// Publishes processed videos to Nostr relays.
 ///
 /// The coordinator of a direct upload's publish: it assembles the NIP-71
@@ -63,46 +68,42 @@ class VideoEventPublisher {
     AudioReuseConsentChecker? audioReuseConsentChecker,
     IosDeviceAttestationService? iosDeviceAttestationService,
     PublishedEventLocalEcho? publishedEventLocalEcho,
-    SignedEventRelayPublisher? relayPublisher,
-    VideoAudioPublisher? audioPublisher,
     ProofModePublishTagger? proofModeTagger,
-    VideoImetaBuilder imetaBuilder = const VideoImetaBuilder(),
-  }) : _uploadManager = uploadManager,
+  }) : assert(
+         proofModeTagger == null || iosDeviceAttestationService == null,
+         'An injected proofModeTagger ignores iosDeviceAttestationService; '
+         'give the attestation service to the tagger instead.',
+       ),
+       _uploadManager = uploadManager,
        _nostrService = nostrService,
        _authService = authService,
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService,
        _profileStatsDao = profileStatsDao,
        _publishedEventLocalEcho = publishedEventLocalEcho,
-       _imetaBuilder = imetaBuilder,
-       _ownsRelayPublisher = relayPublisher == null {
-    _relayPublisher =
-        relayPublisher ??
-        SignedEventRelayPublisher(
-          nostrClient: nostrService,
-          eventApiClient: eventApiClient,
-          trustedRelayUrl: trustedRelayUrl,
-        );
-    _audioPublisher =
-        audioPublisher ??
-        VideoAudioPublisher(
-          nostrClient: nostrService,
-          relayPublisher: _relayPublisher,
-          authService: authService,
-          blossomUploadService: blossomUploadService,
-          profileRepository: profileRepository,
-          audioExtractionService: audioExtractionService,
-          savedSoundsService: savedSoundsService,
-          soundSyncRepositoryGetter: soundSyncRepositoryGetter,
-          audioReuseConsentChecker: audioReuseConsentChecker,
-        );
-    _proofModeTagger =
-        proofModeTagger ??
-        ProofModePublishTagger(
-          iosDeviceAttestation:
-              iosDeviceAttestationService ?? IosDeviceAttestationService(),
-          currentPubkeyHex: () => authService?.currentPublicKeyHex,
-        );
+       _relayPublisher = SignedEventRelayPublisher(
+         nostrClient: nostrService,
+         eventApiClient: eventApiClient,
+         trustedRelayUrl: trustedRelayUrl,
+       ),
+       _proofModeTagger =
+           proofModeTagger ??
+           ProofModePublishTagger(
+             iosDeviceAttestation:
+                 iosDeviceAttestationService ?? IosDeviceAttestationService(),
+             currentPubkeyHex: () => authService?.currentPublicKeyHex,
+           ) {
+    _audioPublisher = VideoAudioPublisher(
+      nostrClient: nostrService,
+      relayPublisher: _relayPublisher,
+      authService: authService,
+      blossomUploadService: blossomUploadService,
+      profileRepository: profileRepository,
+      audioExtractionService: audioExtractionService,
+      savedSoundsService: savedSoundsService,
+      soundSyncRepositoryGetter: soundSyncRepositoryGetter,
+      audioReuseConsentChecker: audioReuseConsentChecker,
+    );
   }
 
   static const String _logName = 'VideoEventPublisher';
@@ -117,14 +118,11 @@ class VideoEventPublisher {
   /// Makes the published event readable before any relay can serve it back.
   /// Null disables the write (tests, callers with no storage wired).
   final PublishedEventLocalEcho? _publishedEventLocalEcho;
-  final VideoImetaBuilder _imetaBuilder;
-
-  /// Whether [dispose] tears down [_relayPublisher]. An injected instance
-  /// belongs to whoever injected it.
-  final bool _ownsRelayPublisher;
-  late final SignedEventRelayPublisher _relayPublisher;
+  final SignedEventRelayPublisher _relayPublisher;
   late final VideoAudioPublisher _audioPublisher;
-  late final ProofModePublishTagger _proofModeTagger;
+  final ProofModePublishTagger _proofModeTagger;
+
+  static const VideoImetaBuilder _imetaBuilder = VideoImetaBuilder();
 
   // Statistics
   int _totalEventsPublished = 0;
@@ -891,6 +889,6 @@ class VideoEventPublisher {
       name: _logName,
       category: LogCategory.video,
     );
-    if (_ownsRelayPublisher) _relayPublisher.dispose();
+    _relayPublisher.dispose();
   }
 }

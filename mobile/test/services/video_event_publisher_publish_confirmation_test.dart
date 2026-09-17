@@ -17,7 +17,6 @@ import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockUploadManager extends Mock implements UploadManager {}

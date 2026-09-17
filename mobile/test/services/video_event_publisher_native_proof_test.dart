@@ -852,6 +852,26 @@ void main() {
       },
     );
   });
+
+  group('VideoEventPublisher constructor', () {
+    test(
+      'rejects an attestation service an injected tagger would ignore',
+      () {
+        expect(
+          () => VideoEventPublisher(
+            uploadManager: MockUploadManager(),
+            nostrService: MockNostrService(),
+            proofModeTagger: ProofModePublishTagger(
+              iosDeviceAttestation: _ThrowingAttestationService(),
+              currentPubkeyHex: () => null,
+            ),
+            iosDeviceAttestationService: _RecordingAttestationService(),
+          ),
+          throwsAssertionError,
+        );
+      },
+    );
+  });
 }
 
 /// Switches the signing account while the publisher reads the C2PA manifest,
