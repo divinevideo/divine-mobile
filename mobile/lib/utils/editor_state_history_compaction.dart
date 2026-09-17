@@ -18,7 +18,14 @@ const String proofManifestRefKey = 'proofManifestRef';
 
 const String _historyKey = 'history';
 const String _metaKey = 'meta';
-const String _minifyKey = 'minify';
+
+/// The key a minified export marks itself with.
+///
+/// `ExportStateHistory` writes `'minify'.toMainKey(minifier)`, and the
+/// minifier maps `minify` to `m` — so a minified export carries `m`, a plain
+/// one carries no such key at all, and the literal `minify` is never written.
+/// `ImportStateHistory` reads `map['m']` for the same reason.
+const String _minifiedMarkerKey = 'm';
 const String _proofManifestJsonKey = 'proofManifestJson';
 
 const _metaEquality = DeepCollectionEquality();
@@ -48,7 +55,7 @@ const _metaEquality = DeepCollectionEquality();
 /// A minified export uses different key names, so it is returned unchanged.
 /// [history] itself is never mutated.
 Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
-  if (history[_minifyKey] == true) return history;
+  if (history[_minifiedMarkerKey] == true) return history;
   final entries = history[_historyKey];
   if (entries is! List || entries.isEmpty) return history;
 

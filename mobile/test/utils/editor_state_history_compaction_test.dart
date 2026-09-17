@@ -158,8 +158,26 @@ void main() {
       expect((reference['clip'] as Map)[proofManifestRefKey], 0);
     });
 
+    // A minified export marks itself with `m`, not the literal `minify`:
+    // the exporter writes `'minify'.toMainKey(minifier)` and the minifier
+    // maps that name to `m`. Keying the bail-out on `minify` made it dead
+    // code that only passed because `history` minifies to `h` as well.
     test('leaves a minified export unchanged', () {
-      final export = _export([_entry(meta: _meta())])..['minify'] = true;
+      final export = <String, dynamic>{
+        'm': true,
+        'h': [
+          {'meta': _meta()},
+          {'meta': _copy(_meta())},
+        ],
+      };
+
+      expect(identical(compactEditorStateHistory(export), export), isTrue);
+    });
+
+    test('leaves a minified export unchanged even when it spells out '
+        'history', () {
+      final export = _export([_entry(meta: _meta()), _entry(meta: _meta())])
+        ..['m'] = true;
 
       expect(identical(compactEditorStateHistory(export), export), isTrue);
     });
