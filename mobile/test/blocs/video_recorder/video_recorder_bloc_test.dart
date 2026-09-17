@@ -1443,15 +1443,44 @@ void main() {
         },
       );
 
+      late _MockEditorVideo wakelockRecorded;
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'a wakelock disable failure is swallowed (best-effort) — the stop '
         'still completes, no error is surfaced, and the recorder is not '
         'driven into the recovery path',
         setUp: () {
           wakelockPlusPlatformInstance = _ThrowingWakelockDisablePlatform();
+          // A real clip, so the only thing that could surface an error here
+          // is the wakelock failure itself (a null result would report
+          // RecordingProducedNoVideoException regardless of the wakelock).
+          final recorded = wakelockRecorded = _MockEditorVideo();
+          when(
+            recorded.safeFilePath,
+          ).thenAnswer((_) => Completer<String>().future);
           when(
             () => cameraService.stopRecording(),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => recorded);
+          when(
+            () => clipManager.addClip(
+              video: recorded,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+            ),
+          ).thenReturn(
+            DivineVideoClip(
+              id: 'wakelock-clip',
+              video: recorded,
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
         },
         tearDown: () {
           wakelockPlusPlatformInstance = _FakeWakelockPlatform();
@@ -1463,16 +1492,25 @@ void main() {
             ),
           ),
         act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
-        // The wakelock failure itself is logged and swallowed by
-        // _disableWakelockSafely, never the recovery catch — but the stub's
-        // null videoResult still reports RecordingProducedNoVideoException,
-        // independently of the wakelock outcome.
-        errors: () => [isA<RecordingProducedNoVideoException>()],
+        // No error reaches addError: the wakelock failure is logged and
+        // swallowed by _disableWakelockSafely, never the recovery catch.
+        errors: () => const <Object>[],
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
-          // The duration timer is still cancelled even though wakelock threw.
+          // The duration timer is still cancelled even though wakelock threw,
+          // and the clip is kept rather than reset by the recovery path.
           verify(() => clipManager.stopRecording()).called(1);
+          verifyNever(() => clipManager.resetRecording());
+          verify(
+            () => clipManager.addClip(
+              video: wakelockRecorded,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+            ),
+          ).called(1);
         },
       );
 
