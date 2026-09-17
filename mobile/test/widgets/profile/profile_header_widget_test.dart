@@ -3607,8 +3607,8 @@ void main() {
                 IdentityClaim(
                   pubkey: testUserHex,
                   platform: 'twitter',
-                  identity: 'mjb',
-                  proof: '2079265722060902514',
+                  identity: 'linked_user',
+                  proof: '123',
                 ),
               ],
             ),
@@ -3617,7 +3617,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(VerifiedAccountsRow), findsOneWidget);
-        expect(find.textContaining('twitter/mjb'), findsOneWidget);
+        expect(find.textContaining('twitter/linked_user'), findsOneWidget);
       });
 
       // The read path swallows a missing OtherProfileBloc and returns an empty
