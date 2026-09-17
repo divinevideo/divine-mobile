@@ -304,17 +304,67 @@ void main() {
       expect(first['clips'], hasLength(2));
     });
 
-    test('drops a reference that points nowhere', () {
-      final expanded = expandEditorStateHistory(
-        _export([
+    // Removing the reference as well would leave the entry indistinguishable
+    // from one that never had a meta, and the next autosave would write that
+    // back as the new truth.
+    test(
+      'keeps a meta reference that points nowhere so the gap stays visible',
+      () {
+        final export = _export([
           _entry(meta: _meta()),
           _entry(layer: 1)..[historyMetaRefKey] = 7,
-        ]),
+        ]);
+
+        final expanded = expandEditorStateHistory(export);
+
+        final entries = _entriesOf(expanded);
+        expect(entries[1][historyMetaRefKey], 7);
+        expect(entries[1], isNot(contains('meta')));
+        expect(
+          editorStateHistoryHasUnresolvedMetaReferences(expanded),
+          isTrue,
+        );
+      },
+    );
+
+    test('reports no unresolved meta references once every one resolves', () {
+      final meta = _meta();
+      final expanded = expandEditorStateHistory(
+        compactEditorStateHistory(
+          _export([_entry(meta: meta), _entry(meta: _copy(meta), layer: 1)]),
+        ),
       );
 
-      final entries = _entriesOf(expanded);
-      expect(entries[1], isNot(contains(historyMetaRefKey)));
-      expect(entries[1], isNot(contains('meta')));
+      expect(_entriesOf(expanded)[1]['meta'], isNotNull);
+      expect(
+        editorStateHistoryHasUnresolvedMetaReferences(expanded),
+        isFalse,
+      );
+    });
+
+    // A manifest reference is dropped rather than kept: the table is rebuilt
+    // on every save, so a stale index could later land inside a larger table
+    // and resolve to a different clip's attestation.
+    test('drops a manifest reference that points nowhere', () {
+      final expanded = expandEditorStateHistory(<String, dynamic>{
+        proofManifestsKey: [_manifestA],
+        'history': [
+          {
+            'meta': {
+              'clips': [
+                {'id': 'clip_a', proofManifestRefKey: 9},
+              ],
+            },
+          },
+        ],
+      });
+
+      final clip =
+          ((_entriesOf(expanded)[0]['meta'] as Map)['clips'] as List).first
+              as Map;
+      expect(clip, isNot(contains(proofManifestRefKey)));
+      expect(clip, isNot(contains('proofManifestJson')));
+      expect(clip['id'], 'clip_a');
     });
 
     // The reserved names are app-namespaced because `meta` is free-form

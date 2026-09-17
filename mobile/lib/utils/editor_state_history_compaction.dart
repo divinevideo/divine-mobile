@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart' show DeepCollectionEquality;
+import 'package:unified_logger/unified_logger.dart';
 
 /// Key the persisted form puts on a history entry whose `meta` is identical to
 /// an earlier entry's; the value is that entry's index in `history`.
@@ -36,6 +37,7 @@ const String _metaKey = 'meta';
 /// `ImportStateHistory` reads `map['m']` for the same reason.
 const String _minifiedMarkerKey = 'm';
 const String _proofManifestJsonKey = 'proofManifestJson';
+const String _logName = 'EditorStateHistory';
 
 const _metaEquality = DeepCollectionEquality();
 
@@ -124,11 +126,17 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
 /// referenced meta): the editor assigns into `activeMeta[key]` in place, and
 /// two entries sharing one map would leak that write between them. The nested
 /// clip and audio lists stay shared, which is what the editor's own import
-/// does too. A reference that points nowhere is dropped rather than thrown on.
-/// [stored] itself is never mutated.
+/// does too.
+///
+/// A reference that points nowhere is logged rather than thrown on, and an
+/// unresolved `metaRef` entry keeps its reference key so the gap stays
+/// visible to [editorStateHistoryHasUnresolvedMetaReferences] instead of
+/// looking like an entry that never had a meta. [stored] itself is never
+/// mutated.
 Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
   final manifests = stored[proofManifestsKey];
   final manifestList = manifests is List ? manifests : const <Object?>[];
+  final unresolvedManifestRefs = <int>[];
   final restored =
       _rewriteMaps(stored, (map) {
             final ref = map[proofManifestRefKey];
@@ -136,12 +144,30 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
             final manifest = ref >= 0 && ref < manifestList.length
                 ? manifestList[ref]
                 : null;
-            final copy = Map<String, dynamic>.from(map)
-              ..remove(proofManifestRefKey);
-            if (manifest is String) copy[_proofManifestJsonKey] = manifest;
-            return copy;
+            if (manifest is! String) {
+              // Dropped rather than kept: the manifest table is rebuilt from
+              // scratch on every save, so a stale index that survives could
+              // later land inside a larger table and resolve to a different
+              // clip's attestation. `divineMetaRef` below indexes `history`
+              // positions, which compaction preserves, so that one is kept.
+              unresolvedManifestRefs.add(ref);
+              return Map<String, dynamic>.from(map)
+                ..remove(proofManifestRefKey);
+            }
+            return Map<String, dynamic>.from(map)
+              ..remove(proofManifestRefKey)
+              ..[_proofManifestJsonKey] = manifest;
           })!
           as Map<String, dynamic>;
+  if (unresolvedManifestRefs.isNotEmpty) {
+    Log.error(
+      'Draft editor history references proof manifests that are not in its '
+      'table: indexes $unresolvedManifestRefs into ${manifestList.length} '
+      'stored manifest(s). Those clips load without their attestation.',
+      name: _logName,
+      category: LogCategory.video,
+    );
+  }
 
   final entries = restored[_historyKey];
   final hasManifests = restored.containsKey(proofManifestsKey);
@@ -155,6 +181,7 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
   if (!hasMetaRefs) return expanded;
 
   final expandedEntries = List<Object?>.from(entries);
+  var unresolvedMetaRefs = 0;
   for (var i = 0; i < expandedEntries.length; i++) {
     final entry = expandedEntries[i];
     if (entry is! Map || !entry.containsKey(historyMetaRefKey)) continue;
@@ -163,9 +190,27 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
         ? expandedEntries[ref]
         : null;
     final meta = target is Map ? target[_metaKey] : null;
-    final copy = Map<String, dynamic>.from(entry)..remove(historyMetaRefKey);
-    if (meta is Map) copy[_metaKey] = Map<String, dynamic>.from(meta);
-    expandedEntries[i] = copy;
+    if (meta is! Map) {
+      // Left as it came. Removing the reference as well would destroy the
+      // only evidence the entry ever had a meta, and the next autosave would
+      // write that degraded entry back as the new truth. Keeping it is safe
+      // because compaction preserves entry positions, so the index cannot
+      // start resolving to some other entry later.
+      unresolvedMetaRefs++;
+      continue;
+    }
+    expandedEntries[i] = Map<String, dynamic>.from(entry)
+      ..remove(historyMetaRefKey)
+      ..[_metaKey] = Map<String, dynamic>.from(meta);
+  }
+  if (unresolvedMetaRefs > 0) {
+    Log.error(
+      'Draft editor history has $unresolvedMetaRefs of '
+      '${expandedEntries.length} entries referencing a meta that is not '
+      'there; their clips, audio and markers are missing from this load.',
+      name: _logName,
+      category: LogCategory.video,
+    );
   }
   return expanded..[_historyKey] = expandedEntries;
 }
@@ -209,4 +254,20 @@ Object? _rewriteMaps(
         rewritten;
   }
   return copy ?? node;
+}
+
+/// Whether [history] — already through [expandEditorStateHistory] — still has
+/// an entry whose meta reference could not be resolved.
+///
+/// Such an entry's clips, audio tracks and markers are absent from this load,
+/// so anything deriving a complete picture of what a draft references must
+/// treat the answer as a lower bound rather than the whole set.
+bool editorStateHistoryHasUnresolvedMetaReferences(
+  Map<String, dynamic> history,
+) {
+  final entries = history[_historyKey];
+  if (entries is! List) return false;
+  return entries.any(
+    (entry) => entry is Map && entry.containsKey(historyMetaRefKey),
+  );
 }
