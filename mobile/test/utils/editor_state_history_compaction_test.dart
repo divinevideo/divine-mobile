@@ -298,10 +298,36 @@ void main() {
       final second = entries[1]['meta'] as Map<String, dynamic>;
       expect(identical(first, second), isFalse);
 
-      // The editor assigns into the active entry's meta in place; the entry it
-      // was copied from must not see that write.
+      // The editor writes into the active entry's meta in place; the entry it
+      // was copied from must not see that write. Replacing a whole top-level
+      // key passes with a shallow copy too, so the assertion that pins the
+      // invariant is the in-place one on the nested list.
       second['clips'] = <Object?>[];
       expect(first['clips'], hasLength(2));
+    });
+
+    test('gives each referenced entry its own nested clip and audio lists', () {
+      final meta = _meta();
+      final expanded = expandEditorStateHistory(
+        compactEditorStateHistory(
+          _export([_entry(meta: meta), _entry(meta: _copy(meta), layer: 1)]),
+        ),
+      );
+
+      final entries = _entriesOf(expanded);
+      final first = entries[0]['meta']! as Map<String, dynamic>;
+      final second = entries[1]['meta']! as Map<String, dynamic>;
+
+      expect(identical(first['clips'], second['clips']), isFalse);
+      (second['clips']! as List).clear();
+      expect(first['clips'], hasLength(2));
+
+      // An undo restoring a shared clip map would replay the edit it undoes.
+      ((first['clips']! as List).first as Map)['trimEndMs'] = 999;
+      expect(
+        ((_entriesOf(expanded)[0]['meta']! as Map)['clips']! as List).first,
+        containsPair('trimEndMs', 999),
+      );
     });
 
     // Removing the reference as well would leave the entry indistinguishable

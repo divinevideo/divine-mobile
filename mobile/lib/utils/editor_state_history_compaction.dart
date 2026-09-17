@@ -122,11 +122,13 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
 /// A history saved before compaction existed carries none of the reference
 /// keys and comes back unchanged, so old drafts keep loading as they did.
 ///
-/// Each `metaRef` entry receives its own top-level map (a shallow copy of the
-/// referenced meta): the editor assigns into `activeMeta[key]` in place, and
-/// two entries sharing one map would leak that write between them. The nested
-/// clip and audio lists stay shared, which is what the editor's own import
-/// does too.
+/// Each `metaRef` entry receives its own deep copy of the referenced meta.
+/// The editor writes into the active entry's meta in place, so any structure
+/// two entries shared would leak that write between them — and a run of
+/// twenty entries would share one clip list, making an undo restore the
+/// timeline as it is *after* the edit being undone. Before compaction each
+/// entry arrived as its own `jsonDecode` subtree, so this keeps the in-memory
+/// shape the editor has always been handed; only the stored form is smaller.
 ///
 /// A reference that points nowhere is logged rather than thrown on, and an
 /// unresolved `metaRef` entry keeps its reference key so the gap stays
@@ -201,7 +203,7 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
     }
     expandedEntries[i] = Map<String, dynamic>.from(entry)
       ..remove(historyMetaRefKey)
-      ..[_metaKey] = Map<String, dynamic>.from(meta);
+      ..[_metaKey] = _deepCopy(meta);
   }
   if (unresolvedMetaRefs > 0) {
     Log.error(
@@ -224,6 +226,27 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
 /// non-String key: this tree is persisted as JSON, where object keys are
 /// Strings by construction, so such a map cannot round-trip and is returned
 /// as it came rather than rewritten.
+/// A copy of [node] sharing none of its maps or lists.
+///
+/// Leaves are strings, numbers and booleans, which are immutable and safe to
+/// share. Typed lists are opaque bytes, and a map holding a non-String key
+/// cannot round-trip as JSON; both are returned as they came, matching
+/// [_rewriteMaps].
+Object? _deepCopy(Object? node) {
+  if (node is Map) {
+    if (node.keys.any((key) => key is! String)) return node;
+    return <String, dynamic>{
+      for (final entry in node.entries)
+        entry.key! as String: _deepCopy(entry.value),
+    };
+  }
+  if (node is List) {
+    if (node is TypedData) return node;
+    return List<Object?>.generate(node.length, (i) => _deepCopy(node[i]));
+  }
+  return node;
+}
+
 Object? _rewriteMaps(
   Object? node,
   Map<String, dynamic>? Function(Map<Object?, Object?> map) transform,
