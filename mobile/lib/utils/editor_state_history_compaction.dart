@@ -166,7 +166,10 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
 ///
 /// [transform] sees a map before its children are visited; a replacement's
 /// children are visited too. Typed lists such as sticker captures are opaque
-/// bytes rather than trees and are skipped.
+/// bytes rather than trees and are skipped, and so is a map holding any
+/// non-String key: this tree is persisted as JSON, where object keys are
+/// Strings by construction, so such a map cannot round-trip and is returned
+/// as it came rather than rewritten.
 Object? _rewriteMaps(
   Object? node,
   Map<String, dynamic>? Function(Map<Object?, Object?> map) transform,
@@ -182,16 +185,19 @@ Object? _rewriteMaps(
     return copy ?? node;
   }
   if (node is! Map) return node;
+  // Skipping the key rather than the map used to leave `Map.from` below to
+  // cast it anyway, so a single non-String key threw out of `toJson` during
+  // an autosave — and only once a String-keyed sibling happened to change.
+  if (node.keys.any((key) => key is! String)) return node;
 
   final replaced = transform(node);
   final source = replaced ?? node;
   Map<String, dynamic>? copy = replaced;
   for (final entry in source.entries) {
-    final key = entry.key;
-    if (key is! String) continue;
     final rewritten = _rewriteMaps(entry.value, transform);
     if (identical(rewritten, entry.value)) continue;
-    (copy ??= Map<String, dynamic>.from(source))[key] = rewritten;
+    (copy ??= Map<String, dynamic>.from(source))[entry.key! as String] =
+        rewritten;
   }
   return copy ?? node;
 }

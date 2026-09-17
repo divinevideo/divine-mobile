@@ -188,6 +188,30 @@ void main() {
       expect(identical(compactEditorStateHistory(export), export), isTrue);
     });
 
+    // Compaction runs on the live editor map, not a decoded one, so a map
+    // the editor built with a non-String key reached `Map.from` and threw
+    // out of `toJson` mid-autosave.
+    test('leaves a map holding a non-String key alone instead of throwing', () {
+      final export = _export([
+        _entry(
+          meta: {
+            'weird': <Object?, Object?>{
+              1: 'int-key',
+              'clip': _clip('clip_a', _manifestA),
+            },
+          },
+        ),
+      ]);
+
+      final compact = compactEditorStateHistory(export);
+
+      final weird =
+          (_entriesOf(compact)[0]['meta'] as Map)['weird']
+              as Map<Object?, Object?>;
+      expect(weird[1], 'int-key');
+      expect((weird['clip'] as Map)['proofManifestJson'], _manifestA);
+    });
+
     test('does not mutate its input', () {
       final meta = _meta();
       final export = _export([
