@@ -4185,6 +4185,8 @@
     "followUserIndexedSemanticLabel": "사용자 팔로우 {index}",
     "unfollowUserIndexedSemanticLabel": "사용자 팔로우 취소 {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / 월",
+    "supporterTierAnnualLabel": "{title} — {price} / 년",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "다른 반응을 추가하기 전에 이전 반응 삭제를 완료하세요.",
     "updateGentleBanner": "새 업데이트가 나왔어요. 확인해 보세요 →",
     "updateModerateTitle": "마지막 확인 이후 업데이트가 나왔어요",

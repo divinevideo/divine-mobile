@@ -12149,6 +12149,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String supporterTierAnnualLabel(String title, String price) {
+    return '$title — $price / Jahr';
+  }
+
+  @override
+  String supporterTierLabel(String title, String price) {
+    return '$title — $price';
+  }
+
+  @override
   String get videoDetailHiddenBySettingsTitle => 'Hidden by your settings';
 
   @override

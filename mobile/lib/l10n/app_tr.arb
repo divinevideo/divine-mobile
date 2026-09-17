@@ -4639,6 +4639,8 @@
     "followUserIndexedSemanticLabel": "Kullanıcıyı takip et {index}",
     "unfollowUserIndexedSemanticLabel": "Kullanıcıyı takipten çık {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / ay",
+    "supporterTierAnnualLabel": "{title} — {price} / yıl",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "Başka bir tepki eklemeden önce önceki tepkinizi kaldırmayı tamamlayın.",
     "updateGentleBanner": "Yeni bir güncelleme çıktı. Göz at →",
     "updateModerateTitle": "Son kontrolünden bu yana bir güncelleme var",

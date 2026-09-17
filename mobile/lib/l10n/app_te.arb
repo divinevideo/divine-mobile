@@ -8078,6 +8078,8 @@
     }
   },
   "supporterTierMonthlyLabel": "{title} — {price}/ నెల",
+  "supporterTierAnnualLabel": "{title} — {price}/ సంవత్సరం",
+  "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "మరొక ప్రతిస్పందనను జోడించే ముందు మీ మునుపటి ప్రతిస్పందనను తొలగించడం పూర్తి చేయండి.",
   "@supporterTierMonthlyLabel": {
     "description": "Label on a supporter subscription button: the tier name, its price, and the monthly billing period.",

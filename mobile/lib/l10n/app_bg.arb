@@ -4763,6 +4763,8 @@
     "followUserIndexedSemanticLabel": "Последвай потребителя {index}",
     "unfollowUserIndexedSemanticLabel": "Спри да следваш потребителя {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / месец",
+    "supporterTierAnnualLabel": "{title} — {price} / година",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "Завършете премахването на предишната си реакция, преди да добавите друга.",
     "updateGentleBanner": "Излезе нова актуализация. Виж я →",
     "updateModerateTitle": "Има актуализация от последната ти проверка",

@@ -20166,6 +20166,18 @@ abstract class AppLocalizations {
   /// **'{title} — {price} / month'**
   String supporterTierMonthlyLabel(String title, String price);
 
+  /// Label on a supporter subscription button: the tier name, its price, and the yearly billing period.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} — {price} / year'**
+  String supporterTierAnnualLabel(String title, String price);
+
+  /// Label on a supporter subscription button whose billing period is not known: the tier name and its price only.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} — {price}'**
+  String supporterTierLabel(String title, String price);
+
   /// No description provided for @videoDetailHiddenBySettingsTitle.
   ///
   /// In en, this message translates to:

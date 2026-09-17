@@ -11,21 +11,26 @@ import 'package:iap_repository/src/exceptions.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:models/models.dart';
 
-/// The store product IDs Divine treats as supporter tiers.
+/// The store product IDs Divine treats as supporter tiers, each with the
+/// billing period it renews on.
 ///
 /// These must exist in App Store Connect and the Google Play Console for real
 /// purchases to work. While the flag is off and these are unconfigured,
 /// fetchProducts simply returns an empty list.
 ///
 /// All three plans grant the same entitlement; only the billing period and the
-/// founding window differ. The visible order is decided by the store product
-/// metadata, not by this set.
+/// founding window differ.
 @visibleForTesting
-const Set<String> supporterProductIds = <String>{
-  'divine.supporter.monthly',
-  'divine.supporter.annual',
-  'divine.supporter.founding.annual',
-};
+const Map<String, SupporterBillingPeriod> supporterProducts =
+    <String, SupporterBillingPeriod>{
+      'divine.supporter.monthly': SupporterBillingPeriod.monthly,
+      'divine.supporter.annual': SupporterBillingPeriod.annual,
+      'divine.supporter.founding.annual': SupporterBillingPeriod.annual,
+    };
+
+/// The product ids in [supporterProducts].
+@visibleForTesting
+Set<String> get supporterProductIds => supporterProducts.keys.toSet();
 
 /// [EntitlementValidator] backed by the `in_app_purchase` plugin.
 ///
@@ -182,6 +187,7 @@ class InAppPurchaseValidator implements EntitlementValidator {
     price: product.price,
     currencyCode: product.currencyCode,
     description: product.description,
+    billingPeriod: supporterProducts[product.id],
   );
 
   @override

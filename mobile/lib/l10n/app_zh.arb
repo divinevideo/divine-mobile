@@ -6402,6 +6402,8 @@
   "followUserIndexedSemanticLabel": "关注用户 {index}",
   "unfollowUserIndexedSemanticLabel": "取消关注用户 {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / 月",
+  "supporterTierAnnualLabel": "{title} — {price} / 年",
+  "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "请先完成移除之前的回应，再添加其他回应。",
   "updateGentleBanner": "新版本刚刚上线。去看看 →",
     "updateModerateTitle": "自上次检查后已有新版本",

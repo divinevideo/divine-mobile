@@ -68,15 +68,26 @@ void main() {
     validator.dispose();
   });
 
-  group('supporterProductIds', () {
-    test('covers every plan Divine sells', () {
+  group('supporterProducts', () {
+    test('covers every plan Divine sells with its billing period', () {
+      expect(
+        supporterProducts,
+        equals(<String, SupporterBillingPeriod>{
+          'divine.supporter.monthly': SupporterBillingPeriod.monthly,
+          'divine.supporter.annual': SupporterBillingPeriod.annual,
+          'divine.supporter.founding.annual': SupporterBillingPeriod.annual,
+        }),
+      );
+    });
+
+    test('supporterProductIds lists the same plans', () {
       expect(
         supporterProductIds,
-        containsAll(<String>[
+        equals(<String>{
           'divine.supporter.monthly',
           'divine.supporter.annual',
           'divine.supporter.founding.annual',
-        ]),
+        }),
       );
     });
   });
@@ -124,6 +135,48 @@ void main() {
           ),
         );
         expect(await validator.fetchProducts(), isEmpty);
+      });
+
+      test('tags each tier with its billing period', () async {
+        validator.dispose();
+        validator = InAppPurchaseValidator(store: store);
+        when(store.isAvailable).thenAnswer((_) async => true);
+        when(() => store.queryProductDetails(any())).thenAnswer(
+          (_) async => ProductDetailsResponse(
+            productDetails: [
+              _product('divine.supporter.monthly'),
+              _product('divine.supporter.annual'),
+              _product('divine.supporter.founding.annual'),
+            ],
+            notFoundIDs: [],
+          ),
+        );
+        final tiers = await validator.fetchProducts();
+        expect(
+          {for (final tier in tiers) tier.productId: tier.billingPeriod},
+          equals(<String, SupporterBillingPeriod>{
+            'divine.supporter.monthly': SupporterBillingPeriod.monthly,
+            'divine.supporter.annual': SupporterBillingPeriod.annual,
+            'divine.supporter.founding.annual': SupporterBillingPeriod.annual,
+          }),
+        );
+      });
+
+      test('leaves the billing period unset for an unknown product', () async {
+        validator.dispose();
+        validator = InAppPurchaseValidator(
+          store: store,
+          productIds: const {'divine.supporter.unknown'},
+        );
+        when(store.isAvailable).thenAnswer((_) async => true);
+        when(() => store.queryProductDetails(any())).thenAnswer(
+          (_) async => ProductDetailsResponse(
+            productDetails: [_product('divine.supporter.unknown')],
+            notFoundIDs: [],
+          ),
+        );
+        final tiers = await validator.fetchProducts();
+        expect(tiers.single.billingPeriod, isNull);
       });
     });
 

@@ -4639,6 +4639,8 @@
     "followUserIndexedSemanticLabel": "Följ användare {index}",
     "unfollowUserIndexedSemanticLabel": "Sluta följa användare {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / månad",
+    "supporterTierAnnualLabel": "{title} — {price} / år",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "Slutför borttagningen av din tidigare reaktion innan du lägger till en ny.",
     "updateGentleBanner": "En ny uppdatering har kommit. Kolla in den →",
     "updateModerateTitle": "Det finns en uppdatering sedan du kollade senast",

@@ -6402,6 +6402,8 @@
   "followUserIndexedSemanticLabel": "Ikut pengguna {index}",
   "unfollowUserIndexedSemanticLabel": "Nyahikut pengguna {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / bulan",
+  "supporterTierAnnualLabel": "{title} — {price} / tahun",
+  "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "Selesaikan pengalihan keluar reaksi terdahulu sebelum menambah reaksi lain.",
   "updateGentleBanner": "Kemas kini baharu sudah tiba. Lihat sekarang →",
     "updateModerateTitle": "Terdapat kemas kini sejak semakan terakhir anda",
