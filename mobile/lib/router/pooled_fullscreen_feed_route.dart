@@ -9,6 +9,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Redirect target for the fullscreen video feed route.
 ///
@@ -16,10 +17,24 @@ import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 /// discarded on page reload or mobile lifecycle restoration. When that
 /// happens, recover the selected video through its durable URL identity.
 /// Falls back to the home feed only for legacy URLs with no video identity.
+/// An [extra] of any other non-null type is logged as a warning and, in debug
+/// builds, fails an assert.
 String? fullscreenFeedRedirect(Object? extra, {String? fallbackVideoId}) {
   if (extra is PooledFullscreenVideoFeedArgs ||
       extra is ProfilePooledFullscreenVideoFeedArgs) {
     return null;
+  }
+  if (extra != null) {
+    final unsupported =
+        'Unsupported extra ${extra.runtimeType} for the fullscreen feed. '
+        'Pass PooledFullscreenVideoFeedArgs or '
+        'ProfilePooledFullscreenVideoFeedArgs.';
+    Log.warning(
+      unsupported,
+      name: 'FullscreenFeedRoute',
+      category: LogCategory.ui,
+    );
+    assert(false, unsupported);
   }
   if (fallbackVideoId != null && fallbackVideoId.isNotEmpty) {
     return VideoDetailScreen.pathForId(fallbackVideoId);
@@ -49,14 +64,13 @@ Widget buildPooledFullscreenFeed(BuildContext context, GoRouterState state) {
   }
   if (extra is ProfilePooledFullscreenVideoFeedArgs) {
     return ProfileVideoFeedView(
-      npub: '',
       userIdHex: extra.userIdHex,
       videoIndex: extra.initialIndex,
       videos: extra.seedVideos,
       initialVideoId: extra.initialVideoId,
       initialStableId: extra.initialStableId,
       contextTitleOverride: extra.contextTitle,
-      onPageChanged: extra.onPageChanged ?? (_) {},
+      onPageChanged: extra.onPageChanged,
     );
   }
   final fallbackVideoId = state

@@ -1,5 +1,5 @@
-// ABOUTME: Tests pooled-feed route recovery when lifecycle restoration loses
-// ABOUTME: in-memory `extra`, including durable selected-video URL fallback.
+// ABOUTME: Tests the pooled-feed route redirect and builder: recovery without
+// ABOUTME: `extra`, unsupported-extra warnings, and profile-args forwarding.
 
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +12,8 @@ import 'package:openvine/router/pooled_fullscreen_feed_route.dart'
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 VideoEvent _video(String id) => VideoEvent(
   id: id,
@@ -61,10 +63,42 @@ void main() {
       },
     );
 
-    test('redirects to the home feed when extra is the wrong type', () {
+    test('asserts when extra is an unsupported type', () {
       expect(
-        fullscreenFeedRedirect('not-args'),
-        equals(VideoFeedPage.pathForIndex(0)),
+        () => fullscreenFeedRedirect('not-args'),
+        throwsA(
+          isA<AssertionError>().having(
+            (error) => '${error.message}',
+            'message',
+            allOf(
+              contains('String'),
+              matches(RegExp(r'\bPooledFullscreenVideoFeedArgs\b')),
+              contains('ProfilePooledFullscreenVideoFeedArgs'),
+            ),
+          ),
+        ),
+      );
+    });
+
+    test('logs a warning when extra is an unsupported type', () async {
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+
+      expect(() => fullscreenFeedRedirect('not-args'), throwsAssertionError);
+
+      final warning = logCapture.getRecentLogs().singleWhere(
+        (log) => log.level == LogLevel.warning,
+      );
+      expect(warning.name, equals('FullscreenFeedRoute'));
+      expect(warning.category, equals(LogCategory.ui));
+      expect(
+        warning.message,
+        equals(
+          'Unsupported extra String for the fullscreen feed. '
+          'Pass PooledFullscreenVideoFeedArgs or '
+          'ProfilePooledFullscreenVideoFeedArgs.',
+        ),
       );
     });
 
@@ -125,6 +159,49 @@ void main() {
         (built as PooledFullscreenVideoFeedScreen).sponsorName,
         'Acme Bikes',
       );
+    });
+
+    testWidgets('builder forwards profile args to $ProfileVideoFeedView', (
+      tester,
+    ) async {
+      late Widget built;
+      final pageChanges = <int>[];
+      final seedVideos = [_video('1'), _video('2')];
+      final args = ProfilePooledFullscreenVideoFeedArgs(
+        userIdHex: 'profile-hex',
+        initialIndex: 1,
+        seedVideos: seedVideos,
+        initialVideoId: '2',
+        initialStableId: 'stable-2',
+        contextTitle: 'Profile title',
+        onPageChanged: pageChanges.add,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              built = buildPooledFullscreenFeed(
+                context,
+                _PooledFeedState(args),
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(built, isA<ProfileVideoFeedView>());
+      final view = built as ProfileVideoFeedView;
+      expect(view.userIdHex, equals('profile-hex'));
+      expect(view.videoIndex, equals(1));
+      expect(view.videos, equals(seedVideos));
+      expect(view.initialVideoId, equals('2'));
+      expect(view.initialStableId, equals('stable-2'));
+      expect(view.contextTitleOverride, equals('Profile title'));
+      view.onPageChanged?.call(3);
+      expect(pageChanges, equals([3]));
     });
 
     testWidgets(

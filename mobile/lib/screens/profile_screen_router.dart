@@ -575,7 +575,6 @@ class ProfileViewSwitcher extends StatelessWidget {
     // When videoIndex is null, show grid mode
     return (videoIndex != null && videos.isNotEmpty)
         ? ProfileVideoFeedView(
-            npub: npub,
             userIdHex: userIdHex,
             videos: videos,
             videoIndex: videoIndex!,

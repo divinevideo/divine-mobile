@@ -164,7 +164,6 @@ void main() {
                 systemVolumeListener: _FakeSystemVolumeListener(),
               ),
               child: ProfileVideoFeedView(
-                npub: 'npub1profile',
                 userIdHex: _profilePubkey,
                 videoIndex: videoIndex,
                 videos: seedVideos,
