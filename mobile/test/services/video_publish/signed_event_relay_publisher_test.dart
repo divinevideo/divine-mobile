@@ -289,11 +289,15 @@ void main() {
           expect(attempts, 1);
 
           publisher.dispose();
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'dispose must cancel the backoff timer itself',
+          );
           async.elapse(const Duration(minutes: 1));
 
           expect(attempts, 1, reason: 'no attempt may run after dispose');
           expect(error, isA<AsyncCancelledException>());
-          expect(async.pendingTimers, isEmpty);
         });
       });
     });
