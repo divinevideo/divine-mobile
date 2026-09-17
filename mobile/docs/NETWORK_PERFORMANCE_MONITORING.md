@@ -300,3 +300,11 @@ flutter test integration_test/perf/feed_ttff_test.dart -d "$(adb get-serialno)" 
 Do not adjust the ceiling from a single run. Re-baseline only after at least 30
 successful runs on the fixed runner, and document the old and new p50/p90 plus
 the reason for the change in the pull request.
+
+## User experience traces and reports
+
+[UX performance monitoring](UX_PERFORMANCE_MONITORING.md) adds fixed operation
+categories alongside these network metrics, deletion signing/polling outcomes,
+and measured startup and playback custom metrics. It includes partition-bounded
+BigQuery reports and explains which dashboard metrics represent real elapsed
+time, export freshness, and rollout/alert configuration.
