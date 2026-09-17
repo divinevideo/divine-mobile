@@ -16,8 +16,16 @@ import 'package:models/models.dart';
 /// These must exist in App Store Connect and the Google Play Console for real
 /// purchases to work. While the flag is off and these are unconfigured,
 /// fetchProducts simply returns an empty list.
+///
+/// All three plans grant the same entitlement; only the billing period and the
+/// founding window differ. The visible order is decided by the store product
+/// metadata, not by this set.
 @visibleForTesting
-const Set<String> supporterProductIds = <String>{'divine.supporter.monthly'};
+const Set<String> supporterProductIds = <String>{
+  'divine.supporter.monthly',
+  'divine.supporter.annual',
+  'divine.supporter.founding.annual',
+};
 
 /// [EntitlementValidator] backed by the `in_app_purchase` plugin.
 ///

@@ -68,6 +68,19 @@ void main() {
     validator.dispose();
   });
 
+  group('supporterProductIds', () {
+    test('covers every plan Divine sells', () {
+      expect(
+        supporterProductIds,
+        containsAll(<String>[
+          'divine.supporter.monthly',
+          'divine.supporter.annual',
+          'divine.supporter.founding.annual',
+        ]),
+      );
+    });
+  });
+
   group(InAppPurchaseValidator, () {
     test('isAvailable delegates to the store', () async {
       when(store.isAvailable).thenAnswer((_) async => true);
