@@ -7,14 +7,23 @@ import 'package:collection/collection.dart' show DeepCollectionEquality;
 
 /// Key the persisted form puts on a history entry whose `meta` is identical to
 /// an earlier entry's; the value is that entry's index in `history`.
-const String historyMetaRefKey = 'metaRef';
+///
+/// The three reserved names below carry a `divine` prefix because the maps
+/// this walks are free-form app-owned space — a history entry's `meta` and a
+/// detached clip layer's meta hold whatever the editor put there. An
+/// unprefixed `metaRef` or `proofManifestRef` would be indistinguishable from
+/// a field someone adds later, and expansion runs over every map in the tree
+/// on every load: it would give an entry a `meta` copied from an unrelated
+/// one, delete a key it did not write, or graft one clip's attestation onto
+/// another map that happened to hold the same int.
+const String historyMetaRefKey = 'divineMetaRef';
 
 /// Key under which the persisted form keeps the distinct proof manifests.
-const String proofManifestsKey = 'proofManifests';
+const String proofManifestsKey = 'divineProofManifests';
 
 /// Key that replaces a clip's `proofManifestJson` in the persisted form; the
 /// value indexes [proofManifestsKey].
-const String proofManifestRefKey = 'proofManifestRef';
+const String proofManifestRefKey = 'divineProofManifestRef';
 
 const String _historyKey = 'history';
 const String _metaKey = 'meta';

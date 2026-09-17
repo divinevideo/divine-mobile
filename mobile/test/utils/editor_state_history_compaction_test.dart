@@ -317,6 +317,41 @@ void main() {
       expect(entries[1], isNot(contains('meta')));
     });
 
+    // The reserved names are app-namespaced because `meta` is free-form
+    // space the editor owns. Before that, expansion rewrote any map in the
+    // tree that happened to hold one of these names.
+    test(
+      'leaves an app-owned key that merely looks like a reference alone',
+      () {
+        final legacy = <String, dynamic>{
+          'history': [
+            {
+              'meta': {'a': 1},
+            },
+            {'metaRef': 0},
+            {
+              'layers': [
+                {'id': 'l1', 'proofManifestRef': 0},
+              ],
+            },
+          ],
+          'proofManifests': 'not ours',
+        };
+
+        final expanded = expandEditorStateHistory(legacy);
+
+        expect(identical(expanded, legacy), isTrue);
+        final entries = _entriesOf(expanded);
+        expect(entries[1], isNot(contains('meta')));
+        expect(entries[1]['metaRef'], 0);
+        expect((entries[2]['layers'] as List).first, {
+          'id': 'l1',
+          'proofManifestRef': 0,
+        });
+        expect(expanded['proofManifests'], 'not ours');
+      },
+    );
+
     test('does not mutate its input', () {
       final stored = compactEditorStateHistory(
         _export([_entry(meta: _meta()), _entry(meta: _meta(), layer: 1)]),
