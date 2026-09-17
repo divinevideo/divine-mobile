@@ -12,6 +12,15 @@ String readIosNativeSource(String fileName) {
   return file.readAsStringSync();
 }
 
+String readMacosNativeSource(String fileName) {
+  final file = [
+    File('macos/Classes/$fileName'),
+    File('packages/divine_camera/macos/Classes/$fileName'),
+  ].firstWhere((file) => file.existsSync());
+
+  return file.readAsStringSync();
+}
+
 String readAndroidNativeSource(String fileName) {
   const packagePath = 'android/src/main/kotlin/co/openvine/divine_camera';
   final file = [

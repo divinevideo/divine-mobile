@@ -3,6 +3,7 @@ import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/services/video_recorder/camera/camera_mobile_service.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _FakeCameraPlatform extends DivineCameraPlatform {
   bool shouldFail = true;
@@ -13,7 +14,7 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
   final List<String> audioCaptureCalls = [];
 
   @override
-  void Function(VideoRecordingResult result)? onRecordingAutoStopped;
+  void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
 
   @override
   void Function(RemoteRecordTrigger trigger)? onRemoteRecordTrigger;
@@ -121,6 +122,35 @@ void main() {
 
         await expectLater(service.suspendAudioCapture(), completes);
         await expectLater(service.resumeAudioCapture(), completes);
+      });
+    });
+
+    group('onAutoStopped', () {
+      late List<EditorVideo?> autoStopped;
+
+      setUp(() async {
+        autoStopped = [];
+        platform.shouldFail = false;
+        service = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: autoStopped.add,
+        );
+        await service.initialize();
+      });
+
+      test('forwards a native stop that captured nothing as null', () {
+        platform.onRecordingAutoStopped!(null);
+
+        expect(autoStopped, [isNull]);
+      });
+
+      test('forwards a native stop with a video as that file', () {
+        platform.onRecordingAutoStopped!(
+          const VideoRecordingResult(filePath: '/clips/auto.mp4'),
+        );
+
+        expect(autoStopped, hasLength(1));
+        expect(autoStopped.single?.file?.path, '/clips/auto.mp4');
       });
     });
   });

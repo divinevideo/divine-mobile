@@ -682,7 +682,8 @@ class CameraController: NSObject {
     /// Finalizes an in-progress recording that cannot continue because the
     /// app lost the camera, and pushes whatever was captured before the cut
     /// through the native auto-stop channel so it reaches Flutter as a
-    /// normal saved clip. Reached from the capture-session interruption
+    /// normal saved clip — or, when nothing was captured, tells Flutter the
+    /// recording is over. Reached from the capture-session interruption
     /// observer and from a genuine background transition in
     /// `pausePreview(releaseAudio: true)`; whichever lands first wins and the
     /// other is a no-op via `isRecording`.
@@ -701,15 +702,14 @@ class CameraController: NSObject {
             name: "DivineCamera.Recording"
         )
         stopRecording { [weak self] result, error in
-            if let result = result {
-                self?.sendAutoStopEvent(result: result)
-            } else {
+            if result == nil {
                 DivineCameraLog.shared.error(
                     "Recording interrupted with nothing to salvage: "
                         + "\(error ?? "unknown error")",
                     name: "DivineCamera.Recording"
                 )
             }
+            self?.sendAutoStopEvent(result: result)
         }
     }
 
@@ -2672,20 +2672,25 @@ class CameraController: NSObject {
         maxDurationTimer = nil
         
         stopRecording { [weak self] result, error in
-            // Send auto-stop event through method channel
-            if let result = result {
-                self?.sendAutoStopEvent(result: result)
+            if result == nil {
+                DivineCameraLog.shared.error(
+                    "Auto-stop finished with nothing to save: "
+                        + "\(error ?? "unknown error")",
+                    name: "DivineCamera.Recording"
+                )
             }
+            self?.sendAutoStopEvent(result: result)
         }
     }
-    
-    /// Sends auto-stop event to Flutter.
-    private func sendAutoStopEvent(result: [String: Any]) {
-        // This will be handled by the plugin via a callback or event channel
+
+    /// Tells Flutter the recording ended without a stop from Dart. A nil
+    /// result goes out as an empty payload (no `filePath`) so Dart still
+    /// leaves its recording state (#9261); the plugin drops a nil `userInfo`.
+    private func sendAutoStopEvent(result: [String: Any]?) {
         NotificationCenter.default.post(
             name: NSNotification.Name("DivineCameraAutoStop"),
             object: nil,
-            userInfo: result
+            userInfo: result ?? [:]
         )
     }
     

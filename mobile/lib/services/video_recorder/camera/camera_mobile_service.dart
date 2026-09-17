@@ -48,7 +48,9 @@ class CameraMobileService extends CameraService {
         preferUnprocessedAudio: preferUnprocessedAudio,
       );
       _camera.onRecordingAutoStopped = (result) {
-        onAutoStopped(EditorVideo.file(result.filePath));
+        onAutoStopped(
+          result == null ? null : EditorVideo.file(result.filePath),
+        );
       };
       // Re-apply remote record trigger callback (gets cleared on dispose)
       if (_remoteRecordTriggerCallback != null) {

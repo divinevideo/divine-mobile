@@ -26,7 +26,7 @@ abstract class CameraService {
   /// implementation based on the current platform.
   factory CameraService.create({
     required void Function({bool? forceCameraRebuild}) onUpdateState,
-    required void Function(EditorVideo video) onAutoStopped,
+    required void Function(EditorVideo? video) onAutoStopped,
   }) {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
       return CameraLinuxService(
@@ -43,7 +43,10 @@ abstract class CameraService {
   /// Callback to trigger UI updates when camera state changes.
   final void Function({bool? forceCameraRebuild}) onUpdateState;
 
-  final void Function(EditorVideo video) onAutoStopped;
+  /// Called when the camera stops recording on its own — the max duration
+  /// was reached, or the camera was interrupted. [video] is null when
+  /// nothing was captured; the recording has ended either way.
+  final void Function(EditorVideo? video) onAutoStopped;
 
   /// Initializes the camera and prepares it for use.
   ///

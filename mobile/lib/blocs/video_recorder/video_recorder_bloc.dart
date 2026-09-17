@@ -74,7 +74,7 @@ typedef AudioPlaybackServiceFactory = AudioPlaybackService Function();
 /// bloc constructor instead of bypassing it with a service override.
 typedef CameraServiceFactory = CameraService Function({
   required void Function({bool? forceCameraRebuild}) onUpdateState,
-  required void Function(EditorVideo video) onAutoStopped,
+  required void Function(EditorVideo? video) onAutoStopped,
 });
 
 /// Accessor for the [ClipManagerNotifier] (method-call + public-getter
@@ -2114,6 +2114,9 @@ class VideoRecorderBloc
     _VideoRecorderAutoStopped event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    // A null video still goes through the stop pipeline: it resets the
+    // recorder and reports the empty recording. The camera service already
+    // knows the recording ended, so it answers with no file.
     add(VideoRecorderRecordingStopRequested(result: event.video));
   }
 

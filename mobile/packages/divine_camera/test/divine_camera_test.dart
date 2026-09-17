@@ -24,16 +24,16 @@ class MockDivineCameraPlatform
 
   /// Counts [resumeAudioCapture] calls that reached the platform.
   int resumeAudioCaptureCalls = 0;
-  void Function(VideoRecordingResult result)? _onRecordingAutoStopped;
+  void Function(VideoRecordingResult? result)? _onRecordingAutoStopped;
   void Function(RemoteRecordTrigger trigger)? _onRemoteRecordTrigger;
 
   @override
-  void Function(VideoRecordingResult result)? get onRecordingAutoStopped =>
+  void Function(VideoRecordingResult? result)? get onRecordingAutoStopped =>
       _onRecordingAutoStopped;
 
   @override
   set onRecordingAutoStopped(
-    void Function(VideoRecordingResult result)? callback,
+    void Function(VideoRecordingResult? result)? callback,
   ) {
     _onRecordingAutoStopped = callback;
   }
@@ -1510,6 +1510,34 @@ void main() {
       expect(receivedResult!.filePath, '/auto/stopped.mp4');
       expect(DivineCamera.instance.isRecording, isFalse);
     });
+
+    test(
+      'onRecordingAutoStopped forwards a stop that captured nothing and '
+      'ends recording',
+      () async {
+        var callCount = 0;
+        VideoRecordingResult? receivedResult = const VideoRecordingResult(
+          filePath: '/sentinel.mp4',
+        );
+        DivineCamera.instance.onRecordingAutoStopped = (result) {
+          callCount++;
+          receivedResult = result;
+        };
+
+        await DivineCamera.instance.initialize();
+        await DivineCamera.instance.startRecording();
+        expect(DivineCamera.instance.isRecording, isTrue);
+
+        mockPlatform.onRecordingAutoStopped?.call(null);
+
+        expect(callCount, 1);
+        expect(receivedResult, isNull);
+        expect(DivineCamera.instance.isRecording, isFalse);
+        // The mock platform still reports an active recording, so a stop
+        // that reached it would return a file.
+        expect(await DivineCamera.instance.stopRecording(), isNull);
+      },
+    );
 
     test('setFocusPoint returns false when not supported', () async {
       // Create mock that doesn't support focus

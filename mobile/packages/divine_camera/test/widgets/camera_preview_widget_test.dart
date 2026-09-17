@@ -10,16 +10,16 @@ class MockDivineCameraPlatform
     with MockPlatformInterfaceMixin
     implements DivineCameraPlatform {
   CameraState _state = const CameraState();
-  void Function(VideoRecordingResult result)? _onRecordingAutoStopped;
+  void Function(VideoRecordingResult? result)? _onRecordingAutoStopped;
   void Function(RemoteRecordTrigger trigger)? _onRemoteRecordTrigger;
 
   @override
-  void Function(VideoRecordingResult result)? get onRecordingAutoStopped =>
+  void Function(VideoRecordingResult? result)? get onRecordingAutoStopped =>
       _onRecordingAutoStopped;
 
   @override
   set onRecordingAutoStopped(
-    void Function(VideoRecordingResult result)? callback,
+    void Function(VideoRecordingResult? result)? callback,
   ) {
     _onRecordingAutoStopped = callback;
   }

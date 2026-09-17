@@ -44,8 +44,10 @@ class DivineCamera {
   /// Callback invoked when camera state changes.
   void Function(CameraState state)? onStateChanged;
 
-  /// Callback invoked when recording auto-stops due to max duration.
-  void Function(VideoRecordingResult result)? onRecordingAutoStopped;
+  /// Callback invoked when the native layer stops a recording on its own —
+  /// the max duration was reached, or the camera was interrupted. The result
+  /// is null when nothing was captured; recording has ended either way.
+  void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
 
   /// Callback invoked when a remote record trigger is detected.
   ///
@@ -77,7 +79,7 @@ class DivineCamera {
   DivineCameraPlatform get _platform => DivineCameraPlatform.instance;
 
   /// Handles auto-stop event from platform.
-  void _handleAutoStop(VideoRecordingResult result) {
+  void _handleAutoStop(VideoRecordingResult? result) {
     _state = _state.copyWith(isRecording: false);
     _notifyStateChanged();
     onRecordingAutoStopped?.call(result);

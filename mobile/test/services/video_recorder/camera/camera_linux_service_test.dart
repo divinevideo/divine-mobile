@@ -10,7 +10,7 @@ void main() {
   group(CameraLinuxService, () {
     late CameraLinuxService service;
     late int updateStateCallCount;
-    late List<EditorVideo> autoStoppedVideos;
+    late List<EditorVideo?> autoStoppedVideos;
 
     setUp(() {
       updateStateCallCount = 0;

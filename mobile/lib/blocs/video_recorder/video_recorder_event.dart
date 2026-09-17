@@ -352,12 +352,13 @@ final class _VideoRecorderRemoteRecordTriggered extends VideoRecorderEvent {
 /// Internal event: the camera auto-stopped recording on its own, without a
 /// user Stop tap — e.g. it hit the recording limit, or the capture session
 /// was interrupted (the app was backgrounded mid-recording) and the native
-/// layer salvaged whatever was captured before the interruption. Dispatched
-/// from the `CameraService.onAutoStopped` callback.
+/// layer salvaged whatever was captured before the interruption. [video] is
+/// null when nothing was captured. Dispatched from the
+/// `CameraService.onAutoStopped` callback.
 final class _VideoRecorderAutoStopped extends VideoRecorderEvent {
   const _VideoRecorderAutoStopped(this.video);
 
-  final EditorVideo video;
+  final EditorVideo? video;
 
   @override
   List<Object?> get props => [video];
