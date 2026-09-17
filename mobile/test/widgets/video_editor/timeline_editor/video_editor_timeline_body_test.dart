@@ -114,6 +114,59 @@ void main() {
       );
     }
 
+    /// Lays the body out the way the timeline lays it out: inside a
+    /// horizontal scroll view, so it takes its natural width — the
+    /// composition plus a [scrollPadding] on each side — instead of being
+    /// squeezed to the 800px test viewport.
+    Future<void> pumpBodyInScrollView(
+      WidgetTester tester, {
+      double scrollPadding = 16,
+      double pixelsPerSecond = 80,
+      double totalWidth = 960,
+    }) async {
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      final scrollController = ScrollController();
+      final overlayStripsScrollController = ScrollController();
+      final playhead = ValueNotifier(Duration.zero);
+      addTearDown(scrollController.dispose);
+      addTearDown(overlayStripsScrollController.dispose);
+      addTearDown(playhead.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+              BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+            ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: scrollController,
+              child: SizedBox(
+                height: 300,
+                child: VideoEditorTimelineBody(
+                  totalDuration: const Duration(seconds: 12),
+                  pixelsPerSecond: pixelsPerSecond,
+                  scrollController: scrollController,
+                  overlayStripsScrollController: overlayStripsScrollController,
+                  scrollPadding: scrollPadding,
+                  clips: const <DivineVideoClip>[],
+                  totalWidth: totalWidth,
+                  isInteracting: false,
+                  onReorder: (_) {},
+                  onReorderChanged: (_) {},
+                  playheadPosition: playhead,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     testWidgets(
       'the right trim handle of an overlay item ending at the composition '
       'end takes the drag',
@@ -286,25 +339,44 @@ void main() {
       'starts the outside-area overlays at the max duration and runs them to '
       'the end of the trailing scroll padding',
       (tester) async {
-        await pumpBody(tester);
+        // Measured, not read off the Positioned arguments: `right: 0` is a
+        // literal that holds for any Stack width, so asserting it under the
+        // 800px viewport would pass even if the Stack stopped short of the
+        // scroll content it is supposed to cover.
+        const scrollPadding = 16.0;
+        const pixelsPerSecond = 80.0;
+        const totalWidth = 960.0;
+        await pumpBodyInScrollView(tester);
 
-        // The composition starts after the leading scroll padding (16), and
-        // the body's trailing padding already reaches the end of the
-        // horizontal scroll extent, so the overlays end with the body.
         final expectedLeft =
-            16 + VideoEditorConstants.maxDuration.inMilliseconds / 1000 * 80;
+            scrollPadding +
+            VideoEditorConstants.maxDuration.inMilliseconds /
+                1000 *
+                pixelsPerSecond;
+        const expectedRight = scrollPadding + totalWidth + scrollPadding;
 
-        expect(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is Positioned &&
-                widget.top == 0 &&
-                widget.bottom == 0 &&
-                widget.left == expectedLeft &&
-                widget.right == 0,
-          ),
-          findsNWidgets(2),
+        final stripe = find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint &&
+              widget.painter.runtimeType.toString() ==
+                  '_TimelineOutsideAreaPainter',
         );
+        final dim = find.byWidgetPredicate(
+          (widget) =>
+              widget is ColoredBox &&
+              widget.color ==
+                  VineTheme.surfaceContainerHigh.withValues(alpha: 0.3),
+        );
+        expect(stripe, findsOneWidget);
+        expect(dim, findsOneWidget);
+
+        // Both bands cover the same stretch, and it ends on the far edge of
+        // the trailing padding rather than on the composition's last pixel.
+        for (final band in [stripe, dim]) {
+          final rect = tester.getRect(band);
+          expect(rect.left, moreOrLessEquals(expectedLeft));
+          expect(rect.right, moreOrLessEquals(expectedRight));
+        }
       },
     );
 
