@@ -12,6 +12,7 @@ import 'package:openvine/router/pooled_fullscreen_feed_route.dart'
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 
 VideoEvent _video(String id) => VideoEvent(
   id: id,
@@ -125,6 +126,49 @@ void main() {
         (built as PooledFullscreenVideoFeedScreen).sponsorName,
         'Acme Bikes',
       );
+    });
+
+    testWidgets('builder forwards profile args to $ProfileVideoFeedView', (
+      tester,
+    ) async {
+      late Widget built;
+      final pageChanges = <int>[];
+      final seedVideos = [_video('1'), _video('2')];
+      final args = ProfilePooledFullscreenVideoFeedArgs(
+        userIdHex: 'profile-hex',
+        initialIndex: 1,
+        seedVideos: seedVideos,
+        initialVideoId: '2',
+        initialStableId: 'stable-2',
+        contextTitle: 'Profile title',
+        onPageChanged: pageChanges.add,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              built = buildPooledFullscreenFeed(
+                context,
+                _PooledFeedState(args),
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(built, isA<ProfileVideoFeedView>());
+      final view = built as ProfileVideoFeedView;
+      expect(view.userIdHex, equals('profile-hex'));
+      expect(view.videoIndex, equals(1));
+      expect(view.videos, equals(seedVideos));
+      expect(view.initialVideoId, equals('2'));
+      expect(view.initialStableId, equals('stable-2'));
+      expect(view.contextTitleOverride, equals('Profile title'));
+      view.onPageChanged?.call(3);
+      expect(pageChanges, equals([3]));
     });
 
     testWidgets(

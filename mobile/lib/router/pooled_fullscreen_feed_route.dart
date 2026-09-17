@@ -49,14 +49,13 @@ Widget buildPooledFullscreenFeed(BuildContext context, GoRouterState state) {
   }
   if (extra is ProfilePooledFullscreenVideoFeedArgs) {
     return ProfileVideoFeedView(
-      npub: '',
       userIdHex: extra.userIdHex,
       videoIndex: extra.initialIndex,
       videos: extra.seedVideos,
       initialVideoId: extra.initialVideoId,
       initialStableId: extra.initialStableId,
       contextTitleOverride: extra.contextTitle,
-      onPageChanged: extra.onPageChanged ?? (_) {},
+      onPageChanged: extra.onPageChanged,
     );
   }
   final fallbackVideoId = state

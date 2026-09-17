@@ -23,22 +23,19 @@ import 'package:videos_repository/videos_repository.dart';
 /// prefetching machinery shared with the main feed. The feed is resolved
 /// through a [StreamFeedRepository] bound to the scope's [ProfileFeedCubit],
 /// so profile-specific metadata updates (like loop counts) survive the
-/// launching grid unmounting. Keeps the URL in sync via [onPageChanged].
+/// launching grid unmounting. A caller that owns a URL keeps it in sync
+/// through [onPageChanged].
 class ProfileVideoFeedView extends ConsumerWidget {
   const ProfileVideoFeedView({
-    required this.npub,
     required this.userIdHex,
     required this.videoIndex,
-    required this.onPageChanged,
     this.videos = const [],
     this.initialVideoId,
     this.initialStableId,
     this.contextTitleOverride,
+    this.onPageChanged,
     super.key,
   });
-
-  /// The npub of the profile (carried for URL updates at the callsite).
-  final String npub;
 
   /// The hex public key of the profile.
   final String userIdHex;
@@ -57,8 +54,8 @@ class ProfileVideoFeedView extends ConsumerWidget {
   /// Optional title override when the caller already has context.
   final String? contextTitleOverride;
 
-  /// Callback when the page changes (for URL updates).
-  final void Function(int newIndex) onPageChanged;
+  /// Called when the page changes, for callers that keep a URL in sync.
+  final void Function(int newIndex)? onPageChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,10 +88,10 @@ class _ProfileFullscreenContent extends StatefulWidget {
     required this.userIdHex,
     required this.seedVideos,
     required this.videoIndex,
-    required this.onPageChanged,
     this.initialVideoId,
     this.initialStableId,
     this.contextTitle,
+    this.onPageChanged,
   });
 
   final String userIdHex;
@@ -103,7 +100,7 @@ class _ProfileFullscreenContent extends StatefulWidget {
   final String? initialVideoId;
   final String? initialStableId;
   final String? contextTitle;
-  final void Function(int newIndex) onPageChanged;
+  final void Function(int newIndex)? onPageChanged;
 
   @override
   State<_ProfileFullscreenContent> createState() =>
