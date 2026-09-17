@@ -234,13 +234,17 @@ void main() {
   });
 
   /// Builds a bloc with all dependencies wired to the mocks.
-  VideoRecorderBloc buildBloc({RecordingStartedCallback? onRecordingStarted}) {
+  VideoRecorderBloc buildBloc({
+    RecordingStartedCallback? onRecordingStarted,
+    CameraServiceFactory? cameraServiceFactory,
+  }) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
       readVideoEditor: () => videoEditor,
       readVideoEditorState: VideoEditorProviderState.new,
       readSharedPreferences: () => prefs,
-      cameraService: cameraService,
+      cameraService: cameraServiceFactory == null ? cameraService : null,
+      cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
       onRecordingStarted: onRecordingStarted,
     );
   }
@@ -1439,15 +1443,44 @@ void main() {
         },
       );
 
+      late _MockEditorVideo wakelockRecorded;
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'a wakelock disable failure is swallowed (best-effort) — the stop '
         'still completes, no error is surfaced, and the recorder is not '
         'driven into the recovery path',
         setUp: () {
           wakelockPlusPlatformInstance = _ThrowingWakelockDisablePlatform();
+          // A real clip, so the only thing that could surface an error here
+          // is the wakelock failure itself (a null result would report
+          // RecordingProducedNoVideoException regardless of the wakelock).
+          final recorded = wakelockRecorded = _MockEditorVideo();
+          when(
+            recorded.safeFilePath,
+          ).thenAnswer((_) => Completer<String>().future);
           when(
             () => cameraService.stopRecording(),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => recorded);
+          when(
+            () => clipManager.addClip(
+              video: recorded,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+            ),
+          ).thenReturn(
+            DivineVideoClip(
+              id: 'wakelock-clip',
+              video: recorded,
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
         },
         tearDown: () {
           wakelockPlusPlatformInstance = _FakeWakelockPlatform();
@@ -1465,14 +1498,26 @@ void main() {
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
-          // The duration timer is still cancelled even though wakelock threw.
+          // The duration timer is still cancelled even though wakelock threw,
+          // and the clip is kept rather than reset by the recovery path.
           verify(() => clipManager.stopRecording()).called(1);
+          verifyNever(() => clipManager.resetRecording());
+          verify(
+            () => clipManager.addClip(
+              video: wakelockRecorded,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: any(named: 'limitClipDuration'),
+            ),
+          ).called(1);
         },
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'on a clean stop, clipManager.stopRecording() is called so the '
-        'periodic duration timer is cancelled on the normal path',
+        'when stopRecording() returns no video file, reports '
+        'RecordingProducedNoVideoException via addError and still resets '
+        'to idle so the recorder is not stuck (#9210)',
         setUp: () {
           when(
             () => cameraService.stopRecording(),
@@ -1485,11 +1530,14 @@ void main() {
             ),
           ),
         act: (bloc) => bloc.add(const VideoRecorderRecordingStopRequested()),
-        errors: () => const <Object>[],
+        errors: () => [isA<RecordingProducedNoVideoException>()],
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
+          // stopRecording() must still run so the periodic duration timer
+          // is cancelled (resetRecording() alone would leave it running).
           verify(() => clipManager.stopRecording()).called(1);
+          verify(() => clipManager.resetRecording()).called(1);
         },
       );
 
@@ -1522,7 +1570,12 @@ void main() {
           );
           bloc.add(const VideoRecorderRecordingStopRequested());
         },
-        errors: () => [isA<Exception>()],
+        // First call throws (recovery path); second returns null, which
+        // now also reports RecordingProducedNoVideoException.
+        errors: () => [
+          isA<Exception>(),
+          isA<RecordingProducedNoVideoException>(),
+        ],
         verify: (bloc) {
           // Both stops reached the native call — the first recovered without
           // latching isStoppingRecording=true (which would have bailed the
@@ -1530,6 +1583,68 @@ void main() {
           verify(() => cameraService.stopRecording()).called(2);
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
+        },
+      );
+    });
+
+    group('native auto-stop callback', () {
+      test(
+        'processes a recovered clip outside recording-limit modes (#9210)',
+        () async {
+          late void Function(EditorVideo video) autoStopCallback;
+          final recoveredVideo = _MockEditorVideo();
+          when(
+            recoveredVideo.safeFilePath,
+          ).thenAnswer((_) => Completer<String>().future);
+          when(
+            () => clipManager.addClip(
+              video: recoveredVideo,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: false,
+            ),
+          ).thenReturn(
+            DivineVideoClip(
+              id: 'recovered-clip',
+              video: recoveredVideo,
+              duration: const Duration(seconds: 2),
+              recordedAt: DateTime(2024),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          );
+          when(
+            () => clipManager.saveClipToLibrary(any()),
+          ).thenAnswer((_) async => true);
+
+          final bloc =
+              buildBloc(
+                cameraServiceFactory:
+                    ({required onUpdateState, required onAutoStopped}) {
+                      autoStopCallback = onAutoStopped;
+                      return cameraService;
+                    },
+              )..emit(
+                const VideoRecorderBlocState(
+                  recordingState: VideoRecorderState.recording,
+                ),
+              );
+          addTearDown(bloc.close);
+
+          autoStopCallback(recoveredVideo);
+          await pumpEventQueue();
+
+          verify(
+            () => clipManager.addClip(
+              video: recoveredVideo,
+              originalAspectRatio: any(named: 'originalAspectRatio'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              lensMetadata: any(named: 'lensMetadata'),
+              limitClipDuration: false,
+            ),
+          ).called(1);
+          verifyNever(() => cameraService.stopRecording());
         },
       );
     });
