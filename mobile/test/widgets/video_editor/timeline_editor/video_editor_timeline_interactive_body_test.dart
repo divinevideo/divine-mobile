@@ -209,48 +209,26 @@ void main() {
         return (horizontal: horizontal, overlayStrips: overlayStrips);
       }
 
-      testWidgets('scrolls when dragging on the strips', (tester) async {
-        final (:overlayStrips, horizontal: _) = await pumpShortTimeline(
-          tester,
-        );
-
-        await tester.dragFrom(const Offset(250, 300), const Offset(0, -120));
-        await tester.pump();
-
-        expect(overlayStrips.offset, greaterThan(0));
-      });
-
-      testWidgets(
-        'scrolls when dragging in the padding left of a short timeline',
-        (tester) async {
-          // Regression: the strips' vertical scroll view was exactly as wide
-          // as the timeline, so a drag that started on the empty area beside a
-          // short composition reached only the horizontal scroll view and the
-          // strips did not move.
+      // Regression for the two padding rows: the strips' vertical scroll
+      // view used to be exactly as wide as the timeline, so a drag starting
+      // on the empty area beside a short composition reached only the
+      // horizontal scroll view and the strips did not move.
+      for (final (where, x) in const [
+        ('on the strips', 250.0),
+        ('in the padding left of a short timeline', 50.0),
+        ('in the padding right of a short timeline', 350.0),
+      ]) {
+        testWidgets('scrolls when dragging $where', (tester) async {
           final (:overlayStrips, horizontal: _) = await pumpShortTimeline(
             tester,
           );
 
-          await tester.dragFrom(const Offset(50, 300), const Offset(0, -120));
+          await tester.dragFrom(Offset(x, 300), const Offset(0, -120));
           await tester.pump();
 
           expect(overlayStrips.offset, greaterThan(0));
-        },
-      );
-
-      testWidgets(
-        'scrolls when dragging in the padding right of a short timeline',
-        (tester) async {
-          final (:overlayStrips, horizontal: _) = await pumpShortTimeline(
-            tester,
-          );
-
-          await tester.dragFrom(const Offset(350, 300), const Offset(0, -120));
-          await tester.pump();
-
-          expect(overlayStrips.offset, greaterThan(0));
-        },
-      );
+        });
+      }
 
       testWidgets(
         'still scrubs the timeline when dragging horizontally in the padding',
