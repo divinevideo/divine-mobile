@@ -19,6 +19,7 @@ import 'package:openvine/router/product_analytics_navigation_observer.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/redirect_provider.dart';
 import 'package:openvine/router/route_error_screen.dart';
+import 'package:openvine/router/route_extra_codec.dart';
 import 'package:openvine/router/router_refresh_listenable.dart';
 import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
 import 'package:openvine/router/routes/apps_routes.dart';
@@ -136,6 +137,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     observers: _buildRouterObservers(ref),
     // Refresh router when auth or account-review state changes
     refreshListenable: refreshListenable,
+    // A refresh re-decodes the route state, which drops non-JSON extras
+    // without a codec (#9292).
+    extraCodec: RouteExtraCodec(),
     errorBuilder: (context, state) =>
         RouteErrorScreen(message: context.l10n.routeUnknownPath),
     redirect: (context, state) => appRouterRedirect(ref, state),

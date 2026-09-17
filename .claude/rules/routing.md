@@ -162,9 +162,12 @@ Don't use `extra` for passing objects - breaks deep linking and web.
 In this repo `extra` is a **warm-start cache only**: every route resolves from
 path parameters, query parameters and repositories, and no route builder may
 dead-end because `extra` was absent (#3335). Read it through `extraAs<T>` /
-`extraValue<T>` from `mobile/lib/router/routes/route_extras.dart` — a restored
-`extra` comes back as a plain `Map<String, dynamic>`, so a raw cast crashes the
-builder. The per-route inventory of what each hint saves, and what a URL-only
+`extraValue<T>` from `mobile/lib/router/routes/route_extras.dart` — `extra` can
+arrive as `null`, or as decoded JSON (a plain `Map<String, dynamic>`) rather
+than the type that was passed, so a raw cast crashes the builder. Within one
+session the router keeps typed objects when it re-reads its own route state,
+through `RouteExtraCodec` (#9292); nothing carries them across a cold start or
+a link. The per-route inventory of what each hint saves, and what a URL-only
 entry falls back to, lives in
 [`mobile/docs/DEEP_LINK_URL_REFERENCE.md`](../../mobile/docs/DEEP_LINK_URL_REFERENCE.md#route-state-and-extra).
 

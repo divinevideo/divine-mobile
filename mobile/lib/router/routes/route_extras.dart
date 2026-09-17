@@ -3,10 +3,10 @@
 
 /// Safely reads a GoRouter `state.extra` payload as [T].
 ///
-/// Returns `null` when [extra] is not a [T]. This matters after route
-/// restoration or a deep link: Flutter serializes `extra` and hands it back
-/// as a plain `Map<String, dynamic>` rather than the originally-passed typed
-/// object, so a raw `extra as T` cast throws
+/// Returns `null` when [extra] is not a [T]. A deep link arrives with no
+/// `extra`, and saved route state can hand it back as decoded JSON — a plain
+/// `Map<String, dynamic>` rather than the originally-passed typed object — so
+/// a raw `extra as T` cast throws
 /// `type '_Map<String, dynamic>' is not a subtype of type 'T'` and crashes the
 /// route builder (Crashlytics iOS 5b96bfc6…, efec8882…). Each affected route
 /// already tolerates a missing payload (optional hints, id-based loaders, or a

@@ -306,13 +306,16 @@ Any feed URL can be shared:
 ## Route State And `extra`
 
 Every route must be reachable from its URL alone. `GoRouterState.extra` is
-process-local: it survives an in-app `push`, and nothing else. A universal
-link, a `divine://` link, a browser refresh on the web build, a restored
-session and an account switch that re-seeds the router all arrive with
-`extra == null`. Flutter can also hand a *restored* `extra` back as a plain
-`Map<String, dynamic>` rather than the typed object that was passed, which is
-why route builders read it through `extraAs<T>` / `extraValue<T>`
-(`lib/router/routes/route_extras.dart`) instead of casting.
+process-local: it survives an in-app `push`, and the router re-reading its own
+route state in the same session — a refresh, or the `Router` mounting again —
+because `RouteExtraCodec` (`lib/router/route_extra_codec.dart`) hands the same
+object back (#9292). A universal link, a `divine://` link, a browser refresh on
+the web build, a restored session and an account switch that re-seeds the
+router all arrive with `extra == null`. Saved route state can also hand an
+`extra` back as decoded JSON — a plain `Map<String, dynamic>` rather than the
+type that was passed — which is why route builders read it through
+`extraAs<T>` / `extraValue<T>` (`lib/router/routes/route_extras.dart`) instead
+of casting.
 
 **The contract (#3335).** A route resolves its screen from path parameters,
 query parameters and repositories. `extra` is only a **warm-start cache** that
