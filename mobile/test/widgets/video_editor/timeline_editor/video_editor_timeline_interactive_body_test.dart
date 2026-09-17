@@ -271,6 +271,26 @@ void main() {
           expect(overlayStrips.offset, equals(0));
         },
       );
+
+      testWidgets(
+        'ignores a drag in the padding while a clip is being reordered',
+        (tester) async {
+          // The strips are faded out and pointer-ignoring during a reorder.
+          // Widening their scroll view over the padding must not let a
+          // second finger there scroll the list they cannot see.
+          when(() => mainBloc.state)
+              .thenReturn(const VideoEditorMainState(isReordering: true));
+
+          final (:overlayStrips, horizontal: _) = await pumpShortTimeline(
+            tester,
+          );
+
+          await tester.dragFrom(const Offset(50, 300), const Offset(0, -120));
+          await tester.pump();
+
+          expect(overlayStrips.offset, equals(0));
+        },
+      );
     });
   });
 }
