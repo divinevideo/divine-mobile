@@ -43,10 +43,12 @@ class VideoImetaBuilder {
   /// its video URLs can be published.
   ///
   /// [thumbnailTimestamp] picks the frame a freshly computed blurhash is
-  /// derived from; an upload that already carries a blurhash reuses it.
+  /// derived from; an upload that already carries a blurhash reuses it. It
+  /// is required, even though it may be null, because no test can observe a
+  /// dropped value: the frame is only read through a platform decoder.
   Future<List<String>?> build(
     PendingUpload upload, {
-    Duration? thumbnailTimestamp,
+    required Duration? thumbnailTimestamp,
   }) async {
     final components = <String>[];
     final urlsAdded = <String>[];

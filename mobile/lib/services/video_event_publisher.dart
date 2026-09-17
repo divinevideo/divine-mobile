@@ -351,32 +351,32 @@ class VideoEventPublisher {
   /// Signs and broadcasts the video event. Must only be called from
   /// [publishDirectUpload], which holds the [_inFlightDirectPublishes]
   /// coalescing lock (#6018); calling it directly bypasses that lock and
-  /// can mint a duplicate event. Keep this parameter list in lockstep with
-  /// [publishDirectUpload] — every param has a default, so a forgotten
-  /// forward at the call site fails silently rather than at compile time.
+  /// can mint a duplicate event. Every parameter is required, so a value
+  /// [publishDirectUpload] forgets to forward fails to compile instead of
+  /// silently falling back to a default.
   Future<bool> _publishDirectUploadUnlocked(
     PendingUpload upload, {
-    int? expirationTimestamp,
-    bool allowAudioReuse = false,
-    List<String> collaboratorPubkeys = const [],
-    List<String> mentionedPubkeys = const [],
-    Duration? thumbnailTimestamp,
-    String? inspiredByAddressableId,
-    String? inspiredByRelayUrl,
-    List<String> inspiredByNpubs = const [],
-    List<ClipSourceCredit> clipSourceCredits = const [],
-    AudioEvent? selectedAudio,
-    AudioShareAttribution? audioShareAttribution,
-    String? selectedAudioEventId,
-    String? selectedAudioRelay,
-    String? language,
-    String? contentWarning,
-    VideoReplyContext? replyContext,
-    bool addReplyToFeed = false,
-    List<String> textTrackRefs = const [],
-    String textTrackLang = 'en',
-    void Function()? onEventSigned,
-    void Function()? onAudioReuseDegraded,
+    required int? expirationTimestamp,
+    required bool allowAudioReuse,
+    required List<String> collaboratorPubkeys,
+    required List<String> mentionedPubkeys,
+    required Duration? thumbnailTimestamp,
+    required String? inspiredByAddressableId,
+    required String? inspiredByRelayUrl,
+    required List<String> inspiredByNpubs,
+    required List<ClipSourceCredit> clipSourceCredits,
+    required AudioEvent? selectedAudio,
+    required AudioShareAttribution? audioShareAttribution,
+    required String? selectedAudioEventId,
+    required String? selectedAudioRelay,
+    required String? language,
+    required String? contentWarning,
+    required VideoReplyContext? replyContext,
+    required bool addReplyToFeed,
+    required List<String> textTrackRefs,
+    required String textTrackLang,
+    required void Function()? onEventSigned,
+    required void Function()? onAudioReuseDegraded,
   }) async {
     // Validate that at least one video URL is publishable. This prevents
     // local file paths and known dead media hosts from being published.

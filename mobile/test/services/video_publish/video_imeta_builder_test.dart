@@ -97,6 +97,7 @@ void main() {
               videoId: 'sha256-of-the-file',
               blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
             ),
+            thumbnailTimestamp: null,
           );
 
           expect(
@@ -118,6 +119,7 @@ void main() {
       test('omits optional components that are unavailable', () async {
         final tag = await builder.build(
           upload(localVideoPath: '${tempDir.path}/missing.mp4'),
+          thumbnailTimestamp: null,
         );
 
         expect(tag, isNotNull);
@@ -135,6 +137,7 @@ void main() {
             localVideoPath: '${tempDir.path}/missing.mp4',
             videoId: 'sha256-of-the-file',
           ),
+          thumbnailTimestamp: null,
         );
 
         expect(tag, contains('x sha256-of-the-file'));
@@ -148,6 +151,7 @@ void main() {
             fallbackUrl: 'https://r2.divine.video/fallback.mp4',
             streamingHlsUrl: 'https://media.divine.video/playlist.m3u8',
           ),
+          thumbnailTimestamp: null,
         );
 
         expect(
@@ -163,6 +167,7 @@ void main() {
       test('skips a local thumbnail path', () async {
         final tag = await builder.build(
           upload(thumbnailPath: '/tmp/thumbnail.jpg'),
+          thumbnailTimestamp: null,
         );
 
         expect(tag!.any((c) => c.startsWith('image ')), isFalse);
@@ -174,6 +179,7 @@ void main() {
             cdnUrl: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8',
             streamingMp4Url: '/var/mobile/video.mp4',
           ),
+          thumbnailTimestamp: null,
         );
 
         expect(tag, isNull);

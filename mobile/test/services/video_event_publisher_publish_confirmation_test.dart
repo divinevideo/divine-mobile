@@ -361,7 +361,8 @@ void main() {
       final result = await publisher.publishDirectUpload(
         createUpload(),
         selectedAudioEventId: validAudioId,
-        selectedAudioRelay: 'wss://relay.divine.video',
+        // Not the default relay, so a dropped forward cannot pass unnoticed.
+        selectedAudioRelay: 'wss://sounds.relay.example',
       );
 
       expect(result, isTrue);
@@ -369,7 +370,7 @@ void main() {
         containsTag(videoTags, [
           'e',
           validAudioId,
-          'wss://relay.divine.video',
+          'wss://sounds.relay.example',
           'audio',
         ]),
         isTrue,
