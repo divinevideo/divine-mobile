@@ -664,29 +664,41 @@ class CameraController: NSObject {
             name: "DivineCamera.Lifecycle"
         )
 
-        // Every existing caller of stopRecording() runs on main (Flutter's
-        // method channel dispatch, or autoStopRecording()'s own
-        // DispatchQueue.main.async timer). Matching that convention here
-        // avoids a race between this notification-driven finalize and a
-        // Dart-initiated stop landing on main at nearly the same moment —
-        // e.g. background, then immediately foreground and tap Stop.
         DispatchQueue.main.async { [weak self] in
-            guard let self = self, self.isRecording else { return }
-            DivineCameraLog.shared.info(
-                "Recording interrupted by backgrounding — finalizing "
-                    + "whatever was captured so far",
-                name: "DivineCamera.Recording"
-            )
-            self.stopRecording { [weak self] result, error in
-                if let result = result {
-                    self?.sendAutoStopEvent(result: result)
-                } else {
-                    DivineCameraLog.shared.error(
-                        "Recording interrupted with nothing to salvage: "
-                            + "\(error ?? "unknown error")",
-                        name: "DivineCamera.Recording"
-                    )
-                }
+            self?.salvageInterruptedRecording(reason: "capture session interrupted")
+        }
+    }
+
+    /// Finalizes an in-progress recording that cannot continue because the
+    /// app lost the camera, and pushes whatever was captured before the cut
+    /// through the native auto-stop channel so it reaches Flutter as a
+    /// normal saved clip. Reached from the capture-session interruption
+    /// observer and from a genuine background transition in
+    /// `pausePreview(releaseAudio: true)`; whichever lands first wins and the
+    /// other is a no-op via `isRecording`.
+    ///
+    /// Must run on main. Every existing caller of stopRecording() does
+    /// (Flutter's method channel dispatch, or autoStopRecording()'s own
+    /// DispatchQueue.main.async timer), and serializing there is what keeps
+    /// this finalize from racing a Dart-initiated stop landing at nearly the
+    /// same moment — e.g. background, then immediately foreground and tap
+    /// Stop.
+    private func salvageInterruptedRecording(reason: String) {
+        guard isRecording else { return }
+        DivineCameraLog.shared.info(
+            "Recording interrupted (\(reason)) — finalizing whatever was "
+                + "captured so far",
+            name: "DivineCamera.Recording"
+        )
+        stopRecording { [weak self] result, error in
+            if let result = result {
+                self?.sendAutoStopEvent(result: result)
+            } else {
+                DivineCameraLog.shared.error(
+                    "Recording interrupted with nothing to salvage: "
+                        + "\(error ?? "unknown error")",
+                    name: "DivineCamera.Recording"
+                )
             }
         }
     }
@@ -2862,18 +2874,30 @@ class CameraController: NSObject {
     /// only the video session and leave the shared audio session running —
     /// releasing it there would signal other apps to resume and then re-cut
     /// their playback on every pull. `releaseAudio: true` (genuine
-    /// background) additionally frees the mic so the lock screen stops
-    /// showing the recording indicator.
+    /// background) additionally finalizes an in-progress recording and frees
+    /// the mic so the lock screen stops showing the recording indicator.
     func pausePreview(releaseAudio: Bool = true) {
         disableScreenFlash()
         isPaused = true
+        // Genuine background. The hardware encoder does not survive the app
+        // being suspended, so a recording left open here fails with
+        // "Operation Interrupted" on the next stop (#9210). The
+        // capture-session interruption observer normally salvages it first,
+        // but AVFoundation only interrupts a *running* session, and the
+        // `.inactive` pausePreview() that precedes this call has usually
+        // already stopped it — so this is the path that runs when no
+        // interruption notification ever arrives.
+        let salvaging = releaseAudio && isRecording
+        if salvaging {
+            salvageInterruptedRecording(reason: "app backgrounded")
+        }
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
             self.captureSession?.stopRunning()
-            // Keep the mic during an active recording — the writer is
-            // still draining; stopRecording() releases it if the preview
-            // is still paused once the file is finalized.
-            if releaseAudio, !self.isRecording {
+            // Keep the mic while a recording drains — including the one
+            // just finalized above; stopRecording() releases it if the
+            // preview is still paused once the file is finalized.
+            if releaseAudio, !salvaging, !self.isRecording {
                 self.releaseAudioForPause()
             }
         }
