@@ -57,17 +57,16 @@ final class VideoAudioResolved extends VideoAudioResolution {
 ///
 /// Three sources of sound exist, and each mints a different event:
 /// * an imported local file, uploaded and credited with the creator's own
-///   attribution ([publishImportedAudioEvent]);
+///   attribution;
 /// * an external-provider catalog sound, bridged into a Kind 1063 that
-///   carries the provider's credit and license
-///   ([publishProviderAudioBridge]);
+///   carries the provider's credit and license;
 /// * the video's own rendered audio, extracted and published as the
-///   creator's reusable original sound ([publishExtractedAudioEvent]).
+///   creator's reusable original sound.
 ///
 /// [resolveForPublish] applies the consent rules and picks the path. It is the
-/// only place reuse consent is checked: the three publish methods above mint a
-/// Kind 1063 whatever the sound's creator allowed. Reach them through
-/// [resolveForPublish], or a sound gets republished without that consent.
+/// only place reuse consent is checked, so the methods that mint each Kind
+/// 1063 stay private: no caller can publish a sound without passing through
+/// that check first.
 class VideoAudioPublisher {
   VideoAudioPublisher({
     required NostrClient nostrClient,
@@ -188,7 +187,7 @@ class VideoAudioPublisher {
           return const VideoAudioBlocked();
         }
 
-        selectedAudioReferenceId = await publishImportedAudioEvent(
+        selectedAudioReferenceId = await _publishImportedAudioEvent(
           audio: selectedAudio!,
           attribution: attribution,
           allowAudioReuse: true,
@@ -211,7 +210,7 @@ class VideoAudioPublisher {
       final userPubkey = _authService?.currentPublicKeyHex;
       final relayHint = _relayHint();
       if (userPubkey == null) return const VideoAudioBlocked();
-      selectedAudioReferenceId = await publishProviderAudioBridge(
+      selectedAudioReferenceId = await _publishProviderAudioBridge(
         audio: selectedAudio!,
         allowAudioReuse: allowAudioReuse,
         videoDTag: videoDTag,
@@ -302,7 +301,7 @@ class VideoAudioPublisher {
         final relayHint = _relayHint();
 
         // Publish audio event first (we need its ID for the video event)
-        final audioEventId = await publishExtractedAudioEvent(
+        final audioEventId = await _publishExtractedAudioEvent(
           videoPath: upload.localVideoPath,
           videoDTag: videoDTag,
           pubkey: userPubkey,
@@ -410,7 +409,7 @@ class VideoAudioPublisher {
   /// 1063 credited with [attribution].
   ///
   /// Returns the published event id, or `null` when any step fails.
-  Future<String?> publishImportedAudioEvent({
+  Future<String?> _publishImportedAudioEvent({
     required AudioEvent audio,
     required AudioShareAttribution attribution,
     required bool allowAudioReuse,
@@ -536,7 +535,7 @@ class VideoAudioPublisher {
   ///
   /// Returns the published event id, or `null` when the sound lacks durable
   /// public credit or any step fails.
-  Future<String?> publishProviderAudioBridge({
+  Future<String?> _publishProviderAudioBridge({
     required AudioEvent audio,
     required bool allowAudioReuse,
     required String videoDTag,
@@ -614,7 +613,7 @@ class VideoAudioPublisher {
   /// caller degrades to a video-only publish. The audio title uses
   /// [attribution] or [videoTitle] when provided, falling back to
   /// "Original sound - @username".
-  Future<String?> publishExtractedAudioEvent({
+  Future<String?> _publishExtractedAudioEvent({
     required String videoPath,
     required String videoDTag,
     required String pubkey,
