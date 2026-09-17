@@ -154,12 +154,14 @@ tip_contained_in_base() {
   esac
 }
 
-# Ignored paths any Flutter toolchain step recreates from tracked sources.
-# `flutter pub get` plus a build regenerates every one, so a worktree holding
-# only these holds no work. Anything absent from this list vetoes, which is
-# also how a git-quoted or unusual path fails: safely, toward KEEP.
-REGENERABLE_DIR='build|\.dart_tool|\.gradle|\.symlinks|ephemeral|Pods|DerivedData|xcuserdata|\.swiftpm|coverage'
-REGENERABLE_FILE='\.DS_Store|\.flutter-plugins|\.flutter-plugins-dependencies|\.packages|local\.properties|Generated\.xcconfig|flutter_export_environment\.sh|Flutter\.podspec|gradlew|gradlew\.bat|gradle-wrapper\.jar|generated_plugins\.cmake|GeneratedPluginRegistrant\.(java|h|m|swift)|generated_plugin_registrant\.(cc|h|dart)'
+# Ignored paths a toolchain step recreates from tracked sources — Flutter,
+# CocoaPods, Xcode/SPM, or Python. `flutter pub get` plus a build, `pod
+# install`, an SPM resolve, or the next interpreter run regenerates every one,
+# so a worktree holding only these holds no work. Anything absent from this
+# list vetoes, which is also how a git-quoted or unusual path fails: safely,
+# toward KEEP.
+REGENERABLE_DIR='build|\.dart_tool|\.gradle|\.symlinks|ephemeral|Pods|DerivedData|xcuserdata|\.swiftpm|swiftpm|__pycache__|coverage'
+REGENERABLE_FILE='\.DS_Store|\.flutter-plugins|\.flutter-plugins-dependencies|\.packages|local\.properties|Generated\.xcconfig|flutter_export_environment\.sh|Flutter\.podspec|Podfile\.lock|gradlew|gradlew\.bat|gradle-wrapper\.jar|generated_plugins\.cmake|GeneratedPluginRegistrant\.(java|h|m|swift)|generated_plugin_registrant\.(cc|h|dart)'
 REGENERABLE_RE="(^|/)(${REGENERABLE_DIR})/|(^|/)(${REGENERABLE_FILE})\$"
 
 # Paths in a worktree that exist in no commit anywhere: every uncommitted or
