@@ -189,7 +189,10 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
                               ? const NeverScrollableScrollPhysics()
                               : const ClampingScrollPhysics(),
                           clipBehavior: .none,
-                          padding: .symmetric(horizontal: halfScreen),
+                          // The half-screen padding that centres the
+                          // composition's ends under the playhead is laid
+                          // out by the body, not here, so its overlay
+                          // strips scroll vertically from that padding too.
                           child: VideoEditorTimelineBody(
                             totalDuration: totalDuration,
                             pixelsPerSecond: pixelsPerSecond,

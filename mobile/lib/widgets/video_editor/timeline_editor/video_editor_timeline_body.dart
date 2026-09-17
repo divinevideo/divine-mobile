@@ -21,6 +21,14 @@ import 'package:openvine/widgets/video_editor/timeline_editor/utils/hit_expanded
 import 'package:openvine/widgets/video_editor/timeline_editor/utils/vertical_only_clipper.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_rules_indicator.dart';
 
+/// Scrollable content of the timeline: ruler, clip strip and the vertically
+/// scrolling overlay strips.
+///
+/// Lays out [scrollPadding] of empty space on both sides of the composition
+/// itself, rather than leaving that to the horizontal scroll view, so the
+/// overlay strips' vertical scroll view spans it too. A vertical drag that
+/// starts beside a composition narrower than the screen therefore reaches the
+/// strips instead of only the horizontal scroll view.
 class VideoEditorTimelineBody extends StatelessWidget {
   const VideoEditorTimelineBody({
     required this.totalDuration,
@@ -58,6 +66,10 @@ class VideoEditorTimelineBody extends StatelessWidget {
   /// timeline state so it can be reset to the top when volume-edit mode is
   /// entered (the strips are frozen there and must align with the arcs).
   final ScrollController overlayStripsScrollController;
+
+  /// Empty space laid out on each side of the composition — half the screen,
+  /// so the composition's ends can sit under the centred playhead. Also the
+  /// offset the ruler and markers subtract from the scroll position.
   final double scrollPadding;
   final List<DivineVideoClip> clips;
   final double totalWidth;
@@ -103,33 +115,29 @@ class VideoEditorTimelineBody extends StatelessWidget {
         ? TimelineConstants.trimHitOverhang
         : 0.0;
 
-    final trimExpand = clipTrimExpand > overlayTrimExpand
-        ? clipTrimExpand
-        : overlayTrimExpand;
     final showMaxDurationOverlays =
         !isReordering && totalDuration > VideoEditorConstants.maxDuration;
-    final outsideExtendWidth = MediaQuery.sizeOf(context).width / 2;
+    final compositionPadding = EdgeInsets.symmetric(horizontal: scrollPadding);
 
-    return HitExpandedBox(
-      expandLeft: trimExpand,
-      expandRight: trimExpand,
-      child: Stack(
-        fit: .passthrough,
-        clipBehavior: .none,
-        children: [
-          // Keep stack slots stable during drag-reorder to avoid gesture drops.
-          _TimelineMaxDurationStripeOverlay(
-            pixelsPerSecond: pixelsPerSecond,
-            visible: showMaxDurationOverlays,
-            outsideExtendWidth: outsideExtendWidth,
-          ),
+    return Stack(
+      fit: .passthrough,
+      clipBehavior: .none,
+      children: [
+        // Keep stack slots stable during drag-reorder to avoid gesture drops.
+        _TimelineMaxDurationStripeOverlay(
+          pixelsPerSecond: pixelsPerSecond,
+          visible: showMaxDurationOverlays,
+          scrollPadding: scrollPadding,
+        ),
 
-          Column(
-            crossAxisAlignment: .start,
-            mainAxisSize: .min,
-            children: [
-              /// Rules Indicator
-              AnimatedOpacity(
+        Column(
+          crossAxisAlignment: .start,
+          mainAxisSize: .min,
+          children: [
+            /// Rules Indicator
+            Padding(
+              padding: compositionPadding,
+              child: AnimatedOpacity(
                 opacity: isReordering ? 0.0 : 1.0,
                 duration: const Duration(milliseconds: 200),
                 child: RepaintBoundary(
@@ -142,79 +150,90 @@ class VideoEditorTimelineBody extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: TimelineConstants.rulerToBodyGap),
+            ),
+            const SizedBox(height: TimelineConstants.rulerToBodyGap),
 
-              /// Video clips, or per-frame stills for a stop-motion clip.
-              RepaintBoundary(
-                child: isStopMotionComposition(clips)
-                    ? _StopMotionFrameStrip(
-                        clip: clips.first,
-                        pixelsPerSecond: pixelsPerSecond,
-                        scrollController: scrollController,
-                        onReorderChanged: onReorderChanged,
-                      )
-                    : VideoEditorTimelineClipStrip(
-                        clips: clips,
-                        totalWidth: totalWidth,
-                        pixelsPerSecond: pixelsPerSecond,
-                        scrollController: scrollController,
-                        isInteracting: isInteracting,
-                        onReorder: onReorder,
-                        onReorderChanged: onReorderChanged,
-                        trimmingClipId: trimmingClipId,
-                        onTrimChanged: onTrimChanged,
-                        onTrimDragChanged: onTrimDragChanged,
-                        onClipTapped: onClipTapped,
-                        isMultiSelectMode: isMultiSelectMode,
-                        selectedClipIds: selectedClipIds,
-                      ),
-              ),
-
-              /// Layers, Filters and Audio-Tracks
-              Expanded(
-                // The strips are only clipped vertically, so a selected item's
-                // trim handle stays visible past the composition's last pixel.
-                // The strip itself is exactly totalWidth wide, and every box
-                // between here and it hit-tests against its own edge, so the
-                // touch was rejected all the way up and the horizontal scroll
-                // view took it instead.
-                child: HitExpandedBox(
-                  expandLeft: overlayTrimExpand,
-                  expandRight: overlayTrimExpand,
-                  child: AnimatedOpacity(
-                    opacity: isReordering ? 0.0 : 1.0,
-                    duration: const Duration(milliseconds: 200),
-                    child: ClipRect(
-                      clipper: const VerticalOnlyClipper(),
-                      child: SingleChildScrollView(
-                        controller: overlayStripsScrollController,
-                        clipBehavior: Clip.none,
-                        physics: isVolumeEditMode
-                            ? const NeverScrollableScrollPhysics()
-                            : null,
-                        padding: EdgeInsets.only(
-                          top: 4,
-                          bottom:
-                              _scrollBottomPadding +
-                              MediaQuery.paddingOf(context).bottom,
+            /// Video clips, or per-frame stills for a stop-motion clip.
+            Padding(
+              padding: compositionPadding,
+              // The trimming clip's handles reach past the strip's edges, and
+              // the boxes on the way down hit-test against their own bounds,
+              // so the touch has to be let through here.
+              child: HitExpandedBox(
+                expandLeft: clipTrimExpand,
+                expandRight: clipTrimExpand,
+                child: RepaintBoundary(
+                  child: isStopMotionComposition(clips)
+                      ? _StopMotionFrameStrip(
+                          clip: clips.first,
+                          pixelsPerSecond: pixelsPerSecond,
+                          scrollController: scrollController,
+                          onReorderChanged: onReorderChanged,
+                        )
+                      : VideoEditorTimelineClipStrip(
+                          clips: clips,
+                          totalWidth: totalWidth,
+                          pixelsPerSecond: pixelsPerSecond,
+                          scrollController: scrollController,
+                          isInteracting: isInteracting,
+                          onReorder: onReorder,
+                          onReorderChanged: onReorderChanged,
+                          trimmingClipId: trimmingClipId,
+                          onTrimChanged: onTrimChanged,
+                          onTrimDragChanged: onTrimDragChanged,
+                          onClipTapped: onClipTapped,
+                          isMultiSelectMode: isMultiSelectMode,
+                          selectedClipIds: selectedClipIds,
                         ),
-                        child: IgnorePointer(
-                          ignoring: isReordering,
-                          child: RepaintBoundary(
-                            child: _CachedOverlayStrips(
-                              clips: clips,
-                              totalWidth: totalWidth,
-                              pixelsPerSecond: pixelsPerSecond,
-                              totalDuration: totalDuration,
-                              playheadPosition: playheadPosition,
-                              onItemTapped: onOverlayItemTapped,
-                              onItemMoved: onOverlayItemMoved,
-                              onItemMoving: onOverlayItemMoving,
-                              onItemTrimmed: onOverlayItemTrimmed,
-                              onTrimDragChanged: onOverlayTrimDragChanged,
-                              onDragStarted: onOverlayDragStarted,
-                              onDragEnded: onOverlayDragEnded,
-                            ),
+                ),
+              ),
+            ),
+
+            /// Layers, Filters and Audio-Tracks
+            Expanded(
+              child: AnimatedOpacity(
+                opacity: isReordering ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                // Clipped only vertically, so a selected item's trim handle
+                // stays visible past the composition's last pixel.
+                child: ClipRect(
+                  clipper: const VerticalOnlyClipper(),
+                  // Carries the composition padding itself so a vertical drag
+                  // beside a short composition still scrolls the strips.
+                  child: SingleChildScrollView(
+                    controller: overlayStripsScrollController,
+                    clipBehavior: Clip.none,
+                    physics: isVolumeEditMode
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
+                    padding: compositionPadding.copyWith(
+                      top: 4,
+                      bottom:
+                          _scrollBottomPadding +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
+                    // The strips are exactly totalWidth wide, so a handle on
+                    // an item ending at the composition's end sits outside
+                    // every box below here — let the touch through to it.
+                    child: HitExpandedBox(
+                      expandLeft: overlayTrimExpand,
+                      expandRight: overlayTrimExpand,
+                      child: IgnorePointer(
+                        ignoring: isReordering,
+                        child: RepaintBoundary(
+                          child: _CachedOverlayStrips(
+                            clips: clips,
+                            totalWidth: totalWidth,
+                            pixelsPerSecond: pixelsPerSecond,
+                            totalDuration: totalDuration,
+                            playheadPosition: playheadPosition,
+                            onItemTapped: onOverlayItemTapped,
+                            onItemMoved: onOverlayItemMoved,
+                            onItemMoving: onOverlayItemMoving,
+                            onItemTrimmed: onOverlayItemTrimmed,
+                            onTrimDragChanged: onOverlayTrimDragChanged,
+                            onDragStarted: onOverlayDragStarted,
+                            onDragEnded: onOverlayDragEnded,
                           ),
                         ),
                       ),
@@ -222,15 +241,15 @@ class VideoEditorTimelineBody extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
-          _TimelineMaxDurationDimOverlay(
-            pixelsPerSecond: pixelsPerSecond,
-            visible: showMaxDurationOverlays,
-            outsideExtendWidth: outsideExtendWidth,
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+        _TimelineMaxDurationDimOverlay(
+          pixelsPerSecond: pixelsPerSecond,
+          visible: showMaxDurationOverlays,
+          scrollPadding: scrollPadding,
+        ),
+      ],
     );
   }
 }
@@ -403,23 +422,26 @@ class _TimelineMaxDurationStripeOverlay extends StatelessWidget {
   const _TimelineMaxDurationStripeOverlay({
     required this.pixelsPerSecond,
     required this.visible,
-    required this.outsideExtendWidth,
+    required this.scrollPadding,
   });
 
   final double pixelsPerSecond;
   final bool visible;
-  final double outsideExtendWidth;
+  final double scrollPadding;
 
   @override
   Widget build(BuildContext context) {
+    // The body's trailing padding already reaches to the far end of the
+    // horizontal scroll extent, so the overlay ends with the body.
     return Positioned(
       left:
+          scrollPadding +
           VideoEditorConstants.maxDuration.inMilliseconds /
-          1000 *
-          pixelsPerSecond,
+              1000 *
+              pixelsPerSecond,
       top: 0,
       bottom: 0,
-      right: -outsideExtendWidth,
+      right: 0,
       child: IgnorePointer(
         child: Visibility(
           visible: visible,
@@ -439,23 +461,26 @@ class _TimelineMaxDurationDimOverlay extends StatelessWidget {
   const _TimelineMaxDurationDimOverlay({
     required this.pixelsPerSecond,
     required this.visible,
-    required this.outsideExtendWidth,
+    required this.scrollPadding,
   });
 
   final double pixelsPerSecond;
   final bool visible;
-  final double outsideExtendWidth;
+  final double scrollPadding;
 
   @override
   Widget build(BuildContext context) {
+    // The body's trailing padding already reaches to the far end of the
+    // horizontal scroll extent, so the overlay ends with the body.
     return Positioned(
       left:
+          scrollPadding +
           VideoEditorConstants.maxDuration.inMilliseconds /
-          1000 *
-          pixelsPerSecond,
+              1000 *
+              pixelsPerSecond,
       top: 0,
       bottom: 0,
-      right: -outsideExtendWidth,
+      right: 0,
       child: IgnorePointer(
         child: Visibility(
           visible: visible,

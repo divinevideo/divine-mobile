@@ -282,30 +282,31 @@ void main() {
       },
     );
 
-    testWidgets('extends overlay by half screen width', (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(1000, 1200);
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'starts the outside-area overlays at the max duration and runs them to '
+      'the end of the trailing scroll padding',
+      (tester) async {
+        await pumpBody(tester);
 
-      await pumpBody(tester);
+        // The composition starts after the leading scroll padding (16), and
+        // the body's trailing padding already reaches the end of the
+        // horizontal scroll extent, so the overlays end with the body.
+        final expectedLeft =
+            16 + VideoEditorConstants.maxDuration.inMilliseconds / 1000 * 80;
 
-      final expectedLeft =
-          VideoEditorConstants.maxDuration.inMilliseconds / 1000 * 80;
-      const expectedRight = -500.0;
-
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Positioned &&
-              widget.top == 0 &&
-              widget.bottom == 0 &&
-              widget.left == expectedLeft &&
-              widget.right == expectedRight,
-        ),
-        findsNWidgets(2),
-      );
-    });
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Positioned &&
+                widget.top == 0 &&
+                widget.bottom == 0 &&
+                widget.left == expectedLeft &&
+                widget.right == 0,
+          ),
+          findsNWidgets(2),
+        );
+      },
+    );
 
     testWidgets('renders dim overlay with updated alpha', (tester) async {
       await pumpBody(tester);
