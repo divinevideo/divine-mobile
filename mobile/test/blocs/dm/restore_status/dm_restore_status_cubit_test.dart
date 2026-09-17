@@ -103,13 +103,19 @@ void main() {
         when(
           () => dmRepository.historyRecoveryStream,
         ).thenAnswer((_) => controller.stream);
-        Future<void>.delayed(const Duration(milliseconds: 20)).then((_) {
-          when(
-            () => dmRepository.hasCompletedHistoryRecoveryBefore,
-          ).thenReturn(true);
-          when(() => dmRepository.hasAttemptedHistoryRecovery).thenReturn(true);
-          controller.add(false);
-        });
+        final recovery =
+            Future<void>.delayed(
+              const Duration(milliseconds: 20),
+            ).then((_) {
+              when(
+                () => dmRepository.hasCompletedHistoryRecoveryBefore,
+              ).thenReturn(true);
+              when(
+                () => dmRepository.hasAttemptedHistoryRecovery,
+              ).thenReturn(true);
+              controller.add(false);
+            });
+        addTearDown(() => recovery);
       },
       build: () => DmRestoreStatusCubit(dmRepository: dmRepository),
       wait: const Duration(milliseconds: 100),

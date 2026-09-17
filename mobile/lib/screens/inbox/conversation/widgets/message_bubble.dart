@@ -23,6 +23,7 @@ import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_c
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_support.dart';
@@ -844,7 +845,12 @@ class _MessageTextState extends ConsumerState<_MessageText> {
   }
 
   void _navigateToHashtag(String hashtag) {
-    context.push(HashtagScreenRouter.pathForTag(hashtag));
+    runDetached(
+      context.push(HashtagScreenRouter.pathForTag(hashtag)),
+      'open hashtag from DM',
+      logName: 'MessageBubble',
+      category: LogCategory.ui,
+    );
   }
 
   void _navigateToProfile(String hexPubkey) {
@@ -853,17 +859,27 @@ class _MessageTextState extends ConsumerState<_MessageText> {
 
   void _navigateToVideo(String routeReference) {
     final dmReplyContext = widget.dmReplyContext;
-    context.push(
-      VideoDetailScreen.pathForId(routeReference),
-      extra: dmReplyContext != null
-          ? VideoDetailRouteExtra(dmReplyContext: dmReplyContext)
-          : null,
+    runDetached(
+      context.push(
+        VideoDetailScreen.pathForId(routeReference),
+        extra: dmReplyContext != null
+            ? VideoDetailRouteExtra(dmReplyContext: dmReplyContext)
+            : null,
+      ),
+      'open video from DM',
+      logName: 'MessageBubble',
+      category: LogCategory.ui,
     );
   }
 
   void _navigateToSearch(String username) {
-    context.push(
-      SearchResultsPage.pathForQuery(username, requestFocusOnMount: false),
+    runDetached(
+      context.push(
+        SearchResultsPage.pathForQuery(username, requestFocusOnMount: false),
+      ),
+      'open search from DM mention',
+      logName: 'MessageBubble',
+      category: LogCategory.ui,
     );
   }
 

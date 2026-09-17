@@ -33,6 +33,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
@@ -82,10 +83,15 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: error));
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce conversation status',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
     );
   }
 
@@ -472,8 +478,13 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                     final npub = NostrKeyUtils.encodePubKey(
                                       otherPubkey,
                                     );
-                                    context.push(
-                                      '${OtherProfileScreen.path}/$npub',
+                                    runDetached(
+                                      context.push(
+                                        '${OtherProfileScreen.path}/$npub',
+                                      ),
+                                      'open conversation profile',
+                                      logName: 'ConversationView',
+                                      category: LogCategory.ui,
                                     );
                                   },
                                 ),
@@ -596,10 +607,15 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // affordance, so no toast — but announce it, per `accessibility.md`,
     // because the bubble's state change is silent to assistive tech.
     if (state.sendStatus == SendStatus.failed) {
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        l10n.dmSendFailedMessage,
-        Directionality.of(context),
+      runDetached(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          l10n.dmSendFailedMessage,
+          Directionality.of(context),
+        ),
+        'announce failed DM send',
+        logName: 'ConversationView',
+        category: LogCategory.ui,
       );
       return;
     }
@@ -639,10 +655,15 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // Per `accessibility.md`, async visible state changes must announce
     // explicitly — Material's default SnackBar semantics are weaker than the
     // written rule and not guaranteed across platforms.
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce partial DM send',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
     );
   }
 
@@ -650,10 +671,15 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: true));
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce DM send error',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
     );
   }
 }
@@ -1091,7 +1117,12 @@ class _MessageList extends StatelessWidget {
         await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
       case MessageAction.saveVideo:
         if (videoTarget == null) return;
-        context.read<SharedVideoSaveCubit>().save(videoTarget);
+        runDetached(
+          context.read<SharedVideoSaveCubit>().save(videoTarget),
+          'save shared DM video',
+          logName: 'ConversationView',
+          category: LogCategory.ui,
+        );
       case MessageAction.delete:
         context.read<ConversationBloc>().add(
           ConversationMessageDeleted(rumorId: message.id),
@@ -1153,10 +1184,15 @@ class _MessageList extends StatelessWidget {
     // Per `accessibility.md`, async visible state changes must announce
     // explicitly — same rule as the blocked/partial snackbars in
     // [_onSendOutcome].
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      l10n.dmSendFailedMessage,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        l10n.dmSendFailedMessage,
+        Directionality.of(context),
+      ),
+      'announce failed DM send options',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
     );
 
     // The prompt must stay open until the user picks resend or stop-trying
@@ -1209,7 +1245,12 @@ class _MessageList extends StatelessWidget {
   /// window — so a rapid double-tap burst can't fan out duplicate gift-wrapped
   /// reactions; the UI just dispatches.
   void _likeOnDoubleTap(BuildContext context, DmMessage message) {
-    HapticFeedback.lightImpact();
+    runDetached(
+      HapticFeedback.lightImpact(),
+      'play DM reaction haptic',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
+    );
     context.read<ConversationReactionsCubit>().add(
       ConversationReactionSet(
         conversationId: message.conversationId,

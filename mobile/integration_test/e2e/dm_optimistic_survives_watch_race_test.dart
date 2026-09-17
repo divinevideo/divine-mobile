@@ -7,6 +7,8 @@
 @Tags(['service'])
 library;
 
+import 'dart:async';
+
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -129,9 +131,11 @@ void main() {
         final router = GoRouter.of(
           tester.element(find.byType(Scaffold).first),
         );
-        router.push(
-          ConversationPage.pathForId(convId),
-          extra: <String>[recipient.pubkey],
+        unawaited(
+          router.push(
+            ConversationPage.pathForId(convId),
+            extra: <String>[recipient.pubkey],
+          ),
         );
         await pumpUntilSettled(tester);
         expect(
@@ -251,9 +255,11 @@ void main() {
         router.pop();
         await pumpUntilSettled(tester);
 
-        router.push(
-          ConversationPage.pathForId(convId),
-          extra: <String>[recipient.pubkey],
+        unawaited(
+          router.push(
+            ConversationPage.pathForId(convId),
+            extra: <String>[recipient.pubkey],
+          ),
         );
         await pumpUntilSettled(tester, maxSeconds: 10);
         expect(

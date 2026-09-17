@@ -19,6 +19,8 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Conversation detail page (single DM thread).
 ///
@@ -82,13 +84,22 @@ class ConversationPage extends ConsumerWidget {
         isDmRestricted,
         officialAccounts,
       )),
-      create: (_) => ConversationParticipantsCubit(
-        dmRepository: dmRepository,
-        conversationId: conversationId,
-        initialParticipantPubkeys: participantPubkeys,
-        isDmRestricted: () => isDmRestricted,
-        isApprovedRecipient: officialAccounts.isReadableByProtectedMinor,
-      )..load(),
+      create: (_) {
+        final cubit = ConversationParticipantsCubit(
+          dmRepository: dmRepository,
+          conversationId: conversationId,
+          initialParticipantPubkeys: participantPubkeys,
+          isDmRestricted: () => isDmRestricted,
+          isApprovedRecipient: officialAccounts.isReadableByProtectedMinor,
+        );
+        runDetached(
+          cubit.load(),
+          'load conversation participants',
+          logName: 'ConversationPage',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: _ConversationPageContent(
         conversationId: conversationId,
         subject: subject,

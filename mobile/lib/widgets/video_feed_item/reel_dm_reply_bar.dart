@@ -25,6 +25,8 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/full_reaction_emoji_picker_sheet.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/reaction_picker_overlay.dart'
     show kDefaultDmReactionEmojis;
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Constants for the reel reply bar.
 abstract class ReelReplyConstants {
@@ -241,7 +243,12 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
     final cubit = context.read<InlineReelReplyCubit>();
     if (cubit.state.status == InlineReelReplyStatus.sending) return;
     _pendingDraft = text;
-    cubit.submit(text);
+    runDetached(
+      cubit.submit(text),
+      'submit inline DM reply',
+      logName: 'ReelDmReplyBar',
+      category: LogCategory.ui,
+    );
     _controller.clear();
     _focusNode.unfocus();
   }
@@ -345,7 +352,12 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
     required String conversationPath,
     required List<String> participantPubkeys,
   }) {
-    router.push(conversationPath, extra: participantPubkeys);
+    runDetached(
+      router.push(conversationPath, extra: participantPubkeys),
+      'open conversation from reel reply',
+      logName: 'ReelDmReplyBar',
+      category: LogCategory.ui,
+    );
   }
 
   void _onReplyOutcome(InlineReelReplyState state) {
@@ -419,7 +431,15 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
             // failed send parked, instead of minting a second rumor the
             // recipient renders as a second message (#7316). The draft is
             // only its fallback, for a send that parked no row at all.
-            cubit.retry(queuedRumorIds: parkedRumorIds, content: draft);
+            runDetached(
+              cubit.retry(
+                queuedRumorIds: parkedRumorIds,
+                content: draft,
+              ),
+              'retry inline DM reply',
+              logName: 'ReelDmReplyBar',
+              category: LogCategory.ui,
+            );
             _controller.clear();
           },
         ),
@@ -523,10 +543,15 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
   }
 
   void _announce(String message) {
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce inline DM reply status',
+      logName: 'ReelDmReplyBar',
+      category: LogCategory.ui,
     );
   }
 

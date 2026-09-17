@@ -37,19 +37,21 @@ bool _isNetworkNoise(String m) =>
 
 Future<void> _guarded(Future<void> Function() body) {
   final completer = Completer<void>();
-  runZonedGuarded(
-    () async {
-      try {
-        await body();
-        if (!completer.isCompleted) completer.complete();
-      } catch (e, s) {
-        if (!completer.isCompleted) completer.completeError(e, s);
-      }
-    },
-    (error, stack) {
-      if (_isNetworkNoise(error.toString())) return;
-      if (!completer.isCompleted) completer.completeError(error, stack);
-    },
+  unawaited(
+    runZonedGuarded(
+      () async {
+        try {
+          await body();
+          if (!completer.isCompleted) completer.complete();
+        } catch (e, s) {
+          if (!completer.isCompleted) completer.completeError(e, s);
+        }
+      },
+      (error, stack) {
+        if (_isNetworkNoise(error.toString())) return;
+        if (!completer.isCompleted) completer.completeError(error, stack);
+      },
+    ),
   );
   return completer.future;
 }

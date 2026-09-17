@@ -385,10 +385,10 @@ void main() {
           replyContext: oneToOne(),
         );
       },
-      act: (cubit) {
-        cubit
-          ..submit('one')
-          ..submit('two');
+      act: (cubit) async {
+        final first = cubit.submit('one');
+        final second = cubit.submit('two');
+        await Future.wait([first, second]);
       },
       verify: (_) {
         verify(
