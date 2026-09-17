@@ -88,10 +88,20 @@ void main() {
     ).thenAnswer((_) async => null);
   });
 
-  void stubQuery(List<Event> events) {
+  void stubQuery(
+    List<Event> events, {
+    bool timedOut = false,
+    bool noRelays = false,
+  }) {
     when(
-      () => nostrClient.queryEvents(any(), useCache: false),
-    ).thenAnswer((_) async => events);
+      () => nostrClient.queryEventsDetailed(
+        any(),
+        useCache: false,
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+      ),
+    ).thenAnswer(
+      (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+    );
   }
 
   group('ProfileRepository.cachedIdentityTags', () {
@@ -495,7 +505,11 @@ void main() {
 
     test('falls back to kind-0 i tags when the relay query throws', () async {
       when(
-        () => nostrClient.queryEvents(any(), useCache: false),
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
       ).thenThrow(Exception('relay down'));
       when(
         () => identityEventsDao.getEvent(_pubkey),
@@ -630,5 +644,66 @@ void main() {
         );
       },
     );
+    group('when the identity read does not settle (#6154)', () {
+      // Divine's identity events live on relay.divine.video. A general-purpose
+      // relay in the pool answering EOSE with nothing used to end the read
+      // early, and the empty result read as "this profile has no linked
+      // accounts" — blanking the verified-account chips on a device with no
+      // cached row to fall back on.
+      test(
+        'asks every relay to settle before trusting an empty answer',
+        () async {
+          stubQuery([]);
+
+          await repository.freshIdentityTags(
+            pubkey: _pubkey,
+            kind0Tags: const [],
+          );
+
+          final captured = verify(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: captureAny(
+                named: 'requireAllRelaysSettled',
+              ),
+            ),
+          ).captured;
+          expect(captured, isNotEmpty);
+          expect(captured.every((v) => v == true), isTrue);
+        },
+      );
+
+      test(
+        'still uses an event that arrived before the read ran out of time',
+        () async {
+          // A partial read is not a failed one. Discarding what arrived would
+          // throw away a genuinely newer identity event; _cachedTagsSuperseding
+          // (#7081) owns the "is this actually newer" question, not this path.
+          stubQuery(
+            [
+              _identityEvent(
+                tags: [
+                  ['i', 'twitter:arrived', '123'],
+                ],
+              ),
+            ],
+            timedOut: true,
+          );
+
+          final tags = await repository.freshIdentityTags(
+            pubkey: _pubkey,
+            kind0Tags: const [],
+          );
+
+          expect(
+            tags,
+            equals([
+              ['i', 'twitter:arrived', '123'],
+            ]),
+          );
+        },
+      );
+    });
   });
 }

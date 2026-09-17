@@ -579,11 +579,12 @@ class IdentityClaimsRepository {
         'No relay is connected, so the current links cannot be read',
       );
     }
-    final identityEvent = await _newestEventOfKind(
+    final identityRead = await _newestEventOfKind(
       client,
       pubkey,
       identityEventKind,
     );
+    final identityEvent = identityRead.event;
     if (identityEvent != null) {
       final tags = _mergeWithLastPublished(
         pubkey,
@@ -614,7 +615,74 @@ class IdentityClaimsRepository {
       );
     }
 
-    final legacyEvent = await _newestEventOfKind(client, pubkey, 0);
+    // An inconclusive kind-10011 read is not evidence that the profile has no
+    // identity event, and the kind-0 fallback cannot tell the difference:
+    // every profile has a kind-0, so it answers either way and would report
+    // "no claims" for a profile whose claims simply did not arrive. Prefer the
+    // last-known-good snapshot instead of rendering an empty set (#6154).
+    //
+    // ProfileRepository._fetchIdentityEvent answers the partial-read question
+    // the other way for display, on purpose — see the note there.
+    if (!identityRead.conclusive) {
+      final cachedRow = await _cachedIdentityRow(pubkey);
+      final cached = _decodeSnapshotRow(cachedRow, pubkey);
+      // A kind-10011-sourced row counts even with no claims on it: that is
+      // what unlinking the last claim leaves behind, and it still mirrors an
+      // identity event the read failed to bring back. Falling through to
+      // kind-0 there would resurrect the pre-migration claims the user
+      // removed, on screen and — on the write path — in the published event.
+      final mirrorsIdentityEvent = cachedRow?.sourceKind == identityEventKind;
+      if (cached != null && (cached.isNotEmpty || mirrorsIdentityEvent)) {
+        // Only a kind-10011-sourced snapshot is evidence that the unsettled
+        // read was lagging. A kind-0-sourced row is what the fallback itself
+        // wrote (profile_repository.dart caches kind-0 tags with sourceKind 0),
+        // so refusing on it would block a legitimate first link for a
+        // pre-migration profile every time one relay failed to settle.
+        if (forWrite && mirrorsIdentityEvent) {
+          throw const IdentityClaimReadException(
+            'The identity event read did not settle, but this profile is '
+            'known to have an identity event — refusing to publish over it',
+          );
+        }
+        if (!forWrite) {
+          Log.warning(
+            'Inconclusive kind-$identityEventKind read for '
+            '${pubkeyForLogs(pubkey)}; serving the snapshot with '
+            '${cached.length} claim tag(s) rather than the kind-0 fallback',
+            name: 'IdentityClaimsRepository',
+          );
+          return _IdentityEventBase(tags: cached, content: '');
+        }
+        // Write path, kind-0-sourced snapshot. Deliberately falls through to a
+        // fresh kind-0 read rather than publishing on the snapshot, so
+        // _refuseIfLocalEvidenceIsAhead still gets to compare the publish base
+        // against what this device already knows.
+        Log.warning(
+          'Inconclusive kind-$identityEventKind read for '
+          '${pubkeyForLogs(pubkey)} with a kind-0-sourced snapshot; reading '
+          'kind-0 fresh so the publish base stays checkable',
+          name: 'IdentityClaimsRepository',
+        );
+      } else {
+        // No snapshot to prefer, so the kind-0 fallback below is all there is.
+        // Say so plainly: a later empty result is not evidence of no claims.
+        Log.warning(
+          'Inconclusive kind-$identityEventKind read for '
+          '${pubkeyForLogs(pubkey)} and no snapshot to fall back on; '
+          'continuing to kind-0, which cannot distinguish "no claims" from '
+          '"claims did not arrive"',
+          name: 'IdentityClaimsRepository',
+        );
+      }
+    }
+
+    // Only the event: kind-0 does not get the same suspicion as kind 10011.
+    // Every profile has a kind-0 and every relay carries it, so an unsettled
+    // kind-0 read is not the "one relay holds it and did not answer" shape
+    // this block exists for — and the write path's own guard
+    // (_refuseIfLocalEvidenceIsAhead) already compares this base against the
+    // snapshot before anything is published.
+    final legacyEvent = (await _newestEventOfKind(client, pubkey, 0)).event;
     if (legacyEvent != null) {
       final tags = _mergeWithLastPublished(
         pubkey,
@@ -763,8 +831,14 @@ class IdentityClaimsRepository {
   ///
   /// Any source kind counts: a kind-0 row still proves the profile had claims,
   /// which is all this is asked for.
-  Future<List<List<String>>?> _cachedIdentityTags(String pubkey) async {
-    final row = await _cachedIdentityRow(pubkey);
+  Future<List<List<String>>?> _cachedIdentityTags(String pubkey) async =>
+      _decodeSnapshotRow(await _cachedIdentityRow(pubkey), pubkey);
+
+  /// Decodes [row]'s `i` tags, or null when absent or unreadable.
+  ///
+  /// Split out so a caller that already needs the row (to check its source
+  /// kind) does not read the same row from the DAO twice.
+  List<List<String>>? _decodeSnapshotRow(IdentityEventRow? row, String pubkey) {
     if (row == null) return null;
     try {
       final decoded = jsonDecode(row.tagsJson) as List<dynamic>;
@@ -806,15 +880,33 @@ class IdentityClaimsRepository {
     }
   }
 
-  Future<Event?> _newestEventOfKind(
+  /// Reads the newest event of [kind] for [pubkey], reporting whether the
+  /// read was conclusive.
+  ///
+  /// `queryEventsDetailed` with `requireAllRelaysSettled`, not `queryEvents`:
+  /// the latter drops `timedOut` and `noRelays`, so a fan-out that settled on
+  /// whichever relay answered first returns `[]` and is indistinguishable from
+  /// "this profile has no identity event". Divine's identity events live on
+  /// `relay.divine.video`; a general-purpose relay in the pool answering
+  /// `EOSE` with nothing would end the read before the one relay that holds
+  /// the event ever replied, and the claims would vanish from the profile with
+  /// no error and no log (#6154).
+  Future<({Event? event, bool conclusive})> _newestEventOfKind(
     NostrClient client,
     String pubkey,
     int kind,
   ) async {
-    final events = await client.queryEvents([
-      Filter(kinds: [kind], authors: [pubkey], limit: 5),
-    ], useCache: false);
-    return newestIdentityEvent(events.where((e) => e.kind == kind).toList());
+    final result = await client.queryEventsDetailed(
+      [
+        Filter(kinds: [kind], authors: [pubkey], limit: 5),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+    );
+    final event = newestIdentityEvent(
+      result.events.where((e) => e.kind == kind).toList(),
+    );
+    return (event: event, conclusive: !result.timedOut && !result.noRelays);
   }
 
   /// Signs and publishes a kind-10011 event carrying [tags].
