@@ -283,11 +283,28 @@ Flutter 3.47.2 upgrade.
 - `Tests` runs 8 shards instead of 4. Byte-weighted, the heaviest 8-shard
   bucket carries 55% of the heaviest 4-shard bucket (3.2 MB vs 5.8 MB).
 
-Expected `Mobile CI` wall after the change: bounded by `Web Bundle Size`
-(~4.1m, a `flutter build web --release` that #9276 added the same week), with
-`Tests`, `Guards` and `Generated Files` each below it. Re-measure with
+First run on the PR (run 35238630335, every scope on, so all 62 guards
+including the three native-gated ones):
+
+| Job | Before (week 38 median) | After |
+|---|---:|---:|
+| `Mobile CI` wall | 9.7m | **5.0m** (299s) |
+| `Generated Files` | 540s | 148s |
+| `Guards` | — | 224s (driver 179s wall for 706s summed) |
+| `Async Safety` | — | 120s |
+| `Tests`, slowest leg | 306s (4 shards) | 278s (8 shards; legs 151–278s) |
+| `Web Bundle Size` | 246s | 271s |
+
+The critical path is now the slowest `Tests` leg and `Web Bundle Size`, within
+seconds of each other. Two things the run shows that estimates did not: four
+guard workers on four vCPUs inflate the summed guard time from 398s to 706s
+(the Dart front-end compiles on more than one thread, so four `dart run`s
+oversubscribe the runner), which is why the driver lands at 2.2× rather than
+4×; and the hash-bucket shards are balanced by bytes but not by runtime —
+shard 3 spends 212s in `very_good test` against shard 6's 91s. Neither is
+worth tuning while `Web Bundle Size` sits at the same height. Re-measure with
 `report_mobile_ci_run.py` and recalibrate `.github/ci-timing-budgets.json`
-once a week of runs has landed.
+once a week of runs has landed; the budgets committed here held on this run.
 
 Runner minutes are not a cost here: the repository is public, every
 `runs-on` is a standard label, and the `timing` endpoint reports
