@@ -273,7 +273,7 @@ gh api repos/OWNER/REPO/pulls/NUMBER/reviews --paginate \
 gh api graphql -f query='
 { repository(owner:"divinevideo",name:"divine-mobile"){ pullRequest(number:NNN){
   reviewThreads(first:100){ pageInfo{ hasNextPage endCursor }
-    nodes { isResolved isOutdated path line
+    nodes { id isResolved isOutdated path line
     comments(first:10){ pageInfo{ hasNextPage endCursor }
       nodes { author{login} body } } } } } } }'
 ```
@@ -346,8 +346,17 @@ thread merely because a fix was pushed.
    code change to justify withdrawing an incorrect finding.
 3. Reply in each original thread with the disposition and evidence, then
    resolve threads you raised only when their finding is verified fixed,
-   withdrawn, or explicitly accepted as nonblocking. Use GitHub's resolve-thread
-   action and re-fetch `isResolved` to verify it. A body-only finding has no
+   withdrawn, or explicitly accepted as nonblocking. Resolve with the
+   `resolveReviewThread` mutation, then re-fetch `isResolved` to verify it:
+
+   ```bash
+   gh api graphql -f query='
+   mutation { resolveReviewThread(input: {threadId: "<thread-id>"}) {
+     thread { id isResolved } } }'
+   ```
+
+   `<thread-id>` is the `id` of the `reviewThreads` node, which the thread
+   query earlier in this section selects. A body-only finding has no
    thread to resolve: link it in the new review's itemized closeout. Leave
    another reviewer's threads to that reviewer unless explicitly delegated;
    write access or a shared posting account alone is not delegation.
