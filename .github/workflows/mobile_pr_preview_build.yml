@@ -29,10 +29,12 @@ jobs:
         working-directory: mobile
 
     steps:
-      - name: Checkout PR head
+      # The default pull_request checkout is the merge commit, which is also
+      # where GitHub reads this workflow from. Checking out the PR head instead
+      # ran steps added on main against a tree that predates them: every open
+      # PR behind #9268 failed on a scripts/ file its head did not carry yet.
+      - name: Checkout PR merge commit
         uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
