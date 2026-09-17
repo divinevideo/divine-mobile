@@ -1366,6 +1366,11 @@ void main() {
         addTearDown(cubit.close);
         await pumpEventQueue();
 
+        // The surviving list is also the list before the release ran, so
+        // without this the test passes with the release step deleted.
+        verify(
+          () => h.pins.releaseDeleted([_coordinate('gone')]),
+        ).called(1);
         expect(cubit.state.pinnedCoordinates, [_coordinate('gone')]);
         expect(cubit.state.videos.map((v) => v.id), ['a']);
       });
