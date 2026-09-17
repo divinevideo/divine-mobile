@@ -196,34 +196,38 @@ class VideoEditorTimelineBody extends StatelessWidget {
               // padding scrolling strips the reorder has faded out.
               child: IgnorePointer(
                 ignoring: isReordering,
-                child: AnimatedOpacity(
-                  opacity: isReordering ? 0.0 : 1.0,
-                  duration: const Duration(milliseconds: 200),
-                  // Clipped only vertically, so a selected item's trim handle
-                  // stays visible past the composition's last pixel.
-                  child: ClipRect(
-                    clipper: const VerticalOnlyClipper(),
-                    // Carries the composition padding itself so a vertical
-                    // drag beside a short composition still scrolls the
-                    // strips.
-                    child: SingleChildScrollView(
-                      controller: overlayStripsScrollController,
-                      clipBehavior: Clip.none,
-                      physics: isVolumeEditMode
-                          ? const NeverScrollableScrollPhysics()
-                          : null,
-                      padding: compositionPadding.copyWith(
-                        top: 4,
-                        bottom:
-                            _scrollBottomPadding +
-                            MediaQuery.paddingOf(context).bottom,
-                      ),
-                      // The strips are exactly totalWidth wide, so a handle on
-                      // an item ending at the composition's end sits outside
-                      // every box below here — let the touch through to it.
-                      child: HitExpandedBox(
-                        expandLeft: overlayTrimExpand,
-                        expandRight: overlayTrimExpand,
+                // Clipped only vertically, so a selected item's trim handle
+                // stays visible past the composition's last pixel.
+                child: ClipRect(
+                  clipper: const VerticalOnlyClipper(),
+                  // Carries the composition padding itself so a vertical drag
+                  // beside a short composition still scrolls the strips.
+                  child: SingleChildScrollView(
+                    controller: overlayStripsScrollController,
+                    clipBehavior: Clip.none,
+                    physics: isVolumeEditMode
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
+                    padding: compositionPadding.copyWith(
+                      top: 4,
+                      bottom:
+                          _scrollBottomPadding +
+                          MediaQuery.paddingOf(context).bottom,
+                    ),
+                    // The strips are exactly totalWidth wide, so a handle on
+                    // an item ending at the composition's end sits outside
+                    // every box below here — let the touch through to it.
+                    // It stays above the fade: the expanded margin reaches
+                    // past the fade's own bounds, and only _hitTestDeep
+                    // below this box bypasses the size check.
+                    child: HitExpandedBox(
+                      expandLeft: overlayTrimExpand,
+                      expandRight: overlayTrimExpand,
+                      // Inside the scroll view, so the reorder fade's
+                      // saveLayer covers the strips rather than the padding.
+                      child: AnimatedOpacity(
+                        opacity: isReordering ? 0.0 : 1.0,
+                        duration: const Duration(milliseconds: 200),
                         child: RepaintBoundary(
                           child: _CachedOverlayStrips(
                             clips: clips,
