@@ -57,9 +57,10 @@ redo the triage.
 
 Working as the author is not the relaxed path — it is the stricter one:
 
-- You cannot submit `APPROVED` or `CHANGES_REQUESTED` on your own PR.
-  Findings you cannot resolve go in a **regular issue comment**,
-  clearly labelled as a blocker or an open decision.
+- You cannot submit `APPROVED` or `CHANGES_REQUESTED` on your own PR. The
+  conclusion still gets delivered: submit it as a **`COMMENT`-state review**,
+  or a regular issue comment when no review can be submitted, with findings
+  you cannot resolve clearly labelled as a blocker or an open decision.
 - There is nobody downstream to catch a red build. §3 is unconditional.
 - "Escalate to the author for a judgment call" resolves to **escalate
   to the human running the session**. Say so plainly and stop; do not
@@ -121,6 +122,7 @@ comments alone, or an unsubmitted `PENDING` review does not deliver a verdict.
 | Review complete, sufficient evidence, no unresolved merge-blocking findings | `APPROVE` (`gh pr review --approve`), including when there are optional suggestions |
 | Verified unresolved finding that must be fixed before merge and that you are not authorized to resolve directly (or that needs a named owner decision) | `REQUEST_CHANGES` (`gh pr review --request-changes`), with the defect, evidence, and required remediation |
 | Partial review, missing evidence needed to decide, draft feedback, or explicitly advisory feedback | `COMMENT` (`gh pr review --comment`), stating why no approval/change-request verdict is possible and what remains |
+| Review complete, but the acting account authored the pull request | `COMMENT` (`gh pr review --comment`), stating the conclusion, that GitHub cannot accept a self-approval, and which eligible reviewer owes the verdict |
 
 The table assumes a non-draft pull request. `state: OPEN` alone does not
 imply that — a draft is also open, and nothing above gates on `isDraft`.
@@ -152,8 +154,11 @@ needs nothing further.
 
 Before submitting, read the authenticated login and the pull request's author,
 `state`, `isDraft`, `mergedAt`, and `headRefOid`. If the acting account is the
-PR author, GitHub cannot accept its approval or change request: report that
-limitation and identify the eligible reviewer needed. Request their review only
+PR author, GitHub cannot accept its approval or change request. That limits
+the *state*, not the delivery: submit the conclusion as a `COMMENT`-state
+review — or a plain top-level comment when no review can be submitted — say
+plainly that the state is a delivery mechanism and not an approval, and
+identify the eligible reviewer needed. Request their review only
 when the task or governing workflow authorizes it. Do not switch accounts to
 evade the restriction or describe a comment as approval. If the PR is merged or closed,
 use an authorized plain `COMMENT` review (`gh pr review <n> --comment
