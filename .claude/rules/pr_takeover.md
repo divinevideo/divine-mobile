@@ -163,13 +163,26 @@ review cannot be submitted at all, an ordinary comment (`gh pr comment <n>
 
 Pin the submission to the full commit SHA you actually reviewed. If the head
 moved, review the new changes before giving a current-head verdict. The REST
-API supports an explicit `commit_id`; write a JSON file containing that SHA,
-`event` (`APPROVE`, `REQUEST_CHANGES`, or `COMMENT`), and the review `body`, then
-submit it with:
+API supports an explicit `commit_id`. Write the request body to a scratch file
+outside the repository — a bare `review.json` in the working tree is untracked
+and trips the clean-workspace rule — then submit it:
 
 ```bash
-gh api --method POST repos/OWNER/REPO/pulls/NUMBER/reviews --input review.json
+gh api --method POST repos/OWNER/REPO/pulls/NUMBER/reviews \
+  --input "${TMPDIR:-/tmp}/review.json"
 ```
+
+```json
+{
+  "commit_id": "<full 40-character SHA>",
+  "event": "APPROVE",
+  "body": "<review body>"
+}
+```
+
+`event` is load-bearing: omit it and GitHub stores the review as `PENDING`,
+which this section already counts as delivering no verdict. Send one of
+`APPROVE`, `REQUEST_CHANGES`, or `COMMENT` every time.
 
 With `gh pr review`, use `--repo OWNER/REPO`, the appropriate verdict flag and
 `--body-file`; recheck the head immediately before submitting. With either
