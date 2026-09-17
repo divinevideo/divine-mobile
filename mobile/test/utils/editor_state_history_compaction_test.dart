@@ -138,6 +138,48 @@ void main() {
       expect(entries[2][historyMetaRefKey], 0);
     });
 
+    // Nothing in a meta is monotonic — the clip ids and recordedAt are stable
+    // across a trim — so a toggle returns the timeline to a state already
+    // stored. Matching only the previous entry re-stored the whole clip list
+    // every other edit.
+    test('stores a meta that returns to an earlier state as a reference', () {
+      final compact = compactEditorStateHistory(
+        _export([
+          for (var i = 0; i < 6; i++)
+            _entry(
+              meta: _meta(trimEndMs: i.isEven ? 0 : 1500),
+              layer: i,
+            ),
+        ]),
+      );
+
+      final entries = _entriesOf(compact);
+      expect(entries[0].containsKey('meta'), isTrue);
+      expect(entries[1].containsKey('meta'), isTrue);
+      expect(
+        entries.skip(2).map((e) => e[historyMetaRefKey]),
+        [0, 1, 0, 1],
+        reason: 'each repeat points at the first entry holding that meta',
+      );
+    });
+
+    test('round-trips a toggle run losslessly', () {
+      final export = _export([
+        for (var i = 0; i < 6; i++)
+          _entry(
+            meta: _meta(trimEndMs: i.isEven ? 0 : 1500),
+            layer: i,
+          ),
+      ]);
+
+      final expanded = expandEditorStateHistory(
+        jsonDecode(jsonEncode(compactEditorStateHistory(export)))
+            as Map<String, dynamic>,
+      );
+
+      expect(_deepEquals.equals(expanded, export), isTrue);
+    });
+
     test('interns every proof manifest once', () {
       final compact = compactEditorStateHistory(
         _export([

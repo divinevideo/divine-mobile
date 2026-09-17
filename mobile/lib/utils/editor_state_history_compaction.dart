@@ -1,6 +1,7 @@
 // ABOUTME: Shrinks a draft's persisted editor history by sharing repeated
 // ABOUTME: metas and proof manifests, and restores the full form on load
 
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:openvine/utils/json_tree_rewrite.dart';
@@ -52,9 +53,13 @@ const String _logName = 'EditorStateHistory';
 /// Two transforms, both exact round-trips through
 /// [expandEditorStateHistory]:
 ///
-///  * An entry whose `meta` deep-equals the nearest earlier entry that still
-///    holds one is stored as `metaRef: <that index>` instead. Entries without
-///    a `meta` are left alone and do not break the run.
+///  * An entry whose `meta` equals one an earlier entry already holds is
+///    stored as `metaRef: <that entry's index>` instead. The match is against
+///    every earlier meta, not just the nearest: a toggle — trimming to a
+///    length and back, muting and unmuting, adding and removing a marker —
+///    returns the timeline to a state it already stored, and nothing in the
+///    meta is monotonic, so those metas are equal again. Entries without a
+///    `meta` are left alone and do not break the run.
 ///  * Every `proofManifestJson` string in the tree is stored once under
 ///    [proofManifestsKey] and each occurrence becomes `proofManifestRef`.
 ///
@@ -69,8 +74,10 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
   final entries = history[_historyKey];
   if (entries is! List || entries.isEmpty) return history;
 
-  Map<Object?, Object?>? lastMeta;
-  var lastMetaIndex = -1;
+  final firstIndexByMeta = HashMap<Map<Object?, Object?>, int>(
+    equals: _sameTree,
+    hashCode: _treeHash,
+  );
   final compactEntries = <Object?>[];
   for (var i = 0; i < entries.length; i++) {
     final entry = entries[i];
@@ -79,16 +86,16 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
       compactEntries.add(entry);
       continue;
     }
-    if (lastMeta != null && _sameTree(meta, lastMeta)) {
+    final seen = firstIndexByMeta[meta];
+    if (seen != null) {
       compactEntries.add(
         Map<String, dynamic>.from(entry)
           ..remove(_metaKey)
-          ..[historyMetaRefKey] = lastMetaIndex,
+          ..[historyMetaRefKey] = seen,
       );
       continue;
     }
-    lastMeta = meta;
-    lastMetaIndex = i;
+    firstIndexByMeta[meta] = i;
     compactEntries.add(entry);
   }
 
@@ -232,6 +239,36 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
     );
   }
   return expanded..[_historyKey] = expandedEntries;
+}
+
+/// A hash consistent with [_sameTree]: equal trees hash equally.
+///
+/// Map entries accumulate order-independently because [_sameTree] compares
+/// maps by key lookup, list items in order because it compares them by index,
+/// and a number mixes in its runtime type because it keeps `1` and `1.0`
+/// apart. Reading every leaf costs about 1.5x a single [_sameTree] against a
+/// leaf-sharing copy, which buys matching against every earlier meta instead
+/// of only the previous one.
+int _treeHash(Object? node) {
+  if (node is Map) {
+    var accumulated = 0;
+    for (final entry in node.entries) {
+      accumulated =
+          (accumulated +
+              Object.hash(_treeHash(entry.key), _treeHash(entry.value))) &
+          0x3fffffff;
+    }
+    return Object.hash(node.length, accumulated);
+  }
+  if (node is List) {
+    var accumulated = 17;
+    for (final item in node) {
+      accumulated = Object.hash(accumulated, _treeHash(item));
+    }
+    return Object.hash(node.length, accumulated);
+  }
+  if (node is num) return Object.hash(node.runtimeType, node);
+  return node.hashCode;
 }
 
 /// Whether [a] and [b] are the same JSON tree.
