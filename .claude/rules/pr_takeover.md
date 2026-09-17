@@ -110,7 +110,9 @@ authorized plain `COMMENT` review (`gh pr review <n> --comment --body-file
 <file>`) for useful retrospective feedback, or file a separately authorized
 issue when verified follow-up work is required.
 
-### Submit an explicit review verdict
+---
+
+## Submit an explicit review verdict
 
 Once posting is authorized, completing a review means submitting a GitHub
 review with a verdict that matches the findings. A body saying "No actionable
