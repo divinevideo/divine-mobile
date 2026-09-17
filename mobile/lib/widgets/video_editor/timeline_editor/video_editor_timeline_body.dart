@@ -119,15 +119,29 @@ class VideoEditorTimelineBody extends StatelessWidget {
         !isReordering && totalDuration > VideoEditorConstants.maxDuration;
     final compositionPadding = EdgeInsets.symmetric(horizontal: scrollPadding);
 
+    // Where the composition stops being usable. Deliberately not
+    // timelinePositionToScrollOffset: that adds a clipGap per clip boundary,
+    // which totalWidth does not, so it would shift this edge.
+    final maxDurationEdge =
+        scrollPadding +
+        VideoEditorConstants.maxDuration.inMilliseconds /
+            1000 *
+            pixelsPerSecond;
+
     return Stack(
       fit: .passthrough,
       clipBehavior: .none,
       children: [
         // Keep stack slots stable during drag-reorder to avoid gesture drops.
-        _TimelineMaxDurationStripeOverlay(
-          pixelsPerSecond: pixelsPerSecond,
+        _TimelineOutsideAreaOverlay(
+          left: maxDurationEdge,
           visible: showMaxDurationOverlays,
-          scrollPadding: scrollPadding,
+          child: CustomPaint(
+            painter: _TimelineOutsideAreaPainter(
+              stripeColor: context.vineColors.disabled,
+            ),
+            child: const SizedBox.expand(),
+          ),
         ),
 
         Column(
@@ -250,10 +264,15 @@ class VideoEditorTimelineBody extends StatelessWidget {
             ),
           ],
         ),
-        _TimelineMaxDurationDimOverlay(
-          pixelsPerSecond: pixelsPerSecond,
+        _TimelineOutsideAreaOverlay(
+          left: maxDurationEdge,
           visible: showMaxDurationOverlays,
-          scrollPadding: scrollPadding,
+          child: ColoredBox(
+            color: context.vineColors.surfaceContainerHigh.withValues(
+              alpha: 0.3,
+            ),
+            child: const SizedBox.expand(),
+          ),
         ),
       ],
     );
@@ -443,79 +462,32 @@ class _ReorderFade extends StatelessWidget {
   }
 }
 
-class _TimelineMaxDurationStripeOverlay extends StatelessWidget {
-  const _TimelineMaxDurationStripeOverlay({
-    required this.pixelsPerSecond,
+/// Bands the stretch of timeline past the maximum clip duration, from [left]
+/// to the end of the body.
+///
+/// Two of these stack up: the striped hatch and the dim wash over it.
+class _TimelineOutsideAreaOverlay extends StatelessWidget {
+  const _TimelineOutsideAreaOverlay({
+    required this.left,
     required this.visible,
-    required this.scrollPadding,
+    required this.child,
   });
 
-  final double pixelsPerSecond;
+  final double left;
   final bool visible;
-  final double scrollPadding;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     // The body's trailing padding already reaches to the far end of the
     // horizontal scroll extent, so the overlay ends with the body.
     return Positioned(
-      left:
-          scrollPadding +
-          VideoEditorConstants.maxDuration.inMilliseconds /
-              1000 *
-              pixelsPerSecond,
+      left: left,
       top: 0,
       bottom: 0,
       right: 0,
       child: IgnorePointer(
-        child: Visibility(
-          visible: visible,
-          child: CustomPaint(
-            painter: _TimelineOutsideAreaPainter(
-              stripeColor: context.vineColors.disabled,
-            ),
-            child: const SizedBox.expand(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TimelineMaxDurationDimOverlay extends StatelessWidget {
-  const _TimelineMaxDurationDimOverlay({
-    required this.pixelsPerSecond,
-    required this.visible,
-    required this.scrollPadding,
-  });
-
-  final double pixelsPerSecond;
-  final bool visible;
-  final double scrollPadding;
-
-  @override
-  Widget build(BuildContext context) {
-    // The body's trailing padding already reaches to the far end of the
-    // horizontal scroll extent, so the overlay ends with the body.
-    return Positioned(
-      left:
-          scrollPadding +
-          VideoEditorConstants.maxDuration.inMilliseconds /
-              1000 *
-              pixelsPerSecond,
-      top: 0,
-      bottom: 0,
-      right: 0,
-      child: IgnorePointer(
-        child: Visibility(
-          visible: visible,
-          child: ColoredBox(
-            color: context.vineColors.surfaceContainerHigh.withValues(
-              alpha: 0.3,
-            ),
-            child: const SizedBox.expand(),
-          ),
-        ),
+        child: Visibility(visible: visible, child: child),
       ),
     );
   }
