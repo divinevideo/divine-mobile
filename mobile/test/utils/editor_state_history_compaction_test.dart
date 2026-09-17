@@ -200,6 +200,20 @@ void main() {
       expect(identical(compactEditorStateHistory(export), export), isTrue);
     });
 
+    // An unconditional write would put an empty table into every draft that
+    // has no manifests, which makes the load see a table, skip the
+    // legacy/no-op fast path, and rebuild the whole history for nothing.
+    test('writes no manifest table when nothing carries a manifest', () {
+      final compact = compactEditorStateHistory(
+        _export([
+          _entry(meta: {'clips': <Object?>[], 'audio': <Object?>[]}),
+          _entry(meta: {'clips': <Object?>[], 'audio': <Object?>[]}, layer: 1),
+        ]),
+      );
+
+      expect(compact, isNot(contains(proofManifestsKey)));
+    });
+
     test('leaves an export without history entries unchanged', () {
       final export = _export([]);
 
@@ -370,6 +384,30 @@ void main() {
         );
       },
     );
+
+    // A reference may only point at an entry already expanded. A forward one
+    // would read a target whose own meta has not been restored yet, so the
+    // bound is backward-only rather than merely in range.
+    test('does not resolve a reference pointing forward', () {
+      final export = _export([
+        _entry()..[historyMetaRefKey] = 1,
+        _entry(meta: _meta(), layer: 1),
+      ]);
+
+      final entries = _entriesOf(expandEditorStateHistory(export));
+
+      expect(entries[0], isNot(contains('meta')));
+      expect(entries[0][historyMetaRefKey], 1);
+    });
+
+    test('does not resolve a reference pointing at itself', () {
+      final export = _export([_entry(layer: 0)..[historyMetaRefKey] = 0]);
+
+      final entries = _entriesOf(expandEditorStateHistory(export));
+
+      expect(entries[0], isNot(contains('meta')));
+      expect(entries[0][historyMetaRefKey], 0);
+    });
 
     test('reports no unresolved meta references once every one resolves', () {
       final meta = _meta();
