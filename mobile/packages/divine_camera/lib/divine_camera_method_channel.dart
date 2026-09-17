@@ -120,16 +120,26 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
   /// Prefixes [message] with the native emit time when the platform sent one.
   ///
   /// Rendered in the same UTC ISO-8601 shape as `LogEntry.timestamp` so the
-  /// two read as one pair in an exported log. A platform that sends no stamp
-  /// still forwards its message unchanged.
+  /// two read as one pair in an exported log. A platform that sends no stamp,
+  /// or one this cannot render, still forwards its message unchanged: the
+  /// stamp exists to make these lines trustworthy, so a malformed one costs
+  /// the stamp and never the line. Both `double.nan.round()` and an epoch
+  /// beyond [_maxEpochMs] throw, and an escaped throw here would take the
+  /// diagnostic down with it.
   static String _withNativeTimestamp(String message, Object? timestampMs) {
-    if (timestampMs is! num) return message;
+    if (timestampMs is! num || !timestampMs.isFinite) return message;
+    final milliseconds = timestampMs.round();
+    if (milliseconds.abs() > _maxEpochMs) return message;
     final stamp = DateTime.fromMillisecondsSinceEpoch(
-      timestampMs.round(),
+      milliseconds,
       isUtc: true,
     ).toIso8601String();
     return '[native $stamp] $message';
   }
+
+  /// The widest epoch [DateTime.fromMillisecondsSinceEpoch] accepts: 100 000
+  /// 000 days either side of the epoch. Anything past it throws a [RangeError].
+  static const int _maxEpochMs = 8640000000000000;
 
   @override
   Future<String?> getPlatformVersion() async {

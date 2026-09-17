@@ -883,6 +883,35 @@ void main() {
       );
     });
 
+    test('still forwards the line when the native stamp is unusable', () async {
+      // The stamp exists to make these lines trustworthy, so a malformed one
+      // must cost the stamp, never the line: both `double.nan.round()` and an
+      // out-of-range epoch throw, and an escaped throw here would take the
+      // diagnostic down with it.
+      const unusable = <String, Object?>{
+        'nan': double.nan,
+        'infinity': double.infinity,
+        'out-of-range': 9.9e18,
+      };
+      for (final entry in unusable.entries) {
+        final message = 'onNativeLog-unusable-${entry.key}-unique';
+        await expectLater(
+          dispatchNativeLog({
+            'level': 'info',
+            'message': message,
+            'name': 'DivineCamera',
+            'timestampMs': entry.value,
+          }),
+          completes,
+        );
+        expect(
+          latestEntryWithMessage(message),
+          isNotNull,
+          reason: 'a ${entry.key} stamp must not drop the line',
+        );
+      }
+    });
+
     test('ignores a call with null arguments without throwing', () async {
       await expectLater(dispatchNativeLog(null), completes);
     });
