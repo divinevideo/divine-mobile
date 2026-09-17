@@ -1582,12 +1582,16 @@ void main() {
           // evidence of a lagging kind-10011 read. Refusing on it would block a
           // legitimate first link for a pre-migration profile whenever a single
           // relay failed to settle.
+          // kind-0 carries a claim the snapshot does not, so the published
+          // tags say which base was used: publishing on the snapshot would
+          // silently drop mastodon and skip _refuseIfLocalEvidenceIsAhead.
           stubUnsettledIdentityRead(
             kind0: [
               _event(
                 id: _eventId(14),
                 tags: [
                   ['i', 'github:octocat', 'abc'],
+                  ['i', 'mastodon:only-on-kind-0', 'xyz'],
                 ],
               ),
             ],
@@ -1610,6 +1614,13 @@ void main() {
           );
 
           verify(() => nostrClient.publishEventAwaitOk(any())).called(1);
+          expect(
+            signedTags,
+            contains(equals(['i', 'mastodon:only-on-kind-0', 'xyz'])),
+            reason:
+                'the publish base must be the fresh kind-0 read, not the '
+                'local snapshot',
+          );
         },
       );
 

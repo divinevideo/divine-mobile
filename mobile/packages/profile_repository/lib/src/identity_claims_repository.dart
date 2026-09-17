@@ -627,12 +627,6 @@ class IdentityClaimsRepository {
       final cachedRow = await _cachedIdentityRow(pubkey);
       final cached = _decodeSnapshotRow(cachedRow, pubkey);
       if (cached != null && cached.isNotEmpty) {
-        Log.warning(
-          'Inconclusive kind-$identityEventKind read for '
-          '${pubkeyForLogs(pubkey)}; serving the snapshot with '
-          '${cached.length} claim tag(s) rather than the kind-0 fallback',
-          name: 'IdentityClaimsRepository',
-        );
         // Only a kind-10011-sourced snapshot is evidence that the unsettled
         // read was lagging. A kind-0-sourced row is what the fallback itself
         // wrote (profile_repository.dart caches kind-0 tags with sourceKind 0),
@@ -644,21 +638,45 @@ class IdentityClaimsRepository {
             'known to have claims — refusing to publish over them',
           );
         }
-        if (!forWrite) return _IdentityEventBase(tags: cached, content: '');
+        if (!forWrite) {
+          Log.warning(
+            'Inconclusive kind-$identityEventKind read for '
+            '${pubkeyForLogs(pubkey)}; serving the snapshot with '
+            '${cached.length} claim tag(s) rather than the kind-0 fallback',
+            name: 'IdentityClaimsRepository',
+          );
+          return _IdentityEventBase(tags: cached, content: '');
+        }
+        // Write path, kind-0-sourced snapshot. Deliberately falls through to a
+        // fresh kind-0 read rather than publishing on the snapshot, so
+        // _refuseIfLocalEvidenceIsAhead still gets to compare the publish base
+        // against what this device already knows.
+        Log.warning(
+          'Inconclusive kind-$identityEventKind read for '
+          '${pubkeyForLogs(pubkey)} with a kind-0-sourced snapshot; reading '
+          'kind-0 fresh so the publish base stays checkable',
+          name: 'IdentityClaimsRepository',
+        );
+      } else {
+        // No snapshot to prefer, so the kind-0 fallback below is all there is.
+        // Say so plainly: a later empty result is not evidence of no claims.
+        Log.warning(
+          'Inconclusive kind-$identityEventKind read for '
+          '${pubkeyForLogs(pubkey)} and no snapshot to fall back on; '
+          'continuing to kind-0, which cannot distinguish "no claims" from '
+          '"claims did not arrive"',
+          name: 'IdentityClaimsRepository',
+        );
       }
-      // No snapshot to prefer, so the kind-0 fallback below is all there is.
-      // Say so plainly: a later empty result is not evidence of no claims.
-      Log.warning(
-        'Inconclusive kind-$identityEventKind read for '
-        '${pubkeyForLogs(pubkey)} and no snapshot to fall back on; '
-        'continuing to kind-0, which cannot distinguish "no claims" from '
-        '"claims did not arrive"',
-        name: 'IdentityClaimsRepository',
-      );
     }
 
-    final legacyRead = await _newestEventOfKind(client, pubkey, 0);
-    final legacyEvent = legacyRead.event;
+    // Only the event: kind-0 does not get the same suspicion as kind 10011.
+    // Every profile has a kind-0 and every relay carries it, so an unsettled
+    // kind-0 read is not the "one relay holds it and did not answer" shape
+    // this block exists for — and the write path's own guard
+    // (_refuseIfLocalEvidenceIsAhead) already compares this base against the
+    // snapshot before anything is published.
+    final legacyEvent = (await _newestEventOfKind(client, pubkey, 0)).event;
     if (legacyEvent != null) {
       final tags = _mergeWithLastPublished(
         pubkey,
