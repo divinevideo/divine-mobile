@@ -20,9 +20,9 @@ import 'package:openvine/services/performance_monitoring_service.dart';
 /// The span ends when the response body ends — completed, failed, or the
 /// subscription cancelled — so the reported duration covers the transfer, not
 /// just time to first byte. A caller that takes a [http.StreamedResponse] and
-/// never listens to its stream leaves the span open; that already leaks the
-/// underlying connection, so it is a bug at the call site rather than
-/// something this client papers over.
+/// never listens to its stream leaves both the span and the operation trace
+/// open; that already leaks the underlying connection, so it is a bug at the
+/// call site rather than something this client papers over.
 class PerformanceHttpClient extends http.BaseClient {
   PerformanceHttpClient({
     required http.Client inner,
