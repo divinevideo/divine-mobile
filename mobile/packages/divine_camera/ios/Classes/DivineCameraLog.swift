@@ -21,17 +21,19 @@ final class DivineCameraLog {
     private init() {}
 
     private let sinkLock = NSLock()
-    private var _sink: ((String, String, String) -> Void)?
+    private var _sink: ((String, String, String, Double) -> Void)?
 
-    /// Forwards `(level, message, name)` to Dart. `level` is one of
-    /// `debug`, `info`, `warning`, `error`. Set by the plugin; `nil` until then.
+    /// Forwards `(level, message, name, timestampMs)` to Dart. `level` is one
+    /// of `debug`, `info`, `warning`, `error`; `timestampMs` is milliseconds
+    /// since the epoch, stamped at the call site. Set by the plugin; `nil`
+    /// until then.
     ///
     /// Lock-guarded: the UI engine reclaims ownership from non-main queues
     /// (e.g. `CameraController.captureOutput` on `videoOutputQueue`) while
     /// `handle`/`emit` touch it on other queues. The lock serializes the
     /// non-atomic closure store/load so a write is never torn against a read.
     /// See #5128.
-    var sink: ((String, String, String) -> Void)? {
+    var sink: ((String, String, String, Double) -> Void)? {
         get {
             sinkLock.lock()
             defer { sinkLock.unlock() }
@@ -61,11 +63,17 @@ final class DivineCameraLog {
     }
 
     private func emit(_ level: String, _ message: String, _ name: String) {
+        // Stamp here, on whichever queue raised the event. The sink hops to
+        // main before it reaches Dart, and Dart stamps on arrival, so without
+        // this a line held up by a busy or suspending main queue reads exactly
+        // like native work that ran late. Milliseconds since the epoch; Dart
+        // renders it beside its own UTC stamp. See #9291.
+        let timestampMs = Date().timeIntervalSince1970 * 1000
         // Keep the console fallback so on-device debugging is unchanged.
         print("[\(name)] \(message)")
         // Snapshot under the lock, then invoke outside it so the forwarding
         // closure can log without re-entering the lock.
         let sink = self.sink
-        sink?(level, message, name)
+        sink?(level, message, name, timestampMs)
     }
 }

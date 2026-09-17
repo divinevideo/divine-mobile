@@ -719,6 +719,13 @@ void main() {
       return matches.isEmpty ? null : matches.last;
     }
 
+    LogEntry? latestEntryWithName(String name) {
+      final matches = LogCaptureService().getRecentLogs().where(
+        (entry) => entry.name == name,
+      );
+      return matches.isEmpty ? null : matches.last;
+    }
+
     test(
       'forwards a warning into UnifiedLogger under the video category',
       () async {
@@ -820,6 +827,57 @@ void main() {
       expect(
         LogCaptureService().getRecentLogs().where(
           (entry) => entry.name == name && entry.message.isEmpty,
+        ),
+        isEmpty,
+      );
+    });
+
+    test(
+      'carries the native emit timestamp into the forwarded message',
+      () async {
+        const name = 'DivineCamera-native-timestamp-unique';
+        const body = 'Recording completed with audio track (durationMs=6300)';
+        await dispatchNativeLog({
+          'level': 'info',
+          'message': body,
+          'name': name,
+          'timestampMs': 1789659688123.0,
+        });
+
+        final entry = latestEntryWithName(name);
+        expect(entry, isNotNull);
+        // Both stamps have to survive, rendered the same way: the native one
+        // says when the event happened, `entry.timestamp` says when the
+        // forward arrived, and the gap is the whole diagnostic (#9291).
+        expect(entry!.message, '[native 2026-09-17T15:41:28.123Z] $body');
+        expect(entry.timestamp.isUtc, isTrue);
+      },
+    );
+
+    test('drops an empty message even when native stamps it', () async {
+      const name = 'DivineCamera-empty-message-stamped-unique';
+      // Positive control: prove the dispatcher reaches the buffer at all
+      // before asserting on an absence (#8617).
+      await dispatchNativeLog({
+        'level': 'warning',
+        'message': 'onNativeLog-empty-message-stamped-control-unique',
+        'name': name,
+        'timestampMs': 1789659688123.0,
+      });
+      expect(latestEntryWithName(name), isNotNull);
+
+      await dispatchNativeLog({
+        'level': 'warning',
+        'message': '',
+        'name': name,
+        'timestampMs': 1789659689456.0,
+      });
+
+      // The empty-message guard reads the raw message, so a stamp cannot
+      // smuggle a contentless line into the export as '[native ...] '.
+      expect(
+        LogCaptureService().getRecentLogs().where(
+          (entry) => entry.message.contains('15:41:29.456'),
         ),
         isEmpty,
       );
