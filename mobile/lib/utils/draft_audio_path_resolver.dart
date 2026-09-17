@@ -2,6 +2,7 @@
 // ABOUTME: by persisting them relative to the app documents directory
 
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/utils/json_tree_rewrite.dart';
 import 'package:path/path.dart' as p;
 
 /// Documents-relative directory that *used* to hold imported audio files.
@@ -150,38 +151,13 @@ String? _belowAudioRoot(String path) {
 Object? _rewriteAudioUrls(
   Object? node,
   String Function(String path) transform,
-) {
-  if (node is List) {
-    List<Object?>? copy;
-    for (var i = 0; i < node.length; i++) {
-      final rewritten = _rewriteAudioUrls(node[i], transform);
-      if (identical(rewritten, node[i])) continue;
-      (copy ??= List<Object?>.of(node))[i] = rewritten;
-    }
-    return copy ?? node;
-  }
-  if (node is! Map) return node;
-
-  final url = _draftLocalAudioUrl(node);
-  if (url != null) {
-    final rewritten = transform(url);
-    if (rewritten == url) return node;
-    return <String, dynamic>{
-      ...Map<String, dynamic>.from(node),
-      'url': rewritten,
-    };
-  }
-
-  Map<String, dynamic>? copy;
-  for (final entry in node.entries) {
-    final key = entry.key;
-    if (key is! String) continue;
-    final rewritten = _rewriteAudioUrls(entry.value, transform);
-    if (identical(rewritten, entry.value)) continue;
-    (copy ??= Map<String, dynamic>.from(node))[key] = rewritten;
-  }
-  return copy ?? node;
-}
+) => rewriteJsonMaps(node, (map) {
+  final url = _draftLocalAudioUrl(map);
+  if (url == null) return null;
+  final rewritten = transform(url);
+  if (rewritten == url) return null;
+  return Map<String, dynamic>.from(map)..['url'] = rewritten;
+});
 
 /// The on-disk url of [node] when it is a draft-local audio event, else `null`.
 ///

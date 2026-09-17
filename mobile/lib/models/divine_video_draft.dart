@@ -18,6 +18,7 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
+import 'package:openvine/utils/editor_state_history_compaction.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -183,15 +184,23 @@ class DivineVideoDraft {
       publishAttempts: json['publishAttempts'] as int? ?? 0,
       sourceDraftId: json['sourceDraftId'] as String?,
       proofManifestJson: json['proofManifestJson'] as String?,
-      editorStateHistory: resolveAudioPaths(
-        (json['editorStateHistory'] as Map<String, dynamic>?) ?? const {},
-        documentsPath,
-        useOriginalPath: useOriginalPath,
+      // Expanded after the paths resolve, so the resolver walks each shared
+      // meta once too.
+      editorStateHistory: expandEditorStateHistory(
+        resolveAudioPaths(
+          (json['editorStateHistory'] as Map<String, dynamic>?) ?? const {},
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
       ),
-      editorEditingParameters: resolveAudioPaths(
-        (json['editorEditingParameters'] as Map<String, dynamic>?) ?? const {},
-        documentsPath,
-        useOriginalPath: useOriginalPath,
+      // Carries its own copy of every clip's manifest, interned the same way.
+      editorEditingParameters: expandProofManifests(
+        resolveAudioPaths(
+          (json['editorEditingParameters'] as Map<String, dynamic>?) ??
+              const {},
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
       ),
       finalRenderedClip: json['finalRenderedClip'] != null
           ? DivineVideoClip.fromJson(
@@ -538,10 +547,15 @@ class DivineVideoDraft {
     if (sourceDraftId != null) 'sourceDraftId': sourceDraftId,
     'publishAttempts': publishAttempts,
     'proofManifestJson': proofManifestJson,
+    // Compacted first so the path rewrite walks each shared meta once.
     if (editorStateHistory.isNotEmpty)
-      'editorStateHistory': toPortableAudioPaths(editorStateHistory),
+      'editorStateHistory': toPortableAudioPaths(
+        compactEditorStateHistory(editorStateHistory),
+      ),
     if (editorEditingParameters.isNotEmpty)
-      'editorEditingParameters': toPortableAudioPaths(editorEditingParameters),
+      'editorEditingParameters': toPortableAudioPaths(
+        compactProofManifests(editorEditingParameters),
+      ),
     if (finalRenderedClip != null)
       'finalRenderedClip': finalRenderedClip!.toJson(),
     if (collaboratorPubkeys.isNotEmpty)

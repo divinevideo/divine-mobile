@@ -80,6 +80,7 @@ void main() {
       required String id,
       required String audioPath,
       required String audioId,
+      int entries = 1,
     }) => drafts.saveDraft(
       DivineVideoDraft.create(
         id: id,
@@ -98,15 +99,16 @@ void main() {
         hashtags: const {},
         selectedApproach: 'video',
         editorStateHistory: {
-          'position': 0,
+          'position': entries - 1,
           'history': [
-            {
-              'meta': {
-                VideoEditorConstants.audioStateHistoryKey: [
-                  localTrack(id: audioId, filePath: audioPath).toJson(),
-                ],
+            for (var i = 0; i < entries; i++)
+              {
+                'meta': {
+                  VideoEditorConstants.audioStateHistoryKey: [
+                    localTrack(id: audioId, filePath: audioPath).toJson(),
+                  ],
+                },
               },
-            },
           ],
         },
       ),
@@ -238,6 +240,61 @@ void main() {
         );
         expect(references.isComplete, isFalse);
       });
+
+      // A reference that resolves to nothing means the draft did not load
+      // whole. It cannot hide a track on its own — compaction only points an
+      // entry at a meta identical to one still in the same blob, and the
+      // paths are unioned into a set — but the sweep's contract is that a
+      // store it could not read makes the reference set a lower bound, and
+      // reclaiming against a lower bound is what costs a user audio they
+      // still play.
+      test(
+        'reports incomplete when a draft has an unresolved meta reference',
+        () async {
+          await saveDraftWithAudio(
+            id: 'draft_ref',
+            audioPath: p.join(
+              documents.path,
+              'draft_audio_imports',
+              'draft_ref',
+              'kept.m4a',
+            ),
+            audioId: 'local_import_ref',
+            // Three entries: the last one is the entry the editor is on and
+            // is stored whole, so the middle one is the reference.
+            entries: 3,
+          );
+
+          final row = (await database.draftsDao.getAllDrafts()).firstWhere(
+            (r) => r.id == 'draft_ref',
+          );
+          final blob = jsonDecode(row.data) as Map<String, dynamic>;
+          final history =
+              (blob['editorStateHistory'] as Map)['history'] as List;
+          expect(
+            (history[1] as Map)['divineMetaRef'],
+            0,
+            reason: 'the repeated meta must have been stored as a reference',
+          );
+          (history[1] as Map)['divineMetaRef'] = 9;
+          await database.draftsDao.upsertDraft(
+            id: 'draft_ref',
+            title: 'Audio draft',
+            description: '',
+            publishStatus: 'draft',
+            createdAt: DateTime(2025),
+            lastModified: DateTime(2025),
+            renderedFilePath: null,
+            renderedThumbnailPath: null,
+            data: jsonEncode(blob),
+          );
+
+          final references = await createService().referencedAudioFilenames();
+
+          expect(references.filenames, contains('kept.m4a'));
+          expect(references.isComplete, isFalse);
+        },
+      );
 
       test(
         'reports incomplete when a saved-sound bucket will not decode',

@@ -9,6 +9,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
+import 'package:openvine/utils/editor_state_history_compaction.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,6 +80,13 @@ class LocalAudioCleanupService {
   /// indexed column — and never throws: a blob that will not parse is logged,
   /// skipped, and reported through [LocalAudioReferences.isComplete].
   ///
+  /// A blob that parses can still be read short. The persisted editor history
+  /// stores one copy of a meta and points the entries that repeat it at that
+  /// copy, so a draft's audio can be named in a single place rather than in
+  /// every entry; if that reference does not resolve, the tracks it covered
+  /// are absent from the load without anything throwing. Those drafts are
+  /// reported through [LocalAudioReferences.isComplete] too.
+  ///
   /// Callers run this *after* removing the draft or saved sound they are
   /// cleaning up, so everything it sees is a survivor and there is nothing to
   /// exclude.
@@ -105,6 +113,17 @@ class LocalAudioCleanupService {
           category: LogCategory.video,
         );
         continue;
+      }
+      if (editorStateHistoryHasUnresolvedMetaReferences(
+        draft.editorStateHistory,
+      )) {
+        isComplete = false;
+        Log.error(
+          '🧹 Draft ${row.id} loaded with editor-history meta references that '
+          'resolve to nothing; the audio it names is a lower bound',
+          name: _logName,
+          category: LogCategory.video,
+        );
       }
       for (final path in draft.localAudioFilePaths) {
         filenames.add(p.basename(path));
