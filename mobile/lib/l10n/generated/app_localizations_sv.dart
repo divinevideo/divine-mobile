@@ -796,6 +796,10 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Kunde inte nå nätverket. Kontrollera din anslutning och försök igen.';
+
+  @override
   String get profilePinFailed => 'Videon kunde inte fästas. Försök igen.';
 
   @override

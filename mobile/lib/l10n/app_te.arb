@@ -616,6 +616,7 @@
   "profileSetupClaimFailed": "వినియోగదారు పేరును క్లెయిమ్ చేయడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "profileSetupPublishFailed": "ప్రొఫైల్‌ను ప్రచురించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "profileSetupNoRelaysConnected": "నెట్‌వర్క్‌ని చేరుకోవడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
+  "profilePinConnectionFailed": "నెట్‌వర్క్‌ని చేరుకోవడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
   "profileSetupDisplayNameLabel": "ప్రదర్శన పేరు",
   "profileSetupDisplayNameRequired": "దయచేసి ప్రదర్శన పేరును నమోదు చేయండి",
   "profileSetupBioLabel": "బయో (ఐచ్ఛికం)",

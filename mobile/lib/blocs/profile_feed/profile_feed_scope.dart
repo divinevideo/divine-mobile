@@ -71,61 +71,80 @@ class ProfileFeedScope extends ConsumerWidget {
           attemptTracker: enrichmentAttemptTracker,
         ),
       ),
-      child: MultiBlocListener(
-        listeners: [
-          BlocListener<ProfileFeedCubit, ProfileFeedState>(
-            listenWhen: (previous, current) =>
-                !previous.hasLoadMoreError && current.hasLoadMoreError,
-            listener: (context, state) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                DivineSnackbarContainer.snackBar(
-                  context.l10n.profileFeedLoadMoreError,
-                  error: true,
-                ),
-              );
-            },
-          ),
-          BlocListener<ProfileFeedCubit, ProfileFeedState>(
-            listenWhen: (previous, current) =>
-                previous.pinFeedback != current.pinFeedback &&
-                current.pinFeedback != ProfileFeedPinFeedback.none,
-            listener: (context, state) {
-              final l10n = context.l10n;
-              final (message, isError) = switch (state.pinFeedback) {
-                ProfileFeedPinFeedback.pinned => (
-                  l10n.profilePinSuccess,
-                  false,
-                ),
-                ProfileFeedPinFeedback.unpinned => (
-                  l10n.profileUnpinSuccess,
-                  false,
-                ),
-                ProfileFeedPinFeedback.pinLimitReached => (
-                  l10n.profilePinLimitReached(ProfileFeedState.maxPinnedVideos),
-                  true,
-                ),
-                ProfileFeedPinFeedback.pinFailed => (
-                  l10n.profilePinFailed,
-                  true,
-                ),
-                ProfileFeedPinFeedback.unpinFailed => (
-                  l10n.profileUnpinFailed,
-                  true,
-                ),
-                ProfileFeedPinFeedback.none => (null, false),
-              };
-              if (message == null) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                DivineSnackbarContainer.snackBar(message, error: isError),
-              );
-            },
-          ),
-        ],
+      child: ProfileFeedFeedbackListeners(
         child: _BlocklistVersionForwarder(
           version: blocklistVersion,
           child: child,
         ),
       ),
+    );
+  }
+}
+
+/// Surfaces transient profile-feed failures without coupling the provider
+/// bridge to snackbar behavior.
+class ProfileFeedFeedbackListeners extends StatelessWidget {
+  const ProfileFeedFeedbackListeners({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ProfileFeedCubit, ProfileFeedState>(
+          listenWhen: (previous, current) =>
+              !previous.hasLoadMoreError && current.hasLoadMoreError,
+          listener: (context, state) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              DivineSnackbarContainer.snackBar(
+                context.l10n.profileFeedLoadMoreError,
+                error: true,
+              ),
+            );
+          },
+        ),
+        BlocListener<ProfileFeedCubit, ProfileFeedState>(
+          listenWhen: (previous, current) =>
+              previous.pinFeedback != current.pinFeedback &&
+              current.pinFeedback != ProfileFeedPinFeedback.none,
+          listener: (context, state) {
+            final l10n = context.l10n;
+            final (message, isError) = switch (state.pinFeedback) {
+              ProfileFeedPinFeedback.pinned => (
+                l10n.profilePinSuccess,
+                false,
+              ),
+              ProfileFeedPinFeedback.unpinned => (
+                l10n.profileUnpinSuccess,
+                false,
+              ),
+              ProfileFeedPinFeedback.pinLimitReached => (
+                l10n.profilePinLimitReached(ProfileFeedState.maxPinnedVideos),
+                true,
+              ),
+              ProfileFeedPinFeedback.pinConnectionFailed => (
+                l10n.profilePinConnectionFailed,
+                true,
+              ),
+              ProfileFeedPinFeedback.pinFailed => (
+                l10n.profilePinFailed,
+                true,
+              ),
+              ProfileFeedPinFeedback.unpinFailed => (
+                l10n.profileUnpinFailed,
+                true,
+              ),
+              ProfileFeedPinFeedback.none => (null, false),
+            };
+            if (message == null) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              DivineSnackbarContainer.snackBar(message, error: isError),
+            );
+          },
+        ),
+      ],
+      child: child,
     );
   }
 }

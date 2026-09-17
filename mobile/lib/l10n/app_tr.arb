@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Kullanıcı adı alınamadı. Lütfen tekrar dene.",
     "profileSetupPublishFailed": "Profil yayınlanamadı. Lütfen tekrar dene.",
     "profileSetupNoRelaysConnected": "Ağa ulaşılamadı. Bağlantını kontrol et ve tekrar dene.",
+    "profilePinConnectionFailed": "Ağa ulaşılamadı. Bağlantını kontrol et ve tekrar dene.",
     "profileSetupDisplayNameLabel": "Görünen Ad",
     "profileSetupDisplayNameRequired": "Lütfen bir görünen ad gir",
     "profileSetupBioLabel": "Biyografi (Opsiyonel)",

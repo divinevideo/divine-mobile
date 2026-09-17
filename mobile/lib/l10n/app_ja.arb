@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "ユーザー名の取得がうまくいかなかった。もう一回試してみて。",
     "profileSetupPublishFailed": "プロフィールの公開がうまくいかなかった。もう一回試してみて。",
     "profileSetupNoRelaysConnected": "ネットワークに接続できなかった。接続を確認してもう一回試してみて。",
+    "profilePinConnectionFailed": "ネットワークに接続できなかった。接続を確認してもう一回試してみて。",
     "profileSetupDisplayNameLabel": "表示名",
     "profileSetupDisplayNameRequired": "表示名を入力してね",
     "profileSetupBioLabel": "自己紹介 (任意)",

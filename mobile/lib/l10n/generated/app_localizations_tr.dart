@@ -752,6 +752,10 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Ağa ulaşılamadı. Bağlantını kontrol et ve tekrar dene.';
+
+  @override
   String get profilePinFailed => 'Bu video sabitlenemedi. Tekrar dene.';
 
   @override

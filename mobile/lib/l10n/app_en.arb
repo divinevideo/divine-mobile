@@ -563,13 +563,17 @@
       }
     }
   },
+  "profilePinConnectionFailed": "Couldn't reach the network. Check your connection and try again.",
+  "@profilePinConnectionFailed": {
+    "description": "Snackbar when a profile pin or unpin could not reach the relays."
+  },
   "profilePinFailed": "Couldn't pin that video. Try again.",
   "@profilePinFailed": {
-    "description": "Snackbar when pinning a video failed (offline, relay rejected, signing failed)."
+    "description": "Snackbar when pinning a video failed after reaching the relays, such as a rejection or signing failure."
   },
   "profileUnpinFailed": "Couldn't unpin that video. Try again.",
   "@profileUnpinFailed": {
-    "description": "Snackbar when unpinning a video failed (offline, relay rejected, signing failed)."
+    "description": "Snackbar when unpinning a video failed after reaching the relays, such as a rejection or signing failure."
   },
   "profileShowMore": "Show more",
   "profileShowLess": "Show less",

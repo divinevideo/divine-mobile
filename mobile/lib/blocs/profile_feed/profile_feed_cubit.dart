@@ -832,10 +832,22 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
           pinFeedback: event.quiet
               ? null
               : switch (result.failure) {
+                  ProfilePinFailure.couldNotReachRelays ||
+                  ProfilePinFailure.timedOut =>
+                    ProfileFeedPinFeedback.pinConnectionFailed,
                   ProfilePinFailure.limitReached =>
-                    ProfileFeedPinFeedback.pinLimitReached,
-                  _ when isPin => ProfileFeedPinFeedback.pinFailed,
-                  _ => ProfileFeedPinFeedback.unpinFailed,
+                    isPin
+                        ? ProfileFeedPinFeedback.pinLimitReached
+                        : ProfileFeedPinFeedback.unpinFailed,
+                  ProfilePinFailure.notAuthenticated ||
+                  ProfilePinFailure.publishDidNotComplete =>
+                    isPin
+                        ? ProfileFeedPinFeedback.pinFailed
+                        : ProfileFeedPinFeedback.unpinFailed,
+                  null =>
+                    isPin
+                        ? ProfileFeedPinFeedback.pinFailed
+                        : ProfileFeedPinFeedback.unpinFailed,
                 },
         ),
       );

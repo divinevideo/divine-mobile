@@ -714,6 +714,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed => 'ネットワークに接続できなかった。接続を確認してもう一回試してみて。';
+
+  @override
   String get profilePinFailed => 'この動画をピン留めできませんでした。もう一度お試しください。';
 
   @override

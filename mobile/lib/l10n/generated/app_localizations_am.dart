@@ -795,6 +795,10 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'አውታረ መረቡ ላይ መድረስ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።';
+
+  @override
   String get profilePinFailed => 'ያንን ቪዲዮ መስካት አልተቻለም። እንደገና ይሞክሩ።';
 
   @override

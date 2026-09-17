@@ -755,6 +755,10 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Tidak dapat menjangkau jaringan. Periksa koneksimu dan coba lagi.';
+
+  @override
   String get profilePinFailed => 'Video itu gagal disematkan. Coba lagi.';
 
   @override

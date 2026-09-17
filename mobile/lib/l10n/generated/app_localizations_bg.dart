@@ -824,6 +824,10 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Не успяхме да се свържем с мрежата. Провери връзката си и опитай пак.';
+
+  @override
   String get profilePinFailed => 'Видеото не можа да се закачи. Опитай пак.';
 
   @override

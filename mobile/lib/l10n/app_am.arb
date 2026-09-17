@@ -434,6 +434,7 @@
     "profileSetupClaimFailed": "የተጠቃሚ ስም መጠየቅ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
     "profileSetupPublishFailed": "መገለጫን ማተም አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
     "profileSetupNoRelaysConnected": "አውታረ መረቡ ላይ መድረስ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።",
+    "profilePinConnectionFailed": "አውታረ መረቡ ላይ መድረስ አልተቻለም። ግንኙነትዎን ይፈትሹ እና እንደገና ይሞክሩ።",
     "profileSetupDisplayNameLabel": "የማሳያ ስም",
     "profileSetupDisplayNameRequired": "እባክዎ የማሳያ ስም ያስገቡ",
     "profileSetupBioLabel": "ባዮ (አማራጭ)",

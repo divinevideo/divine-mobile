@@ -815,6 +815,10 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Kan het netwerk niet bereiken. Controleer je verbinding en probeer het opnieuw.';
+
+  @override
   String get profilePinFailed =>
       'Die video kon niet worden vastgepind. Probeer het opnieuw.';
 

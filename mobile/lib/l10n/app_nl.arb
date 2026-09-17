@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Gebruikersnaam claimen mislukt. Probeer het opnieuw.",
     "profileSetupPublishFailed": "Profiel publiceren mislukt. Probeer het opnieuw.",
     "profileSetupNoRelaysConnected": "Kan het netwerk niet bereiken. Controleer je verbinding en probeer het opnieuw.",
+    "profilePinConnectionFailed": "Kan het netwerk niet bereiken. Controleer je verbinding en probeer het opnieuw.",
     "profileSetupDisplayNameLabel": "Weergavenaam",
     "profileSetupDisplayNameRequired": "Voer een weergavenaam in",
     "profileSetupBioLabel": "Bio (optioneel)",

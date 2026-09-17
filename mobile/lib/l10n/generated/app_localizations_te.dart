@@ -837,6 +837,10 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'నెట్‌వర్క్‌ని చేరుకోవడం సాధ్యపడలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get profilePinFailed =>
       'ఆ వీడియోను పిన్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
 

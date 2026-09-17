@@ -737,6 +737,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed => '无法连接网络。请检查连接后重试。';
+
+  @override
   String get profilePinFailed => '无法置顶这个视频，再试一次。';
 
   @override

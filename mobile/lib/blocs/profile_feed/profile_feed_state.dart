@@ -23,6 +23,7 @@ enum ProfileFeedPinFeedback {
   pinned,
   unpinned,
   pinLimitReached,
+  pinConnectionFailed,
   pinFailed,
   unpinFailed,
 }

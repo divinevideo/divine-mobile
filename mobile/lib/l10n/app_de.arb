@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Benutzername konnte nicht reserviert werden. Bitte versuch es nochmal.",
     "profileSetupPublishFailed": "Profil konnte nicht veröffentlicht werden. Bitte versuch es nochmal.",
     "profileSetupNoRelaysConnected": "Netzwerk nicht erreichbar. Überprüfe deine Verbindung und versuch es nochmal.",
+    "profilePinConnectionFailed": "Netzwerk nicht erreichbar. Überprüfe deine Verbindung und versuch es nochmal.",
     "profileSetupDisplayNameLabel": "Anzeigename",
     "profileSetupDisplayNameRequired": "Bitte gib einen Anzeigenamen ein",
     "profileSetupBioLabel": "Bio (optional)",

@@ -364,6 +364,7 @@
     "profileSetupClaimFailed": "Impossibile rivendicare il nome utente. Riprova.",
     "profileSetupPublishFailed": "Impossibile pubblicare il profilo. Riprova.",
     "profileSetupNoRelaysConnected": "Impossibile raggiungere la rete. Controlla la connessione e riprova.",
+    "profilePinConnectionFailed": "Impossibile raggiungere la rete. Controlla la connessione e riprova.",
     "profileSetupDisplayNameLabel": "Nome visualizzato",
     "profileSetupDisplayNameRequired": "Inserisci un nome visualizzato",
     "profileSetupBioLabel": "Bio (opzionale)",

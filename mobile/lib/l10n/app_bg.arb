@@ -403,6 +403,7 @@
     "profileSetupClaimFailed": "Не успяхме да запазим потребителското име. Опитай пак.",
     "profileSetupPublishFailed": "Профилът не се публикува. Опитай пак.",
     "profileSetupNoRelaysConnected": "Не успяхме да се свържем с мрежата. Провери връзката си и опитай пак.",
+    "profilePinConnectionFailed": "Не успяхме да се свържем с мрежата. Провери връзката си и опитай пак.",
     "profileSetupDisplayNameLabel": "Име за показване",
     "profileSetupDisplayNameRequired": "Въведи име за показване",
     "profileSetupBioLabel": "Био (по избор)",

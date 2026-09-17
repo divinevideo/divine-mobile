@@ -822,6 +822,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get profilePinConnectionFailed =>
+      'Couldn\'t reach the network. Check your connection and try again.';
+
+  @override
   String get profilePinFailed => 'Couldn\'t pin that video. Try again.';
 
   @override
