@@ -114,7 +114,9 @@ final class ProfileFeedPinRequested extends ProfileFeedPinMutationRequested {
 /// The grid sends it [quiet] after a successful delete of a pinned video:
 /// the deleted coordinate would otherwise keep occupying one of the pin
 /// slots with no tile left to unpin it from. That cleanup is best-effort and
-/// rides on the delete's own snackbar, so neither outcome announces itself.
+/// rides on the delete's own snackbar, so neither outcome announces itself;
+/// one that never lands is retried by the next profile open, which releases
+/// every pinned coordinate the relays report deleted.
 final class ProfileFeedUnpinRequested extends ProfileFeedPinMutationRequested {
   const ProfileFeedUnpinRequested(super.video, {super.quiet});
 }

@@ -749,6 +749,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
 
   /// Fetches the pinned videos that neither the loaded window nor an earlier
   /// resolution holds, then re-derives the sequence so they take their place.
+  /// Whatever still shows no video afterwards is offered for release.
   Future<void> _resolveMissingPinnedVideos(
     Emitter<ProfileFeedState> emit,
   ) async {
@@ -759,21 +760,63 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     final missing = _pinnedCoordinates
         .where((coordinate) => !loaded.contains(coordinate))
         .toList();
-    if (missing.isEmpty) return;
+
+    if (missing.isNotEmpty) {
+      try {
+        final videos = await _videosRepository.getVideosByAddressableIds(
+          missing,
+          cacheResults: true,
+        );
+        if (isClosed) return;
+        for (final video in videos) {
+          final coordinate = video.addressableId;
+          if (coordinate != null && missing.contains(coordinate)) {
+            _resolvedPinnedVideos[coordinate] = video;
+          }
+        }
+        emit(state.copyWith(videos: _applyFeedFilters(_unfilteredVideos)));
+      } on Object catch (error, stackTrace) {
+        if (isClosed) return;
+        addError(error, stackTrace);
+        // A failed resolution says nothing about which pins are gone.
+        return;
+      }
+    }
+    await _releaseDeletedPins(emit);
+  }
+
+  /// Frees the slots of pinned videos that show nothing: unresolved, or
+  /// resolved to a version this device knows is deleted. The repository
+  /// releases only what the relays confirm deleted, so a pin that merely
+  /// failed to resolve this once stays put. A video deleted on Web, or whose
+  /// quiet unpin after an in-app delete never landed, is cleaned up here on
+  /// the next profile open instead of holding its slot for good (#9263).
+  /// Quiet on every outcome: the owner did not ask for it by name.
+  Future<void> _releaseDeletedPins(Emitter<ProfileFeedState> emit) async {
+    final loaded = <String, VideoEvent>{
+      ..._resolvedPinnedVideos,
+      for (final video in _unfilteredVideos) ?video.addressableId: video,
+    };
+    final unavailable = _pinnedCoordinates.where((coordinate) {
+      final video = loaded[coordinate];
+      return video == null ||
+          _videoEventService.isVideoEventKnownDeleted(video);
+    }).toList();
+    if (unavailable.isEmpty) return;
 
     try {
-      final videos = await _videosRepository.getVideosByAddressableIds(
-        missing,
-        cacheResults: true,
+      final released = await _pinsRepository.releaseDeleted(unavailable);
+      if (isClosed || released == null) return;
+      _pinnedCoordinates = released;
+      _resolvedPinnedVideos.removeWhere(
+        (coordinate, _) => !released.contains(coordinate),
       );
-      if (isClosed) return;
-      for (final video in videos) {
-        final coordinate = video.addressableId;
-        if (coordinate != null && missing.contains(coordinate)) {
-          _resolvedPinnedVideos[coordinate] = video;
-        }
-      }
-      emit(state.copyWith(videos: _applyFeedFilters(_unfilteredVideos)));
+      emit(
+        state.copyWith(
+          videos: _applyFeedFilters(_unfilteredVideos),
+          pinnedCoordinates: released,
+        ),
+      );
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
