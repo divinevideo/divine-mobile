@@ -11,6 +11,8 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/account_credentials_providers.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Page layer: reads the repository from Riverpod and hands it to the cubit.
 ///
@@ -31,8 +33,16 @@ class ChangeEmailScreen extends ConsumerWidget {
 
     return BlocProvider<ChangeEmailCubit>(
       key: ValueKey(repository),
-      create: (_) =>
-          ChangeEmailCubit(repository: repository)..loadCurrentEmail(),
+      create: (_) {
+        final cubit = ChangeEmailCubit(repository: repository);
+        runDetached(
+          cubit.loadCurrentEmail(),
+          'load current email',
+          logName: 'ChangeEmailScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const ChangeEmailView(),
     );
   }
@@ -76,10 +86,15 @@ class _ChangeEmailViewState extends State<ChangeEmailView> {
     };
     if (announcement == null) return;
 
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      announcement,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        announcement,
+        Directionality.of(context),
+      ),
+      'announce change-email status',
+      logName: 'ChangeEmailScreen',
+      category: LogCategory.ui,
     );
   }
 

@@ -17,6 +17,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/content_filters_screen.dart';
 import 'package:openvine/screens/settings/account_content_labels_tile.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -61,17 +62,26 @@ class SafetySettingsScreen extends ConsumerWidget {
         contentBlocklistRepository,
         isAdultContentLocked,
       )),
-      create: (_) => SafetySettingsCubit(
-        ageVerificationService: ageVerificationService,
-        contentFilterService: contentFilterService,
-        videoEventService: videoEventService,
-        divineHostFilterService: divineHostFilterService,
-        provenanceFilterService: provenanceFilterService,
-        moderationLabelService: moderationLabelService,
-        followRepository: followRepository,
-        contentBlocklistRepository: contentBlocklistRepository,
-        isAdultContentLocked: isAdultContentLocked,
-      )..load(),
+      create: (_) {
+        final cubit = SafetySettingsCubit(
+          ageVerificationService: ageVerificationService,
+          contentFilterService: contentFilterService,
+          videoEventService: videoEventService,
+          divineHostFilterService: divineHostFilterService,
+          provenanceFilterService: provenanceFilterService,
+          moderationLabelService: moderationLabelService,
+          followRepository: followRepository,
+          contentBlocklistRepository: contentBlocklistRepository,
+          isAdultContentLocked: isAdultContentLocked,
+        );
+        runDetached(
+          cubit.load(),
+          'load safety settings',
+          logName: 'SafetySettingsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const SafetySettingsView(),
     );
   }

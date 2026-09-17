@@ -11,7 +11,9 @@ import 'package:openvine/blocs/blossom_settings/blossom_settings_state.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Page: bridges `BlossomUploadService` into [BlossomSettingsCubit].
 class BlossomSettingsScreen extends ConsumerWidget {
@@ -28,9 +30,18 @@ class BlossomSettingsScreen extends ConsumerWidget {
     final blossomUploadService = ref.watch(blossomUploadServiceProvider);
     return BlocProvider(
       key: ValueKey(blossomUploadService),
-      create: (_) =>
-          BlossomSettingsCubit(blossomUploadService: blossomUploadService)
-            ..load(),
+      create: (_) {
+        final cubit = BlossomSettingsCubit(
+          blossomUploadService: blossomUploadService,
+        );
+        runDetached(
+          cubit.load(),
+          'load Blossom settings',
+          logName: 'BlossomSettingsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const BlossomSettingsView(),
     );
   }

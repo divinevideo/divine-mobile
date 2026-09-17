@@ -51,6 +51,7 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/share_sheet.dart';
@@ -82,13 +83,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       authService: ref.read(authServiceProvider),
       draftStorageService: ref.read(draftStorageServiceProvider),
       featureFlagService: ref.read(featureFlagServiceProvider),
-    )..load();
+    );
+    runDetached(
+      _accountCubit.load(),
+      'load account settings',
+      logName: 'SettingsScreen',
+      category: LogCategory.ui,
+    );
   }
 
   @override
   void dispose() {
     _deferredLoginOptionsNavigator.dispose();
-    _accountCubit.close();
+    runDetached(
+      _accountCubit.close(),
+      'close account settings',
+      logName: 'SettingsScreen',
+      category: LogCategory.ui,
+    );
     super.dispose();
   }
 

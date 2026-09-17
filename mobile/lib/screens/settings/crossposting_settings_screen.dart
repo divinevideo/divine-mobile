@@ -14,7 +14,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Wires authenticated dependencies for the crossposting settings view.
 class CrosspostingSettingsScreen extends ConsumerWidget {
@@ -47,11 +49,20 @@ class CrosspostingSettingsScreen extends ConsumerWidget {
     final repository = ref.watch(crosspostingRepositoryProvider);
     return BlocProvider(
       key: ValueKey(repository),
-      create: (_) => CrosspostingSettingsCubit(
-        repository: repository,
-        launchOAuth: launchOAuth,
-        nonceGenerator: nonceGenerator,
-      )..load(),
+      create: (_) {
+        final cubit = CrosspostingSettingsCubit(
+          repository: repository,
+          launchOAuth: launchOAuth,
+          nonceGenerator: nonceGenerator,
+        );
+        runDetached(
+          cubit.load(),
+          'load crossposting settings',
+          logName: 'CrosspostingSettingsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const CrosspostingSettingsView(),
     );
   }

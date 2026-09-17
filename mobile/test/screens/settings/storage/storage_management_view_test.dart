@@ -77,8 +77,9 @@ void main() {
 
   group('renders', () {
     testWidgets('shows the cache size and both action buttons', (tester) async {
-      final cubit = StorageCubit(service: service)..loadCacheSize();
+      final cubit = StorageCubit(service: service);
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -94,8 +95,9 @@ void main() {
     testWidgets('shows the cache-limit slider and approximate video count', (
       tester,
     ) async {
-      final cubit = StorageCubit(service: service)..loadCacheSize();
+      final cubit = StorageCubit(service: service);
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -242,8 +244,9 @@ void main() {
       tester,
     ) async {
       when(service.findBrokenClips).thenAnswer((_) async => []);
-      final cubit = StorageCubit(service: service)..loadCacheSize();
+      final cubit = StorageCubit(service: service);
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -263,8 +266,9 @@ void main() {
     ) async {
       when(service.findBrokenClips).thenAnswer((_) async => [_clip('a')]);
       when(() => service.removeBrokenClips(any())).thenAnswer((_) async {});
-      final cubit = StorageCubit(service: service)..loadCacheSize();
+      final cubit = StorageCubit(service: service);
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -306,8 +310,9 @@ void main() {
       tester,
     ) async {
       when(() => service.setVideoCacheLimit(any())).thenAnswer((_) async {});
-      final cubit = StorageCubit(service: service)..loadCacheSize();
+      final cubit = StorageCubit(service: service);
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -340,8 +345,9 @@ void main() {
           return true;
         },
         measureRecoveryFootprint: () async => 42 * 1024 * 1024,
-      )..loadCacheSize();
+      );
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -363,8 +369,9 @@ void main() {
       final cubit = StorageCubit(
         service: service,
         measureRecoveryFootprint: () async => 42 * 1024 * 1024,
-      )..loadCacheSize();
+      );
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -433,7 +440,7 @@ void main() {
             return null;
           });
       addTearDown(
-        () => tester.binding.defaultBinaryMessenger
+        () async => tester.binding.defaultBinaryMessenger
             .setMockDecodedMessageHandler<Object?>(
               SystemChannels.accessibility,
               null,
@@ -445,8 +452,9 @@ void main() {
         service: service,
         recoverAllCaches: () async => true,
         measureRecoveryFootprint: () async => 0,
-      )..loadCacheSize();
+      );
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();
@@ -470,8 +478,9 @@ void main() {
         service: service,
         recoverAllCaches: () async => false,
         measureRecoveryFootprint: () async => 0,
-      )..loadCacheSize();
+      );
       addTearDown(cubit.close);
+      await cubit.loadCacheSize();
 
       await tester.pumpWidget(wrap(cubit));
       await tester.pumpAndSettle();

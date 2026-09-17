@@ -16,6 +16,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/storage_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/byte_size_format.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Settings screen for clearing caches and auditing the clip library.
 class StorageManagementPage extends ConsumerWidget {
@@ -169,10 +171,15 @@ class StorageManagementView extends StatelessWidget {
 
   void _announce(BuildContext context, String? message) {
     if (message == null) return;
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce storage status',
+      logName: 'StorageManagementPage',
+      category: LogCategory.ui,
     );
   }
 }

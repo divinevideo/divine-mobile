@@ -14,6 +14,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Page: bridges Riverpod-provided dependencies into [NotificationSettingsCubit].
 class NotificationSettingsScreen extends ConsumerWidget {
@@ -37,10 +39,19 @@ class NotificationSettingsScreen extends ConsumerWidget {
       // change on auth flip; re-key so the Cubit reloads with the fresh
       // dependencies instead of operating on stale ones.
       key: ValueKey((preferencesService, repository)),
-      create: (_) => NotificationSettingsCubit(
-        preferencesService: preferencesService,
-        notificationRepository: repository,
-      )..load(),
+      create: (_) {
+        final cubit = NotificationSettingsCubit(
+          preferencesService: preferencesService,
+          notificationRepository: repository,
+        );
+        runDetached(
+          cubit.load(),
+          'load notification settings',
+          logName: 'NotificationSettingsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: NotificationSettingsView(
         showNewPosts: ref.watch(
           isFeatureEnabledProvider(FeatureFlag.newPostNotifications),

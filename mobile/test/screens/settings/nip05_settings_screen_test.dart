@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -295,7 +297,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        router.push('/nip05');
+        unawaited(router.push('/nip05'));
         await tester.pumpAndSettle();
 
         await tester.enterText(

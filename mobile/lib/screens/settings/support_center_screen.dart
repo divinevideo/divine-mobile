@@ -17,6 +17,7 @@ import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/clear_logs_confirmation_sheet.dart';
@@ -156,11 +157,21 @@ class SupportCenterScreen extends ConsumerWidget {
       return;
     }
 
-    context.push(BugReportScreen.path);
+    runDetached(
+      context.push(BugReportScreen.path),
+      'open bug report',
+      logName: 'SupportCenterScreen',
+      category: LogCategory.ui,
+    );
   }
 
   void _showFeatureRequest(BuildContext context) {
-    context.push(FeatureRequestScreen.path);
+    runDetached(
+      context.push(FeatureRequestScreen.path),
+      'open feature request',
+      logName: 'SupportCenterScreen',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> _launchUrl(
@@ -404,7 +415,12 @@ class _ExportLogsTileView extends StatelessWidget {
           // DivineSnackbarContainer's action is a plain button, so unlike
           // SnackBarAction it does not dismiss the banner for us.
           messenger.hideCurrentSnackBar();
-          cubit.revealFile(filePath);
+          runDetached(
+            cubit.revealFile(filePath),
+            'reveal exported logs',
+            logName: 'SupportCenterScreen',
+            category: LogCategory.ui,
+          );
         },
       ),
     );
@@ -457,6 +473,6 @@ class _ClearLogsTileView extends StatelessWidget {
   Future<void> _confirmAndClear(BuildContext context) async {
     final confirmed = await showClearLogsConfirmation(context);
     if (confirmed != true || !context.mounted) return;
-    context.read<ClearLogsCubit>().clear();
+    await context.read<ClearLogsCubit>().clear();
   }
 }
