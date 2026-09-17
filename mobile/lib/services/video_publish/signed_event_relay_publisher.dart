@@ -116,8 +116,10 @@ enum _RelayPresence { found, notFound, unknown }
 ///   retry skips the re-send when a relay already serves the event. Without
 ///   one, the attempts are WebSocket only and check no presence.
 ///
-/// The backoff waits are owned by an [AsyncScope]; [dispose] cancels any
-/// pending wait so a retry ladder cannot outlive its owner.
+/// The backoff waits are owned by an [AsyncScope], so [dispose] stops a
+/// retry ladder rather than letting it resume into a torn-down owner. Nothing
+/// in the app disposes the video publisher today: a provider rebuild drops
+/// the old instance undisposed, and a ladder it started runs to completion.
 class SignedEventRelayPublisher {
   SignedEventRelayPublisher({
     required NostrClient nostrClient,
