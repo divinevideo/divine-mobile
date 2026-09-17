@@ -29,6 +29,7 @@ const String proofManifestRefKey = 'divineProofManifestRef';
 
 const String _historyKey = 'history';
 const String _metaKey = 'meta';
+const String _positionKey = 'position';
 
 /// The key a minified export marks itself with.
 ///
@@ -68,12 +69,24 @@ const String _logName = 'EditorStateHistory';
 /// `addHistory` shares the leaf values and [_sameTree] settles a ~10 KB
 /// manifest string on a pointer compare.
 ///
+/// The entry at `position` — the one the editor is on, which the
+/// current-and-backward export always writes last — keeps its meta whole
+/// even when an earlier entry holds an equal one. A build without
+/// [expandEditorStateHistory] (a Shorebird rollback to a baseline older than
+/// this format, or a downgrade) reads a referenced entry as one with an empty
+/// meta: its clips, audio and markers are gone, and the editor's in-place
+/// writes into the empty `const` meta the importer substitutes throw. With
+/// the active entry whole, such a build still opens and edits the draft at
+/// its current state; only undo into a referenced entry degrades there. The
+/// cost is one meta copy per draft.
+///
 /// A minified export uses different key names, so it is returned unchanged.
 /// [history] itself is never mutated.
 Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
   if (history[_minifiedMarkerKey] == true) return history;
   final entries = history[_historyKey];
   if (entries is! List || entries.isEmpty) return history;
+  final activeIndex = history[_positionKey];
 
   final firstIndexByMeta = HashMap<Map<Object?, Object?>, int>(
     equals: _sameTree,
@@ -88,7 +101,7 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
       continue;
     }
     final seen = firstIndexByMeta[meta];
-    if (seen != null) {
+    if (seen != null && i != activeIndex) {
       compactEntries.add(
         Map<String, dynamic>.from(entry)
           ..remove(_metaKey)
@@ -96,7 +109,7 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
       );
       continue;
     }
-    firstIndexByMeta[meta] = i;
+    if (seen == null) firstIndexByMeta[meta] = i;
     compactEntries.add(entry);
   }
 

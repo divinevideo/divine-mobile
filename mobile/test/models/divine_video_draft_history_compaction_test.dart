@@ -146,11 +146,11 @@ void main() {
 
       final entries = _storedEntries(json);
       expect(entries.first.containsKey('meta'), isTrue);
-      expect(
-        entries.skip(1).map((e) => e[historyMetaRefKey]),
-        everyElement(0),
-      );
-      expect(entries.skip(1).any((e) => e.containsKey('meta')), isFalse);
+      // The last entry is the one the editor is on and stays whole.
+      final repeats = entries.sublist(1, entries.length - 1);
+      expect(repeats.map((e) => e[historyMetaRefKey]), everyElement(0));
+      expect(repeats.any((e) => e.containsKey('meta')), isFalse);
+      expect(entries.last, isNot(contains(historyMetaRefKey)));
       expect(
         (json['editorStateHistory'] as Map)[proofManifestsKey],
         [_manifest],

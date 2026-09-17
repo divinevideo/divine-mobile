@@ -70,6 +70,7 @@ void main() {
           _entry(meta: meta),
           _entry(meta: _copy(meta), layer: 1),
           _entry(meta: _copy(meta), layer: 2),
+          _entry(meta: _copy(meta), layer: 3),
         ]),
       );
 
@@ -84,12 +85,37 @@ void main() {
       ]);
     });
 
+    // A build without the expander — a Shorebird rollback to a baseline older
+    // than this format — reads a referenced entry as one with an empty meta,
+    // and the importer's `const` meta then throws on the editor's in-place
+    // writes. The entry the editor is on stays whole so such a build still
+    // opens and edits the draft at its current state.
+    test('keeps the meta of the entry at position whole', () {
+      final meta = _meta();
+      final compact = compactEditorStateHistory(
+        _export([
+          _entry(meta: meta),
+          _entry(meta: _copy(meta), layer: 1),
+          _entry(meta: _copy(meta), layer: 2),
+        ]),
+      );
+
+      final entries = _entriesOf(compact);
+      expect(compact['position'], 2);
+      expect(entries[1][historyMetaRefKey], 0);
+      expect(entries[2], isNot(contains(historyMetaRefKey)));
+      expect(entries[2].containsKey('meta'), isTrue);
+      final expanded = _entriesOf(expandEditorStateHistory(compact));
+      expect(_deepEquals.equals(expanded[2]['meta'], meta), isTrue);
+    });
+
     test('keeps a meta that differs from the previous one', () {
       final compact = compactEditorStateHistory(
         _export([
           _entry(meta: _meta()),
           _entry(meta: _meta(trimEndMs: 1500), layer: 1),
           _entry(meta: _meta(trimEndMs: 1500), layer: 2),
+          _entry(meta: _meta(trimEndMs: 1500), layer: 3),
         ]),
       );
 
@@ -129,6 +155,7 @@ void main() {
           _entry(meta: meta),
           _entry(layer: 1),
           _entry(meta: _copy(meta), layer: 2),
+          _entry(meta: _copy(meta), layer: 3),
         ]),
       );
 
@@ -145,7 +172,7 @@ void main() {
     test('stores a meta that returns to an earlier state as a reference', () {
       final compact = compactEditorStateHistory(
         _export([
-          for (var i = 0; i < 6; i++)
+          for (var i = 0; i < 7; i++)
             _entry(
               meta: _meta(trimEndMs: i.isEven ? 0 : 1500),
               layer: i,
@@ -157,10 +184,11 @@ void main() {
       expect(entries[0].containsKey('meta'), isTrue);
       expect(entries[1].containsKey('meta'), isTrue);
       expect(
-        entries.skip(2).map((e) => e[historyMetaRefKey]),
+        entries.sublist(2, 6).map((e) => e[historyMetaRefKey]),
         [0, 1, 0, 1],
         reason: 'each repeat points at the first entry holding that meta',
       );
+      expect(entries[6], isNot(contains(historyMetaRefKey)));
     });
 
     test('round-trips a toggle run losslessly', () {
@@ -528,7 +556,11 @@ void main() {
 
     test('does not mutate its input', () {
       final stored = compactEditorStateHistory(
-        _export([_entry(meta: _meta()), _entry(meta: _meta(), layer: 1)]),
+        _export([
+          _entry(meta: _meta()),
+          _entry(meta: _meta(), layer: 1),
+          _entry(meta: _meta(), layer: 2),
+        ]),
       );
       final before = jsonEncode(stored);
       expect(before, contains('"$historyMetaRefKey"'));

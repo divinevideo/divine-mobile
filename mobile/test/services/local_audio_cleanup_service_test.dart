@@ -260,7 +260,9 @@ void main() {
               'kept.m4a',
             ),
             audioId: 'local_import_ref',
-            entries: 2,
+            // Three entries: the last one is the entry the editor is on and
+            // is stored whole, so the middle one is the reference.
+            entries: 3,
           );
 
           final row = (await database.draftsDao.getAllDrafts()).firstWhere(
