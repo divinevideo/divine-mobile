@@ -104,6 +104,51 @@ void main() {
       },
     );
 
+    testWidgets(
+      'does not re-present the prompt when a cancellation arrives while the '
+      'app is merely inactive',
+      (tester) async {
+        // iOS resigns active while the system authentication sheet is up.
+        // That is not a background transition and must not be retried.
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        when(
+          () => localAuthentication.isDeviceSupported(),
+        ).thenAnswer((_) async => true);
+
+        var attempts = 0;
+        when(
+          () => localAuthentication.authenticate(
+            localizedReason: any(named: 'localizedReason'),
+            persistAcrossBackgrounding: any(
+              named: 'persistAcrossBackgrounding',
+            ),
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          throw const LocalAuthException(
+            code: LocalAuthExceptionCode.userCanceled,
+          );
+        });
+
+        final resultFuture = authentication.authenticate(reason: 'Verify');
+        await tester.pump();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(await resultFuture, DeviceAuthenticationResult.denied);
+        expect(
+          attempts,
+          1,
+          reason: 'a plain cancellation must not trigger a second prompt',
+        );
+      },
+    );
+
     test(
       'returns unavailable when device authentication is unsupported',
       () async {

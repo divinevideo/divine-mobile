@@ -144,6 +144,15 @@ class _AuthenticationLifecycleObserver extends WidgetsBindingObserver {
     }
   }
 
+  /// Mirrors the states [didChangeAppLifecycleState] counts as backgrounding.
+  /// `inactive` is deliberately excluded: a system authentication sheet makes
+  /// the app inactive on iOS, so treating it as a background transition turns
+  /// an ordinary cancellation into a second prompt.
+  static bool _isBackgrounded(AppLifecycleState? state) =>
+      state == AppLifecycleState.paused ||
+      state == AppLifecycleState.hidden ||
+      state == AppLifecycleState.detached;
+
   Future<void> waitUntilResumed() {
     if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
       return Future<void>.value();
@@ -153,7 +162,7 @@ class _AuthenticationLifecycleObserver extends WidgetsBindingObserver {
 
   Future<bool> detectPendingBackgroundTransition() {
     if (wasBackgrounded ||
-        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+        _isBackgrounded(WidgetsBinding.instance.lifecycleState)) {
       return Future<bool>.value(true);
     }
 
