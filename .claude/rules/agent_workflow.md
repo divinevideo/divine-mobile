@@ -420,9 +420,12 @@ step 1.
 
 ### After every push
 
-Local green does not end the task — CI green does.
+Local green does not end the task, and neither does CI green on its own —
+`pr_takeover.md` §3 requires finished, green checks *and* every review
+finding closed out per §2 before you hand back.
 
 - `gh pr checks <number> --watch`, then read the result.
 - Red → fix and push again, until green.
-- Only after checks have *finished* do you post the handback comment
-  or report the task complete. See `pr_takeover.md` §3.
+- Only after checks have *finished*, and every finding has a fixed /
+  escalated / declined disposition, do you post the handback comment
+  or report the task complete. See `pr_takeover.md` §2 and §3.

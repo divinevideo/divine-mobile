@@ -27,13 +27,26 @@ a fix. See [`pr_takeover.md`](pr_takeover.md).
 - [ ] If it's **someone else's**: every gate in `PR_REVIEW.md` clears
   before you push. Draft or feedback-only ⇒ read-only.
 - [ ] Pin `headRefOid`, fetch the PR head, and verify every cited path, line,
-  identifier, and snippet against that exact commit. A `fatal:` lookup or exit
-  status 128 stops the review; it does not disprove the finding. Check
-  `mergedAt` before choosing a review state, and never submit
-  `CHANGES_REQUESTED` after merge.
+  identifier, and snippet against that exact commit. A `fatal:`/128 from the
+  commit-object lookup stops the review — it's a broken lookup, not evidence.
+  A `fatal:`/128 from the *path* lookup on a resolved commit is the opposite:
+  real evidence the file was deleted, renamed, or moved. Check `mergedAt`
+  before choosing a review state, and never submit `CHANGES_REQUESTED` after
+  merge.
 - [ ] Every review item sorted into fixed / escalated / declined —
   including inline threads fetched via GraphQL, and outdated ones.
 - [ ] Unrequested changes called out separately from review fixes.
+- [ ] **Completing a review means submitting a matching GitHub verdict** —
+  `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` — not just posting findings or a
+  body saying "no actionable findings" as `COMMENTED`. The review request is
+  itself the authorization to post it, so post by default rather than asking.
+  An explicit instruction to keep the review private withholds it; one that
+  holds a single verdict for a named owner still sends the conclusion as a
+  non-approving review.
+  Pick the verdict from the table in
+  [`pr_takeover.md`](pr_takeover.md#submit-an-explicit-review-verdict), pin the
+  reviewed SHA, and verify the saved review's `state`, `commit_id`, and
+  `submitted_at` afterward.
 
 ---
 
@@ -323,3 +336,15 @@ Then:
 - [ ] Leave a single summary comment on the review tagging the reviewer
   when all their blockers are addressed; don't expect them to
   reconstruct it from 20 inline replies.
+- [ ] **Re-reviewing your own prior findings against a fixed head** (not
+  the first triage above): give each one a disposition — **verified
+  fixed** (commit and evidence), **withdrawn** (why it was wrong),
+  **accepted as nonblocking**, or **still blocking / unverified** — never
+  infer "fixed" from a "fixed" comment, a resolved thread, or green CI
+  alone. Resolve a thread you raised only once its finding has one of the
+  first three dispositions; leave another reviewer's threads to them.
+- [ ] When the disposition is clear, submit a fresh `APPROVE` through the
+  same GitHub identity that requested changes, to supersede your own
+  `CHANGES_REQUESTED` — a "fixed" comment or a resolved thread does not
+  clear it by itself. See
+  [`pr_takeover.md`](pr_takeover.md#close-the-loop-on-requested-changes).
