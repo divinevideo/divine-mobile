@@ -109,10 +109,12 @@ enum _RelayPresence { found, notFound, unknown }
 /// * [publishViaWebSocket] — one OK-aware attempt over the relay pool. The
 ///   single-shot path for audio and subtitle events, whose callers keep
 ///   their own null/false handling.
-/// * [publish] — the video-event strategy: REST-first when an
-///   [EventApiClient] is wired, WebSocket fallback, three attempts with a
-///   2s/4s backoff, and a relay-presence check before every retry so a lost
-///   `OK` never turns into a duplicate broadcast.
+/// * [publish] — the video-event strategy: up to three attempts with a 2s/4s
+///   backoff, all sending the same signed event. With an [EventApiClient]
+///   wired, as the app always does, each attempt is REST first with an
+///   OK-aware WebSocket fallback, and a relay-presence check before each
+///   retry skips the re-send when a relay already serves the event. Without
+///   one, the attempts are WebSocket only and check no presence.
 ///
 /// The backoff waits are owned by an [AsyncScope]; [dispose] cancels any
 /// pending wait so a retry ladder cannot outlive its owner.

@@ -309,6 +309,94 @@ void main() {
         );
       });
 
+      test('retries with a 2s then 4s backoff', () {
+        fakeAsync((async) {
+          final event = _signedEvent();
+          var restAttempts = 0;
+          when(() => eventApiClient.publishEvent(any())).thenAnswer((_) async {
+            restAttempts++;
+            return restAttempts == 3
+                ? EventApiAccepted(event.id)
+                : const EventApiTransientFailure('timeout');
+          });
+          stubWebSocket((event) => _rejected(event, 'error: try later'));
+          EventPublishOutcome? outcome;
+
+          unawaited(publisher.publish(event).then((value) => outcome = value));
+          async.flushMicrotasks();
+          expect(restAttempts, 1);
+
+          async.elapse(const Duration(seconds: 1));
+          expect(restAttempts, 1, reason: 'first backoff is 2s');
+          async.elapse(const Duration(seconds: 1));
+          expect(restAttempts, 2);
+
+          async.elapse(const Duration(seconds: 3));
+          expect(restAttempts, 2, reason: 'second backoff is 4s');
+          async.elapse(const Duration(seconds: 1));
+          expect(restAttempts, 3);
+          expect(outcome, EventPublishOutcome.published);
+        });
+      });
+
+      test('stops after three attempts and a final presence check', () {
+        fakeAsync((async) {
+          var restAttempts = 0;
+          when(() => eventApiClient.publishEvent(any())).thenAnswer((_) async {
+            restAttempts++;
+            return const EventApiTransientFailure('timeout');
+          });
+          stubWebSocket((event) => _rejected(event, 'error: try later'));
+          EventPublishOutcome? outcome;
+
+          unawaited(
+            publisher.publish(_signedEvent()).then((value) => outcome = value),
+          );
+          async.elapse(const Duration(minutes: 1));
+
+          expect(restAttempts, 3);
+          expect(outcome, EventPublishOutcome.transientFailure);
+          verify(
+            () => nostrClient.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+            ),
+          ).called(3);
+          expect(async.pendingTimers, isEmpty);
+        });
+      });
+
+      test('dispose cancels a pending backoff instead of retrying', () {
+        fakeAsync((async) {
+          var restAttempts = 0;
+          when(() => eventApiClient.publishEvent(any())).thenAnswer((_) async {
+            restAttempts++;
+            return const EventApiTransientFailure('timeout');
+          });
+          stubWebSocket((event) => _rejected(event, 'error: try later'));
+          Object? error;
+
+          unawaited(
+            publisher
+                .publish(_signedEvent())
+                .then<void>((_) {}, onError: (Object e) => error = e),
+          );
+          async.flushMicrotasks();
+          expect(restAttempts, 1);
+
+          publisher.dispose();
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'dispose must cancel the backoff timer itself',
+          );
+          async.elapse(const Duration(minutes: 1));
+
+          expect(restAttempts, 1, reason: 'no attempt may run after dispose');
+          expect(error, isA<AsyncCancelledException>());
+        });
+      });
+
       test('a REST acceptance publishes without touching WebSocket', () async {
         when(
           () => eventApiClient.publishEvent(any()),
