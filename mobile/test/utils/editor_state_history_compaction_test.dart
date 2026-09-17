@@ -104,6 +104,24 @@ void main() {
       expect(entries[2][historyMetaRefKey], 1);
     });
 
+    // `DeepCollectionEquality` calls 1 and 1.0 equal, so this pair deduped
+    // and the double came back an int — enough to throw in any consumer
+    // reading a volume, a playback speed or a layer scale back out.
+    test('keeps a double apart from the int that equals it', () {
+      final export = _export([
+        _entry(meta: {'volume': 1}),
+        _entry(meta: {'volume': 1.0}, layer: 1),
+      ]);
+
+      final compact = compactEditorStateHistory(export);
+      expect(_entriesOf(compact)[1], isNot(contains(historyMetaRefKey)));
+
+      final expanded = expandEditorStateHistory(compact);
+      final restored = (_entriesOf(expanded)[1]['meta']! as Map)['volume'];
+      expect(restored, isA<double>());
+      expect(restored, 1.0);
+    });
+
     test('skips entries without a meta without breaking the run', () {
       final meta = _meta();
       final compact = compactEditorStateHistory(

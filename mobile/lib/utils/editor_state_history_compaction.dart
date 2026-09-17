@@ -3,7 +3,6 @@
 
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart' show DeepCollectionEquality;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Key the persisted form puts on a history entry whose `meta` is identical to
@@ -39,8 +38,6 @@ const String _minifiedMarkerKey = 'm';
 const String _proofManifestJsonKey = 'proofManifestJson';
 const String _logName = 'EditorStateHistory';
 
-const _metaEquality = DeepCollectionEquality();
-
 /// The persisted form of an exported editor state [history].
 ///
 /// The editor writes the clip list, audio tracks, captions and markers into
@@ -60,8 +57,9 @@ const _metaEquality = DeepCollectionEquality();
 ///  * Every `proofManifestJson` string in the tree is stored once under
 ///    [proofManifestsKey] and each occurrence becomes `proofManifestRef`.
 ///
-/// Comparing metas is cheap: `addHistory` copies the map structure but shares
-/// the leaf strings, so the deep equality resolves each field by identity.
+/// Comparing metas is cheap because `addHistory` copies the map structure but
+/// shares the leaf values, so [_sameTree] settles a ~10 KB manifest string on
+/// a pointer compare rather than reading it.
 ///
 /// A minified export uses different key names, so it is returned unchanged.
 /// [history] itself is never mutated.
@@ -94,7 +92,7 @@ Map<String, dynamic> compactEditorStateHistory(Map<String, dynamic> history) {
       compactEntries.add(entry);
       continue;
     }
-    if (lastMeta != null && _metaEquality.equals(meta, lastMeta)) {
+    if (lastMeta != null && _sameTree(meta, lastMeta)) {
       compactEntries.add(
         Map<String, dynamic>.from(entry)
           ..remove(_metaKey)
@@ -226,6 +224,43 @@ Map<String, dynamic> expandEditorStateHistory(Map<String, dynamic> stored) {
 /// non-String key: this tree is persisted as JSON, where object keys are
 /// Strings by construction, so such a map cannot round-trip and is returned
 /// as it came rather than rewritten.
+/// Whether [a] and [b] are the same JSON tree.
+///
+/// Two differences from `DeepCollectionEquality`, which this replaced:
+///
+///  * It short-circuits on `identical` at every level. That is what makes
+///    comparing metas cheap — `addHistory` shares the leaf values, so a clip's
+///    ~10 KB `proofManifestJson` settles on a pointer compare. The equality it
+///    replaced short-circuits only on the two top-level maps and then
+///    deep-*hashes* both operands in full for every comparison, with no
+///    memoisation, which is the opposite of resolving by identity.
+///  * It keeps `1` and `1.0` apart. `DeepCollectionEquality` calls them equal,
+///    so an int/double pair in otherwise-equal metas deduped and the `double`
+///    came back narrowed to an `int` — enough to throw `type 'int' is not a
+///    subtype of type 'double'` in any consumer reading a `volume`, a
+///    `playbackSpeed` or a layer's `scale` back out.
+bool _sameTree(Object? a, Object? b) {
+  if (identical(a, b)) return true;
+  if (a is Map) {
+    if (b is! Map || a.length != b.length) return false;
+    for (final entry in a.entries) {
+      final other = b[entry.key];
+      if (other == null && !b.containsKey(entry.key)) return false;
+      if (!_sameTree(entry.value, other)) return false;
+    }
+    return true;
+  }
+  if (a is List) {
+    if (b is! List || a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!_sameTree(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (a is num) return b is num && a.runtimeType == b.runtimeType && a == b;
+  return a == b;
+}
+
 /// A copy of [node] sharing none of its maps or lists.
 ///
 /// Leaves are strings, numbers and booleans, which are immutable and safe to
