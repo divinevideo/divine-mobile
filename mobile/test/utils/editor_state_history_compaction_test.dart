@@ -1,0 +1,290 @@
+// ABOUTME: Pins the persisted editor-history form: repeated metas become
+// ABOUTME: references, proof manifests are stored once, and loads round-trip
+
+import 'dart:convert';
+
+import 'package:collection/collection.dart' show DeepCollectionEquality;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/utils/editor_state_history_compaction.dart';
+
+const _deepEquals = DeepCollectionEquality();
+
+/// A ~10 KB attestation, the size a recorded clip's manifest has on device.
+final String _manifestA = jsonEncode({
+  'hash': 'a' * 64,
+  'deviceAttestation': 'A' * 10000,
+});
+final String _manifestB = jsonEncode({
+  'hash': 'b' * 64,
+  'deviceAttestation': 'B' * 10000,
+});
+
+Map<String, dynamic> _clip(String id, String manifest, {int trimEndMs = 0}) => {
+  'id': id,
+  'filePath': '$id.mp4',
+  'durationMs': 2000,
+  'trimEndMs': trimEndMs,
+  'proofManifestJson': manifest,
+};
+
+/// The meta the editor writes into a history entry: the clip list plus the
+/// audio tracks and markers that travel with it.
+Map<String, dynamic> _meta({int trimEndMs = 0}) => {
+  'clips': [
+    _clip('clip_a', _manifestA, trimEndMs: trimEndMs),
+    _clip('clip_b', _manifestB),
+  ],
+  'audio': <Object?>[],
+  'timelineMarkers': [500],
+};
+
+/// Mirrors `addHistory`: a fresh map tree per entry with shared leaf values.
+Map<String, dynamic> _copy(Map<String, dynamic> meta) =>
+    jsonDecode(jsonEncode(meta)) as Map<String, dynamic>;
+
+Map<String, dynamic> _entry({Map<String, dynamic>? meta, int layer = 0}) => {
+  'layers': [
+    {'id': 'text_1', 'x': layer * 10},
+  ],
+  'meta': ?meta,
+};
+
+Map<String, dynamic> _export(List<Map<String, dynamic>> history) => {
+  'version': '1.0.0',
+  'position': history.length - 1,
+  'history': history,
+  'references': {
+    'text_1': {'type': 'text', 'text': 'Hello'},
+  },
+};
+
+List<Map<String, dynamic>> _entriesOf(Map<String, dynamic> history) =>
+    (history['history'] as List).cast<Map<String, dynamic>>();
+
+void main() {
+  group('compactEditorStateHistory', () {
+    test('stores a meta identical to the previous entry as a reference', () {
+      final meta = _meta();
+      final compact = compactEditorStateHistory(
+        _export([
+          _entry(meta: meta),
+          _entry(meta: _copy(meta), layer: 1),
+          _entry(meta: _copy(meta), layer: 2),
+        ]),
+      );
+
+      final entries = _entriesOf(compact);
+      expect(entries[0].containsKey('meta'), isTrue);
+      expect(entries[1], isNot(contains('meta')));
+      expect(entries[1][historyMetaRefKey], 0);
+      expect(entries[2], isNot(contains('meta')));
+      expect(entries[2][historyMetaRefKey], 0);
+      expect(entries[2]['layers'], [
+        {'id': 'text_1', 'x': 20},
+      ]);
+    });
+
+    test('keeps a meta that differs from the previous one', () {
+      final compact = compactEditorStateHistory(
+        _export([
+          _entry(meta: _meta()),
+          _entry(meta: _meta(trimEndMs: 1500), layer: 1),
+          _entry(meta: _meta(trimEndMs: 1500), layer: 2),
+        ]),
+      );
+
+      final entries = _entriesOf(compact);
+      expect(entries[0].containsKey('meta'), isTrue);
+      expect(entries[1].containsKey('meta'), isTrue);
+      expect(entries[1], isNot(contains(historyMetaRefKey)));
+      expect(
+        ((entries[1]['meta'] as Map)['clips'] as List).first,
+        containsPair('trimEndMs', 1500),
+      );
+      expect(entries[2][historyMetaRefKey], 1);
+    });
+
+    test('skips entries without a meta without breaking the run', () {
+      final meta = _meta();
+      final compact = compactEditorStateHistory(
+        _export([
+          _entry(meta: meta),
+          _entry(layer: 1),
+          _entry(meta: _copy(meta), layer: 2),
+        ]),
+      );
+
+      final entries = _entriesOf(compact);
+      expect(entries[1], isNot(contains('meta')));
+      expect(entries[1], isNot(contains(historyMetaRefKey)));
+      expect(entries[2][historyMetaRefKey], 0);
+    });
+
+    test('interns every proof manifest once', () {
+      final compact = compactEditorStateHistory(
+        _export([
+          _entry(meta: _meta()),
+          _entry(meta: _meta(trimEndMs: 1500), layer: 1),
+        ]),
+      );
+
+      expect(compact[proofManifestsKey], [_manifestA, _manifestB]);
+      for (final entry in _entriesOf(compact)) {
+        final clips = (entry['meta'] as Map)['clips'] as List;
+        expect(
+          clips.map((c) => (c as Map)[proofManifestRefKey]),
+          [0, 1],
+        );
+        expect(clips.map((c) => (c as Map).containsKey('proofManifestJson')), [
+          false,
+          false,
+        ]);
+      }
+    });
+
+    test('interns a manifest carried by a layer reference', () {
+      final export = _export([_entry(meta: _meta())]);
+      export['references'] = {
+        'detached_1': {
+          'type': 'widget',
+          'clip': _clip('clip_a', _manifestA),
+        },
+      };
+
+      final compact = compactEditorStateHistory(export);
+
+      expect(compact[proofManifestsKey], [_manifestA, _manifestB]);
+      final reference = (compact['references'] as Map)['detached_1'] as Map;
+      expect((reference['clip'] as Map)[proofManifestRefKey], 0);
+    });
+
+    test('leaves a minified export unchanged', () {
+      final export = _export([_entry(meta: _meta())])..['minify'] = true;
+
+      expect(identical(compactEditorStateHistory(export), export), isTrue);
+    });
+
+    test('leaves an export without history entries unchanged', () {
+      final export = _export([]);
+
+      expect(identical(compactEditorStateHistory(export), export), isTrue);
+    });
+
+    test('does not mutate its input', () {
+      final meta = _meta();
+      final export = _export([
+        _entry(meta: meta),
+        _entry(meta: _copy(meta), layer: 1),
+      ]);
+      final before = jsonEncode(export);
+      expect(before, contains('"proofManifestJson"'));
+
+      compactEditorStateHistory(export);
+
+      expect(jsonEncode(export), before);
+    });
+
+    // The shape from #9206: one text layer dragged around a draft whose clips
+    // carry attestations. Every drag re-stored the whole clip list.
+    test('stops the stored size growing with layer-only edits', () {
+      final meta = _meta();
+      final twoEdits = _export([
+        _entry(meta: meta),
+        _entry(meta: _copy(meta), layer: 1),
+      ]);
+      final twentyEdits = _export([
+        for (var i = 0; i < 20; i++) _entry(meta: _copy(meta), layer: i),
+      ]);
+
+      final twoEditsBytes = jsonEncode(
+        compactEditorStateHistory(twoEdits),
+      ).length;
+      final twentyEditsBytes = jsonEncode(
+        compactEditorStateHistory(twentyEdits),
+      ).length;
+
+      // 18 more entries cost their layer deltas only, not 18 clip lists.
+      expect(twentyEditsBytes - twoEditsBytes, lessThan(2000));
+      expect(
+        twentyEditsBytes,
+        lessThan(jsonEncode(twentyEdits).length ~/ 10),
+      );
+    });
+  });
+
+  group('expandEditorStateHistory', () {
+    test('restores the compact form to the exported one', () {
+      final meta = _meta();
+      final export = _export([
+        _entry(meta: meta),
+        _entry(meta: _copy(meta), layer: 1),
+        _entry(layer: 2),
+        _entry(meta: _meta(trimEndMs: 1500), layer: 3),
+        _entry(meta: _meta(trimEndMs: 1500), layer: 4),
+      ]);
+
+      final stored = jsonDecode(
+        jsonEncode(compactEditorStateHistory(export)),
+      );
+      final expanded = expandEditorStateHistory(
+        stored as Map<String, dynamic>,
+      );
+
+      expect(_deepEquals.equals(expanded, export), isTrue);
+      expect(expanded, isNot(contains(proofManifestsKey)));
+    });
+
+    test('returns a history saved before compaction unchanged', () {
+      final legacy = _export([
+        _entry(meta: _meta()),
+        _entry(meta: _meta(), layer: 1),
+      ]);
+
+      expect(identical(expandEditorStateHistory(legacy), legacy), isTrue);
+    });
+
+    test('gives each referenced entry its own meta map', () {
+      final meta = _meta();
+      final expanded = expandEditorStateHistory(
+        compactEditorStateHistory(
+          _export([_entry(meta: meta), _entry(meta: _copy(meta), layer: 1)]),
+        ),
+      );
+
+      final entries = _entriesOf(expanded);
+      final first = entries[0]['meta'] as Map<String, dynamic>;
+      final second = entries[1]['meta'] as Map<String, dynamic>;
+      expect(identical(first, second), isFalse);
+
+      // The editor assigns into the active entry's meta in place; the entry it
+      // was copied from must not see that write.
+      second['clips'] = <Object?>[];
+      expect(first['clips'], hasLength(2));
+    });
+
+    test('drops a reference that points nowhere', () {
+      final expanded = expandEditorStateHistory(
+        _export([
+          _entry(meta: _meta()),
+          _entry(layer: 1)..[historyMetaRefKey] = 7,
+        ]),
+      );
+
+      final entries = _entriesOf(expanded);
+      expect(entries[1], isNot(contains(historyMetaRefKey)));
+      expect(entries[1], isNot(contains('meta')));
+    });
+
+    test('does not mutate its input', () {
+      final stored = compactEditorStateHistory(
+        _export([_entry(meta: _meta()), _entry(meta: _meta(), layer: 1)]),
+      );
+      final before = jsonEncode(stored);
+      expect(before, contains('"$historyMetaRefKey"'));
+
+      expandEditorStateHistory(stored);
+
+      expect(jsonEncode(stored), before);
+    });
+  });
+}
