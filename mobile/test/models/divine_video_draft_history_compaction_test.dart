@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/utils/editor_state_history_compaction.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -73,6 +74,58 @@ DivineVideoDraft _draft({required int entries}) => DivineVideoDraft(
   },
 );
 
+/// A draft whose history is shaped the way the editor actually exports one.
+///
+/// The fixture above declares version `1.0.0` and no `references`, which is
+/// the pre-3.0 shape the app stopped writing: `ExportStateHistory` writes
+/// `ExportImportVersion.latest` and parks a detached clip layer's whole map —
+/// including its ~10 KB attestation — in the top-level `references` table
+/// rather than under `history[].meta`. So the transforms that cross at both
+/// boundaries, compaction and the portable-path rewrite, were never exercised
+/// on the branch of the tree where the app's own manifests live.
+DivineVideoDraft _realisticDraft({required int entries}) => DivineVideoDraft(
+  id: 'draft_2',
+  clips: [_clip()],
+  title: 'Test Draft',
+  description: '',
+  hashtags: const {},
+  selectedApproach: 'camera',
+  createdAt: DateTime(2025),
+  lastModified: DateTime(2025),
+  publishStatus: PublishStatus.draft,
+  publishAttempts: 0,
+  editorStateHistory: {
+    'version': '6.5.0',
+    'position': entries - 1,
+    'history': [
+      for (var i = 0; i < entries; i++)
+        {
+          'layers': [
+            {'id': 'text_1', 'x': i * 10, 'type': 'text'},
+          ],
+          'meta': _meta(),
+        },
+    ],
+    'references': {
+      '0': {
+        'type': 'widget',
+        'exportConfigs': {
+          'id': 'detached_1',
+          'meta': {detachedClipLayerClipKey: _clip().toJson()},
+        },
+      },
+    },
+    'imgSize': {'width': 1080.0, 'height': 1920.0},
+    'lastRenderedImgSize': {'width': 1080.0, 'height': 1920.0},
+  },
+);
+
+Map<String, dynamic> _storedReferenceClip(Map<String, dynamic> json) =>
+    ((((json['editorStateHistory'] as Map)['references'] as Map)['0']
+                as Map)['exportConfigs']
+            as Map)['meta']
+        as Map<String, dynamic>;
+
 List<Map<String, dynamic>> _storedEntries(Map<String, dynamic> json) =>
     ((json['editorStateHistory'] as Map)['history'] as List)
         .cast<Map<String, dynamic>>();
@@ -136,6 +189,82 @@ void main() {
         return (audio.single as Map)['url'];
       });
       expect(urls, everyElement('$_newDocs/voice_over_recordings/take_1.m4a'));
+    });
+
+    group('on the shape the editor actually exports', () {
+      test(
+        'interns the manifest a detached clip layer parks in references',
+        () {
+          final json = _realisticDraft(entries: 4).toJson();
+
+          expect(
+            (json['editorStateHistory'] as Map)[proofManifestsKey],
+            [_manifest],
+            reason: 'the clip list and the reference share one stored manifest',
+          );
+          final referenceClip =
+              _storedReferenceClip(json)[detachedClipLayerClipKey]! as Map;
+          expect(referenceClip[proofManifestRefKey], 0);
+          expect(referenceClip, isNot(contains('proofManifestJson')));
+        },
+      );
+
+      test(
+        'restores it whole, with audio resolved against the new container',
+        () {
+          final draft = _realisticDraft(entries: 4);
+          final stored = jsonDecode(jsonEncode(draft.toJson()));
+
+          final restored = DivineVideoDraft.fromJson(
+            stored as Map<String, dynamic>,
+            _newDocs,
+          );
+
+          final referenceClip =
+              ((((restored.editorStateHistory['references'] as Map)['0']
+                              as Map)['exportConfigs']
+                          as Map)['meta']
+                      as Map)[detachedClipLayerClipKey]
+                  as Map;
+          expect(referenceClip['proofManifestJson'], _manifest);
+
+          final urls = (restored.editorStateHistory['history']! as List).map((
+            e,
+          ) {
+            final audio = ((e as Map)['meta'] as Map)['audio'] as List;
+            return (audio.single as Map)['url'];
+          });
+          expect(
+            urls,
+            everyElement('$_newDocs/voice_over_recordings/take_1.m4a'),
+          );
+        },
+      );
+
+      test('round-trips losslessly', () {
+        final draft = _realisticDraft(entries: 6);
+        final stored = jsonDecode(jsonEncode(draft.toJson()));
+
+        final restored = DivineVideoDraft.fromJson(
+          stored as Map<String, dynamic>,
+          _oldDocs,
+        );
+
+        expect(
+          _deepEquals.equals(
+            restored.editorStateHistory,
+            draft.editorStateHistory,
+          ),
+          isTrue,
+        );
+      });
+
+      test('still stores the clip list once across the run', () {
+        final six = jsonEncode(_realisticDraft(entries: 6).toJson()).length;
+        final twenty = jsonEncode(_realisticDraft(entries: 20).toJson()).length;
+
+        expect(twenty - six, lessThan(2000));
+      });
     });
 
     test('loads a draft saved before compaction unchanged', () {
