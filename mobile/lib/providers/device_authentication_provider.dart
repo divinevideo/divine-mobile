@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
@@ -20,6 +21,15 @@ class LocalDeviceAuthentication implements DeviceAuthentication {
 
   final LocalAuthentication _localAuthentication;
 
+  /// local_auth parks the pending completion instead of finishing it when a
+  /// sticky authentication is system-canceled, and only resumes it from
+  /// `sceneDidBecomeActive` / `applicationDidBecomeActive`. Both hooks are
+  /// compiled under `#if os(iOS)`, so on macOS nothing ever resumes the parked
+  /// call and the future never completes. Keep the flag off where the native
+  /// retry is not wired and let [_AuthenticationLifecycleObserver] re-prompt.
+  static bool get _nativeStickyRetryIsWired =>
+      kIsWeb || defaultTargetPlatform != TargetPlatform.macOS;
+
   @override
   Future<DeviceAuthenticationResult> authenticate({
     required String reason,
@@ -35,7 +45,7 @@ class LocalDeviceAuthentication implements DeviceAuthentication {
         try {
           final authenticated = await _localAuthentication.authenticate(
             localizedReason: reason,
-            persistAcrossBackgrounding: true,
+            persistAcrossBackgrounding: _nativeStickyRetryIsWired,
           );
           if (!authenticated &&
               canRetryAfterBackgrounding &&

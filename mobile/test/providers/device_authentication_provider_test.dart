@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -146,6 +147,40 @@ void main() {
           1,
           reason: 'a plain cancellation must not trigger a second prompt',
         );
+      },
+    );
+
+    test(
+      'does not ask local_auth to persist across backgrounding on macOS, '
+      'where the native retry hook is not compiled',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+        when(
+          () => localAuthentication.isDeviceSupported(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => localAuthentication.authenticate(
+            localizedReason: any(named: 'localizedReason'),
+            persistAcrossBackgrounding: any(
+              named: 'persistAcrossBackgrounding',
+            ),
+          ),
+        ).thenAnswer((_) async => true);
+
+        await authentication.authenticate(reason: 'Verify');
+
+        final captured = verify(
+          () => localAuthentication.authenticate(
+            localizedReason: 'Verify',
+            persistAcrossBackgrounding: captureAny(
+              named: 'persistAcrossBackgrounding',
+            ),
+          ),
+        ).captured;
+
+        expect(captured.single, isFalse);
       },
     );
 
