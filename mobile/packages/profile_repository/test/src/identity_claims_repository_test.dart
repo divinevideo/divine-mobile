@@ -1639,6 +1639,77 @@ void main() {
         expect(status.claims, hasLength(1));
         expect(status.claims.single.platform, equals('github'));
       });
+
+      // A kind-10011 row with no claims is what unlinking the last claim
+      // leaves behind. It still mirrors an identity event on the relay, so an
+      // unsettled read that returned nothing is lagging — and the kind-0
+      // fallback would carry the pre-migration claims the user removed.
+      test(
+        'refuses to relink over an identity event whose claims were all '
+        'unlinked',
+        () async {
+          stubUnsettledIdentityRead(
+            kind0: [
+              _event(
+                id: _eventId(15),
+                tags: [
+                  ['i', 'github:octocat', 'abc'],
+                ],
+              ),
+            ],
+          );
+          when(() => identityEventsDao.getEvent(any())).thenAnswer(
+            (_) async => const IdentityEventRow(
+              pubkey: _pubkey,
+              tagsJson: '[]',
+              sourceKind: 10011,
+              sourceCreatedAt: 1400,
+              sourceEventId: 'aa',
+            ),
+          );
+
+          await expectLater(
+            () => repo.publishClaim(
+              const IdentityClaim(
+                pubkey: _pubkey,
+                platform: 'twitter',
+                identity: 'someone',
+                proof: '123',
+              ),
+            ),
+            throwsA(isA<IdentityClaimReadException>()),
+          );
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'keeps an emptied identity event ahead of the kind-0 fallback',
+        () async {
+          stubUnsettledIdentityRead(
+            kind0: [
+              _event(
+                id: _eventId(16),
+                tags: [
+                  ['i', 'github:octocat', 'abc'],
+                ],
+              ),
+            ],
+          );
+          when(() => identityEventsDao.getEvent(any())).thenAnswer(
+            (_) async => const IdentityEventRow(
+              pubkey: _pubkey,
+              tagsJson: '[]',
+              sourceKind: 10011,
+            ),
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(status.claims, isEmpty);
+          verifyNever(() => client.verifyBatch(any()));
+        },
+      );
     });
 
     group('when only the verdict snapshot remembers the claims', () {

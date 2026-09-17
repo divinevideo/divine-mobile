@@ -626,16 +626,22 @@ class IdentityClaimsRepository {
     if (!identityRead.conclusive) {
       final cachedRow = await _cachedIdentityRow(pubkey);
       final cached = _decodeSnapshotRow(cachedRow, pubkey);
-      if (cached != null && cached.isNotEmpty) {
+      // A kind-10011-sourced row counts even with no claims on it: that is
+      // what unlinking the last claim leaves behind, and it still mirrors an
+      // identity event the read failed to bring back. Falling through to
+      // kind-0 there would resurrect the pre-migration claims the user
+      // removed, on screen and — on the write path — in the published event.
+      final mirrorsIdentityEvent = cachedRow?.sourceKind == identityEventKind;
+      if (cached != null && (cached.isNotEmpty || mirrorsIdentityEvent)) {
         // Only a kind-10011-sourced snapshot is evidence that the unsettled
         // read was lagging. A kind-0-sourced row is what the fallback itself
         // wrote (profile_repository.dart caches kind-0 tags with sourceKind 0),
         // so refusing on it would block a legitimate first link for a
         // pre-migration profile every time one relay failed to settle.
-        if (forWrite && cachedRow?.sourceKind == identityEventKind) {
+        if (forWrite && mirrorsIdentityEvent) {
           throw const IdentityClaimReadException(
             'The identity event read did not settle, but this profile is '
-            'known to have claims — refusing to publish over them',
+            'known to have an identity event — refusing to publish over it',
           );
         }
         if (!forWrite) {
