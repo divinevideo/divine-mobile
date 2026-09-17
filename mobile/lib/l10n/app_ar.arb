@@ -4639,6 +4639,8 @@
     "followUserIndexedSemanticLabel": "متابعة المستخدم {index}",
     "unfollowUserIndexedSemanticLabel": "إلغاء متابعة المستخدم {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / شهريًا",
+    "supporterTierAnnualLabel": "{title} — {price} / سنويًا",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "أكمل إزالة تفاعلك السابق قبل إضافة تفاعل آخر.",
     "updateGentleBanner": "تحديث جديد متاح للاطّلاع ←",
     "updateModerateTitle": "صدر تحديث منذ آخر مرة تحققت فيها",

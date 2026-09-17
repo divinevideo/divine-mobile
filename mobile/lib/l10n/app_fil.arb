@@ -3631,6 +3631,8 @@
     "followUserIndexedSemanticLabel": "Sundan ang user {index}",
     "unfollowUserIndexedSemanticLabel": "I-unfollow ang user {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / buwan",
+    "supporterTierAnnualLabel": "{title} — {price} / taon",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "Tapusin munang alisin ang dati mong reaksyon bago magdagdag ng bago.",
     "updateGentleBanner": "May bagong update. Tingnan ito →",
     "updateModerateTitle": "May update mula noong huli mong tingnan",

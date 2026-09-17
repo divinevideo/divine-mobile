@@ -12330,6 +12330,16 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String supporterTierAnnualLabel(String title, String price) {
+    return '$title — $price/ సంవత్సరం';
+  }
+
+  @override
+  String supporterTierLabel(String title, String price) {
+    return '$title — $price';
+  }
+
+  @override
   String get videoDetailHiddenBySettingsTitle =>
       'మీ సెట్టింగ్‌ల ద్వారా దాచబడింది';
 

@@ -6402,6 +6402,8 @@
   "followUserIndexedSemanticLabel": "صارف کو فالو کریں {index}",
   "unfollowUserIndexedSemanticLabel": "صارف کو ان فالو کریں {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / ماہ",
+  "supporterTierAnnualLabel": "{title} — {price} / سال",
+  "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "کوئی دوسرا ردعمل شامل کرنے سے پہلے پچھلا ردعمل ہٹانے کا عمل مکمل کریں۔",
   "updateGentleBanner": "ایک نئی اپ ڈیٹ آ گئی ہے۔ دیکھیں ←",
     "updateModerateTitle": "آپ کے آخری بار چیک کرنے کے بعد ایک اپ ڈیٹ آئی ہے",

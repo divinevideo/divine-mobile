@@ -6402,6 +6402,8 @@
   "followUserIndexedSemanticLabel": "Theo dõi người dùng {index}",
   "unfollowUserIndexedSemanticLabel": "Bỏ theo dõi người dùng {index}",
   "supporterTierMonthlyLabel": "{title} — {price} / tháng",
+  "supporterTierAnnualLabel": "{title} — {price} / năm",
+  "supporterTierLabel": "{title} — {price}",
   "dmReactionAddBlockedByRemoval": "Hãy hoàn tất việc xóa cảm xúc trước đó trước khi thêm cảm xúc khác.",
   "updateGentleBanner": "Vừa có bản cập nhật mới. Xem ngay →",
     "updateModerateTitle": "Đã có bản cập nhật kể từ lần cuối bạn kiểm tra",

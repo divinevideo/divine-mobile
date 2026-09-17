@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
@@ -201,10 +202,7 @@ class _TierList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: DivineButton(
-              label: context.l10n.supporterTierMonthlyLabel(
-                tier.title,
-                tier.price,
-              ),
+              label: _tierLabel(context, tier),
               onPressed: state.isBusy
                   ? null
                   : () => context.read<SupporterCubit>().subscribe(
@@ -215,6 +213,23 @@ class _TierList extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Names the billing period only when the tier carries one, so a plan is
+/// never shown as "/ month" when it renews yearly.
+String _tierLabel(BuildContext context, SupporterTier tier) {
+  final l10n = context.l10n;
+  return switch (tier.billingPeriod) {
+    SupporterBillingPeriod.monthly => l10n.supporterTierMonthlyLabel(
+      tier.title,
+      tier.price,
+    ),
+    SupporterBillingPeriod.annual => l10n.supporterTierAnnualLabel(
+      tier.title,
+      tier.price,
+    ),
+    null => l10n.supporterTierLabel(tier.title, tier.price),
+  };
 }
 
 class _UnavailableNote extends StatelessWidget {

@@ -3,6 +3,15 @@
 
 import 'package:meta/meta.dart';
 
+/// How often a supporter subscription renews.
+enum SupporterBillingPeriod {
+  /// Renews every month.
+  monthly,
+
+  /// Renews every year.
+  annual,
+}
+
 /// A purchasable supporter tier, backed by a StoreKit / Play Billing product.
 ///
 /// The [productId] is the platform-specific SKU configured in App Store
@@ -16,6 +25,7 @@ class SupporterTier {
     required this.price,
     this.currencyCode,
     this.description,
+    this.billingPeriod,
   });
 
   /// Platform-specific product identifier (SKU) from the store console.
@@ -33,12 +43,19 @@ class SupporterTier {
   /// Optional marketing description of the tier.
   final String? description;
 
+  /// How often the tier renews, or `null` when the period is not known.
+  ///
+  /// The UI only names a billing period when this is set, so an unknown
+  /// product is never shown with a period it does not have.
+  final SupporterBillingPeriod? billingPeriod;
+
   Map<String, dynamic> toJson() => {
     'productId': productId,
     'title': title,
     'price': price,
     if (currencyCode != null) 'currencyCode': currencyCode,
     if (description != null) 'description': description,
+    if (billingPeriod != null) 'billingPeriod': billingPeriod!.name,
   };
 
   @override
@@ -50,13 +67,21 @@ class SupporterTier {
           title == other.title &&
           price == other.price &&
           currencyCode == other.currencyCode &&
-          description == other.description;
+          description == other.description &&
+          billingPeriod == other.billingPeriod;
 
   @override
-  int get hashCode =>
-      Object.hash(productId, title, price, currencyCode, description);
+  int get hashCode => Object.hash(
+    productId,
+    title,
+    price,
+    currencyCode,
+    description,
+    billingPeriod,
+  );
 
   @override
   String toString() =>
-      'SupporterTier(productId: $productId, title: $title, price: $price)';
+      'SupporterTier(productId: $productId, title: $title, price: $price, '
+      'billingPeriod: ${billingPeriod?.name})';
 }

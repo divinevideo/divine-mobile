@@ -4639,6 +4639,8 @@
     "followUserIndexedSemanticLabel": "Suivre l'utilisateur {index}",
     "unfollowUserIndexedSemanticLabel": "Ne plus suivre l'utilisateur {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / mois",
+    "supporterTierAnnualLabel": "{title} — {price} / an",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "Terminez de supprimer votre réaction précédente avant d’en ajouter une autre.",
     "updateGentleBanner": "Une nouvelle mise à jour vient de sortir. Découvre-la →",
     "updateModerateTitle": "Une mise à jour est disponible depuis ta dernière visite",

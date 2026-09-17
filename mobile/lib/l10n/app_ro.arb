@@ -4639,6 +4639,8 @@
     "followUserIndexedSemanticLabel": "Urmărește utilizatorul {index}",
     "unfollowUserIndexedSemanticLabel": "Nu mai urmări utilizatorul {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / lună",
+    "supporterTierAnnualLabel": "{title} — {price} / an",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "Finalizează eliminarea reacției anterioare înainte de a adăuga alta.",
     "updateGentleBanner": "A apărut o actualizare nouă. Descoper-o →",
     "updateModerateTitle": "Există o actualizare de la ultima verificare",

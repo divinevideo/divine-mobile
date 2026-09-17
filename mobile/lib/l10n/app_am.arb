@@ -4757,6 +4757,8 @@
     "followUserIndexedSemanticLabel": "ተጠቃሚን ተከታተል {index}",
     "unfollowUserIndexedSemanticLabel": "ተጠቃሚን መከታተል አቁም {index}",
     "supporterTierMonthlyLabel": "{title} — {price} / በወር",
+    "supporterTierAnnualLabel": "{title} — {price} / በዓመት",
+    "supporterTierLabel": "{title} — {price}",
     "dmReactionAddBlockedByRemoval": "ሌላ ምላሽ ከማከልዎ በፊት የቀድሞውን ምላሽዎን ማስወገድ ያጠናቅቁ።",
     "updateGentleBanner": "አዲስ ዝማኔ ወጥቷል። ይመልከቱት →",
     "updateModerateTitle": "ካለፈው ጊዜ ጀምሮ አዲስ ዝማኔ አለ",

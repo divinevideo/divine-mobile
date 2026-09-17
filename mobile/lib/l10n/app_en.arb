@@ -8358,6 +8358,30 @@
       }
     }
   },
+  "supporterTierAnnualLabel": "{title} — {price} / year",
+  "@supporterTierAnnualLabel": {
+    "description": "Label on a supporter subscription button: the tier name, its price, and the yearly billing period.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterTierLabel": "{title} — {price}",
+  "@supporterTierLabel": {
+    "description": "Label on a supporter subscription button whose billing period is not known: the tier name and its price only.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "videoDetailHiddenBySettingsTitle": "Hidden by your settings",
   "videoDetailHiddenByHostFilterBody": "This one's hosted on {host}, and you're set to only show Divine-hosted videos.",
   "@videoDetailHiddenByHostFilterBody": {
