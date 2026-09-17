@@ -697,11 +697,33 @@ class ProfileRepository implements ProfileReader {
   /// Returns `null` when no event is found or the query fails.
   Future<Event?> _fetchIdentityEvent(String pubkey) async {
     try {
-      final events = await _nostrClient.queryEvents([
-        Filter(kinds: const [identityEventKind], authors: [pubkey], limit: 5),
-      ], useCache: false);
+      // `requireAllRelaysSettled`, or a general-purpose relay answering EOSE
+      // with nothing ends the read before relay.divine.video — where Divine's
+      // identity events actually live — has replied. The empty result then
+      // reads as "this profile has no linked accounts" and the verified
+      // account chips vanish, with no error and nothing in the logs (#6154).
+      final result = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(kinds: const [identityEventKind], authors: [pubkey], limit: 5),
+        ],
+        useCache: false,
+        requireAllRelaysSettled: true,
+      );
+      if (result.timedOut || result.noRelays) {
+        // Diagnostic only. An unsettled read needs no special handling here:
+        // an empty result already falls through to the cached kind-10011 row,
+        // and a partial one is reconciled by _cachedTagsSuperseding (#7081),
+        // which is the right owner of "is this live event actually newer".
+        // Discarding a partial read would throw away a genuinely newer event.
+        Log.warning(
+          'Kind-$identityEventKind read did not settle for '
+          '${pubkeyForLogs(pubkey)} (${result.events.length} event(s) '
+          'arrived); the cached source stands in for whatever did not',
+          name: 'ProfileRepository',
+        );
+      }
       return newestIdentityEvent(
-        events.where((e) => e.kind == identityEventKind).toList(),
+        result.events.where((e) => e.kind == identityEventKind).toList(),
       );
     } on Exception catch (e) {
       Log.warning(
