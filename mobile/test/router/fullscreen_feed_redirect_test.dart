@@ -1,5 +1,5 @@
-// ABOUTME: Tests pooled-feed route recovery when lifecycle restoration loses
-// ABOUTME: in-memory `extra`, including durable selected-video URL fallback.
+// ABOUTME: Tests the pooled-feed route redirect and builder: recovery without
+// ABOUTME: `extra`, unsupported-extra warnings, and profile-args forwarding.
 
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +13,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 VideoEvent _video(String id) => VideoEvent(
   id: id,
@@ -62,10 +63,42 @@ void main() {
       },
     );
 
-    test('redirects to the home feed when extra is the wrong type', () {
+    test('asserts when extra is an unsupported type', () {
       expect(
-        fullscreenFeedRedirect('not-args'),
-        equals(VideoFeedPage.pathForIndex(0)),
+        () => fullscreenFeedRedirect('not-args'),
+        throwsA(
+          isA<AssertionError>().having(
+            (error) => '${error.message}',
+            'message',
+            allOf(
+              contains('String'),
+              matches(RegExp(r'\bPooledFullscreenVideoFeedArgs\b')),
+              contains('ProfilePooledFullscreenVideoFeedArgs'),
+            ),
+          ),
+        ),
+      );
+    });
+
+    test('logs a warning when extra is an unsupported type', () async {
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+
+      expect(() => fullscreenFeedRedirect('not-args'), throwsAssertionError);
+
+      final warning = logCapture.getRecentLogs().singleWhere(
+        (log) => log.level == LogLevel.warning,
+      );
+      expect(warning.name, equals('FullscreenFeedRoute'));
+      expect(warning.category, equals(LogCategory.ui));
+      expect(
+        warning.message,
+        equals(
+          'Unsupported extra String for the fullscreen feed. '
+          'Pass PooledFullscreenVideoFeedArgs or '
+          'ProfilePooledFullscreenVideoFeedArgs.',
+        ),
       );
     });
 
