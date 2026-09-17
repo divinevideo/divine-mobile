@@ -138,7 +138,6 @@ void main() {
     when(
       () => mockKeyStorage.getIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async => null);
     when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
@@ -195,7 +194,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             matchingContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => matchingContainer);
 
@@ -294,7 +292,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             matchingContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => matchingContainer);
         when(() => mockKeyStorage.hasKeys()).thenAnswer((_) async => true);
@@ -321,7 +318,6 @@ void main() {
         verify(
           () => mockKeyStorage.getIdentityKeyContainer(
             matchingContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).called(1);
       },
@@ -355,7 +351,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             any(),
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenThrow(StateError('simulated keystore failure'));
 
@@ -381,7 +376,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             matchingContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => matchingContainer);
 
@@ -408,9 +402,7 @@ void main() {
         expect(authService.canExportLocalNsec, isFalse);
         expect(await authService.exportNsec(), isNull);
         verifyNever(
-          () => mockKeyStorage.exportNsec(
-            biometricPrompt: any(named: 'biometricPrompt'),
-          ),
+          () => mockKeyStorage.exportNsec(),
         );
       },
     );
@@ -434,7 +426,6 @@ void main() {
         when(
           () => mockKeyStorage.getIdentityKeyContainer(
             matchingContainer.npub,
-            biometricPrompt: any(named: 'biometricPrompt'),
           ),
         ).thenAnswer((_) async => matchingContainer);
 

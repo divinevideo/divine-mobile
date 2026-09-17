@@ -142,13 +142,10 @@ void main() {
     when(
       () => mockKeyStorage.deleteIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async {});
     when(
-      () => mockKeyStorage.generateAndStoreKeys(
-        biometricPrompt: any(named: 'biometricPrompt'),
-      ),
+      () => mockKeyStorage.generateAndStoreKeys(),
     ).thenAnswer((_) async => testKeyContainer);
     when(
       () => mockKeyStorage.storeIdentityKeyContainer(any(), any()),
@@ -156,14 +153,12 @@ void main() {
     when(
       () => mockKeyStorage.getIdentityKeyContainer(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async => null);
     when(() => mockKeyStorage.getKeyContainer()).thenAnswer((_) async => null);
     when(
       () => mockKeyStorage.switchToIdentity(
         any(),
-        biometricPrompt: any(named: 'biometricPrompt'),
       ),
     ).thenAnswer((_) async => true);
 

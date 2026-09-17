@@ -10,6 +10,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/device_authentication_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -31,7 +32,8 @@ class KeyManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
-  bool _isProcessing = false;
+  bool _isImporting = false;
+  bool _isExporting = false;
   final _importController = TextEditingController();
 
   @override
@@ -117,7 +119,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
           labelText: 'nsec1...',
           minLines: 1,
           maxLines: 3,
-          enabled: !_isProcessing,
+          enabled: !_isImporting,
           autocorrect: false,
           textCapitalization: TextCapitalization.none,
           spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
@@ -129,7 +131,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             foregroundColor: context.vineColors.onSurfaceVariant,
             showShadow: false,
             tooltip: context.l10n.keyManagementPasteKey,
-            onPressed: _isProcessing ? null : _pasteKeyFromClipboard,
+            onPressed: _isImporting ? null : _pasteKeyFromClipboard,
           ),
         ),
         const SizedBox(height: 12),
@@ -143,8 +145,8 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
         DivineButton(
           label: context.l10n.keyManagementImportButton,
           expanded: true,
-          isLoading: _isProcessing,
-          onPressed: _isProcessing
+          isLoading: _isImporting,
+          onPressed: _isImporting || _isExporting
               ? null
               : () => _importKey(context, nostrService),
         ),
@@ -189,7 +191,10 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             leadingIcon: DivineIconName.copy,
             expanded: true,
             semanticIdentifier: SemanticIds.keyManagementCopyNsecButton,
-            onPressed: _isProcessing ? null : () => _exportKey(context),
+            isLoading: _isExporting,
+            onPressed: _isImporting || _isExporting
+                ? null
+                : () => _exportKey(context),
           ),
         ] else if (showKeycastRemoteSigningInfo)
           const KeycastKeyExportCard(),
@@ -270,7 +275,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
 
     if (confirmed != true) return;
 
-    setState(() => _isProcessing = true);
+    setState(() => _isImporting = true);
 
     try {
       // Use AuthService for proper session setup and relay discovery
@@ -324,16 +329,35 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isProcessing = false);
+        setState(() => _isImporting = false);
       }
     }
   }
 
   Future<void> _exportKey(BuildContext context) async {
+    if (ref.read(isKeyManagementRestrictedProvider)) return;
+
+    setState(() => _isExporting = true);
+
     try {
-      // Consistency guard with _importKey's raw-key boundary check. No dialog
-      // precedes this call, so there is no real flip window here; kept as
-      // defense-in-depth so both key-handover call sites read the gate.
+      final authentication = await ref
+          .read(deviceAuthenticationProvider)
+          .authenticate(reason: context.l10n.keyManagementExportAuthReason);
+
+      if (!context.mounted) return;
+
+      if (authentication != DeviceAuthenticationResult.authenticated) {
+        final message = authentication == DeviceAuthenticationResult.unavailable
+            ? context.l10n.keyManagementExportAuthUnavailable
+            : context.l10n.keyManagementExportAuthDenied;
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(message, error: true),
+        );
+        return;
+      }
+
+      // The restriction can change while the system authentication UI is open.
+      // Re-check immediately before the raw key leaves AuthService.
       if (ref.read(isKeyManagementRestrictedProvider)) return;
       final nsec = await ref.read(authServiceProvider).exportNsec();
 
@@ -364,6 +388,10 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
             error: true,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
       }
     }
   }

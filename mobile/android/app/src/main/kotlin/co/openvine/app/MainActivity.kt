@@ -11,7 +11,7 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import android.window.OnBackInvokedCallback
 import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import org.witness.proofmode.ProofMode
@@ -42,7 +42,7 @@ import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     companion object {
         private const val NAVIGATION_CHANNEL = "org.openvine/navigation"
         private const val NAV_TAG = "OpenVineNavigation"
