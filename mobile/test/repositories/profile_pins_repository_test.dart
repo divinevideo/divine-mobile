@@ -747,6 +747,70 @@ void main() {
         expect(released, isNull);
         verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
+
+      test('does not sign the list for an account that switched during the '
+          'authoritative read', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('gone')],
+          ]),
+          _deletion([_coordinate('gone')]),
+        ]);
+        // The pre-flight check in releaseDeleted and the one guarding the
+        // rewrite both pass; the switch lands while the list is being read.
+        var reads = 0;
+        when(
+          () => signer.currentPublicKeyHex,
+        ).thenAnswer((_) => reads++ < 2 ? _owner : _other);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(
+          () => signer.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        );
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('does not publish a list the wrong account signed', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('gone')],
+          ]),
+          _deletion([_coordinate('gone')]),
+        ]);
+        // Every identity read still says _owner: the switch lands inside
+        // createAndSignEvent, so only the signed event names who signed it.
+        when(
+          () => signer.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => Event(
+            _other,
+            invocation.namedArguments[#kind] as int,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            invocation.namedArguments[#content] as String,
+          ),
+        );
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
     });
 
     group('serialization', () {

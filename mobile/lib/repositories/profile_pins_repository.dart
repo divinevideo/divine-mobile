@@ -416,6 +416,15 @@ class ProfilePinsRepository {
       return ProfilePinMutation.failed(replacement);
     }
 
+    // The authoritative read was a settled relay round trip, so the identity
+    // can have changed since the caller checked it; don't ask the account
+    // that is signed in now to sign the previous one's list.
+    if (_signer.currentPublicKeyHex != owner) {
+      return const ProfilePinMutation.failed(
+        ProfilePinFailure.notAuthenticated,
+      );
+    }
+
     final event = await _signer.createAndSignEvent(
       kind: EventKind.pinList,
       // NIP-51 reserves `content` for the encrypted private-item array, which
@@ -427,6 +436,22 @@ class ProfilePinsRepository {
     if (event == null) {
       return const ProfilePinMutation.failed(
         ProfilePinFailure.publishDidNotComplete,
+      );
+    }
+    // Signing suspends too, and the signed event is the only authority on who
+    // signed it. Publishing one stamped by the next account would replace
+    // *its* kind-10001 with this owner's coordinates, which
+    // `managedCoordinates` - keyed on the signing pubkey - then reads as an
+    // empty list for both accounts.
+    if (event.pubkey != owner) {
+      Log.warning(
+        'Pin list for ${pubkeyForLogs(owner)} came back signed by '
+        '${pubkeyForLogs(event.pubkey)} - not publishing',
+        name: 'ProfilePinsRepository',
+        category: LogCategory.relay,
+      );
+      return const ProfilePinMutation.failed(
+        ProfilePinFailure.notAuthenticated,
       );
     }
 
