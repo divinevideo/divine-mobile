@@ -194,8 +194,8 @@ abstract class DivineCameraPlatform extends PlatformInterface {
   }
 
   /// Callback for when the native layer stops a recording on its own — the
-  /// max duration was reached, or the camera was interrupted. The result is
-  /// null when nothing was captured.
+  /// max duration was reached, or (iOS only) the camera was interrupted. The
+  /// result is null when nothing was captured.
   void Function(VideoRecordingResult? result)? get onRecordingAutoStopped {
     throw UnimplementedError(
       'onRecordingAutoStopped has not been implemented.',

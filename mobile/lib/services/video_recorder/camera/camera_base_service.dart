@@ -44,8 +44,8 @@ abstract class CameraService {
   final void Function({bool? forceCameraRebuild}) onUpdateState;
 
   /// Called when the camera stops recording on its own — the max duration
-  /// was reached, or the camera was interrupted. [video] is null when
-  /// nothing was captured; the recording has ended either way.
+  /// was reached, or (iOS only) the camera was interrupted. [video] is null
+  /// when nothing was captured; the recording has ended either way.
   final void Function(EditorVideo? video) onAutoStopped;
 
   /// Initializes the camera and prepares it for use.

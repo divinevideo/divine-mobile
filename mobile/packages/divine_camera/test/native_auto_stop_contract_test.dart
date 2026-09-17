@@ -5,6 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/native_source.dart';
 
+/// A Swift stop-completion [closure] reaches [send] for every result: it has
+/// no early exit or `else` branch, and the nil-result block does not own it.
+void _expectSwiftSendsEveryResult(String closure, {required String send}) {
+  expect(closure, contains(send));
+  expect(closure, isNot(contains('return')));
+  expect(closure, isNot(contains('else')));
+  expect(declarationAt(closure, 'if result == nil {'), isNot(contains(send)));
+}
+
 void main() {
   // A native stop that captured nothing must still reach Dart, or the recorder
   // keeps showing a recording that no longer exists. The signal is a payload
@@ -33,8 +42,10 @@ void main() {
           'private func autoStopRecording()',
         );
 
-        expect(autoStop, contains('self?.sendAutoStopEvent(result: result)'));
-        expect(autoStop, isNot(contains('if let result')));
+        _expectSwiftSendsEveryResult(
+          declarationAt(autoStop, 'stopRecording { [weak self] result, error'),
+          send: 'self?.sendAutoStopEvent(result: result)',
+        );
       });
 
       test('the interruption salvage reports every outcome', () {
@@ -43,8 +54,10 @@ void main() {
           'private func salvageInterruptedRecording(',
         );
 
-        expect(salvage, contains('self?.sendAutoStopEvent(result: result)'));
-        expect(salvage, isNot(contains('if let result')));
+        _expectSwiftSendsEveryResult(
+          declarationAt(salvage, 'stopRecording { [weak self] result, error'),
+          send: 'self?.sendAutoStopEvent(result: result)',
+        );
       });
     });
 
@@ -55,22 +68,28 @@ void main() {
           'func autoStopRecording()',
         );
 
-        expect(autoStop, contains('userInfo: result ?? [:]'));
-        expect(autoStop, isNot(contains('if let result')));
+        _expectSwiftSendsEveryResult(
+          declarationAt(autoStop, 'stopRecording { result, error'),
+          send: 'userInfo: result ?? [:]',
+        );
       });
     });
 
     group('Android', () {
       test('the max-duration auto-stop reports every outcome', () {
-        final autoStop = declarationAt(
+        final callback = declarationAt(
           readAndroidNativeSource('CameraController.kt'),
-          'private fun autoStopRecording()',
+          'autoStopCallback = { result, error ->',
         );
+        const send = 'onAutoStopListener?.invoke(result ?: emptyMap())';
 
+        expect(callback, contains(send));
+        expect(callback, isNot(contains('return@')));
         expect(
-          autoStop,
-          contains('onAutoStopListener?.invoke(result ?: emptyMap())'),
+          declarationAt(callback, 'if (result != null) {'),
+          isNot(contains(send)),
         );
+        expect(declarationAt(callback, '} else {'), isNot(contains(send)));
       });
     });
   });

@@ -45,8 +45,9 @@ class DivineCamera {
   void Function(CameraState state)? onStateChanged;
 
   /// Callback invoked when the native layer stops a recording on its own —
-  /// the max duration was reached, or the camera was interrupted. The result
-  /// is null when nothing was captured; recording has ended either way.
+  /// the max duration was reached, or (iOS only) the camera was interrupted.
+  /// The result is null when nothing was captured; recording has ended
+  /// either way.
   void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
 
   /// Callback invoked when a remote record trigger is detected.

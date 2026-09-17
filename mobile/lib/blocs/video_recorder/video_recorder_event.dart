@@ -174,7 +174,9 @@ final class VideoRecorderRecordingStartRequested extends VideoRecorderEvent {
 /// thumbnail, ghost frame). When [result] is supplied, the camera
 /// auto-stopped (e.g. recording limit reached, or the capture session
 /// was interrupted and native salvaged what it could) and the recording
-/// itself is already finalized.
+/// itself is already finalized. Without one, the camera service is asked
+/// for the file: after a Stop tap, or after an auto-stop that captured
+/// nothing, in which case the service reports no file.
 ///
 /// Registered with `transformer: sequential()` — see
 /// [VideoRecorderRecordingStartRequested].
