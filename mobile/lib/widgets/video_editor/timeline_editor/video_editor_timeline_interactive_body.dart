@@ -94,8 +94,6 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
   final ScrollController overlayStripsScrollController;
   final ValueNotifier<double?> volumePreviewNotifier;
 
-  static const _scrollBottomPadding = 100;
-
   @override
   Widget build(BuildContext context) {
     final isVolumeEditMode = context.select(
@@ -130,7 +128,9 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
               ? const ClampingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
           padding: .only(
-            bottom: _scrollBottomPadding + MediaQuery.paddingOf(context).bottom,
+            bottom:
+                TimelineConstants.scrollBottomPadding +
+                MediaQuery.paddingOf(context).bottom,
           ),
           child: ClipRect(
             child: AnimatedContainer(
@@ -189,7 +189,9 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
                               ? const NeverScrollableScrollPhysics()
                               : const ClampingScrollPhysics(),
                           clipBehavior: .none,
-                          padding: .symmetric(horizontal: halfScreen),
+                          // No padding here — the body lays it out, so the
+                          // strips scroll from it too. Restoring it would
+                          // double the horizontal extent.
                           child: VideoEditorTimelineBody(
                             totalDuration: totalDuration,
                             pixelsPerSecond: pixelsPerSecond,

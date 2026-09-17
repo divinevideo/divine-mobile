@@ -54,12 +54,8 @@ void main() {
       mainBloc = _MockVideoEditorMainBloc();
       overlayBloc = _MockTimelineOverlayBloc();
 
-      when(
-        () => mainBloc.stream,
-      ).thenAnswer((_) => const Stream<VideoEditorMainState>.empty());
-      when(
-        () => overlayBloc.stream,
-      ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
+      // MockBloc's own constructor already stubs `stream` and `close`;
+      // only `state` needs one.
       when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
     });
 
@@ -107,6 +103,59 @@ void main() {
                 onReorderChanged: (_) {},
                 onOverlayItemTrimmed: onOverlayItemTrimmed,
                 playheadPosition: playhead,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    /// Lays the body out the way the timeline lays it out: inside a
+    /// horizontal scroll view, so it takes its natural width — the
+    /// composition plus a [scrollPadding] on each side — instead of being
+    /// squeezed to the 800px test viewport.
+    Future<void> pumpBodyInScrollView(
+      WidgetTester tester, {
+      double scrollPadding = 16,
+      double pixelsPerSecond = 80,
+      double totalWidth = 960,
+    }) async {
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      final scrollController = ScrollController();
+      final overlayStripsScrollController = ScrollController();
+      final playhead = ValueNotifier(Duration.zero);
+      addTearDown(scrollController.dispose);
+      addTearDown(overlayStripsScrollController.dispose);
+      addTearDown(playhead.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+              BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+            ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: scrollController,
+              child: SizedBox(
+                height: 300,
+                child: VideoEditorTimelineBody(
+                  totalDuration: const Duration(seconds: 12),
+                  pixelsPerSecond: pixelsPerSecond,
+                  scrollController: scrollController,
+                  overlayStripsScrollController: overlayStripsScrollController,
+                  scrollPadding: scrollPadding,
+                  clips: const <DivineVideoClip>[],
+                  totalWidth: totalWidth,
+                  isInteracting: false,
+                  onReorder: (_) {},
+                  onReorderChanged: (_) {},
+                  playheadPosition: playhead,
+                ),
               ),
             ),
           ),
@@ -282,30 +331,50 @@ void main() {
       },
     );
 
-    testWidgets('extends overlay by half screen width', (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(1000, 1200);
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'starts the outside-area overlays at the max duration and runs them to '
+      'the end of the trailing scroll padding',
+      (tester) async {
+        // Measured, not read off the Positioned arguments: `right: 0` is a
+        // literal that holds for any Stack width, so asserting it under the
+        // 800px viewport would pass even if the Stack stopped short of the
+        // scroll content it is supposed to cover.
+        const scrollPadding = 16.0;
+        const pixelsPerSecond = 80.0;
+        const totalWidth = 960.0;
+        await pumpBodyInScrollView(tester);
 
-      await pumpBody(tester);
+        final expectedLeft =
+            scrollPadding +
+            VideoEditorConstants.maxDuration.inMilliseconds /
+                1000 *
+                pixelsPerSecond;
+        const expectedRight = scrollPadding + totalWidth + scrollPadding;
 
-      final expectedLeft =
-          VideoEditorConstants.maxDuration.inMilliseconds / 1000 * 80;
-      const expectedRight = -500.0;
-
-      expect(
-        find.byWidgetPredicate(
+        final stripe = find.byWidgetPredicate(
           (widget) =>
-              widget is Positioned &&
-              widget.top == 0 &&
-              widget.bottom == 0 &&
-              widget.left == expectedLeft &&
-              widget.right == expectedRight,
-        ),
-        findsNWidgets(2),
-      );
-    });
+              widget is CustomPaint &&
+              widget.painter.runtimeType.toString() ==
+                  '_TimelineOutsideAreaPainter',
+        );
+        final dim = find.byWidgetPredicate(
+          (widget) =>
+              widget is ColoredBox &&
+              widget.color ==
+                  VineTheme.surfaceContainerHigh.withValues(alpha: 0.3),
+        );
+        expect(stripe, findsOneWidget);
+        expect(dim, findsOneWidget);
+
+        // Both bands cover the same stretch, and it ends on the far edge of
+        // the trailing padding rather than on the composition's last pixel.
+        for (final band in [stripe, dim]) {
+          final rect = tester.getRect(band);
+          expect(rect.left, moreOrLessEquals(expectedLeft));
+          expect(rect.right, moreOrLessEquals(expectedRight));
+        }
+      },
+    );
 
     testWidgets('renders dim overlay with updated alpha', (tester) async {
       await pumpBody(tester);
