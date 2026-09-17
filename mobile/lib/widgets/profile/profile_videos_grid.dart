@@ -206,7 +206,8 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
           // The deleted video's coordinate would otherwise keep one of the
           // pin slots with no tile left to free it from. Quiet: the delete
           // already reported, and a stale reference is not worth a second
-          // snackbar either way.
+          // snackbar either way — the next profile open releases it if this
+          // does not land.
           if (feedCubit.state.isPinned(video)) {
             feedCubit.add(ProfileFeedUnpinRequested(video, quiet: true));
           }

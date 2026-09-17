@@ -446,6 +446,16 @@ clients ignore them. Mobile (`ProfilePinsRepository`) therefore:
   truncated. A successful delete of a pinned video from the profile grid is
   followed by a best-effort, unannounced unpin so the deleted coordinate does
   not keep occupying a slot with no tile left to free it from
+- releases a slot only on an explicit deletion signal, never on a read: when
+  the owner opens their profile and a pinned coordinate shows no video
+  (unresolved, or resolved to a version the device knows is deleted), the
+  repository asks the relays for a NIP-09 kind-5 by the owner whose `a` tag
+  names it and for any kind-34236 version under the same `d`; the coordinate
+  is unpinned, quietly and in one rewrite with the others, only when such a
+  request exists and no version is stamped after it. A video deleted on Web
+  or another device, or one whose quiet unpin after an in-app delete never
+  landed, frees its slot this way; a coordinate that merely failed to resolve
+  once stays put
 - reads the list with full relay settlement before every write and refuses to
   publish over an inconclusive read, because a replaceable event republished
   from a partial read silently drops items

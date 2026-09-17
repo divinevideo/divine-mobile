@@ -1,5 +1,6 @@
 // ABOUTME: Tests for ProfilePinsRepository — kind-10001 parsing, cached and
-// ABOUTME: relay reads, and the pin/unpin read-modify-write against relays.
+// ABOUTME: relay reads, the pin/unpin read-modify-write against relays, and
+// ABOUTME: the deletion-confirmed release of pinned coordinates.
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,40 @@ Event _pinList(
   int createdAt = 1000,
   String content = '',
 }) => Event(pubkey, EventKind.pinList, tags, content, createdAt: createdAt);
+
+/// A NIP-09 deletion request naming [coordinates], the way both Mobile and
+/// Web publish one for a video (an `e` tag for the version, `a` for the
+/// address).
+Event _deletion(
+  List<String> coordinates, {
+  String pubkey = _owner,
+  int createdAt = 1000,
+}) => Event(
+  pubkey,
+  EventKind.eventDeletion,
+  [
+    ['e', 'e' * 64],
+    for (final coordinate in coordinates) ['a', coordinate],
+  ],
+  '',
+  createdAt: createdAt,
+);
+
+/// A version of the owner's video under [dTag], as a relay still holding it
+/// would return it.
+Event _videoVersion(
+  String dTag, {
+  String pubkey = _owner,
+  int createdAt = 1000,
+}) => Event(
+  pubkey,
+  EventKind.videoVertical,
+  [
+    ['d', dTag],
+  ],
+  '',
+  createdAt: createdAt,
+);
 
 void main() {
   setUpAll(() {
@@ -493,6 +528,293 @@ void main() {
           verifyNever(() => nostrClient.publishEventAwaitOk(any()));
         },
       );
+    });
+
+    group('releaseDeleted', () {
+      /// The filters of every relay read, in call order.
+      List<List<Filter>> relayReads() => verify(
+        () => nostrClient.queryEventsDetailed(
+          captureAny(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).captured.cast<List<Filter>>();
+
+      test('releases every coordinate the relays report deleted in one '
+          'rewrite and keeps the rest of the list verbatim', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('keep')],
+            ['a', _coordinate('gone-web')],
+            ['e', 'f' * 64],
+            ['a', _coordinate('gone-mobile')],
+            ['a', _coordinate('foreign', pubkey: _other)],
+          ], content: 'private'),
+          _deletion([_coordinate('gone-web')]),
+          _deletion([_coordinate('gone-mobile')], createdAt: 1500),
+        ]);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone-web'),
+          _coordinate('gone-mobile'),
+          _coordinate('keep'),
+        ]);
+
+        expect(released, [_coordinate('keep')]);
+        expect(signedTags, [
+          ['a', _coordinate('keep')],
+          ['e', 'f' * 64],
+          ['a', _coordinate('foreign', pubkey: _other)],
+        ]);
+        expect(signedContent, 'private');
+        verify(() => nostrClient.publishEventAwaitOk(any())).called(1);
+        expect(await repository.readCached(_owner), [_coordinate('keep')]);
+      });
+
+      test('asks the relays for deletion requests naming the coordinates '
+          'and for any version that outlives them', () async {
+        stubRelayAnswer(const []);
+
+        await repository.releaseDeleted([
+          _coordinate('one'),
+          _coordinate('two'),
+          _coordinate('one'),
+        ]);
+
+        final [lookup] = relayReads();
+        final [deletions, versions] = lookup;
+        expect(deletions.kinds, [EventKind.eventDeletion]);
+        expect(deletions.authors, [_owner]);
+        expect(deletions.a, [_coordinate('one'), _coordinate('two')]);
+        expect(versions.kinds, [EventKind.videoVertical]);
+        expect(versions.authors, [_owner]);
+        expect(versions.d, ['one', 'two']);
+      });
+
+      test('keeps a coordinate that merely failed to resolve: no deletion '
+          'request, no rewrite', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('unresolved')],
+          ]),
+          // A request that names the version, not the address, says nothing
+          // about the coordinate.
+          Event(_owner, EventKind.eventDeletion, [
+            ['e', 'e' * 64],
+          ], ''),
+        ]);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('unresolved'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        // Only the lookup read the relays; the list itself was never re-read.
+        expect(relayReads(), hasLength(1));
+      });
+
+      test('keeps a coordinate whose video was republished after the '
+          'deletion request', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('republished')],
+          ]),
+          _deletion([_coordinate('republished')]),
+          _videoVersion('republished', createdAt: 1001),
+        ]);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('republished'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('still releases when the only surviving version predates the '
+          'request, as on a relay that ignored it', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('lingering')],
+          ]),
+          _deletion([_coordinate('lingering')]),
+          _videoVersion('lingering', createdAt: 999),
+        ]);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('lingering'),
+        ]);
+
+        expect(released, isEmpty);
+        expect(signedTags, isEmpty);
+      });
+
+      test('releases nothing over an inconclusive lookup', () async {
+        stubRelayAnswer([
+          _deletion([_coordinate('gone')]),
+        ], timedOut: true);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test("ignores coordinates that are not the signer's own without "
+          'touching a relay', () async {
+        final released = await repository.releaseDeleted([
+          _coordinate('theirs', pubkey: _other),
+          '34235:$_owner:normal',
+        ]);
+
+        expect(released, isNull);
+        verifyNever(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
+      });
+
+      test('does nothing when signed out', () async {
+        when(() => signer.currentPublicKeyHex).thenReturn(null);
+
+        final released = await repository.releaseDeleted([_coordinate('v')]);
+
+        expect(released, isNull);
+        verifyNever(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
+      });
+
+      test('returns the current list without a rewrite when it no longer '
+          'holds the coordinate', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('keep')],
+          ]),
+          _deletion([_coordinate('already-released')]),
+        ]);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('already-released'),
+        ]);
+
+        expect(released, [_coordinate('keep')]);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        // No rewrite, but the read was authoritative: the cache tracks it, or
+        // the next open leads with the coordinate that is already gone.
+        expect(await repository.readCached(_owner), [_coordinate('keep')]);
+      });
+
+      test('reports nothing when no relay accepts the rewrite', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('gone')],
+          ]),
+          _deletion([_coordinate('gone')]),
+        ]);
+        stubPublish(accepted: false);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+      });
+
+      test('does not sign the list for an account that switched during the '
+          'lookup', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('gone')],
+          ]),
+          _deletion([_coordinate('gone')]),
+        ]);
+        var reads = 0;
+        when(
+          () => signer.currentPublicKeyHex,
+        ).thenAnswer((_) => reads++ == 0 ? _owner : _other);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('does not sign the list for an account that switched during the '
+          'authoritative read', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('gone')],
+          ]),
+          _deletion([_coordinate('gone')]),
+        ]);
+        // The pre-flight check in releaseDeleted and the one guarding the
+        // rewrite both pass; the switch lands while the list is being read.
+        var reads = 0;
+        when(
+          () => signer.currentPublicKeyHex,
+        ).thenAnswer((_) => reads++ < 2 ? _owner : _other);
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(
+          () => signer.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        );
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('does not publish a list the wrong account signed', () async {
+        stubRelayAnswer([
+          _pinList([
+            ['a', _coordinate('gone')],
+          ]),
+          _deletion([_coordinate('gone')]),
+        ]);
+        // Every identity read still says _owner: the switch lands inside
+        // createAndSignEvent, so only the signed event names who signed it.
+        when(
+          () => signer.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => Event(
+            _other,
+            invocation.namedArguments[#kind] as int,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            invocation.namedArguments[#content] as String,
+          ),
+        );
+
+        final released = await repository.releaseDeleted([
+          _coordinate('gone'),
+        ]);
+
+        expect(released, isNull);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
     });
 
     group('serialization', () {

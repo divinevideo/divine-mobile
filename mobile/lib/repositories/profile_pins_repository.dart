@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -62,6 +63,14 @@ class ProfilePinMutation {
 
   bool get succeeded => failure == null;
 }
+
+/// Replacement tags for a pin list, or `null` when the list is already in
+/// the requested state, or a [ProfilePinFailure] to refuse the write.
+typedef _PinListRewrite = Object? Function(
+  List<List<String>> tags,
+  List<String> current,
+  String owner,
+);
 
 /// A creator's pinned profile videos, stored on their NIP-51 kind-10001 list
 /// as kind-34236 `a` coordinates (`34236:<pubkey>:<d>`).
@@ -193,7 +202,9 @@ class ProfilePinsRepository {
   ///
   /// Idempotent: a coordinate the relay already holds is left in place and
   /// reported as success. Refuses to write past [maxPins], counting every
-  /// stored owner-authored coordinate whether or not its video resolves.
+  /// stored owner-authored coordinate whether or not its video resolves; a
+  /// slot held by a deleted video is freed by [releaseDeleted], never by a
+  /// read.
   ///
   /// Throws [ArgumentError] when [coordinate] does not name one of the signer's
   /// own kind-34236 videos; callers gate the action on
@@ -222,6 +233,138 @@ class ProfilePinsRepository {
     }),
   );
 
+  /// Frees the slots held by pinned videos the signed-in user has deleted.
+  ///
+  /// [unavailable] are coordinates from the user's own list that show no
+  /// video: the caller could not resolve them, or resolved a version it
+  /// already knows is deleted. That alone never drops a pin — a relay hiccup
+  /// reads the same way — so a coordinate is released only when the relays
+  /// hold a NIP-09 deletion request by the user naming it and no version of
+  /// the video published after that request (NIP-09 covers the versions
+  /// stamped at or before it; a later republish is live again). Coordinates
+  /// the signer does not own are ignored without a relay round trip, so a
+  /// viewer on another creator's profile never touches that creator's list.
+  ///
+  /// The released coordinates leave in one rewrite. A non-null answer is the
+  /// reconciled list, not proof that anything left it: when the authoritative
+  /// list no longer holds any of the deleted coordinates it comes back
+  /// unchanged, with no rewrite published. `null` means the list could not be
+  /// reconciled at all — no candidate is known deleted, the deletion lookup
+  /// was inconclusive, or the rewrite failed. The caller keeps its list either
+  /// way and asks again on the next profile open, which is how a quiet unpin
+  /// that never landed after an in-app delete is retried.
+  Future<List<String>?> releaseDeleted(List<String> unavailable) async {
+    final owner = _signer.currentPublicKeyHex;
+    if (owner == null) return null;
+    final candidates = {
+      for (final coordinate in unavailable)
+        if (isEligibleCoordinate(coordinate, owner: owner)) coordinate,
+    };
+    if (candidates.isEmpty) return null;
+
+    final deleted = await _knownDeleted(owner, candidates);
+    if (deleted.isEmpty) return null;
+
+    var released = 0;
+    final result = await _serialized(() async {
+      // The lookup was a relay round trip ago; an account switch since then
+      // must not sign this owner's list with the next account's key.
+      if (_signer.currentPublicKeyHex != owner) {
+        return const ProfilePinMutation.failed(
+          ProfilePinFailure.notAuthenticated,
+        );
+      }
+      return _rewrite(owner, (tags, current, _) {
+        released = current.where(deleted.contains).length;
+        if (released == 0) return null;
+        return tags
+            .where(
+              (tag) => !deleted.contains(_managedCoordinate(tag, owner: owner)),
+            )
+            .toList();
+      });
+    });
+    final coordinates = result.coordinates;
+    if (coordinates != null && released > 0) {
+      Log.info(
+        'Released $released pinned video(s) the relays report deleted for '
+        '${pubkeyForLogs(owner)}',
+        name: 'ProfilePinsRepository',
+        category: LogCategory.relay,
+      );
+    }
+    return coordinates;
+  }
+
+  /// The [candidates] the relays report deleted: a kind-5 by [owner] names
+  /// the coordinate and no kind-34236 version by [owner] under the same `d`
+  /// is stamped later than the newest such request. Settled on every relay
+  /// so a slow relay cannot hide the version that outlives the request; an
+  /// inconclusive read reports nothing deleted.
+  Future<Set<String>> _knownDeleted(
+    String owner,
+    Set<String> candidates,
+  ) async {
+    final result = await _nostrClient.queryEventsDetailed(
+      [
+        Filter(
+          kinds: const [EventKind.eventDeletion],
+          authors: [owner],
+          a: candidates.toList(),
+        ),
+        Filter(
+          kinds: const [EventKind.videoVertical],
+          authors: [owner],
+          d: [
+            for (final coordinate in candidates)
+              AId.fromString(coordinate)!.dTag,
+          ],
+        ),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+    );
+    if (result.noRelays || result.timedOut) {
+      Log.info(
+        'Pinned-video deletion lookup inconclusive (timedOut='
+        '${result.timedOut}, noRelays=${result.noRelays}) - nothing released',
+        name: 'ProfilePinsRepository',
+        category: LogCategory.relay,
+      );
+      return const {};
+    }
+
+    final deletedAt = <String, int>{};
+    final liveAt = <String, int>{};
+    for (final event in result.events) {
+      if (event.pubkey != owner) continue;
+      if (event.kind == EventKind.eventDeletion) {
+        for (final tag in event.tags) {
+          if (tag.length < 2 || tag[0] != 'a') continue;
+          if (!candidates.contains(tag[1])) continue;
+          deletedAt.update(
+            tag[1],
+            (known) => max(known, event.createdAt),
+            ifAbsent: () => event.createdAt,
+          );
+        }
+      } else if (event.kind == EventKind.videoVertical) {
+        final coordinate = '${event.kind}:${event.pubkey}:${event.dTagValue}';
+        if (!candidates.contains(coordinate)) continue;
+        liveAt.update(
+          coordinate,
+          (known) => max(known, event.createdAt),
+          ifAbsent: () => event.createdAt,
+        );
+      }
+    }
+    return {
+      for (final MapEntry(key: coordinate, value: requestedAt)
+          in deletedAt.entries)
+        if ((liveAt[coordinate] ?? requestedAt) <= requestedAt) coordinate,
+    };
+  }
+
   Future<T> _serialized<T>(Future<T> Function() operation) {
     final completer = Completer<T>();
     _queue = _queue.then((_) async {
@@ -234,18 +377,11 @@ class ProfilePinsRepository {
     return completer.future;
   }
 
-  /// Reads the authoritative list, asks [rewrite] for the replacement tags,
-  /// and publishes the result. [rewrite] returns `null` when the list is
-  /// already in the requested state, a [ProfilePinFailure] to refuse,
-  /// otherwise the tags to publish.
+  /// Rewrites the signed-in user's list around a single [coordinate] of
+  /// their own; see [pin] for the failure and throw contract.
   Future<ProfilePinMutation> _mutate(
     String coordinate,
-    Object? Function(
-      List<List<String>> tags,
-      List<String> current,
-      String owner,
-    )
-    rewrite,
+    _PinListRewrite rewrite,
   ) async {
     final owner = _signer.currentPublicKeyHex;
     if (owner == null) {
@@ -260,7 +396,15 @@ class ProfilePinsRepository {
         'must name a kind-${EventKind.videoVertical} video by the signer',
       );
     }
+    return _rewrite(owner, rewrite);
+  }
 
+  /// Reads [owner]'s authoritative list, asks [rewrite] for the replacement
+  /// tags, and publishes the result.
+  Future<ProfilePinMutation> _rewrite(
+    String owner,
+    _PinListRewrite rewrite,
+  ) async {
     final read = await _readAuthoritative(owner);
     if (read.failure case final failure?) {
       return ProfilePinMutation.failed(failure);
@@ -269,9 +413,24 @@ class ProfilePinsRepository {
     final current = base == null ? const <String>[] : managedCoordinates(base);
 
     final replacement = rewrite(base?.tags ?? const [], current, owner);
-    if (replacement == null) return ProfilePinMutation.succeeded(current);
+    if (replacement == null) {
+      // Nothing to publish, but the read was authoritative and conclusive:
+      // leaving the cache alone keeps serving a list the relays have moved
+      // past, which is how a released coordinate comes back on the next open.
+      await _writeCache(owner, current);
+      return ProfilePinMutation.succeeded(current);
+    }
     if (replacement is ProfilePinFailure) {
       return ProfilePinMutation.failed(replacement);
+    }
+
+    // The authoritative read was a settled relay round trip, so the identity
+    // can have changed since the caller checked it; don't ask the account
+    // that is signed in now to sign the previous one's list.
+    if (_signer.currentPublicKeyHex != owner) {
+      return const ProfilePinMutation.failed(
+        ProfilePinFailure.notAuthenticated,
+      );
     }
 
     final event = await _signer.createAndSignEvent(
@@ -285,6 +444,22 @@ class ProfilePinsRepository {
     if (event == null) {
       return const ProfilePinMutation.failed(
         ProfilePinFailure.publishDidNotComplete,
+      );
+    }
+    // Signing suspends too, and the signed event is the only authority on who
+    // signed it. Publishing one stamped by the next account would replace
+    // *its* kind-10001 with this owner's coordinates, which
+    // `managedCoordinates` - keyed on the signing pubkey - then reads as an
+    // empty list for both accounts.
+    if (event.pubkey != owner) {
+      Log.warning(
+        'Pin list for ${pubkeyForLogs(owner)} came back signed by '
+        '${pubkeyForLogs(event.pubkey)} - not publishing',
+        name: 'ProfilePinsRepository',
+        category: LogCategory.relay,
+      );
+      return const ProfilePinMutation.failed(
+        ProfilePinFailure.notAuthenticated,
       );
     }
 

@@ -130,6 +130,7 @@ class _Harness {
     when(() => blocklist.shouldFilterFromFeeds(any())).thenReturn(false);
     when(() => pins.readCached(any())).thenAnswer((_) async => null);
     when(() => pins.fetch(any())).thenAnswer((_) async => const []);
+    when(() => pins.releaseDeleted(any())).thenAnswer((_) async => null);
     when(
       () => repo.getVideosByAddressableIds(
         any(),
@@ -1257,13 +1258,16 @@ void main() {
         await pumpEventQueue();
 
         expect(cubit.state.videos.map((v) => v.id), ['old', 'a', 'b']);
+        // Every pin shows a video, so there is nothing to offer for release.
+        verifyNever(() => h.pins.releaseDeleted(any()));
         // The resolved copy is not part of the source window the snapshot
         // persists: it is re-resolved by coordinate on the next open.
         final snapshot = await readSnapshot();
         expect(snapshot?.videos.map((v) => v.id), ['a', 'b']);
       });
 
-      test('a pinned coordinate that resolves nowhere is skipped', () async {
+      test('a pinned coordinate that resolves nowhere is skipped, and kept '
+          'on the list until the relays report it deleted', () async {
         when(
           () => h.pins.fetch(_author),
         ).thenAnswer((_) async => [_coordinate('gone'), _coordinate('b')]);
@@ -1279,11 +1283,96 @@ void main() {
         await pumpEventQueue();
 
         expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+        expect(cubit.state.pinnedCoordinates, [
+          _coordinate('gone'),
+          _coordinate('b'),
+        ]);
         verify(
           () => h.repo.getVideosByAddressableIds([
             _coordinate('gone'),
           ], cacheResults: true),
         ).called(1);
+        // Offered for release; the repository answered that nothing says
+        // the video is gone, so the slot stays taken.
+        verify(() => h.pins.releaseDeleted([_coordinate('gone')])).called(1);
+      });
+
+      test('a pinned coordinate that resolves nowhere is released once the '
+          'relays report its video deleted', () async {
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone'), _coordinate('b')]);
+        when(
+          () => h.pins.releaseDeleted([_coordinate('gone')]),
+        ).thenAnswer((_) async => [_coordinate('b')]);
+        h.stubAuthorFeed(
+          _result([
+            _video('a', createdAt: 3000, dTag: 'a'),
+            _video('b', createdAt: 2000, dTag: 'b'),
+          ], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.pinnedCoordinates, [_coordinate('b')]);
+        expect(cubit.state.videos.map((v) => v.id), ['b', 'a']);
+        expect(cubit.state.canPinMore, isTrue);
+        // Quiet: the owner did not ask for it, so no snackbar.
+        expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.none);
+        expect(cubit.state.isPinMutationInFlight, isFalse);
+      });
+
+      test('a pin that resolves to a version this device knows is deleted '
+          'is offered for release too', () async {
+        final stale = _video('stale', createdAt: 10, dTag: 'gone');
+        when(() => h.ves.isVideoEventKnownDeleted(stale)).thenReturn(true);
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone')]);
+        when(
+          () => h.repo.getVideosByAddressableIds([
+            _coordinate('gone'),
+          ], cacheResults: true),
+        ).thenAnswer((_) async => [stale]);
+        when(
+          () => h.pins.releaseDeleted([_coordinate('gone')]),
+        ).thenAnswer((_) async => const []);
+        h.stubAuthorFeed(
+          _result([_video('a', createdAt: 3000, dTag: 'a')], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        expect(cubit.state.pinnedCoordinates, isEmpty);
+        expect(cubit.state.videos.map((v) => v.id), ['a']);
+      });
+
+      test('a release that fails leaves the list alone', () async {
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone')]);
+        when(
+          () => h.pins.releaseDeleted(any()),
+        ).thenThrow(Exception('relay'));
+        h.stubAuthorFeed(
+          _result([_video('a', createdAt: 3000, dTag: 'a')], hasMore: false),
+        );
+
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+
+        // The surviving list is also the list before the release ran, so
+        // without this the test passes with the release step deleted.
+        verify(
+          () => h.pins.releaseDeleted([_coordinate('gone')]),
+        ).called(1);
+        expect(cubit.state.pinnedCoordinates, [_coordinate('gone')]);
+        expect(cubit.state.videos.map((v) => v.id), ['a']);
       });
 
       test('pins survive every re-derivation: filter change, relay '
