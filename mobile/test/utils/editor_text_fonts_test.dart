@@ -29,12 +29,29 @@ void main() {
         expect(googleFontFamilyName(font), isNotNull);
       }
     });
+
+    test('uses the exact family name published by google_fonts', () {
+      final published = GoogleFonts.asMap();
+      for (final entry in VideoEditorConstants.textFontCatalogue) {
+        expect(
+          published[entry.familyName],
+          same(entry.font),
+          reason:
+              '${entry.familyName} is not the exact name google_fonts '
+              'publishes this tear-off under',
+        );
+      }
+    });
   });
 
   group('VideoEditorConstants.textFonts', () {
     test('holds no font twice', () {
       final fonts = VideoEditorConstants.textFonts;
       expect(fonts.toSet(), hasLength(fonts.length));
+    });
+
+    test('keeps the persisted catalogue at 79 entries', () {
+      expect(VideoEditorConstants.textFontCatalogue, hasLength(79));
     });
 
     test('rejects in-place reordering, which would repoint saved drafts', () {

@@ -11,7 +11,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 /// beside each tear-off, rather than by reversing `GoogleFonts.asMap()`. That
 /// map is const over the package's whole catalogue, so referencing it retains
 /// every one of its ~1700 font descriptors — see [EditorTextFont].
-final Map<Object, String> _googleFontFamilyNames = {
+final Map<TextFont, String> _googleFontFamilyNames = {
   for (final entry in VideoEditorConstants.textFontCatalogue)
     entry.font: entry.familyName,
 };

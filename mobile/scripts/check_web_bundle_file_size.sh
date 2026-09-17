@@ -4,13 +4,12 @@
 #
 # Cloudflare Pages rejects an upload containing a file over 25 MiB. Nothing in
 # `flutter build web` knows that, so before this guard existed the only signal
-# was wrangler refusing the deploy -- and that runs in a *separate* workflow
-# after the build: on the PR-preview deploy (which needs the build artifact
-# first) and on the production deploy (which runs on main, after merge). So a
-# change that inflated main.dart.js shipped with every check green, and
-# app.divine.video silently stopped receiving updates for a day while every PR
-# preview failed too. Checking in the build job puts the failure on the PR that
-# causes it.
+# was wrangler refusing a deploy. Preview uploads happen in a later workflow,
+# while production builds and deploys only after a change reaches main. A
+# change that inflated main.dart.js therefore shipped with every required PR
+# check green, and app.divine.video silently stopped receiving updates for a
+# day while every PR preview failed too. The required Mobile CI build now
+# checks the production bundle on pull requests and merge-queue heads.
 #
 # `GoogleFonts.asMap()` is the shape that did it: a const map over the whole
 # google_fonts catalogue, so referencing it retains all ~1700 font descriptors
@@ -52,13 +51,22 @@ annotate() {
 
 fail=0
 warned=0
+scanned=0
 largest_size=0
 largest_rel=""
+file_list="$(mktemp)"
+trap 'rm -f "$file_list"' EXIT
+
+if ! find -L "$site_dir" -type f -print0 > "$file_list"; then
+  echo "❌ Could not scan $site_dir for files."
+  exit 1
+fi
 
 # `wc -c` rather than `stat`: the size flags differ between BSD and GNU stat,
 # and GNU's `-f` reports the filesystem instead of erroring, so a portable
 # invocation is easier to get right than to detect.
-while IFS= read -r file; do
+while IFS= read -r -d '' file; do
+  scanned=$((scanned + 1))
   size="$(wc -c < "$file" | tr -d ' ')"
   rel="${file#"$site_dir"/}"
   if [ "$size" -gt "$largest_size" ]; then
@@ -66,7 +74,7 @@ while IFS= read -r file; do
     largest_rel="$rel"
   fi
   if [ "$size" -gt "$LIMIT_BYTES" ]; then
-    message="$rel is $(mib "$size"), over Cloudflare Pages' $(mib "$LIMIT_BYTES") per-file limit."
+    message="$rel is $(mib "$size") ($size bytes), over Cloudflare Pages' $(mib "$LIMIT_BYTES") ($LIMIT_BYTES bytes) per-file limit."
     echo "❌ $message"
     annotate error "$message"
     fail=1
@@ -76,7 +84,12 @@ while IFS= read -r file; do
     annotate warning "$message"
     warned=1
   fi
-done < <(find "$site_dir" -type f)
+done < "$file_list"
+
+if [ "$scanned" -eq 0 ]; then
+  echo "❌ $site_dir contains no files. Build the web site before running this guard."
+  exit 1
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo
