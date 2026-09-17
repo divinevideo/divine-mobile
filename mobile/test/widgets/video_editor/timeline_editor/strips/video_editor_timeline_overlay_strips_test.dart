@@ -32,8 +32,8 @@ void main() {
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
     });
 
-    tearDown(() {
-      mainBloc.close();
+    tearDown(() async {
+      await mainBloc.close();
     });
 
     Widget build() {

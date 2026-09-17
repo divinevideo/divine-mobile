@@ -483,7 +483,7 @@ class _VideoEditorTimelineClipStripState
     // Offset so the reorder grid starts aligned with the pressed clip.
     final slotCenter = _slotLeft(pressedIndex) + _reorderSize / 2;
 
-    HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
     widget.onReorderChanged?.call(true);
     setState(() {
       _rowOffset = fingerX - slotCenter;
@@ -508,13 +508,14 @@ class _VideoEditorTimelineClipStripState
     });
 
     // After the shrink animation completes, switch to finger-following mode.
-    _reorderAnimController
-      ..reset()
-      ..forward().then((_) {
+    _reorderAnimController.reset();
+    unawaited(
+      _reorderAnimController.forward().then((_) {
         if (mounted && _isReordering) {
           setState(() => _dragAnimating = false);
         }
-      });
+      }),
+    );
   }
 
   void _onLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
@@ -525,7 +526,7 @@ class _VideoEditorTimelineClipStripState
       final adjustedX = _effectiveLocalX - _rowOffset;
       final targetIndex = _clipIndexAtX(adjustedX);
       if (targetIndex != _dragIndex) {
-        HapticFeedback.selectionClick();
+        unawaited(HapticFeedback.selectionClick());
         final clip = _orderedClips.removeAt(_dragIndex!);
         _orderedClips.insert(targetIndex, clip);
         _dragIndex = targetIndex;
@@ -585,7 +586,7 @@ class _VideoEditorTimelineClipStripState
       final adjustedX = _effectiveLocalX - _rowOffset;
       final targetIndex = _clipIndexAtX(adjustedX);
       if (targetIndex != _dragIndex) {
-        HapticFeedback.selectionClick();
+        unawaited(HapticFeedback.selectionClick());
         final clip = _orderedClips.removeAt(_dragIndex!);
         _orderedClips.insert(targetIndex, clip);
         _dragIndex = targetIndex;
@@ -610,7 +611,7 @@ class _VideoEditorTimelineClipStripState
   /// Programmatic reorder for accessibility custom actions.
   void _reorderClip(int from, int to) {
     if (from == to) return;
-    HapticFeedback.selectionClick();
+    unawaited(HapticFeedback.selectionClick());
     setState(() {
       final clip = _orderedClips.removeAt(from);
       _orderedClips.insert(to, clip);
@@ -642,9 +643,9 @@ class _VideoEditorTimelineClipStripState
     }
 
     // Phase 2: after the grow-back animation completes, clean up.
-    _reorderAnimController
-      ..reset()
-      ..forward().then((_) {
+    _reorderAnimController.reset();
+    unawaited(
+      _reorderAnimController.forward().then((_) {
         if (mounted) {
           setState(() {
             _isReorderExiting = false;
@@ -658,7 +659,8 @@ class _VideoEditorTimelineClipStripState
             _rowOffset = 0;
           });
         }
-      });
+      }),
+    );
   }
 
   static bool _sameOrder(List<DivineVideoClip> a, List<DivineVideoClip> b) {

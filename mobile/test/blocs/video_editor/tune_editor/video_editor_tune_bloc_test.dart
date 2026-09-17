@@ -14,17 +14,20 @@ void main() {
   group(VideoEditorTuneBloc, () {
     VideoEditorTuneBloc buildBloc() => VideoEditorTuneBloc();
 
-    test('initial state exposes all tune adjustments at neutral values', () {
-      final bloc = buildBloc();
-      expect(
-        bloc.state.adjustments,
-        equals(VideoEditorConstants.tuneAdjustments),
-      );
-      expect(bloc.state.selectedIndex, 0);
-      expect(bloc.state.values, isEmpty);
-      expect(bloc.state.selectedValue, 0);
-      bloc.close();
-    });
+    test(
+      'initial state exposes all tune adjustments at neutral values',
+      () async {
+        final bloc = buildBloc();
+        expect(
+          bloc.state.adjustments,
+          equals(VideoEditorConstants.tuneAdjustments),
+        );
+        expect(bloc.state.selectedIndex, 0);
+        expect(bloc.state.values, isEmpty);
+        expect(bloc.state.selectedValue, 0);
+        await bloc.close();
+      },
+    );
 
     group('VideoEditorTuneEditorInitialized', () {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(

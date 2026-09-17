@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -266,7 +267,7 @@ class _VolumeArcState extends State<_VolumeArc> {
             // fires onTap when the gesture didn't escalate to a pan, so
             // taps and drags don't conflict.
             onTap: () {
-              HapticFeedback.lightImpact();
+              unawaited(HapticFeedback.lightImpact());
               final next = _localVolume > 0.001
                   ? 0.0
                   : (_lastUnmutedVolume > 0 ? _lastUnmutedVolume : 1.0);

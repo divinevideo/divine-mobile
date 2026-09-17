@@ -16,7 +16,7 @@ void main() {
       return VideoEditorDrawBloc();
     }
 
-    test('initial state has correct default values', () {
+    test('initial state has correct default values', () async {
       final bloc = buildBloc();
       expect(bloc.state.canUndo, isFalse);
       expect(bloc.state.canRedo, isFalse);
@@ -25,7 +25,7 @@ void main() {
       expect(bloc.state.opacity, 1.0);
       expect(bloc.state.selectedColor, VideoEditorConstants.primaryColor);
       expect(bloc.state.mode, PaintMode.freeStyle);
-      bloc.close();
+      await bloc.close();
     });
 
     group('VideoEditorDrawCapabilitiesChanged', () {

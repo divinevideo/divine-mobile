@@ -2,6 +2,8 @@
 // ABOUTME: Close/done on top, video timeline + live waveform in the middle,
 // ABOUTME: record below; drives the preview so each take plays over its spot.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
@@ -171,10 +173,12 @@ class _RecorderListeners extends StatelessWidget {
   }
 
   void _announce(BuildContext context, String message) {
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
     );
   }
 }

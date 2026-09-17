@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,7 +32,7 @@ void toggleAllTimelineVolumeMuted(BuildContext context) {
           customAudioTracks.every((t) => t.volume == 0.0));
   final targetVolume = allMuted ? 1.0 : 0.0;
 
-  HapticFeedback.mediumImpact();
+  unawaited(HapticFeedback.mediumImpact());
   clipBloc.add(ClipEditorAllClipsVolumeChanged(volume: targetVolume));
   overlayBloc.add(
     TimelineOverlayAllAudioVolumeChanged(volume: targetVolume),

@@ -28,7 +28,7 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
   ) async {
     final scope = VideoEditorScope.of(context);
 
-    VineBottomSheet.show(
+    await VineBottomSheet.show<void>(
       context: context,
       expanded: false,
       scrollable: false,

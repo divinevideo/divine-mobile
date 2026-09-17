@@ -7,8 +7,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// What the clip being keyed sits on, which decides what "Nothing" behind the
 /// subject means and which backdrops can be offered.
@@ -126,9 +128,14 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
     if (!ChromaKeyShader.isBackendSupported || ChromaKeyShader.isSupported) {
       return;
     }
-    ChromaKeyShader.ensureLoaded().then((_) {
-      if (mounted) setState(() => _loadAttempted = true);
-    });
+    runDetached(
+      ChromaKeyShader.ensureLoaded().then((_) {
+        if (mounted) setState(() => _loadAttempted = true);
+      }),
+      'load chroma-key shader',
+      logName: 'ChromaKeyControls',
+      category: LogCategory.video,
+    );
   }
 
   @override

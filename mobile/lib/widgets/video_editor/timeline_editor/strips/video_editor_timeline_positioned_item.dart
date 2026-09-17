@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
@@ -410,7 +411,7 @@ class _TrimmableOverlayTileState extends State<_TrimmableOverlayTile> {
 
     // Suppress boundary haptics during auto-scroll.
     if (atBoundary && !_hitBoundary && !_isAutoScrolling) {
-      HapticFeedback.heavyImpact();
+      unawaited(HapticFeedback.heavyImpact());
     }
     _hitBoundary = atBoundary;
 
@@ -476,7 +477,7 @@ class _TrimmableOverlayTileState extends State<_TrimmableOverlayTile> {
 
     // Suppress boundary haptics during auto-scroll.
     if (atBoundary && !_hitBoundary && !_isAutoScrolling) {
-      HapticFeedback.heavyImpact();
+      unawaited(HapticFeedback.heavyImpact());
     }
     _hitBoundary = atBoundary;
 
