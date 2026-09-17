@@ -147,6 +147,10 @@ abstract class TimelineConstants {
   /// Animation duration for overlay tile state changes.
   static const Duration overlayTileAnimDuration = Duration(milliseconds: 150);
 
+  /// Fade applied to the ruler and the overlay strips while a clip is being
+  /// drag-reordered. Both rows use it, so they fade in step.
+  static const Duration reorderFadeDuration = Duration(milliseconds: 200);
+
   /// Border width for dragged overlay items.
   static const double dragBorderWidth = 1.5;
 

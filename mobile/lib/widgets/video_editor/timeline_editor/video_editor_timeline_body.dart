@@ -137,9 +137,8 @@ class VideoEditorTimelineBody extends StatelessWidget {
             /// Rules Indicator
             Padding(
               padding: compositionPadding,
-              child: AnimatedOpacity(
-                opacity: isReordering ? 0.0 : 1.0,
-                duration: const Duration(milliseconds: 200),
+              child: _ReorderFade(
+                isReordering: isReordering,
                 child: RepaintBoundary(
                   child: VideoEditorTimelineRulesIndicator(
                     totalDuration: totalDuration,
@@ -225,9 +224,8 @@ class VideoEditorTimelineBody extends StatelessWidget {
                       expandRight: overlayTrimExpand,
                       // Inside the scroll view, so the reorder fade's
                       // saveLayer covers the strips rather than the padding.
-                      child: AnimatedOpacity(
-                        opacity: isReordering ? 0.0 : 1.0,
-                        duration: const Duration(milliseconds: 200),
+                      child: _ReorderFade(
+                        isReordering: isReordering,
                         child: RepaintBoundary(
                           child: _CachedOverlayStrips(
                             clips: clips,
@@ -422,6 +420,25 @@ class _CachedOverlayStripsState extends State<_CachedOverlayStrips> {
       onTrimDragChanged: widget.onTrimDragChanged,
       onDragStarted: widget.onDragStarted,
       onDragEnded: widget.onDragEnded,
+    );
+  }
+}
+
+/// Fades a timeline row out while a clip is being drag-reordered.
+///
+/// The ruler and the overlay strips both use it so they fade in step.
+class _ReorderFade extends StatelessWidget {
+  const _ReorderFade({required this.isReordering, required this.child});
+
+  final bool isReordering;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: isReordering ? 0.0 : 1.0,
+      duration: TimelineConstants.reorderFadeDuration,
+      child: child,
     );
   }
 }
