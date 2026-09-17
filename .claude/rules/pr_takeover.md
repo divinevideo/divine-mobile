@@ -114,10 +114,13 @@ issue when verified follow-up work is required.
 
 ## Submit an explicit review verdict
 
-Once posting is authorized, completing a review means submitting a GitHub
-review with a verdict that matches the findings. A body saying "No actionable
-findings" with state `COMMENTED` is not an approval. An issue comment, inline
-comments alone, or an unsubmitted `PENDING` review does not deliver a verdict.
+A review request is itself authorization to publish the conclusion — see
+`AGENTS.md`, "Authority" — so posting is the default, and only an explicit
+current-task instruction to keep the review private withholds it. Do not stop
+to ask. Completing a review then means submitting a GitHub review with a
+verdict that matches the findings. A body saying "No actionable findings" with
+state `COMMENTED` is not an approval. An issue comment, inline comments alone,
+or an unsubmitted `PENDING` review does not deliver a verdict.
 
 | Review outcome on an open pull request | Submit |
 | --- | --- |

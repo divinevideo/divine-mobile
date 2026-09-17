@@ -36,9 +36,10 @@ a fix. See [`pr_takeover.md`](pr_takeover.md).
 - [ ] Every review item sorted into fixed / escalated / declined —
   including inline threads fetched via GraphQL, and outdated ones.
 - [ ] Unrequested changes called out separately from review fixes.
-- [ ] Once posting is authorized, **completing a review means submitting a
-  matching GitHub verdict** — `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` — not
-  just posting findings or a body saying "no actionable findings" as `COMMENTED`.
+- [ ] **Completing a review means submitting a matching GitHub verdict** —
+  `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` — not just posting findings or a
+  body saying "no actionable findings" as `COMMENTED`. The review request is
+  itself the authorization to post it, so post by default rather than asking.
   Pick the verdict from the table in
   [`pr_takeover.md`](pr_takeover.md#submit-an-explicit-review-verdict), pin the
   reviewed SHA, and verify the saved review's `state`, `commit_id`, and
