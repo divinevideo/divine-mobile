@@ -1547,6 +1547,34 @@ void main() {
         },
       );
 
+      test('refuses to publish over claims it could not read', () async {
+        // The write path must not treat an unsettled read as an empty one:
+        // publishing on it would replace the identity event with a set that
+        // predates what this device has already seen — the silent unlink the
+        // other read-failure branches already refuse.
+        stubUnsettledIdentityRead(kind0: [_event(id: _eventId(13))]);
+        when(() => identityEventsDao.getEvent(any())).thenAnswer(
+          (_) async => const IdentityEventRow(
+            pubkey: _pubkey,
+            tagsJson: '[["i","github:octocat","abc"]]',
+            sourceKind: 10011,
+          ),
+        );
+
+        await expectLater(
+          () => repo.publishClaim(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'someone',
+              proof: '123',
+            ),
+          ),
+          throwsA(isA<IdentityClaimReadException>()),
+        );
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
       test('keeps the snapshot claims instead of reporting none', () async {
         stubUnsettledIdentityRead(kind0: [_event(id: _eventId(11))]);
         when(() => identityEventsDao.getEvent(any())).thenAnswer(
