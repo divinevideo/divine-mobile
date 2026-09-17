@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:c2pa_flutter/c2pa.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -12,9 +13,11 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/ios_device_attestation_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
+import 'package:openvine/services/video_publish/proofmode_publish_tagger.dart';
 
 // Mock classes
 class MockAuthService extends Mock implements AuthService {}
@@ -748,7 +751,121 @@ void main() {
         expect(jsonDecode(proofTag[1])['deviceAttestation'], isNull);
       },
     );
+
+    test(
+      'drops publish-time attestation when the account changes after the mint',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+        // The switch lands after attestationFor has returned, so the tagger's
+        // own recheck sees a matching account and keeps the payload. Only the
+        // caller-side strip before signing can catch this one.
+        var currentPubkey = 'account-a-pubkey';
+        final attestation = _RecordingAttestationService(
+          payload: 'attestation-for-account-a',
+        );
+        final tagger = ProofModePublishTagger(
+          iosDeviceAttestation: attestation,
+          currentPubkeyHex: () => currentPubkey,
+          c2paSigningServiceFactory: () => _AccountSwitchingC2paSigningService(
+            onReadManifest: () => currentPubkey = 'account-b-pubkey',
+          ),
+        );
+        publisher = VideoEventPublisher(
+          uploadManager: mockUploadManager,
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          proofModeTagger: tagger,
+        );
+        when(
+          () => mockAuthService.currentPublicKeyHex,
+        ).thenAnswer((_) => currentPubkey);
+
+        const nativeProof = NativeProofData(
+          videoHash: 'abc123def456',
+          pgpSignature: 'signature',
+          publicKey: 'public_key',
+          deviceAttestation: 'attestation-for-the-previous-account',
+        );
+
+        final upload =
+            PendingUpload.create(
+              localVideoPath: '/tmp/test.mp4',
+              nostrPubkey: 'account-a-pubkey',
+              proofManifestJson: jsonEncode(nativeProof.toJson()),
+            ).copyWith(
+              status: UploadStatus.readyToPublish,
+              videoId: 'video123',
+              cdnUrl: 'https://cdn.example.com/video.mp4',
+            );
+
+        Event? capturedEvent;
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((invocation) {
+          capturedEvent = Event.fromJson({
+            'id': 'event997',
+            'pubkey': currentPubkey,
+            'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            'kind': 34236,
+            'tags': invocation.namedArguments[#tags],
+            'content': invocation.namedArguments[#content],
+            'sig': 'signature997',
+          });
+          return Future.value(capturedEvent);
+        });
+        when(
+          () => mockNostrService.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (invocation) async => PublishOutcome(
+            eventId: (invocation.positionalArguments[0] as Event).id,
+            acceptedBy: const ['wss://relay.divine.video'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
+
+        await publisher.publishDirectUpload(upload);
+
+        expect(attestation.pubkeyHex, 'account-a-pubkey');
+        expect(capturedEvent, isNotNull);
+        expect(capturedEvent!.pubkey, 'account-b-pubkey');
+        expect(
+          capturedEvent!.tags.where(
+            (tag) => tag.isNotEmpty && tag[0] == 'device_attestation',
+          ),
+          isEmpty,
+          reason: 'account B must not publish account A device material',
+        );
+        final proofTag = capturedEvent!.tags.firstWhere(
+          (tag) => tag.isNotEmpty && tag[0] == 'proofmode',
+        );
+        expect(jsonDecode(proofTag[1])['deviceAttestation'], isNull);
+      },
+    );
   });
+}
+
+/// Switches the signing account while the publisher reads the C2PA manifest,
+/// i.e. after the attestation has already been minted for the old account.
+class _AccountSwitchingC2paSigningService extends C2paSigningService {
+  _AccountSwitchingC2paSigningService({required this.onReadManifest});
+
+  final VoidCallback onReadManifest;
+
+  @override
+  Future<ManifestStoreInfo?> readManifest(String filePath) async {
+    onReadManifest();
+    return null;
+  }
 }
 
 /// Stands in for App Attest, recording what the publisher asked it to bind.
