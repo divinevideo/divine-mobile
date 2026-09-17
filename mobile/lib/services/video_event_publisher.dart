@@ -32,6 +32,7 @@ import 'package:openvine/services/video_publish/signed_event_relay_publisher.dar
 import 'package:openvine/services/video_publish/video_audio_publisher.dart';
 import 'package:openvine/services/video_publish/video_event_tags.dart';
 import 'package:openvine/services/video_publish/video_imeta_builder.dart';
+import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -169,9 +170,13 @@ class VideoEventPublisher {
   /// Publishes an already-signed video [event] for [upload]; see
   /// [SignedEventRelayPublisher.publish] for the strategy.
   ///
-  /// Throws [AccountRestrictedPublishException] when the authoritative REST
-  /// endpoint or configured Divine relay reports that the account is suspended
-  /// or banned.
+  /// Throws:
+  ///
+  /// * [AccountRestrictedPublishException] when the authoritative REST
+  ///   endpoint or configured Divine relay reports that the account is
+  ///   suspended or banned.
+  /// * [AsyncCancelledException] when [dispose] runs before the retry ladder
+  ///   finishes.
   @visibleForTesting
   Future<bool> publishSignedVideoEvent({
     required PendingUpload upload,
@@ -188,6 +193,8 @@ class VideoEventPublisher {
   /// cleared for reuse — see [publishDirectUpload].
   /// Throws [AccountRestrictedPublishException] when an authoritative Divine
   /// publish surface reports that the account is suspended or banned.
+  /// Throws [AsyncCancelledException] when [dispose] runs while the publish
+  /// waits to retry — see [publishDirectUpload].
   Future<bool> publishVideoEvent({
     required PendingUpload upload,
     String? title,
@@ -271,6 +278,9 @@ class VideoEventPublisher {
   ///   folded into `false`.
   /// * [AccountRestrictedPublishException] if an authoritative Divine publish
   ///   surface reports that the signed-in account is suspended or banned.
+  /// * [AsyncCancelledException] if [dispose] runs while the publish waits to
+  ///   retry. That is teardown rather than a failed publish, so it is not
+  ///   counted as one.
   Future<bool> publishDirectUpload(
     PendingUpload upload, {
     int? expirationTimestamp,
@@ -612,6 +622,10 @@ class VideoEventPublisher {
       rethrow;
     } on AccountRestrictedPublishException {
       _totalEventsFailed++;
+      rethrow;
+    } on AsyncCancelledException {
+      // Disposed mid-retry: teardown rather than a failed publish, so it is
+      // neither counted nor logged as one. The caller decides what it means.
       rethrow;
     } catch (e, stackTrace) {
       Log.error(

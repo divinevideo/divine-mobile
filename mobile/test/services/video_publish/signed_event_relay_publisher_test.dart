@@ -397,6 +397,46 @@ void main() {
         });
       });
 
+      test('dispose during a relay-presence check starts no attempt', () {
+        fakeAsync((async) {
+          var restAttempts = 0;
+          when(() => eventApiClient.publishEvent(any())).thenAnswer((_) async {
+            restAttempts++;
+            return const EventApiTransientFailure('timeout');
+          });
+          stubWebSocket((event) => _rejected(event, 'error: try later'));
+          final presence = Completer<List<Event>>();
+          when(
+            () => nostrClient.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+            ),
+          ).thenAnswer((_) => presence.future);
+          Object? error;
+
+          unawaited(
+            publisher
+                .publish(_signedEvent())
+                .then<void>((_) {}, onError: (Object e) => error = e),
+          );
+          async.elapse(const Duration(seconds: 2));
+          expect(restAttempts, 1);
+          verify(
+            () => nostrClient.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+            ),
+          ).called(1);
+
+          publisher.dispose();
+          presence.complete(const <Event>[]);
+          async.flushMicrotasks();
+
+          expect(restAttempts, 1, reason: 'no attempt may start after dispose');
+          expect(error, isA<AsyncCancelledException>());
+        });
+      });
+
       test('a REST acceptance publishes without touching WebSocket', () async {
         when(
           () => eventApiClient.publishEvent(any()),

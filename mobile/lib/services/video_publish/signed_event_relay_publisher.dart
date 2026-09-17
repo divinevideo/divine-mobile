@@ -173,9 +173,13 @@ class SignedEventRelayPublisher {
   /// The same signed [event] is reused across all attempts — no event is
   /// re-signed per retry, so relays deduplicate by id.
   ///
-  /// Throws [AccountRestrictedPublishException] when the authoritative REST
-  /// endpoint or configured Divine relay reports that the account is
-  /// suspended or banned.
+  /// Throws:
+  ///
+  /// * [AccountRestrictedPublishException] when the authoritative REST
+  ///   endpoint or configured Divine relay reports that the account is
+  ///   suspended or banned.
+  /// * [AsyncCancelledException] when [dispose] runs before the ladder
+  ///   finishes: a pending backoff ends and no further attempt starts.
   Future<EventPublishOutcome> publish(
     Event event, {
     bool isRetry = false,
@@ -208,6 +212,7 @@ class SignedEventRelayPublisher {
         return EventPublishOutcome.published;
       }
 
+      _throwIfDisposed(attempt);
       final outcome = await _publishViaRestThenWebSocket(apiClient, event);
       switch (outcome) {
         case EventPublishOutcome.published:
@@ -379,9 +384,18 @@ class SignedEventRelayPublisher {
     }
   }
 
-  /// Cancels any pending backoff wait. A retry ladder mid-backoff completes
-  /// with [AsyncCancelledException] instead of running another attempt.
+  /// Stops any retry ladder in [publish]: a pending backoff ends and no
+  /// further attempt starts, so the ladder completes with
+  /// [AsyncCancelledException].
   void dispose() => _async.dispose();
+
+  /// Refuses to start [attempt] once [dispose] has run. The backoff wait
+  /// alone would miss a dispose that lands during a relay-presence check.
+  void _throwIfDisposed(int attempt) {
+    if (_async.isDisposed) {
+      throw AsyncCancelledException('publish-attempt-$attempt');
+    }
+  }
 
   void _logFullEvent(Event event) {
     Log.info(
@@ -503,6 +517,7 @@ class SignedEventRelayPublisher {
   /// retry loop. Used only when no [EventApiClient] is configured.
   Future<EventPublishOutcome> _publishWithWebSocketRetries(Event event) async {
     for (var attempt = 1; attempt <= _maxPublishAttempts; attempt++) {
+      _throwIfDisposed(attempt);
       final outcome = await publishViaWebSocket(event);
       if (outcome == EventPublishOutcome.published) {
         if (attempt > 1) {

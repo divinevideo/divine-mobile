@@ -1,6 +1,8 @@
 // ABOUTME: Tests for VideoEventPublisher REST-first publish with WebSocket fallback
 // ABOUTME: Covers REST accept, transient fallback, recovery, retry reuse, no-duplicate
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show VideoEvent;
@@ -16,6 +18,7 @@ import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/async_utils.dart';
 
 class _MockUploadManager extends Mock implements UploadManager {}
 
@@ -159,6 +162,36 @@ void main() {
   }
 
   group('VideoEventPublisher REST-first publish', () {
+    test(
+      'a publisher disposed mid-retry surfaces the cancellation uncounted',
+      () async {
+        final signedEvent = createSignedEvent();
+        stubSigning(signedEvent);
+        final firstAttempt = Completer<void>();
+        when(() => mockEventApiClient.publishEvent(any()))
+            .thenAnswer((_) async {
+              if (!firstAttempt.isCompleted) firstAttempt.complete();
+              return const EventApiTransientFailure('http_503');
+            });
+        stubWebSocket(
+          PublishOutcome(
+            eventId: signedEvent.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const ['wss://trusted.example'],
+          ),
+        );
+
+        final result = publisher.publishDirectUpload(createUpload());
+        await firstAttempt.future;
+        publisher.dispose();
+
+        await expectLater(result, throwsA(isA<AsyncCancelledException>()));
+        expect(publisher.publishingStats['total_failed'], 0);
+        verify(() => mockEventApiClient.publishEvent(any())).called(1);
+      },
+    );
+
     test('REST 200 acceptance marks the upload published', () async {
       final signedEvent = createSignedEvent();
       stubSigning(signedEvent);
