@@ -24,17 +24,17 @@ class VideoImetaBuilder {
 
   /// Whether [upload] carries at least one video URL that may be published.
   static bool hasPublishableVideoUrl(PendingUpload upload) =>
-      isPublishableMediaUrl(upload.streamingMp4Url) ||
-      isPublishableMediaUrl(upload.fallbackUrl) ||
-      isPublishableMediaUrl(upload.streamingHlsUrl) ||
-      isPublishableMediaUrl(upload.cdnUrl);
+      _isPublishableMediaUrl(upload.streamingMp4Url) ||
+      _isPublishableMediaUrl(upload.fallbackUrl) ||
+      _isPublishableMediaUrl(upload.streamingHlsUrl) ||
+      _isPublishableMediaUrl(upload.cdnUrl);
 
   /// Whether [url] is an HTTP(S) URL on a media host that still serves.
-  static bool isPublishableMediaUrl(String? url) =>
-      isHttpUrl(url) && !VideoUrlResolver.isKnownDeadMediaUrl(url!);
+  static bool _isPublishableMediaUrl(String? url) =>
+      _isHttpUrl(url) && !VideoUrlResolver.isKnownDeadMediaUrl(url!);
 
   /// Whether [url] is an HTTP(S) URL rather than a local file path.
-  static bool isHttpUrl(String? url) {
+  static bool _isHttpUrl(String? url) {
     if (url == null || url.isEmpty) return false;
     return url.startsWith('http://') || url.startsWith('https://');
   }
@@ -59,7 +59,7 @@ class VideoImetaBuilder {
       required String label,
     }) {
       if (url == null || url.isEmpty) return;
-      if (!isHttpUrl(url)) {
+      if (!_isHttpUrl(url)) {
         Log.error(
           '⚠️ Skipping non-HTTP $fieldName (possible local path): $url',
           name: _logName,
@@ -124,7 +124,7 @@ class VideoImetaBuilder {
 
     // Use uploaded thumbnail CDN URL from Blossom upload
     final thumbnailPath = upload.thumbnailPath;
-    if (thumbnailPath != null && isHttpUrl(thumbnailPath)) {
+    if (thumbnailPath != null && _isHttpUrl(thumbnailPath)) {
       components.add('image $thumbnailPath');
       Log.info(
         '✅ Using uploaded thumbnail CDN URL: $thumbnailPath',
