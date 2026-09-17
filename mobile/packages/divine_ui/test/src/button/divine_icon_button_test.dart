@@ -482,13 +482,42 @@ void main() {
           ),
         );
 
-        final divineIcon = tester.widget<DivineIcon>(
-          find.byType(DivineIcon),
+        final glyph = tester.widget<ShadowedDivineIcon>(
+          find.byType(ShadowedDivineIcon),
         );
         // A 15 % scrim over a video frame stays dark whatever the palette
         // says, so this variant must not follow it into the light palette.
-        expect(divineIcon.color, VineTheme.onSurface);
-        expect(divineIcon.color, isNot(VineTheme.lightColors.onSurface));
+        expect(glyph.color, VineTheme.onSurface);
+        expect(glyph.color, isNot(VineTheme.lightColors.onSurface));
+      });
+
+      testWidgets('ghostOverMedia type bakes its glyph without shadows', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            type: DivineIconButtonType.ghostOverMedia,
+            onPressed: () {},
+          ),
+        );
+
+        // Over video the button is redrawn every frame; a baked glyph is one
+        // draw where a live SVG is a saveLayer. The pill carries the
+        // contrast, so the bake has no shadow pair.
+        final glyph = tester.widget<ShadowedDivineIcon>(
+          find.byType(ShadowedDivineIcon),
+        );
+        expect(glyph.icon, DivineIconName.x);
+        expect(glyph.shadows, isEmpty);
+      });
+
+      testWidgets('other types keep the live glyph', (tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(type: DivineIconButtonType.ghost, onPressed: () {}),
+        );
+
+        expect(find.byType(ShadowedDivineIcon), findsNothing);
+        expect(find.byType(DivineIcon), findsOneWidget);
       });
 
       testWidgets('error type uses onErrorContainer color', (tester) async {

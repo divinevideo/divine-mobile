@@ -122,7 +122,6 @@ void main() {
               const Locale('en'),
             ).notificationsBadgeUnread(3),
             isButton: true,
-            isImage: true,
             hasTapAction: true,
           ),
         );
@@ -155,7 +154,6 @@ void main() {
         matchesSemantics(
           label: 'Inbox',
           isButton: true,
-          isImage: true,
           hasTapAction: true,
         ),
       );

@@ -100,6 +100,10 @@ class ShadowedDivineIcon extends StatefulWidget {
   final double size;
 
   /// Shadows painted under the glyph, first entry lowest.
+  ///
+  /// An empty list bakes the bare glyph. That is still worth it for an icon
+  /// that sits over video: a live [DivineIcon] with a tint is a colour-filter
+  /// `saveLayer` on every frame, the baked bitmap is a single draw.
   final List<DivineIconShadow> shadows;
 
   /// Raster cache to draw from. Defaults to [ShadowedIconRasterCache.instance];
@@ -225,7 +229,11 @@ class _LayeredShadowedIcon extends StatelessWidget {
                 ),
               ),
             ),
-          DivineIcon(icon: icon, color: color, size: size),
+          // The owning control supplies the accessible label and role. Keep
+          // semantics stable when this live SVG is replaced by a RawImage.
+          ExcludeSemantics(
+            child: DivineIcon(icon: icon, color: color, size: size),
+          ),
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:divine_ui/src/app_bar/icon_source.dart';
 import 'package:divine_ui/src/icon/divine_icon.dart';
+import 'package:divine_ui/src/icon/shadowed_divine_icon.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
@@ -355,6 +356,16 @@ class _DivineIconButtonContent extends StatelessWidget {
           size: size,
         ),
       };
+    }
+    if (type == DivineIconButtonType.ghostOverMedia) {
+      // Over a playing video the button is redrawn on every frame, and a live
+      // SVG glyph is a colour-filter `saveLayer` each time. Baking it once
+      // (no shadows — the pill supplies the contrast) makes it one draw.
+      return ShadowedDivineIcon(
+        icon: icon!,
+        color: iconColor,
+        shadows: const [],
+      );
     }
     return DivineIcon(icon: icon!, color: iconColor);
   }
