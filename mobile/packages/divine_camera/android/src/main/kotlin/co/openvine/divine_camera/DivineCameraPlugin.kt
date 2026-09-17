@@ -46,14 +46,20 @@ class DivineCameraPlugin :
     // call, which is the gap a purely native event (e.g. a volume-key callback)
     // could otherwise fall into. onMethodCall re-claims as defense-in-depth,
     // since camera calls only ever reach the UI engine.
-    private val logSink: (String, String, String) -> Unit = { level, message, name ->
-        mainHandler.post {
-            channel.invokeMethod(
-                "onNativeLog",
-                mapOf("level" to level, "message" to message, "name" to name)
-            )
+    private val logSink: (String, String, String, Double) -> Unit =
+        { level, message, name, timestampMs ->
+            mainHandler.post {
+                channel.invokeMethod(
+                    "onNativeLog",
+                    mapOf(
+                        "level" to level,
+                        "message" to message,
+                        "name" to name,
+                        "timestampMs" to timestampMs
+                    )
+                )
+            }
         }
-    }
 
     // Claim the process-wide diagnostics sink for THIS engine. Only the UI
     // engine reaches these call sites (activity attachment + camera method

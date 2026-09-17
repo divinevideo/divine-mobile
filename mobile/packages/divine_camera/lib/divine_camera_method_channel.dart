@@ -90,11 +90,18 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
   /// problems (audio-session setup, interruptions, recovery, recording
   /// start/stop, asset-writer failures) — see `DivineCameraLog` on each
   /// platform. Per-frame and verbose native logs stay on the device console.
+  ///
+  /// `timestampMs` is stamped natively at the call site, before the sink hops
+  /// to the main queue to reach this channel. That hop is not free while the
+  /// app is being backgrounded, so [UnifiedLogger]'s arrival stamp cannot
+  /// stand in for it: a late line would otherwise read the same whether the
+  /// native work stalled or only its forward did (#9291).
   void _forwardNativeLog(Map<dynamic, dynamic> args) {
-    final message = args['message'] as String?;
-    if (message == null || message.isEmpty) return;
+    final rawMessage = args['message'] as String?;
+    if (rawMessage == null || rawMessage.isEmpty) return;
     final level = args['level'] as String? ?? 'info';
     final name = args['name'] as String? ?? 'DivineCameraNative';
+    final message = _withNativeTimestamp(rawMessage, args['timestampMs']);
     switch (level) {
       case 'error':
         Log.error(message, name: name, category: LogCategory.video);
@@ -109,6 +116,30 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
         Log.info(message, name: name, category: LogCategory.video);
     }
   }
+
+  /// Prefixes [message] with the native emit time when the platform sent one.
+  ///
+  /// Rendered in the same UTC ISO-8601 shape as `LogEntry.timestamp` so the
+  /// two read as one pair in an exported log. A platform that sends no stamp,
+  /// or one this cannot render, still forwards its message unchanged: the
+  /// stamp exists to make these lines trustworthy, so a malformed one costs
+  /// the stamp and never the line. Both `double.nan.round()` and an epoch
+  /// beyond [_maxEpochMs] throw, and an escaped throw here would take the
+  /// diagnostic down with it.
+  static String _withNativeTimestamp(String message, Object? timestampMs) {
+    if (timestampMs is! num || !timestampMs.isFinite) return message;
+    final milliseconds = timestampMs.round();
+    if (milliseconds.abs() > _maxEpochMs) return message;
+    final stamp = DateTime.fromMillisecondsSinceEpoch(
+      milliseconds,
+      isUtc: true,
+    ).toIso8601String();
+    return '[native $stamp] $message';
+  }
+
+  /// The widest epoch [DateTime.fromMillisecondsSinceEpoch] accepts: 100 000
+  /// 000 days either side of the epoch. Anything past it throws a [RangeError].
+  static const int _maxEpochMs = 8640000000000000;
 
   @override
   Future<String?> getPlatformVersion() async {

@@ -78,12 +78,17 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     /// sufficient. (Android binds ownership to the Activity lifecycle; iOS
     /// reclaims in its native callbacks because the background-engine steal
     /// scenario does apply on mobile.) See #5128.
-    private lazy var logSink: (String, String, String) -> Void = {
-        [weak self] level, message, name in
+    private lazy var logSink: (String, String, String, Double) -> Void = {
+        [weak self] level, message, name, timestampMs in
         DispatchQueue.main.async {
             self?.methodChannel?.invokeMethod(
                 "onNativeLog",
-                arguments: ["level": level, "message": message, "name": name]
+                arguments: [
+                    "level": level,
+                    "message": message,
+                    "name": name,
+                    "timestampMs": timestampMs,
+                ]
             )
         }
     }

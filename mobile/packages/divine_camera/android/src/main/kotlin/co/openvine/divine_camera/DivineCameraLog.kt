@@ -21,11 +21,13 @@ import android.util.Log
  */
 object DivineCameraLog {
     /**
-     * Forwards `(level, message, name)` to Dart. `level` is one of `debug`,
-     * `info`, `warning`, `error`. Set by the plugin; `null` until then.
+     * Forwards `(level, message, name, timestampMs)` to Dart. `level` is one
+     * of `debug`, `info`, `warning`, `error`. `timestampMs` is epoch
+     * milliseconds stamped at the call site. Set by the plugin; `null` until
+     * then.
      */
     @Volatile
-    var sink: ((String, String, String) -> Unit)? = null
+    var sink: ((String, String, String, Double) -> Unit)? = null
 
     fun debug(message: String, name: String = "DivineCamera") = emit("debug", message, name)
 
@@ -52,6 +54,11 @@ object DivineCameraLog {
         emit("error", message, tag, tr)
 
     private fun emit(level: String, message: String, name: String, tr: Throwable? = null) {
+        // Stamp here, on whichever thread raised the event. The sink hops to
+        // the main looper before it reaches Dart, and Dart stamps on arrival,
+        // so without this a line held up by a busy main thread reads exactly
+        // like native work that ran late. See #9291.
+        val timestampMs = System.currentTimeMillis().toDouble()
         // Keep the logcat fallback so on-device debugging is unchanged.
         when (level) {
             "error" -> if (tr != null) Log.e(name, message, tr) else Log.e(name, message)
@@ -59,6 +66,6 @@ object DivineCameraLog {
             "info" -> if (tr != null) Log.i(name, message, tr) else Log.i(name, message)
             else -> if (tr != null) Log.d(name, message, tr) else Log.d(name, message)
         }
-        sink?.invoke(level, tr?.let { "$message: $it" } ?: message, name)
+        sink?.invoke(level, tr?.let { "$message: $it" } ?: message, name, timestampMs)
     }
 }
