@@ -313,11 +313,12 @@ These issues stay report-only regardless of assignee; see `<context-dir>/AGENT_T
 
 ## Zapstore Publishing Notes
 
-- Do not complicate Zapstore publish handoff. Let Rabble run `zsp` directly unless explicitly asked to wrap or automate it.
-- Never ask Rabble to paste an `nsec` into chat or into a shell command that would land in history.
-- If `zsp` selects the wrong release, stop and fix the release source/version issue before signing. Do not continue to preview/sign.
-- Divine `1.0.9` was a GitHub prerelease, so `zsp` selected `1.0.8` unless `--pre-release` was passed or a local APK/config path forced the exact APK.
-- Before telling Rabble to sign, verify the `zsp` fetch output shows the intended APK version, for example `Version: 1.0.9 (...)`.
+- The Android build publishes to Zapstore automatically once it creates the GitHub release (`PUBLISH_TO_GITHUB=YES`). It runs a pinned `zsp` against the tracked root `zapstore.yaml`, so there is no manual `zsp publish` step in the normal release flow.
+- The workflow signs with `ZAPSTORE_NSEC` from the `zapstore_credentials` Codemagic group. Never paste that `nsec` into chat, a shell command, a log, or a file that would land in history.
+- `--pre-release` is required: the CI-created GitHub release is a prerelease, so without the flag `zsp` skips it for the previous public release. Divine `1.0.9` was published wrong for exactly this reason.
+- The workflow refuses to publish when the newest GitHub release does not match the version it just cut, so a stale or missing release cannot be published under the signing key.
+- Certificate linking (`zsp identity --link-key`) is a one-time proof, not a per-release step, and is deliberately skipped during publish. Run it separately with `KEYSTORE_PASSWORD` set.
+- To publish by hand, run from the repo root so the config's icon path resolves: `SIGN_WITH=... zsp publish zapstore.yaml --quiet --skip-preview --skip-certificate-linking --pre-release`, and confirm the fetched version before signing.
 
 ## Clean Workspace Expectations
 
