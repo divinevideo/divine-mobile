@@ -357,6 +357,64 @@ void main() {
       });
     });
 
+    group('delay', () {
+      test('completes once the duration elapses', () {
+        fakeAsync((async) {
+          final scope = AsyncScope();
+          var completed = false;
+
+          unawaited(
+            scope
+                .delay(const Duration(seconds: 2))
+                .then((_) => completed = true),
+          );
+          async.elapse(const Duration(seconds: 1));
+          expect(completed, isFalse);
+
+          async.elapse(const Duration(seconds: 1));
+          expect(completed, isTrue);
+          expect(scope.pendingWaitCount, 0);
+          scope.dispose();
+        });
+      });
+
+      test('dispose aborts a pending delay with AsyncCancelledException', () {
+        fakeAsync((async) {
+          final scope = AsyncScope();
+          Object? thrown;
+
+          unawaited(
+            scope
+                .delay(const Duration(seconds: 2), debugName: 'backoff')
+                .catchError((Object e) => thrown = e),
+          );
+          async.flushMicrotasks();
+
+          scope.dispose();
+          async.elapse(const Duration(seconds: 5));
+
+          expect(
+            thrown,
+            isA<AsyncCancelledException>().having(
+              (e) => e.debugName,
+              'debugName',
+              'backoff',
+            ),
+          );
+          expect(async.pendingTimers, isEmpty);
+        });
+      });
+
+      test('throws immediately when the scope is already disposed', () async {
+        final scope = AsyncScope()..dispose();
+
+        await expectLater(
+          scope.delay(const Duration(seconds: 1)),
+          throwsA(isA<AsyncCancelledException>()),
+        );
+      });
+    });
+
     group('lifecycle', () {
       test('dispose is idempotent and clears outstanding waits', () {
         fakeAsync((async) {

@@ -143,7 +143,6 @@ test/services/video_editor/stop_motion_audio_preview_test.dart	1
 test/services/video_editor/transition_seam_render_service_test.dart	1
 test/services/video_editor/video_editor_render_service_progress_test.dart	1
 test/services/video_editor/video_editor_split_service_test.dart	1
-test/services/video_event_publisher_retry_test.dart	1
 test/services/video_event_service_blocklist_sweep_test.dart	7
 test/services/video_event_service_deletion_test.dart	9
 test/services/video_event_service_event_deduplication_test.dart	24

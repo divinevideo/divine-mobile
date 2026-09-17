@@ -3,6 +3,6 @@
 # scripts/check_service_sentinel_ceiling.sh. A count may only SHRINK; a net
 # increase fails CI vs origin/main. Migrate to typed exceptions + Reportable.
 # Epic: #4336.
-lib/services/auth_service.dart	43
-lib/services/local_key_signer.dart	12
-lib/services/video_event_publisher.dart	35
+lib/services/auth_service.dart	26
+lib/services/local_key_signer.dart	0
+lib/services/video_event_publisher.dart	18
