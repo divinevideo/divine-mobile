@@ -1,6 +1,7 @@
 // ABOUTME: Tests for ClipManagerProvider - Riverpod state management
 // ABOUTME: Validates state updates and provider lifecycle
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -103,6 +104,33 @@ void main() {
       final state = container.read(clipManagerProvider);
       expect(state.clips.length, equals(1));
       expect(state.totalDuration, equals(const Duration(seconds: 2)));
+    });
+
+    group('resetRecording', () {
+      test(
+        'clears the in-progress duration of a recording that made no clip',
+        () {
+          fakeAsync((async) {
+            final notifier = container.read(clipManagerProvider.notifier)
+              ..startRecording();
+            async.elapse(const Duration(milliseconds: 50));
+            notifier.stopRecording();
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              greaterThan(Duration.zero),
+            );
+
+            notifier.resetRecording();
+
+            // The recorder bars draw clips plus this duration, so a stale
+            // value shows a segment for a clip that does not exist.
+            expect(
+              container.read(clipManagerProvider).activeRecordingDuration,
+              Duration.zero,
+            );
+          });
+        },
+      );
     });
 
     group('trim completion lifecycle', () {
