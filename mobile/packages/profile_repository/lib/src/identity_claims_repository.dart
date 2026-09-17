@@ -622,13 +622,13 @@ class IdentityClaimsRepository {
     // last-known-good snapshot instead of rendering an empty set (#6154).
     if (!identityRead.conclusive) {
       final cached = await _cachedIdentityTags(pubkey);
-      Log.warning(
-        'Inconclusive kind-$identityEventKind read for '
-        '${pubkeyForLogs(pubkey)}; falling back to snapshot with '
-        '${cached?.length ?? 0} claim tag(s) rather than kind-0',
-        name: 'IdentityClaimsRepository',
-      );
       if (cached != null && cached.isNotEmpty) {
+        Log.warning(
+          'Inconclusive kind-$identityEventKind read for '
+          '${pubkeyForLogs(pubkey)}; serving the snapshot with '
+          '${cached.length} claim tag(s) rather than the kind-0 fallback',
+          name: 'IdentityClaimsRepository',
+        );
         if (forWrite) {
           throw const IdentityClaimReadException(
             'The identity event read did not settle, but this profile is '
@@ -637,6 +637,15 @@ class IdentityClaimsRepository {
         }
         return _IdentityEventBase(tags: cached, content: '');
       }
+      // No snapshot to prefer, so the kind-0 fallback below is all there is.
+      // Say so plainly: a later empty result is not evidence of no claims.
+      Log.warning(
+        'Inconclusive kind-$identityEventKind read for '
+        '${pubkeyForLogs(pubkey)} and no snapshot to fall back on; '
+        'continuing to kind-0, which cannot distinguish "no claims" from '
+        '"claims did not arrive"',
+        name: 'IdentityClaimsRepository',
+      );
     }
 
     final legacyRead = await _newestEventOfKind(client, pubkey, 0);
