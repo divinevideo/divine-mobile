@@ -145,12 +145,12 @@ When remediation is authorized, fix and validate it, then review the resulting
 head. Approving after you fixed the branch yourself is the normal takeover
 flow, not an exception to it — `PR_REVIEW.md`'s "Branch modification
 responsibilities" says to submit `APPROVED` after pushing validated fixes.
-"Independent-review requirements" means a repository rule that names
-independent re-derivation specifically, such as funnelcake's adversarial
-performance review (`PR_REVIEW.md`, "Independent verification by a separate
-agent session"). Only when a rule like that governs the change does writing
-the fix yourself fail to satisfy it; an ordinary takeover fix-and-approve
-needs nothing further.
+The one thing that does defeat it is a repository rule naming independent
+re-derivation specifically, such as funnelcake's adversarial performance
+review (`PR_REVIEW.md`, "Independent verification by a separate agent
+session"). Only when a rule like that governs the change does writing the fix
+yourself fail to satisfy it; an ordinary takeover fix-and-approve needs
+nothing further.
 
 Before submitting, read the authenticated login and the pull request's author,
 `state`, `isDraft`, `mergedAt`, and `headRefOid`. If the acting account is the
