@@ -125,7 +125,7 @@ key: ValueKey((likesRepo, repostsRepo, eventId, type)),
 ## CI Enforcement (ratchets)
 
 The ownership boundary and disallowed patterns above are enforced in CI by shell
-guards under `mobile/scripts/` (run in the `generated-files` job of
+guards under `mobile/scripts/` (run in the `guards` job of
 `.github/workflows/mobile_ci.yaml`). `custom_lint` / `riverpod_lint` are
 currently disabled by an rxdart version conflict, so enforcement is shell-based.
 
