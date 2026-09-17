@@ -114,7 +114,7 @@ while IFS= read -r path; do
       app=true; native=true; android=true; ios=true; service=true
       maestro_static=true; smoke=true; performance=true; ci_config=true ;;
     .github/workflows/*)
-      # Four `generated-files` guards read workflow files as their only input
+      # Four `guards`-job guards read workflow files as their only input
       # (package coverage floor, package CI floor, backend host defaults,
       # service suite coverage), and `mobile/test/tools/` holds the contract
       # tests that pin these workflows. Both live behind `app`, so a workflow
@@ -133,7 +133,10 @@ while IFS= read -r path; do
   esac
 
   case "$path" in
-    .gitattributes|mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/scripts/check_native_transport_security.sh|mobile/scripts/check_ios_shipping_versions.sh|mobile/scripts/check_gradle_wrapper_checksum.sh|mobile/scripts/ci/detect_mobile_ci_scope.sh)
+    # The guard manifest and its driver decide which native-gated guards run
+    # and how, so editing either must schedule them the same way editing the
+    # gated scripts does.
+    .gitattributes|mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/scripts/check_native_transport_security.sh|mobile/scripts/check_ios_shipping_versions.sh|mobile/scripts/check_gradle_wrapper_checksum.sh|mobile/scripts/ci/detect_mobile_ci_scope.sh|mobile/scripts/ci/guards.tsv|mobile/scripts/ci/run_guards.sh)
       native=true ;;
   esac
 

@@ -119,11 +119,6 @@ jobs:
         working-directory: mobile/
     steps:
       - uses: actions/checkout@v7
-      - name: 🔀 Fetch origin/main for ratchet baselines
-        # The ratchet scripts below compare against origin/main. Fetch it once
-        # here so each script is order-independent; a fetch failure fails the
-        # job (the guards fail closed when the base baseline can't load).
-        run: git fetch --quiet --depth=1 origin main
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -132,395 +127,17 @@ jobs:
           cache: true
       - name: 📦 Install dependencies
         run: flutter pub get
-      - name: 📊 Verify pinned product analytics contract
-        run: dart run tools/check_product_analytics_contract.dart
-      - name: 🔒 Verify native transport security
-        # Skipped when no native config changed. The guard's only inputs are
-        # mobile/android/**, mobile/ios/**, mobile/macos/** and its own
-        # script; if none of those moved, its verdict is identical to the one
-        # main already recorded. Gating it also skips the apt install of
-        # libxml2-utils (~42s, of which `apt-get update` alone is ~28s), which
-        # is the single most expensive step in this job after codegen.
-        if: ${{ needs.changes.outputs.native == 'true' }}
-        run: |
-          if ! command -v xmllint >/dev/null 2>&1; then
-            sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends libxml2-utils
-          fi
-          bash scripts/check_native_transport_security.sh
-      - name: 🍏 Verify iOS shipping target versions
-        if: ${{ needs.changes.outputs.native == 'true' }}
-        run: bash scripts/check_ios_shipping_versions.sh
-      - name: 🔒 Verify iOS required-reason APIs are declared
-        # Deliberately NOT gated on `needs.changes.outputs.native`. That filter
-        # covers mobile/ios/*, mobile/android/* and mobile/macos/* but NOT
-        # mobile/packages/*/ios/*, and a first-party plugin is exactly where
-        # this drift happened: divine_camera's manifest was authored in #890
-        # with an empty NSPrivacyAccessedAPITypes, then #1783 added
-        # ProcessInfo.systemUptime six weeks later under a path the native
-        # filter does not watch. Gating here would reproduce the bug the guard
-        # exists to catch. The check is pure python3 with no package installs,
-        # so running it every time costs well under a second.
-        run: bash scripts/check_privacy_manifest_coverage.sh
-      - name: 📵 Verify LibProofMode network fields stay privacy-gated
-        run: python3 scripts/check_libproofmode_network_privacy.py
-      - name: 🐘 Verify the tracked Gradle wrapper is the pinned artifact
-        # The wrapper is tracked (#7201) so a fresh clone or worktree can run
-        # gradle tooling without a prior `flutter build`. That makes
-        # gradle-wrapper.jar the one third-party binary here that
-        # check_dependency_provenance.sh does not cover -- it reads pubspec
-        # sources only. Gated on `native` for the same reason as the two steps
-        # around it: the guard's only inputs are mobile/android/** and its own
-        # script.
-        if: ${{ needs.changes.outputs.native == 'true' }}
-        run: bash scripts/check_gradle_wrapper_checksum.sh
-      - name: 🌐 Verify backend-host defaults stay on *.divine.video
-        run: bash scripts/check_backend_host_defaults.sh
-      - name: 🪵 Verify no raw logging in production code
-        run: bash scripts/check_raw_logging.sh
-      - name: 🌐 Verify no untagged test mutates HttpOverrides.global
-        run: bash scripts/check_http_overrides_isolation.sh
-      - name: 🧬 Verify no untagged test leaks a process-global singleton
-        run: bash scripts/check_process_global_mutations.sh
-      - name: 🧯 Verify integration_test error-handler restores are exception-safe
-        run: bash scripts/check_integration_test_error_restore_safety.sh
-      - name: 🧾 Verify every E2E service suite is accounted for
-        run: bash scripts/check_service_suite_coverage.sh
-      - name: 🕸️ Verify focused service-suite dependency scopes
-        run: bash scripts/check_service_suite_scope_drift.sh
-      - name: 🔌 Verify no new raw shared-channel installs (heal-and-blame ratchet)
-        run: |
-          # LIST ratchet vs origin/main (fails closed if the base baseline can't
-          # load). The runtime heal-and-blame tearDown (flutter_test_config.dart)
-          # is the primary guard; this freezes raw setMockMethodCallHandler
-          # installs of the five shared channels so new ones must go through
-          # overrideSharedChannel(...). #5738.
-          bash scripts/check_shared_channel_overrides.sh
-      - name: 🐝 Verify production Hive opens use the observable seam
-        run: bash scripts/check_direct_hive_opens.sh
-      - name: 📦 Verify no new package-test channel leaks (per-package merged-isolate ratchet)
-        run: |
-          # Packages analogue of the shared-channel ratchet above. Each package runs
-          # its own very_good --optimization merged isolate and — unlike mobile/test —
-          # has no flutter_test_config.dart heal-and-blame harness, so an un-torn-down
-          # channel mock leaks across that package's suite. Freezes package *_test.dart
-          # entries that install a channel handler without nulling any back down; new
-          # ones must add a tearDown (or a skip tag). #5838.
-          bash scripts/check_package_channel_isolation.sh
-      - name: 🚧 Verify Riverpod boundary (@riverpod / StateProvider locations)
-        run: bash scripts/check_riverpod_boundary.sh
-      - name: 🚧 Verify ChangeNotifier boundary (sanctioned-allowlist ratchet)
-        run: bash scripts/check_changenotifier_boundary.sh
-      - name: 🚧 Verify UI does not import services directly (layering ratchet)
-        # Compares the baseline against origin/main (fetched once at job start);
-        # the guard fails closed when the base baseline cannot be loaded.
-        run: bash scripts/check_ui_service_boundary.sh
-      - name: 🚧 Verify lower layers do not import the UI (layer-direction ratchet)
-        run: |
-          # Mirror image of the guard above: providers/services/repositories/state
-          # must not import screens, widgets, or the router, and route providers
-          # must not import screens. Those upward edges drag the whole screen
-          # graph — and through it app_providers.dart — into non-UI code. Route
-          # locations come from the RoutePaths leaf instead. #7383 (wave #4506).
-          bash scripts/check_layer_direction.sh
-      - name: 🧪 Verify skipped-test count does not increase (skip-ceiling ratchet)
-        run: |
-          # Per-file CEILING over mobile/test, mobile/integration_test and
-          # mobile/packages/*/test, from a Dart AST rather than a regex: the
-          # regex missed a skip: whose reason dart format wrapped onto the next
-          # line, could not see @Skip, and needed one file excluded by name.
-          # Skip-debt epic: #4337 (WS-1) -> #4836. Fails closed if the baseline
-          # can't load.
-          bash scripts/check_skip_ceiling.sh
-      - name: 🧪 Verify no test can pass unconditionally (placeholder ratchet)
-        run: |
-          # Frozen at ZERO: a test whose every assertion is trivially satisfied
-          # (expect(true, isTrue)), or a *_test.dart declaring no test at all.
-          # #3340 removed all 93 sites, so any hit is a regression. A test with
-          # no assertion is deliberately not counted -- imported helpers and
-          # third-party verifiers assert in ways one file cannot see. #3340.
-          bash scripts/check_placeholder_tests.sh
-      - name: 🧪 Verify no 'unchanged' assertion goes unpinned (state-tautology ratchet)
-        run: |
-          # Frozen at ZERO: a test whose only assertion compares a re-read of
-          # state with an earlier read of it that was never pinned. Both operands
-          # come from the state under test, so with the method inert the test
-          # compares null with null (or 0 with 0) and stays green -- #8617 proved
-          # one by mutation. The placeholder ratchet above cannot see it: nothing
-          # here is a literal. Pin the baseline (expect(first, isNotNull)) before
-          # the act. #8617.
-          bash scripts/check_unpinned_unchanged_assertions.sh
-      - name: ⏳ Verify Future.delayed-in-tests count does not increase (ratchet)
-        run: bash scripts/check_future_delayed_ceiling.sh
-      - name: ⏳ Verify Future.delayed-in-production count does not increase (ratchet)
-        run: |
-          # Production (mobile/lib) counterpart of the test-scoped ratchet above.
-          # Fails closed if the base baseline cannot be loaded. Epic: #4339 (PR-4).
-          bash scripts/check_future_delayed_production_ceiling.sh
-      - name: ⏳ Verify async-safety findings do not increase (ratchet)
-        run: |
-          # #9118: analyzer-backed per-rule, per-file ceilings for the remaining
-          # unawaited_futures and discarded_futures debt. Every count may only
-          # shrink; new files and increased counts fail closed.
-          bash scripts/check_async_safety_ceiling.sh
-      - name: 🧱 Verify untested-services count does not increase (floor ratchet)
-        run: bash scripts/check_untested_services_floor.sh
-      - name: 🧱 Verify singleton services do not regrow (DI ratchet)
-        run: |
-          # #4743: lazy-static singletons cannot be replaced in a test without
-          # reaching into static state. The set drifts when nothing watches it —
-          # #3623 counted 13, #4743 counted 14, and only 5 were left by the time
-          # either was re-read. Epic: #4338.
-          bash scripts/check_singleton_services.sh
-      - name: 🧱 Verify service god-files do not grow (architecture ratchet)
-        run: |
-          # Hard architecture guard for #4338: the broad 800-line file-size
-          # check remains advisory, but oversized service-layer god-files are
-          # frozen at their recorded ceilings until a shrink is relocked.
-          bash scripts/check_service_god_file_ceiling.sh
-      - name: 🧱 Verify test/unit does not re-accrete (test-structure ratchet)
-        run: |
-          # Freezes the legacy non-mirroring test/unit bucket per-file so it can
-          # only shrink. New tests must mirror lib/ (test/services/foo_test.dart),
-          # never test/unit/. Fails closed if the base baseline cannot load.
-          # Test-org epic: #4337 (WS-7).
-          bash scripts/check_test_unit_structure.sh
-      - name: 🧱 Verify no test declaration sits outside a group (test-structure ratchet)
-        run: |
-          # Issue #3615: a flat test file gives the runner nothing to nest, so
-          # failures print as an undifferentiated wall and a file cannot be run
-          # a slice at a time. Freezes the per-file count of test/testWidgets/
-          # blocTest/patrolTest declarations outside any group() so it can only
-          # shrink. Group by method name (repositories/services/clients), event
-          # name (blocs/cubits), or renders/interactions/navigation (widgets).
-          bash scripts/check_ungrouped_tests.sh
-      - name: 🧱 Verify every package ships analysis options + a CI workflow (package CI floor)
-        run: |
-          # Issues #3574 / #3575: optionless packages silently inherit the
-          # app's relaxed analyzer config; workflow-less packages get no CI.
-          bash scripts/check_package_ci_floor.sh
-      - name: 🔄 Verify workspace package dependencies remain acyclic
-        # Issue #8934: runtime package dependencies must remain a directed
-        # acyclic graph; dev-only test-fixture edges are deliberately excluded.
-        run: bash scripts/check_package_dependency_cycles.sh
-      - name: 🧱 Verify no package re-adds a runtime Flutter dependency (boundary ratchet)
-        run: |
-          # Issue #3338. A package with no `flutter: sdk: flutter` entry has
-          # `depend_on_referenced_packages` rejecting every package:flutter
-          # import in its lib/ and test/, which is what makes the repository
-          # layer boundary enforced rather than conventional. Freezes the set of
-          # packages that still declare one so re-opening a boundary is a
-          # reviewable baseline edit. Fails closed if the base baseline can't load.
-          bash scripts/check_package_flutter_boundary.sh
-      - name: 🔗 Verify dependency provenance (git refs + overrides ratchet)
-        run: |
-          # Issues #3655 / #3363 (AC3): freezes the set of dependencies resolved
-          # from outside pub.dev, and rejects a movable git ref unconditionally
-          # (a branch or tag can be repointed under the build).
-          bash scripts/check_dependency_provenance.sh
-      - name: 🧱 Verify per-package coverage floors do not decrease (coverage floor ratchet)
-        run: |
-          # Follow-up to #3575: each package workflow's min_coverage is locked in
-          # a baseline and may only RISE. VGV already fails when measured coverage
-          # drops below the floor; this stops the floor itself from being lowered.
-          # Fails closed if the base baseline cannot be loaded.
-          bash scripts/check_package_coverage_floor.sh
-      - name: 🧯 Verify empty-catch count does not increase (reliability ratchet)
-        run: |
-          # Reliability ceilings (epic #4336). Each fails closed if the base
-          # baseline cannot be loaded.
-          bash scripts/check_empty_catch_ceiling.sh
-      - name: 🧯 Verify service error-sentinel count does not increase (reliability ratchet)
-        run: bash scripts/check_service_sentinel_ceiling.sh
-      - name: 🧯 Verify ARB {error}-interpolation count does not increase (reliability ratchet)
-        run: bash scripts/check_arb_error_ceiling.sh
-      - name: 🧭 Verify Maestro suite copy stays aligned (e2e drift guard)
-        run: |
-          # BLOCKING by decision (review on #6978): a copy change that breaks
-          # the E2E suite is real breakage, so this fails the job like every
-          # sibling ratchet above. Unrelated ARB edits that trip it are fixed
-          # by regenerating the baseline in the same PR (UPDATE_BASELINE=1).
-          # Copy drift rotted the Maestro suite silently between 2026-03 and
-          # 2026-08 (#6948): copy in lib/l10n/app_en.arb and the flows diverged
-          # with nothing failing. The guard binds every asserted literal to its
-          # ARB key.
-          bash scripts/check_maestro_copy_drift.sh
-      - name: 🧭 Verify Maestro flow references resolve (e2e drift guard)
-        run: |
-          # Keep this independent from copy drift so contributors see both
-          # failures in one CI run. macOS hides case errors the linux_x2 runner
-          # hard-fails on.
-          bash e2e/maestro/scripts/check_refs.sh
-      - name: 📏 Report oversized files (advisory — does not block CI)
-        run: |
-          # The 800-line file-size ceiling is advisory (team decision): it
-          # reports new oversized files and files that grew relative to main as
-          # a warning, but the script always exits 0 and never fails
-          # the job. Surface the findings as a GitHub warning annotation so they
-          # bubble up to the PR. Oversized-file epic: #4339 (PR-1).
-          output="$(bash scripts/check_file_size_ceiling.sh)"
-          echo "$output"
-          if printf '%s\n' "$output" | grep -q '^WARN \[file_size_ceiling\]'; then
-            echo "::warning title=File-size ceiling (advisory)::One or more Dart files are newly over 800 lines or grew relative to main. This is advisory and does not block CI — see the step log for the list."
-          fi
-      - name: 🎨 Verify raw Icons.* count matches its frozen ceiling (DivineIcon ratchet)
-        run: |
-          # Freezes the deferred raw Material Icons.* residue (#4803) per-file so
-          # the migration can only shrink. origin/main provides the base ref for
-          # the anti-bypass check; fails closed if it cannot load the baseline.
-          bash scripts/check_raw_icons_ceiling.sh
-      - name: 🎨 Verify raw TextStyle( count matches its frozen ceiling (VineTheme ratchet)
-        run: |
-          # Design-system drift ceilings (#6145, epic #4339). Each freezes a
-          # per-file count of raw UI patterns under mobile/lib so new drift is
-          # intentional; existing debt is baselined, not fixed. Fails closed if
-          # the base baseline cannot be loaded. New UI must use the divine_ui /
-          # VineTheme sanctioned replacements — see the script headers.
-          bash scripts/check_raw_textstyle_ceiling.sh
-      - name: 🎨 Verify raw color count matches its frozen ceiling (VineTheme ratchet)
-        run: bash scripts/check_raw_colors_ceiling.sh
-      - name: 🎨 Verify direct Material-button count matches its frozen ceiling (DivineButton ratchet)
-        run: bash scripts/check_material_button_ceiling.sh
-      - name: 🎨 Verify raw dialog/bottom-sheet count matches its frozen ceiling (VineBottomSheet ratchet)
-        run: bash scripts/check_raw_dialog_ceiling.sh
-      - name: 🎨 Verify no VineTheme.*Font( call omits its color (light-mode ratchet)
-        run: bash scripts/check_implicit_font_color_ceiling.sh
-      - name: 🔙 Verify raw back-button pop count does not increase (safePop ratchet)
-        run: bash scripts/check_unsafe_back_pop_ceiling.sh
-      - name: 🧨 Verify post-close emit/add count does not increase (close-guard ratchet)
-        run: |
-          # Issue #7370, prevention follow-up to the #7293 Crashlytics
-          # aggregates fixed in #7356. Freezes the per-file count of bloc/cubit
-          # emit()/add() calls that can run after close() with no isClosed
-          # guard, so the "Cannot emit/add … after calling close" crash class
-          # can only shrink. Fix with emitIfOpen / addIfOpen from
-          # lib/blocs/close_guard.dart.
-          bash scripts/check_post_close_emit_ceiling.sh
-      - name: 🔁 Verify service listeners do not invalidate their own provider
-        run: |
-          # Issue #9266. Rebuilding a provider from its registered service
-          # callback reinstalls the listener and resets local version state.
-          # Publish a changed value instead; this AST-backed guard is zero-based.
-          bash scripts/check_listener_invalidate_self.sh
-      - name: ⏱️ Verify no uncancellable timer-backed waits (frozen at zero)
-        run: |
-          # Issue #8457, epic #4339. A `Timer(...)` nobody holds whose callback
-          # completes a Completer somebody awaits is a wall-clock wait with no
-          # owner: dispose() cannot cancel it, so the awaiting code resumes into
-          # a torn-down owner. It is Future.delayed with the name filed off, and
-          # check_future_delayed_production_ceiling.sh greps that literal, so it
-          # cannot see this shape at all. Fix with AsyncScope from
-          # lib/utils/async_utils.dart.
-          bash scripts/check_uncancellable_timer_wait.sh
-      - name: 🎨 Verify no legacy Material/Cupertino imports (frozen at zero)
-        run: |
-          # Issue #8916. Material and Cupertino ship as the material_ui and
-          # cupertino_ui pub packages now. `package:flutter/material.dart` still
-          # exists in Flutter 3.47.2, so a reintroduced import compiles,
-          # analyzes and tests clean until its ThemeData or MaterialLocalizations
-          # meets ours -- and the type error then surfaces in a file that does
-          # not contain the mistake. Nothing else here reads import URIs.
-          bash scripts/check_legacy_design_imports.sh
-      - name: 🧷 Verify shared-setUp stubs do not accrete (inherited-stub ratchet)
-        run: |
-          # Issue #8399, follow-up to #8170 / #7324. A stub in a shared setUp is
-          # invisible at every call site that inherits it, so a class of bug can
-          # go unobservable across a whole file -- #7324 shipped exactly that
-          # way. The shape also accretes silently: dm_repository_test.dart's
-          # block went from 6 stubs to 21 across 13 PRs, none of which looked
-          # wrong alone. Freezes the per-file count of stubs registered in a
-          # file-level or outermost-group setUp that descendant groups inherit,
-          # for files carrying 10 or more. Fix by declaring the stub in the
-          # groups that depend on it.
-          bash scripts/check_shared_setup_stubs.sh
-      - name: 🔑 Verify no Nostr ID is shortened into a log (full-identifier ratchet)
-        run: |
-          # Issue #3372. Freezes at ZERO the per-file count of Nostr identifiers
-          # shortened on the way into a log/debug sink, across mobile/lib,
-          # mobile/packages, mobile/test and mobile/integration_test. A truncated
-          # id looks correlatable and is not: `npub1abc...wxyz` cannot be grepped
-          # against relay logs or matched to a funnelcake row, and 8 hex of an
-          # event id is 32 bits. UI shortening is NOT counted (display sink), and
-          # secrets are redacted whole rather than shortened — see the script
-          # header. AGENTS.md -> Nostr And Async Rules.
-          bash scripts/check_nostr_id_log_truncation.sh
-      - name: 🪪 Verify pubkeys reach logs as npub plus hex (encoding ratchet)
-        run: |
-          # Issue #8066, successor to #3372. Freezes at ZERO the per-file count
-          # of pubkeys interpolated into a log/debug sink in one encoding across
-          # mobile/lib and mobile/packages. Hex greps against relay and backend
-          # rows; npub is the only form a person can paste into a client, and
-          # Zendesk bug reports are one-way, so the log has to carry both. Fix
-          # with pubkeyForLogs (packages/nostr_sdk/lib/nip19/pubkey_for_logs.dart),
-          # which takes either encoding and truncates neither. Counts, booleans
-          # and collections that merely mention a pubkey are NOT counted.
-          bash scripts/check_pubkey_log_encoding.sh
-      - name: 🌍 Verify delegate-less MaterialApp count does not increase (l10n ratchet)
-        run: |
-          # Issue #3613. Freezes the per-file count of MaterialApp /
-          # CupertinoApp / WidgetsApp constructions under mobile/test that
-          # register no AppLocalizations delegate, so `context.l10n` under a
-          # test app can only get safer. Without a delegate that read is
-          # `Localizations.of<AppLocalizations>(...)!` on a null and throws
-          # "Null check operator used on a null value" — silently, only once a
-          # widget under test happens to reach it. Prefer testMaterialApp(...)
-          # from test/helpers/test_provider_overrides.dart.
-          bash scripts/check_l10n_delegates_ceiling.sh
-      - name: 🏷️ Verify Divine UI semantic labels stay localized (a11y ratchet)
-        run: |
-          # Issue #7901. Freezes app call sites that can render a public
-          # divine_ui control while relying on its English semantic-label
-          # fallback. The AST detector understands conditional controls and
-          # constructor/static-helper forms, so non-password fields and sheets
-          # without completion actions do not create noise.
-          bash scripts/check_divine_ui_semantic_label_defaults.sh
-      - name: 🌀 Verify progress indicators honor reduced motion
-        run: |
-          # Issue #8681. Raw indeterminate Material indicators repeat forever
-          # even when the platform disables animations, which prevents
-          # XCUITest hierarchy queries from reaching quiescence.
-          bash scripts/check_indeterminate_progress_indicator.sh
-      - name: 🔢 Verify countable ARB keys carry ICU plurals (l10n ratchet)
-        run: |
-          # Issue #3633. Freezes the set of app_en.arb keys that interpolate a
-          # count but have no ICU plural. A flat countable key still renders the
-          # number — it just stops inflecting the noun, so English ships
-          # "1 videos". Nothing else catches this: arb_consistency_test checks
-          # key and placeholder parity, and plural_arm_number_test (#7153) only
-          # fires on arms that already exist. Most baseline entries are
-          # permanent (units, percentages, ordinals, ratios) and must NEVER be
-          # pluralized — each carries a trailing '# reason'.
-          bash scripts/check_countable_plural_floor.sh
-      - name: 🗑️ Verify every ARB key is actually rendered (l10n ratchet)
-        run: |
-          # Issue #3630. Freezes the set of app_en.arb keys that nothing
-          # under mobile/lib renders (lib only — a test cannot render a string,
-          # and a findsNothing assertion is evidence the key is DEAD). An
-          # orphaned key is translated
-          # into 21 locales and compiled into AppLocalizations, yet never
-          # rendered — usually while the string it was written for sits
-          # hardcoded in a widget, still broken for non-English users. Nothing
-          # else sees it: arb_consistency_test proves a key exists in every
-          # locale (an orphan passes in all 22), and `flutter analyze` cannot
-          # report an unused getter on a generated class. Baseline entries are
-          # a worklist, each carrying '# wire: <path>:<line>' or
-          # '# staged: <why>'.
-          bash scripts/check_orphaned_arb_key_floor.sh
-      - name: 🧹 Verify every stored preference key is classified (#8314)
-        run: |
-          # Issues #8314 / #6985. The account-switch sweep named its keys by
-          # copied string literal for nine months: eleven listed keys rotted
-          # into no-ops when their owning service was renamed or deleted, and
-          # fourteen live keys were never listed, two of them a real
-          # cross-account leak. The sweep now references the constants its
-          # services own, so a RENAME is a compile error. This freezes the
-          # other direction, which the compiler cannot see: a NEW key nobody
-          # classifies. Declare it in the sweep, or in a
-          # `deviceScopedPrefsKeys` list beside the constant — never here.
-          # Baseline entries are a worklist, not exemptions.
-          bash scripts/check_prefs_key_classification.sh
-      - name: 🔐 Verify no profile publish reaches the ungated read provider (#6423)
-        run: bash scripts/check_profile_read_write_split.sh
+      - name: Restore dart hook downloads
+        # `dart run build_runner` runs the native-asset hooks first, and the
+        # sqlite3mc hook does one unretried GitHub Releases GET on a fresh VM
+        # (#7197). The Tests job saves this tree on push-to-main; restoring it
+        # here turns that download into a cache hit.
+        uses: actions/cache/restore@v6
+        with:
+          path: mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-dart-hooks-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dart-hooks-
       - name: 🔨 Verify generated files are up-to-date
         run: |
           dart run build_runner build
@@ -537,6 +154,103 @@ jobs:
             git diff --name-only
             exit 1
           fi
+
+  guards:
+    name: Guards
+    # Every ratchet and guard script, run in parallel by
+    # mobile/scripts/ci/run_guards.sh from the manifest in
+    # mobile/scripts/ci/guards.tsv. They used to be ~60 sequential steps of
+    # the Generated Files job; each Dart-AST detector pays ~8s of VM start plus
+    # package:analyzer JIT on the runner, so that job grew from 3 to 9 minutes
+    # between July and September 2026 and became the workflow's critical path.
+    # The guards are independent of each other, so the driver runs them four
+    # wide and replays each guard's output as its own log group, in manifest
+    # order, with a ::error annotation per failure. A guard's rationale lives
+    # beside its manifest entry; add new guards there, not here.
+    needs: changes
+    if: ${{ needs.changes.outputs.app == 'true' }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: 🔀 Fetch origin/main for ratchet baselines
+        # The ratchet scripts compare against origin/main. Fetch it once here
+        # so each script is order-independent; a fetch failure fails the job
+        # (the guards fail closed when the base baseline can't load).
+        run: git fetch --quiet --depth=1 origin main
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: "stable"
+          cache: true
+      - name: 📦 Install dependencies
+        run: flutter pub get
+      - name: Restore dart hook downloads
+        # Native-asset hooks store downloaded libs under this tree; every
+        # `dart run` below triggers them. The Tests job saves the cache on
+        # push-to-main (merge_group can restore but not save, #7197).
+        uses: actions/cache/restore@v6
+        with:
+          path: mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-dart-hooks-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dart-hooks-
+      - name: Warm sqlite3mc native assets
+        # Runs the hooks once, serially, before four detectors start `dart run`
+        # at the same moment. A cache hit skips the one unretried GitHub
+        # Releases GET; a miss still gets five attempts.
+        run: bash scripts/ci/warmup_sqlite3mc.sh
+      - name: 🔧 Install xmllint for the native transport-security guard
+        # Only the native-gated transport-security guard needs it, and the apt
+        # round trip is ~42s (of which `apt-get update` alone is ~28s), so it
+        # stays behind the same gate as the guard itself.
+        if: ${{ needs.changes.outputs.native == 'true' }}
+        run: |
+          if ! command -v xmllint >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends libxml2-utils
+          fi
+      - name: 🛡️ Run guards
+        run: bash scripts/ci/run_guards.sh --native "${{ needs.changes.outputs.native }}"
+
+  async-safety:
+    name: Async Safety
+    # #9118: analyzer-backed per-rule, per-file ceilings for the remaining
+    # unawaited_futures and discarded_futures debt. Every count may only
+    # shrink; new files and increased counts fail closed. Its own job rather
+    # than a Guards entry for two reasons: it is a full `dart analyze` of the
+    # app (~80s, the single most expensive guard), and it rewrites
+    # analysis_options.yaml in place while it runs, which nothing else may
+    # share a checkout with. Retire the job with the ratchet once the baseline
+    # reaches zero and the analyzer's own lint takes over.
+    needs: changes
+    if: ${{ needs.changes.outputs.app == 'true' }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: 🔀 Fetch origin/main for ratchet baselines
+        run: git fetch --quiet --depth=1 origin main
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: "stable"
+          cache: true
+      - name: 📦 Install dependencies
+        run: flutter pub get
+      - name: ⏳ Verify async-safety findings do not increase (ratchet)
+        run: |
+          # #9118: analyzer-backed per-rule, per-file ceilings for the remaining
+          # unawaited_futures and discarded_futures debt. Every count may only
+          # shrink; new files and increased counts fail closed.
+          bash scripts/check_async_safety_ceiling.sh
+
   format:
     name: Format
     needs: changes
@@ -596,7 +310,7 @@ jobs:
       # additional failures and forces a second full round-trip to find them.
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     defaults:
       run:
         working-directory: mobile/
@@ -886,6 +600,8 @@ jobs:
       - codemagic-groups
       - ci-config-tests
       - generated-files
+      - guards
+      - async-safety
       - format
       - analyze
       - tests
@@ -898,6 +614,8 @@ jobs:
         env:
           CODEMAGIC_GROUPS_RESULT: ${{ needs.codemagic-groups.result }}
           GENERATED_FILES_RESULT: ${{ needs.generated-files.result }}
+          GUARDS_RESULT: ${{ needs.guards.result }}
+          ASYNC_SAFETY_RESULT: ${{ needs.async-safety.result }}
           CI_CONFIG_TESTS_RESULT: ${{ needs.ci-config-tests.result }}
           FORMAT_RESULT: ${{ needs.format.result }}
           ANALYZE_RESULT: ${{ needs.analyze.result }}
@@ -911,6 +629,8 @@ jobs:
           echo "app-ci-required: ${APP_CI_REQUIRED}"
           echo "codemagic-groups: ${CODEMAGIC_GROUPS_RESULT}"
           echo "generated-files: ${GENERATED_FILES_RESULT}"
+          echo "guards: ${GUARDS_RESULT}"
+          echo "async-safety: ${ASYNC_SAFETY_RESULT}"
           echo "ci-config-tests: ${CI_CONFIG_TESTS_RESULT}"
           echo "format: ${FORMAT_RESULT}"
           echo "analyze: ${ANALYZE_RESULT}"
@@ -943,6 +663,8 @@ jobs:
           required_results=(
             "${CI_CONFIG_TESTS_RESULT}"
             "${GENERATED_FILES_RESULT}"
+            "${GUARDS_RESULT}"
+            "${ASYNC_SAFETY_RESULT}"
             "${FORMAT_RESULT}"
             "${ANALYZE_RESULT}"
             "${TESTS_RESULT}"

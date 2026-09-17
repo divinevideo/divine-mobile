@@ -314,7 +314,7 @@ Then:
   (or equivalent primary vs secondary code paths) where relevant.
 - [ ] CI: `build / build` (divine_ui coverage), `Analyze`,
   `Tests (shard N/total)` for every shard, `Goldens`, aggregate
-  `Mobile CI`, `Format`, `Generated Files` all green before requesting
+  `Mobile CI`, `Format`, `Generated Files`, `Guards`, `Async Safety` all green before requesting
   review. A red `Goldens` on a UI change is usually a real visual
   regression — download its `golden-failures` artifact and look at the
   diff before assuming drift.

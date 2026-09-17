@@ -210,7 +210,7 @@ Reason codes:
 ## The guard
 
 `mobile/scripts/check_privacy_manifest_coverage.sh` runs whenever CI's
-**Generated Files** job runs. The step is not gated on the narrower native-file
+**Guards** job runs. Its manifest entry is not gated on the narrower native-file
 filter, so package-owned iOS sources are covered whenever Mobile CI is in app
 scope. It scans `mobile/ios/Runner`, both iOS extension targets,
 `mobile/ios/LocalPods/*` and `mobile/packages/*/ios`, and fails when a detected

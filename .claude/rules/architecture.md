@@ -181,7 +181,7 @@ the reduction with:
 UPDATE_BASELINE=1 bash mobile/scripts/check_package_flutter_boundary.sh
 ```
 
-The guard runs in Mobile CI's `generated-files` job. See
+The guard runs in Mobile CI's `guards` job. See
 [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md#which-packages-may-depend-on-flutter-issue-3338)
 for the policy, sanctioned package groups, and current per-package rationale;
 that document is the policy source of truth.

@@ -337,6 +337,28 @@ esac
       );
     });
 
+    test('guard manifest and driver changes run native checks', () {
+      // The manifest carries the `native` flag per guard and the driver
+      // applies it, so either file can change which native-gated guards run.
+      // Both are under mobile/scripts/ci/, which alone only turns on `app`
+      // and `ci_config`.
+      for (final path in [
+        'mobile/scripts/ci/guards.tsv',
+        'mobile/scripts/ci/run_guards.sh',
+      ]) {
+        expectScope(
+          runDetector(
+            event: 'pull_request',
+            changedFiles: [path],
+            changedTotal: 1,
+          ),
+          app: true,
+          native: true,
+          also: const {'ci_config': true},
+        );
+      }
+    });
+
     test('gitattributes changes run wrapper checks', () {
       // The tracked wrapper launchers depend on their root-level line-ending
       // attributes, so changing that file must run the app and native gates.

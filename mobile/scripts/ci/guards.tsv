@@ -1,0 +1,349 @@
+# Mobile CI guard manifest, run by scripts/ci/run_guards.sh in the `Guards` job.
+#
+# One guard per line: <name>TAB<flags>TAB<command>. Flags are `-`, or a
+# comma-separated set of `native` (run only when native platform config
+# changed) and `advisory` (never blocks; findings become warning annotations).
+# Commands run through `bash -c` from mobile/. A command must not contain a tab.
+#
+# The driver runs guards in parallel and replays their output in this order, so
+# the heaviest guards sit first: a Dart-AST detector costs ~8s of VM start plus
+# package:analyzer JIT before it parses anything, and scheduling those before
+# the sub-second grep guards keeps the last worker from being left alone with a
+# 26s job. Keep the comments: every entry's rationale used to live on its
+# workflow step, and this file is where a reader now finds it.
+#
+# Every scripts/check_*.sh either appears here or is named, with its reason, in
+# test/tools/run_guards_test.dart — a guard that is in neither runs nowhere.
+
+# ---------------------------------------------------------------------------
+# Dart-AST detectors (heaviest first)
+# ---------------------------------------------------------------------------
+
+# Issue #3372. Freezes at ZERO the per-file count of Nostr identifiers
+# shortened on the way into a log/debug sink, across mobile/lib,
+# mobile/packages, mobile/test and mobile/integration_test. A truncated id
+# looks correlatable and is not: `npub1abc...wxyz` cannot be grepped against
+# relay logs or matched to a funnelcake row, and 8 hex of an event id is 32
+# bits. UI shortening is NOT counted (display sink), and secrets are redacted
+# whole rather than shortened — see the script header. AGENTS.md -> Nostr And
+# Async Rules.
+🔑 Verify no Nostr ID is shortened into a log (full-identifier ratchet)	-	bash scripts/check_nostr_id_log_truncation.sh
+
+🔐 Verify no profile publish reaches the ungated read provider (#6423)	-	bash scripts/check_profile_read_write_split.sh
+
+🪵 Verify no raw logging in production code	-	bash scripts/check_raw_logging.sh
+
+# Issues #8314 / #6985. The account-switch sweep named its keys by copied
+# string literal for nine months: eleven listed keys rotted into no-ops when
+# their owning service was renamed or deleted, and fourteen live keys were
+# never listed, two of them a real cross-account leak. The sweep now references
+# the constants its services own, so a RENAME is a compile error. This freezes
+# the other direction, which the compiler cannot see: a NEW key nobody
+# classifies. Declare it in the sweep, or in a `deviceScopedPrefsKeys` list
+# beside the constant — never here. Baseline entries are a worklist, not
+# exemptions.
+🧹 Verify every stored preference key is classified (#8314)	-	bash scripts/check_prefs_key_classification.sh
+
+# Per-file CEILING over mobile/test, mobile/integration_test and
+# mobile/packages/*/test, from a Dart AST rather than a regex: the regex missed
+# a skip: whose reason dart format wrapped onto the next line, could not see
+# @Skip, and needed one file excluded by name. Skip-debt epic: #4337 (WS-1) ->
+# #4836. Fails closed if the baseline can't load.
+🧪 Verify skipped-test count does not increase (skip-ceiling ratchet)	-	bash scripts/check_skip_ceiling.sh
+
+# Frozen at ZERO: a test whose every assertion is trivially satisfied
+# (expect(true, isTrue)), or a *_test.dart declaring no test at all. #3340
+# removed all 93 sites, so any hit is a regression. A test with no assertion is
+# deliberately not counted -- imported helpers and third-party verifiers assert
+# in ways one file cannot see. #3340.
+🧪 Verify no test can pass unconditionally (placeholder ratchet)	-	bash scripts/check_placeholder_tests.sh
+
+# Frozen at ZERO: a test whose only assertion compares a re-read of state with
+# an earlier read of it that was never pinned. Both operands come from the
+# state under test, so with the method inert the test compares null with null
+# (or 0 with 0) and stays green -- #8617 proved one by mutation. The
+# placeholder ratchet above cannot see it: nothing here is a literal. Pin the
+# baseline (expect(first, isNotNull)) before the act. #8617.
+🧪 Verify no 'unchanged' assertion goes unpinned (state-tautology ratchet)	-	bash scripts/check_unpinned_unchanged_assertions.sh
+
+# Issue #3615: a flat test file gives the runner nothing to nest, so failures
+# print as an undifferentiated wall and a file cannot be run a slice at a time.
+# Freezes the per-file count of test/testWidgets/blocTest/patrolTest
+# declarations outside any group() so it can only shrink. Group by method name
+# (repositories/services/clients), event name (blocs/cubits), or
+# renders/interactions/navigation (widgets).
+🧱 Verify no test declaration sits outside a group (test-structure ratchet)	-	bash scripts/check_ungrouped_tests.sh
+
+# Issue #8399, follow-up to #8170 / #7324. A stub in a shared setUp is
+# invisible at every call site that inherits it, so a class of bug can go
+# unobservable across a whole file -- #7324 shipped exactly that way. The shape
+# also accretes silently: dm_repository_test.dart's block went from 6 stubs to
+# 21 across 13 PRs, none of which looked wrong alone. Freezes the per-file
+# count of stubs registered in a file-level or outermost-group setUp that
+# descendant groups inherit, for files carrying 10 or more. Fix by declaring
+# the stub in the groups that depend on it.
+🧷 Verify shared-setUp stubs do not accrete (inherited-stub ratchet)	-	bash scripts/check_shared_setup_stubs.sh
+
+# Issue #3613. Freezes the per-file count of MaterialApp / CupertinoApp /
+# WidgetsApp constructions under mobile/test that register no AppLocalizations
+# delegate, so `context.l10n` under a test app can only get safer. Without a
+# delegate that read is `Localizations.of<AppLocalizations>(...)!` on a null
+# and throws "Null check operator used on a null value" — silently, only once a
+# widget under test happens to reach it. Prefer testMaterialApp(...) from
+# test/helpers/test_provider_overrides.dart.
+🌍 Verify delegate-less MaterialApp count does not increase (l10n ratchet)	-	bash scripts/check_l10n_delegates_ceiling.sh
+
+# Issue #7370, prevention follow-up to the #7293 Crashlytics aggregates fixed
+# in #7356. Freezes the per-file count of bloc/cubit emit()/add() calls that
+# can run after close() with no isClosed guard, so the "Cannot emit/add … after
+# calling close" crash class can only shrink. Fix with emitIfOpen / addIfOpen
+# from lib/blocs/close_guard.dart.
+🧨 Verify post-close emit/add count does not increase (close-guard ratchet)	-	bash scripts/check_post_close_emit_ceiling.sh
+
+# Issue #9266. Rebuilding a provider from its registered service callback
+# reinstalls the listener and resets local version state. Publish a changed
+# value instead; this AST-backed guard is zero-based.
+🔁 Verify service listeners do not invalidate their own provider	-	bash scripts/check_listener_invalidate_self.sh
+
+# Issue #8457, epic #4339. A `Timer(...)` nobody holds whose callback
+# completes a Completer somebody awaits is a wall-clock wait with no owner:
+# dispose() cannot cancel it, so the awaiting code resumes into a torn-down
+# owner. It is Future.delayed with the name filed off, and
+# check_future_delayed_production_ceiling.sh greps that literal, so it cannot
+# see this shape at all. Fix with AsyncScope from lib/utils/async_utils.dart.
+⏱️ Verify no uncancellable timer-backed waits (frozen at zero)	-	bash scripts/check_uncancellable_timer_wait.sh
+
+# Reliability ceilings (epic #4336). Each fails closed if the base baseline
+# cannot be loaded.
+🧯 Verify empty-catch count does not increase (reliability ratchet)	-	bash scripts/check_empty_catch_ceiling.sh
+
+# Issue #8066, successor to #3372. Freezes at ZERO the per-file count of
+# pubkeys interpolated into a log/debug sink in one encoding across mobile/lib
+# and mobile/packages. Hex greps against relay and backend rows; npub is the
+# only form a person can paste into a client, and Zendesk bug reports are
+# one-way, so the log has to carry both. Fix with pubkeyForLogs
+# (packages/nostr_sdk/lib/nip19/pubkey_for_logs.dart), which takes either
+# encoding and truncates neither. Counts, booleans and collections that merely
+# mention a pubkey are NOT counted.
+🪪 Verify pubkeys reach logs as npub plus hex (encoding ratchet)	-	bash scripts/check_pubkey_log_encoding.sh
+
+# Issue #7901. Freezes app call sites that can render a public divine_ui
+# control while relying on its English semantic-label fallback. The AST
+# detector understands conditional controls and constructor/static-helper
+# forms, so non-password fields and sheets without completion actions do not
+# create noise.
+🏷️ Verify Divine UI semantic labels stay localized (a11y ratchet)	-	bash scripts/check_divine_ui_semantic_label_defaults.sh
+
+# Issue #8681. Raw indeterminate Material indicators repeat forever even when
+# the platform disables animations, which prevents XCUITest hierarchy queries
+# from reaching quiescence.
+🌀 Verify progress indicators honor reduced motion	-	bash scripts/check_indeterminate_progress_indicator.sh
+
+# Issue #3630. Freezes the set of app_en.arb keys that nothing under mobile/lib
+# renders (lib only — a test cannot render a string, and a findsNothing
+# assertion is evidence the key is DEAD). An orphaned key is translated into
+# 21 locales and compiled into AppLocalizations, yet never rendered — usually
+# while the string it was written for sits hardcoded in a widget, still broken
+# for non-English users. Nothing else sees it: arb_consistency_test proves a
+# key exists in every locale (an orphan passes in all 22), and `flutter
+# analyze` cannot report an unused getter on a generated class. Baseline
+# entries are a worklist, each carrying '# wire: <path>:<line>' or
+# '# staged: <why>'.
+🗑️ Verify every ARB key is actually rendered (l10n ratchet)	-	bash scripts/check_orphaned_arb_key_floor.sh
+
+# Issue #3633. Freezes the set of app_en.arb keys that interpolate a count but
+# have no ICU plural. A flat countable key still renders the number — it just
+# stops inflecting the noun, so English ships "1 videos". Nothing else catches
+# this: arb_consistency_test checks key and placeholder parity, and
+# plural_arm_number_test (#7153) only fires on arms that already exist. Most
+# baseline entries are permanent (units, percentages, ordinals, ratios) and
+# must NEVER be pluralized — each carries a trailing '# reason'.
+🔢 Verify countable ARB keys carry ICU plurals (l10n ratchet)	-	bash scripts/check_countable_plural_floor.sh
+
+🧱 Verify untested-services count does not increase (floor ratchet)	-	bash scripts/check_untested_services_floor.sh
+
+# Issue #8934: runtime package dependencies must remain a directed acyclic
+# graph; dev-only test-fixture edges are deliberately excluded.
+🔄 Verify workspace package dependencies remain acyclic	-	bash scripts/check_package_dependency_cycles.sh
+
+🕸️ Verify focused service-suite dependency scopes	-	bash scripts/check_service_suite_scope_drift.sh
+
+📊 Verify pinned product analytics contract	-	dart run tools/check_product_analytics_contract.dart
+
+# ---------------------------------------------------------------------------
+# Native platform config (only when mobile/android, ios or macos changed)
+# ---------------------------------------------------------------------------
+
+# Skipped when no native config changed. The guard's only inputs are
+# mobile/android/**, mobile/ios/**, mobile/macos/** and its own script; if none
+# of those moved, its verdict is identical to the one main already recorded.
+# The xmllint it needs is installed by the workflow step before the driver
+# runs, under the same gate.
+🔒 Verify native transport security	native	bash scripts/check_native_transport_security.sh
+
+🍏 Verify iOS shipping target versions	native	bash scripts/check_ios_shipping_versions.sh
+
+# The wrapper is tracked (#7201) so a fresh clone or worktree can run gradle
+# tooling without a prior `flutter build`. That makes gradle-wrapper.jar the
+# one third-party binary here that check_dependency_provenance.sh does not
+# cover -- it reads pubspec sources only. Gated on `native` for the same reason
+# as the two guards around it: the guard's only inputs are mobile/android/**
+# and its own script.
+🐘 Verify the tracked Gradle wrapper is the pinned artifact	native	bash scripts/check_gradle_wrapper_checksum.sh
+
+# ---------------------------------------------------------------------------
+# Shell and Python guards (sub-second to a few seconds each)
+# ---------------------------------------------------------------------------
+
+# Deliberately NOT gated on `native`. That filter covers mobile/ios/*,
+# mobile/android/* and mobile/macos/* but NOT mobile/packages/*/ios/*, and a
+# first-party plugin is exactly where this drift happened: divine_camera's
+# manifest was authored in #890 with an empty NSPrivacyAccessedAPITypes, then
+# #1783 added ProcessInfo.systemUptime six weeks later under a path the native
+# filter does not watch. Gating here would reproduce the bug the guard exists
+# to catch. The check is pure python3 with no package installs, so running it
+# every time costs well under a second.
+🔒 Verify iOS required-reason APIs are declared	-	bash scripts/check_privacy_manifest_coverage.sh
+
+📵 Verify LibProofMode network fields stay privacy-gated	-	python3 scripts/check_libproofmode_network_privacy.py
+
+🌐 Verify backend-host defaults stay on *.divine.video	-	bash scripts/check_backend_host_defaults.sh
+
+🌐 Verify no untagged test mutates HttpOverrides.global	-	bash scripts/check_http_overrides_isolation.sh
+
+🧬 Verify no untagged test leaks a process-global singleton	-	bash scripts/check_process_global_mutations.sh
+
+🧯 Verify integration_test error-handler restores are exception-safe	-	bash scripts/check_integration_test_error_restore_safety.sh
+
+🧾 Verify every E2E service suite is accounted for	-	bash scripts/check_service_suite_coverage.sh
+
+# LIST ratchet vs origin/main (fails closed if the base baseline can't load).
+# The runtime heal-and-blame tearDown (flutter_test_config.dart) is the primary
+# guard; this freezes raw setMockMethodCallHandler installs of the five shared
+# channels so new ones must go through overrideSharedChannel(...). #5738.
+🔌 Verify no new raw shared-channel installs (heal-and-blame ratchet)	-	bash scripts/check_shared_channel_overrides.sh
+
+🐝 Verify production Hive opens use the observable seam	-	bash scripts/check_direct_hive_opens.sh
+
+# Packages analogue of the shared-channel ratchet above. Each package runs its
+# own very_good --optimization merged isolate and — unlike mobile/test — has no
+# flutter_test_config.dart heal-and-blame harness, so an un-torn-down channel
+# mock leaks across that package's suite. Freezes package *_test.dart entries
+# that install a channel handler without nulling any back down; new ones must
+# add a tearDown (or a skip tag). #5838.
+📦 Verify no new package-test channel leaks (per-package merged-isolate ratchet)	-	bash scripts/check_package_channel_isolation.sh
+
+🚧 Verify Riverpod boundary (@riverpod / StateProvider locations)	-	bash scripts/check_riverpod_boundary.sh
+
+🚧 Verify ChangeNotifier boundary (sanctioned-allowlist ratchet)	-	bash scripts/check_changenotifier_boundary.sh
+
+# Compares the baseline against origin/main (fetched once at job start); the
+# guard fails closed when the base baseline cannot be loaded.
+🚧 Verify UI does not import services directly (layering ratchet)	-	bash scripts/check_ui_service_boundary.sh
+
+# Mirror image of the guard above: providers/services/repositories/state must
+# not import screens, widgets, or the router, and route providers must not
+# import screens. Those upward edges drag the whole screen graph — and through
+# it app_providers.dart — into non-UI code. Route locations come from the
+# RoutePaths leaf instead. #7383 (wave #4506).
+🚧 Verify lower layers do not import the UI (layer-direction ratchet)	-	bash scripts/check_layer_direction.sh
+
+⏳ Verify Future.delayed-in-tests count does not increase (ratchet)	-	bash scripts/check_future_delayed_ceiling.sh
+
+# Production (mobile/lib) counterpart of the test-scoped ratchet above. Fails
+# closed if the base baseline cannot be loaded. Epic: #4339 (PR-4).
+⏳ Verify Future.delayed-in-production count does not increase (ratchet)	-	bash scripts/check_future_delayed_production_ceiling.sh
+
+# #4743: lazy-static singletons cannot be replaced in a test without reaching
+# into static state. The set drifts when nothing watches it — #3623 counted
+# 13, #4743 counted 14, and only 5 were left by the time either was re-read.
+# Epic: #4338.
+🧱 Verify singleton services do not regrow (DI ratchet)	-	bash scripts/check_singleton_services.sh
+
+# Hard architecture guard for #4338: the broad 800-line file-size check remains
+# advisory, but oversized service-layer god-files are frozen at their recorded
+# ceilings until a shrink is relocked.
+🧱 Verify service god-files do not grow (architecture ratchet)	-	bash scripts/check_service_god_file_ceiling.sh
+
+# Freezes the legacy non-mirroring test/unit bucket per-file so it can only
+# shrink. New tests must mirror lib/ (test/services/foo_test.dart), never
+# test/unit/. Fails closed if the base baseline cannot load. Test-org epic:
+# #4337 (WS-7).
+🧱 Verify test/unit does not re-accrete (test-structure ratchet)	-	bash scripts/check_test_unit_structure.sh
+
+# Issues #3574 / #3575: optionless packages silently inherit the app's relaxed
+# analyzer config; workflow-less packages get no CI.
+🧱 Verify every package ships analysis options + a CI workflow (package CI floor)	-	bash scripts/check_package_ci_floor.sh
+
+# Issue #3338. A package with no `flutter: sdk: flutter` entry has
+# `depend_on_referenced_packages` rejecting every package:flutter import in its
+# lib/ and test/, which is what makes the repository layer boundary enforced
+# rather than conventional. Freezes the set of packages that still declare one
+# so re-opening a boundary is a reviewable baseline edit. Fails closed if the
+# base baseline can't load.
+🧱 Verify no package re-adds a runtime Flutter dependency (boundary ratchet)	-	bash scripts/check_package_flutter_boundary.sh
+
+# Issues #3655 / #3363 (AC3): freezes the set of dependencies resolved from
+# outside pub.dev, and rejects a movable git ref unconditionally (a branch or
+# tag can be repointed under the build).
+🔗 Verify dependency provenance (git refs + overrides ratchet)	-	bash scripts/check_dependency_provenance.sh
+
+# Follow-up to #3575: each package workflow's min_coverage is locked in a
+# baseline and may only RISE. VGV already fails when measured coverage drops
+# below the floor; this stops the floor itself from being lowered. Fails
+# closed if the base baseline cannot be loaded.
+🧱 Verify per-package coverage floors do not decrease (coverage floor ratchet)	-	bash scripts/check_package_coverage_floor.sh
+
+🧯 Verify service error-sentinel count does not increase (reliability ratchet)	-	bash scripts/check_service_sentinel_ceiling.sh
+
+🧯 Verify ARB {error}-interpolation count does not increase (reliability ratchet)	-	bash scripts/check_arb_error_ceiling.sh
+
+# BLOCKING by decision (review on #6978): a copy change that breaks the E2E
+# suite is real breakage, so this fails the job like every sibling ratchet.
+# Unrelated ARB edits that trip it are fixed by regenerating the baseline in
+# the same PR (UPDATE_BASELINE=1). Copy drift rotted the Maestro suite silently
+# between 2026-03 and 2026-08 (#6948): copy in lib/l10n/app_en.arb and the
+# flows diverged with nothing failing. The guard binds every asserted literal
+# to its ARB key.
+🧭 Verify Maestro suite copy stays aligned (e2e drift guard)	-	bash scripts/check_maestro_copy_drift.sh
+
+# Keep this independent from copy drift so contributors see both failures in
+# one CI run. macOS hides case errors the linux_x2 runner hard-fails on.
+🧭 Verify Maestro flow references resolve (e2e drift guard)	-	bash e2e/maestro/scripts/check_refs.sh
+
+# The 800-line file-size ceiling is advisory (team decision): it reports new
+# oversized files and files that grew relative to main, but the script always
+# exits 0 and never fails the job. The driver turns its `WARN
+# [file_size_ceiling]` line into a GitHub warning annotation so the finding
+# bubbles up to the PR. Oversized-file epic: #4339 (PR-1).
+📏 Report oversized files (advisory — does not block CI)	advisory	bash scripts/check_file_size_ceiling.sh
+
+# Freezes the deferred raw Material Icons.* residue (#4803) per-file so the
+# migration can only shrink. origin/main provides the base ref for the
+# anti-bypass check; fails closed if it cannot load the baseline.
+🎨 Verify raw Icons.* count matches its frozen ceiling (DivineIcon ratchet)	-	bash scripts/check_raw_icons_ceiling.sh
+
+# Design-system drift ceilings (#6145, epic #4339). Each freezes a per-file
+# count of raw UI patterns under mobile/lib so new drift is intentional;
+# existing debt is baselined, not fixed. Fails closed if the base baseline
+# cannot be loaded. New UI must use the divine_ui / VineTheme sanctioned
+# replacements — see the script headers.
+🎨 Verify raw TextStyle( count matches its frozen ceiling (VineTheme ratchet)	-	bash scripts/check_raw_textstyle_ceiling.sh
+
+🎨 Verify raw color count matches its frozen ceiling (VineTheme ratchet)	-	bash scripts/check_raw_colors_ceiling.sh
+
+🎨 Verify direct Material-button count matches its frozen ceiling (DivineButton ratchet)	-	bash scripts/check_material_button_ceiling.sh
+
+🎨 Verify raw dialog/bottom-sheet count matches its frozen ceiling (VineBottomSheet ratchet)	-	bash scripts/check_raw_dialog_ceiling.sh
+
+🎨 Verify no VineTheme.*Font( call omits its color (light-mode ratchet)	-	bash scripts/check_implicit_font_color_ceiling.sh
+
+🔙 Verify raw back-button pop count does not increase (safePop ratchet)	-	bash scripts/check_unsafe_back_pop_ceiling.sh
+
+# Issue #8916. Material and Cupertino ship as the material_ui and cupertino_ui
+# pub packages now. `package:flutter/material.dart` still exists in Flutter
+# 3.47.2, so a reintroduced import compiles, analyzes and tests clean until its
+# ThemeData or MaterialLocalizations meets ours -- and the type error then
+# surfaces in a file that does not contain the mistake. Nothing else here reads
+# import URIs.
+🎨 Verify no legacy Material/Cupertino imports (frozen at zero)	-	bash scripts/check_legacy_design_imports.sh

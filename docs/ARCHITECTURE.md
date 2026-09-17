@@ -104,7 +104,7 @@ dependency when it is one of:
 Anything else is out of policy, and **CI enforces it**:
 `mobile/scripts/check_package_flutter_boundary.sh` freezes the set in
 `mobile/scripts/baseline/package_flutter_deps.txt`. Existing entries are
-shrink-only, and a package re-adding one fails the `generated-files` job. A new
+shrink-only, and a package re-adding one fails the `guards` job. A new
 package may be registered only when its own pubspec contains a
 `flutter: plugin:` block; wrappers, UI packages, and Flutter API consumers
 remain unable to grow the baseline. That baseline, not this page, is the
