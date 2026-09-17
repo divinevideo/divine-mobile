@@ -320,8 +320,8 @@ is part of the job. Report-only instructions still control external actions.
 Do not leave an obsolete blocking verdict behind after verifying its resolution.
 
 **Author or fixing agent:** enumerate every finding from review bodies and
-inline threads, including outdated and resolved threads. Paginate reviews,
-threads, and thread comments; a truncated first page is not a complete review
+inline threads, including outdated and resolved threads. Paginate the threads
+and each thread's comments; a truncated first page is not a complete review
 history. For each item, link the original finding and record the fixing commit
 and validation, or explain why it is disputed, deferred, or awaiting a named
 owner. After pushing and inspecting required checks, request re-review from the
