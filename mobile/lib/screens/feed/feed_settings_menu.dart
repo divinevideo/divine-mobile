@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/owner_video_cleanup_feedback.dart';
 import 'package:openvine/widgets/owner_video_delete_confirmation_dialog.dart';
 import 'package:openvine/widgets/video_feed_item/feed_playback_toggles_pill.dart';
@@ -103,7 +104,12 @@ class _FeedSettingsMenuState extends ConsumerState<FeedSettingsMenu> {
     if (video == null) return;
     if (_ownerVideoActionsCubit.isDeleteInProgress(video.id)) return;
     _close();
-    context.push(VideoMetadataEditScreen.pathFor(video.id), extra: video);
+    runDetached(
+      context.push(VideoMetadataEditScreen.pathFor(video.id), extra: video),
+      'open video metadata editor',
+      logName: 'FeedSettingsMenu',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> _confirmDeleteVideo() async {

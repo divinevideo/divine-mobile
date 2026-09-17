@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for ChangeEmailView
 // ABOUTME: Covers the current address, refusal copy, and the confirmation panel
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -70,8 +72,11 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         home: BlocProvider<ChangeEmailCubit>(
-          create: (_) =>
-              ChangeEmailCubit(repository: repository)..loadCurrentEmail(),
+          create: (_) {
+            final cubit = ChangeEmailCubit(repository: repository);
+            unawaited(cubit.loadCurrentEmail());
+            return cubit;
+          },
           child: const ChangeEmailView(),
         ),
       );

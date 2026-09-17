@@ -476,40 +476,40 @@ void main() {
   });
 
   group('SafetySettingsScreen Blocked Users Section - Unit Tests', () {
-    test('runtimeBlockedUsers returns blocked users set', () {
+    test('runtimeBlockedUsers returns blocked users set', () async {
       final service = _MockContentBlocklistRepository();
 
       // Initially empty
       expect(service.runtimeBlockedUsers, isEmpty);
 
       // Block a user
-      service.blockUser('blocked_pubkey_1');
+      await service.blockUser('blocked_pubkey_1');
       expect(service.runtimeBlockedUsers.contains('blocked_pubkey_1'), isTrue);
 
       // Block another
-      service.blockUser('blocked_pubkey_2');
+      await service.blockUser('blocked_pubkey_2');
       expect(service.runtimeBlockedUsers.length, equals(2));
     });
 
-    test('unblockUser removes user from blocked list', () {
+    test('unblockUser removes user from blocked list', () async {
       final service = _MockContentBlocklistRepository();
 
-      service.blockUser('user_to_unblock');
+      await service.blockUser('user_to_unblock');
       expect(service.runtimeBlockedUsers.contains('user_to_unblock'), isTrue);
 
-      service.unblockUser('user_to_unblock');
+      await service.unblockUser('user_to_unblock');
       expect(service.runtimeBlockedUsers.contains('user_to_unblock'), isFalse);
     });
 
-    test('isBlocked returns correct status', () {
+    test('isBlocked returns correct status', () async {
       final service = _MockContentBlocklistRepository();
 
       expect(service.isBlocked('some_user'), isFalse);
 
-      service.blockUser('some_user');
+      await service.blockUser('some_user');
       expect(service.isBlocked('some_user'), isTrue);
 
-      service.unblockUser('some_user');
+      await service.unblockUser('some_user');
       expect(service.isBlocked('some_user'), isFalse);
     });
   });

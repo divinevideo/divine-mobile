@@ -26,6 +26,11 @@ void _expectProvisioningPollerArmed(FakeAsync fake, Duration pollInterval) {
   );
 }
 
+void _close(FakeAsync fake, CrosspostSettingsCubit cubit) {
+  unawaited(cubit.close());
+  fake.flushMicrotasks();
+}
+
 void main() {
   group(CrosspostSettingsCubit, () {
     late _MockBlueskyCrosspostRepository repository;
@@ -621,7 +626,7 @@ void main() {
           fake.elapse(const Duration(milliseconds: 10));
           fake.flushMicrotasks();
           expect(loadCount, settledCount);
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 
@@ -655,7 +660,7 @@ void main() {
           fake.elapse(const Duration(milliseconds: 5));
           fake.flushMicrotasks();
           expect(fake.pendingTimers, isNotEmpty);
-          cubit.close();
+          _close(fake, cubit);
           expect(fake.pendingTimers, isEmpty);
 
           final countAfterClose = loadCount;
@@ -713,7 +718,7 @@ void main() {
             );
             expect(cubit.state.error, isNull);
             expect(cubit.state.attempt, 0);
-            cubit.close();
+            _close(fake, cubit);
           });
         },
       );
@@ -766,7 +771,7 @@ void main() {
           fake.elapse(const Duration(milliseconds: 5));
           fake.flushMicrotasks();
           expect(loadCount, cappedCount);
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 
@@ -825,7 +830,7 @@ void main() {
             cubit.state.provisioningState,
             AtprotoProvisioningState.disabled,
           );
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 
@@ -883,7 +888,7 @@ void main() {
             cubit.state.provisioningState,
             AtprotoProvisioningState.disabled,
           );
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 
@@ -928,7 +933,7 @@ void main() {
           fake.elapse(const Duration(milliseconds: 5));
           fake.flushMicrotasks();
           expect(loadCount, cappedCount);
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 
@@ -983,7 +988,7 @@ void main() {
           fake.elapse(const Duration(milliseconds: 1));
           fake.flushMicrotasks();
           expect(loadCount, greaterThan(postReloadCount));
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 
@@ -1040,7 +1045,7 @@ void main() {
           );
           expect(cubit.state.provisioningPollAttempts, 0);
           expect(cubit.state.provisioningPollingTimedOut, isFalse);
-          cubit.close();
+          _close(fake, cubit);
         });
       });
 

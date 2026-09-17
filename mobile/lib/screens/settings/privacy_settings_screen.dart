@@ -11,6 +11,8 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Settings → Privacy.
 ///
@@ -61,7 +63,16 @@ class _AnalyticsConsentToggle extends ConsumerWidget {
     final service = ref.watch(analyticsServiceProvider);
     return BlocProvider(
       key: ValueKey(service),
-      create: (_) => AnalyticsConsentCubit(service: service)..load(),
+      create: (_) {
+        final cubit = AnalyticsConsentCubit(service: service);
+        runDetached(
+          cubit.load(),
+          'load analytics consent',
+          logName: 'PrivacySettingsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const _AnalyticsConsentTile(),
     );
   }

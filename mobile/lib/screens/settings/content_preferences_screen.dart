@@ -18,6 +18,8 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/content_filters_screen.dart';
 import 'package:openvine/screens/settings/account_content_labels_tile.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class ContentPreferencesScreen extends ConsumerWidget {
   static const routeName = 'content-preferences';
@@ -93,7 +95,16 @@ class _LanguageSetting extends ConsumerWidget {
     final service = ref.watch(languagePreferenceServiceProvider);
     return BlocProvider(
       key: ValueKey(service),
-      create: (_) => LanguageSettingCubit(service: service)..load(),
+      create: (_) {
+        final cubit = LanguageSettingCubit(service: service);
+        runDetached(
+          cubit.load(),
+          'load language setting',
+          logName: 'ContentPreferencesScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const _LanguageSettingTile(),
     );
   }
@@ -305,7 +316,16 @@ class _AudioDeviceSelector extends ConsumerWidget {
     final service = ref.watch(audioDevicePreferenceServiceProvider);
     return BlocProvider(
       key: ValueKey(service),
-      create: (_) => AudioDeviceCubit(service: service)..load(),
+      create: (_) {
+        final cubit = AudioDeviceCubit(service: service);
+        runDetached(
+          cubit.load(),
+          'load audio devices',
+          logName: 'ContentPreferencesScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const _AudioDeviceSelectorTile(),
     );
   }

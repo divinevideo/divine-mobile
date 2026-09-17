@@ -16,6 +16,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -350,7 +351,12 @@ class _RelayTile extends ConsumerWidget {
         collapsedIconColor: context.vineColors.mutedText,
         onExpansionChanged: (expanded) {
           if (expanded) {
-            context.read<RelaySettingsCubit>().fetchCapabilities(relayUrl);
+            runDetached(
+              context.read<RelaySettingsCubit>().fetchCapabilities(relayUrl),
+              'fetch relay capabilities',
+              logName: 'RelaySettingsScreen',
+              category: LogCategory.ui,
+            );
           }
         },
         children: [_RelayDetails(stats: stats, relayUrl: relayUrl)],
