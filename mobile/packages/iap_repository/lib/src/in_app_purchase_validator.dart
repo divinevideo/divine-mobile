@@ -19,7 +19,9 @@ import 'package:models/models.dart';
 /// fetchProducts simply returns an empty list.
 ///
 /// All three plans grant the same entitlement; only the billing period and the
-/// founding window differ.
+/// founding window differ. Neither store guarantees the order it returns
+/// products in, so [InAppPurchaseValidator.fetchProducts] lists tiers in the
+/// order they are declared here.
 @visibleForTesting
 const Map<String, SupporterBillingPeriod> supporterProducts =
     <String, SupporterBillingPeriod>{
@@ -28,7 +30,7 @@ const Map<String, SupporterBillingPeriod> supporterProducts =
       'divine.supporter.founding.annual': SupporterBillingPeriod.annual,
     };
 
-/// The product ids in [supporterProducts].
+/// The product ids in [supporterProducts], in display order.
 @visibleForTesting
 Set<String> get supporterProductIds => supporterProducts.keys.toSet();
 
@@ -178,7 +180,12 @@ class InAppPurchaseValidator implements EntitlementValidator {
     }
     if (_productIds.isEmpty) return const <SupporterTier>[];
     final response = await _store.queryProductDetails(_productIds);
-    return response.productDetails.map(_tierFromProduct).toList();
+    final displayOrder = _productIds.toList();
+    return response.productDetails.map(_tierFromProduct).toList()..sort(
+      (a, b) => displayOrder
+          .indexOf(a.productId)
+          .compareTo(displayOrder.indexOf(b.productId)),
+    );
   }
 
   SupporterTier _tierFromProduct(ProductDetails product) => SupporterTier(

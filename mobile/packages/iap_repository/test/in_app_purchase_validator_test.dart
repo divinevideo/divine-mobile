@@ -80,14 +80,14 @@ void main() {
       );
     });
 
-    test('supporterProductIds lists the same plans', () {
+    test('supporterProductIds lists the same plans in display order', () {
       expect(
-        supporterProductIds,
-        equals(<String>{
+        supporterProductIds.toList(),
+        equals(<String>[
           'divine.supporter.monthly',
           'divine.supporter.annual',
           'divine.supporter.founding.annual',
-        }),
+        ]),
       );
     });
   });
@@ -137,28 +137,36 @@ void main() {
         expect(await validator.fetchProducts(), isEmpty);
       });
 
-      test('tags each tier with its billing period', () async {
+      test('keeps declaration order and tags each billing period', () async {
         validator.dispose();
         validator = InAppPurchaseValidator(store: store);
         when(store.isAvailable).thenAnswer((_) async => true);
         when(() => store.queryProductDetails(any())).thenAnswer(
           (_) async => ProductDetailsResponse(
             productDetails: [
+              _product('divine.supporter.founding.annual'),
               _product('divine.supporter.monthly'),
               _product('divine.supporter.annual'),
-              _product('divine.supporter.founding.annual'),
             ],
             notFoundIDs: [],
           ),
         );
         final tiers = await validator.fetchProducts();
         expect(
-          {for (final tier in tiers) tier.productId: tier.billingPeriod},
-          equals(<String, SupporterBillingPeriod>{
-            'divine.supporter.monthly': SupporterBillingPeriod.monthly,
-            'divine.supporter.annual': SupporterBillingPeriod.annual,
-            'divine.supporter.founding.annual': SupporterBillingPeriod.annual,
-          }),
+          tiers.map((tier) => tier.productId).toList(),
+          equals(<String>[
+            'divine.supporter.monthly',
+            'divine.supporter.annual',
+            'divine.supporter.founding.annual',
+          ]),
+        );
+        expect(
+          tiers.map((tier) => tier.billingPeriod).toList(),
+          equals(<SupporterBillingPeriod>[
+            SupporterBillingPeriod.monthly,
+            SupporterBillingPeriod.annual,
+            SupporterBillingPeriod.annual,
+          ]),
         );
       });
 
