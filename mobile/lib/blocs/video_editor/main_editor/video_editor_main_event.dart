@@ -131,12 +131,17 @@ class VideoEditorPositionChanged extends VideoEditorMainEvent {
 
 /// Triggered when the video player reports total duration.
 class VideoEditorDurationChanged extends VideoEditorMainEvent {
-  const VideoEditorDurationChanged(this.duration);
+  const VideoEditorDurationChanged(this.duration, {this.isShortLoop = false});
 
   final Duration duration;
 
+  /// Whether the native player's looping composition is shorter than the
+  /// timeline chase animation. This uses player duration, which can differ
+  /// from the editor duration when a rendered transition seam is present.
+  final bool isShortLoop;
+
   @override
-  List<Object?> get props => [duration];
+  List<Object?> get props => [duration, isShortLoop];
 }
 
 /// Types of sub-editors that can be opened.

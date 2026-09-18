@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode, listEquals;
@@ -39,6 +40,7 @@ import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
@@ -456,13 +458,49 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Drives the layer-overlay play time at display refresh rate between the
   /// native player's coarse reports; each report re-anchors it in
   /// [_onPlayerStateChanged]. It runs only while playing and never while a
-  /// seek / trim / drag owns the play time.
+  /// seek / trim / drag owns the play time. On a short loop it drives the
+  /// timeline position too — see [_onPlayheadTick].
   late final _playheadInterpolator = PlayheadInterpolator(
     vsync: this,
-    onTick: (position) =>
-        _setLayerPlayTime(_composition.playerToTimeline(position)),
+    onTick: _onPlayheadTick,
     onAdvancingChanged: _setPlayheadAdvancing,
+    // The zone's clock is the system clock in production; under a widget
+    // test it is the binding's fake time, so pumped frames drive the ticks.
+    createStopwatch: clock.stopwatch,
   );
+
+  /// Whether the timeline position follows the interpolator's ticks rather
+  /// than the native player's reports; decided per report in
+  /// [_onPlayerStateChanged].
+  ///
+  /// The player reports its position about five times a second. On a loop of
+  /// a few frames those reports land at arbitrary points of the loop, and a
+  /// timeline chasing them twitches in place instead of sweeping while the
+  /// time label sticks wherever the reports happen to fall. The ticks carry
+  /// the sweep, so while a short loop plays they feed the bloc at the
+  /// stop-motion clock's cadence and wrap at the loop end (see [isShortLoop]).
+  bool _ticksDriveTimeline = false;
+
+  /// Last position [_onPlayheadTick] pushed into the bloc, for throttling.
+  Duration _lastTickEmit = Duration.zero;
+
+  void _onPlayheadTick(Duration playerPosition) {
+    final timelinePosition = _composition.playerToTimeline(playerPosition);
+    _setLayerPlayTime(timelinePosition);
+    if (!_ticksDriveTimeline) return;
+    if (!playheadEmitDue(
+      last: _lastTickEmit,
+      next: timelinePosition,
+      interval: VideoEditorConstants.playheadEmitInterval,
+    )) {
+      return;
+    }
+    _lastTickEmit = timelinePosition;
+    _lastReportedPosition = timelinePosition;
+    context.read<VideoEditorMainBloc>().add(
+      VideoEditorPositionChanged(timelinePosition),
+    );
+  }
 
   /// Drives playback of a frames-only stop-motion clip, which has no native
   /// player (`_videoPlayer` stays null). Advances the bloc's currentPosition —
@@ -471,7 +509,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   late final _stopMotionClock = StopMotionPlaybackClock(
     vsync: this,
     totalDuration: () => _stopMotionTotalDuration,
-    emitInterval: VideoEditorConstants.stopMotionPlayheadEmitInterval,
+    emitInterval: VideoEditorConstants.playheadEmitInterval,
     onAdvancingChanged: _setPlayheadAdvancing,
     onPlayTime: _setLayerPlayTime,
     onAudioSync: _syncStopMotionAudioTo,
@@ -718,9 +756,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _isSeeking = true;
     final ownerEpoch = _seekEpoch;
     try {
-      final loaded = await _setClipsSafely(_videoPlayer, [
-        ..._composition.buildPlayerClips(clips),
-      ], startPosition: _composition.timelineToPlayer(timelineStartPosition));
+      final loaded = await _setClipsSafely(
+        _videoPlayer,
+        [..._composition.buildPlayerClips(clips)],
+        startPosition: _composition.timelineToPlayer(timelineStartPosition),
+      );
       if (!loaded) return;
       // Only pin the restored position if no newer swap took over during the
       // await — matching the epoch-guarded [_isSeeking] release below. Without
@@ -1127,7 +1167,28 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         _pendingSeekPosition == null &&
         reportAccepted;
 
-    if (canDrivePlayTime && timelinePosition != _lastReportedPosition) {
+    // On a short loop the interpolator's ticks drive the timeline and a
+    // report only re-anchors them below: pushed into the bloc as well, it
+    // would drop the playhead onto an arbitrary point of the loop between two
+    // ticks. The same predicate decides whether the timeline glides or jumps.
+    // The native player reports in composite space. A rendered transition can
+    // make that loop shorter than the editor timeline, so classify it from the
+    // reported player duration and carry the result to the timeline below.
+    final shortLoop = isShortLoop(playerState.duration);
+    final timelineDuration = _composition.playerToTimeline(
+      playerState.duration,
+    );
+    if (timelineDuration != _lastReportedDuration) {
+      _lastReportedDuration = timelineDuration;
+      bloc.add(
+        VideoEditorDurationChanged(timelineDuration, isShortLoop: shortLoop),
+      );
+    }
+    _ticksDriveTimeline = isPlaying && canDrivePlayTime && shortLoop;
+
+    if (canDrivePlayTime &&
+        timelinePosition != _lastReportedPosition &&
+        !_ticksDriveTimeline) {
       _lastReportedPosition = timelinePosition;
       bloc.add(VideoEditorPositionChanged(timelinePosition));
       _setLayerPlayTime(timelinePosition);
@@ -1141,17 +1202,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         position: playerState.position,
         speed: playerState.playbackSpeed,
         maxDuration: playerState.duration,
+        // A short loop wraps in less time than a report takes to arrive, so
+        // parking at the end until one does would be most of the loop.
+        wrap: shortLoop,
       );
     } else {
       _playheadInterpolator.stop();
-    }
-
-    final timelineDuration = _composition.playerToTimeline(
-      playerState.duration,
-    );
-    if (timelineDuration != _lastReportedDuration) {
-      _lastReportedDuration = timelineDuration;
-      bloc.add(VideoEditorDurationChanged(timelineDuration));
     }
   }
 
@@ -1203,9 +1259,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _pendingSeekTarget = currentPosition;
     final generation = _beginClipLoad();
     _runDetached(
-      _setClipsForGeneration(generation, _videoPlayer, [
-        ..._composition.buildPlayerClips(clips),
-      ], startPosition: _composition.timelineToPlayer(currentPosition)),
+      _setClipsForGeneration(
+        generation,
+        _videoPlayer,
+        [..._composition.buildPlayerClips(clips)],
+        startPosition: _composition.timelineToPlayer(currentPosition),
+      ),
       'reload changed clip paths',
     );
     _composition.ensureSeamsRendered(clips);
@@ -1999,9 +2058,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           _setClipsForGeneration(
             generation,
             _videoPlayer,
-            [
-              ..._composition.buildPlayerClips(clips),
-            ],
+            [..._composition.buildPlayerClips(clips)],
             startPosition: _composition.timelineToPlayer(currentPosition),
           ),
           'reload trimmed clips',
@@ -2034,9 +2091,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           _setClipsForGeneration(
             generation,
             _videoPlayer,
-            [
-              ..._composition.buildPlayerClips(clips),
-            ],
+            [..._composition.buildPlayerClips(clips)],
             startPosition: _composition.timelineToPlayer(currentPosition),
           ),
           'reload speed-adjusted clips',
@@ -2461,10 +2516,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           listenWhen: (previous, current) =>
               previous.seekCounter != current.seekCounter,
           listener: (context, state) {
-            _runDetached(
-              _onSeekRequested(state.seekPosition),
-              'seek timeline',
-            );
+            _runDetached(_onSeekRequested(state.seekPosition), 'seek timeline');
           },
         ),
       ],

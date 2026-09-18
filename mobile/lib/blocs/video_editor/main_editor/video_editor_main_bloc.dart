@@ -158,7 +158,12 @@ class VideoEditorMainBloc
     VideoEditorDurationChanged event,
     Emitter<VideoEditorMainState> emit,
   ) {
-    emit(state.copyWith(totalDuration: event.duration));
+    emit(
+      state.copyWith(
+        totalDuration: event.duration,
+        isShortLoop: event.isShortLoop,
+      ),
+    );
   }
 
   void _onVolumeEditModeToggled(

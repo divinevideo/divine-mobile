@@ -17,6 +17,7 @@ class VideoEditorMainState extends Equatable {
     this.seekCounter = 0,
     this.currentPosition = Duration.zero,
     this.totalDuration = Duration.zero,
+    this.isShortLoop = false,
     this.isVolumeEditMode = false,
     this.isReordering = false,
     this.isTimelineHiddenByUser = false,
@@ -77,6 +78,9 @@ class VideoEditorMainState extends Equatable {
   /// Total duration of all clips reported by the video player.
   final Duration totalDuration;
 
+  /// Whether the native preview loop is shorter than the timeline's glide.
+  final bool isShortLoop;
+
   /// Whether the timeline is in volume edit mode.
   final bool isVolumeEditMode;
 
@@ -130,6 +134,7 @@ class VideoEditorMainState extends Equatable {
     int? seekCounter,
     Duration? currentPosition,
     Duration? totalDuration,
+    bool? isShortLoop,
     bool? isReordering,
     bool? isTimelineHiddenByUser,
     bool? isMarkerMode,
@@ -157,6 +162,7 @@ class VideoEditorMainState extends Equatable {
       seekCounter: seekCounter ?? this.seekCounter,
       currentPosition: currentPosition ?? this.currentPosition,
       totalDuration: totalDuration ?? this.totalDuration,
+      isShortLoop: isShortLoop ?? this.isShortLoop,
       isVolumeEditMode: isVolumeEditMode ?? this.isVolumeEditMode,
       isReordering: isReordering ?? this.isReordering,
       isTimelineHiddenByUser:
@@ -182,6 +188,7 @@ class VideoEditorMainState extends Equatable {
     seekCounter,
     currentPosition,
     totalDuration,
+    isShortLoop,
     isVolumeEditMode,
     isReordering,
     isTimelineHiddenByUser,

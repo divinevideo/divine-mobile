@@ -110,6 +110,30 @@ void main() {
         interpolator.stop();
       });
 
+      testWidgets('wraps around the duration instead of parking when asked', (
+        tester,
+      ) async {
+        // A four-frame loop, anchored 20ms before its end: the next tick is
+        // already in the next pass, and the one after keeps going.
+        const loop = Duration(milliseconds: 130);
+        build();
+        interpolator.anchor(
+          position: loop - const Duration(milliseconds: 20),
+          speed: 1,
+          maxDuration: loop,
+          wrap: true,
+        );
+
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(recorder.ticks, [
+          const Duration(milliseconds: 30),
+          const Duration(milliseconds: 80),
+        ]);
+        interpolator.stop();
+      });
+
       testWidgets('re-anchoring while active corrects drift without a '
           'restart', (tester) async {
         build();

@@ -175,8 +175,13 @@ class StopMotionPlaybackClock {
     onPlayTime(looped);
     onAudioSync(looped, isPlaying: true, isSeek: false);
 
-    final advanced = looped - _lastEmit;
-    if (advanced >= Duration.zero && advanced < emitInterval) return;
+    if (!playheadEmitDue(
+      last: _lastEmit,
+      next: looped,
+      interval: emitInterval,
+    )) {
+      return;
+    }
     _lastEmit = looped;
     onPositionChanged(looped);
   }
