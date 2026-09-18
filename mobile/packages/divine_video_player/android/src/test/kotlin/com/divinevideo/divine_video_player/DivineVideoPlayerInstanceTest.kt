@@ -1162,6 +1162,39 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `the loop decode of an authenticated clip carries its headers`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        mockkObject(VideoCache)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            val headerFns = mutableListOf<(Uri) -> Map<String, String>>()
+            every { VideoCache.dataSourceFactory(any(), any()) } answers {
+                headerFns += secondArg<(Uri) -> Map<String, String>>()
+                DataSource.Factory { mockk(relaxed = true) }
+            }
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.bufferedPosition } returns 1_200L
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            val headers = mapOf("Authorization" to "Bearer test-token")
+            instance.onMethodCall(
+                setClipsWithHeaders("https://cdn.example/gated.mp4", headers),
+                mockk(relaxed = true),
+            )
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // Without the token the range request is rejected and the loop
+            // track silently falls back to the renderer's audio.
+            assertEquals(1, headerFns.size)
+            assertEquals(headers, headerFns.single()(mockk(relaxed = true)))
+        } finally {
+            unmockkObject(VideoCache)
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
     fun `a clamp that shortens the loop cuts its audio again against the clipped timeline`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
