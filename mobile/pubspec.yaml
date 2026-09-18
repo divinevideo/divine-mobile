@@ -389,7 +389,7 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.13.0
+  pro_video_editor: ^2.13.1
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
