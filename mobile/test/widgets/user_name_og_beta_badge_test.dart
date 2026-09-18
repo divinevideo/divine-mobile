@@ -31,6 +31,7 @@ void main() {
     bool cachedOgViner = false,
     bool showProfileBadges = true,
     bool eligible = true,
+    List<String>? lookups,
   }) async {
     SharedPreferences.setMockInitialValues({
       if (cachedOgViner) ogVinerPubkeysCacheKey: jsonEncode([pubkey]),
@@ -40,9 +41,10 @@ void main() {
     return ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        ogDivinerEligibilityProvider.overrideWith(
-          (ref, candidate) async => eligible && candidate == pubkey,
-        ),
+        ogDivinerEligibilityProvider.overrideWith((ref, candidate) async {
+          lookups?.add(candidate);
+          return eligible && candidate == pubkey;
+        }),
       ],
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -199,6 +201,29 @@ void main() {
 
       expect(find.byType(OgVinerBadge), findsOneWidget);
       expect(find.byType(OgBetaBadge), findsNothing);
+    });
+
+    testWidgets('asks the server nothing when a cheaper chit already wins', (
+      tester,
+    ) async {
+      final lookups = <String>[];
+
+      await tester.pumpWidget(
+        await buildSubject(pubkey: kDivineTeamPubkeys.first, lookups: lookups),
+      );
+      await tester.pump();
+      await tester.pumpWidget(
+        await buildSubject(
+          pubkey: eligiblePubkey,
+          cachedOgViner: true,
+          lookups: lookups,
+        ),
+      );
+      await tester.pump();
+
+      // The lookup tells the server which account is being viewed, so the
+      // precedence guards have to short-circuit it, not just hide its result.
+      expect(lookups, isEmpty);
     });
   });
 }
