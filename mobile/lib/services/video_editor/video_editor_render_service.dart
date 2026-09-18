@@ -675,7 +675,7 @@ class VideoEditorRenderService {
       );
 
       final taskId = DateTime.now().microsecondsSinceEpoch.toString();
-      await _cancelAndRender(
+      await cancelAndRender(
         outputPath,
         VideoRenderData(
           id: taskId,
@@ -772,7 +772,7 @@ class VideoEditorRenderService {
       transform: cropParams.toExportTransform(),
     );
 
-    await _cancelAndRender(outputPath, task);
+    await cancelAndRender(outputPath, task);
 
     Log.debug(
       '✅ Video cropped to: $outputPath',
@@ -891,7 +891,7 @@ class VideoEditorRenderService {
 
     await renderWithEncoderFallback(
       baseTask: task,
-      encode: (attemptTask) => _cancelAndRender(outputPath, attemptTask),
+      encode: (attemptTask) => cancelAndRender(outputPath, attemptTask),
       fallbackAspectRatio: aspectRatio,
     );
 
@@ -1096,7 +1096,7 @@ class VideoEditorRenderService {
   }
 
   /// Cancels any in-progress render for [task], then renders to [outputPath].
-  static Future<void> _cancelAndRender(
+  static Future<void> cancelAndRender(
     String outputPath,
     VideoRenderData task,
   ) async {

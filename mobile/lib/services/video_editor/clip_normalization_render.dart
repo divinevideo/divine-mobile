@@ -204,11 +204,8 @@ abstract final class ClipNormalizationRender {
 
     await VideoEditorRenderService.renderWithEncoderFallback(
       baseTask: task,
-      encode: (attemptTask) => VideoEditorRenderService.renderNativeVideoToFile(
-        outputPath,
-        attemptTask,
-        reuseActiveCancellation: true,
-      ),
+      encode: (attemptTask) =>
+          VideoEditorRenderService.cancelAndRender(outputPath, attemptTask),
       ownerTaskId: ownerTaskId,
     );
 
