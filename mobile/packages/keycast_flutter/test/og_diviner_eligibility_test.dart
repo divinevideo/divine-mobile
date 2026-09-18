@@ -33,6 +33,20 @@ void main() {
       expect(await oauth.isOgDiviner(pubkey.toUpperCase()), isTrue);
     });
 
+    test(
+      'returns false when the server says the account is not eligible',
+      () async {
+        final oauth = KeycastOAuth(
+          config: config,
+          httpClient: MockClient(
+            (_) async => http.Response('{"eligible":false}', 200),
+          ),
+        );
+
+        expect(await oauth.isOgDiviner(pubkey), isFalse);
+      },
+    );
+
     test('rejects a malformed eligibility response', () async {
       final oauth = KeycastOAuth(
         config: config,
