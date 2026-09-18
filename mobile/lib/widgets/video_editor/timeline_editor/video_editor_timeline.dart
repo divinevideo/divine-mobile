@@ -13,7 +13,6 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
