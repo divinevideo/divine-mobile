@@ -58,6 +58,9 @@ void main() {
   group(ClipNormalizationRender, () {
     const landscape = Size(1920, 1080);
     const vertical = Size(1080, 1920);
+    // Also exactly 9:16, so it needs no crop, but its crop box differs from
+    // [vertical]'s — which is what puts a no-render pair on the mixed path.
+    const smallVertical = Size(540, 960);
 
     late Directory cacheDir;
     late ProVideoEditor originalProVideoEditor;
@@ -159,6 +162,25 @@ void main() {
         '${cacheDir.path}/tall.mp4',
       );
       expect(result.segments.last.startTime, const Duration(milliseconds: 500));
+    });
+
+    test('stops at the next clip when the export is cancelled', () async {
+      // Neither clip needs cropping, so this pass renders nothing and its own
+      // per-clip check is the only thing that can see the cancel: a user
+      // cancel targets the export id, and the encoder-fallback helper that
+      // would otherwise notice it only runs for a clip being re-encoded.
+      RenderCancellationRegistry.start('export');
+      RenderCancellationRegistry.cancel('export');
+
+      await expectLater(
+        normalize([
+          clipFor('tall', vertical),
+          clipFor('small', smallVertical),
+        ]),
+        throwsA(isA<RenderCanceledException>()),
+      );
+
+      expect(plugin.renders, isEmpty);
     });
   });
 }
