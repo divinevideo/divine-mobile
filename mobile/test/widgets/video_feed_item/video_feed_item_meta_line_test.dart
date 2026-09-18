@@ -1,8 +1,9 @@
 // ABOUTME: Widget tests for the video card's loop-count meta line.
-// ABOUTME: Pins that small public counts stay hidden and the date never shows.
+// ABOUTME: Pins hidden small counts, the absent date, and the author node.
 
 import 'dart:async';
 
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -235,6 +236,31 @@ void main() {
 
       expect(find.textContaining(_l10n(tester).timeVerboseNow), findsNothing);
       expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+    });
+
+    testWidgets('the author node is a labelled button that opens the profile', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      // Without the date there is no text left to merge into the author
+      // gesture's own node, so the row only stays labelled if the annotated
+      // node is the one carrying the action.
+      await pump(tester, video: _video(rawTags: {'views': '50000'}));
+
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+
+      final node = tester.getSemantics(
+        find.bySemanticsIdentifier('video_author_name'),
+      );
+      final data = node.getSemanticsData();
+      expect(node.label, isNotEmpty);
+      expect(
+        data.hasAction(SemanticsAction.tap),
+        isTrue,
+        reason: 'the labelled node must be the one that opens the profile',
+      );
+      expect(data.flagsCollection.isButton, isTrue);
+      handle.dispose();
     });
   });
 }

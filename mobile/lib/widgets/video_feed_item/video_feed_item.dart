@@ -411,6 +411,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                       identifier: 'video_author_name',
                                       container: true,
                                       explicitChildNodes: true,
+                                      button: true,
                                       label: context.l10n
                                           .videoAuthorSemanticLabel(
                                             displayName,
