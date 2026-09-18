@@ -161,10 +161,14 @@ internal class DataSourceMediaDataSource(
 
     private companion object {
         /**
-         * Regions read side by side: two or three sample tables and the
-         * samples themselves, with one to spare.
+         * Regions read side by side. Every feed clip measured needs three —
+         * two sample tables and the samples themselves — and the bound is
+         * a cliff rather than a slope: one region more than it allows turns
+         * every read into a reopen. Three spare cost 64 KB each for the life
+         * of a decode, which is cheaper than finding the fourth table the
+         * hard way.
          */
-        const val MAX_CURSORS = 4
+        const val MAX_CURSORS = 6
 
         /**
          * What each cursor keeps of its region. Two sample tables of a

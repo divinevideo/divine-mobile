@@ -177,21 +177,21 @@ class DataSourceMediaDataSourceTest {
 
     @Test
     fun `the source used longest ago is the one retired`() {
-        val big = ByteArray(2 * 1024 * 1024)
+        val big = ByteArray(3 * 1024 * 1024)
         val fake = FakeSource(big)
         val source = sourceOver(fake)
         val out = ByteArray(4)
-        val regions = listOf(0L, 400_000L, 800_000L, 1_200_000L, 1_600_000L)
+        val regions = (0L until 7L).map { it * 400_000L }
 
         regions.forEach { source.readAt(it, out, 0, 4) }
-        // Five regions, four sources: the first opened has been idle the
+        // Seven regions, six sources: the first opened has been idle the
         // longest and is the one given up.
         assertEquals(1, fake.closes)
         // Reading it again costs a reopen, which retires the next-oldest;
         // the ones used since are still in hand.
         source.readAt(4, out, 0, 4)
         source.readAt(800_004, out, 0, 4)
-        source.readAt(1_600_004, out, 0, 4)
+        source.readAt(2_400_004, out, 0, 4)
 
         assertEquals(regions + 4L, fake.opens)
         assertEquals(2, fake.closes)
