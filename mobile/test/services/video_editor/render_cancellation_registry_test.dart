@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show RenderCanceledException;
 
 void main() {
   group(RenderCancellationRegistry, () {
@@ -41,6 +43,33 @@ void main() {
         isFalse,
       );
       RenderCancellationRegistry.finish('render-task', newToken);
+    });
+
+    test('throwIfRequested consumes a cancel aimed at the owning export', () {
+      RenderCancellationRegistry.start('export');
+      RenderCancellationRegistry.start('export_clip_0_normalized');
+      RenderCancellationRegistry.cancel('export');
+
+      expect(
+        () => RenderCancellationRegistry.throwIfRequested(
+          'export_clip_0_normalized',
+          'export',
+        ),
+        throwsA(isA<RenderCanceledException>()),
+      );
+      // Consumed: the same intermediate pass does not throw twice for one
+      // cancel, and the owner's flag is gone as well.
+      expect(
+        () => RenderCancellationRegistry.throwIfRequested(
+          'export_clip_0_normalized',
+          'export',
+        ),
+        returnsNormally,
+      );
+      expect(
+        RenderCancellationRegistry.isCancellationRequested('export'),
+        isFalse,
+      );
     });
 
     test('startIfIdle reuses an active generation', () {

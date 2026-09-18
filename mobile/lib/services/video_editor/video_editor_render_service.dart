@@ -16,9 +16,11 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
+import 'package:openvine/services/video_editor/clip_normalization_render.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
+import 'package:openvine/services/video_editor/render_progress_tracker.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -31,108 +33,6 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/services/video_editor/video_render_failures.dart';
-
-class _RenderProgressTracker {
-  _RenderProgressTracker({
-    required this.taskId,
-    required int clipCount,
-    bool hasAssemblyPhase = false,
-  }) : _proofBudget =
-           VideoEditorRenderService.proofModeProgressBudgetForClipCount(
-             clipCount,
-           ),
-       _proofSteps = clipCount + 1,
-       _hasAssemblyPhase = hasAssemblyPhase;
-
-  /// Share of the non-proof budget reserved for the stop-motion assembly
-  /// pass. Assembly (stills → base mp4) and the composite render are both
-  /// full encode passes over the same output duration, so they get equal
-  /// halves.
-  static const double _assemblyShare = 0.5;
-
-  final String taskId;
-  final double _proofBudget;
-  final int _proofSteps;
-  final bool _hasAssemblyPhase;
-  StreamSubscription<ProgressModel>? _renderSubscription;
-  StreamSubscription<ProgressModel>? _assemblySubscription;
-  double _lastProgress = 0;
-
-  double get _assemblyBudget =>
-      _hasAssemblyPhase ? (1 - _proofBudget) * _assemblyShare : 0;
-  double get _renderBudget => 1 - _proofBudget - _assemblyBudget;
-
-  void start() {
-    // Emit an explicit reset so a reused broadcast stream does not keep showing
-    // the completed progress of a previous render.
-    _lastProgress = 0;
-    VideoEditorRenderService._emitCompositeProgress(
-      taskId: taskId,
-      progress: 0,
-    );
-    _renderSubscription = ProVideoEditor.instance
-        .progressStreamById(taskId)
-        .listen((progressModel) {
-          _emit(_assemblyBudget + progressModel.progress * _renderBudget);
-        });
-  }
-
-  /// Routes the native progress of the stop-motion assembly running under
-  /// [assemblyTaskId] (step [step] of [stepCount]) into the assembly slice
-  /// of the composite progress.
-  Future<void> startAssemblyStep({
-    required String assemblyTaskId,
-    required int step,
-    required int stepCount,
-  }) async {
-    await _assemblySubscription?.cancel();
-    _assemblySubscription = ProVideoEditor.instance
-        .progressStreamById(assemblyTaskId)
-        .listen((progressModel) {
-          _emit(_assemblyBudget * (step + progressModel.progress) / stepCount);
-        });
-  }
-
-  Future<void> markAssemblyComplete() async {
-    // Stop listening so late assembly events cannot regress the composite
-    // progress during the render phase.
-    await _assemblySubscription?.cancel();
-    _assemblySubscription = null;
-    _emit(_assemblyBudget);
-  }
-
-  Future<void> markRenderComplete() async {
-    // Stop listening to render progress so late events from the render stream
-    // cannot regress the composite progress during the proof phase.
-    await _renderSubscription?.cancel();
-    _renderSubscription = null;
-    _emit(1 - _proofBudget);
-  }
-
-  void markProofStepComplete(int completedSteps) {
-    final normalizedSteps = completedSteps.clamp(0, _proofSteps);
-    _emit(1 - _proofBudget + (_proofBudget * normalizedSteps / _proofSteps));
-  }
-
-  Future<void> dispose() async {
-    await _renderSubscription?.cancel();
-    _renderSubscription = null;
-    await _assemblySubscription?.cancel();
-    _assemblySubscription = null;
-  }
-
-  /// Emits a monotonically increasing composite progress value, guarding
-  /// against backwards jumps caused by out-of-order stream events.
-  void _emit(double progress) {
-    final clamped = progress.clamp(0.0, 1.0);
-    if (clamped <= _lastProgress) return;
-    _lastProgress = clamped;
-    VideoEditorRenderService._emitCompositeProgress(
-      taskId: taskId,
-      progress: clamped,
-    );
-  }
-}
 
 /// Service for rendering final video from multiple clips.
 ///
@@ -321,9 +221,12 @@ class VideoEditorRenderService {
     final assemblyStepCount = clips
         .where((clip) => clip.video == null && clip.isStopMotion)
         .length;
-    final progressTracker = _RenderProgressTracker(
+    final progressTracker = RenderProgressTracker(
       taskId: effectiveTaskId,
-      clipCount: clips.length,
+      emit: (progress) =>
+          _emitCompositeProgress(taskId: effectiveTaskId, progress: progress),
+      proofBudget: proofModeProgressBudgetForClipCount(clips.length),
+      proofSteps: clips.length + 1,
       hasAssemblyPhase: assemblyStepCount > 0,
     )..start();
 
@@ -666,7 +569,7 @@ class VideoEditorRenderService {
       final effectiveTaskId = taskId ?? clips.first.id;
 
       // Intermediate normalized clips always go to cache (they get deleted)
-      final result = await _normalizeClipsToAspectRatio(
+      final result = await ClipNormalizationRender.normalizeClipsToAspectRatio(
         clips: clips,
         aspectRatio: aspectRatio ?? clips.first.targetAspectRatio,
         cacheDir: cacheDir,
@@ -880,198 +783,6 @@ class VideoEditorRenderService {
     return outputPath;
   }
 
-  /// Normalizes all clips to the target aspect ratio.
-  ///
-  /// Optimizes rendering by:
-  /// - Using a single global transform if all clips have the same resolution
-  /// - Only pre-rendering clips that differ from the majority
-  ///
-  /// Returns video segments ready for concatenation and an optional global
-  /// transform when all clips share the same crop parameters.
-  ///
-  /// [taskId] is the export's own id — the one a user cancel targets — so this
-  /// pass can stop between clips instead of rendering the whole set (#7833).
-  /// [tempFilePaths] is owned by the caller so partial output remains visible
-  /// to its cleanup handlers when this pass throws.
-  static Future<NormalizationResult> _normalizeClipsToAspectRatio({
-    required List<DivineVideoClip> clips,
-    required model.AspectRatio aspectRatio,
-    required Directory cacheDir,
-    required CompleteParameters? parameters,
-    required String taskId,
-    required List<String> tempFilePaths,
-  }) async {
-    // Analyze all clips first to determine the optimal rendering strategy
-    final clipAnalysis = await _analyzeClips(clips, aspectRatio);
-
-    // A transition overlaps the tail of its clip and the head of the next, so
-    // clamp it to a duration both clips can sustain. Without this the native
-    // render fails on a transition longer than a (possibly later-trimmed) clip,
-    // even though the lightweight seam preview clamps independently.
-    final clampedTransitions = clampTransitions(clips);
-
-    // If all clips have the same crop params, use global transform (most efficient)
-    if (clipAnalysis.allSameCropParams) {
-      Log.debug(
-        '⚡ All ${clips.length} clips have identical resolution - using global transform',
-        name: _logName,
-        category: .video,
-      );
-      return NormalizationResult(
-        segments: clips
-            .map(
-              (c) => VideoSegment(
-                video: c.requireVideo,
-                startTime: c.trimStart == .zero ? null : c.trimStart,
-                endTime: c.trimStart + c.trimmedDuration,
-                volume: c.volume,
-                playbackSpeed: c.playbackSpeed,
-                transition: clampedTransitions[c.id],
-              ),
-            )
-            .toList(),
-        globalTransform:
-            clipAnalysis.entries.first.cropParams.needsCropping(
-              clipAnalysis.entries.first.resolution,
-            )
-            ? clipAnalysis.entries.first.cropParams
-            : null,
-      );
-    }
-
-    // Mixed resolutions: normalize clips that differ from the target
-    Log.debug(
-      '🔄 Mixed resolutions detected - normalizing individual clips',
-      name: _logName,
-      category: .video,
-    );
-
-    final segments = <VideoSegment>[];
-    for (int i = 0; i < clips.length; i++) {
-      _throwIfCancellationRequested(taskId);
-      final entry = clipAnalysis.entries[i];
-      final needsCrop = entry.cropParams.needsCropping(entry.resolution);
-
-      Log.debug(
-        '🎯 Clip ${entry.clip.id}: ${entry.resolution.width.round()}x${entry.resolution.height.round()}, '
-        'crop: ${entry.cropParams}, needsCrop: $needsCrop',
-        name: _logName,
-        category: .video,
-      );
-
-      if (!needsCrop) {
-        segments.add(
-          VideoSegment(
-            video: entry.clip.requireVideo,
-            startTime: entry.clip.trimStart == .zero
-                ? null
-                : entry.clip.trimStart,
-            endTime: entry.clip.trimStart + entry.clip.trimmedDuration,
-            volume: entry.clip.volume,
-            playbackSpeed: entry.clip.playbackSpeed,
-            transition: clampedTransitions[entry.clip.id],
-          ),
-        );
-      } else {
-        final normalizedPath = path.join(
-          cacheDir.path,
-          'normalized_${i}_${DateTime.now().microsecondsSinceEpoch}.mp4',
-        );
-        tempFilePaths.add(normalizedPath);
-        await _renderNormalizedClip(
-          clip: entry.clip,
-          cropParams: entry.cropParams,
-          outputPath: normalizedPath,
-          parameters: parameters,
-          ownerTaskId: taskId,
-        );
-        segments.add(
-          VideoSegment(
-            video: EditorVideo.file(File(normalizedPath)),
-            transition: clampedTransitions[entry.clip.id],
-          ),
-        );
-      }
-    }
-
-    return NormalizationResult(segments: segments);
-  }
-
-  /// Analyzes all clips to determine their crop parameters.
-  static Future<ClipAnalysis> _analyzeClips(
-    List<DivineVideoClip> clips,
-    model.AspectRatio aspectRatio,
-  ) async {
-    final entries = <ClipAnalysisEntry>[];
-
-    for (final clip in clips) {
-      final metaData = await ProVideoEditor.instance.getMetadata(
-        clip.requireVideo,
-      );
-      final resolution = metaData.resolution;
-      final cropParams = CropParameters.forAspectRatio(
-        resolution: resolution,
-        aspectRatio: aspectRatio,
-      );
-      entries.add(
-        ClipAnalysisEntry(
-          clip: clip,
-          resolution: resolution,
-          cropParams: cropParams,
-        ),
-      );
-    }
-
-    return ClipAnalysis(entries: entries);
-  }
-
-  /// Renders a single clip with crop transform to normalize its aspect ratio.
-  static Future<String> _renderNormalizedClip({
-    required DivineVideoClip clip,
-    required CropParameters cropParams,
-    required String outputPath,
-    required CompleteParameters? parameters,
-    required String ownerTaskId,
-  }) async {
-    final task = VideoRenderData(
-      id: '${clip.id}_normalized',
-      videoSegments: [
-        VideoSegment(
-          video: clip.requireVideo,
-          startTime: clip.trimStart == .zero ? null : clip.trimStart,
-          endTime: clip.trimStart + clip.trimmedDuration,
-          volume: clip.volume,
-          playbackSpeed: clip.playbackSpeed,
-        ),
-      ],
-      shouldOptimizeForNetworkUse: true,
-      imageBytesWithCropping: true,
-      transform: ExportTransform(
-        x: cropParams.x,
-        y: cropParams.y,
-        width: cropParams.width,
-        height: cropParams.height,
-        flipX: parameters?.flipX ?? false,
-        flipY: parameters?.flipY ?? false,
-        rotateTurns: parameters?.rotateTurns ?? 0,
-      ),
-    );
-
-    await renderWithEncoderFallback(
-      baseTask: task,
-      encode: (attemptTask) => _cancelAndRender(outputPath, attemptTask),
-      ownerTaskId: ownerTaskId,
-    );
-
-    Log.debug(
-      '✅ Clip ${clip.id} normalized to: $outputPath',
-      name: _logName,
-      category: .video,
-    );
-
-    return outputPath;
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // Video Concatenation
   // ─────────────────────────────────────────────────────────────────────────
@@ -1250,10 +961,10 @@ class VideoEditorRenderService {
         if (attempt.settle > Duration.zero) {
           await Future<void>.delayed(attempt.settle);
         }
-        _throwIfCancellationRequested(baseTask.id, ownerTaskId);
+        RenderCancellationRegistry.throwIfRequested(baseTask.id, ownerTaskId);
         try {
           await encode(attempt.task);
-          _throwIfCancellationRequested(baseTask.id, ownerTaskId);
+          RenderCancellationRegistry.throwIfRequested(baseTask.id, ownerTaskId);
           return;
         } on RenderEncoderException catch (e) {
           final isLast = i == attempts.length - 1;
@@ -1271,26 +982,6 @@ class VideoEditorRenderService {
       if (renderGeneration.started) {
         RenderCancellationRegistry.finish(baseTask.id, renderGeneration.token);
       }
-    }
-  }
-
-  /// Throws [RenderCanceledException] when a cancel is pending for [taskId]
-  /// or for [ownerTaskId], consuming the request.
-  ///
-  /// Intermediate passes render under their own ids, so a user cancel — which
-  /// targets the export's id — is invisible to them unless they also consult
-  /// the owner.
-  static void _throwIfCancellationRequested(
-    String taskId, [
-    String? ownerTaskId,
-  ]) {
-    final cancelled = RenderCancellationRegistry.consumeCancellation(taskId);
-    final ownerCancelled =
-        ownerTaskId != null &&
-        ownerTaskId != taskId &&
-        RenderCancellationRegistry.consumeCancellation(ownerTaskId);
-    if (cancelled || ownerCancelled) {
-      throw const RenderCanceledException();
     }
   }
 
@@ -1465,7 +1156,7 @@ class VideoEditorRenderService {
     }
     return NativeRenderTaskRegistry.track(task.id, () {
       return Future.sync(() {
-        _throwIfCancellationRequested(task.id);
+        RenderCancellationRegistry.throwIfRequested(task.id);
         return ProVideoEditor.instance.renderVideoToFile(
           outputPath,
           task,

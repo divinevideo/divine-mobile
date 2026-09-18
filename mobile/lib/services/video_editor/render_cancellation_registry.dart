@@ -1,6 +1,9 @@
 // ABOUTME: Tracks cancellation requests for video render task generations
 // ABOUTME: Preserves user cancels issued before native render registration
 
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show RenderCanceledException;
+
 /// Registry of cancellation requests for app-owned video render tasks.
 ///
 /// A render id can be reused across attempts and sessions, so each render mints
@@ -48,6 +51,26 @@ class RenderCancellationRegistry {
     if (token == null || !identical(_cancelledTokens[id], token)) return false;
     _cancelledTokens.remove(id);
     return true;
+  }
+
+  /// Throws [RenderCanceledException] when a cancel is pending for [taskId]
+  /// or for [ownerTaskId], consuming the request.
+  ///
+  /// Intermediate passes render under their own ids, so a user cancel — which
+  /// targets the export's id — is invisible to them unless they also consult
+  /// the owner.
+  static void throwIfRequested(
+    String taskId, [
+    String? ownerTaskId,
+  ]) {
+    final cancelled = consumeCancellation(taskId);
+    final ownerCancelled =
+        ownerTaskId != null &&
+        ownerTaskId != taskId &&
+        consumeCancellation(ownerTaskId);
+    if (cancelled || ownerCancelled) {
+      throw const RenderCanceledException();
+    }
   }
 
   /// Ends [id]'s render generation if [token] still owns it.
