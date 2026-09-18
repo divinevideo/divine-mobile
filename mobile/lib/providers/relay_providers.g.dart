@@ -75,7 +75,8 @@ String _$connectionStatusServiceHash() =>
 /// de-configured relay leaves no stale entry behind, and it reports dialling
 /// separately so `isConnecting` means something too.
 ///
-/// keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+/// keepAlive with no UI consumer: activated by `AppShellSideEffects`,
+/// alongside `relaySetChangeBridge`, which reads the same stream.
 
 @ProviderFor(relayConnectionStatusBridge)
 final relayConnectionStatusBridgeProvider =
@@ -95,7 +96,8 @@ final relayConnectionStatusBridgeProvider =
 /// de-configured relay leaves no stale entry behind, and it reports dialling
 /// separately so `isConnecting` means something too.
 ///
-/// keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+/// keepAlive with no UI consumer: activated by `AppShellSideEffects`,
+/// alongside `relaySetChangeBridge`, which reads the same stream.
 
 final class RelayConnectionStatusBridgeProvider
     extends $FunctionalProvider<void, void, void>
@@ -114,7 +116,8 @@ final class RelayConnectionStatusBridgeProvider
   /// de-configured relay leaves no stale entry behind, and it reports dialling
   /// separately so `isConnecting` means something too.
   ///
-  /// keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+  /// keepAlive with no UI consumer: activated by `AppShellSideEffects`,
+  /// alongside `relaySetChangeBridge`, which reads the same stream.
   RelayConnectionStatusBridgeProvider._()
     : super(
         from: null,
