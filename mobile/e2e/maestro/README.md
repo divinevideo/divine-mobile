@@ -50,9 +50,13 @@ fixture; changing it is a reviewed CI configuration change.
 The broader `suites/smoke.yaml` remains a manual regression target. It includes
 account-management and social flows that depend on credentials or mutable
 staging state. `likeFlow` and `commentFlow` remain unsuitable for the PR gate:
-after the reduced-motion fix they still fail on Codemagic with a blocked main
-thread, as documented in
-[#7204](https://github.com/divinevideo/divine-mobile/issues/7204). Restoring
+when they last ran on Codemagic they failed with a blocked main thread, as
+documented in
+[#7204](https://github.com/divinevideo/divine-mobile/issues/7204). Treat that
+as a dated observation rather than a current one: it predates the webhook
+lapse below, and no `e2e-smoke-ios` build has run since to re-check it. A
+blocked main thread is also a different failure from a never-quiescent
+animation, so the reduced-motion work was never going to clear it. Restoring
 those flows is tracked by
 [#7619](https://github.com/divinevideo/divine-mobile/issues/7619) and
 [#7620](https://github.com/divinevideo/divine-mobile/issues/7620). The iOS
