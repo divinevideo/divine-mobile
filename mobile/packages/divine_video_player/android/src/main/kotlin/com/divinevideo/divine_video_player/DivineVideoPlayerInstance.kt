@@ -18,6 +18,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
@@ -144,6 +145,9 @@ internal class DivineVideoPlayerInstance(
 
     /** Set when the audio loop is waiting for a readable duration. */
     private var clipAudioPending = false
+
+    /** Set when the audio loop is waiting for the player to finish loading. */
+    private var clipAudioAwaitingLoad = false
 
     /**
      * A loop that decoded while the player was playing, held for the next
@@ -422,6 +426,28 @@ internal class DivineVideoPlayerInstance(
         }
         return builder.build()
     }
+
+    private fun isRemoteSource(uri: String): Boolean =
+        uri.startsWith("http://") || uri.startsWith("https://")
+
+    /** Whether the player has buffered its clip to the end it presents. */
+    private fun ExoPlayer.hasBufferedWholeClip(): Boolean {
+        val presentedMs = duration
+        return presentedMs != C.TIME_UNSET && bufferedPosition >= presentedMs
+    }
+
+    /**
+     * What a `MediaExtractor` reads remote clips through: the same factory
+     * the player itself uses — its cache for anonymous HTTP(S), straight to
+     * the network otherwise — so the extractor reads what the player has
+     * fetched. Deliberately not the blocking variant of the cache source:
+     * the extractor holds several ranges open at once, and one of them
+     * blocking on a range another holds locked would wait on itself.
+     */
+    private fun remoteSourceFactory(): DataSource.Factory =
+        VideoCache.dataSourceFactory(context) { requestUri: Uri ->
+            httpHeadersForRequest(requestUri.toString())
+        }
 
     internal fun httpHeadersForRequest(url: String): Map<String, String> {
         httpHeadersByUri[url]?.let { return it }
@@ -1064,12 +1090,19 @@ internal class DivineVideoPlayerInstance(
         if (trackDurationsCache.containsKey(uri)) return
 
         val extractor = MediaExtractor()
+        var remoteSource: DataSourceMediaDataSource? = null
         val durations = try {
             when {
                 uri.startsWith("file://") ->
                     extractor.setDataSource(Uri.parse(uri).path ?: return)
-                uri.startsWith("http://") || uri.startsWith("https://") ->
-                    extractor.setDataSource(uri, headers)
+                // Through the player's cache: a clip seen before is read
+                // from disk, and what this read fetches of a new one is
+                // there for the player's own load.
+                uri.startsWith("http://") || uri.startsWith("https://") -> {
+                    remoteSource =
+                        DataSourceMediaDataSource(remoteSourceFactory(), Uri.parse(uri))
+                    extractor.setDataSource(remoteSource)
+                }
                 // A bare filesystem path. [canReadTrackDurations] rejected
                 // everything else before this was ever queued.
                 else -> extractor.setDataSource(uri)
@@ -1100,6 +1133,7 @@ internal class DivineVideoPlayerInstance(
             return
         } finally {
             extractor.release()
+            runCatching { remoteSource?.close() }
         }
         trackDurationsCache[uri] = durations
     }
@@ -1182,17 +1216,32 @@ internal class DivineVideoPlayerInstance(
 
         // The presented length is only known once the timeline is populated;
         // [onPlaybackStateChanged] calls back in when it is.
-        val loopMs = if (awaitTimeline) C.TIME_UNSET else ensurePlayer().duration
+        val exoPlayer = ensurePlayer()
+        val loopMs = if (awaitTimeline) C.TIME_UNSET else exoPlayer.duration
         if (loopMs == C.TIME_UNSET || loopMs <= 0) {
             clipAudioPending = true
             return
         }
         clipAudioPending = false
 
+        // A remote clip is decoded from the player's cache rather than fetched
+        // again, so the decode waits until the player has the whole clip
+        // buffered — [onIsLoadingChanged] calls back in as the load
+        // progresses. Read alongside the download it would find the range
+        // the player is writing locked and be sent to the network for it,
+        // which is the second download this avoids. On the feed the clip is
+        // buffered within the first lap, and the decode then runs from disk.
+        if (isRemoteSource(uri) && !exoPlayer.hasBufferedWholeClip()) {
+            clipAudioAwaitingLoad = true
+            return
+        }
+        clipAudioAwaitingLoad = false
+        val remoteSourceFactory = remoteSourceFactory()
+
         if (metadataExecutor.isShutdown) return
         runCatching {
             metadataExecutor.execute {
-                val loop = ClipAudioLoopTrack.create(uri, headers, loopMs)
+                val loop = ClipAudioLoopTrack.create(uri, headers, loopMs, remoteSourceFactory)
                 mainHandler.post {
                     if (generation != clipAudioGeneration) {
                         loop?.release()
@@ -1250,6 +1299,7 @@ internal class DivineVideoPlayerInstance(
     private fun releaseClipAudioLoop() {
         clipAudioGeneration++
         clipAudioPending = false
+        clipAudioAwaitingLoad = false
         pendingClipAudioLoop?.release()
         pendingClipAudioLoop = null
         clipAudioLoop?.release()
@@ -1796,6 +1846,15 @@ internal class DivineVideoPlayerInstance(
                 DivineVideoPlayerLog.debug(message, name = "DivineVideoPlayer.Playback")
             } else {
                 DivineVideoPlayerLog.info(message, name = "DivineVideoPlayer.Playback")
+            }
+        }
+
+        override fun onIsLoadingChanged(isLoading: Boolean) {
+            // Fires at every load boundary — the player pauses each megabyte
+            // to ask whether to go on — and at the one that completes the
+            // clip, which is the only one the waiting decode is after.
+            if (clipAudioAwaitingLoad && player?.hasBufferedWholeClip() == true) {
+                startClipAudioLoop(lastClipsRaw, lastClipsRaw.size)
             }
         }
 

@@ -14,6 +14,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.VideoSize
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -1006,7 +1007,7 @@ class DivineVideoPlayerInstanceTest {
     fun `a clip whose audio will not decode keeps the player's audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
             every { mockPlayer.duration } returns 3_000L
             val disabled = captureAudioTrackDisables()
 
@@ -1026,7 +1027,7 @@ class DivineVideoPlayerInstanceTest {
     fun `a fresh clip list waits for its own timeline before cutting the audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
             // A reused player still holds the outgoing item while the new clips
             // are applied, so its duration describes that one.
             every { mockPlayer.duration } returns 3_000L
@@ -1039,11 +1040,95 @@ class DivineVideoPlayerInstanceTest {
             // Cutting to that duration here would loop the incoming video's
             // sound at the previous video's length, drifting a little further
             // from the picture every lap.
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any()) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
 
             listener.onPlaybackStateChanged(Player.STATE_READY)
 
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `the loop decode waits until the player has the whole clip buffered`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.bufferedPosition } returns 1_200L
+            captureAudioTrackDisables()
+            val listener = capturePlayerListener()
+
+            instance.onMethodCall(setClipsCall("https://cdn.example/clip.mp4"), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // The decode reads through the player's cache, and the range the
+            // player is still downloading is locked there: a reader would sit
+            // on it, on the one thread every player's metadata reads share.
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+
+            // The player pauses loading every megabyte to ask whether to go
+            // on; that boundary is not the end of the clip.
+            listener.onIsLoadingChanged(false)
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+
+            every { mockPlayer.bufferedPosition } returns 3_000L
+            listener.onIsLoadingChanged(false)
+
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000L, any()) }
+
+            // A later load — the next lap's period, a seek — is not a
+            // reason to decode again.
+            listener.onIsLoadingChanged(true)
+            listener.onIsLoadingChanged(false)
+
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a local clip's loop decode does not wait on buffering`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.bufferedPosition } returns 0L
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            instance.onMethodCall(setClipsCall("file:///tmp/a.mp4"), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // There is no download to wait for; the file is on the device.
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000L, any()) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `the loop decode reads a remote clip through the player's data source`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val factories = mutableListOf<DataSource.Factory?>()
+            every {
+                ClipAudioLoopTrack.create(any(), any(), any(), captureNullable(factories))
+            } returns null
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.bufferedPosition } returns 3_000L
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            instance.onMethodCall(setClipsCall("https://cdn.example/clip.mp4"), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // Without it the extractor opens the URL with its own HTTP stack
+            // and downloads the clip the player already holds in its cache.
+            assertEquals(1, factories.size)
+            assertEquals(true, factories.single() != null)
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
@@ -1053,7 +1138,7 @@ class DivineVideoPlayerInstanceTest {
     fun `a clamp that shortens the loop cuts its audio again against the clipped timeline`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
             every { mockPlayer.mediaItemCount } returns 1
             every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
             every { mockPlayer.playWhenReady } returns true
@@ -1062,6 +1147,7 @@ class DivineVideoPlayerInstanceTest {
             // end after it.
             var presentedMs = 6_300L
             every { mockPlayer.duration } answers { presentedMs }
+            every { mockPlayer.bufferedPosition } answers { presentedMs }
             captureAudioTrackDisables()
             val listenerSlot = slot<Player.Listener>()
             every { mockPlayer.addListener(capture(listenerSlot)) } just runs
@@ -1076,7 +1162,7 @@ class DivineVideoPlayerInstanceTest {
                 capturePostedRunnables().forEach { it.run() }
             }
             listenerSlot.captured.onPlaybackStateChanged(Player.STATE_READY)
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 6_300L) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 6_300L, any()) }
 
             // The parked clamp lands at the loop restart and moves only the
             // picture to 6.0 s. Left alone, the sound keeps looping at 6.3 s
@@ -1090,10 +1176,10 @@ class DivineVideoPlayerInstanceTest {
             verify { mockPlayer.replaceMediaItem(0, any()) }
             // Not before the clipped timeline is reported: the replaced item's
             // duration is whatever the player holds at that instant.
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), 6_000L) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), 6_000L, any()) }
 
             listenerSlot.captured.onPlaybackStateChanged(Player.STATE_READY)
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 6_000L) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 6_000L, any()) }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
@@ -1103,7 +1189,7 @@ class DivineVideoPlayerInstanceTest {
     fun `an off-speed player keeps its own audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
             every { mockPlayer.duration } returns 3_000L
             val disabled = captureAudioTrackDisables()
 
@@ -1116,7 +1202,7 @@ class DivineVideoPlayerInstanceTest {
 
             // A static track plays the recording at its own rate, so it would
             // drift away from a picture running at twice the speed.
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any()) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
             assertEquals(false, disabled.contains(true))
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
@@ -1128,7 +1214,7 @@ class DivineVideoPlayerInstanceTest {
      * audio path, and hands back the player listener the instance registered.
      */
     private fun installLoopTrack(loop: ClipAudioLoopTrack): Player.Listener {
-        every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+        every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
         every { mockPlayer.duration } returns 3_000L
         captureAudioTrackDisables()
         val listener = capturePlayerListener()
@@ -1202,7 +1288,7 @@ class DivineVideoPlayerInstanceTest {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
             val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
             every { mockPlayer.duration } returns 3_000L
             every { mockPlayer.isPlaying } returns true
             every { mockPlayer.currentPosition } returns 40L
@@ -1249,7 +1335,7 @@ class DivineVideoPlayerInstanceTest {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
             val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
             every { mockPlayer.duration } returns 3_000L
             every { mockPlayer.isPlaying } returns false
             every { mockPlayer.currentPosition } returns 0L
@@ -1286,12 +1372,13 @@ class DivineVideoPlayerInstanceTest {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
             val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
-            every { ClipAudioLoopTrack.create(any(), any(), any()) } returns loop
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
             every { mockPlayer.mediaItemCount } returns 1
             every { mockPlayer.getMediaItemAt(0) } returns MediaItem.Builder().build()
             every { mockPlayer.playWhenReady } returns true
             every { mockPlayer.isPlaying } returns true
             every { mockPlayer.duration } returns 6_300L
+            every { mockPlayer.bufferedPosition } returns 6_300L
             val disabled = captureAudioTrackDisables()
             val listenerSlot = slot<Player.Listener>()
             every { mockPlayer.addListener(capture(listenerSlot)) } just runs
@@ -1518,16 +1605,25 @@ class DivineVideoPlayerInstanceTest {
         every { audio.getLong(MediaFormat.KEY_DURATION) } returns audioUs
 
         mockkConstructor(android.media.MediaExtractor::class)
+        mockkStatic(Uri::class)
         try {
+            // A remote source is read through the player's data source, which
+            // the extractor is handed as a MediaDataSource; a local one by
+            // path. Uri.parse is an android.jar stub that returns null here.
+            every { Uri.parse(any()) } returns mockk(relaxed = true)
             every {
                 anyConstructed<android.media.MediaExtractor>()
-                    .setDataSource(any<String>(), any<Map<String, String>>())
+                    .setDataSource(any<android.media.MediaDataSource>())
+            } just runs
+            every {
+                anyConstructed<android.media.MediaExtractor>().setDataSource(any<String>())
             } just runs
             every { anyConstructed<android.media.MediaExtractor>().trackCount } returns 2
             every { anyConstructed<android.media.MediaExtractor>().getTrackFormat(0) } returns video
             every { anyConstructed<android.media.MediaExtractor>().getTrackFormat(1) } returns audio
             block()
         } finally {
+            unmockkStatic(Uri::class)
             unmockkConstructor(android.media.MediaExtractor::class)
         }
     }
@@ -1750,30 +1846,38 @@ class DivineVideoPlayerInstanceTest {
     @Test
     fun `a source that reads as having no track pair is not probed again`() {
         val uri = "https://cdn.example/no-pair.mp4"
+        mockkStatic(Uri::class)
+        try {
+            every { Uri.parse(any()) } returns mockk(relaxed = true)
 
-        // MediaExtractor is stubbed to defaults here, so it reports no tracks
-        // — the same shape as a genuinely audio-only source. That answer is
-        // about the source and does not change, so it is cached.
-        instance.onMethodCall(trimmingSetClipsCall(uri), mockk(relaxed = true))
-        capturePostedRunnables().forEach { it.run() }
-        val afterFirst = capturePostedRunnables().size
+            // MediaExtractor is stubbed to defaults here, so it reports no
+            // tracks — the same shape as a genuinely audio-only source. That
+            // answer is about the source and does not change, so it is cached.
+            instance.onMethodCall(trimmingSetClipsCall(uri), mockk(relaxed = true))
+            capturePostedRunnables().forEach { it.run() }
+            val afterFirst = capturePostedRunnables().size
 
-        instance.onMethodCall(trimmingSetClipsCall(uri), mockk(relaxed = true))
+            instance.onMethodCall(trimmingSetClipsCall(uri), mockk(relaxed = true))
 
-        // Answered from the cache, so nothing is deferred: the clips reach the
-        // player without a second continuation.
-        assertEquals(afterFirst, capturePostedRunnables().size)
-        verify(exactly = 2) { mockPlayer.setMediaItems(any(), any(), any()) }
+            // Answered from the cache, so nothing is deferred: the clips reach
+            // the player without a second continuation.
+            assertEquals(afterFirst, capturePostedRunnables().size)
+            verify(exactly = 2) { mockPlayer.setMediaItems(any(), any(), any()) }
+        } finally {
+            unmockkStatic(Uri::class)
+        }
     }
 
     @Test
     fun `a read that threw is probed again rather than cached as unreadable`() {
         val uri = "https://cdn.example/flaky.mp4"
         mockkConstructor(android.media.MediaExtractor::class)
+        mockkStatic(Uri::class)
         try {
+            every { Uri.parse(any()) } returns mockk(relaxed = true)
             every {
                 anyConstructed<android.media.MediaExtractor>()
-                    .setDataSource(any<String>(), any<Map<String, String>>())
+                    .setDataSource(any<android.media.MediaDataSource>())
             } throws IOException("connection reset")
 
             instance.onMethodCall(trimmingSetClipsCall(uri), mockk(relaxed = true))
@@ -1788,6 +1892,7 @@ class DivineVideoPlayerInstanceTest {
             // entry is re-promoted on every replay and never even evicts.
             assertEquals(afterFirst + 1, capturePostedRunnables().size)
         } finally {
+            unmockkStatic(Uri::class)
             unmockkConstructor(android.media.MediaExtractor::class)
         }
     }

@@ -6,6 +6,9 @@ import android.media.AudioTrack
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.net.Uri
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -118,21 +121,36 @@ internal class ClipAudioLoopTrack private constructor(
          * [loopMs] must be the duration the player presents, not the media
          * duration of any track.
          *
+         * A remote [uri] is read through [remoteSourceFactory] when one is
+         * given — the player's own cache-backed factory, so the bytes the
+         * player has already downloaded are not fetched a second time — and
+         * with the extractor's own HTTP stack otherwise. Local sources are
+         * opened directly either way; there is nothing to cache for them.
+         *
          * Returns null when there is nothing to play or anything goes wrong;
          * the caller then leaves the audio with ExoPlayer. Blocks on I/O and on
          * the decoder, so it must not run on the platform thread.
          */
+        @UnstableApi
         fun create(
             uri: String,
             headers: Map<String, String>,
             loopMs: Long,
+            remoteSourceFactory: DataSource.Factory? = null,
         ): ClipAudioLoopTrack? {
             val extractor = MediaExtractor()
             var codec: MediaCodec? = null
+            var remoteSource: DataSourceMediaDataSource? = null
             try {
                 when {
                     uri.startsWith("http://") || uri.startsWith("https://") ->
-                        extractor.setDataSource(uri, headers)
+                        if (remoteSourceFactory != null) {
+                            remoteSource =
+                                DataSourceMediaDataSource(remoteSourceFactory, Uri.parse(uri))
+                            extractor.setDataSource(remoteSource)
+                        } else {
+                            extractor.setDataSource(uri, headers)
+                        }
                     uri.startsWith("file://") ->
                         extractor.setDataSource(uri.removePrefix("file://"))
                     else -> extractor.setDataSource(uri)
@@ -305,6 +323,7 @@ internal class ClipAudioLoopTrack private constructor(
                 runCatching { codec?.stop() }
                 runCatching { codec?.release() }
                 runCatching { extractor.release() }
+                runCatching { remoteSource?.close() }
             }
         }
     }
