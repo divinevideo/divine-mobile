@@ -215,7 +215,7 @@ void main() {
         expect(id, isNot(StopMotionSessionStore.sessionId(frameA)));
       });
 
-      test('queues the clip manager\'s own copy of the clip', () async {
+      test('queues the copy the clip manager itself holds', () async {
         final stored = clipWith('clip_sm_a', libraryTitle: 'from manager');
         when(() => clipManager.clips).thenReturn([stored]);
 

@@ -121,8 +121,8 @@ void main() {
         expect(() => build(proofBudget: -0.1), throwsA(isA<AssertionError>()));
       });
 
-      test('accepts the export call site\'s own arguments', () {
-        expect(() => build(), returnsNormally);
+      test('accepts the arguments the export call site passes', () {
+        expect(build, returnsNormally);
       });
     });
   });
