@@ -315,8 +315,19 @@ void main() {
       });
     });
 
-    test('does not re-issue while the device is offline', () {
+    test('hands a timed-out feed to the relay-ready retry once the pool '
+        'reads offline, and re-issues it when a relay is back', () {
       fakeAsync((fake) {
+        final relayStatuses =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        addTearDown(relayStatuses.close);
+        when(
+          () => mockNostrService.relayStatusStream,
+        ).thenAnswer((_) => relayStatuses.stream);
+        when(
+          () => mockNostrService.retryDisconnectedRelays(),
+        ).thenAnswer((_) async {});
+
         unawaited(
           service.subscribeToVideoFeed(
             subscriptionType: SubscriptionType.profile,
@@ -328,17 +339,31 @@ void main() {
           ..elapse(const Duration(seconds: 31))
           ..flushMicrotasks();
 
+        // Offline is relay reachability (#8331). The online poll cannot see
+        // the pool come back on its own — a pool that spent its self-heal
+        // budget stays down until something dials it (#8992) — so the cycle
+        // hands over to the relay-ready retry, which dials.
         connectionService.online = false;
         fake
           ..elapse(const Duration(seconds: 30))
           ..flushMicrotasks();
         expect(subscribeCalls, hasLength(1));
+        verify(() => mockNostrService.retryDisconnectedRelays()).called(1);
 
         connectionService.online = true;
-        fake
-          ..elapse(const Duration(seconds: 10))
-          ..flushMicrotasks();
+        relayStatuses.add({
+          'wss://relay.divine.video': RelayConnectionStatus.connected(
+            'wss://relay.divine.video',
+          ),
+        });
+        fake.flushMicrotasks();
         expect(subscribeCalls, hasLength(2));
+        expect(
+          subscribeCalls.last.any(
+            (filter) => filter.authors?.contains(author) ?? false,
+          ),
+          isTrue,
+        );
       });
     });
 

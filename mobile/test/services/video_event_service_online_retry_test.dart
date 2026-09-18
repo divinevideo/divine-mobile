@@ -23,20 +23,15 @@ class _FakeFilter extends Fake implements Filter {}
 
 class _FakeConnectionStatusService extends ConnectionStatusService {
   bool online = true;
-  final List<bool> onlineReads = [];
 
   @override
-  bool get isOnline =>
-      onlineReads.isNotEmpty ? onlineReads.removeAt(0) : online;
+  bool get isOnline => online;
 
   @override
   bool get isConnected => online;
 
   @override
-  Map<String, dynamic> getConnectionInfo() => {
-    'isConnected': online,
-    'scriptedReads': onlineReads.length,
-  };
+  Map<String, dynamic> getConnectionInfo() => {'isConnected': online};
 }
 
 void main() {
@@ -58,6 +53,7 @@ void main() {
     late StreamController<Map<String, RelayConnectionStatus>>
     relayStatusController;
     late int connectedRelayCount;
+    late Object? subscribeFailure;
 
     setUp(() {
       mockNostrService = _MockNostrClient();
@@ -67,6 +63,7 @@ void main() {
       streamControllers = [];
       relayStatusController = StreamController.broadcast();
       connectedRelayCount = 1;
+      subscribeFailure = null;
 
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.publicKey).thenReturn('');
@@ -82,6 +79,8 @@ void main() {
       when(
         () => mockNostrService.subscribe(any(), onEose: any(named: 'onEose')),
       ).thenAnswer((invocation) {
+        final failure = subscribeFailure;
+        if (failure != null) throw failure;
         subscribeCalls.add(
           (invocation.positionalArguments.first as List<Filter>).toList(),
         );
@@ -160,9 +159,12 @@ void main() {
       });
     });
 
-    test('first subscribe while offline retries with the original authors', () {
+    test('first subscribe while offline dials the pool and retries with the '
+        'original authors once a relay is back', () {
       fakeAsync((fake) {
+        // Offline is relay reachability (#8331), so the pool reads empty too.
         connectionService.online = false;
+        connectedRelayCount = 0;
         Object? caughtError;
 
         unawaited(
@@ -177,13 +179,32 @@ void main() {
         );
         fake.flushMicrotasks();
 
-        expect(caughtError, isA<VideoEventServiceException>());
+        // The discovery provider defers on RelayNotReadyException and rethrows
+        // anything else into the app zone, so the offline gate must throw the
+        // same type as the relay-count gate.
+        expect(caughtError, isA<RelayNotReadyException>());
         expect(subscribeCalls, isEmpty);
+        // A pool that has spent its self-heal budget stays down until
+        // something dials it (#8992); the online poll never would.
+        verify(() => mockNostrService.retryDisconnectedRelays()).called(1);
+
+        fake
+          ..elapse(const Duration(minutes: 5))
+          ..flushMicrotasks();
+        expect(
+          subscribeCalls,
+          isEmpty,
+          reason: 'nothing to issue the REQ on while the pool stays down',
+        );
 
         connectionService.online = true;
-        fake
-          ..elapse(const Duration(seconds: 10))
-          ..flushMicrotasks();
+        connectedRelayCount = 1;
+        relayStatusController.add({
+          'wss://relay.divine.video': RelayConnectionStatus.connected(
+            'wss://relay.divine.video',
+          ),
+        });
+        fake.flushMicrotasks();
 
         expect(subscribeCalls, hasLength(1));
         expect(
@@ -192,6 +213,37 @@ void main() {
           ),
           isTrue,
         );
+      });
+    });
+
+    test('every subscribe that finds no relay dials the pool again', () {
+      fakeAsync((fake) {
+        connectedRelayCount = 0;
+
+        unawaited(
+          service
+              .subscribeToVideoFeed(
+                subscriptionType: SubscriptionType.profile,
+                authors: [followedAuthor],
+              )
+              .catchError((Object _) {}),
+        );
+        fake.flushMicrotasks();
+        verify(() => mockNostrService.retryDisconnectedRelays()).called(1);
+
+        // The relay-ready listener is already armed. A sweep that ran out
+        // during an outage leaves every socket down, so this second ask — a
+        // pull-to-refresh once the relay is back — has to dial again (#8992).
+        unawaited(
+          service
+              .subscribeToVideoFeed(
+                subscriptionType: SubscriptionType.discovery,
+              )
+              .catchError((Object _) {}),
+        );
+        fake.flushMicrotasks();
+        verify(() => mockNostrService.retryDisconnectedRelays()).called(1);
+        expect(subscribeCalls, isEmpty);
       });
     });
 
@@ -393,15 +445,9 @@ void main() {
         );
         fake.flushMicrotasks();
 
-        connectionService.onlineReads.addAll([
-          true,
-          false,
-          true,
-          false,
-          true,
-          false,
-        ]);
-
+        // Every re-issue fails at the client with a connection error, which
+        // the online cycle counts against its budget until it gives up.
+        subscribeFailure = Exception('websocket connection refused');
         for (var i = 0; i < 3; i++) {
           fake
             ..elapse(const Duration(seconds: 10))
@@ -411,9 +457,10 @@ void main() {
         expect(
           subscribeCalls,
           hasLength(1),
-          reason: 'offline retry attempts throw before creating relay REQs',
+          reason: 'failed retry attempts create no relay REQs',
         );
 
+        subscribeFailure = null;
         unawaited(
           service.subscribeToVideoFeed(
             subscriptionType: SubscriptionType.hashtag,
@@ -426,7 +473,6 @@ void main() {
         streamControllers.last.addError(Exception('network disconnected'));
         fake.flushMicrotasks();
 
-        connectionService.online = true;
         fake
           ..elapse(const Duration(seconds: 10))
           ..flushMicrotasks();

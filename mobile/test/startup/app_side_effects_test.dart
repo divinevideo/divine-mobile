@@ -116,6 +116,7 @@ void main() {
     relaySetChangeBridgeProvider.overrideWith(
       (ref) => onRelaySetChangeBuilt?.call(),
     ),
+    relayConnectionStatusBridgeProvider.overrideWith((ref) {}),
     blockedFollowReconcilerProvider.overrideWith(
       (ref) => onBlockedFollowReconcilerBuilt?.call(),
     ),
@@ -337,6 +338,7 @@ void main() {
       'supporterRecoveryProvider',
       'relayStatisticsBridgeProvider',
       'relaySetChangeBridgeProvider',
+      'relayConnectionStatusBridgeProvider',
       'relayListDirtyPublishBridgeProvider',
       'contactListDirtyBroadcastBridgeProvider',
       'notificationPreferencesDirtySyncBridgeProvider',

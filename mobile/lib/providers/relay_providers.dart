@@ -532,6 +532,51 @@ ConnectionStatusService connectionStatusService(Ref ref) {
   return service;
 }
 
+/// Feeds [ConnectionStatusService] from the client's live relay statuses.
+///
+/// Until #8331 nothing called into that service at all, so `isOnline` stayed
+/// at its initial `true` for the life of the app. Measured on a simulator over
+/// 51 samples: the client reported `connectedRelayCount` of both 0 and 1 while
+/// the service reported `isOnline=true` and `totalRelayCount=0` every single
+/// time. Ten gates read that flag, so the offline queue never engaged for
+/// connectivity reasons and a follow made while relays were down was dropped
+/// rather than queued.
+///
+/// This is the one writer. It republishes the whole pool on every frame, so a
+/// de-configured relay leaves no stale entry behind, and it reports dialling
+/// separately so `isConnecting` means something too.
+///
+/// keepAlive with no UI consumer: activated by `AppShellSideEffects`,
+/// alongside `relaySetChangeBridge`, which reads the same stream.
+@Riverpod(keepAlive: true)
+void relayConnectionStatusBridge(Ref ref) {
+  final client = ref.watch(nostrServiceProvider);
+  final connectionStatus = ref.watch(connectionStatusServiceProvider);
+
+  void publish(Map<String, RelayConnectionStatus> statuses) {
+    connectionStatus
+      ..updateRelayStatuses({
+        for (final entry in statuses.entries)
+          entry.key: entry.value.isConnected,
+      })
+      ..setConnecting(
+        statuses.values.any((status) => status.state == RelayState.connecting),
+      );
+  }
+
+  // Seed from what the client already holds; the stream reports changes only.
+  publish(client.relayStatuses);
+
+  final subscription = client.relayStatusStream.listen(publish);
+  ref.onDispose(() {
+    runProviderDetached(
+      subscription.cancel(),
+      'cancel the relay connection-status bridge',
+      logName: 'RelayConnectionStatusBridge',
+    );
+  });
+}
+
 /// Relay capability service for detecting NIP-11 Divine extensions
 @Riverpod(keepAlive: true)
 RelayCapabilityService relayCapabilityService(Ref ref) {
@@ -754,6 +799,42 @@ final connectivityCheckProvider =
     Provider<Future<List<ConnectivityResult>> Function()>(
       (ref) => Connectivity().checkConnectivity,
     );
+
+/// Whether the device currently has no network interface at all.
+///
+/// Device-level on purpose. [ConnectionStatusService] answers "can we reach a
+/// relay", which is the right question for Nostr reads and writes and the
+/// wrong one for copy that decides whether to blame the user's wifi: after
+/// #8331 a healthy device whose relays are all down reads as relay-offline,
+/// and telling that user to check their connection sends them to debug wifi
+/// that is working. Reuses [connectivityCheckProvider] so the probe stays a
+/// single test seam.
+final deviceIsOfflineProvider = Provider<Future<bool> Function()>((ref) {
+  final checkConnectivity = ref.watch(connectivityCheckProvider);
+  return () async {
+    try {
+      // Bounded: a probe that never answers would hold the prompt back
+      // indefinitely, which is the same suppression the catch below prevents.
+      final results = await checkConnectivity().timeout(
+        const Duration(seconds: 2),
+      );
+      return !results.any((result) => result != ConnectivityResult.none);
+    } on Object catch (e) {
+      // A probe that cannot answer must not decide anything. Callers gate
+      // user-facing copy on this, and one of them is a provenance prompt that
+      // has to appear either way, so a throw here would suppress the prompt
+      // rather than reword it. Report "not known to be offline": the wrong
+      // answer is a note that blames the service, never one that blames a
+      // connection that is working.
+      Log.warning(
+        'Device connectivity probe failed; assuming the device is online: $e',
+        name: 'DeviceIsOffline',
+        category: LogCategory.relay,
+      );
+      return false;
+    }
+  };
+});
 
 /// The one app-wide owner of connectivity-driven relay repair, so a pool that
 /// collapsed during an offline window self-heals on every route, not only on

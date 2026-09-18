@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -21,7 +22,6 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
-import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/widgets/video_metadata/modes/capture/video_metadata_capture_stack.dart';
 import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_classic_stack.dart';
@@ -413,13 +413,86 @@ void main() {
     });
 
     group('C2PA signing prompt (#6058)', () {
+      // The note under the prompt is chosen from *device* connectivity, not
+      // from ConnectionStatusService, which since #8331 reports relay
+      // reachability. Blaming a working connection is the one wrong answer
+      // here, so both branches are pinned.
+      Future<void> pumpWithConnectivity(
+        WidgetTester tester,
+        List<ConnectivityResult> results,
+      ) async {
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            connectivityCheckProvider.overrideWithValue(() async => results),
+            clipManagerProvider.overrideWith(
+              () => _MockClipManagerNotifier([testClip]),
+            ),
+            videoEditorProvider.overrideWith(
+              () => _MockVideoEditorNotifier(
+                VideoEditorProviderState(finalRenderedClip: testClip),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: VideoMetadataScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final notifier = container.read(videoEditorProvider.notifier);
+        notifier.state = notifier.state.copyWith(c2paSigningFailed: true);
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('blames the service when the device has a network', (
+        tester,
+      ) async {
+        await pumpWithConnectivity(tester, [ConnectivityResult.wifi]);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoMetadataC2paMissingTitle), findsOneWidget);
+        expect(
+          find.text(l10n.videoMetadataC2paMissingNoteServiceUnavailable),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.videoMetadataC2paMissingNote),
+          findsNothing,
+          reason: 'wifi is up, so the connection is not the likely cause',
+        );
+      });
+
+      testWidgets('blames the connection only when the device is offline', (
+        tester,
+      ) async {
+        await pumpWithConnectivity(tester, [ConnectivityResult.none]);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoMetadataC2paMissingTitle), findsOneWidget);
+        expect(find.text(l10n.videoMetadataC2paMissingNote), findsOneWidget);
+        expect(
+          find.text(l10n.videoMetadataC2paMissingNoteServiceUnavailable),
+          findsNothing,
+        );
+      });
+
       testWidgets('prompts to regenerate or skip when signing fails, and '
           '"Skip" clears the flag', (tester) async {
         final container = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
-            connectionStatusServiceProvider.overrideWithValue(
-              ConnectionStatusService(),
+            connectivityCheckProvider.overrideWithValue(
+              () async => [ConnectivityResult.wifi],
             ),
             clipManagerProvider.overrideWith(
               () => _MockClipManagerNotifier([testClip]),
@@ -492,8 +565,8 @@ void main() {
           final container = ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
-              connectionStatusServiceProvider.overrideWithValue(
-                ConnectionStatusService(),
+              connectivityCheckProvider.overrideWithValue(
+                () async => [ConnectivityResult.wifi],
               ),
               clipManagerProvider.overrideWith(
                 () => _MockClipManagerNotifier([testClip]),
@@ -574,8 +647,8 @@ void main() {
           final container = ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
-              connectionStatusServiceProvider.overrideWithValue(
-                ConnectionStatusService(),
+              connectivityCheckProvider.overrideWithValue(
+                () async => [ConnectivityResult.wifi],
               ),
               clipManagerProvider.overrideWith(
                 () => _MockClipManagerNotifier([testClip]),
@@ -642,8 +715,8 @@ void main() {
           final container = ProviderContainer(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
-              connectionStatusServiceProvider.overrideWithValue(
-                ConnectionStatusService(),
+              connectivityCheckProvider.overrideWithValue(
+                () async => [ConnectivityResult.wifi],
               ),
               clipManagerProvider.overrideWith(
                 () => _MockClipManagerNotifier([testClip]),

@@ -132,23 +132,55 @@ void main() {
         });
       });
 
-      test('waits for the network instead of spending attempts offline', () {
+      test('hands an offline pool to the relay-ready retry at once', () {
         fakeAsync((fake) {
           final scheduler = build();
           addTearDown(scheduler.dispose);
 
           connectionService.online = false;
           scheduler.scheduleWhenOnline(SubscriptionType.profile);
-          fake
-            ..elapse(const Duration(minutes: 5))
-            ..flushMicrotasks();
+
+          // Offline means no relay is reachable (#8331), and only the
+          // relay-ready retry dials the pool; polling here would never see
+          // it come back.
+          expect(relayNotReady, [SubscriptionType.profile]);
           expect(resubscribed, isEmpty);
 
           connectionService.online = true;
           fake
+            ..elapse(const Duration(minutes: 5))
+            ..flushMicrotasks();
+          expect(
+            resubscribed,
+            isEmpty,
+            reason: 'the type was handed over, so no cycle is left running',
+          );
+        });
+      });
+
+      test('hands the cycle over when the pool goes offline mid-cycle', () {
+        fakeAsync((fake) {
+          resubscribe = (_) async => throw StateError('no relay');
+          final scheduler = build();
+          addTearDown(scheduler.dispose);
+
+          scheduler.scheduleWhenOnline(SubscriptionType.profile);
+          fake
             ..elapse(const Duration(seconds: 10))
             ..flushMicrotasks();
-          expect(resubscribed, [SubscriptionType.profile]);
+          expect(resubscribed, hasLength(1));
+
+          connectionService.online = false;
+          fake
+            ..elapse(const Duration(minutes: 5))
+            ..flushMicrotasks();
+
+          expect(relayNotReady, [SubscriptionType.profile]);
+          expect(
+            resubscribed,
+            hasLength(1),
+            reason: 'no further attempts once the pool read offline',
+          );
         });
       });
 
