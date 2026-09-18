@@ -7,6 +7,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/services/video_recorder/stop_motion_session_store.dart';
@@ -25,6 +27,16 @@ void main() {
       registerFallbackValue(model.AspectRatio.square);
       registerFallbackValue(Duration.zero);
       registerFallbackValue(<StopMotionClipFrame>[]);
+      registerFallbackValue(
+        DivineVideoClip(
+          id: 'fallback',
+          duration: Duration.zero,
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.square,
+          originalAspectRatio: 1,
+          stopMotionFrames: const [],
+        ),
+      );
     });
 
     setUp(() {
@@ -111,6 +123,118 @@ void main() {
       await store.discardSession([frameA, frameB]);
 
       expect(removed, ['clip_sm_a']);
+    });
+
+    group('ingest', () {
+      late String missing;
+
+      DivineVideoClip clipWith(String id, {String? libraryTitle}) =>
+          DivineVideoClip(
+            id: id,
+            duration: const Duration(seconds: 1),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: model.AspectRatio.square,
+            originalAspectRatio: 1,
+            libraryTitle: libraryTitle,
+            stopMotionFrames: const [],
+          );
+
+      setUp(() {
+        missing = '${frameDir.path}/missing.jpg';
+        when(
+          () => clipManager.addStopMotionClip(
+            id: any(named: 'id'),
+            frames: any(named: 'frames'),
+            originalAspectRatio: any(named: 'originalAspectRatio'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            duration: any(named: 'duration'),
+            thumbnailPath: any(named: 'thumbnailPath'),
+            lensMetadata: any(named: 'lensMetadata'),
+          ),
+        ).thenAnswer(
+          (invocation) =>
+              clipWith(invocation.namedArguments[#id] as String? ?? 'fallback'),
+        );
+        when(() => clipManager.clips).thenReturn(const []);
+        when(() => clipManager.saveClipToLibrary(any())).thenAnswer(
+          (_) async => true,
+        );
+      });
+
+      test('drops unreadable stills and holds the ones that survive', () {
+        store.ingest(
+          [missing, frameA, frameB],
+          aspectRatio: model.AspectRatio.square,
+        );
+
+        final frames =
+            verify(
+                  () => clipManager.addStopMotionClip(
+                    id: any(named: 'id'),
+                    frames: captureAny(named: 'frames'),
+                    originalAspectRatio: any(named: 'originalAspectRatio'),
+                    targetAspectRatio: any(named: 'targetAspectRatio'),
+                    duration: any(named: 'duration'),
+                    thumbnailPath: any(named: 'thumbnailPath'),
+                    lensMetadata: any(named: 'lensMetadata'),
+                  ),
+                ).captured.single
+                as List<StopMotionClipFrame>;
+
+        expect(frames.map((f) => f.path), [frameA, frameB]);
+        // The hold stretches a short session to a minimum length, so it must
+        // count only the stills that made it into the clip.
+        expect(frames.first.duration, StopMotionFrameOps.initialHold(2));
+        expect(frames.first.duration, isNot(StopMotionFrameOps.initialHold(3)));
+      });
+
+      test('keeps the capture session id when its first still is gone', () {
+        store.ingest(
+          [missing, frameA, frameB],
+          aspectRatio: model.AspectRatio.square,
+        );
+
+        // Keyed on the session's original first still, not the first surviving
+        // one, so the row written during capture is updated rather than
+        // duplicated.
+        final id =
+            verify(
+                  () => clipManager.addStopMotionClip(
+                    id: captureAny(named: 'id'),
+                    frames: any(named: 'frames'),
+                    originalAspectRatio: any(named: 'originalAspectRatio'),
+                    targetAspectRatio: any(named: 'targetAspectRatio'),
+                    duration: any(named: 'duration'),
+                    thumbnailPath: any(named: 'thumbnailPath'),
+                    lensMetadata: any(named: 'lensMetadata'),
+                  ),
+                ).captured.single
+                as String;
+
+        expect(id, StopMotionSessionStore.sessionId(missing));
+        expect(id, isNot(StopMotionSessionStore.sessionId(frameA)));
+      });
+
+      test('queues the clip manager\'s own copy of the clip', () async {
+        final stored = clipWith('clip_sm_a', libraryTitle: 'from manager');
+        when(() => clipManager.clips).thenReturn([stored]);
+
+        final returned = store.ingest(
+          [frameA],
+          aspectRatio: model.AspectRatio.square,
+        );
+        await store.idle;
+
+        // Re-read after the add so the queued save carries whatever the
+        // manager actually holds, not the pre-insert value.
+        final saved =
+            verify(
+                  () => clipManager.saveClipToLibrary(captureAny()),
+                ).captured.single
+                as DivineVideoClip;
+        expect(saved.libraryTitle, 'from manager');
+        expect(returned.libraryTitle, isNull);
+      });
     });
 
     test('ingest refuses a session with no readable still', () {
