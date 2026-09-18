@@ -19,6 +19,10 @@ class ClipOperationProgressOverlays extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Stack(
       fit: .expand,
+      // Matches the editor stack these overlays were lifted out of, which is
+      // Clip.none: a Stack otherwise defaults to Clip.hardEdge and would clip
+      // anything an overlay paints past the scrim's edge.
+      clipBehavior: .none,
       children: [
         _ReverseProgressOverlay(),
         _TransformProgressOverlay(),
