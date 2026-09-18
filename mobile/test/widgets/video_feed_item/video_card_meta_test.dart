@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for the video card meta-line resolver.
-// ABOUTME: Pins which videos surface a public count and which show only a date.
+// ABOUTME: Pins which videos surface a public count.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
@@ -57,7 +57,6 @@ void main() {
           isOwnVideo: false,
         );
 
-        expect(meta.timestamp, equals(_divineEraCreatedAt));
         expect(meta.loopCount, isNull);
       });
 
@@ -70,7 +69,6 @@ void main() {
         );
 
         expect(meta.loopCount, isNull);
-        expect(meta.timestamp, equals(_vineEraCreatedAt));
       });
 
       test('surfaces a large count on a classic Vine', () {
@@ -80,7 +78,6 @@ void main() {
         );
 
         expect(meta.loopCount, equals(2100000));
-        expect(meta.timestamp, equals(_vineEraCreatedAt));
       });
 
       test('surfaces a large count on a diVine-native post', () {
@@ -138,13 +135,12 @@ void main() {
         expect(meta.loopCount, isNull);
       });
 
-      test('surfaces both the date and the combined count', () {
+      test('surfaces the combined count', () {
         final meta = resolveVideoCardMeta(
           video: _video(originalLoops: 3, rawTags: {'views': '9'}),
           isOwnVideo: true,
         );
 
-        expect(meta.timestamp, equals(_divineEraCreatedAt));
         expect(meta.loopCount, equals(12));
       });
 
@@ -179,28 +175,6 @@ void main() {
     });
 
     group('for edge cases', () {
-      test('omits the date when the original date is unrecoverable', () {
-        // No published_at tag and a createdAt after Vine shut down: the
-        // import could not recover when this was actually posted.
-        final video = _video(
-          originalLoops: 900000,
-          rawTags: {'platform': 'vine'},
-        );
-        expect(
-          video.hasUnknownOriginalDate,
-          isTrue,
-          reason: 'fixture must exercise the unknown-date branch',
-        );
-
-        final meta = resolveVideoCardMeta(
-          video: video,
-          isOwnVideo: false,
-        );
-
-        expect(meta.timestamp, isNull);
-        expect(meta.loopCount, equals(900000));
-      });
-
       test('is empty for a null video so the caller omits the line', () {
         final meta = resolveVideoCardMeta(
           video: null,
@@ -210,13 +184,13 @@ void main() {
         expect(meta.isEmpty, isTrue);
       });
 
-      test('prefers published_at over createdAt when both are present', () {
+      test('is empty when a video has no count to show', () {
         final meta = resolveVideoCardMeta(
-          video: _video(publishedAt: '$_vineEraCreatedAt'),
+          video: _video(rawTags: {'views': '7'}),
           isOwnVideo: false,
         );
 
-        expect(meta.timestamp, equals(_vineEraCreatedAt));
+        expect(meta.isEmpty, isTrue);
       });
     });
   });

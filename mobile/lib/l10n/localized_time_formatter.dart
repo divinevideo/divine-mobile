@@ -13,9 +13,6 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 /// This wrapper lives in the app layer and supplies the
 /// localized labels.
 abstract class LocalizedTimeFormatter {
-  /// Age at which [formatPostAge] switches from elapsed time to a full date.
-  static const int _absoluteDateAfterDays = 7;
-
   /// Formats a Unix timestamp (seconds) into a localized
   /// short relative time string.
   ///
@@ -190,34 +187,6 @@ abstract class LocalizedTimeFormatter {
       ).formatCompactDate(localTimestamp);
     }
     return DateFormat.yMd(locale).format(localTimestamp);
-  }
-
-  /// Formats a post timestamp for a video card's meta line.
-  ///
-  /// Recent posts read as elapsed time ("3h ago"); anything a week or older
-  /// falls back to an absolute date carrying the year ("Apr 22, 2014"), so a
-  /// classic Vine reads as an artifact rather than as neglect.
-  ///
-  /// Examples: "Now", "3h ago", "2d ago", "Apr 22, 2014"
-  static String formatPostAge(
-    AppLocalizations l10n,
-    int unixSeconds, {
-    String? locale,
-  }) {
-    // Formatted in local time like every other method here: DateFormat reads
-    // the DateTime's field accessors, so formatting a UTC value renders the
-    // UTC calendar day. A Vine published near midnight UTC would otherwise
-    // show a day late for every viewer in the Americas.
-    final date = DateTime.fromMillisecondsSinceEpoch(
-      unixSeconds * 1000,
-      isUtc: true,
-    ).toLocal();
-    final difference = clock.now().difference(date);
-
-    if (difference.inDays >= _absoluteDateAfterDays) {
-      return DateFormat.yMMMd(locale).format(date);
-    }
-    return formatRelativeVerbose(l10n, unixSeconds);
   }
 
   /// Formats a [Duration] into a localized draft age string.

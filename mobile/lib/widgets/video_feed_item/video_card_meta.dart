@@ -20,19 +20,20 @@ import 'package:models/models.dart';
 /// value to change if the bar turns out to sit in the wrong place.
 const int publicLoopCountFloor = 1000;
 
-/// The date and count a video card's secondary line should render.
+/// The count a video card's secondary line should render.
+///
+/// The post date is deliberately not part of the card. The line exists to show
+/// social proof, and a date only reads as evidence the surface is quiet; the
+/// metadata sheet still carries the full date for anyone who opens it.
 @immutable
 class VideoCardMeta {
-  const VideoCardMeta({this.timestamp, this.loopCount});
-
-  /// Post time in Unix seconds, or null when no reliable date exists.
-  final int? timestamp;
+  const VideoCardMeta({this.loopCount});
 
   /// Loop count to display, or null when the count stays hidden.
   final int? loopCount;
 
   /// Whether there is nothing to render, so the caller omits the line.
-  bool get isEmpty => timestamp == null && loopCount == null;
+  bool get isEmpty => loopCount == null;
 }
 
 /// Resolves the meta line for [video].
@@ -46,13 +47,9 @@ VideoCardMeta resolveVideoCardMeta({
 }) {
   if (video == null) return const VideoCardMeta();
 
-  final timestamp = video.hasUnknownOriginalDate
-      ? null
-      : int.tryParse(video.publishedAt ?? '') ?? video.createdAt;
-
   final loopCount = _resolveLoopCount(video: video, isOwnVideo: isOwnVideo);
 
-  return VideoCardMeta(timestamp: timestamp, loopCount: loopCount);
+  return VideoCardMeta(loopCount: loopCount);
 }
 
 int? _resolveLoopCount({required VideoEvent video, required bool isOwnVideo}) {
