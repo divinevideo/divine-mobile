@@ -64,6 +64,7 @@ class PendingActionService extends ChangeNotifier {
   bool _isSyncing = false;
   bool _disposed = false;
   StreamSubscription<List<PendingAction>>? _dbSubscription;
+  StreamSubscription<bool>? _connectivitySubscription;
   Timer? _syncRetryTimer;
 
   /// Owns the retry backoff timers so [dispose] can cancel them. Without an
@@ -135,8 +136,15 @@ class PendingActionService extends ChangeNotifier {
         _notifyIfAlive();
       });
 
-      // Listen for connectivity changes
-      _connectionStatusService.addListener(_onConnectivityChange);
+      // Listen for connectivity changes.
+      //
+      // The status stream, not addListener: this notifier also fires for
+      // dialling changes via setConnecting, and reacting to those would run a
+      // sync on every relay reconnect attempt. The stream carries only the
+      // online/offline edges (#8331).
+      _connectivitySubscription = _connectionStatusService.statusStream.listen(
+        (_) => _onConnectivityChange(),
+      );
 
       _isInitialized = true;
 
@@ -387,7 +395,15 @@ class PendingActionService extends ChangeNotifier {
     // every resource torn down below.
     _async.dispose();
     _cancelSyncRetry();
-    _connectionStatusService.removeListener(_onConnectivityChange);
+    if (_connectivitySubscription != null) {
+      runDetached(
+        _connectivitySubscription!.cancel(),
+        'cancel the pending-action connectivity subscription',
+        logName: 'PendingActionService',
+        category: LogCategory.system,
+      );
+      _connectivitySubscription = null;
+    }
     if (_dbSubscription != null) {
       runDetached(
         _dbSubscription!.cancel(),

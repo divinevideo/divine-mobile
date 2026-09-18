@@ -61,6 +61,7 @@ class _TerminalActionException implements TerminalSocialActionException {
 void main() {
   late PendingActionService service;
   late MockConnectionStatusService mockConnectionService;
+  late StreamController<bool> connectivityEdges;
   late AppDatabase database;
   late PendingActionsDao dao;
 
@@ -81,6 +82,13 @@ void main() {
     // Default to online
     when(() => mockConnectionService.isOnline).thenReturn(true);
 
+    // The service subscribes to connectivity *edges* rather than to every
+    // notification, so that a relay dial cannot trigger a sync (#8331).
+    connectivityEdges = StreamController<bool>.broadcast();
+    when(
+      () => mockConnectionService.statusStream,
+    ).thenAnswer((_) => connectivityEdges.stream);
+
     service = PendingActionService(
       connectionStatusService: mockConnectionService,
       pendingActionsDao: dao,
@@ -97,6 +105,7 @@ void main() {
 
   tearDown(() async {
     service.dispose();
+    await connectivityEdges.close();
     await database.close();
   });
 
@@ -537,6 +546,34 @@ void main() {
         expect(service.pendingActions, isEmpty);
         expect(service.allActions.single.status, PendingActionStatus.failed);
         expect(service.allActions.single.retryCount, 0);
+      });
+    });
+
+    group('connectivity edges', () {
+      test('regaining connectivity syncs the queue exactly once', () async {
+        when(() => mockConnectionService.isOnline).thenReturn(false);
+        await service.queueAction(
+          type: PendingActionType.like,
+          targetId: 'event123',
+          authorPubkey: 'author123',
+        );
+        expect(
+          service.pendingActions,
+          hasLength(1),
+          reason: 'queued while offline',
+        );
+
+        var executorCalls = 0;
+        service.registerExecutor(PendingActionType.like, (_) async {
+          executorCalls++;
+        });
+
+        when(() => mockConnectionService.isOnline).thenReturn(true);
+        connectivityEdges.add(true);
+        await pumpEventQueue();
+
+        expect(executorCalls, equals(1));
+        expect(service.pendingActions, isEmpty);
       });
     });
 
