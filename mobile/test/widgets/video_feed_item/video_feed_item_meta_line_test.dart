@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
@@ -161,6 +162,21 @@ void main() {
 
       // A lookup that has not answered, or failed and resolved to false, must
       // not put the chit on an account that has not earned it.
+      expect(find.byType(OgBetaBadge), findsNothing);
+    });
+
+    testWidgets('hides OG Beta Tester behind the team checkmark', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        video: _video(pubkey: kDivineTeamPubkeys.first),
+        isOgDiviner: true,
+      );
+
+      // Team members can also be eligible beta testers, so a name would
+      // otherwise carry two chits.
+      expect(find.byType(SpecialProfileCheckmark), findsOneWidget);
       expect(find.byType(OgBetaBadge), findsNothing);
     });
 
