@@ -8683,6 +8683,21 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'enregistrer le style.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Styles';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Styles enregistrés pour ce texte';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Rien d\'enregistré pour l\'instant. Mets ton texte en forme comme tu veux, enregistre le style ici et réutilise ce look dans ta prochaine vidéo.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Les textes qui utilisent déjà ce style gardent leur look.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Classique';
 
   @override

@@ -8526,6 +8526,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorCaptionsSavedStyleSaveFailed => 'Không lưu được kiểu.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Kiểu';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Kiểu đã lưu cho chữ này';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Chưa lưu gì cả. Tạo kiểu chữ theo ý bạn, lưu vào đây rồi dùng lại diện mạo đó cho video tiếp theo.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Chữ đang dùng kiểu này vẫn giữ nguyên diện mạo.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Cổ điển';
 
   @override

@@ -15,8 +15,8 @@ import 'package:openvine/providers/saved_caption_style_repository_provider.dart'
 import 'package:openvine/widgets/color_swatch_button.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/saved_style_name_prompt.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_font_sheet.dart';
-import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_caption_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode;
@@ -169,7 +169,7 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
     final style = _style;
     // The font is the most recognisable part of a look, so its name is the
     // suggestion; one tap keeps it, typing replaces it.
-    final name = await showCaptionStyleNamePrompt(
+    final name = await showSavedStyleNamePrompt(
       context,
       title: l10n.videoEditorCaptionsSavedStyleSaveTitle,
       confirmLabel: l10n.videoEditorCaptionsSavedStyleSaveAction,

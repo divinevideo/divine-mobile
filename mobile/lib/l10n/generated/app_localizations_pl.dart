@@ -8738,6 +8738,21 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się zapisać stylu.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Style';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Zapisane style dla tego tekstu';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Nic jeszcze nie zapisano. Nadaj tekstowi wygląd, który ci się podoba, zapisz go tutaj i użyj w następnym filmie.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Tekst, który już używa tego stylu, zachowa swój wygląd.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasyczny';
 
   @override

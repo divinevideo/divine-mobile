@@ -1,9 +1,9 @@
 // ABOUTME: A user-defined caption style saved under a name of the user's
 // ABOUTME: choosing, so it can be applied to captions in later videos (#7742).
 
-import 'package:characters/characters.dart';
 import 'package:equatable/equatable.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
+import 'package:openvine/models/video_editor/saved_style_name.dart';
 
 /// A [CaptionCustomStyle] the user saved for reuse across drafts.
 ///
@@ -35,18 +35,13 @@ class SavedCaptionStyle extends Equatable {
   /// Position in the picker, ascending.
   final int orderIndex;
 
-  /// Longest name a style may carry. Keeps a row label readable next to its
-  /// preview and matches the clip-category limit.
-  static const maxNameLength = 40;
+  /// Longest name a style may carry; see [savedStyleMaxNameLength].
+  static const int maxNameLength = savedStyleMaxNameLength;
 
-  /// Trims [rawName] and returns it, or `null` when it holds no usable text.
-  /// Callers use `null` to reject the input instead of saving a style with a
-  /// blank or whitespace-only name.
-  static String? sanitizeName(String rawName) {
-    final trimmed = rawName.trim();
-    if (trimmed.isEmpty) return null;
-    return trimmed.characters.take(maxNameLength).toString();
-  }
+  /// Trims [rawName] and returns it, or `null` when it holds no usable text;
+  /// see [sanitizeSavedStyleName].
+  static String? sanitizeName(String rawName) =>
+      sanitizeSavedStyleName(rawName);
 
   /// Copy with the given fields replaced.
   SavedCaptionStyle copyWith({String? name, int? orderIndex}) =>

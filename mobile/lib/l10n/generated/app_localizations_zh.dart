@@ -8074,6 +8074,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorCaptionsSavedStyleSaveFailed => '无法保存样式。';
 
   @override
+  String get videoEditorTitleStylesLabel => '样式';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel => '此文字可用的已保存样式';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      '还没有保存任何样式。把文字调成你喜欢的样子，保存到这里，下个视频就能直接复用。';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      '已经使用此样式的文字会保持原样。';
+
+  @override
   String get videoEditorCaptionsPresetClassic => '经典';
 
   @override

@@ -5574,11 +5574,11 @@
   },
   "videoEditorCaptionsSavedStylesTitle": "Saved styles",
   "@videoEditorCaptionsSavedStylesTitle": {
-    "description": "Title of the sheet listing the caption styles the user saved."
+    "description": "Title of the sheets listing the caption styles and the title styles the user saved."
   },
   "videoEditorCaptionsSavedStylesSaveCurrent": "Save current style",
   "@videoEditorCaptionsSavedStylesSaveCurrent": {
-    "description": "Button in the saved caption styles sheet that saves the caption track's current custom style as a new named style."
+    "description": "Button in the saved caption styles and saved title styles sheets that saves the current look as a new named style."
   },
   "videoEditorCaptionsSavedStylesEmpty": "Nothing saved yet. Dial in a custom style, save it here, and reuse the look in your next video.",
   "@videoEditorCaptionsSavedStylesEmpty": {
@@ -5586,31 +5586,31 @@
   },
   "videoEditorCaptionsSavedStylesLoadFailed": "Couldn't load your saved styles.",
   "@videoEditorCaptionsSavedStylesLoadFailed": {
-    "description": "Shown in the saved caption styles sheet when the styles could not be read from the device."
+    "description": "Shown in the saved caption styles and saved title styles sheets when the styles could not be read from the device."
   },
   "videoEditorCaptionsSavedStyleNameLabel": "Style name",
   "@videoEditorCaptionsSavedStyleNameLabel": {
-    "description": "Label of the text field for naming a saved caption style when saving or renaming it."
+    "description": "Label of the text field for naming a saved caption or title style when saving or renaming it."
   },
   "videoEditorCaptionsSavedStyleSaveTitle": "Save style",
   "@videoEditorCaptionsSavedStyleSaveTitle": {
-    "description": "Title of the prompt that asks for a name before saving a caption style, and the label of the button in the custom style editor that opens it."
+    "description": "Title of the prompt that asks for a name before saving a caption or title style, and the label of the button in the caption custom style editor that opens it."
   },
   "videoEditorCaptionsSavedStyleSaveAction": "Save",
   "@videoEditorCaptionsSavedStyleSaveAction": {
-    "description": "Confirm button of the prompt that saves a caption style."
+    "description": "Confirm button of the prompt that saves a caption or title style."
   },
   "videoEditorCaptionsSavedStyleRenameTitle": "Rename style",
   "@videoEditorCaptionsSavedStyleRenameTitle": {
-    "description": "Title of the prompt that renames a saved caption style."
+    "description": "Title of the prompt that renames a saved caption or title style."
   },
   "videoEditorCaptionsSavedStyleRenameAction": "Rename",
   "@videoEditorCaptionsSavedStyleRenameAction": {
-    "description": "Menu item and confirm button for renaming a saved caption style."
+    "description": "Menu item and confirm button for renaming a saved caption or title style."
   },
   "videoEditorCaptionsSavedStyleDeleteConfirmTitle": "Delete “{name}”?",
   "@videoEditorCaptionsSavedStyleDeleteConfirmTitle": {
-    "description": "Title of the confirmation before deleting a saved caption style. {name} is the style's user-given name.",
+    "description": "Title of the confirmation before deleting a saved caption or title style. {name} is the style's user-given name.",
     "placeholders": {
       "name": {
         "type": "String"
@@ -5623,7 +5623,7 @@
   },
   "videoEditorCaptionsSavedStyleApplySemanticLabel": "Apply {name}",
   "@videoEditorCaptionsSavedStyleApplySemanticLabel": {
-    "description": "Accessibility label for a row in the saved caption styles sheet; tapping it applies that style to the captions. {name} is the style name.",
+    "description": "Accessibility label for a row in the saved caption styles or saved title styles sheet; tapping it applies that style. {name} is the style name.",
     "placeholders": {
       "name": {
         "type": "String"
@@ -5660,6 +5660,22 @@
   "videoEditorCaptionsSavedStyleSaveFailed": "Couldn't save the style.",
   "@videoEditorCaptionsSavedStyleSaveFailed": {
     "description": "Note shown under the Save style button when saving a caption style from the custom style editor failed."
+  },
+  "videoEditorTitleStylesLabel": "Styles",
+  "@videoEditorTitleStylesLabel": {
+    "description": "Caption of the timeline action bar button, shown under a selected text overlay, that opens the saved title styles sheet. Short, like the neighbouring Animate label."
+  },
+  "videoEditorTitleStylesButtonSemanticLabel": "Saved styles for this text",
+  "@videoEditorTitleStylesButtonSemanticLabel": {
+    "description": "Accessibility label of the timeline action bar button that opens the saved title styles sheet for the selected text overlay."
+  },
+  "videoEditorTitleSavedStylesEmpty": "Nothing saved yet. Style your text the way you like it, save it here, and reuse the look in your next video.",
+  "@videoEditorTitleSavedStylesEmpty": {
+    "description": "Shown in place of the list when the user has not saved a title style yet."
+  },
+  "videoEditorTitleSavedStyleDeleteConfirmMessage": "Text already using this style keeps its look.",
+  "@videoEditorTitleSavedStyleDeleteConfirmMessage": {
+    "description": "Body of the confirmation before deleting a saved title style, reassuring that text overlays already styled with it are unaffected."
   },
   "videoEditorCaptionsPresetClassic": "Classic",
   "videoEditorCaptionsPresetPop": "Pop",

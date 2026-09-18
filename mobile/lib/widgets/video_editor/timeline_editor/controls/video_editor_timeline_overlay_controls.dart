@@ -12,12 +12,14 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma_key.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
@@ -57,13 +59,26 @@ class _LayerOverlayControls extends StatelessWidget {
 
   final TimelineOverlayItem item;
 
+  /// The layer as the editor holds it right now.
+  ///
+  /// Every action resolves the layer when it fires rather than using the one
+  /// [build] saw. This bar is rebuilt only when the selected item changes,
+  /// and `Layer.==` compares id, placement, timing and animations — not a
+  /// text layer's colors, font or size — so an edit that only recolours the
+  /// text leaves the item "equal", the bar unrebuilt, and a layer captured in
+  /// [build] describing a look the editor no longer shows. An action that
+  /// copied from that capture would write the old look back.
+  Layer? _liveLayer(BuildContext context) => VideoEditorScope.of(
+    context,
+  ).editor?.activeLayers.where((l) => l.id == item.id).firstOrNull;
+
   @override
   Widget build(BuildContext context) {
     final scope = VideoEditorScope.of(context);
 
-    final layer = scope.editor?.activeLayers
-        .where((l) => l.id == item.id)
-        .firstOrNull;
+    // Decides which actions to offer; the actions themselves re-resolve the
+    // layer through [_liveLayer].
+    final layer = _liveLayer(context);
     final isTextLayer = layer is TextLayer;
     final isDetachedClip =
         layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
@@ -77,28 +92,26 @@ class _LayerOverlayControls extends StatelessWidget {
         isMergeableDrawLayer(layer) && mergeableDrawLayerCount >= 2;
 
     return VideoEditorTimelineControls(
-      onDelete: () => _removeLayer(context: context, layer: layer),
-      onEdit: isTextLayer
-          ? () => _editTextLayer(context: context, layer: layer)
-          : null,
-      onDuplicated: () => _duplicateLayer(context: context, layer: layer),
+      onDelete: () => _removeLayer(context: context),
+      onEdit: isTextLayer ? () => _editTextLayer(context: context) : null,
+      onDuplicated: () => _duplicateLayer(context: context),
       onMultiSelect: canMultiSelect
           ? () => _startLayerMultiSelect(context: context)
           : null,
       multiSelectSemanticLabel:
           context.l10n.videoEditorLayerMultiSelectSemanticLabel,
-      onSplit: () => _splitLayer(context: context, layer: layer),
+      onSplit: () => _splitLayer(context: context),
       // Crop / rotate / flip, for a detached clip only. Every other layer is
       // already whatever shape it was drawn or typed at; a detached clip
       // carries a video file that can genuinely be re-rendered.
       onTransform: isDetachedClip
-          ? () => transformDetachedClip(context, layer)
+          ? () => _transformLayer(context: context)
           : null,
       // Green screen, for a detached clip only — and, unlike the timeline's,
       // never baked: the export composites the layer over the track, so the
       // removed area can be left genuinely see-through.
       onChromaKey: isDetachedClip
-          ? () => editDetachedClipChromaKey(context, layer)
+          ? () => _editChromaKey(context: context)
           : null,
       hasChromaKey:
           isDetachedClip &&
@@ -112,43 +125,96 @@ class _LayerOverlayControls extends StatelessWidget {
       // from the file.
       onAnimate: layer == null || isDetachedClip
           ? null
-          : () => editLayerAnimation(
-              context,
-              layer,
-              // The stable editor-timeline total (sum of clip playback
-              // lengths), not item.endTime (the layer's own clamped end) and
-              // not VideoEditorMainBloc.totalDuration — the latter is derived
-              // from player duration reports and can be a transient zero right
-              // after a clip change. A too-small total here would collapse the
-              // layer's leave-animation window and drop it from the timeline.
-              totalDuration: context.read<ClipEditorBloc>().state.totalDuration,
-            ),
+          : () => _animateLayer(context: context),
+      // Saved title styles, for text only. A burned-in caption cue is a text
+      // layer too, but it never reaches this bar: the timeline partitions it
+      // into the captions strip, whose look the caption track owns.
+      onStyles: isTextLayer ? () => _openTitleStyles(context: context) : null,
       onDone: () => TimelineOverlayControls._deselect(context),
     );
   }
 
-  void _removeLayer({required BuildContext context, Layer? layer}) {
+  void _removeLayer({required BuildContext context}) {
     // Remove from the ProImageEditor active layers.
     final scope = VideoEditorScope.of(context);
     final editor = scope.editor;
+    final layer = _liveLayer(context);
     if (editor != null && layer != null) {
       editor.removeLayer(layer);
     }
   }
 
-  Future<void> _editTextLayer({
-    required BuildContext context,
-    required TextLayer layer,
-  }) async {
+  Future<void> _editTextLayer({required BuildContext context}) async {
     final scope = VideoEditorScope.of(context);
     final editor = scope.editor;
-    if (editor == null) return;
-    final originalLayer = layer;
+    final layer = _liveLayer(context);
+    if (editor == null || layer is! TextLayer) return;
 
-    final updatedLayer = await scope.onAddEditTextLayer(originalLayer);
+    final updatedLayer = await scope.onAddEditTextLayer(layer);
     if (updatedLayer == null) return;
 
     editor.applyTextLayerChanges(layer, updatedLayer);
+  }
+
+  Future<void> _transformLayer({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await transformDetachedClip(context, layer);
+  }
+
+  Future<void> _editChromaKey({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editDetachedClipChromaKey(context, layer);
+  }
+
+  Future<void> _animateLayer({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editLayerAnimation(
+      context,
+      layer,
+      // The stable editor-timeline total (sum of clip playback lengths), not
+      // item.endTime (the layer's own clamped end) and not
+      // VideoEditorMainBloc.totalDuration — the latter is derived from player
+      // duration reports and can be a transient zero right after a clip
+      // change. A too-small total here would collapse the layer's
+      // leave-animation window and drop it from the timeline.
+      totalDuration: context.read<ClipEditorBloc>().state.totalDuration,
+    );
+  }
+
+  /// Opens the saved title styles sheet for the selected text layer and,
+  /// when one is chosen, writes it onto the layer through the editor history.
+  Future<void> _openTitleStyles({required BuildContext context}) async {
+    final scope = VideoEditorScope.of(context);
+    final editor = scope.editor;
+    final layer = _liveLayer(context);
+    if (editor == null || layer is! TextLayer) return;
+    // Read before the await: the total is needed after the sheet closes, and
+    // the context may be gone by then.
+    final totalDuration = context.read<ClipEditorBloc>().state.totalDuration;
+
+    final style = await showSavedTitleStylesSheet(
+      context,
+      currentStyle: TitleStyle.of(layer),
+      sampleText: layer.text,
+    );
+    // The editor can be torn down while the sheet is open; writing history
+    // onto a dead one, or sizing the style against a canvas that is gone,
+    // would land the style nowhere.
+    if (style == null || !context.mounted) return;
+
+    final layers = List<Layer>.from(editor.activeLayers);
+    final index = layers.indexWhere((l) => l.id == layer.id);
+    if (index < 0) return;
+
+    layers[index] = style.applyTo(
+      layer,
+      canvasSize: scope.canvasRenderSize,
+      totalDuration: totalDuration,
+    );
+    editor.addHistory(layers: layers);
   }
 
   /// Enters draw-layer multi-select mode, seeded with the tapped layer.
@@ -161,8 +227,9 @@ class _LayerOverlayControls extends StatelessWidget {
     );
   }
 
-  void _duplicateLayer({required BuildContext context, Layer? layer}) {
+  void _duplicateLayer({required BuildContext context}) {
     final editor = VideoEditorScope.of(context).editor;
+    final layer = _liveLayer(context);
     if (editor == null || layer == null) return;
 
     final layers = List<Layer>.from(editor.activeLayers);
@@ -182,8 +249,9 @@ class _LayerOverlayControls extends StatelessWidget {
     );
   }
 
-  void _splitLayer({required BuildContext context, Layer? layer}) {
+  void _splitLayer({required BuildContext context}) {
     final editor = VideoEditorScope.of(context).editor;
+    final layer = _liveLayer(context);
     if (editor == null || layer == null) return;
 
     final splitAt = _validSplitPosition(context, item);

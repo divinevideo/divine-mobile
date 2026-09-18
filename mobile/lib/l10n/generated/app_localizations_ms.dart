@@ -8569,6 +8569,21 @@ class AppLocalizationsMs extends AppLocalizations {
       'Gaya tidak dapat disimpan.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Gaya';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Gaya tersimpan untuk teks ini';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Belum ada yang disimpan. Gayakan teks anda mengikut citarasa, simpan di sini, dan gunakan semula rupa itu dalam video seterusnya.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Teks yang sudah menggunakan gaya ini mengekalkan rupanya.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasik';
 
   @override

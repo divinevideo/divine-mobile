@@ -8811,6 +8811,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'శైలిని సేవ్ చేయలేకపోయాం.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'శైలులు';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'ఈ వచనానికి సేవ్ చేసిన శైలులు';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'ఇంకా ఏమీ సేవ్ చేయలేదు. మీ వచనానికి నచ్చిన లుక్ ఇచ్చి, ఇక్కడ సేవ్ చేయండి; తర్వాతి వీడియోలో అదే లుక్‌ను మళ్లీ వాడుకోవచ్చు.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'ఈ శైలిని ఇప్పటికే వాడుతున్న వచనం తన లుక్‌ను అలాగే ఉంచుకుంటుంది.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'క్లాసిక్';
 
   @override

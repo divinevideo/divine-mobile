@@ -8559,6 +8559,21 @@ class AppLocalizationsUr extends AppLocalizations {
       'اسٹائل محفوظ نہیں ہو سکا۔';
 
   @override
+  String get videoEditorTitleStylesLabel => 'اسٹائلز';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'اس ٹیکسٹ کے لیے محفوظ اسٹائلز';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'ابھی تک کچھ محفوظ نہیں۔ اپنے ٹیکسٹ کو اپنی پسند کا لُک دیں، یہاں محفوظ کریں اور اگلی ویڈیو میں وہی لُک دوبارہ استعمال کریں۔';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'جو ٹیکسٹ پہلے سے یہ اسٹائل استعمال کر رہا ہے اس کا لُک برقرار رہے گا۔';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'کلاسک';
 
   @override

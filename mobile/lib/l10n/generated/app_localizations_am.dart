@@ -8366,6 +8366,20 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorCaptionsSavedStyleSaveFailed => 'ስታይሉን ማስቀመጥ አልተቻለም።';
 
   @override
+  String get videoEditorTitleStylesLabel => 'ስታይሎች';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel => 'ለዚህ ጽሑፍ የተቀመጡ ስታይሎች';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'እስካሁን ምንም አልተቀመጠም። ጽሑፍዎን በሚወዱት መንገድ ያስውቡት፣ እዚህ ያስቀምጡት እና በሚቀጥለው ቪዲዮዎ ያንኑ መልክ እንደገና ይጠቀሙ።';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'ይህን ስታይል አስቀድሞ የሚጠቀም ጽሑፍ መልኩን ይይዛል።';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'ክላሲክ';
 
   @override

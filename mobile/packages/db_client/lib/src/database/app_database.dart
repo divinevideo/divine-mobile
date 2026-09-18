@@ -93,6 +93,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SeenVideos,
     VanishedProfiles,
     SavedCaptionStyles,
+    SavedTitleStyles,
   ],
   daos: [
     UserProfilesDao,
@@ -126,6 +127,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     SeenVideosDao,
     VanishedProfilesDao,
     SavedCaptionStylesDao,
+    SavedTitleStylesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -136,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -230,6 +232,12 @@ class AppDatabase extends _$AppDatabase {
         // `createTable` does not emit `@TableIndex.sql` indexes; see the
         // `from < 13` step above.
         await _createSavedCaptionStyleIndexes();
+      }
+      if (from < 17) {
+        await m.createTable(savedTitleStyles);
+        // `createTable` does not emit `@TableIndex.sql` indexes; see the
+        // `from < 13` step above.
+        await _createSavedTitleStyleIndexes();
       }
     },
     beforeOpen: (details) async {
@@ -508,6 +516,15 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_saved_caption_style_owner_pubkey '
       'ON saved_caption_styles (owner_pubkey)',
+    );
+  }
+
+  /// Creates the `saved_title_styles` indexes (#7742), for the same reason as
+  /// [_createSavedCaptionStyleIndexes].
+  Future<void> _createSavedTitleStyleIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_saved_title_style_owner_pubkey '
+      'ON saved_title_styles (owner_pubkey)',
     );
   }
 

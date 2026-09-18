@@ -61,6 +61,45 @@ void main() {
       expect(doneCount, equals(1));
     });
 
+    testWidgets('renders Styles only when onStyles is set and invokes it', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      var stylesCount = 0;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: VideoEditorTimelineControls(onDone: () {}),
+          ),
+        ),
+      );
+      expect(find.text(l10n.videoEditorTitleStylesLabel), findsNothing);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: VideoEditorTimelineControls(
+              onStyles: () => stylesCount++,
+              onDone: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text(l10n.videoEditorTitleStylesLabel), findsOneWidget);
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoEditorTitleStylesButtonSemanticLabel),
+      );
+      await tester.pump();
+
+      expect(stylesCount, equals(1));
+    });
+
     testWidgets('renders the transform button only when onTransform is set', (
       tester,
     ) async {

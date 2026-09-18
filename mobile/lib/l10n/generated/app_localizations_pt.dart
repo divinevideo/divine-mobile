@@ -8626,6 +8626,21 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível salvar o estilo.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Estilos';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Estilos salvos para este texto';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Nada salvo ainda. Deixe o texto do jeito que você gosta, salve aqui e reaproveite o visual no próximo vídeo.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Os textos que já usam esse estilo mantêm o visual.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Clássico';
 
   @override

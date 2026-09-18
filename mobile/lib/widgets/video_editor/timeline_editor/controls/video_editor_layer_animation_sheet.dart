@@ -5,6 +5,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/extensions/layer_animation_apply.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
@@ -144,111 +145,18 @@ Future<void> editLayerAnimation(
   final index = layers.indexWhere((l) => l.id == layer.id);
   if (index < 0) return;
 
-  // Carry through any animations the picker doesn't model — phases other than
-  // enter/leave (e.g. animateInOut) — so editing one phase can't silently drop
-  // them.
-  final preserved = [
-    for (final animation in layer.divineAnimations)
-      if (animation.phase != AnimationPhase.animateIn &&
-          animation.phase != AnimationPhase.animateOut)
-        animation,
-  ];
-  final animations = <LayerAnimation>[
-    ...result.enter,
-    ...result.leave,
-    ...preserved,
-  ];
-
-  final endTime = resolveLayerEndTime(
-    currentEndTime: layer.endTime,
-    startTime: layer.startTime ?? Duration.zero,
+  layers[index] = layer.withDivineAnimations(
+    enter: result.enter,
+    leave: result.leave,
+    points: LayerSlidePoints(
+      enter: result.enterPoint,
+      leave: result.leavePoint,
+    ),
+    canvasSize: canvasSize,
     totalDuration: totalDuration,
-    hasLeaveAnimation: result.leave.isNotEmpty,
   );
-
-  // A custom slide point only means anything to a slide, so a phase that no
-  // longer has one drops its point rather than keeping an origin nothing reads.
-  final points = LayerSlidePoints(
-    enter: _slidePointFor(result.enter, result.enterPoint),
-    leave: _slidePointFor(result.leave, result.leavePoint),
-  );
-
-  // Drive the layer entirely from the typed animations; clear the legacy fade
-  // fields / custom builder so [Layer.effectiveAnimations] can't fall back to a
-  // stale fade when the animations list is empty.
-  //
-  // endTime is set via the mutable field rather than copyWith: Layer.copyWith
-  // resolves it as `endTime ?? this.endTime`, so it can't clear a stale end
-  // back to null — which resolveLayerEndTime returns to un-anchor a layer.
-  layers[index] =
-      layer.copyWith(
-          // The points ride along on the animations as well, in canvas pixels,
-          // so the editor's own preview slides the way the export will.
-          animations: animations.toLayerAnimations(
-            points: points,
-            canvasSize: canvasSize,
-          ),
-          meta: points.applyTo(layer.meta),
-        )
-        ..endTime = endTime
-        ..enterDuration = null
-        ..exitDuration = null
-        ..enterCurve = null
-        ..exitCurve = null
-        ..transitionBuilder = null;
 
   editor.addHistory(layers: layers);
-}
-
-/// Resolves the [Layer.endTime] needed for a leave (animateOut) animation to
-/// have a window to play in.
-///
-/// The leave phase renders only when the layer has a non-null `endTime` — both
-/// the in-editor preview ([Layer.animations] timeline visibility) and the
-/// native export skip the animateOut branch when `endTime` is null.
-///
-/// Only a *real trim* — an end strictly inside the video — is treated as user
-/// intent worth preserving. An end at or after [totalDuration] is not a trim:
-/// it's either a stale anchor a previously-set (now-removed) leave animation
-/// left behind, or a no-op full-length end. Treating it as `null` keeps an
-/// untrimmed layer untrimmed, so it follows later duration changes (e.g. the
-/// video being extended) instead of staying pinned to a stale end.
-///
-/// [totalDuration] must be the true total video duration, independent of the
-/// layer's own [Layer.endTime]. Passing the layer's clamped timeline end (which
-/// equals its [Layer.endTime]) would make `currentEndTime < totalDuration` false
-/// for every trim, so genuine trims would read as full-length and be dropped.
-///
-/// [startTime] is the layer's own start. The returned end is never at or before
-/// it: a stale or transient-zero [totalDuration] (e.g. read before the player
-/// has reported its length) must not anchor the leave window at `<= startTime`,
-/// which would collapse the layer to a zero-length window and drop it from the
-/// timeline entirely. In that degenerate case the layer's existing end is kept
-/// (when still valid) or the end is left un-anchored — the layer stays visible
-/// either way.
-///
-/// With [hasLeaveAnimation] true the end is anchored to that trim, or to
-/// [totalDuration] when there is no real trim — never beyond the video, never
-/// at or before [startTime]. Without a leave animation a real trim is preserved
-/// and everything else collapses to `null`.
-@visibleForTesting
-Duration? resolveLayerEndTime({
-  required Duration? currentEndTime,
-  required Duration startTime,
-  required Duration totalDuration,
-  required bool hasLeaveAnimation,
-}) {
-  final trim = currentEndTime != null && currentEndTime < totalDuration
-      ? currentEndTime
-      : null;
-  if (!hasLeaveAnimation) return trim;
-
-  final anchor = trim ?? totalDuration;
-  if (anchor > startTime) return anchor;
-  if (currentEndTime != null && currentEndTime > startTime) {
-    return currentEndTime;
-  }
-  return null;
 }
 
 /// The picker's result: the chosen enter and leave animations, the custom slide
@@ -264,15 +172,6 @@ typedef _LayerAnimationResult = ({
   AnimationPhase phase,
   bool pickPoint,
 });
-
-/// The point to store for a phase, or `null` when the phase has no slide to
-/// apply it to.
-Offset? _slidePointFor(List<LayerAnimation> animations, Offset? point) {
-  if (point == null) return null;
-  return animations.any((a) => a.type == LayerAnimationType.slide)
-      ? point
-      : null;
-}
 
 /// Stateful picker body. Edits the enter and leave animations independently via
 /// an Enter|Leave toggle; pops a [_LayerAnimationResult] on confirm.

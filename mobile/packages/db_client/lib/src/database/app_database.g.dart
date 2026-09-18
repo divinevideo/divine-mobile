@@ -19979,6 +19979,431 @@ class SavedCaptionStylesCompanion
   }
 }
 
+class $SavedTitleStylesTable extends SavedTitleStyles
+    with TableInfo<$SavedTitleStylesTable, SavedTitleStyleRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavedTitleStylesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _styleMeta = const VerificationMeta('style');
+  @override
+  late final GeneratedColumn<String> style = GeneratedColumn<String>(
+    'style',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    style,
+    orderIndex,
+    createdAt,
+    ownerPubkey,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'saved_title_styles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavedTitleStyleRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('style')) {
+      context.handle(
+        _styleMeta,
+        style.isAcceptableOrUnknown(data['style']!, _styleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_styleMeta);
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavedTitleStyleRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavedTitleStyleRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      style: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}style'],
+      )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      ),
+    );
+  }
+
+  @override
+  $SavedTitleStylesTable createAlias(String alias) {
+    return $SavedTitleStylesTable(attachedDatabase, alias);
+  }
+}
+
+class SavedTitleStyleRow extends DataClass
+    implements Insertable<SavedTitleStyleRow> {
+  /// Unique style identifier.
+  final String id;
+
+  /// User-entered display name. Not localized — it is the user's own text.
+  final String name;
+
+  /// JSON-serialized `TitleStyle` payload.
+  final String style;
+
+  /// Position of this style in the picker (0-based).
+  final int orderIndex;
+
+  /// When the style was saved.
+  final DateTime createdAt;
+
+  /// Hex public key of the account that owns this style.
+  /// NULL for styles saved before an account was known.
+  final String? ownerPubkey;
+  const SavedTitleStyleRow({
+    required this.id,
+    required this.name,
+    required this.style,
+    required this.orderIndex,
+    required this.createdAt,
+    this.ownerPubkey,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['style'] = Variable<String>(style);
+    map['order_index'] = Variable<int>(orderIndex);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || ownerPubkey != null) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    }
+    return map;
+  }
+
+  SavedTitleStylesCompanion toCompanion(bool nullToAbsent) {
+    return SavedTitleStylesCompanion(
+      id: Value(id),
+      name: Value(name),
+      style: Value(style),
+      orderIndex: Value(orderIndex),
+      createdAt: Value(createdAt),
+      ownerPubkey: ownerPubkey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownerPubkey),
+    );
+  }
+
+  factory SavedTitleStyleRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavedTitleStyleRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      style: serializer.fromJson<String>(json['style']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      ownerPubkey: serializer.fromJson<String?>(json['ownerPubkey']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'style': serializer.toJson<String>(style),
+      'orderIndex': serializer.toJson<int>(orderIndex),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'ownerPubkey': serializer.toJson<String?>(ownerPubkey),
+    };
+  }
+
+  SavedTitleStyleRow copyWith({
+    String? id,
+    String? name,
+    String? style,
+    int? orderIndex,
+    DateTime? createdAt,
+    Value<String?> ownerPubkey = const Value.absent(),
+  }) => SavedTitleStyleRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    style: style ?? this.style,
+    orderIndex: orderIndex ?? this.orderIndex,
+    createdAt: createdAt ?? this.createdAt,
+    ownerPubkey: ownerPubkey.present ? ownerPubkey.value : this.ownerPubkey,
+  );
+  SavedTitleStyleRow copyWithCompanion(SavedTitleStylesCompanion data) {
+    return SavedTitleStyleRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      style: data.style.present ? data.style.value : this.style,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedTitleStyleRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('style: $style, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('ownerPubkey: $ownerPubkey')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, name, style, orderIndex, createdAt, ownerPubkey);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavedTitleStyleRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.style == this.style &&
+          other.orderIndex == this.orderIndex &&
+          other.createdAt == this.createdAt &&
+          other.ownerPubkey == this.ownerPubkey);
+}
+
+class SavedTitleStylesCompanion extends UpdateCompanion<SavedTitleStyleRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> style;
+  final Value<int> orderIndex;
+  final Value<DateTime> createdAt;
+  final Value<String?> ownerPubkey;
+  final Value<int> rowid;
+  const SavedTitleStylesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.style = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.ownerPubkey = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SavedTitleStylesCompanion.insert({
+    required String id,
+    required String name,
+    required String style,
+    this.orderIndex = const Value.absent(),
+    required DateTime createdAt,
+    this.ownerPubkey = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       style = Value(style),
+       createdAt = Value(createdAt);
+  static Insertable<SavedTitleStyleRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? style,
+    Expression<int>? orderIndex,
+    Expression<DateTime>? createdAt,
+    Expression<String>? ownerPubkey,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (style != null) 'style': style,
+      if (orderIndex != null) 'order_index': orderIndex,
+      if (createdAt != null) 'created_at': createdAt,
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SavedTitleStylesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? style,
+    Value<int>? orderIndex,
+    Value<DateTime>? createdAt,
+    Value<String?>? ownerPubkey,
+    Value<int>? rowid,
+  }) {
+    return SavedTitleStylesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      style: style ?? this.style,
+      orderIndex: orderIndex ?? this.orderIndex,
+      createdAt: createdAt ?? this.createdAt,
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (style.present) {
+      map['style'] = Variable<String>(style.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedTitleStylesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('style: $style, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -20029,6 +20454,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $SavedCaptionStylesTable savedCaptionStyles =
       $SavedCaptionStylesTable(this);
+  late final $SavedTitleStylesTable savedTitleStyles = $SavedTitleStylesTable(
+    this,
+  );
   late final Index idxMetricsLoopCount = Index(
     'idx_metrics_loop_count',
     'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
@@ -20100,6 +20528,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxSavedCaptionStyleOwnerPubkey = Index(
     'idx_saved_caption_style_owner_pubkey',
     'CREATE INDEX IF NOT EXISTS idx_saved_caption_style_owner_pubkey ON saved_caption_styles (owner_pubkey)',
+  );
+  late final Index idxSavedTitleStyleOwnerPubkey = Index(
+    'idx_saved_title_style_owner_pubkey',
+    'CREATE INDEX IF NOT EXISTS idx_saved_title_style_owner_pubkey ON saved_title_styles (owner_pubkey)',
   );
   late final UserProfilesDao userProfilesDao = UserProfilesDao(
     this as AppDatabase,
@@ -20181,6 +20613,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final SavedCaptionStylesDao savedCaptionStylesDao =
       SavedCaptionStylesDao(this as AppDatabase);
+  late final SavedTitleStylesDao savedTitleStylesDao = SavedTitleStylesDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -20217,6 +20652,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     seenVideos,
     vanishedProfiles,
     savedCaptionStyles,
+    savedTitleStyles,
     idxMetricsLoopCount,
     idxMetricsLikes,
     idxMetricsViews,
@@ -20235,6 +20671,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxPersonalEventsPubkeyKindCreatedAt,
     idxPersonalEventsPubkeyCreatedAt,
     idxSavedCaptionStyleOwnerPubkey,
+    idxSavedTitleStyleOwnerPubkey,
   ];
 }
 
@@ -29742,6 +30179,239 @@ typedef $$SavedCaptionStylesTableProcessedTableManager =
       SavedCaptionStyleRow,
       PrefetchHooks Function()
     >;
+typedef $$SavedTitleStylesTableCreateCompanionBuilder =
+    SavedTitleStylesCompanion Function({
+      required String id,
+      required String name,
+      required String style,
+      Value<int> orderIndex,
+      required DateTime createdAt,
+      Value<String?> ownerPubkey,
+      Value<int> rowid,
+    });
+typedef $$SavedTitleStylesTableUpdateCompanionBuilder =
+    SavedTitleStylesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> style,
+      Value<int> orderIndex,
+      Value<DateTime> createdAt,
+      Value<String?> ownerPubkey,
+      Value<int> rowid,
+    });
+
+class $$SavedTitleStylesTableFilterComposer
+    extends Composer<_$AppDatabase, $SavedTitleStylesTable> {
+  $$SavedTitleStylesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get style => $composableBuilder(
+    column: $table.style,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavedTitleStylesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavedTitleStylesTable> {
+  $$SavedTitleStylesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get style => $composableBuilder(
+    column: $table.style,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavedTitleStylesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavedTitleStylesTable> {
+  $$SavedTitleStylesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get style =>
+      $composableBuilder(column: $table.style, builder: (column) => column);
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+}
+
+class $$SavedTitleStylesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavedTitleStylesTable,
+          SavedTitleStyleRow,
+          $$SavedTitleStylesTableFilterComposer,
+          $$SavedTitleStylesTableOrderingComposer,
+          $$SavedTitleStylesTableAnnotationComposer,
+          $$SavedTitleStylesTableCreateCompanionBuilder,
+          $$SavedTitleStylesTableUpdateCompanionBuilder,
+          (
+            SavedTitleStyleRow,
+            BaseReferences<
+              _$AppDatabase,
+              $SavedTitleStylesTable,
+              SavedTitleStyleRow
+            >,
+          ),
+          SavedTitleStyleRow,
+          PrefetchHooks Function()
+        > {
+  $$SavedTitleStylesTableTableManager(
+    _$AppDatabase db,
+    $SavedTitleStylesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavedTitleStylesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SavedTitleStylesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SavedTitleStylesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> style = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> ownerPubkey = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavedTitleStylesCompanion(
+                id: id,
+                name: name,
+                style: style,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+                ownerPubkey: ownerPubkey,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String style,
+                Value<int> orderIndex = const Value.absent(),
+                required DateTime createdAt,
+                Value<String?> ownerPubkey = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavedTitleStylesCompanion.insert(
+                id: id,
+                name: name,
+                style: style,
+                orderIndex: orderIndex,
+                createdAt: createdAt,
+                ownerPubkey: ownerPubkey,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavedTitleStylesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavedTitleStylesTable,
+      SavedTitleStyleRow,
+      $$SavedTitleStylesTableFilterComposer,
+      $$SavedTitleStylesTableOrderingComposer,
+      $$SavedTitleStylesTableAnnotationComposer,
+      $$SavedTitleStylesTableCreateCompanionBuilder,
+      $$SavedTitleStylesTableUpdateCompanionBuilder,
+      (
+        SavedTitleStyleRow,
+        BaseReferences<
+          _$AppDatabase,
+          $SavedTitleStylesTable,
+          SavedTitleStyleRow
+        >,
+      ),
+      SavedTitleStyleRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -29808,4 +30478,6 @@ class $AppDatabaseManager {
       $$VanishedProfilesTableTableManager(_db, _db.vanishedProfiles);
   $$SavedCaptionStylesTableTableManager get savedCaptionStyles =>
       $$SavedCaptionStylesTableTableManager(_db, _db.savedCaptionStyles);
+  $$SavedTitleStylesTableTableManager get savedTitleStyles =>
+      $$SavedTitleStylesTableTableManager(_db, _db.savedTitleStyles);
 }

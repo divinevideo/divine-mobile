@@ -8637,6 +8637,21 @@ class AppLocalizationsBg extends AppLocalizations {
       'Стилът не можа да се запази.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Стилове';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Запазени стилове за този текст';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Още нищо не е запазено. Оформи текста си както ти харесва, запази стила тук и използвай същия вид в следващото си видео.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Текстът, който вече използва този стил, запазва вида си.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Класически';
 
   @override

@@ -13,6 +13,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onDetach,
     this.isDetaching = false,
     this.onAnimate,
+    this.onStyles,
     this.onSpeed,
     this.onTransform,
     this.onChromaKey,
@@ -51,6 +52,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
 
   /// Opens the layer enter/leave animation picker. Layer overlays only.
   final VoidCallback? onAnimate;
+
+  /// Opens the saved title styles sheet. Text overlays only.
+  final VoidCallback? onStyles;
   final VoidCallback? onSpeed;
   final VoidCallback? onTransform;
 
@@ -179,6 +183,15 @@ class VideoEditorTimelineControls extends StatelessWidget {
                           .l10n
                           .videoEditorLayerAnimationButtonSemanticLabel,
                       onPressed: onAnimate,
+                    ),
+                  if (onStyles != null)
+                    _ControlButton(
+                      icon: .bookmarkSimple,
+                      label: context.l10n.videoEditorTitleStylesLabel,
+                      semanticLabel: context
+                          .l10n
+                          .videoEditorTitleStylesButtonSemanticLabel,
+                      onPressed: onStyles,
                     ),
                   if (onSpeed != null)
                     _ControlButton(

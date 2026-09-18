@@ -8646,6 +8646,21 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos guardar el estilo.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Estilos';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Estilos guardados para este texto';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Todavía no guardaste nada. Dale a tu texto el look que te guste, guardalo acá y reusalo en tu próximo video.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Los textos que ya usan este estilo conservan su look.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Clásico';
 
   @override

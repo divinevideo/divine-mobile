@@ -16,6 +16,7 @@ import 'package:openvine/models/video_editor/saved_caption_style.dart';
 import 'package:openvine/providers/saved_caption_style_repository_provider.dart';
 import 'package:openvine/repositories/saved_caption_style_repository.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/saved_style_name_prompt.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_caption_styles_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode;
@@ -210,7 +211,7 @@ void main() {
 
       // The prompt suggests the font's name so a single tap saves.
       final field = tester.widget<DivineTextField>(
-        find.byKey(const Key('saved_caption_style_name_field')),
+        find.byKey(savedStyleNameFieldKey),
       );
       expect(field.controller?.text, equals('Inter'));
 
@@ -238,7 +239,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.byKey(const Key('saved_caption_style_name_field')),
+        find.byKey(savedStyleNameFieldKey),
         'Series intro',
       );
       await tester.pump();
@@ -275,12 +276,12 @@ void main() {
       await tester.pumpAndSettle();
 
       final field = tester.widget<DivineTextField>(
-        find.byKey(const Key('saved_caption_style_name_field')),
+        find.byKey(savedStyleNameFieldKey),
       );
       expect(field.controller?.text, equals('Intro'));
 
       await tester.enterText(
-        find.byKey(const Key('saved_caption_style_name_field')),
+        find.byKey(savedStyleNameFieldKey),
         'Outro',
       );
       await tester.pump();

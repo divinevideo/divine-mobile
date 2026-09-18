@@ -681,6 +681,76 @@ void main() {
       expect(claimed.single.ownerPubkey, _pubkeyA);
     });
 
+    Future<void> saveTitleStyleFor(String id, String? pubkey) =>
+        db.savedTitleStylesDao.upsertStyle(
+          id: id,
+          name: 'Intro',
+          style: '{}',
+          createdAt: DateTime.utc(2026),
+          ownerPubkey: pubkey,
+        );
+
+    test(
+      "destructive cleanup drops only the departing user's saved title "
+      'styles (#7742)',
+      () async {
+        await saveTitleStyleFor('title_a', _pubkeyA);
+        await saveTitleStyleFor('title_b', _pubkeyB);
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        final remaining = await db.savedTitleStylesDao.getStyles();
+        expect(remaining.map((row) => row.id), ['title_b']);
+      },
+    );
+
+    test('a plain account switch keeps saved title styles (#7742)', () async {
+      await saveTitleStyleFor('title_a', _pubkeyA);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+      final remaining = await db.savedTitleStylesDao.getStyles();
+      expect(remaining.map((row) => row.id), ['title_a']);
+    });
+
+    test('sign-in claims ownerless saved title styles (#7742)', () async {
+      await saveTitleStyleFor('title_legacy', null);
+      await saveTitleStyleFor('title_b', _pubkeyB);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      expect(service.onClaimLegacyRows, isNotNull);
+      await service.onClaimLegacyRows!(_pubkeyA);
+
+      final claimed = await db.savedTitleStylesDao.getStyles(
+        ownerPubkey: _pubkeyA,
+      );
+      expect(claimed.map((row) => row.id), ['title_legacy']);
+      expect(claimed.single.ownerPubkey, _pubkeyA);
+    });
+
     test('non-destructive cleanup preserves pending reports (#8053)', () async {
       await db.pendingReportsDao.enqueue(reportFor('ra', _pubkeyA));
 
