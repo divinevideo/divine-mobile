@@ -1967,3 +1967,44 @@ class SavedCaptionStyles extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+/// Text-overlay looks the user saved from the video editor's timeline
+/// (#7742), so a title's font, colors, background mode, alignment, size and
+/// enter/leave animation can be applied to text in later videos with one tap.
+///
+/// The twin of [SavedCaptionStyles] for free-form text layers, which have no
+/// style model of their own in the draft: their look lives on the layer. The
+/// style fields are a JSON blob (`TitleStyle.toJson`), so a new style field is
+/// an app-level change rather than a migration.
+@TableIndex.sql(
+  'CREATE INDEX IF NOT EXISTS idx_saved_title_style_owner_pubkey '
+  'ON saved_title_styles (owner_pubkey)',
+)
+@DataClassName('SavedTitleStyleRow')
+class SavedTitleStyles extends Table {
+  @override
+  String get tableName => 'saved_title_styles';
+
+  /// Unique style identifier.
+  TextColumn get id => text()();
+
+  /// User-entered display name. Not localized — it is the user's own text.
+  TextColumn get name => text()();
+
+  /// JSON-serialized `TitleStyle` payload.
+  TextColumn get style => text()();
+
+  /// Position of this style in the picker (0-based).
+  IntColumn get orderIndex =>
+      integer().withDefault(const Constant(0)).named('order_index')();
+
+  /// When the style was saved.
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  /// Hex public key of the account that owns this style.
+  /// NULL for styles saved before an account was known.
+  TextColumn get ownerPubkey => text().nullable().named('owner_pubkey')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

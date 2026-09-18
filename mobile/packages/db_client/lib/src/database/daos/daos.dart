@@ -25,6 +25,7 @@ export 'processed_gift_wraps_dao.dart';
 export 'profile_stats_dao.dart';
 export 'removed_conversations_dao.dart';
 export 'saved_caption_styles_dao.dart';
+export 'saved_title_styles_dao.dart';
 export 'seen_videos_dao.dart';
 export 'user_profiles_dao.dart';
 export 'vanished_profiles_dao.dart';

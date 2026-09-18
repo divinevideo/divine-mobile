@@ -14,6 +14,7 @@ import 'generated/schema_v13.dart' as v13;
 import 'generated/schema_v14.dart' as v14;
 import 'generated/schema_v15.dart' as v15;
 import 'generated/schema_v16.dart' as v16;
+import 'generated/schema_v17.dart' as v17;
 import 'generated/schema_v9.dart' as v9;
 
 void main() {
@@ -25,14 +26,14 @@ void main() {
   });
 
   group('schema validation', () {
-    test('current schema version is 16', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 16);
+    test('current schema version is 17', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 17);
     });
 
-    test('v16 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(16);
+    test('v17 schema is valid and up to date', () async {
+      final schema = await verifier.schemaAt(17);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
@@ -167,6 +168,66 @@ void main() {
     );
 
     test(
+      'v16 -> v17 creates saved_title_styles with its owner index',
+      () async {
+        await verifier.testWithDataIntegrity(
+          oldVersion: 16,
+          newVersion: 17,
+          createOld: v16.DatabaseAtV16.new,
+          createNew: v17.DatabaseAtV17.new,
+          openTestedDatabase: AppDatabase.new,
+          createItems: (batch, oldDb) {
+            // The step is additive, so seed a v16 row and require it back —
+            // the caption twin this table mirrors, so a destructive edit to
+            // either step is caught here.
+            batch.insert(
+              oldDb.savedCaptionStyles,
+              v16.SavedCaptionStylesCompanion.insert(
+                id: 'kept-across-v17',
+                name: 'Existing caption style',
+                style: '{}',
+                createdAt: 1700000000,
+              ),
+            );
+          },
+          validateItems: (newDb) async {
+            final kept = await newDb
+                .customSelect(
+                  "SELECT COUNT(*) AS c FROM saved_caption_styles "
+                  "WHERE id = 'kept-across-v17'",
+                )
+                .getSingle();
+            expect(kept.data['c'], 1);
+
+            // The new table exists and accepts a row after the migration.
+            await newDb.customStatement(
+              "INSERT INTO saved_title_styles (id, name, style, order_index, "
+              "created_at, owner_pubkey) "
+              "VALUES ('t1', 'Intro', '{}', 0, 1700000000, 'a')",
+            );
+            final rows = await newDb
+                .customSelect('SELECT COUNT(*) AS c FROM saved_title_styles')
+                .getSingle();
+            expect(rows.data['c'], 1);
+
+            // The upgrade step creates the owner index by hand; a fresh
+            // install gets it from `createAll`. Both must agree.
+            final indexes = await newDb
+                .customSelect(
+                  "SELECT name FROM sqlite_master WHERE type = 'index' "
+                  "AND tbl_name = 'saved_title_styles'",
+                )
+                .get();
+            expect(
+              [for (final row in indexes) row.data['name']],
+              contains('idx_saved_title_style_owner_pubkey'),
+            );
+          },
+        );
+      },
+    );
+
+    test(
       'a v10 direct message arrives at v11 with no twin already absorbed',
       () async {
         // twin_collapsed defaults to false for historical rows. Defaulting the
@@ -232,10 +293,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v16', () async {
+    test('v8 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -257,45 +318,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v16', () async {
+    test('v7 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
-    test('v6 schema migrates to v16', () async {
+    test('v6 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
-    test('v5 schema migrates to v16', () async {
+    test('v5 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
-    test('v3 schema migrates to v16', () async {
+    test('v3 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
-    test('v2 schema migrates to v16', () async {
+    test('v2 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v16', () async {
+    test('legacy v1 schema migrates to v17', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
       await db.close();
     });
 
@@ -323,7 +384,7 @@ void main() {
       );
 
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
 
       final rows = await db
           .customSelect(
@@ -382,7 +443,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 16);
+        await verifier.migrateAndValidate(db, 17);
 
         final migrated = await db.clipsDao.getClipById('clip-1');
         expect(migrated?.id, 'clip-1');
@@ -403,7 +464,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 16);
+        await verifier.migrateAndValidate(db, 17);
 
         final migrated = await db.clipsDao.getClipById('clip-1');
         expect(migrated?.id, 'clip-1');
@@ -543,7 +604,7 @@ void main() {
       );
 
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
 
       final row = await db
           .customSelect(
@@ -598,7 +659,7 @@ void main() {
         );
 
         final db = AppDatabase(schema.newConnection());
-        await verifier.migrateAndValidate(db, 16);
+        await verifier.migrateAndValidate(db, 17);
 
         final row = await db
             .customSelect(
@@ -675,7 +736,7 @@ void main() {
 
       final schema = await verifier.schemaAt(11);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
 
       final rows = await db
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")
@@ -765,7 +826,7 @@ void main() {
 
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 16);
+      await verifier.migrateAndValidate(db, 17);
 
       final rows = await db
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'index'")

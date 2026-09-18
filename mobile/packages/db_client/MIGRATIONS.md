@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 16** (see `app_database.dart`).
+**Version: 17** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -90,6 +90,17 @@ migration. Rows are owner-scoped like `clip_categories`, with the same
 legacy-row claim on sign-in and delete on destructive sign-out. The `from < 16`
 step creates the owner index by hand for the same reason v13 does:
 `createTable` does not emit `@TableIndex.sql` indexes.
+
+Version 17 adds `saved_title_styles` (#7742), the twin of
+`saved_caption_styles` for free-form text overlays: the looks a user saves
+from the timeline's Styles action — font, colors, background mode, alignment,
+font scale and enter/leave animation — so a title treatment can be applied to
+text in later videos. A text layer has no style model of its own in the draft
+(its look lives on the `pro_image_editor` layer), which is why the two kinds
+get separate tables rather than a discriminator column: their payloads are
+different models. Same JSON-blob shape, same owner scoping, same legacy-row
+claim and destructive-sign-out delete, and the `from < 17` step creates the
+owner index by hand for the same reason v13 and v16 do.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
