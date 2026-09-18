@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
@@ -6,7 +7,30 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
 import 'package:openvine/services/video_editor/transition_seam_render_service.dart';
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
+
+/// Reports a fixed 1500ms duration for any file, so a persisted seam reads back
+/// as valid and [TransitionSeamRenderService] takes its reuse branch.
+class _FakeProVideoEditor extends editor.ProVideoEditor {
+  // The base constructor calls this, and the platform interface throws.
+  @override
+  void initializeStream() {}
+
+  @override
+  Future<editor.VideoMetadata> getMetadata(
+    editor.EditorVideo value, {
+    bool checkStreamingOptimization = false,
+    editor.NativeLogLevel? nativeLogLevel,
+  }) async => editor.VideoMetadata(
+    duration: const Duration(milliseconds: 1500),
+    extension: 'mp4',
+    fileSize: 1024,
+    resolution: const Size(1080, 1920),
+    rotation: 0,
+    bitrate: 1000000,
+  );
+}
 
 void main() {
   DivineVideoClip clip(String id, {editor.ClipTransition? transition}) =>
@@ -449,6 +473,104 @@ void main() {
 
       expect(service.cached(square, clipB, dissolve), isNotNull);
       expect(service.cached(vertical, clipB, dissolve), isNull);
+    });
+  });
+
+  group('persisted seam reuse', () {
+    late Directory tempRoot;
+    late editor.ProVideoEditor originalProVideoEditor;
+    var renderCount = 0;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      originalProVideoEditor = editor.ProVideoEditor.instance;
+      editor.ProVideoEditor.instance = _FakeProVideoEditor();
+      tempRoot = Directory.systemTemp.createTempSync('seam_persist_test_');
+      renderCount = 0;
+      VideoEditorRenderService.renderVideoOverride =
+          ({
+            required clips,
+            required usePersistentStorage,
+            aspectRatio,
+            parameters,
+            taskId,
+            maxOutputDuration,
+          }) async {
+            renderCount++;
+            final rendered = File('${tempRoot.path}/render_$renderCount.mp4')
+              ..writeAsStringSync('seam body');
+            return rendered.path;
+          };
+    });
+
+    tearDown(() {
+      VideoEditorRenderService.renderVideoOverride = null;
+      editor.ProVideoEditor.instance = originalProVideoEditor;
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    TransitionSeamRenderService service() => TransitionSeamRenderService(
+      documentsDirectoryProvider: () async => tempRoot,
+    );
+
+    test('a seam persisted by an earlier session is reused instead of '
+        're-rendered', () async {
+      final clipA = clip('a', transition: dissolve);
+      final clipB = clip('b');
+
+      final first = await service().render(
+        clipA: clipA,
+        clipB: clipB,
+        transition: dissolve,
+      );
+
+      expect(first, isNotNull);
+      expect(renderCount, 1);
+      expect(File(first!.path).existsSync(), isTrue);
+
+      // A second service starts with an empty in-memory cache, so reuse here
+      // can only come from the keyed file under `transition_seams/` — this is
+      // the cross-session branch the editor relies on.
+      final second = await service().render(
+        clipA: clipA,
+        clipB: clipB,
+        transition: dissolve,
+      );
+
+      expect(second?.path, first.path);
+      expect(renderCount, 1);
+    });
+
+    test('a seam persisted under a different key is not reused', () async {
+      final clipA = clip('a', transition: dissolve);
+      final clipB = clip('b');
+      const longerDissolve = editor.ClipTransition(
+        type: editor.ClipTransitionType.dissolve,
+        duration: Duration(milliseconds: 800),
+      );
+
+      final first = await service().render(
+        clipA: clipA,
+        clipB: clipB,
+        transition: dissolve,
+      );
+      expect(renderCount, 1);
+
+      // The persisted path is sha256 of the key, and the key carries the cache
+      // version alongside the clip/transition fields. A key change must land on
+      // a different file rather than replaying the old one — that is the
+      // mechanism `_seamCacheVersion` uses to orphan seams rendered by an older
+      // algorithm after an app upgrade.
+      final second = await service().render(
+        clipA: clipA.copyWith(transition: longerDissolve),
+        clipB: clipB,
+        transition: longerDissolve,
+      );
+
+      expect(renderCount, 2);
+      expect(second, isNotNull);
+      expect(second!.path, isNot(first!.path));
+      expect(File(first.path).existsSync(), isTrue);
     });
   });
 

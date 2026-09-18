@@ -333,14 +333,19 @@ class TransitionSeamRenderService {
   }
 
   /// Bumped whenever the seam-composition math ([computeSeamSpans] /
-  /// [_tailClip] / [_headClip]) or the transition that reaches the seam changes.
+  /// [_tailClip] / [_headClip]), the transition that reaches the seam, or the
+  /// renderer that turns them into pixels changes — a `pro_video_editor`
+  /// upgrade that changes what a seam looks like counts.
   /// It prefixes [_key], so persisted seams rendered by an older algorithm under
   /// `transition_seams/` are no longer key-matched and get re-rendered after an
   /// app upgrade instead of replayed stale (the keyed files live in the
   /// documents dir and survive upgrades).
   ///
   /// v4: seams now render the no-overlap-clamped transition, not the raw one.
-  static const _seamCacheVersion = 4;
+  /// v5: pro_video_editor 2.13.1 blends an overlap transition across a
+  /// rotation flag that 2.13.0 hard-cut (#9321), so every seam persisted by
+  /// 2.13.0 at a mixed-orientation boundary is a stale hard cut.
+  static const _seamCacheVersion = 5;
 
   String _key(
     DivineVideoClip clipA,
