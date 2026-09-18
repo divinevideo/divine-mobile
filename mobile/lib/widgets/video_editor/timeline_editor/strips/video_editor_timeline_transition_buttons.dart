@@ -92,8 +92,10 @@ class TimelineLoopSeamRegion extends StatelessWidget {
     final fallback = ColoredBox(
       color: VineTheme.primary.withValues(alpha: 0.18),
     );
-    final tail = _frame(tailFramePath);
-    final head = _frame(headFramePath);
+    // Copied to locals so the null checks below promote; a public final field
+    // does not.
+    final tailPath = tailFramePath;
+    final headPath = headFramePath;
     return Positioned(
       left: left,
       top: 0,
@@ -107,8 +109,8 @@ class TimelineLoopSeamRegion extends StatelessWidget {
           child: Stack(
             fit: .expand,
             children: [
-              tail ?? fallback,
-              if (head != null)
+              if (tailPath == null) fallback else _SeamFrame(path: tailPath),
+              if (headPath != null)
                 ShaderMask(
                   // Only the gradient's alpha matters (dstIn masks the head
                   // frame in from transparent to opaque across the region).
@@ -116,7 +118,7 @@ class TimelineLoopSeamRegion extends StatelessWidget {
                     colors: [VineTheme.transparent, VineTheme.whiteText],
                   ).createShader(rect),
                   blendMode: BlendMode.dstIn,
-                  child: head,
+                  child: _SeamFrame(path: headPath),
                 ),
             ],
           ),
@@ -124,9 +126,17 @@ class TimelineLoopSeamRegion extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget? _frame(String? path) {
-    if (path == null) return null;
+/// One end of the loop seam: a captured still filling the seam region, blank
+/// if the file has gone missing.
+class _SeamFrame extends StatelessWidget {
+  const _SeamFrame({required this.path});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
     return Image.file(
       File(path),
       fit: .cover,
