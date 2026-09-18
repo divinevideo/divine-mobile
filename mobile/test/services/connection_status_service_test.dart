@@ -38,6 +38,19 @@ void main() {
         await closed;
       });
 
+      test('a status frame arriving after dispose is ignored', () {
+        final service = _service();
+        service.dispose();
+
+        // The bridge's subscription is cancelled detached, so a late frame is
+        // possible; adding to the closed stream controller would throw.
+        expect(
+          () => service.updateRelayStatuses({'wss://relay.one': false}),
+          returnsNormally,
+        );
+        expect(service.isOnline, isTrue);
+      });
+
       test('a pending offline edge cannot fire after dispose', () {
         fakeAsync((async) {
           final service = _service()

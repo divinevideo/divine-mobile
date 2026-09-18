@@ -48,6 +48,7 @@ class ConnectionStatusService extends ChangeNotifier {
   bool _isConnecting = false;
   Map<String, bool> _relayStatuses = {};
   Timer? _offlineTimer;
+  bool _disposed = false;
 
   final _statusController = StreamController<bool>.broadcast();
 
@@ -94,6 +95,10 @@ class ConnectionStatusService extends ChangeNotifier {
   /// apart, measured), and reporting offline in that gap would queue work on
   /// every launch.
   void updateRelayStatuses(Map<String, bool> statuses) {
+    // The bridge cancels its subscription through runProviderDetached, which
+    // is not awaited, so a status frame can still arrive after teardown. The
+    // stream controller is closed by then and would throw on add.
+    if (_disposed) return;
     _relayStatuses = Map<String, bool>.from(statuses);
     if (_relayStatuses.isEmpty) return;
 
@@ -179,6 +184,7 @@ class ConnectionStatusService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _offlineTimer?.cancel();
     _offlineTimer = null;
     runDetached(
