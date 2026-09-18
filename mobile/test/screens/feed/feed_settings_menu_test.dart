@@ -1,5 +1,5 @@
-// ABOUTME: Widget coverage for owner-delete behavior in the feed settings menu.
-// ABOUTME: Verifies relay feedback and pending-delete action gating.
+// ABOUTME: Widget coverage for the feed settings menu: owner-delete behavior
+// ABOUTME: and the playback toggles that dismiss the popover.
 
 import 'dart:async';
 
@@ -15,9 +15,11 @@ import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
+import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/widgets/video_feed_item/feed_playback_toggles_pill.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -203,6 +205,54 @@ void main() {
         tester.widget<GestureDetector>(cleanupEditGesture).onTap,
         isNotNull,
       );
+    });
+  });
+
+  group('playback toggles', () {
+    testWidgets('turning Auto on dismisses the popover', (tester) async {
+      // The popover used to stay open over a still-paused video, so the
+      // viewer could not see that Auto had taken effect.
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final authService = createMockAuthService();
+      final volumeCubit = _MockVideoVolumeCubit();
+      final autoAdvance = FeedAutoAdvanceCubit();
+      addTearDown(autoAdvance.close);
+      when(() => authService.currentPublicKeyHex).thenReturn(ownPubkey);
+      when(() => volumeCubit.state).thenReturn(const VideoVolumeState());
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
+              BlocProvider<FeedAutoAdvanceCubit>.value(value: autoAdvance),
+            ],
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.topRight,
+                child: FeedSettingsMenu(video: video),
+              ),
+            ),
+          ),
+          mockAuthService: authService,
+        ),
+      );
+
+      await tester.tap(find.bySemanticsLabel(l10n.videoSettingsMenuOpen));
+      await tester.pump();
+      expect(find.byType(FeedPlaybackTogglesPill), findsOneWidget);
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoActionEnableAutoAdvance),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        autoAdvance.state.enabled,
+        isTrue,
+        reason: 'sanity: the tap reached the Auto toggle',
+      );
+      expect(find.byType(FeedPlaybackTogglesPill), findsNothing);
     });
   });
 }
