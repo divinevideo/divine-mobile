@@ -144,6 +144,12 @@ void main() {
         expect(TitleStyle.fromJson({...json, 'enter': enter}), isNull);
       });
 
+      test('rejects a wrongly typed font scale rather than throwing', () {
+        final json = style.toJson();
+
+        expect(TitleStyle.fromJson({...json, 'fontScale': 'big'}), isNull);
+      });
+
       test('defaults the optional fields a stored row may lack', () {
         final decoded = TitleStyle.fromJson({
           'fontIndex': 99,

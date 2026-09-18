@@ -80,6 +80,9 @@ class TitleStyle extends Equatable {
     final leave = _animationsFromJson(json['leave']);
     if (enter == null || leave == null) return null;
 
+    final fontScale = json['fontScale'];
+    if (fontScale != null && fontScale is! num) return null;
+
     return TitleStyle(
       fontIndex: fontIndex,
       color: colorFromArgb32(color),
@@ -93,7 +96,7 @@ class TitleStyle extends Equatable {
         (align) => align.name == json['align'],
         orElse: () => TextAlign.center,
       ),
-      fontScale: (json['fontScale'] as num?)?.toDouble() ?? 1,
+      fontScale: (fontScale as num?)?.toDouble() ?? 1,
       enter: enter,
       leave: leave,
       enterPoint: _offsetFromJson(json['enterPoint']),
