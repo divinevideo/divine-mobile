@@ -61,9 +61,11 @@ void main() {
       });
     });
 
-    group('compactRows', () {
+    // Row compaction is reached through recalculateRows, which groups by type
+    // first — so a single-type list exercises exactly one compaction pass.
+    group('row compaction', () {
       test('collapses an empty row left behind by a removed item', () {
-        final result = TimelineOverlayRowLayout.compactRows([
+        final result = TimelineOverlayRowLayout.recalculateRows([
           _item('a', startMs: 0, endMs: 1000),
           _item('b', startMs: 500, endMs: 1500, row: 2),
         ]);
@@ -72,7 +74,7 @@ void main() {
       });
 
       test('shifts an item up by at most one row per pass', () {
-        final result = TimelineOverlayRowLayout.compactRows([
+        final result = TimelineOverlayRowLayout.recalculateRows([
           _item('a', startMs: 0, endMs: 1000),
           _item('b', startMs: 0, endMs: 1000, row: 1),
           _item('c', startMs: 2000, endMs: 3000, row: 3),
@@ -84,7 +86,7 @@ void main() {
       });
 
       test('pushes a later same-row overlap down instead of stacking', () {
-        final result = TimelineOverlayRowLayout.compactRows([
+        final result = TimelineOverlayRowLayout.recalculateRows([
           _item('a', startMs: 0, endMs: 2000),
           _item('b', startMs: 1000, endMs: 3000),
         ]);

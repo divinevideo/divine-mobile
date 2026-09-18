@@ -36,8 +36,8 @@ abstract final class TimelineOverlayRowLayout {
 
   /// Gently compacts rows for items that already have row assignments.
   ///
-  /// Groups items by [TimelineOverlayType] and runs [compactRows]
-  /// independently per type.
+  /// Groups items by [TimelineOverlayType] and compacts each type
+  /// independently.
   static List<TimelineOverlayItem> recalculateRows(
     List<TimelineOverlayItem> items,
   ) {
@@ -45,7 +45,7 @@ abstract final class TimelineOverlayRowLayout {
     for (final item in items) {
       (grouped[item.type] ??= []).add(item);
     }
-    return [for (final group in grouped.values) ...compactRows(group)];
+    return [for (final group in grouped.values) ..._compactRows(group)];
   }
 
   /// Compacts rows gradually.
@@ -57,7 +57,7 @@ abstract final class TimelineOverlayRowLayout {
   ///
   /// Items are processed from lowest to highest row so upstream
   /// moves can cascade within a single pass.
-  static List<TimelineOverlayItem> compactRows(
+  static List<TimelineOverlayItem> _compactRows(
     List<TimelineOverlayItem> items,
   ) {
     if (items.isEmpty) return items;
