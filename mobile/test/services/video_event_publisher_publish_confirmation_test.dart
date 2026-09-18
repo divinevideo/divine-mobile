@@ -361,7 +361,8 @@ void main() {
       final result = await publisher.publishDirectUpload(
         createUpload(),
         selectedAudioEventId: validAudioId,
-        selectedAudioRelay: 'wss://relay.divine.video',
+        // Not the default relay, so a dropped forward cannot pass unnoticed.
+        selectedAudioRelay: 'wss://sounds.relay.example',
       );
 
       expect(result, isTrue);
@@ -369,7 +370,7 @@ void main() {
         containsTag(videoTags, [
           'e',
           validAudioId,
-          'wss://relay.divine.video',
+          'wss://sounds.relay.example',
           'audio',
         ]),
         isTrue,
@@ -556,11 +557,11 @@ void main() {
   });
 
   group('VideoEventPublisher.currentOuterPublishTimeout wiring', () {
-    // Pins the production wiring between [outerPublishTimeoutFor] and
-    // the actual `Future.timeout` inside _publishEventToNostr. The math
-    // is covered exhaustively in video_event_publisher_test.dart; this
-    // group only verifies the call site reads from the helper rather
-    // than re-introducing a hard-coded literal.
+    // Pins the production wiring between [outerPublishTimeoutFor] and the
+    // actual `Future.timeout` inside publishViaWebSocket. The math is
+    // covered exhaustively in signed_event_relay_publisher_test.dart; this
+    // group only verifies the call site reads from the helper rather than
+    // re-introducing a hard-coded literal.
 
     test(
       'reflects outerPublishTimeoutFor for the current configuredRelayCount',

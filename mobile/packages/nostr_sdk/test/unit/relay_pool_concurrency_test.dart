@@ -785,8 +785,8 @@ void main() {
       () {
         // Pin: the public constant is the SDK's contract with callers
         // that need to size their own outer guards (e.g.
-        // `outerPublishTimeoutFor` in mobile/lib/services/
-        // video_event_publisher.dart). Bumping this value is a SDK-
+        // `outerPublishTimeoutFor` in mobile/lib/services/video_publish/
+        // signed_event_relay_publisher.dart). Bumping this value is a SDK-
         // public-API change — callers depending on the worst-case
         // sequential fan-out math need to be revisited.
         expect(

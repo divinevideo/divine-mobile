@@ -17,7 +17,6 @@ lib/services/event_router.dart	1
 lib/services/foreground_idle_warmup_coordinator.dart	1
 lib/services/upload_initialization_helper.dart	1
 lib/services/video_editor/video_editor_render_service.dart	1
-lib/services/video_event_publisher.dart	2
 lib/services/video_publish/video_publish_service.dart	1
 lib/services/video_thumbnail_service.dart	1
 lib/widgets/video_feed_item/actions/share_action_button.dart	1

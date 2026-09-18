@@ -34,6 +34,11 @@ void main() {
           expect(operationCalls, 1, reason: 'first attempt ran');
 
           scope.dispose();
+          expect(
+            async.pendingTimers,
+            isEmpty,
+            reason: 'the backoff timer must be owned and cancelled',
+          );
           async.elapse(const Duration(minutes: 2));
 
           expect(
@@ -42,11 +47,6 @@ void main() {
             reason: 'no further invocation may happen after dispose',
           );
           expect(thrown, isA<AsyncCancelledException>());
-          expect(
-            async.pendingTimers,
-            isEmpty,
-            reason: 'the backoff timer must be owned and cancelled',
-          );
         });
       });
 
@@ -354,6 +354,64 @@ void main() {
           throwsA(isA<AsyncCancelledException>()),
         );
         expect(calls, 0);
+      });
+    });
+
+    group('delay', () {
+      test('completes once the duration elapses', () {
+        fakeAsync((async) {
+          final scope = AsyncScope();
+          var completed = false;
+
+          unawaited(
+            scope
+                .delay(const Duration(seconds: 2))
+                .then((_) => completed = true),
+          );
+          async.elapse(const Duration(seconds: 1));
+          expect(completed, isFalse);
+
+          async.elapse(const Duration(seconds: 1));
+          expect(completed, isTrue);
+          expect(scope.pendingWaitCount, 0);
+          scope.dispose();
+        });
+      });
+
+      test('dispose aborts a pending delay with AsyncCancelledException', () {
+        fakeAsync((async) {
+          final scope = AsyncScope();
+          Object? thrown;
+
+          unawaited(
+            scope
+                .delay(const Duration(seconds: 2), debugName: 'backoff')
+                .catchError((Object e) => thrown = e),
+          );
+          async.flushMicrotasks();
+
+          scope.dispose();
+          expect(async.pendingTimers, isEmpty);
+          async.elapse(const Duration(seconds: 5));
+
+          expect(
+            thrown,
+            isA<AsyncCancelledException>().having(
+              (e) => e.debugName,
+              'debugName',
+              'backoff',
+            ),
+          );
+        });
+      });
+
+      test('throws immediately when the scope is already disposed', () async {
+        final scope = AsyncScope()..dispose();
+
+        await expectLater(
+          scope.delay(const Duration(seconds: 1)),
+          throwsA(isA<AsyncCancelledException>()),
+        );
       });
     });
 

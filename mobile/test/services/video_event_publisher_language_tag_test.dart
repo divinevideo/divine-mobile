@@ -1,5 +1,5 @@
-// ABOUTME: Tests for NIP-32 language tagging in VideoEventPublisher
-// ABOUTME: Verifies that L and l tags are correctly added to published events
+// ABOUTME: Tests for NIP-32 label and NIP-40 expiration tagging in VideoEventPublisher
+// ABOUTME: Verifies the L, l and expiration tags reach the signed event
 
 import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -64,7 +64,7 @@ void main() {
       videoEventService: mockVideoEventService,
     );
 
-    // Stub NostrClient properties used by _publishEventToNostr
+    // Stub NostrClient properties used by publishViaWebSocket
     when(() => mockNostrClient.isInitialized).thenReturn(true);
     when(() => mockNostrClient.configuredRelayCount).thenReturn(1);
     when(() => mockNostrClient.connectedRelayCount).thenReturn(1);
@@ -300,6 +300,24 @@ void main() {
               tag.length >= 3 && tag[0] == 'l' && tag[2] == 'content-warning',
         ),
         isFalse,
+      );
+    });
+  });
+
+  group('NIP-40 expiration tagging', () {
+    test('publishVideoEvent passes expirationTimestamp through', () async {
+      stubSignAndPublish();
+
+      await publisher.publishVideoEvent(
+        upload: createTestUpload(),
+        expirationTimestamp: 1893456000,
+      );
+
+      expect(capturedTags, isNotNull);
+      expect(
+        _containsTag(capturedTags!, ['expiration', '1893456000']),
+        isTrue,
+        reason: 'every forwarding hop must carry the expiration',
       );
     });
   });

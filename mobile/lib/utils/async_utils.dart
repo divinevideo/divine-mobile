@@ -295,6 +295,18 @@ class AsyncScope {
     }
   }
 
+  /// Waits [duration], as a timer this scope owns.
+  ///
+  /// The owned replacement for `Future.delayed` in a backoff loop: completes
+  /// normally once [duration] elapses, and throws [AsyncCancelledException]
+  /// if the scope is cancelled or disposed first, or immediately if it is
+  /// already disposed, so the awaiting loop stops instead of resuming into a
+  /// torn-down owner.
+  Future<void> delay(Duration duration, {String? debugName}) async {
+    _throwIfDisposed(debugName);
+    await _sleep(duration, debugName);
+  }
+
   /// A cancellable sleep owned by this scope.
   Future<void> _sleep(Duration duration, String? debugName) {
     final completer = Completer<void>();

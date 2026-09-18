@@ -2,7 +2,7 @@
 // ABOUTME: When mocktail's thenAnswer((_) async => value) infers a non-nullable
 // ABOUTME: Future<T>, .timeout(onTimeout: () => fallback) throws a runtime TypeError
 // ABOUTME: because the closure return type is inferred too narrowly. Production code
-// ABOUTME: in video_event_publisher.dart sidesteps this by using try/catch on
+// ABOUTME: in signed_event_relay_publisher.dart sidesteps this with try/catch on
 // ABOUTME: TimeoutException; this file locks the gotcha so future contributors
 // ABOUTME: don't reach for onTimeout when stubbing publishEvent in tests.
 // ABOUTME: Note: publishEvent now returns Future<PublishResult> (a non-nullable
@@ -88,7 +88,7 @@ void main() {
           reason:
               'If this assertion starts failing because no error was thrown, '
               'mocktail or Dart fixed the inference and the try/catch '
-              'workaround in video_event_publisher.dart can be dropped.',
+              'workaround in signed_event_relay_publisher.dart can be dropped.',
         );
       },
     );

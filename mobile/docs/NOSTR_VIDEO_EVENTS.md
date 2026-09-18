@@ -99,7 +99,7 @@ independently even when they point at the same source video, so clearing manual
 Inspired By attribution during metadata edit does not erase factual clip
 provenance. Publishing lives in
 `mobile/lib/utils/inspired_by_tags.dart` and
-`mobile/lib/services/video_event_publisher.dart`; parsing in
+`mobile/lib/services/video_publish/video_event_tags.dart`; parsing in
 `mobile/packages/models/lib/src/video_event.dart`.
 
 ### Event Metadata

@@ -283,9 +283,10 @@ VideoEventPublisher videoEventPublisher(Ref ref) {
   );
 
   // REST-first publish: POST the signed event to {eventPublishBaseUrl}/api/events with
-  // NIP-98 auth, falling back to the WebSocket relay pool on transient
-  // failures. NIP-98 validates the exact URL, so event publish uses the relay
-  // HTTP origin rather than production's FunnelCake API host.
+  // NIP-98 auth, falling back to the WebSocket relay pool on any failure
+  // other than an account restriction. NIP-98 validates the exact URL, so
+  // event publish uses the relay HTTP origin rather than production's
+  // FunnelCake API host.
   final environmentConfig = ref.watch(currentEnvironmentProvider);
   final nip98AuthService = ref.watch(nip98AuthServiceProvider);
   final eventApiHttpClient = ref.watch(instrumentedHttpClientFactoryProvider)();
