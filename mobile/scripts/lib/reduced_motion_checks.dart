@@ -38,10 +38,10 @@ bool isReducedMotionRead(Expression? expression) {
 /// condition does not consult the preference at all. Callers use it to decide
 /// which branch of an `if` is the motion-allowed one.
 ///
-/// A disjunction is true when reduced motion is on if either side is; a
-/// conjunction requires motion to be allowed if either side does. That is
-/// enough for the shapes this codebase actually writes, and anything it cannot
-/// classify returns `null` rather than guessing.
+/// Disjunction and conjunction use Kleene three-valued logic so a mixed
+/// `false`/`unknown` OR or `true`/`unknown` AND stays unknown. Those
+/// conditions can still be true while reduced motion is on. Anything the
+/// classifier cannot name returns `null` rather than guessing.
 bool? reducedMotionPolarity(Expression? condition) {
   switch (condition) {
     case ParenthesizedExpression(:final expression):
@@ -59,8 +59,21 @@ bool? reducedMotionPolarity(Expression? condition) {
       final right = reducedMotionPolarity(rightOperand);
       if (left == null && right == null) return null;
       return switch (operator.lexeme) {
-        '||' => (left ?? false) || (right ?? false),
-        '&&' => !((left == false) || (right == false)),
+        // Kleene three-valued logic. A mixed false/unknown OR or true/unknown
+        // AND is unknown: those conditions can still be true while reduced
+        // motion is on, so they must not count as a gate.
+        '||' =>
+          left == true || right == true
+              ? true
+              : left == false && right == false
+              ? false
+              : null,
+        '&&' =>
+          left == false || right == false
+              ? false
+              : left == true && right == true
+              ? true
+              : null,
         _ => null,
       };
     default:

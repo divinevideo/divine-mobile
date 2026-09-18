@@ -82,7 +82,7 @@ class _GatingVisitor extends RecursiveAstVisitor<void> {
     for (final argument in arguments.arguments) {
       if (argument is! NamedExpression) continue;
       if (argument.name.label.name != 'effect') continue;
-      if (_references(argument.expression, _skeletonEffectHelper)) return;
+      if (_isSkeletonEffectHelper(argument.expression)) return;
       break;
     }
     sites.add(_site(offset, 'skeletonizer'));
@@ -155,23 +155,14 @@ String? _lastIdentifierName(Expression? expression) {
   };
 }
 
-bool _references(AstNode node, String name) {
-  final visitor = _IdentifierVisitor(name);
-  node.accept(visitor);
-  return visitor.found;
-}
-
-class _IdentifierVisitor extends RecursiveAstVisitor<void> {
-  _IdentifierVisitor(this._name);
-
-  final String _name;
-  bool found = false;
-
-  @override
-  void visitSimpleIdentifier(SimpleIdentifier node) {
-    if (node.name == _name) found = true;
-    super.visitSimpleIdentifier(node);
+/// Whether [expression] is the shared helper call itself, not merely a mention.
+bool _isSkeletonEffectHelper(Expression expression) {
+  var current = expression;
+  while (current is ParenthesizedExpression) {
+    current = current.expression;
   }
+  return current is MethodInvocation &&
+      current.methodName.name == _skeletonEffectHelper;
 }
 
 /// Whether [path] is production Dart this guard should read.

@@ -57,6 +57,18 @@ Widget a() => Skeletonizer(
         );
       });
 
+      test('rejects an effect that only mentions the helper in one branch', () {
+        expect(
+          kinds('''
+Widget a(bool custom) => Skeletonizer(
+  effect: custom ? ShimmerEffect() : vineSkeletonEffectOf(context),
+  child: x,
+);
+'''),
+          ['skeletonizer'],
+        );
+      });
+
       test('ignores our own wrapper and unrelated widgets', () {
         expect(
           kinds('''
@@ -168,6 +180,34 @@ void a(BuildContext context) {
     _c.stop();
   }
   _c.repeat();
+}
+'''),
+          ['repeat'],
+        );
+      });
+
+      test('does not treat a mixed OR as a motion-allowed gate', () {
+        expect(
+          kinds('''
+void a(bool other) {
+  if (!reduceMotion || other) {
+    _c.repeat();
+  }
+}
+'''),
+          ['repeat'],
+        );
+      });
+
+      test('does not treat a mixed AND else as a motion-allowed gate', () {
+        expect(
+          kinds('''
+void a(bool other) {
+  if (reduceMotion && other) {
+    _c.stop();
+  } else {
+    _c.repeat();
+  }
 }
 '''),
           ['repeat'],
