@@ -18,7 +18,14 @@ appId: co.openvine.app.staging
 # Settings itself is asserted by whatever is looking for a specific row:
 # the screen is a flat list whose contents vary with feature flags and
 # developer mode, so there is no stable full-screen assertion to make.
-- extendedWaitUntil:
-    visible:
+#
+# Scroll to that row rather than waiting for it to appear. The list has
+# outgrown the viewport, so the Nostr row now sits below the fold on a stock
+# iPhone and a plain visibility wait times out on a screen that is already
+# fully drawn. Scrolling is a superset of the old wait: it returns
+# immediately when the row is on screen already.
+- scrollUntilVisible:
+    element:
       id: "nostr_settings_tile"
+    direction: DOWN
     timeout: 30000
