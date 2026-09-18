@@ -237,6 +237,15 @@ final contactListDirtyBroadcastBridgeProvider = Provider<void>((ref) {
   ref.listen<bool>(appForegroundProvider, (previous, next) {
     if (next && previous != true) unawaited(retryIfPending());
   });
+
+  // Relays coming back is the signal this bridge was missing. Before #8331 fed
+  // ConnectionStatusService, `registerOnReconnectCallback` had no callers and
+  // could not fire anyway, so a follow withheld while the pool was down sat
+  // local until the user happened to background and re-foreground the app.
+  final stopListeningForReconnect = ref
+      .read(connectionStatusServiceProvider)
+      .registerOnReconnectCallback(() => unawaited(retryIfPending()));
+  ref.onDispose(stopListeningForReconnect);
 });
 
 /// Provider for [CuratedListRepository] instance.
