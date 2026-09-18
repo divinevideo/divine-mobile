@@ -372,6 +372,7 @@ void main() {
       bool isVanished = false,
       OtherProfileState? otherProfileState,
       bool isOgDiviner = false,
+      bool eligibilityIsLoading = false,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -479,7 +480,9 @@ void main() {
           ),
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
           ogDivinerEligibilityProvider.overrideWith(
-            (ref, pubkey) async => isOgDiviner && pubkey == userIdHex,
+            eligibilityIsLoading
+                ? (ref, pubkey) => Completer<bool>().future
+                : (ref, pubkey) async => isOgDiviner && pubkey == userIdHex,
           ),
           fetchUserProfileProvider(userIdHex).overrideWith(
             profileIsLoading
@@ -738,6 +741,30 @@ void main() {
 
       // A vanished account renders profileDeletedAccountName; a chit beside
       // that is incoherent even when the account is otherwise eligible.
+      expect(find.byType(OgBetaBadge), findsNothing);
+    });
+
+    testWidgets('hides the OG Beta Tester chit until the lookup answers', (
+      tester,
+    ) async {
+      const unknownPubkey =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: unknownPubkey,
+          isOwnProfile: false,
+          eligibilityIsLoading: true,
+          suppliedProfile: createTestProfile(
+            displayName: 'Beta User',
+            pubkey: unknownPubkey,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // A lookup that has not answered, or failed and resolved to false, must
+      // not put the chit on an account that has not earned it.
       expect(find.byType(OgBetaBadge), findsNothing);
     });
 
