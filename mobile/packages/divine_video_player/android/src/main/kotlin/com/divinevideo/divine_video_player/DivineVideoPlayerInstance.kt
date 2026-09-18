@@ -440,14 +440,14 @@ internal class DivineVideoPlayerInstance(
      * What a `MediaExtractor` reads remote clips through: the same factory
      * the player itself uses — its cache for anonymous HTTP(S), straight to
      * the network otherwise — so the extractor reads what the player has
-     * fetched. Deliberately not the blocking variant of the cache source:
-     * the extractor holds several ranges open at once, and one of them
-     * blocking on a range another holds locked would wait on itself.
+     * fetched. [headers] is the clip's own map, not [httpHeadersForRequest]:
+     * the duration probe runs before [applyClips] fills that lookup.
+     * Deliberately not the blocking variant of the cache source: the
+     * extractor holds several ranges open at once, and one of them blocking
+     * on a range another holds locked would wait on itself.
      */
-    private fun remoteSourceFactory(): DataSource.Factory =
-        VideoCache.dataSourceFactory(context) { requestUri: Uri ->
-            httpHeadersForRequest(requestUri.toString())
-        }
+    private fun extractorDataSourceFactory(headers: Map<String, String>): DataSource.Factory =
+        VideoCache.dataSourceFactory(context) { _ -> headers }
 
     internal fun httpHeadersForRequest(url: String): Map<String, String> {
         httpHeadersByUri[url]?.let { return it }
@@ -1100,7 +1100,10 @@ internal class DivineVideoPlayerInstance(
                 // there for the player's own load.
                 uri.startsWith("http://") || uri.startsWith("https://") -> {
                     remoteSource =
-                        DataSourceMediaDataSource(remoteSourceFactory(), Uri.parse(uri))
+                        DataSourceMediaDataSource(
+                            extractorDataSourceFactory(headers),
+                            Uri.parse(uri),
+                        )
                     extractor.setDataSource(remoteSource)
                 }
                 // A bare filesystem path. [canReadTrackDurations] rejected
@@ -1224,19 +1227,24 @@ internal class DivineVideoPlayerInstance(
         }
         clipAudioPending = false
 
-        // A remote clip is decoded from the player's cache rather than fetched
-        // again, so the decode waits until the player has the whole clip
-        // buffered — [onIsLoadingChanged] calls back in as the load
-        // progresses. Read alongside the download it would find the range
-        // the player is writing locked and be sent to the network for it,
-        // which is the second download this avoids. On the feed the clip is
-        // buffered within the first lap, and the decode then runs from disk.
-        if (isRemoteSource(uri) && !exoPlayer.hasBufferedWholeClip()) {
+        // A remote anonymous clip is decoded from the player's cache rather
+        // than fetched again, so the decode waits until the player has the
+        // whole clip buffered — [onIsLoadingChanged] calls back in as the
+        // load progresses. Read alongside the download it would find the
+        // range the player is writing locked and be sent to the network for
+        // it, which is the second download this avoids. Viewer-authenticated
+        // clips bypass the cache, so waiting would only delay a second
+        // download. On the feed an anonymous clip is buffered within the
+        // first lap, and the decode then runs from disk.
+        if (isRemoteSource(uri) &&
+            headers.isEmpty() &&
+            !exoPlayer.hasBufferedWholeClip()
+        ) {
             clipAudioAwaitingLoad = true
             return
         }
         clipAudioAwaitingLoad = false
-        val remoteSourceFactory = remoteSourceFactory()
+        val remoteSourceFactory = extractorDataSourceFactory(headers)
 
         if (metadataExecutor.isShutdown) return
         runCatching {

@@ -1090,6 +1090,33 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `an authenticated remote clip does not wait on buffering to decode loop audio`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { mockPlayer.duration } returns 3_000L
+            every { mockPlayer.bufferedPosition } returns 1_200L
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            instance.onMethodCall(
+                setClipsWithHeaders(
+                    "https://cdn.example/gated.mp4",
+                    mapOf("Authorization" to "Bearer test-token"),
+                ),
+                mockk(relaxed = true),
+            )
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // Authenticated bytes bypass the cache, so waiting for the player
+            // to finish would only delay a second download.
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000L, any()) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
     fun `a local clip's loop decode does not wait on buffering`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
@@ -1416,16 +1443,20 @@ class DivineVideoPlayerInstanceTest {
         }
     }
 
-    private fun trimmingSetClipsCall(uri: String): MethodCall =
+    private fun trimmingSetClipsCall(
+        uri: String,
+        httpHeaders: Map<String, String> = emptyMap(),
+    ): MethodCall =
         MethodCall(
             "setClips",
             mapOf(
                 "clips" to listOf(
-                    mapOf(
-                        "uri" to uri,
-                        "startMs" to 0,
-                        "trimToCommonTrackEnd" to true,
-                    ),
+                    buildMap {
+                        put("uri", uri)
+                        put("startMs", 0)
+                        put("trimToCommonTrackEnd", true)
+                        if (httpHeaders.isNotEmpty()) put("httpHeaders", httpHeaders)
+                    },
                 ),
             ),
         )
@@ -1625,6 +1656,31 @@ class DivineVideoPlayerInstanceTest {
         } finally {
             unmockkStatic(Uri::class)
             unmockkConstructor(android.media.MediaExtractor::class)
+        }
+    }
+
+    @Test
+    fun `a blocking remote duration probe uses the clip headers`() {
+        mockkObject(VideoCache)
+        try {
+            val headerFns = mutableListOf<(Uri) -> Map<String, String>>()
+            every { VideoCache.dataSourceFactory(any(), any()) } answers {
+                headerFns += secondArg<(Uri) -> Map<String, String>>()
+                DataSource.Factory { mockk(relaxed = true) }
+            }
+            val headers = mapOf("Authorization" to "Bearer test-token")
+            withTrackDurations(videoUs = 6_000_000L, audioUs = 6_040_000L) {
+                instance.onMethodCall(
+                    trimmingSetClipsCall("https://cdn.example/gated.mp4", headers),
+                    mockk(relaxed = true),
+                )
+            }
+            // The probe runs before applyClips fills httpHeadersByUri; looking
+            // that map up would send the request without the viewer token.
+            assertEquals(1, headerFns.size)
+            assertEquals(headers, headerFns.single()(mockk(relaxed = true)))
+        } finally {
+            unmockkObject(VideoCache)
         }
     }
 
