@@ -1715,36 +1715,14 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       return;
     }
 
-    // Check connection status
-    if (!_connectionService.isOnline) {
-      _isLoading = false;
-
-      Log.warning(
-        'Device is offline, will retry when connection is restored',
-        name: 'VideoEventService',
-        category: LogCategory.video,
-      );
-      if (scheduleOnlineRetry) {
-        // Store retry parameters before the offline early return so a first
-        // subscribe can retry the requested feed when connectivity returns.
-        _storeSubscriptionParams(
-          subscriptionType: subscriptionType,
-          authors: authors,
-          hashtags: hashtags,
-          group: group,
-          since: since,
-          until: until,
-          limit: limit,
-          includeReposts: includeReposts,
-          sortBy: sortBy,
-          nip50Sort: nip50Sort,
-        );
-        _retryScheduler.scheduleWhenOnline(subscriptionType);
-      }
-      throw const VideoEventServiceException('Device is offline');
-    }
-
-    if (_nostrService.connectedRelayCount == 0) {
+    // No relay reachable. `isOnline` reports relay reachability (#8331), so
+    // both reads describe the same pool and recover the same way: through the
+    // relay-ready retry, never the online poll. After a long outage every
+    // socket has spent its self-heal budget and stays down until something
+    // dials it (#8992); the relay-ready retry dials, and `isOnline` cannot
+    // flip back until that dial lands, so polling it would wait forever.
+    if (!_connectionService.isOnline ||
+        _nostrService.connectedRelayCount == 0) {
       _isLoading = false;
 
       Log.warning(
@@ -4579,12 +4557,15 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
 
   /// Schedule retry of [subscriptionType] when at least one relay reconnects.
   ///
-  /// This is intentionally separate from [FeedRetryScheduler.scheduleWhenOnline]: the device
-  /// can have network connectivity while every Nostr relay is disconnected.
+  /// Owns the wait for a usable relay. [FeedRetryScheduler.scheduleWhenOnline]
+  /// hands a feed here as soon as the pool reads offline, because a pool that
+  /// has stopped dialling needs the kick below before its status can change.
   void _scheduleRetryWhenRelayReady(SubscriptionType subscriptionType) {
     _typesAwaitingRelayReady.add(subscriptionType);
 
-    if (_nostrService.connectedRelayCount > 0) {
+    // Mirrors the gate in subscribeToVideoFeed: retrying while either read
+    // still says "no relay" would bounce straight back here.
+    if (_connectionService.isOnline && _nostrService.connectedRelayCount > 0) {
       _retrySubscriptionsAwaitingRelayReady();
       return;
     }

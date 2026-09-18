@@ -17,10 +17,13 @@ typedef FeedRelayNotReady = void Function(SubscriptionType type);
 
 /// Re-issues feed subscriptions that failed, a few times, while online.
 ///
-/// Serves two callers: a subscribe attempted while offline, and a feed load
-/// whose relay never answered (#7124). Both need the same thing — re-issue
-/// these filters a few times, but only while there is a network to issue them
-/// on — and both need it to stop rather than run for the life of the process.
+/// Serves two callers: a subscribe that failed with a connection error, and a
+/// feed load whose relay never answered (#7124). Both need the same thing —
+/// re-issue these filters a few times, but only while a relay is reachable —
+/// and both need it to stop rather than run for the life of the process. A
+/// subscribe that finds no relay at all never comes here; it goes straight to
+/// the relay-ready retry, and so does anything waiting here once the pool
+/// reads offline.
 ///
 /// The two budgets are deliberately separate. [scheduleWhenOnline] counts
 /// re-subscribe *calls that threw*, which bounds a subscribe that cannot even
@@ -102,14 +105,25 @@ class FeedRetryScheduler {
     _attempts = 0;
   }
 
-  /// Schedule a retry of [subscriptionType] once the device is online.
+  /// Schedule a retry of [subscriptionType] while a relay is reachable.
   ///
   /// The failed type is recorded so the retry re-establishes the feed that
   /// actually broke (with its original parameters) — previously the retry
   /// hardcoded the discovery feed, so home/hashtag/profile feeds never
   /// recovered through this path.
+  ///
+  /// A pool that reads offline is handed to the relay-ready retry at once,
+  /// and again if it goes offline mid-cycle. Offline means no relay is
+  /// reachable (#8331), and a pool that has spent its self-heal budget stays
+  /// down until something dials it (#8992); polling `isOnline` here would wait
+  /// on a flag that cannot flip without that dial.
   void scheduleWhenOnline(SubscriptionType subscriptionType) {
     _typesAwaitingRetry.add(subscriptionType);
+
+    if (!_connectionService.isOnline) {
+      _handOffToRelayReady();
+      return;
+    }
 
     // An active cycle keeps its attempt budget. A fresh cycle starts
     // over — previously an exhausted counter was never reset, leaving
@@ -119,11 +133,7 @@ class FeedRetryScheduler {
 
     _retryTimer = Timer.periodic(retryDelay, (timer) {
       if (!_connectionService.isOnline) {
-        Log.debug(
-          '⏳ Still offline, waiting for connection...',
-          name: _logName,
-          category: LogCategory.video,
-        );
+        _handOffToRelayReady();
         return;
       }
       if (_typesAwaitingRetry.isEmpty || _attempts >= maxAttempts) {
@@ -145,6 +155,23 @@ class FeedRetryScheduler {
         _retrySubscription(type, timer);
       }
     });
+  }
+
+  /// Ends the online cycle and hands every waiting feed to the relay-ready
+  /// retry, which owns the wait for a usable relay and dials the pool.
+  void _handOffToRelayReady() {
+    final pending = Set<SubscriptionType>.of(_typesAwaitingRetry);
+    _typesAwaitingRetry.clear();
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _attempts = 0;
+    Log.info(
+      'No relay reachable; handing ${pending.map((t) => t.name).join(", ")} '
+      'to the relay-ready retry',
+      name: _logName,
+      category: LogCategory.video,
+    );
+    pending.forEach(_onRelayNotReady);
   }
 
   /// Re-issue the relay subscription for [type] using its last-known
