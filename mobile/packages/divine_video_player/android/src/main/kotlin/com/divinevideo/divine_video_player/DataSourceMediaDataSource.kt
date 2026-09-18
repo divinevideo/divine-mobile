@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSourceException
 import androidx.media3.datasource.DataSpec
+import java.io.IOException
 
 /**
  * Lets a [android.media.MediaExtractor] read through a media3 [DataSource].
@@ -97,10 +98,11 @@ internal class DataSourceMediaDataSource(
         if (length >= 0 && position >= length) return -1
         val cursor = cursors.firstOrNull { it.reaches(position) } ?: try {
             openCursor(position)
-        } catch (e: DataSourceException) {
+        } catch (e: IOException) {
             // A read past the end of a source whose length was not known
-            // yet: the end of the stream, not an error.
-            if (e.reason == DataSourceException.POSITION_OUT_OF_RANGE) return -1
+            // yet: the end of the stream, not an error. The sources below a
+            // cache wrap what they catch, so the cause chain is what says so.
+            if (DataSourceException.isCausedByPositionOutOfRange(e)) return -1
             throw e
         }
         cursor.lastUsed = ++useCount

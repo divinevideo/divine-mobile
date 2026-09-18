@@ -267,6 +267,26 @@ class DataSourceMediaDataSourceTest {
     }
 
     @Test
+    fun `a wrapped read past the end still reads as -1`() {
+        val factory = mockk<DataSource.Factory>()
+        every { factory.createDataSource() } answers {
+            mockk<DataSource>().also {
+                every { it.open(any()) } throws
+                    IOException(
+                        "Unable to open source",
+                        DataSourceException(DataSourceException.POSITION_OUT_OF_RANGE),
+                    )
+                every { it.close() } returns Unit
+            }
+        }
+        val source = DataSourceMediaDataSource(factory, uri)
+
+        // A cache sits above the source that knows the range is past the
+        // end, and it reports that through the cause rather than directly.
+        assertEquals(-1, source.readAt(120, ByteArray(10), 0, 10))
+    }
+
+    @Test
     fun `a source that fails part way through a hop is not read from again`() {
         val big = ByteArray(200_000) { it.toByte() }
         val fake = FakeSource(big, chunk = 8 * 1024, failReadAt = 40_000)
