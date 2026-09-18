@@ -139,6 +139,12 @@
 # from reaching quiescence.
 🌀 Verify progress indicators honor reduced motion	-	bash scripts/check_indeterminate_progress_indicator.sh
 
+# Issue #9317. Skeleton shimmer and repeating AnimationControllers are the
+# other two perpetual-animation shapes. Neither is a Material indicator, so
+# the guard above cannot see them, and both ran on convention alone until
+# this froze them at zero.
+🌀 Verify perpetual animations honor reduced motion	-	bash scripts/check_reduced_motion_gating.sh
+
 # Issue #3630. Freezes the set of app_en.arb keys that nothing under mobile/lib
 # renders (lib only — a test cannot render a string, and a findsNothing
 # assertion is evidence the key is DEAD). An orphaned key is translated into
