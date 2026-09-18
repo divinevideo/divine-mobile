@@ -32,7 +32,10 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
   final String? videoId;
 
   /// Called after the auto-advance toggle is tapped, so the host surface can
-  /// dismiss itself — the top-bar popover closes — and let playback resume.
+  /// dismiss itself — the top-bar popover closes.
+  ///
+  /// Resuming playback is not this callback's job. The feed does that from
+  /// the cubit state, whether or not a host passes one.
   final VoidCallback? onAutoAdvanceToggled;
 
   @override
