@@ -4,11 +4,12 @@
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/features.dart';
-import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/source/line_info.dart';
+
+import 'reduced_motion_checks.dart';
 
 const _rawIndicators = {'CircularProgressIndicator', 'LinearProgressIndicator'};
 
@@ -24,16 +25,16 @@ class IndeterminateProgressIndicatorSite {
 
 List<IndeterminateProgressIndicatorSite>
 findIndeterminateProgressIndicatorsInSource(String source) {
-  final ParseStringResult parsed;
-  try {
-    parsed = parseString(
-      content: source,
-      featureSet: FeatureSet.latestLanguageVersion(),
-      throwIfDiagnostics: false,
-    );
-  } on Object {
-    return const [];
-  }
+  // Deliberately not wrapped in a try/catch. Source this cannot parse must not
+  // come back as zero sites, because zero is the whole claim this guard makes
+  // -- `main` names the file and exits 2 so a tooling failure never reads as a
+  // pass. The process-level half of this was fixed in #8751 review; this is
+  // the per-file half.
+  final parsed = parseString(
+    content: source,
+    featureSet: FeatureSet.latestLanguageVersion(),
+    throwIfDiagnostics: false,
+  );
 
   final visitor = _IndicatorVisitor(parsed.lineInfo);
   parsed.unit.accept(visitor);
@@ -131,22 +132,10 @@ bool _isReducedMotionGuardedValue(Expression? value) {
   if (value is! ConditionalExpression) return false;
   final staticWhenReduced = value.thenExpression;
   final animatedOtherwise = value.elseExpression;
-  return _isDisableAnimationsCheck(value.condition) &&
+  return isReducedMotionRead(value.condition) &&
       (staticWhenReduced is DoubleLiteral ||
           staticWhenReduced is IntegerLiteral) &&
       animatedOtherwise is NullLiteral;
-}
-
-bool _isDisableAnimationsCheck(Expression condition) {
-  return switch (condition) {
-    MethodInvocation(:final methodName) =>
-      methodName.name == 'disableAnimationsOf',
-    PropertyAccess(:final propertyName) =>
-      propertyName.name == 'disableAnimations',
-    PrefixedIdentifier(:final identifier) =>
-      identifier.name == 'disableAnimations',
-    _ => false,
-  };
 }
 
 String? _lastIdentifierName(Expression? expression) {
@@ -200,9 +189,19 @@ void main(List<String> args) {
         relative = relative.substring(pathPrefix.length);
       }
       relative = relative.replaceFirst(RegExp('^/'), '');
-      for (final site in findIndeterminateProgressIndicatorsInSource(
-        file.readAsStringSync(),
-      )) {
+      final List<IndeterminateProgressIndicatorSite> found;
+      try {
+        found = findIndeterminateProgressIndicatorsInSource(
+          file.readAsStringSync(),
+        );
+      } on Object catch (error) {
+        // Never let an unreadable file look like a clean one.
+        stderr.writeln(
+          'indeterminate_progress_indicator_detector: $relative: $error',
+        );
+        exit(2);
+      }
+      for (final site in found) {
         details.add('$relative:${site.line}  ${site.widget}');
       }
     }
