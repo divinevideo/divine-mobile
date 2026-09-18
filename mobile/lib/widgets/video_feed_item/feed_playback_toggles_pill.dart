@@ -23,9 +23,17 @@ import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 /// [videoId] when a feed surface has current-video context; otherwise the
 /// captions button falls back to the global Settings preference.
 class FeedPlaybackTogglesPill extends StatelessWidget {
-  const FeedPlaybackTogglesPill({super.key, this.videoId});
+  const FeedPlaybackTogglesPill({
+    super.key,
+    this.videoId,
+    this.onAutoAdvanceToggled,
+  });
 
   final String? videoId;
+
+  /// Called after the auto-advance toggle is tapped, so the host surface can
+  /// dismiss itself — the top-bar popover closes — and let playback resume.
+  final VoidCallback? onAutoAdvanceToggled;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +64,10 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               spacing: 8,
               children: [
-                _PlaybackModeToggle(foregroundColor: chromeForeground),
+                _PlaybackModeToggle(
+                  foregroundColor: chromeForeground,
+                  onAutoAdvanceToggled: onAutoAdvanceToggled,
+                ),
                 _AudioToggle(foregroundColor: chromeForeground),
                 _CaptionsToggle(
                   foregroundColor: chromeForeground,
@@ -79,9 +90,13 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
 /// surface without requiring callers to wire up the cubit when they
 /// don't use auto-advance.
 class _PlaybackModeToggle extends StatelessWidget {
-  const _PlaybackModeToggle({required this.foregroundColor});
+  const _PlaybackModeToggle({
+    required this.foregroundColor,
+    this.onAutoAdvanceToggled,
+  });
 
   final Color foregroundColor;
+  final VoidCallback? onAutoAdvanceToggled;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +129,7 @@ class _PlaybackModeToggle extends StatelessWidget {
                   ? context.l10n.videoSettingsAutoAdvanceOn
                   : context.l10n.videoSettingsAutoAdvanceOff,
             );
+            onAutoAdvanceToggled?.call();
           },
           child: DivineIcon(
             icon: enabled

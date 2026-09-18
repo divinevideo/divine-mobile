@@ -260,7 +260,10 @@ class _FeedSettingsOverlay extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  FeedPlaybackTogglesPill(videoId: videoId),
+                  FeedPlaybackTogglesPill(
+                    videoId: videoId,
+                    onAutoAdvanceToggled: onClose,
+                  ),
                 ],
               ),
             ),
