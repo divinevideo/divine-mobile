@@ -200,7 +200,10 @@ class _LayerOverlayControls extends StatelessWidget {
       currentStyle: TitleStyle.of(layer),
       sampleText: layer.text,
     );
-    if (style == null) return;
+    // The editor can be torn down while the sheet is open; writing history
+    // onto a dead one, or sizing the style against a canvas that is gone,
+    // would land the style nowhere.
+    if (style == null || !context.mounted) return;
 
     final layers = List<Layer>.from(editor.activeLayers);
     final index = layers.indexWhere((l) => l.id == layer.id);
