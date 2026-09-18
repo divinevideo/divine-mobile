@@ -224,51 +224,12 @@ class _MergeProgressOverlay extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           child: renderId == null
               ? const SizedBox.shrink()
-              : _MergeProgressContent(renderId: renderId),
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorMergeProgressLabel,
+                ),
         );
       },
-    );
-  }
-}
-
-class _MergeProgressContent extends StatelessWidget {
-  const _MergeProgressContent({required this.renderId});
-
-  final String renderId;
-
-  @override
-  Widget build(BuildContext context) {
-    return AbsorbPointer(
-      child: ColoredBox(
-        color: context.vineColors.background.withAlpha(210),
-        child: Center(
-          child: RepaintBoundary(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 24,
-              children: [
-                StreamBuilder<ProgressModel>(
-                  stream: ProVideoEditor.instance.progressStreamById(renderId),
-                  builder: (context, snapshot) {
-                    final progress = snapshot.data?.progress ?? 0;
-                    return PartialCircleSpinner(progress: progress);
-                  },
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 240),
-                  child: Text(
-                    context.l10n.videoEditorMergeProgressLabel,
-                    textAlign: TextAlign.center,
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
