@@ -8,6 +8,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_row_layout.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
@@ -214,11 +215,11 @@ class TimelineOverlayBloc
     ];
 
     final newItems = [
-      ..._assignRows(sounds),
-      ..._assignRows(filters),
-      ..._assignRows(tunes),
-      ..._assignRows(layers),
-      ..._assignRows(captions),
+      ...TimelineOverlayRowLayout.assignRows(sounds),
+      ...TimelineOverlayRowLayout.assignRows(filters),
+      ...TimelineOverlayRowLayout.assignRows(tunes),
+      ...TimelineOverlayRowLayout.assignRows(layers),
+      ...TimelineOverlayRowLayout.assignRows(captions),
     ];
 
     // Only clear selection if the selected item no longer exists.
@@ -335,111 +336,6 @@ class TimelineOverlayBloc
     );
   }
 
-  /// Gently compacts rows for items that already have row assignments.
-  ///
-  /// Groups items by [TimelineOverlayType] and runs [_compactRows]
-  /// independently per type.
-  static List<TimelineOverlayItem> _recalculateRows(
-    List<TimelineOverlayItem> items,
-  ) {
-    final grouped = <TimelineOverlayType, List<TimelineOverlayItem>>{};
-    for (final item in items) {
-      (grouped[item.type] ??= []).add(item);
-    }
-    return [for (final group in grouped.values) ..._compactRows(group)];
-  }
-
-  /// Compacts rows gradually.
-  ///
-  /// 0. Resolve same-row overlaps by pushing the later item down.
-  /// 1. Completely empty rows are collapsed (items shift through).
-  /// 2. Each item may then shift up by at most **one** row if
-  ///    its target row has no temporal overlap.
-  ///
-  /// Items are processed from lowest to highest row so upstream
-  /// moves can cascade within a single pass.
-  static List<TimelineOverlayItem> _compactRows(
-    List<TimelineOverlayItem> items,
-  ) {
-    if (items.isEmpty) return items;
-
-    // Step 0: Resolve same-row overlaps.
-    // Process items from lowest row upward. When two items on the
-    // same row overlap, push the later-added one down.
-    final resolved = List<TimelineOverlayItem>.from(items);
-    for (var i = 0; i < resolved.length; i++) {
-      for (var j = i + 1; j < resolved.length; j++) {
-        final a = resolved[i];
-        final b = resolved[j];
-        if (a.row == b.row &&
-            a.startTime < b.endTime &&
-            b.startTime < a.endTime) {
-          resolved[j] = b.copyWith(row: b.row + 1);
-        }
-      }
-    }
-
-    // Step 1: Collapse completely empty rows.
-    final usedRows = <int>{for (final item in resolved) item.row};
-    final sortedUsed = usedRows.toList()..sort();
-    final rowMap = {
-      for (var i = 0; i < sortedUsed.length; i++) sortedUsed[i]: i,
-    };
-    final result = [
-      for (final item in resolved) item.copyWith(row: rowMap[item.row]),
-    ];
-
-    // Step 2: Try to shift each item up by 1 row if no overlap.
-    // Process from lowest row first so cascading works naturally.
-    result.sort((a, b) => a.row.compareTo(b.row));
-    for (var i = 0; i < result.length; i++) {
-      final item = result[i];
-      if (item.row <= 0) continue;
-
-      final hasOverlap = result.any(
-        (other) =>
-            other.id != item.id &&
-            other.row == item.row - 1 &&
-            item.startTime < other.endTime &&
-            other.startTime < item.endTime,
-      );
-      if (!hasOverlap) {
-        result[i] = item.copyWith(row: item.row - 1);
-      }
-    }
-
-    return result;
-  }
-
-  /// Packs items into the fewest rows while preserving list order.
-  ///
-  /// An item's row must be strictly greater than the row of any
-  /// temporally overlapping item that was placed before it. This
-  /// prevents items from visually "jumping over" earlier items.
-  /// Non-overlapping items can share a row.
-  static List<TimelineOverlayItem> _assignRows(
-    List<TimelineOverlayItem> items,
-  ) {
-    if (items.isEmpty) return items;
-
-    final result = <TimelineOverlayItem>[];
-
-    for (final item in items) {
-      var row = 0;
-      for (final placed in result) {
-        if (item.startTime < placed.endTime &&
-            placed.startTime < item.endTime &&
-            placed.row >= row) {
-          row = placed.row + 1;
-        }
-      }
-      result.add(item.copyWith(row: row));
-    }
-
-    return result;
-  }
-
-  /// Returns a human-readable label based on the layer type.
   /// Where a layer with no explicit window ends.
   ///
   /// Layers run to the end of the composition by default. A detached clip
@@ -492,12 +388,22 @@ class TimelineOverlayBloc
     if (hasOverlap) {
       if (event.insertAbove) {
         // Keep the moved item at its row; push existing items down.
-        items = _shiftRowsDown(items, moved.type, moved.row, moved.id);
+        items = TimelineOverlayRowLayout.shiftRowsDown(
+          items,
+          moved.type,
+          moved.row,
+          moved.id,
+        );
         items[idx] = moved;
       } else {
         // Place the moved item one row below; push existing items down.
         final targetRow = moved.row + 1;
-        items = _shiftRowsDown(items, moved.type, targetRow, moved.id);
+        items = TimelineOverlayRowLayout.shiftRowsDown(
+          items,
+          moved.type,
+          targetRow,
+          moved.id,
+        );
         items[idx] = moved.copyWith(row: targetRow);
       }
     } else {
@@ -505,22 +411,6 @@ class TimelineOverlayBloc
     }
 
     emit(state.copyWith(items: items));
-  }
-
-  /// Shift all items of [type] with row >= [fromRow] down by one row,
-  /// excluding the item with [excludeId].
-  static List<TimelineOverlayItem> _shiftRowsDown(
-    List<TimelineOverlayItem> items,
-    TimelineOverlayType type,
-    int fromRow,
-    String excludeId,
-  ) {
-    return items.map((i) {
-      if (i.id != excludeId && i.type == type && i.row >= fromRow) {
-        return i.copyWith(row: i.row + 1);
-      }
-      return i;
-    }).toList();
   }
 
   void _onItemTrimmed(
@@ -556,7 +446,7 @@ class TimelineOverlayBloc
     // Only re-assign rows for the changed type; other types are unaffected.
     final changedType = item.type;
     final unchanged = items.where((el) => el.type != changedType).toList();
-    final reassigned = _assignRows(
+    final reassigned = TimelineOverlayRowLayout.assignRows(
       items.where((el) => el.type == changedType).toList(),
     );
 
@@ -648,7 +538,7 @@ class TimelineOverlayBloc
     // Compact rows so there are no empty gaps.
     emit(
       state.copyWith(
-        items: _recalculateRows(state.items),
+        items: TimelineOverlayRowLayout.recalculateRows(state.items),
         clearDraggingItemId: true,
         clearDragPosition: true,
       ),
@@ -668,7 +558,7 @@ class TimelineOverlayBloc
   ) {
     emit(
       state.copyWith(
-        items: _recalculateRows(state.items),
+        items: TimelineOverlayRowLayout.recalculateRows(state.items),
         clearTrimmingItemId: true,
         clearTrimPosition: true,
       ),
@@ -741,7 +631,7 @@ class TimelineOverlayBloc
 
     emit(
       state.copyWith(
-        items: _recalculateRows(updated),
+        items: TimelineOverlayRowLayout.recalculateRows(updated),
         timelineMarkers: _clampMarkers(state.timelineMarkers, totalDuration),
         audioTracksPlayerRevision:
             soundWindowChanged && !event.isClipTrimDragging
