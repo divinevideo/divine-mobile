@@ -17,7 +17,8 @@ class FeedAutoAdvanceState extends Equatable {
   final bool enabled;
 
   /// Whether Auto is temporarily suppressed by a non-swipe interaction
-  /// (e.g. opening a comment sheet). Cleared on the next manual swipe.
+  /// (e.g. opening a comment sheet). Cleared on the next manual swipe, or
+  /// on the tap that resumes playback.
   final bool suppressed;
 
   /// Whether an auto-advance is queued waiting for the next pagination page
@@ -68,7 +69,8 @@ class FeedAutoAdvanceCubit extends Cubit<FeedAutoAdvanceState> {
   /// is its normal state — the tap that reveals the overlay is the one that
   /// suppresses. A resume-instead-of-disable branch there would leave the
   /// control reporting "on" after a press on "Disable auto advance".
-  /// Suppression is lifted by a manual swipe ([resumeAfterSwipe]) instead.
+  /// Suppression is lifted by [resumeAfterSwipe] instead — on a manual
+  /// swipe, or on the tap that resumes playback.
   void toggle() => setEnabled(enabled: !state.enabled);
 
   /// Temporarily suppress Auto for a non-swipe interaction.
@@ -78,7 +80,11 @@ class FeedAutoAdvanceCubit extends Cubit<FeedAutoAdvanceState> {
     emit(state.copyWith(suppressed: true, pendingPaginationAdvance: false));
   }
 
-  /// Resume Auto after the user performs a manual swipe.
+  /// Resume Auto after an interaction that must not leave it latched off.
+  ///
+  /// Called on a manual swipe, and on the tap that resumes playback after a
+  /// pause — both say the viewer wants to keep watching. The name predates
+  /// that second caller.
   void resumeAfterSwipe() {
     if (!state.enabled || !state.suppressed) return;
 
