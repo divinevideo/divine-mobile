@@ -95,5 +95,35 @@ void main() {
         1,
       ]);
     });
+
+    group('constructor invariants', () {
+      RenderProgressTracker build({
+        double proofBudget = 0.1,
+        int proofSteps = 2,
+      }) => RenderProgressTracker(
+        taskId: 'export',
+        emit: emitted.add,
+        proofBudget: proofBudget,
+        proofSteps: proofSteps,
+      );
+
+      test('rejects a proof phase with no steps', () {
+        // 0/0 is NaN, and NaN.clamp(0, 1) is 1.0 — so without this guard the
+        // first proof step publishes 100% and the monotonic guard then drops
+        // every later value for the rest of the export.
+        expect(() => build(proofSteps: 0), throwsA(isA<AssertionError>()));
+      });
+
+      test('rejects a proof budget outside the axis', () {
+        // A budget over 1 makes the render slice negative, so render progress
+        // would run backwards.
+        expect(() => build(proofBudget: 1.5), throwsA(isA<AssertionError>()));
+        expect(() => build(proofBudget: -0.1), throwsA(isA<AssertionError>()));
+      });
+
+      test('accepts the export call site\'s own arguments', () {
+        expect(() => build(), returnsNormally);
+      });
+    });
   });
 }

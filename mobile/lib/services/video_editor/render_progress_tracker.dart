@@ -22,7 +22,17 @@ class RenderProgressTracker {
     required double proofBudget,
     required int proofSteps,
     bool hasAssemblyPhase = false,
-  }) : _proofBudget = proofBudget,
+  }) : // Both were derived from one clip count before this class was its own
+       // owner, so they could not disagree. They are independent inputs now:
+       // `proofSteps: 0` makes the proof term 0/0, and NaN.clamp(0, 1) is 1.0,
+       // so the first proof step would publish 100% and the monotonic guard
+       // would swallow every real value after it.
+       assert(proofSteps > 0, 'proofSteps must be positive, got $proofSteps'),
+       assert(
+         proofBudget >= 0 && proofBudget <= 1,
+         'proofBudget must be within 0..1, got $proofBudget',
+       ),
+       _proofBudget = proofBudget,
        _proofSteps = proofSteps,
        _hasAssemblyPhase = hasAssemblyPhase;
 
