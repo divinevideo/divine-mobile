@@ -116,10 +116,15 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
     // Blaming connectivity for a service-side failure sends users to debug wifi
     // that is working. Only claim the connection when the device is actually
     // offline; otherwise say the service didn't respond.
-    final isOnline = ref.read(connectionStatusServiceProvider).isOnline;
-    final note = isOnline
-        ? l10n.videoMetadataC2paMissingNoteServiceUnavailable
-        : l10n.videoMetadataC2paMissingNote;
+    //
+    // Device-level, not ConnectionStatusService: since #8331 that reports
+    // relay reachability, so a healthy device whose relays happened to be down
+    // would be told to check its connection.
+    final deviceOffline = await ref.read(deviceIsOfflineProvider)();
+    if (!mounted) return;
+    final note = deviceOffline
+        ? l10n.videoMetadataC2paMissingNote
+        : l10n.videoMetadataC2paMissingNoteServiceUnavailable;
     // Non-dismissible: forfeiting the content credential is a provenance
     // decision, so require an explicit button rather than letting an accidental
     // barrier tap / swipe silently post without it (#6058).

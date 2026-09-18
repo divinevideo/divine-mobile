@@ -800,6 +800,42 @@ final connectivityCheckProvider =
       (ref) => Connectivity().checkConnectivity,
     );
 
+/// Whether the device currently has no network interface at all.
+///
+/// Device-level on purpose. [ConnectionStatusService] answers "can we reach a
+/// relay", which is the right question for Nostr reads and writes and the
+/// wrong one for copy that decides whether to blame the user's wifi: after
+/// #8331 a healthy device whose relays are all down reads as relay-offline,
+/// and telling that user to check their connection sends them to debug wifi
+/// that is working. Reuses [connectivityCheckProvider] so the probe stays a
+/// single test seam.
+final deviceIsOfflineProvider = Provider<Future<bool> Function()>((ref) {
+  final checkConnectivity = ref.watch(connectivityCheckProvider);
+  return () async {
+    try {
+      // Bounded: a probe that never answers would hold the prompt back
+      // indefinitely, which is the same suppression the catch below prevents.
+      final results = await checkConnectivity().timeout(
+        const Duration(seconds: 2),
+      );
+      return !results.any((result) => result != ConnectivityResult.none);
+    } on Object catch (e) {
+      // A probe that cannot answer must not decide anything. Callers gate
+      // user-facing copy on this, and one of them is a provenance prompt that
+      // has to appear either way, so a throw here would suppress the prompt
+      // rather than reword it. Report "not known to be offline": the wrong
+      // answer is a note that blames the service, never one that blames a
+      // connection that is working.
+      Log.warning(
+        'Device connectivity probe failed; assuming the device is online: $e',
+        name: 'DeviceIsOffline',
+        category: LogCategory.relay,
+      );
+      return false;
+    }
+  };
+});
+
 /// The one app-wide owner of connectivity-driven relay repair, so a pool that
 /// collapsed during an offline window self-heals on every route, not only on
 /// an app-foreground transition (#3161).
