@@ -256,6 +256,26 @@ void main() {
       await unmount(tester);
     });
 
+    testWidgets('uses the player loop duration when seams shorten playback', (
+      tester,
+    ) async {
+      // A rendered transition seam can make the native composite 130ms while
+      // the editor still draws a 600ms timeline. The native loop is what makes
+      // coarse reports unusable, so it must choose the tick path.
+      await pumpCanvas(tester, const Duration(milliseconds: 600));
+      await report(tester, positionMs: 0, durationMs: loop.inMilliseconds);
+
+      await tester.pump(const Duration(milliseconds: 45));
+      await settleBloc(tester);
+
+      expect(
+        mainBloc.state.currentPosition,
+        const Duration(milliseconds: 45),
+      );
+      expect(mainBloc.state.isShortLoop, isTrue);
+      await unmount(tester);
+    });
+
     testWidgets('keeps a native report off the timeline', (tester) async {
       await pumpCanvas(tester, loop);
       await report(tester, positionMs: 0, durationMs: loop.inMilliseconds);

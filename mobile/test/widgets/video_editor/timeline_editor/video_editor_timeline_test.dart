@@ -396,6 +396,7 @@ void main() {
         WidgetTester tester, {
         required DivineVideoClip clip,
         required Duration position,
+        required bool isShortLoop,
       }) async {
         final states = StreamController<VideoEditorMainState>.broadcast();
         addTearDown(states.close);
@@ -408,7 +409,12 @@ void main() {
           buildWidget(clipState: ClipEditorState(clips: [clip])),
         );
 
-        states.add(VideoEditorMainState(currentPosition: position));
+        states.add(
+          VideoEditorMainState(
+            currentPosition: position,
+            isShortLoop: isShortLoop,
+          ),
+        );
         await tester.pump();
         final onArrival = scrollOffset(tester);
         await tester.pump(const Duration(milliseconds: 300));
@@ -421,6 +427,7 @@ void main() {
           tester,
           clip: _createTestClip(id: 'a', seconds: 6),
           position: const Duration(seconds: 2),
+          isShortLoop: false,
         );
 
         expect(settled, greaterThan(0));
@@ -434,6 +441,23 @@ void main() {
           tester,
           clip: _createTestClip(id: 'a', seconds: 0, milliseconds: 130),
           position: const Duration(milliseconds: 100),
+          isShortLoop: true,
+        );
+
+        expect(settled, greaterThan(0));
+        expect(onArrival, settled);
+      });
+
+      testWidgets('jumps when a seam makes the player loop short', (
+        tester,
+      ) async {
+        final (onArrival, settled) = await followTo(
+          tester,
+          // The timeline can be longer than the composite handed to the
+          // player after a rendered seam consumes adjacent clip bodies.
+          clip: _createTestClip(id: 'a', seconds: 1),
+          position: const Duration(milliseconds: 100),
+          isShortLoop: true,
         );
 
         expect(settled, greaterThan(0));
