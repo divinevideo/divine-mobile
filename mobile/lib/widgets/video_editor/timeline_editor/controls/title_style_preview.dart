@@ -87,32 +87,38 @@ class TitleStylePreview extends StatelessWidget {
           width: width,
           height: height,
           child: Center(
-            child: AnimatedBuilder(
-              animation: loop,
-              builder: (context, child) {
-                final (:opacity, :scale, :translation) = _transform(loop.value);
-                return Transform.translate(
-                  offset: translation,
-                  child: Transform.scale(
-                    scale: scale,
-                    child: Opacity(
-                      opacity: opacity.clamp(0.0, 1.0),
-                      child: child,
+            // The loop runs for as long as the sheet is open, so keep its
+            // repaints off the row, the reorderable list and the sheet.
+            child: RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: loop,
+                builder: (context, child) {
+                  final (:opacity, :scale, :translation) = _transform(
+                    loop.value,
+                  );
+                  return Transform.translate(
+                    offset: translation,
+                    child: Transform.scale(
+                      scale: scale,
+                      child: Opacity(
+                        opacity: opacity.clamp(0.0, 1.0),
+                        child: child,
+                      ),
                     ),
-                  ),
-                );
-              },
-              // Only the transform changes between frames. The pill and its
-              // text are hoisted out of the builder because resolving the
-              // font is not free: `style.font` is a google_fonts call, and
-              // every invocation allocates a load future and registers it in
-              // the package's global pending-font set. Built inside the
-              // builder it ran once per row per frame, for the whole time the
-              // sheet was open.
-              child: _StyledSample(
-                style: style,
-                text: text,
-                fontSize: _fontSize,
+                  );
+                },
+                // Only the transform changes between frames. The pill and its
+                // text are hoisted out of the builder because resolving the
+                // font is not free: `style.font` is a google_fonts call, and
+                // every invocation allocates a load future and registers it in
+                // the package's global pending-font set. Built inside the
+                // builder it ran once per row per frame, for the whole time the
+                // sheet was open.
+                child: _StyledSample(
+                  style: style,
+                  text: text,
+                  fontSize: _fontSize,
+                ),
               ),
             ),
           ),
