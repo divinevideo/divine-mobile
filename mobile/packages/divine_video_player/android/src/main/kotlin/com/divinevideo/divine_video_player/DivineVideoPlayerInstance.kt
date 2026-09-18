@@ -145,38 +145,11 @@ internal class DivineVideoPlayerInstance(
     /** Set when the audio loop is waiting for a readable duration. */
     private var clipAudioPending = false
 
-    /** True while [clipAudioDeadline] has given the audio back to ExoPlayer. */
-    private var clipAudioHandedBack = false
-
     /**
-     * A loop that decoded after [clipAudioDeadline] had passed, held for the
-     * next loop restart. See [adoptLateClipAudioLoop].
+     * A loop that decoded while the player was playing, held for the next
+     * loop restart. See [adoptClipAudioLoop].
      */
     private var pendingClipAudioLoop: ClipAudioLoopTrack? = null
-
-    /**
-     * Gives the audio back to ExoPlayer when the decoded loop is not ready in
-     * time.
-     *
-     * [startClipAudioLoop] takes the audio away from the renderer before the
-     * decode is even queued, and the decode shares [metadataExecutor] with the
-     * track-length reads. A remote read that has stalled — nothing bounds one
-     * that warms in the background — holds that thread, and every clip loaded
-     * behind it plays its picture over silence until the read gives up.
-     * Nothing else restores the sound: the setClips timeout only applies the
-     * clips. So the renderer gets its audio back on a deadline, and a loop
-     * that lands after it takes over at the next loop restart instead.
-     */
-    private val clipAudioDeadline = Runnable {
-        if (clipAudioLoop != null || clipAudioHandedBack) return@Runnable
-        clipAudioHandedBack = true
-        setExoPlayerAudioEnabled(true)
-        DivineVideoPlayerLog.warning(
-            "$logTarget handed audio back to ExoPlayer: loop audio not " +
-                "ready within ${CLIP_AUDIO_LOOP_DEADLINE_MS}ms",
-            name = "DivineVideoPlayer.AudioLoop",
-        )
-    }
 
     /**
      * The clips last handed over.
@@ -703,38 +676,63 @@ internal class DivineVideoPlayerInstance(
         exoPlayer: ExoPlayer,
         clipsRaw: List<Map<String, Any?>>,
     ) {
-        var changed = false
-        clipsRaw.forEachIndexed loop@{ index, map ->
-            val uri = map["uri"] as? String ?: return@loop
-            if (map["trimToCommonTrackEnd"] as? Boolean != true) return@loop
-            val startMs = (map["startMs"] as? Number)?.toLong() ?: 0L
-            val requestedEndMs = (map["endMs"] as? Number)?.toLong()
-            val commonEndMs = boundedCommonTrackEndMs(uri, startMs, requestedEndMs)
-                ?: return@loop
-            val effectiveEndMs = listOfNotNull(requestedEndMs, commonEndMs).minOrNull()
-                ?: return@loop
-            val currentItem = exoPlayer.getMediaItemAt(index)
-            if (currentItem.clippingConfiguration.endPositionMs == effectiveEndMs) {
-                return@loop
-            }
-            exoPlayer.replaceMediaItem(
-                index,
-                buildMediaItem(uri, startMs, effectiveEndMs),
-            )
-            changed = true
+        val replacements = clipsRaw.mapIndexedNotNull { index, map ->
+            resolvedClampFor(exoPlayer, index, map)?.let { index to it }
         }
-        if (changed) {
-            refreshClipOffsets(exoPlayer)
-            // The loop audio was cut to the duration the player presented
-            // before the clamp, and the clamp moves only the picture. Cut it
-            // again against the clipped timeline once the player reports it,
-            // or the two loop at different lengths from here on.
-            startClipAudioLoop(clipsRaw, clipsRaw.size, awaitTimeline = true)
-            DivineVideoPlayerLog.info(
-                "$logTarget applied resolved track-end clamp",
-                name = "DivineVideoPlayer.Load",
-            )
+        if (replacements.isEmpty()) return
+
+        // `replaceMediaItem` cannot change a clipping configuration in place,
+        // so it inserts the new item and removes the old one. After a removal
+        // the player looks for the period to continue from by walking the old
+        // timeline in its current repeat mode, and under `REPEAT_MODE_ONE`
+        // that walk never leaves the removed period: no successor is found
+        // and playback ends. On the feed that was a video freezing on its
+        // last frame after its first lap. Widen the mode for the swap so the
+        // walk reaches the inserted item; the player handles its messages in
+        // order, so restoring it right after is safe.
+        val repeatMode = exoPlayer.repeatMode
+        if (repeatMode == Player.REPEAT_MODE_ONE) {
+            exoPlayer.repeatMode = Player.REPEAT_MODE_ALL
         }
+        replacements.forEach { (index, item) -> exoPlayer.replaceMediaItem(index, item) }
+        if (repeatMode == Player.REPEAT_MODE_ONE) {
+            exoPlayer.repeatMode = repeatMode
+        }
+
+        refreshClipOffsets(exoPlayer)
+        // The loop audio was cut to the duration the player presented before
+        // the clamp, and the clamp moves only the picture. Cut it again
+        // against the clipped timeline once the player reports it, or the two
+        // loop at different lengths from here on.
+        startClipAudioLoop(clipsRaw, clipsRaw.size, awaitTimeline = true)
+        DivineVideoPlayerLog.info(
+            "$logTarget applied resolved track-end clamp",
+            name = "DivineVideoPlayer.Load",
+        )
+    }
+
+    /**
+     * The item that clip [index] should be replaced with to carry its resolved
+     * clamp, or null when the loaded item already does.
+     */
+    private fun resolvedClampFor(
+        exoPlayer: ExoPlayer,
+        index: Int,
+        map: Map<String, Any?>,
+    ): MediaItem? {
+        val uri = map["uri"] as? String ?: return null
+        if (map["trimToCommonTrackEnd"] as? Boolean != true) return null
+        val startMs = (map["startMs"] as? Number)?.toLong() ?: 0L
+        val requestedEndMs = (map["endMs"] as? Number)?.toLong()
+        val commonEndMs = boundedCommonTrackEndMs(uri, startMs, requestedEndMs)
+            ?: return null
+        val effectiveEndMs = listOfNotNull(requestedEndMs, commonEndMs).minOrNull()
+            ?: return null
+        val currentItem = exoPlayer.getMediaItemAt(index)
+        if (currentItem.clippingConfiguration.endPositionMs == effectiveEndMs) {
+            return null
+        }
+        return buildMediaItem(uri, startMs, effectiveEndMs)
     }
 
     /**
@@ -1151,8 +1149,13 @@ internal class DivineVideoPlayerInstance(
      * timelines keep the player's audio — there is no repeat of the same
      * media period there, so nothing to avoid.
      *
-     * Decoding blocks, so it runs on [metadataExecutor]; the picture is already
-     * playing by the time the sound joins, which is the right way round.
+     * Decoding blocks, so it runs on [metadataExecutor]. The player keeps its
+     * own audio until the loop is ready: a decode reads the source again and
+     * lands 0.5–0.7 s after `play` on a video opened straight from a grid,
+     * and taking the renderer's audio away before that (#8021) played the
+     * picture over silence for exactly that long. A loop that lands before
+     * playback starts — every preloaded feed tile — takes over at once; one
+     * that lands mid-lap waits for the loop restart, see [adoptClipAudioLoop].
      *
      * [awaitTimeline] is for a caller that still has its playlist swap ahead of
      * it. The player's duration describes whatever is loaded *now*, so on a
@@ -1177,15 +1180,9 @@ internal class DivineVideoPlayerInstance(
         if (((map["playbackSpeed"] as? Number)?.toFloat() ?: 1.0f) != 1.0f) return
         val headers = httpHeadersOf(map)
 
-        // The renderer must not see the audio at all, or it pays the sink
-        // rebuild at the seam regardless of who is making the sound.
-        val exoPlayer = ensurePlayer()
-        setExoPlayerAudioEnabled(false)
-        mainHandler.postDelayed(clipAudioDeadline, CLIP_AUDIO_LOOP_DEADLINE_MS)
-
         // The presented length is only known once the timeline is populated;
         // [onPlaybackStateChanged] calls back in when it is.
-        val loopMs = if (awaitTimeline) C.TIME_UNSET else exoPlayer.duration
+        val loopMs = if (awaitTimeline) C.TIME_UNSET else ensurePlayer().duration
         if (loopMs == C.TIME_UNSET || loopMs <= 0) {
             clipAudioPending = true
             return
@@ -1201,30 +1198,18 @@ internal class DivineVideoPlayerInstance(
                         loop?.release()
                         return@post
                     }
-                    mainHandler.removeCallbacks(clipAudioDeadline)
-                    if (loop == null) {
-                        // Nothing decoded — a clip with no audio, an
-                        // unreachable source, a codec that refused. Hand the
-                        // audio back or the video plays silent for good.
-                        setExoPlayerAudioEnabled(true)
-                        return@post
-                    }
-                    if (clipAudioHandedBack) {
-                        adoptLateClipAudioLoop(loop)
-                        return@post
-                    }
-                    clipAudioLoop = loop
-                    player?.takeIf { it.isPlaying }?.let {
-                        loop.play(it.currentPosition, it.volume)
-                    }
+                    // Nothing decoded — a clip with no audio, an unreachable
+                    // source, a codec that refused. The renderer still has
+                    // the audio, so the video keeps its sound.
+                    if (loop == null) return@post
+                    adoptClipAudioLoop(loop)
                 }
             }
         }
     }
 
     /**
-     * Takes over from ExoPlayer with a loop that decoded after
-     * [clipAudioDeadline] had given the sound back to it.
+     * Takes the audio over from ExoPlayer with a freshly decoded [loop].
      *
      * A player that is not playing switches at once: nothing is sounding, and
      * [onIsPlayingChanged] starts the loop from the picture's position when it
@@ -1232,29 +1217,29 @@ internal class DivineVideoPlayerInstance(
      * where the switch lands on the discontinuity the renderer's seam already
      * makes rather than adding one of its own mid-lap.
      */
-    private fun adoptLateClipAudioLoop(loop: ClipAudioLoopTrack) {
+    private fun adoptClipAudioLoop(loop: ClipAudioLoopTrack) {
         if (player?.isPlaying == true) {
             pendingClipAudioLoop?.release()
             pendingClipAudioLoop = loop
             return
         }
-        adoptClipAudioLoop(loop)
+        installClipAudioLoop(loop)
     }
 
     /**
-     * Installs a loop parked by [adoptLateClipAudioLoop]. Runs from
+     * Installs a loop parked by [adoptClipAudioLoop]. Runs from
      * [Player.Listener.onPositionDiscontinuity] on an automatic transition,
      * which for a single repeating clip is the loop restart.
      */
     private fun adoptPendingClipAudioLoop() {
         val loop = pendingClipAudioLoop ?: return
         pendingClipAudioLoop = null
-        adoptClipAudioLoop(loop)
+        installClipAudioLoop(loop)
     }
 
-    private fun adoptClipAudioLoop(loop: ClipAudioLoopTrack) {
+    /** Switches the sound from the player's renderer to [loop]. */
+    private fun installClipAudioLoop(loop: ClipAudioLoopTrack) {
         setExoPlayerAudioEnabled(false)
-        clipAudioHandedBack = false
         clipAudioLoop = loop
         player?.takeIf { it.isPlaying }?.let {
             loop.play(it.currentPosition, it.volume)
@@ -1265,8 +1250,6 @@ internal class DivineVideoPlayerInstance(
     private fun releaseClipAudioLoop() {
         clipAudioGeneration++
         clipAudioPending = false
-        mainHandler.removeCallbacks(clipAudioDeadline)
-        clipAudioHandedBack = false
         pendingClipAudioLoop?.release()
         pendingClipAudioLoop = null
         clipAudioLoop?.release()
@@ -1850,7 +1833,9 @@ internal class DivineVideoPlayerInstance(
             if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
                 applyPendingCommonTrackEndClamp()
                 // After the clamp: a clamp re-cuts the loop audio, which
-                // releases a parked loop as stale along with the rest.
+                // releases a parked loop as stale along with the rest. The
+                // renderer keeps the sound for that lap and the re-cut loop
+                // takes over at the restart after it.
                 adoptPendingClipAudioLoop()
             }
             // Apply per-clip speed/volume as early as possible on auto-transition.
@@ -2217,18 +2202,6 @@ internal class DivineVideoPlayerInstance(
          * asserts on rather than restate the number.
          */
         internal const val TRACK_DURATION_RESOLVE_TIMEOUT_MS = 1_500L
-
-        /**
-         * How long a looping clip's picture may play over silence while its
-         * audio decodes, before the sound goes back to ExoPlayer.
-         *
-         * A local six-second clip decodes in a fraction of this; the window is
-         * for a decode queued behind a stalled read on the same thread, or
-         * one reading a remote source itself. Past it a viewer hears a seam
-         * rather than nothing, and the loop takes over at the next restart if
-         * it lands after all.
-         */
-        internal const val CLIP_AUDIO_LOOP_DEADLINE_MS = 1_000L
 
         /** Cached "this source carries no video/audio pair to trim". */
         private val NO_TRACK_PAIR = longArrayOf(-1L, -1L)
