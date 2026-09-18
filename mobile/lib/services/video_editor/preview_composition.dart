@@ -59,7 +59,13 @@ class PreviewComposition {
   ValueListenable<int> get pendingSeamRenders => _pendingSeamRenders;
 
   /// Kicks off (once) the seam render for every transition boundary in
-  /// [clips], including the loop-restart wrap.
+  /// [clips], including the loop-restart wrap. Idempotent — cached seams are
+  /// skipped, so it is safe to call on every clip change.
+  ///
+  /// Renders the no-overlap-clamped transition ([clampTransitions]) so the
+  /// preview consumes exactly what the export will, and a clip touched by
+  /// transitions on both sides is split between them rather than
+  /// over-consumed.
   void ensureSeamsRendered(List<DivineVideoClip> clips) {
     final clamped = clampTransitions(clips);
     for (var i = 0; i < clips.length - 1; i++) {
