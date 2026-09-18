@@ -18,7 +18,13 @@ import 'package:unified_logger/unified_logger.dart';
 /// For testing, access this directly: `container.read(routerLocationStreamProvider)`
 final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
   final router = ref.read(goRouterProvider);
-  final ctrl = StreamController<String>(sync: true);
+  // Deliberately asynchronous. GoRouterDelegate is a ChangeNotifier and
+  // notifies while the widget tree is building — a route redirect runs inside
+  // the build pipeline — so a synchronous controller hands that emission
+  // straight to the listening [routerLocationProvider], which calls setValue
+  // mid-build and throws `Tried to modify a provider while the widget tree was
+  // building` into the app zone, and on to Crashlytics, on every cold start.
+  final ctrl = StreamController<String>();
 
   void emit() {
     // Access location via routeInformationProvider
@@ -26,7 +32,9 @@ final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
     if (!ctrl.isClosed) ctrl.add(location);
   }
 
-  // Emit initial location immediately
+  // Queue the current location so a subscriber gets one without waiting for
+  // the first navigation. A single-subscription controller buffers it until
+  // [routerLocationProvider] listens.
   emit();
 
   // Listen for location changes via delegate
@@ -53,7 +61,9 @@ final routerLocationStreamProvider = Provider<Stream<String>>((ref) {
 /// StreamProvider that emits router location whenever it changes
 ///
 /// Uses routerDelegate listener (not routeInformationProvider) for
-/// reliable change detection. Emits synchronously on first read.
+/// reliable change detection. Every emission — including the initial location —
+/// arrives asynchronously, so reading this provider during a build sees
+/// [AsyncLoading] until the first value lands on a later microtask.
 final routerLocationProvider = StreamProvider<String>((ref) {
   return ref.watch(routerLocationStreamProvider);
 });
