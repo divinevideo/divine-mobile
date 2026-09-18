@@ -24,7 +24,6 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
-import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
@@ -38,8 +37,8 @@ import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_editor/clip_media_duration.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:openvine/services/video_recorder/stop_motion_session_store.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
-import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -285,7 +284,9 @@ class VideoRecorderBloc
   CountdownSoundService? _countdownSoundService;
   Timer? _focusPointTimer;
   Timer? _zoomIndicatorTimer;
-  Future<void> _stopMotionSessionWrite = Future.value();
+  late final _stopMotionSessions = StopMotionSessionStore(
+    readClipManager: _readClipManager,
+  );
   bool _remoteRecordControlEnabled = false;
 
   /// How long the zoom ruler stays visible after the last pinch activity
@@ -1622,7 +1623,7 @@ class VideoRecorderBloc
       ),
     );
     if (previousFrames.isNotEmpty) {
-      unawaited(_discardStopMotionSession(previousFrames));
+      unawaited(_stopMotionSessions.discardSession(previousFrames));
     }
     final prefs = _readSharedPreferences();
     await prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
@@ -1677,7 +1678,7 @@ class VideoRecorderBloc
     final frames = state.stopMotionFrames;
     emit(const VideoRecorderBlocState());
     if (frames.isNotEmpty) {
-      unawaited(_discardStopMotionSession(frames));
+      unawaited(_stopMotionSessions.discardSession(frames));
     }
   }
 
@@ -1705,22 +1706,14 @@ class VideoRecorderBloc
 
   // === Stop-motion handlers ===
 
-  /// Hold duration of one captured still in a session of [frameCount] stills,
-  /// at the render frame rate, so the library preview, the timeline, and the
-  /// assembled clip all agree.
-  ///
-  /// A session too short to fill a second on its own is stretched to it
-  /// ([StopMotionFrameOps.initialHold]): three stills at the default hold play
-  /// in an eighth of a second, which the editor only shows as a flicker.
-  static Duration _stopMotionHold(int frameCount) =>
-      StopMotionFrameOps.initialHold(frameCount);
-
-  /// Stable library-clip id for the capture session that begins with
-  /// [firstFramePath]. The first frame's filename is unique per session and
-  /// unchanged while the session grows, so the eager saves during capture and
-  /// the final assemble all upsert the same library row (no duplicate).
-  String _stopMotionSessionId(String firstFramePath) =>
-      'clip_sm_${p.basenameWithoutExtension(firstFramePath)}';
+  /// Queues the library upsert of the session at [framePaths] with the
+  /// recorder's current aspect ratio and lens.
+  Future<void> _persistStopMotionSession(List<String> framePaths) =>
+      _stopMotionSessions.persistSession(
+        framePaths,
+        aspectRatio: state.aspectRatio,
+        lensMetadata: _cameraService.currentLensMetadata,
+      );
 
   /// Captures one still, appends it to [state.stopMotionFrames], and persists
   /// the growing session to the library.
@@ -1775,7 +1768,7 @@ class VideoRecorderBloc
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
-      await _deleteFrameFile(photo.filePath);
+      await _stopMotionSessions.deleteFrameFile(photo.filePath);
       return;
     }
 
@@ -1791,7 +1784,7 @@ class VideoRecorderBloc
     // session here.
     if (!state.recorderMode.capturesStills ||
         state.stopMotionStatus == StopMotionStatus.ready) {
-      unawaited(_deleteFrameFile(photo.filePath));
+      unawaited(_stopMotionSessions.deleteFrameFile(photo.filePath));
       return;
     }
 
@@ -1810,11 +1803,7 @@ class VideoRecorderBloc
 
     // Fire-and-forget so shooting stays instant; the library row is upserted
     // by the stable session id, so an out-of-order write just re-writes it.
-    unawaited(
-      _enqueueStopMotionSessionWrite(
-        () => _persistStopMotionSession(framePaths),
-      ),
-    );
+    unawaited(_persistStopMotionSession(framePaths));
   }
 
   /// Removes the last captured stop-motion frame, deletes its file, and
@@ -1830,74 +1819,14 @@ class VideoRecorderBloc
     final removed = frames.last;
     final remaining = frames.sublist(0, frames.length - 1);
     emit(state.copyWith(stopMotionFrames: remaining));
-    unawaited(_deleteFrameFile(removed));
+    unawaited(_stopMotionSessions.deleteFrameFile(removed));
 
     if (remaining.isEmpty) {
       // Whole session undone — drop its library row. The frame file is deleted
       // above, so a row-only delete is correct here.
-      unawaited(
-        _enqueueStopMotionSessionWrite(
-          () => _readClipManager().removeStopMotionSessionFromLibrary(
-            _stopMotionSessionId(frames.first),
-          ),
-        ),
-      );
+      unawaited(_stopMotionSessions.removeSession(frames.first));
     } else {
-      unawaited(
-        _enqueueStopMotionSessionWrite(
-          () => _persistStopMotionSession(remaining),
-        ),
-      );
-    }
-  }
-
-  Future<void> _enqueueStopMotionSessionWrite(
-    Future<void> Function() operation,
-  ) {
-    final run = _stopMotionSessionWrite
-        .catchError((Object e, StackTrace s) {
-          Log.warning(
-            '⚠️ Previous stop-motion session write failed: $e',
-            name: 'VideoRecorderBloc',
-            category: LogCategory.video,
-          );
-        })
-        .then((_) => operation());
-    _stopMotionSessionWrite = run;
-    return run;
-  }
-
-  /// Upserts the current capture session (the stills at [framePaths]) as a
-  /// single library clip. Shared by capture and undo; keyed by
-  /// [_stopMotionSessionId] so every call targets the same row.
-  ///
-  /// [framePaths] are taken as readable — each still is checked as it is
-  /// captured, so re-sweeping the accumulated session on every shutter tap
-  /// would stat the same files repeatedly without learning anything new. The
-  /// assemble re-checks the whole set (see [_ingestStopMotionClip]), which is
-  /// where a still that goes missing mid-session gets dropped.
-  Future<void> _persistStopMotionSession(List<String> framePaths) async {
-    if (framePaths.isEmpty) return;
-    final hold = _stopMotionHold(framePaths.length);
-    final frames = [
-      for (final path in framePaths)
-        StopMotionClipFrame(path: path, duration: hold),
-    ];
-    final saved = await _readClipManager().saveStopMotionSessionToLibrary(
-      id: _stopMotionSessionId(framePaths.first),
-      frames: frames,
-      originalAspectRatio: state.aspectRatio.value,
-      targetAspectRatio: state.aspectRatio,
-      duration: StopMotionFrameOps.totalDuration(frames),
-      thumbnailPath: frames.first.path,
-      lensMetadata: _cameraService.currentLensMetadata,
-    );
-    if (!saved) {
-      Log.warning(
-        '⚠️ Stop-motion session save to library failed',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
+      unawaited(_persistStopMotionSession(remaining));
     }
   }
 
@@ -1923,7 +1852,11 @@ class VideoRecorderBloc
     emit(state.copyWith(stopMotionStatus: StopMotionStatus.assembling));
 
     try {
-      _ingestStopMotionClip(frames);
+      _stopMotionSessions.ingest(
+        frames,
+        aspectRatio: state.aspectRatio,
+        lensMetadata: _cameraService.currentLensMetadata,
+      );
     } catch (e, stackTrace) {
       Log.warning(
         '⚠️ Stop-motion ingest failed',
@@ -1941,99 +1874,6 @@ class VideoRecorderBloc
         stopMotionFrames: const [],
       ),
     );
-  }
-
-  /// Adds the captured [framePaths] to the clip manager as a frames-based
-  /// stop-motion clip and queues its library save. Frame files are kept (not
-  /// deleted) since they are the clip's source of truth.
-  ///
-  /// Reuses the capture session's library id so the row already written during
-  /// capture is updated in place rather than duplicated. That row exists by the
-  /// time the user taps "Next" (capture upserts it on every still) and the
-  /// editor reads the clip from the clip manager, not the library — so the save
-  /// is queued behind the capture-time writes rather than awaited, and the
-  /// handoff to the editor stays instant.
-  void _ingestStopMotionClip(List<String> framePaths) {
-    final clipManager = _readClipManager();
-
-    // Drop unreadable captures; a session with no readable still is a failed
-    // assemble (surfaced by the caller's failure snackbar). Filtered before the
-    // hold is computed so the stretch to a minimum length counts only the
-    // stills that actually make it into the clip.
-    final readablePaths = [
-      for (final path in framePaths)
-        if (StopMotionFrameOps.isReadableImage(path)) path,
-    ];
-    if (readablePaths.isEmpty) {
-      throw StateError('No readable stop-motion stills to assemble');
-    }
-    final hold = _stopMotionHold(readablePaths.length);
-    final frames = [
-      for (final path in readablePaths)
-        StopMotionClipFrame(path: path, duration: hold),
-    ];
-
-    final clip = clipManager.addStopMotionClip(
-      id: _stopMotionSessionId(framePaths.first),
-      frames: frames,
-      originalAspectRatio: state.aspectRatio.value,
-      targetAspectRatio: state.aspectRatio,
-      duration: StopMotionFrameOps.totalDuration(frames),
-      thumbnailPath: frames.first.path,
-      lensMetadata: _cameraService.currentLensMetadata,
-    );
-
-    final updatedClip = clipManager.clips.firstWhere(
-      (c) => c.id == clip.id,
-      orElse: () => clip,
-    );
-    unawaited(
-      _enqueueStopMotionSessionWrite(() async {
-        final saved = await clipManager.saveClipToLibrary(updatedClip);
-        if (!saved) {
-          Log.warning(
-            '⚠️ Stop-motion clip save to library failed for ${clip.id}',
-            name: 'VideoRecorderBloc',
-            category: LogCategory.video,
-          );
-        }
-      }),
-    );
-  }
-
-  /// Discards an abandoned capture session: deletes its frame files and drops
-  /// the library row eagerly saved during capture. A mode switch or reset
-  /// otherwise leaves an orphaned library clip whose source frames are gone.
-  /// Mirrors the empty-session branch of [_onStopMotionFrameUndone].
-  Future<void> _discardStopMotionSession(List<String> framePaths) async {
-    if (framePaths.isEmpty) return;
-    await _deleteFrameFiles(framePaths);
-    await _enqueueStopMotionSessionWrite(
-      () => _readClipManager().removeStopMotionSessionFromLibrary(
-        _stopMotionSessionId(framePaths.first),
-      ),
-    );
-  }
-
-  /// Deletes all captured stop-motion frame files, ignoring errors.
-  Future<void> _deleteFrameFiles(List<String> paths) async {
-    for (final path in paths) {
-      await _deleteFrameFile(path);
-    }
-  }
-
-  /// Deletes a captured stop-motion frame file, ignoring errors.
-  Future<void> _deleteFrameFile(String path) async {
-    try {
-      final file = File(path);
-      if (file.existsSync()) await file.delete();
-    } catch (e) {
-      Log.warning(
-        '⚠️ Failed to delete stop-motion frame $path: $e',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
-    }
   }
 
   void _onCameraStateChanged(
@@ -2342,7 +2182,7 @@ class VideoRecorderBloc
     _zoomIndicatorTimer?.cancel();
     _zoomIndicatorTimer = null;
     try {
-      await _stopMotionSessionWrite;
+      await _stopMotionSessions.idle;
     } catch (e) {
       Log.warning(
         '🧹 Stop-motion session write cleanup failed: $e',
