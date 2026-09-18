@@ -97,7 +97,10 @@ class DataSourceMediaDataSourceTest {
 
     @Test
     fun `a short hop forward is read through on the open source`() {
-        val fake = FakeSource(bytes)
+        // Past what one cursor buffers, so the hop is read through rather
+        // than served from bytes already held.
+        val big = ByteArray(200_000) { it.toByte() }
+        val fake = FakeSource(big)
         val source = sourceOver(fake)
         val out = ByteArray(10)
 
@@ -105,11 +108,11 @@ class DataSourceMediaDataSourceTest {
         // Consecutive audio samples sit a video frame apart: on a source
         // that has to go to the network a reopen here is a fresh range
         // request per sample.
-        assertEquals(10, source.readAt(60, out, 0, 10))
+        assertEquals(10, source.readAt(70_000, out, 0, 10))
+        assertArrayEquals(big.copyOfRange(70_000, 70_010), out)
 
         assertEquals(listOf(0L), fake.opens)
         assertEquals(0, fake.closes)
-        assertArrayEquals(bytes.copyOfRange(60, 70), out)
     }
 
     @Test
