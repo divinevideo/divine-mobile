@@ -106,7 +106,15 @@ internal class DataSourceMediaDataSource(
         cursor.lastUsed = ++useCount
         var total = 0
         while (total < size) {
-            cursor.fill(position + total, minOf(size - total, BUFFER_BYTES))
+            try {
+                cursor.fill(position + total, minOf(size - total, BUFFER_BYTES))
+            } catch (e: Throwable) {
+                // A failed read leaves the source somewhere the cursor cannot
+                // know, and a cursor whose arithmetic no longer matches its
+                // source hands out the wrong bytes without anything noticing.
+                retire(cursor)
+                throw e
+            }
             val available = minOf(size - total, cursor.bufferLength)
             if (available == 0) break
             cursor.buffer.copyInto(buffer, offset + total, 0, available)
@@ -127,12 +135,16 @@ internal class DataSourceMediaDataSource(
         cursors.clear()
     }
 
+    /** Drops [cursor] and closes the source behind it. */
+    private fun retire(cursor: Cursor) {
+        cursors.remove(cursor)
+        runCatching { cursor.source.close() }
+    }
+
     /** Opens a source at [position], retiring the longest-unused cursor. */
     private fun openCursor(position: Long): Cursor {
         if (cursors.size >= MAX_CURSORS) {
-            val stale = cursors.minByOrNull { it.lastUsed }!!
-            cursors.remove(stale)
-            runCatching { stale.source.close() }
+            retire(cursors.minByOrNull { it.lastUsed }!!)
         }
         val opened = factory.createDataSource()
         val remaining = try {

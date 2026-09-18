@@ -10,7 +10,9 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.io.IOException
 
 /**
  * Pins how [DataSourceMediaDataSource] drives a [DataSource] on behalf of a
@@ -28,9 +30,11 @@ class DataSourceMediaDataSourceTest {
         private val bytes: ByteArray,
         private val chunk: Int = Int.MAX_VALUE,
         private val knowsLength: Boolean = true,
+        private val failReadAt: Long = -1L,
     ) {
         val opens = mutableListOf<Long>()
         var closes = 0
+        private var failed = false
 
         fun create(): DataSource = object : DataSource {
             private var position = 0
@@ -48,6 +52,10 @@ class DataSourceMediaDataSourceTest {
             }
 
             override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                if (!failed && failReadAt >= 0 && position >= failReadAt) {
+                    failed = true
+                    throw IOException("connection reset")
+                }
                 if (position >= bytes.size) return C.RESULT_END_OF_INPUT
                 val count = minOf(length, chunk, bytes.size - position)
                 bytes.copyInto(buffer, offset, position, position + count)
@@ -253,5 +261,24 @@ class DataSourceMediaDataSourceTest {
         source.close()
 
         assertEquals(2, fake.closes)
+    }
+
+    @Test
+    fun `a source that fails part way through a hop is not read from again`() {
+        val big = ByteArray(200_000) { it.toByte() }
+        val fake = FakeSource(big, chunk = 8 * 1024, failReadAt = 40_000)
+        val source = sourceOver(fake)
+        val out = ByteArray(10)
+
+        // Fills the first cursor, leaving its source at 8 KB.
+        assertEquals(10, source.readAt(0, out, 0, 10))
+        // Within reach, so the same source is walked forward through the gap,
+        // and the network drops part way along it. The extractor is told.
+        assertThrows(IOException::class.java) { source.readAt(70_000, out, 0, 10) }
+
+        // The retry must not be served by a source stranded mid-gap: the
+        // extractor has no way to tell those bytes from the ones it asked for.
+        assertEquals(10, source.readAt(70_000, out, 0, 10))
+        assertArrayEquals(big.copyOfRange(70_000, 70_010), out)
     }
 }
