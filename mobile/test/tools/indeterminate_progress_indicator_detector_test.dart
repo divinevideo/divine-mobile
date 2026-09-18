@@ -81,6 +81,27 @@ Widget a(BuildContext context) => CircularProgressIndicator(
       expect(sites, isEmpty);
     });
 
+    test('allows every reduced-motion idiom the app writes', () {
+      // The app gates on MediaQuery.disableAnimationsOf, the older
+      // MediaQuery.of(context).disableAnimations, and context.reduceMotion
+      // from media_query_extensions.dart. A guard that knows only the first
+      // reports correct call sites, which on a zero-tolerance check is worse
+      // than silence.
+      final sites = findIndeterminateProgressIndicatorsInSource('''
+Widget a(BuildContext context) => CircularProgressIndicator(
+  value: context.reduceMotion ? 0.75 : null,
+);
+Widget b(BuildContext context) => CircularProgressIndicator(
+  value: MediaQuery.of(context).disableAnimations ? 0.75 : null,
+);
+Widget c(bool reduceMotion) => CircularProgressIndicator(
+  value: reduceMotion ? 0.75 : null,
+);
+''');
+
+      expect(sites, isEmpty);
+    });
+
     test('does not trust a similarly named arbitrary condition', () {
       final sites = findIndeterminateProgressIndicatorsInSource('''
 Widget a(bool disableAnimationsLater) => CircularProgressIndicator(
