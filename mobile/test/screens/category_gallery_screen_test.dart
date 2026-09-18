@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/categories/categories_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -292,6 +293,9 @@ void main() {
           ),
           authServiceProvider.overrideWithValue(authService),
           subscribedListVideoCacheProvider.overrideWithValue(null),
+          ogDivinerEligibilityProvider.overrideWith(
+            (ref, pubkey) async => false,
+          ),
         ],
       );
       addTearDown(container.dispose);

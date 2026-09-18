@@ -9,13 +9,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/route_extras.dart';
@@ -332,13 +332,17 @@ class VideoOverlayActions extends ConsumerWidget {
                       authorPubkey,
                     );
                     // The beta chit yields to both the checkmark and the OG
-                    // Viner chit, so a name never carries two of them. The
-                    // Viner rosters are disjoint by construction; many team
-                    // accounts also appear on the beta roster.
+                    // Viner chit, so a name never carries two of them. Team
+                    // members can also be eligible beta testers.
                     final isOgBetaTester =
                         !isOgViner &&
                         !showCheckmark &&
-                        isOgBetaTesterPubkey(authorPubkey);
+                        (ref
+                                .watch(
+                                  ogDivinerEligibilityProvider(authorPubkey),
+                                )
+                                .value ??
+                            false);
 
                     void navigateToProfile() {
                       onInteracted?.call();

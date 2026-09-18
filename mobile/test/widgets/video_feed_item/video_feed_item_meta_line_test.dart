@@ -10,9 +10,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
@@ -95,16 +95,23 @@ void main() {
     WidgetTester tester, {
     required VideoEvent video,
     bool viewerIsAuthor = false,
+    bool isOgDiviner = false,
+    bool eligibilityIsLoading = false,
   }) async {
-    when(() => mockAuthService.currentPublicKeyHex).thenReturn(
-      viewerIsAuthor ? _authorPubkey : _strangerPubkey,
-    );
+    when(
+      () => mockAuthService.currentPublicKeyHex,
+    ).thenReturn(viewerIsAuthor ? _authorPubkey : _strangerPubkey);
 
     await tester.pumpWidget(
       testProviderScope(
         additionalOverrides: [
           repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
+          ogDivinerEligibilityProvider.overrideWith(
+            eligibilityIsLoading
+                ? (ref, pubkey) => Completer<bool>().future
+                : (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
+          ),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -122,7 +129,12 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // A lookup that never answers has nothing to settle to.
+    if (eligibilityIsLoading) {
+      await tester.pump();
+    } else {
+      await tester.pumpAndSettle();
+    }
   }
 
   String loopLine(WidgetTester tester, int count) => _l10n(
@@ -130,36 +142,52 @@ void main() {
   ).videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
 
   group('video card meta line', () {
-    testWidgets('shows OG Beta Tester for a non-team roster member', (
+    testWidgets('shows OG Beta Tester for an eligible non-team member', (
       tester,
     ) async {
-      final pubkey = ogBetaTesterPubkeys.firstWhere(
-        (candidate) => !kDivineTeamPubkeys.contains(candidate),
+      await pump(
+        tester,
+        video: _video(),
+        isOgDiviner: true,
       );
-      await pump(tester, video: _video(pubkey: pubkey));
 
       expect(find.byType(SpecialProfileCheckmark), findsNothing);
       expect(find.byType(OgBetaBadge), findsOneWidget);
     });
 
-    testWidgets('hides a small count from a stranger', (
+    testWidgets('hides OG Beta Tester until the lookup answers', (
+      tester,
+    ) async {
+      await pump(tester, video: _video(), eligibilityIsLoading: true);
+
+      // A lookup that has not answered, or failed and resolved to false, must
+      // not put the chit on an account that has not earned it.
+      expect(find.byType(OgBetaBadge), findsNothing);
+    });
+
+    testWidgets('hides OG Beta Tester behind the team checkmark', (
       tester,
     ) async {
       await pump(
         tester,
-        video: _video(rawTags: {'views': '7'}),
+        video: _video(pubkey: kDivineTeamPubkeys.first),
+        isOgDiviner: true,
       );
+
+      // Team members can also be eligible beta testers, so a name would
+      // otherwise carry two chits.
+      expect(find.byType(SpecialProfileCheckmark), findsOneWidget);
+      expect(find.byType(OgBetaBadge), findsNothing);
+    });
+
+    testWidgets('hides a small count from a stranger', (tester) async {
+      await pump(tester, video: _video(rawTags: {'views': '7'}));
 
       expect(find.text(loopLine(tester, 7)), findsNothing);
     });
 
-    testWidgets('shows a large count to a stranger', (
-      tester,
-    ) async {
-      await pump(
-        tester,
-        video: _video(rawTags: {'views': '50000'}),
-      );
+    testWidgets('shows a large count to a stranger', (tester) async {
+      await pump(tester, video: _video(rawTags: {'views': '50000'}));
 
       expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
@@ -209,10 +237,7 @@ void main() {
       ).thenReturn(AuthState.unauthenticated);
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
 
-      await pump(
-        tester,
-        video: _video(rawTags: {'views': '7'}),
-      );
+      await pump(tester, video: _video(rawTags: {'views': '7'}));
 
       expect(find.textContaining(loopLine(tester, 7)), findsNothing);
 
@@ -225,10 +250,7 @@ void main() {
     });
 
     testWidgets('shows a relative date on a fresh post', (tester) async {
-      await pump(
-        tester,
-        video: _video(rawTags: {'views': '7'}),
-      );
+      await pump(tester, video: _video(rawTags: {'views': '7'}));
 
       expect(find.textContaining(_l10n(tester).timeVerboseNow), findsOneWidget);
     });
