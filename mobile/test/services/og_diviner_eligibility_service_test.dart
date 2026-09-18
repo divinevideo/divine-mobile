@@ -34,6 +34,24 @@ void main() {
       expect(requests, 1);
     });
 
+    test('answers an empty pubkey without asking the server', () async {
+      var requests = 0;
+      final service = OgDivinerEligibilityService(
+        keycast: KeycastOAuth(
+          config: config,
+          httpClient: MockClient((_) async {
+            requests++;
+            return http.Response('{"eligible":true}', 200);
+          }),
+        ),
+      );
+
+      // Without the guard this requests /api/public/users//og-diviner.
+      expect(await service.isEligible(''), isFalse);
+      expect(await service.isEligible('   '), isFalse);
+      expect(requests, 0);
+    });
+
     test('coalesces concurrent requests for the same pubkey', () async {
       var requests = 0;
       final service = OgDivinerEligibilityService(
