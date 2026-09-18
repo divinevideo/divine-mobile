@@ -320,7 +320,7 @@ final class VideoEventServiceProvider
   }
 }
 
-String _$videoEventServiceHash() => r'91213342fada710c74c9d62d6725179a11a24dcc';
+String _$videoEventServiceHash() => r'1cf4e4bd5c70b75f9ae5d4070ad1c5d0a2e730ff';
 
 /// Video event publisher for publishing video events to Nostr relays
 

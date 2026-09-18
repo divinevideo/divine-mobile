@@ -199,6 +199,10 @@ VideoEventService videoEventService(Ref ref) {
     eventRouter: eventRouter,
     videoFilterBuilder: videoFilterBuilder,
     performanceMonitor: ref.watch(performanceMonitoringServiceProvider),
+    // Without this the service builds its own ConnectionStatusService, which
+    // no bridge can reach, so its offline gate stayed dead even after #8331
+    // wired the shared one.
+    connectionService: ref.watch(connectionStatusServiceProvider),
   );
   ref.onDispose(service.dispose);
   var persistedDeletions = const <ContentDeletion>[];

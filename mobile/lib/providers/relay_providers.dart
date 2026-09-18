@@ -532,6 +532,51 @@ ConnectionStatusService connectionStatusService(Ref ref) {
   return service;
 }
 
+/// Feeds [ConnectionStatusService] from the client's live relay statuses.
+///
+/// Until #8331 nothing called into that service at all, so `isOnline` stayed
+/// at its initial `true` for the life of the app. Measured on a simulator over
+/// 51 samples: the client reported `connectedRelayCount` of both 0 and 1 while
+/// the service reported `isOnline=true` and `totalRelayCount=0` every single
+/// time. Ten gates read that flag, so the offline queue never engaged for
+/// connectivity reasons and a follow made while relays were down was dropped
+/// rather than queued.
+///
+/// This is the one writer. It republishes the whole pool on every frame, so a
+/// de-configured relay leaves no stale entry behind, and it reports dialling
+/// separately so `isConnecting` means something too.
+///
+/// keepAlive with no UI consumer: activated by `AppShellSideEffects`,
+/// alongside `relaySetChangeBridge`, which reads the same stream.
+@Riverpod(keepAlive: true)
+void relayConnectionStatusBridge(Ref ref) {
+  final client = ref.watch(nostrServiceProvider);
+  final connectionStatus = ref.watch(connectionStatusServiceProvider);
+
+  void publish(Map<String, RelayConnectionStatus> statuses) {
+    connectionStatus
+      ..updateRelayStatuses({
+        for (final entry in statuses.entries)
+          entry.key: entry.value.isConnected,
+      })
+      ..setConnecting(
+        statuses.values.any((status) => status.state == RelayState.connecting),
+      );
+  }
+
+  // Seed from what the client already holds; the stream reports changes only.
+  publish(client.relayStatuses);
+
+  final subscription = client.relayStatusStream.listen(publish);
+  ref.onDispose(() {
+    runProviderDetached(
+      subscription.cancel(),
+      'cancel the relay connection-status bridge',
+      logName: 'RelayConnectionStatusBridge',
+    );
+  });
+}
+
 /// Relay capability service for detecting NIP-11 Divine extensions
 @Riverpod(keepAlive: true)
 RelayCapabilityService relayCapabilityService(Ref ref) {

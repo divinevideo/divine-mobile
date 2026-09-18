@@ -133,6 +133,10 @@ class AppShellSideEffects extends ConsumerWidget {
     // cubit/service.
     ref.watch(relayStatisticsBridgeProvider);
 
+    // Feeds ConnectionStatusService from the live relay pool, so `isOnline`
+    // reflects relay reachability instead of staying permanently true (#8331).
+    ref.watch(relayConnectionStatusBridgeProvider);
+
     // Refreshes feeds when the relay set changes. Builds
     // `videoEventServiceProvider`.
     // TODO(#4338): remove when feed refresh is driven by a relay event stream

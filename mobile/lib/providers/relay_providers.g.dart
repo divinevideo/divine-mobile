@@ -61,6 +61,96 @@ final class ConnectionStatusServiceProvider
 String _$connectionStatusServiceHash() =>
     r'30fc9602e77f81edd6e26b19f6e36e0c82a02353';
 
+/// Feeds [ConnectionStatusService] from the client's live relay statuses.
+///
+/// Until #8331 nothing called into that service at all, so `isOnline` stayed
+/// at its initial `true` for the life of the app. Measured on a simulator over
+/// 51 samples: the client reported `connectedRelayCount` of both 0 and 1 while
+/// the service reported `isOnline=true` and `totalRelayCount=0` every single
+/// time. Ten gates read that flag, so the offline queue never engaged for
+/// connectivity reasons and a follow made while relays were down was dropped
+/// rather than queued.
+///
+/// This is the one writer. It republishes the whole pool on every frame, so a
+/// de-configured relay leaves no stale entry behind, and it reports dialling
+/// separately so `isConnecting` means something too.
+///
+/// keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+
+@ProviderFor(relayConnectionStatusBridge)
+final relayConnectionStatusBridgeProvider =
+    RelayConnectionStatusBridgeProvider._();
+
+/// Feeds [ConnectionStatusService] from the client's live relay statuses.
+///
+/// Until #8331 nothing called into that service at all, so `isOnline` stayed
+/// at its initial `true` for the life of the app. Measured on a simulator over
+/// 51 samples: the client reported `connectedRelayCount` of both 0 and 1 while
+/// the service reported `isOnline=true` and `totalRelayCount=0` every single
+/// time. Ten gates read that flag, so the offline queue never engaged for
+/// connectivity reasons and a follow made while relays were down was dropped
+/// rather than queued.
+///
+/// This is the one writer. It republishes the whole pool on every frame, so a
+/// de-configured relay leaves no stale entry behind, and it reports dialling
+/// separately so `isConnecting` means something too.
+///
+/// keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+
+final class RelayConnectionStatusBridgeProvider
+    extends $FunctionalProvider<void, void, void>
+    with $Provider<void> {
+  /// Feeds [ConnectionStatusService] from the client's live relay statuses.
+  ///
+  /// Until #8331 nothing called into that service at all, so `isOnline` stayed
+  /// at its initial `true` for the life of the app. Measured on a simulator over
+  /// 51 samples: the client reported `connectedRelayCount` of both 0 and 1 while
+  /// the service reported `isOnline=true` and `totalRelayCount=0` every single
+  /// time. Ten gates read that flag, so the offline queue never engaged for
+  /// connectivity reasons and a follow made while relays were down was dropped
+  /// rather than queued.
+  ///
+  /// This is the one writer. It republishes the whole pool on every frame, so a
+  /// de-configured relay leaves no stale entry behind, and it reports dialling
+  /// separately so `isConnecting` means something too.
+  ///
+  /// keepAlive with no UI consumer: activated by `AppRootSideEffects`.
+  RelayConnectionStatusBridgeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayConnectionStatusBridgeProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayConnectionStatusBridgeHash();
+
+  @$internal
+  @override
+  $ProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  void create(Ref ref) {
+    return relayConnectionStatusBridge(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$relayConnectionStatusBridgeHash() =>
+    r'ff695eed266cadc488cd59b80cf1c53d82e5c25d';
+
 /// Relay capability service for detecting NIP-11 Divine extensions
 
 @ProviderFor(relayCapabilityService)
