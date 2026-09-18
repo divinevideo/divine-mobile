@@ -95,6 +95,7 @@ void main() {
     required VideoEvent video,
     bool viewerIsAuthor = false,
     bool isOgDiviner = false,
+    bool eligibilityIsLoading = false,
   }) async {
     when(
       () => mockAuthService.currentPublicKeyHex,
@@ -106,7 +107,9 @@ void main() {
           repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
           ogDivinerEligibilityProvider.overrideWith(
-            (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
+            eligibilityIsLoading
+                ? (ref, pubkey) => Completer<bool>().future
+                : (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
           ),
         ],
         child: MaterialApp(
@@ -125,7 +128,12 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // A lookup that never answers has nothing to settle to.
+    if (eligibilityIsLoading) {
+      await tester.pump();
+    } else {
+      await tester.pumpAndSettle();
+    }
   }
 
   String loopLine(WidgetTester tester, int count) => _l10n(
@@ -144,6 +152,16 @@ void main() {
 
       expect(find.byType(SpecialProfileCheckmark), findsNothing);
       expect(find.byType(OgBetaBadge), findsOneWidget);
+    });
+
+    testWidgets('hides OG Beta Tester until the lookup answers', (
+      tester,
+    ) async {
+      await pump(tester, video: _video(), eligibilityIsLoading: true);
+
+      // A lookup that has not answered, or failed and resolved to false, must
+      // not put the chit on an account that has not earned it.
+      expect(find.byType(OgBetaBadge), findsNothing);
     });
 
     testWidgets('hides a small count from a stranger', (tester) async {
