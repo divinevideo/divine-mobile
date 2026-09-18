@@ -69,6 +69,8 @@ class TimelineTransitionButtonsLayer extends StatelessWidget {
 /// the first clip's head frame along the region — the same frames the
 /// transition picker previews. Falls back to a tinted box when neither frame
 /// resolves.
+///
+/// Builds a [Positioned], so it must be a direct child of a [Stack].
 class TimelineLoopSeamRegion extends StatelessWidget {
   const TimelineLoopSeamRegion({
     required this.left,
@@ -152,6 +154,8 @@ class _SeamFrame extends StatelessWidget {
 /// the between-clip buttons straddle their seams; the strip reserves a
 /// half-button trailing slot so the right half isn't clipped. Shown even for a
 /// single clip, which wraps into itself.
+///
+/// Builds a [Positioned], so it must be a direct child of a [Stack].
 class TimelineLoopTransitionButton extends StatelessWidget {
   const TimelineLoopTransitionButton({
     required this.hasTransition,
