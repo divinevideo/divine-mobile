@@ -68,7 +68,7 @@ void main() {
         child: TitleStylePreview(
           style: style,
           text: 'Episode 13',
-          loopValue: loopValue,
+          loop: AlwaysStoppedAnimation(loopValue),
           loopMs: loopMs,
           width: width,
           height: height,

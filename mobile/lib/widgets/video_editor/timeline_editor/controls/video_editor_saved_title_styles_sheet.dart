@@ -386,16 +386,13 @@ class _SavedStyleRow extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: ExcludeSemantics(
-                            child: AnimatedBuilder(
-                              animation: controller,
-                              builder: (context, _) => TitleStylePreview(
-                                style: saved.style,
-                                text: sampleText,
-                                loopValue: controller.value,
-                                loopMs: _loopMs,
-                                width: _previewWidth,
-                                height: _previewHeight,
-                              ),
+                            child: TitleStylePreview(
+                              style: saved.style,
+                              text: sampleText,
+                              loop: controller,
+                              loopMs: _loopMs,
+                              width: _previewWidth,
+                              height: _previewHeight,
                             ),
                           ),
                         ),

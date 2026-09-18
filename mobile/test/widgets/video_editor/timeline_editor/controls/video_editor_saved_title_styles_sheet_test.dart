@@ -436,7 +436,7 @@ void main() {
       final preview = tester.widget<TitleStylePreview>(
         find.byType(TitleStylePreview),
       );
-      expect(preview.loopValue, equals(TitleStylePreview.holdValue));
+      expect(preview.loop.value, equals(TitleStylePreview.holdValue));
     });
 
     testWidgets('loops the previews otherwise', (tester) async {
@@ -449,10 +449,10 @@ void main() {
       TitleStylePreview preview() => tester.widget<TitleStylePreview>(
         find.byType(TitleStylePreview),
       );
-      final before = preview().loopValue;
+      final before = preview().loop.value;
       await tester.pump(const Duration(milliseconds: 700));
 
-      expect(preview().loopValue, isNot(equals(before)));
+      expect(preview().loop.value, isNot(equals(before)));
     });
   });
 

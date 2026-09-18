@@ -22,11 +22,11 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 /// from the edge its direction names, or along the line a custom point makes
 /// with the resting place.
 class TitleStylePreview extends StatelessWidget {
-  /// Creates a preview at [loopValue] (0..1) of a [loopMs] loop.
+  /// Creates a preview driven by [loop] (0..1) over a [loopMs] loop.
   const TitleStylePreview({
     required this.style,
     required this.text,
-    required this.loopValue,
+    required this.loop,
     required this.loopMs,
     required this.width,
     required this.height,
@@ -40,8 +40,11 @@ class TitleStylePreview extends StatelessWidget {
   /// actually see restyled.
   final String text;
 
-  /// Current loop position, 0..1.
-  final double loopValue;
+  /// Drives the loop; its value is the current position, 0..1.
+  ///
+  /// Named for the loop rather than the animation because this file's other
+  /// `animation` is a [LayerAnimation] — one of the style's own.
+  final Animation<double> loop;
 
   /// Loop length in milliseconds; animation durations are relative to it.
   final int loopMs;
@@ -71,7 +74,6 @@ class TitleStylePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (:opacity, :scale, :translation) = _transform(loopValue);
     return ClipRRect(
       child: DecoratedBox(
         decoration: const BoxDecoration(
@@ -85,37 +87,32 @@ class TitleStylePreview extends StatelessWidget {
           width: width,
           height: height,
           child: Center(
-            child: Transform.translate(
-              offset: translation,
-              child: Transform.scale(
-                scale: scale,
-                child: Opacity(
-                  opacity: opacity.clamp(0.0, 1.0),
-                  child: Container(
-                    padding: style.hasBackground
-                        ? const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          )
-                        : EdgeInsets.zero,
-                    decoration: style.hasBackground
-                        ? BoxDecoration(
-                            color: style.background,
-                            borderRadius: BorderRadius.circular(8),
-                          )
-                        : null,
-                    child: Text(
-                      text,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: style.align,
-                      style: style.font(
-                        fontSize: _fontSize,
-                        color: style.color,
-                      ),
+            child: AnimatedBuilder(
+              animation: loop,
+              builder: (context, child) {
+                final (:opacity, :scale, :translation) = _transform(loop.value);
+                return Transform.translate(
+                  offset: translation,
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Opacity(
+                      opacity: opacity.clamp(0.0, 1.0),
+                      child: child,
                     ),
                   ),
-                ),
+                );
+              },
+              // Only the transform changes between frames. The pill and its
+              // text are hoisted out of the builder because resolving the
+              // font is not free: `style.font` is a google_fonts call, and
+              // every invocation allocates a load future and registers it in
+              // the package's global pending-font set. Built inside the
+              // builder it ran once per row per frame, for the whole time the
+              // sheet was open.
+              child: _StyledSample(
+                style: style,
+                text: text,
+                fontSize: _fontSize,
               ),
             ),
           ),
@@ -201,5 +198,41 @@ class TitleStylePreview extends StatelessWidget {
       SlideDirection.bottom => Offset(0, height),
       null => Offset.zero,
     };
+  }
+}
+
+/// The sample text in [style]'s font, colors and pill — everything about a
+/// preview frame that does not change as the loop runs.
+class _StyledSample extends StatelessWidget {
+  const _StyledSample({
+    required this.style,
+    required this.text,
+    required this.fontSize,
+  });
+
+  final TitleStyle style;
+  final String text;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: style.hasBackground
+          ? const EdgeInsets.symmetric(horizontal: 6, vertical: 3)
+          : EdgeInsets.zero,
+      decoration: style.hasBackground
+          ? BoxDecoration(
+              color: style.background,
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: style.align,
+        style: style.font(fontSize: fontSize, color: style.color),
+      ),
+    );
   }
 }
