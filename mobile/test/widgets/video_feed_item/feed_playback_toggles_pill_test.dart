@@ -283,7 +283,7 @@ void main() {
         );
         await tester.pump();
 
-        expect(toggled, 1);
+        expect(toggled, equals(1));
       },
     );
 
