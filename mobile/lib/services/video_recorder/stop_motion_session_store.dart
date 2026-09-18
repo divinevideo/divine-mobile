@@ -30,7 +30,10 @@ class StopMotionSessionStore {
     required ClipManagerNotifier Function() readClipManager,
   }) : _readClipManager = readClipManager;
 
-  static const _logName = 'StopMotionSessionStore';
+  // Keeps the pre-extraction tag so saved log filters and support-triage greps
+  // for stop-motion library-write failures still match, as the sibling
+  // ClipNormalizationRender extraction does with 'VideoEditorRenderService'.
+  static const _logName = 'VideoRecorderBloc';
 
   final ClipManagerNotifier Function() _readClipManager;
   Future<void> _write = Future.value();
