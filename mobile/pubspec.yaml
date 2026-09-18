@@ -389,6 +389,11 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
+  # 2.13.1 is the first release that blends an overlap transition across a
+  # rotation flag; 2.13.0 silently hard-cuts that boundary (#9321). The floor is
+  # load-bearing and Android-only — no CI job builds Android, and a fallback
+  # hard cut is indistinguishable from a working transition in the UI, so
+  # relaxing it back to ^2.13.0 would reintroduce #9321 with no signal at all.
   pro_video_editor: ^2.13.1
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
