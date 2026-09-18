@@ -150,6 +150,25 @@ void main() {
         expect(TitleStyle.fromJson({...json, 'fontScale': 'big'}), isNull);
       });
 
+      test('drops a slide point that is not finite', () {
+        final json = style.toJson();
+
+        expect(
+          TitleStyle.fromJson({
+            ...json,
+            'enterPoint': {'dx': double.nan, 'dy': 0.0},
+          })?.enterPoint,
+          isNull,
+        );
+        expect(
+          TitleStyle.fromJson({
+            ...json,
+            'enterPoint': {'dx': 0.0, 'dy': double.infinity},
+          })?.enterPoint,
+          isNull,
+        );
+      });
+
       test('defaults the optional fields a stored row may lack', () {
         final decoded = TitleStyle.fromJson({
           'fontIndex': 99,

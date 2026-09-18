@@ -285,5 +285,6 @@ Offset? _offsetFromJson(Object? json) {
   final dx = json['dx'];
   final dy = json['dy'];
   if (dx is! num || dy is! num) return null;
+  if (!dx.isFinite || !dy.isFinite) return null;
   return Offset(dx.toDouble(), dy.toDouble());
 }
