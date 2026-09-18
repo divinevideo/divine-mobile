@@ -25,7 +25,7 @@ class TimelineTransitionButtonsLayer extends StatelessWidget {
   final ({List<double> widths, List<double> offsets, double totalWidth}) layout;
 
   /// Visible glyph circle.
-  static const double visualSize = 26;
+  static const double _visualSize = 26;
 
   /// Tap target around the glyph. The 1px clip gap leaves no horizontal room,
   /// so the target overlaps the neighbours and is enlarged toward the
@@ -50,7 +50,7 @@ class TimelineTransitionButtonsLayer extends StatelessWidget {
             width: hitWidth,
             height: hitHeight,
             child: _TransitionButton(
-              visualSize: visualSize,
+              visualSize: _visualSize,
               hasTransition: clips[i].transition != null,
               onTap: () => editClipTransition(context, i),
             ),
@@ -191,7 +191,7 @@ class TimelineLoopTransitionButton extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           child: Center(
             child: SizedBox.square(
-              dimension: TimelineTransitionButtonsLayer.visualSize,
+              dimension: TimelineTransitionButtonsLayer._visualSize,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: context.vineColors.surface,

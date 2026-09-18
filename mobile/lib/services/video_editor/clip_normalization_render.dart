@@ -47,7 +47,7 @@ abstract final class ClipNormalizationRender {
     required List<String> tempFilePaths,
   }) async {
     // Analyze all clips first to determine the optimal rendering strategy
-    final clipAnalysis = await analyzeClips(clips, aspectRatio);
+    final clipAnalysis = await _analyzeClips(clips, aspectRatio);
 
     // A transition overlaps the tail of its clip and the head of the next, so
     // clamp it to a duration both clips can sustain. Without this the native
@@ -143,7 +143,7 @@ abstract final class ClipNormalizationRender {
   }
 
   /// Analyzes all clips to determine their crop parameters.
-  static Future<ClipAnalysis> analyzeClips(
+  static Future<ClipAnalysis> _analyzeClips(
     List<DivineVideoClip> clips,
     model.AspectRatio aspectRatio,
   ) async {
