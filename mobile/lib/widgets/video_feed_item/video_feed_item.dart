@@ -13,7 +13,6 @@ import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
@@ -402,48 +401,54 @@ class VideoOverlayActions extends ConsumerWidget {
                                     // glyphs: deferring to the child leaves the 44dp
                                     // node it advertises just 20dp of real target.
                                     behavior: HitTestBehavior.opaque,
+                                    // The gesture owns no semantics of its own: the
+                                    // labelled node inside carries the profile
+                                    // action, so the tap target is never rendered
+                                    // as an unlabelled node.
+                                    excludeFromSemantics: true,
                                     onTap: navigateToProfile,
-                                    // Constrained to the avatar's height and
-                                    // centred, so the name and meta line sit
-                                    // vertically aligned with the avatar; that
-                                    // height is also the column's tap target,
-                                    // Apple's 44pt minimum. minHeight, not a
-                                    // fixed height, so it still grows with the
-                                    // system font scale
-                                    // (.claude/rules/accessibility.md); minWidth
-                                    // covers a display name too short to reach a
-                                    // minimum on its own.
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        minWidth: kMinInteractiveDimension,
-                                        minHeight: _authorAvatarSize,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Row(
-                                            // Hugs the name and its badges, so the
-                                            // detector above can hug in turn.
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Flexible(
-                                                child: Semantics(
-                                                  identifier:
-                                                      'video_author_name',
-                                                  container: true,
-                                                  explicitChildNodes: true,
-                                                  label: context.l10n
-                                                      .videoAuthorSemanticLabel(
-                                                        displayName,
-                                                      ),
+                                    child: Semantics(
+                                      identifier: 'video_author_name',
+                                      container: true,
+                                      explicitChildNodes: true,
+                                      label: context.l10n
+                                          .videoAuthorSemanticLabel(
+                                            displayName,
+                                          ),
+                                      onTap: navigateToProfile,
+                                      // Constrained to the avatar's height and
+                                      // centred, so the name and meta line sit
+                                      // vertically aligned with the avatar; that
+                                      // height is also the column's tap target,
+                                      // Apple's 44pt minimum. minHeight, not a
+                                      // fixed height, so it still grows with the
+                                      // system font scale
+                                      // (.claude/rules/accessibility.md); minWidth
+                                      // covers a display name too short to reach a
+                                      // minimum on its own.
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: kMinInteractiveDimension,
+                                          minHeight: _authorAvatarSize,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Row(
+                                              // Hugs the name and its badges, so
+                                              // the detector above can hug in
+                                              // turn.
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Flexible(
                                                   child: DivineHeartText(
                                                     displayName,
                                                     style:
-                                                        VineTheme.titleSmallFont(
+                                                        VineTheme.titleLargeFont(
                                                           color: VineTheme
                                                               .whiteText,
                                                         ),
@@ -452,29 +457,33 @@ class VideoOverlayActions extends ConsumerWidget {
                                                         TextOverflow.ellipsis,
                                                   ),
                                                 ),
-                                              ),
-                                              if (showCheckmark)
-                                                const SpecialProfileCheckmark(),
-                                              if (isOgViner)
-                                                const OgVinerBadge(),
-                                              if (isOgBetaTester)
-                                                OgBetaBadge(
-                                                  onTap: () =>
-                                                      showProfileBadgeExplanationSheet(
-                                                        context,
-                                                        ProfileBadgeExplanationType
-                                                            .ogBetaTester,
-                                                      ),
-                                                ),
-                                            ],
-                                          ),
-                                          _VideoCardMetaLine(
-                                            meta: resolveVideoCardMeta(
-                                              video: video,
-                                              isOwnVideo: isOwnVideo,
+                                                if (showCheckmark)
+                                                  const SpecialProfileCheckmark(
+                                                    iconSize: 14,
+                                                    padding: 3,
+                                                  ),
+                                                if (isOgViner)
+                                                  const OgVinerBadge(size: 20),
+                                                if (isOgBetaTester)
+                                                  OgBetaBadge(
+                                                    size: 20,
+                                                    onTap: () =>
+                                                        showProfileBadgeExplanationSheet(
+                                                          context,
+                                                          ProfileBadgeExplanationType
+                                                              .ogBetaTester,
+                                                        ),
+                                                  ),
+                                              ],
                                             ),
-                                          ),
-                                        ],
+                                            _VideoCardMetaLine(
+                                              meta: resolveVideoCardMeta(
+                                                video: video,
+                                                isOwnVideo: isOwnVideo,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -666,9 +675,13 @@ class VideoOverlayActions extends ConsumerWidget {
   }
 }
 
-/// The line under a video card's author name: post date, loop count, or both.
+/// The line under a video card's author name: the loop count, when one clears
+/// the public floor (and always for the creator's own videos).
 ///
-/// Renders nothing when neither is available, rather than an empty row.
+/// The post date is deliberately omitted, so an old timestamp cannot make the
+/// feed read as inactive; the metadata sheet carries it.
+///
+/// Renders nothing when there is no count, rather than an empty row.
 class _VideoCardMetaLine extends StatelessWidget {
   const _VideoCardMetaLine({required this.meta});
 
@@ -678,26 +691,13 @@ class _VideoCardMetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     if (meta.isEmpty) return const SizedBox.shrink();
 
-    final l10n = context.l10n;
-    final loopCount = meta.loopCount;
-    final timestamp = meta.timestamp;
-
-    final parts = <String>[
-      if (timestamp != null)
-        LocalizedTimeFormatter.formatPostAge(
-          l10n,
-          timestamp,
-          locale: Localizations.localeOf(context).toString(),
-        ),
-      if (loopCount != null)
-        l10n.videoFeedLoopCountLine(
-          StringUtils.formatCompactNumber(loopCount),
-          loopCount,
-        ),
-    ];
+    final loopCount = meta.loopCount!;
 
     return Text(
-      parts.join(' · '),
+      context.l10n.videoFeedLoopCountLine(
+        StringUtils.formatCompactNumber(loopCount),
+        loopCount,
+      ),
       // Sits on the video next to the white author name.
       style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
     );

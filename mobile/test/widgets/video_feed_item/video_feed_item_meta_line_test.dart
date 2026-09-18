@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for the video card's date-and-count meta line.
-// ABOUTME: Pins that small public counts stay hidden from strangers.
+// ABOUTME: Widget tests for the video card's loop-count meta line.
+// ABOUTME: Pins that small public counts stay hidden and the date never shows.
 
 import 'dart:async';
 
@@ -174,29 +174,30 @@ void main() {
       expect(find.textContaining(loopLine(tester, 7)), findsOneWidget);
     });
 
-    testWidgets('shows a classic Vine date alongside its archival count', (
-      tester,
-    ) async {
-      await pump(
+    testWidgets(
+      'hides the date and shows the archival count on a classic Vine',
+      (
         tester,
-        video: _video(
-          originalLoops: 2100000,
-          createdAt: _vineEraCreatedAt,
-          rawTags: {
-            'platform': 'vine',
-            'published_at': '$_vineEraCreatedAt',
-            'views': '340',
-          },
-        ),
-      );
+      ) async {
+        await pump(
+          tester,
+          video: _video(
+            originalLoops: 2100000,
+            createdAt: _vineEraCreatedAt,
+            rawTags: {
+              'platform': 'vine',
+              'published_at': '$_vineEraCreatedAt',
+              'views': '340',
+            },
+          ),
+        );
 
-      // Archival figure only: live diVine views must not inflate it.
-      expect(find.textContaining(loopLine(tester, 2100000)), findsOneWidget);
-      // The year is the point — it is what makes the clip read as an artifact
-      // rather than as something posted this spring. The exact calendar day is
-      // timezone-dependent and is pinned in localized_time_formatter_test.
-      expect(find.textContaining('2014'), findsOneWidget);
-    });
+        // Archival figure only: live diVine views must not inflate it.
+        expect(find.textContaining(loopLine(tester, 2100000)), findsOneWidget);
+        // The post date is never part of the card.
+        expect(find.textContaining('2014'), findsNothing);
+      },
+    );
 
     testWidgets('reveals the creator their count after they sign in', (
       tester,
@@ -224,13 +225,16 @@ void main() {
       expect(find.textContaining(loopLine(tester, 7)), findsOneWidget);
     });
 
-    testWidgets('shows a relative date on a fresh post', (tester) async {
+    testWidgets('never shows the post date, even beside a count', (
+      tester,
+    ) async {
       await pump(
         tester,
-        video: _video(rawTags: {'views': '7'}),
+        video: _video(rawTags: {'views': '50000'}),
       );
 
-      expect(find.textContaining(_l10n(tester).timeVerboseNow), findsOneWidget);
+      expect(find.textContaining(_l10n(tester).timeVerboseNow), findsNothing);
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
   });
 }
