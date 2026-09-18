@@ -4570,12 +4570,10 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       return;
     }
 
-    if (_relayReadyRetrySubscription != null) return;
-
     // Deliberately event-bounded rather than attempt-bounded: pending types are
     // enum-bounded, and each retry is triggered only by a relay status update.
     // A hard cap here can leave a feed dead forever after relay flapping.
-    _relayReadyRetrySubscription = _nostrService.relayStatusStream.listen((
+    _relayReadyRetrySubscription ??= _nostrService.relayStatusStream.listen((
       statuses,
     ) {
       if (_hasConnectedRelay(statuses)) {
@@ -4583,9 +4581,12 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       }
     });
 
-    // Kick the pool ourselves; the listener above only fires on a status
-    // change, and nothing else causes one for an idle-disconnected pool
-    // (#8992).
+    // Kick the pool on every ask, not only when the listener above is first
+    // armed. The listener only fires on a status change, and nothing else
+    // causes one for a pool whose sockets have stopped dialling (#8992): a
+    // sweep that ran out during an outage leaves them down, and the next
+    // subscribe — a pull-to-refresh once the relay is back — is the only
+    // thing that can start another. Concurrent calls share one sweep.
     unawaited(_nostrService.retryDisconnectedRelays());
   }
 

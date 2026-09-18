@@ -216,6 +216,37 @@ void main() {
       });
     });
 
+    test('every subscribe that finds no relay dials the pool again', () {
+      fakeAsync((fake) {
+        connectedRelayCount = 0;
+
+        unawaited(
+          service
+              .subscribeToVideoFeed(
+                subscriptionType: SubscriptionType.profile,
+                authors: [followedAuthor],
+              )
+              .catchError((Object _) {}),
+        );
+        fake.flushMicrotasks();
+        verify(() => mockNostrService.retryDisconnectedRelays()).called(1);
+
+        // The relay-ready listener is already armed. A sweep that ran out
+        // during an outage leaves every socket down, so this second ask — a
+        // pull-to-refresh once the relay is back — has to dial again (#8992).
+        unawaited(
+          service
+              .subscribeToVideoFeed(
+                subscriptionType: SubscriptionType.discovery,
+              )
+              .catchError((Object _) {}),
+        );
+        fake.flushMicrotasks();
+        verify(() => mockNostrService.retryDisconnectedRelays()).called(1);
+        expect(subscribeCalls, isEmpty);
+      });
+    });
+
     test('first subscribe with zero relays retries after relay reconnect with '
         'the original authors', () {
       fakeAsync((fake) {
