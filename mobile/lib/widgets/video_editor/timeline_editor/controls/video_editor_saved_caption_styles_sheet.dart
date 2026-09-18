@@ -14,6 +14,7 @@ import 'package:openvine/models/video_editor/saved_caption_style.dart';
 import 'package:openvine/providers/saved_caption_style_repository_provider.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/saved_style_name_prompt.dart';
 
 /// One preview loop: cue A enters/holds/leaves, then cue B, then repeat —
 /// the same loop the preset grid runs.
@@ -147,7 +148,7 @@ class _SavedCaptionStylesSheetViewState
     final cubit = context.read<SavedCaptionStylesCubit>();
     // The font is the most recognisable part of a look, so its name is the
     // suggestion; one tap keeps it, typing replaces it.
-    final name = await showCaptionStyleNamePrompt(
+    final name = await showSavedStyleNamePrompt(
       context,
       title: context.l10n.videoEditorCaptionsSavedStyleSaveTitle,
       confirmLabel: context.l10n.videoEditorCaptionsSavedStyleSaveAction,
@@ -164,7 +165,7 @@ class _SavedCaptionStylesSheetViewState
 
     switch (choice) {
       case _ManageChoice.rename:
-        final name = await showCaptionStyleNamePrompt(
+        final name = await showSavedStyleNamePrompt(
           context,
           title: context.l10n.videoEditorCaptionsSavedStyleRenameTitle,
           confirmLabel: context.l10n.videoEditorCaptionsSavedStyleRenameAction,
@@ -469,30 +470,6 @@ Future<_ManageChoice?> _showManageSheet(
   return choice;
 }
 
-/// Asks for a style name; resolves with the entered text, or `null` when the
-/// prompt is dismissed. The cubit still sanitizes it.
-///
-/// Shared with the custom style editor, whose "Save style" action asks the
-/// same question.
-Future<String?> showCaptionStyleNamePrompt(
-  BuildContext context, {
-  required String title,
-  required String confirmLabel,
-  required String initialName,
-}) {
-  return VineBottomSheet.show<String>(
-    context: context,
-    scrollable: false,
-    expanded: false,
-    isScrollControlled: true,
-    title: Text(
-      title,
-      style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
-    ),
-    body: _StyleNameForm(confirmLabel: confirmLabel, initialName: initialName),
-  );
-}
-
 /// Confirms deleting [saved], spelling out that styled captions are
 /// unaffected.
 Future<bool> _confirmDelete(
@@ -512,84 +489,4 @@ Future<bool> _confirmDelete(
     onSecondaryPressed: () => Navigator.of(context).pop(false),
   );
   return confirmed ?? false;
-}
-
-class _StyleNameForm extends StatefulWidget {
-  const _StyleNameForm({required this.confirmLabel, required this.initialName});
-
-  final String confirmLabel;
-  final String initialName;
-
-  @override
-  State<_StyleNameForm> createState() => _StyleNameFormState();
-}
-
-class _StyleNameFormState extends State<_StyleNameForm> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    // Pre-selected so the suggested name is one keystroke from replaced, and
-    // one tap on the button from kept.
-    _controller = TextEditingController(text: widget.initialName)
-      ..selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.initialName.length,
-      );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit(String value) {
-    if (SavedCaptionStyle.sanitizeName(value) == null) return;
-    Navigator.of(context).pop(value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return VineKeyboardAwareFooter(
-      includeSafeArea: true,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 16,
-          children: [
-            DivineTextField(
-              key: const Key('saved_caption_style_name_field'),
-              controller: _controller,
-              labelText: context.l10n.videoEditorCaptionsSavedStyleNameLabel,
-              // Sits directly on the sheet surface, so it needs its own fill
-              // to have a visible edge at all.
-              filled: true,
-              primaryWhenFilled: true,
-              autofocus: true,
-              maxLength: SavedCaptionStyle.maxNameLength,
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.done,
-              spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-              onSubmitted: _submit,
-            ),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _controller,
-              builder: (context, value, _) {
-                final canSubmit =
-                    SavedCaptionStyle.sanitizeName(value.text) != null;
-                return DivineButton(
-                  expanded: true,
-                  label: widget.confirmLabel,
-                  onPressed: canSubmit ? () => _submit(_controller.text) : null,
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

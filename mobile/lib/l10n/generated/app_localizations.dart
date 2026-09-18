@@ -14480,13 +14480,13 @@ abstract class AppLocalizations {
   /// **'Saved'**
   String get videoEditorCaptionsPresetSaved;
 
-  /// Title of the sheet listing the caption styles the user saved.
+  /// Title of the sheets listing the caption styles and the title styles the user saved.
   ///
   /// In en, this message translates to:
   /// **'Saved styles'**
   String get videoEditorCaptionsSavedStylesTitle;
 
-  /// Button in the saved caption styles sheet that saves the caption track's current custom style as a new named style.
+  /// Button in the saved caption styles and saved title styles sheets that saves the current look as a new named style.
   ///
   /// In en, this message translates to:
   /// **'Save current style'**
@@ -14498,43 +14498,43 @@ abstract class AppLocalizations {
   /// **'Nothing saved yet. Dial in a custom style, save it here, and reuse the look in your next video.'**
   String get videoEditorCaptionsSavedStylesEmpty;
 
-  /// Shown in the saved caption styles sheet when the styles could not be read from the device.
+  /// Shown in the saved caption styles and saved title styles sheets when the styles could not be read from the device.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t load your saved styles.'**
   String get videoEditorCaptionsSavedStylesLoadFailed;
 
-  /// Label of the text field for naming a saved caption style when saving or renaming it.
+  /// Label of the text field for naming a saved caption or title style when saving or renaming it.
   ///
   /// In en, this message translates to:
   /// **'Style name'**
   String get videoEditorCaptionsSavedStyleNameLabel;
 
-  /// Title of the prompt that asks for a name before saving a caption style, and the label of the button in the custom style editor that opens it.
+  /// Title of the prompt that asks for a name before saving a caption or title style, and the label of the button in the caption custom style editor that opens it.
   ///
   /// In en, this message translates to:
   /// **'Save style'**
   String get videoEditorCaptionsSavedStyleSaveTitle;
 
-  /// Confirm button of the prompt that saves a caption style.
+  /// Confirm button of the prompt that saves a caption or title style.
   ///
   /// In en, this message translates to:
   /// **'Save'**
   String get videoEditorCaptionsSavedStyleSaveAction;
 
-  /// Title of the prompt that renames a saved caption style.
+  /// Title of the prompt that renames a saved caption or title style.
   ///
   /// In en, this message translates to:
   /// **'Rename style'**
   String get videoEditorCaptionsSavedStyleRenameTitle;
 
-  /// Menu item and confirm button for renaming a saved caption style.
+  /// Menu item and confirm button for renaming a saved caption or title style.
   ///
   /// In en, this message translates to:
   /// **'Rename'**
   String get videoEditorCaptionsSavedStyleRenameAction;
 
-  /// Title of the confirmation before deleting a saved caption style. {name} is the style's user-given name.
+  /// Title of the confirmation before deleting a saved caption or title style. {name} is the style's user-given name.
   ///
   /// In en, this message translates to:
   /// **'Delete “{name}”?'**
@@ -14546,7 +14546,7 @@ abstract class AppLocalizations {
   /// **'Captions already using this style keep their look.'**
   String get videoEditorCaptionsSavedStyleDeleteConfirmMessage;
 
-  /// Accessibility label for a row in the saved caption styles sheet; tapping it applies that style to the captions. {name} is the style name.
+  /// Accessibility label for a row in the saved caption styles or saved title styles sheet; tapping it applies that style. {name} is the style name.
   ///
   /// In en, this message translates to:
   /// **'Apply {name}'**
@@ -14575,6 +14575,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save the style.'**
   String get videoEditorCaptionsSavedStyleSaveFailed;
+
+  /// Caption of the timeline action bar button, shown under a selected text overlay, that opens the saved title styles sheet. Short, like the neighbouring Animate label.
+  ///
+  /// In en, this message translates to:
+  /// **'Styles'**
+  String get videoEditorTitleStylesLabel;
+
+  /// Accessibility label of the timeline action bar button that opens the saved title styles sheet for the selected text overlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved styles for this text'**
+  String get videoEditorTitleStylesButtonSemanticLabel;
+
+  /// Shown in place of the list when the user has not saved a title style yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet. Style your text the way you like it, save it here, and reuse the look in your next video.'**
+  String get videoEditorTitleSavedStylesEmpty;
+
+  /// Body of the confirmation before deleting a saved title style, reassuring that text overlays already styled with it are unaffected.
+  ///
+  /// In en, this message translates to:
+  /// **'Text already using this style keeps its look.'**
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage;
 
   /// No description provided for @videoEditorCaptionsPresetClassic.
   ///

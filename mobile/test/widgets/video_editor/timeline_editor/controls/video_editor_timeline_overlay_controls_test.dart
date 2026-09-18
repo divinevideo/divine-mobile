@@ -9,22 +9,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart';
+import 'package:models/models.dart' as model;
+import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/saved_title_style.dart';
+import 'package:openvine/models/video_editor/title_style.dart';
+import 'package:openvine/providers/saved_title_style_repository_provider.dart';
+import 'package:openvine/repositories/saved_title_style_repository.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
+import 'package:pro_video_editor/pro_video_editor.dart' as pve;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
+import 'package:riverpod/misc.dart' show Override;
 
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
@@ -44,6 +55,9 @@ class _MockProImageEditorState extends Mock implements ProImageEditorState {
 }
 
 class _MockStateManager extends Mock implements StateManager {}
+
+class _MockSavedTitleStyleRepository extends Mock
+    implements SavedTitleStyleRepository {}
 
 void main() {
   group(TimelineOverlayControls, () {
@@ -67,8 +81,10 @@ void main() {
       _MockProImageEditorState mockEditor,
       _MockVideoEditorMainBloc mainBloc, {
       _MockClipEditorBloc? clipBloc,
+      List<Override> overrides = const [],
     }) {
       return ProviderScope(
+        overrides: overrides,
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -193,6 +209,29 @@ void main() {
       // animations field — offering the action would animate it in the editor
       // and drop it silently from the file.
       expect(find.text(l10n.videoEditorLayerAnimationLabel), findsNothing);
+    });
+
+    testWidgets('offers saved styles for a text layer only', (tester) async {
+      const item = TimelineOverlayItem(
+        id: 'layer-1',
+        type: TimelineOverlayType.layer,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 3),
+      );
+      final editor = _MockProImageEditorState();
+      final mainBloc = _MockVideoEditorMainBloc();
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+      when(
+        () => editor.activeLayers,
+      ).thenReturn([TextLayer(id: item.id, text: 'Episode 13')]);
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+      expect(find.text(l10n.videoEditorTitleStylesLabel), findsOneWidget);
+
+      // A drawing has no font, colors or pill to save.
+      when(() => editor.activeLayers).thenReturn([_buildPaintLayer(item.id)]);
+      await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+      expect(find.text(l10n.videoEditorTitleStylesLabel), findsNothing);
     });
 
     testWidgets('keeps the green screen off every other layer', (
@@ -1104,6 +1143,183 @@ void main() {
           expect(find.byType(LayerAnimationPickerView), findsOneWidget);
         },
       );
+
+      testWidgets('applying a saved style restyles the selected text', (
+        tester,
+      ) async {
+        final layer = TextLayer(
+          text: 'Episode 13',
+          id: 'layer-a',
+          offset: const Offset(10, 20),
+          startTime: const Duration(seconds: 1),
+        );
+        when(() => mockEditor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+        final clipBloc = _MockClipEditorBloc();
+        when(
+          () => clipBloc.stream,
+        ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
+        // One six-second clip: the total the leave animation anchors to.
+        when(() => clipBloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              DivineVideoClip(
+                id: 'clip-1',
+                video: EditorVideo.file('/tmp/clip-1.mp4'),
+                duration: const Duration(seconds: 6),
+                recordedAt: DateTime(2026),
+                targetAspectRatio: model.AspectRatio.vertical,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+          ),
+        );
+
+        const saved = TitleStyle(
+          fontIndex: 0,
+          color: Color(0xFFFFF140),
+          background: Color(0xFF000000),
+          colorMode: LayerBackgroundMode.onlyColor,
+          fontScale: 1.5,
+          leave: [
+            pve.LayerAnimation(
+              type: pve.LayerAnimationType.fade,
+              phase: pve.AnimationPhase.animateOut,
+              duration: Duration(milliseconds: 300),
+            ),
+          ],
+        );
+        final repository = _MockSavedTitleStyleRepository();
+        when(repository.getStyles).thenAnswer(
+          (_) async => [
+            SavedTitleStyle(
+              id: 'style-1',
+              name: 'Series intro',
+              style: saved,
+              createdAt: DateTime(2026, 9, 18),
+            ),
+          ],
+        );
+
+        const item = TimelineOverlayItem(
+          id: 'layer-a',
+          type: TimelineOverlayType.layer,
+          startTime: Duration(seconds: 1),
+          endTime: Duration(seconds: 6),
+        );
+        await tester.pumpWidget(
+          buildWithEditor(
+            item,
+            mockEditor,
+            mainBloc,
+            clipBloc: clipBloc,
+            overrides: [
+              savedTitleStyleRepositoryProvider.overrideWithValue(repository),
+            ],
+          ),
+        );
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorTitleStylesButtonSemanticLabel),
+        );
+        // Bounded pumps rather than pumpAndSettle: the sheet's preview loops
+        // continuously so the tree never settles.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(SavedTitleStylesSheetView), findsOneWidget);
+
+        await tester.tap(
+          find.bySemanticsLabel(
+            l10n.videoEditorCaptionsSavedStyleApplySemanticLabel(
+              'Series intro',
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        final written =
+            verify(
+                  () => mockEditor.addHistory(
+                    layers: captureAny(named: 'layers'),
+                  ),
+                ).captured.last
+                as List<Layer>;
+        final restyled = written.single as TextLayer;
+        // The look and animation come from the saved style; the text, its
+        // place on the canvas and its start are the layer's own.
+        expect(restyled.id, 'layer-a');
+        expect(restyled.text, 'Episode 13');
+        expect(restyled.offset, const Offset(10, 20));
+        expect(restyled.startTime, const Duration(seconds: 1));
+        expect(restyled.color, const Color(0xFFFFF140));
+        expect(restyled.colorMode, LayerBackgroundMode.onlyColor);
+        expect(restyled.fontScale, 1.5);
+        expect(restyled.divineLeaveAnimations, saved.leave);
+        // The leave animation gets its window from the clip total.
+        expect(restyled.endTime, const Duration(seconds: 6));
+      });
+
+      testWidgets('saved styles read the layer as the editor holds it now', (
+        tester,
+      ) async {
+        // Same id, placement and timing, so `Layer.==` — which ignores a
+        // text layer's colors — reports the two as equal and the bar is not
+        // rebuilt between them. The action must still see the recolour.
+        TextLayer layerWith(Color background) => TextLayer(
+          text: 'Episode 13',
+          id: 'layer-a',
+          background: background,
+          colorMode: LayerBackgroundMode.background,
+          startTime: Duration.zero,
+        );
+        when(
+          () => mockEditor.activeLayers,
+        ).thenReturn([layerWith(const Color(0xFFFFFFFF))]);
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+        final clipBloc = _MockClipEditorBloc();
+        when(
+          () => clipBloc.stream,
+        ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
+        when(() => clipBloc.state).thenReturn(const ClipEditorState());
+        final repository = _MockSavedTitleStyleRepository();
+        when(repository.getStyles).thenAnswer((_) async => []);
+
+        const item = TimelineOverlayItem(
+          id: 'layer-a',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 3),
+        );
+        await tester.pumpWidget(
+          buildWithEditor(
+            item,
+            mockEditor,
+            mainBloc,
+            clipBloc: clipBloc,
+            overrides: [
+              savedTitleStyleRepositoryProvider.overrideWithValue(repository),
+            ],
+          ),
+        );
+
+        // The text editor recolours the layer; nothing rebuilds the bar.
+        when(
+          () => mockEditor.activeLayers,
+        ).thenReturn([layerWith(const Color(0xFFFF7A00))]);
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorTitleStylesButtonSemanticLabel),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        final sheet = tester.widget<SavedTitleStylesSheetView>(
+          find.byType(SavedTitleStylesSheetView),
+        );
+        expect(sheet.currentStyle.background, const Color(0xFFFF7A00));
+      });
 
       testWidgets(
         'tune edit opens the tune sub-editor seeded with the set id',

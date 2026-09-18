@@ -8517,6 +8517,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorCaptionsSavedStyleSaveFailed => 'تعذّر حفظ النمط.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'الأنماط';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'الأنماط المحفوظة لهذا النص';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'لم يُحفظ أي نمط بعد. بعد تنسيق النص كما تريد، يمكن حفظ المظهر هنا لإعادة استخدامه في الفيديو التالي.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'النصوص التي تستخدم هذا النمط بالفعل تحتفظ بمظهرها.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'كلاسيكي';
 
   @override

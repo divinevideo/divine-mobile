@@ -8755,6 +8755,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut salva stilul.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Stiluri';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Stiluri salvate pentru acest text';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Nimic salvat încă. Dă textului look-ul care îți place, salvează-l aici și refolosește-l în următorul video.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Textele care folosesc deja acest stil își păstrează look-ul.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Clasic';
 
   @override

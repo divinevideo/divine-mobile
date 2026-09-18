@@ -8602,6 +8602,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'De stijl kon niet worden opgeslagen.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Stijlen';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Opgeslagen stijlen voor deze tekst';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Nog niets opgeslagen. Geef je tekst de look die je wilt, sla hem hier op en gebruik hem in je volgende video opnieuw.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Tekst die deze stijl al gebruikt, houdt zijn look.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klassiek';
 
   @override

@@ -8483,6 +8483,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorCaptionsSavedStyleSaveFailed => 'Stil kaydedilemedi.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Stiller';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Bu metin için kaydedilmiş stiller';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Henüz kaydedilmiş bir şey yok. Metnini istediğin gibi biçimlendir, stili buraya kaydet ve aynı görünümü sonraki videonda kullan.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Bu stili zaten kullanan metinler görünümünü korur.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasik';
 
   @override

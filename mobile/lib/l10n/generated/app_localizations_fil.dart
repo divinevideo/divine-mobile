@@ -8626,6 +8626,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-save ang style.';
 
   @override
+  String get videoEditorTitleStylesLabel => 'Mga Style';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel =>
+      'Mga naka-save na style para sa text na ito';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'Wala pang naka-save. I-style ang text mo ayon sa gusto mo, i-save dito, at gamitin ulit ang look sa susunod mong video.';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'Mananatili ang look ng text na gumagamit na ng style na ito.';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'Klasiko';
 
   @override

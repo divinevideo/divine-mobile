@@ -918,6 +918,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => db.savedCaptionStylesDao.deleteAllForUser(userPubkey),
           );
           await requiredDelete(
+            'savedTitleStyles',
+            () => db.savedTitleStylesDao.deleteAllForUser(userPubkey),
+          );
+          await requiredDelete(
             'pendingUploads',
             () => db.pendingUploadsDao.deleteAllForUser(userPubkey),
           );
@@ -990,6 +994,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
       sourceOwnerPubkey: DraftStorageService.anonymousOwnerPubkey,
     );
     await db.savedCaptionStylesDao.claimLegacyRows(
+      userPubkey,
+      sourceOwnerPubkey: DraftStorageService.anonymousOwnerPubkey,
+    );
+    await db.savedTitleStylesDao.claimLegacyRows(
       userPubkey,
       sourceOwnerPubkey: DraftStorageService.anonymousOwnerPubkey,
     );

@@ -8142,6 +8142,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorCaptionsSavedStyleSaveFailed => 'スタイルを保存できませんでした。';
 
   @override
+  String get videoEditorTitleStylesLabel => 'スタイル';
+
+  @override
+  String get videoEditorTitleStylesButtonSemanticLabel => 'このテキストの保存済みスタイル';
+
+  @override
+  String get videoEditorTitleSavedStylesEmpty =>
+      'まだ保存されたスタイルはありません。テキストを好みの見た目に整えてここに保存すると、次の動画でも同じ見た目を使えます。';
+
+  @override
+  String get videoEditorTitleSavedStyleDeleteConfirmMessage =>
+      'このスタイルをすでに使っているテキストの見た目は変わりません。';
+
+  @override
   String get videoEditorCaptionsPresetClassic => 'クラシック';
 
   @override
