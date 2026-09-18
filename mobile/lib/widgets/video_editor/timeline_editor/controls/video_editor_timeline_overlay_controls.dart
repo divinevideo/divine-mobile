@@ -105,13 +105,13 @@ class _LayerOverlayControls extends StatelessWidget {
       // already whatever shape it was drawn or typed at; a detached clip
       // carries a video file that can genuinely be re-rendered.
       onTransform: isDetachedClip
-          ? () => transformDetachedClip(context, layer)
+          ? () => _transformLayer(context: context)
           : null,
       // Green screen, for a detached clip only — and, unlike the timeline's,
       // never baked: the export composites the layer over the track, so the
       // removed area can be left genuinely see-through.
       onChromaKey: isDetachedClip
-          ? () => editDetachedClipChromaKey(context, layer)
+          ? () => _editChromaKey(context: context)
           : null,
       hasChromaKey:
           isDetachedClip &&
@@ -154,6 +154,18 @@ class _LayerOverlayControls extends StatelessWidget {
     if (updatedLayer == null) return;
 
     editor.applyTextLayerChanges(layer, updatedLayer);
+  }
+
+  Future<void> _transformLayer({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await transformDetachedClip(context, layer);
+  }
+
+  Future<void> _editChromaKey({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editDetachedClipChromaKey(context, layer);
   }
 
   Future<void> _animateLayer({required BuildContext context}) async {
