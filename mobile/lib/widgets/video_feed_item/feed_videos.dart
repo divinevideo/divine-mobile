@@ -363,6 +363,16 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             );
           },
         ),
+        // Turning Auto on is a request to keep watching: resume the current
+        // video so playback — and the loop that drives the advance — actually
+        // starts, instead of leaving it paused until the viewer taps to play.
+        BlocListener<FeedAutoAdvanceCubit, FeedAutoAdvanceState>(
+          listenWhen: (previous, current) =>
+              !previous.enabled && current.enabled,
+          listener: (_, _) {
+            _feedKey.currentState?.resumeCurrentPlayback();
+          },
+        ),
       ],
       child: InfiniteVideoFeed(
         key: _feedKey,
@@ -529,6 +539,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
               ),
               onContentWarningRevealed: () => _revealContentWarning(video.id),
               onSuppressAutoAdvance: _suppressAutoAdvance,
+              onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
             ),
           );
         },
@@ -548,6 +559,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.contentWarningRevealed,
     required this.onContentWarningRevealed,
     this.onSuppressAutoAdvance,
+    this.onResumeAutoAdvance,
   });
 
   final String? contextTitle;
@@ -572,6 +584,10 @@ class _Overlay extends ConsumerStatefulWidget {
   final VoidCallback onContentWarningRevealed;
 
   final VoidCallback? onSuppressAutoAdvance;
+
+  /// Called when a tap resumes playback, so Auto can be lifted out of the
+  /// suppression a preceding pause applied.
+  final VoidCallback? onResumeAutoAdvance;
 
   @override
   ConsumerState<_Overlay> createState() => __OverlayState();
@@ -777,14 +793,18 @@ class __OverlayState extends ConsumerState<_Overlay> {
   }
 
   void _handlePlayerTap() {
-    widget.onSuppressAutoAdvance?.call();
-
     final controller = widget.controller;
     if (controller == null) return;
     switch (resolvePlayerTapAction(controller.state.status)) {
+      // Pausing suppresses Auto so it cannot advance out from under a paused
+      // frame; resuming lifts that suppression, because a tap to play is a
+      // request to keep watching. Suppressing on both taps latched Auto off
+      // after a pause and nothing lifted it until the next swipe.
       case PlayerTapAction.play:
+        widget.onResumeAutoAdvance?.call();
         controller.play();
       case PlayerTapAction.pause:
+        widget.onSuppressAutoAdvance?.call();
         controller.pause();
     }
   }
