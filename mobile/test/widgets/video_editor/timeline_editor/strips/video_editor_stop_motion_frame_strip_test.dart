@@ -95,6 +95,36 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(Image), findsNWidgets(4));
     });
+
+    // The recorder deletes a still's file on undo, discard, reset and a mode
+    // switch, so a tile can outlive its file. Decoding it through a bare
+    // Image.file throws PathNotFoundException with no image-stream error
+    // listener attached, which FlutterError.onError records as a *fatal*
+    // crash (#5796's class). setUp makes a fresh randomly-named temp dir per
+    // test, so no other test can read this failed resolution back.
+    testWidgets('renders the placeholder instead of throwing when a still is '
+        'gone', (tester) async {
+      frames = [
+        StopMotionClipFrame(
+          path: '${tempDir.path}/deleted_by_undo.png',
+          duration: const Duration(milliseconds: 500),
+        ),
+      ];
+      await pump(tester, onFrameTapped: (_) {});
+      // Resolving the file is real I/O, so the failure needs real event-loop
+      // turns to arrive; polled rather than waited on for a fixed span.
+      for (
+        var attempt = 0;
+        attempt < 50 && find.byType(DivineIcon).evaluate().isEmpty;
+        attempt++
+      ) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DivineIcon), findsOneWidget);
+    });
   });
 
   group('tapping', () {

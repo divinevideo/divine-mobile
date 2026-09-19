@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 
 /// Plays a stop-motion clip by looping through its captured stills, holding
 /// each for its own [StopMotionClipFrame.duration].
@@ -125,6 +126,11 @@ class _StopMotionPlayerState extends State<StopMotionPlayer>
           FileImage(File(frame.path)),
         ),
         context,
+        // The recorder deletes frame files on undo, discard and reset, so a
+        // missing still is expected. precacheImage reports through its own
+        // listener, so without this it stays a fatal FlutterError even though
+        // _StopMotionFrame renders the placeholder (#5796's class).
+        onError: (_, _) {},
       );
     }
   }
@@ -225,8 +231,8 @@ class _StopMotionFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.file(
-      File(frame.path),
+    return ClipThumbnailImage(
+      path: frame.path,
       fit: fit,
       gaplessPlayback: true,
       cacheHeight: cacheHeight,
