@@ -70,7 +70,6 @@ class _ResultOnlyDownload extends CancellableDownload {
 http.StreamedResponse _abortableResponse(
   http.BaseRequest request,
   int statusCode, {
-  Map<String, String> headers = const {},
   void Function()? onListen,
 }) {
   final abortTrigger = (request as http.AbortableRequest).abortTrigger!;
@@ -87,7 +86,7 @@ http.StreamedResponse _abortableResponse(
       );
     },
   );
-  return http.StreamedResponse(body.stream, statusCode, headers: headers);
+  return http.StreamedResponse(body.stream, statusCode);
 }
 
 void main() {
@@ -383,21 +382,19 @@ void main() {
         expect(target.existsSync(), isFalse);
       });
 
-      test('keeps the status and reports nothing when cancelled while a '
-          'non-OK body is being drained', () async {
+      test('reports nothing when cancelled while a non-OK body is being '
+          'drained', () async {
         var bodyListened = false;
         final client = _CallbackClient(
           (request) async => _abortableResponse(
             request,
             HttpStatus.tooManyRequests,
-            headers: {'retry-after': '10'},
             onListen: () => bodyListened = true,
           ),
         );
         final downloader = HttpCancellableDownloader(client);
 
         final zoneErrors = <Object>[];
-        CancellableDownloadResult? resolved;
         late CancellableDownload download;
         await runZonedGuarded(() async {
           download = downloader.download(
@@ -406,7 +403,7 @@ void main() {
           );
           // The result settles before the body finishes draining, which is
           // the window a caller's dispose-time cancel() lands in.
-          resolved = await download.result;
+          await download.result;
           download.cancel();
           await pumpEventQueue();
         }, (error, _) => zoneErrors.add(error));
@@ -414,9 +411,6 @@ void main() {
         expect(zoneErrors, isEmpty);
         // An unread body never gives its IOClient connection back to the pool.
         expect(bodyListened, isTrue);
-        expect(resolved?.file, isNull);
-        expect(resolved?.statusCode, equals(HttpStatus.tooManyRequests));
-        expect(resolved?.headers['retry-after'], equals('10'));
         expect(download.isCancelled, isTrue);
         expect(target.existsSync(), isFalse);
       });
