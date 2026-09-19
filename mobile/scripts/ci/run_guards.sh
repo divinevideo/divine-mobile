@@ -150,7 +150,22 @@ if [ "$LIST_ONLY" -eq 1 ]; then
 fi
 
 if [ -z "$JOBS" ]; then
-  JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
+  # macOS defaults to serial. Most guards are `dart run` detectors, and on
+  # macOS every `dart run` re-copies and re-codesigns the workspace's native
+  # assets into the shared mobile/.dart_tool/lib/ before it executes. Run two
+  # of them at once and they clobber each other mid-signature:
+  #   Failed to codesign dylib .../.dart_tool/lib/libsqlite3mc.dylib:
+  #   replacing existing signature ... No such file or directory
+  # The guard then fails with an exit code that has nothing to do with its
+  # ratchet, and which guard loses the race changes run to run — so a local
+  # run reports 2-3 phantom failures out of 62 and hides real ones. Linux has
+  # no codesigning step and no race, so CI keeps the full fan-out.
+  # Override with --jobs N or GUARDS_JOBS to opt back in.
+  if [ "$(uname -s)" = "Darwin" ]; then
+    JOBS=1
+  else
+    JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
+  fi
 fi
 if ! [[ "$JOBS" =~ ^[1-9][0-9]*$ ]]; then
   echo "--jobs must be a positive integer, got: ${JOBS}" >&2
