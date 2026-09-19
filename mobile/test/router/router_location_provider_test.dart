@@ -108,6 +108,57 @@ void main() {
       await tester.pump();
     });
 
+    test('delivers a delegate notification asynchronously, so a router '
+        'change during build cannot modify a provider mid-build', () async {
+      // GoRouterDelegate is a ChangeNotifier and notifies while the widget
+      // tree is building (route redirects run inside the build pipeline). A
+      // synchronous controller hands that straight to the listening
+      // StreamProvider, which then calls setValue mid-build and throws
+      // `Tried to modify a provider while the widget tree was building` into
+      // the app zone — and on to Crashlytics — on every cold start.
+      final router = _MockGoRouter();
+      final delegate = _MockGoRouterDelegate();
+      final routeInformation = GoRouteInformationProvider(
+        initialLocation: '/sentinel-location',
+        initialExtra: null,
+      );
+      addTearDown(routeInformation.dispose);
+      when(() => router.routerDelegate).thenReturn(delegate);
+      when(() => router.routeInformationProvider).thenReturn(routeInformation);
+      final container = ProviderContainer(
+        overrides: [goRouterProvider.overrideWithValue(router)],
+      );
+      addTearDown(container.dispose);
+
+      final stream = container.read(routerLocationStreamProvider);
+      final locations = <String>[];
+      final subscription = stream.listen(locations.add);
+      addTearDown(subscription.cancel);
+      final listener =
+          verify(() => delegate.addListener(captureAny())).captured.single
+              as VoidCallback;
+
+      // Drain the buffered initial location so only the delegate-driven
+      // emission is under test.
+      await pumpEventQueue();
+      expect(locations, ['/sentinel-location']);
+      locations.clear();
+
+      listener();
+
+      expect(
+        locations,
+        isEmpty,
+        reason:
+            'the emission must not be delivered inline: the delegate '
+            'notifies during build, and a listening StreamProvider would '
+            'update mid-build',
+      );
+
+      await pumpEventQueue();
+      expect(locations, ['/sentinel-location']);
+    });
+
     test('removes its listener and closes the stream on dispose', () async {
       final router = _MockGoRouter();
       final delegate = _MockGoRouterDelegate();
@@ -132,9 +183,7 @@ void main() {
       );
       addTearDown(subscription.cancel);
       final listener =
-          verify(
-                () => delegate.addListener(captureAny()),
-              ).captured.single
+          verify(() => delegate.addListener(captureAny())).captured.single
               as VoidCallback;
 
       await pumpEventQueue();
