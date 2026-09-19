@@ -63,10 +63,10 @@ class _ResultOnlyDownload extends CancellableDownload {
   void cancel() {}
 }
 
-/// Builds a response whose body behaves like `IOClient`'s once the headers
-/// have arrived: an abort no longer throws out of `send()` but is delivered
-/// on the body stream as a [http.RequestAbortedException], after which the
-/// stream closes. [onListen] fires when the download starts reading the body.
+/// Builds a response whose body reports an abort the way `package:http`
+/// clients do once `send()` has returned: as a [http.RequestAbortedException]
+/// on the body stream, which then closes. [onListen] fires when the download
+/// starts reading the body.
 http.StreamedResponse _abortableResponse(
   http.BaseRequest request,
   int statusCode, {
@@ -338,15 +338,18 @@ void main() {
     // instead. The unawaited drain of a body nobody wanted was its only
     // consumer, so every feed scroll or thumbnail dispose in that window was
     // reported as a crash.
-    group('when cancel() lands after the response headers', () {
+    group('when the abort arrives on the response body', () {
       late File target;
 
       setUp(() {
         target = File('${tempDir.path}/aborted_body.mp4');
       });
 
-      test('settles with null and reports nothing when cancelled before the '
-          'body is consumed', () async {
+      test('settles with null and reports nothing when the response arrives '
+          'after cancel()', () async {
+        // cupertino_http and cronet_http still return a response whose
+        // headers landed just before the cancel; IOClient would throw out of
+        // send() here instead.
         final headersArrived = Completer<void>();
         var bodyListened = false;
         final client = _CallbackClient((request) async {
