@@ -1139,10 +1139,11 @@ void main() {
         'a service built after the save republishes the complete source '
         'shape while the relay is stale',
         () async {
-          // The writing surface builds a fresh BookmarksRepository per sheet
-          // (#7596), so an in-memory-only watermark is blank again by the
-          // next save. That makes the ordinary save / close / save loop
-          // reproduce #7163 with no concurrency involved at all.
+          // A BookmarksRepository built after the one that saved — the next
+          // app launch, or, before #7596 gave the app one shared instance,
+          // the next share sheet — starts with a blank in-memory watermark.
+          // That makes the ordinary save / close / save loop reproduce #7163
+          // with no concurrency involved at all.
           final ciphertext = await encryptToSelf([
             ['e', 'private-video'],
           ]);
