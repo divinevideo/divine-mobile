@@ -35,12 +35,12 @@ part 'profile_saved_videos_state.dart';
 class ProfileSavedVideosBloc
     extends Bloc<ProfileSavedVideosEvent, ProfileSavedVideosState> {
   ProfileSavedVideosBloc({
-    required Future<BookmarksRepository> bookmarksRepository,
+    required BookmarksRepository bookmarksRepository,
     required VideosRepository videosRepository,
     required String currentUserPubkey,
     required Stream<String> removedVideoIds,
     required bool Function(VideoEvent video) deletedVideoFilter,
-  }) : _bookmarksRepositoryFuture = bookmarksRepository,
+  }) : _bookmarksRepository = bookmarksRepository,
        _videosRepository = videosRepository,
        _currentUserPubkey = currentUserPubkey,
        _deletedVideoFilter = deletedVideoFilter,
@@ -63,10 +63,7 @@ class ProfileSavedVideosBloc
     });
   }
 
-  /// Resolved lazily on the first sync — [bookmarksRepositoryProvider] is an
-  /// async provider so the service isn't immediately available at widget
-  /// build time.
-  final Future<BookmarksRepository> _bookmarksRepositoryFuture;
+  final BookmarksRepository _bookmarksRepository;
   final VideosRepository _videosRepository;
   final String _currentUserPubkey;
   late final StreamSubscription<String> _removedVideoIdsSubscription;
@@ -167,9 +164,8 @@ class ProfileSavedVideosBloc
   /// and the caller is only reading. (The write path treats the same failure
   /// as fatal, because republishing an unreconciled list destroys bookmarks.)
   Future<List<String>> _resolveSavedIds() async {
-    final bookmarksRepository = await _bookmarksRepositoryFuture;
-    await bookmarksRepository.syncGlobalBookmarks();
-    return bookmarksRepository.globalBookmarks
+    await _bookmarksRepository.syncGlobalBookmarks();
+    return _bookmarksRepository.globalBookmarks
         .where((item) => item.type == 'e')
         .map((item) => item.id)
         .toList();

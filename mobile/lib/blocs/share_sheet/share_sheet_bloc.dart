@@ -42,7 +42,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
     required ProfileReader profileRepository,
     required FollowRepository followRepository,
     required String currentUserPubkey,
-    Future<BookmarksRepository?>? bookmarksRepositoryFuture,
+    BookmarksRepository? bookmarksRepository,
     BaseCacheManager? cacheManager,
     VideoClipImportService? videoClipImportService,
   }) : _video = video,
@@ -51,7 +51,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
        _profileRepository = profileRepository,
        _followRepository = followRepository,
        _currentUserPubkey = currentUserPubkey,
-       _bookmarksRepositoryFuture = bookmarksRepositoryFuture,
+       _bookmarksRepository = bookmarksRepository,
        _cacheManager = cacheManager,
        _videoClipImportService = videoClipImportService,
        super(const ShareSheetState()) {
@@ -79,7 +79,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
   final ProfileReader _profileRepository;
   final FollowRepository _followRepository;
   final String _currentUserPubkey;
-  final Future<BookmarksRepository?>? _bookmarksRepositoryFuture;
+  final BookmarksRepository? _bookmarksRepository;
   final BaseCacheManager? _cacheManager;
   final VideoClipImportService? _videoClipImportService;
 
@@ -415,7 +415,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
     ShareSheetBookmarkStatusRequested event,
     Emitter<ShareSheetState> emit,
   ) async {
-    final bookmarksRepository = await _bookmarksRepositoryFuture;
+    final bookmarksRepository = _bookmarksRepository;
     if (bookmarksRepository == null || isClosed) return;
 
     try {
@@ -466,15 +466,12 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState> {
     ShareSheetSaveRequested event,
     Emitter<ShareSheetState> emit,
   ) async {
-    // Emitted above the await deliberately: resolving the bookmark service is
-    // itself a wait on a cold start, and the toggle below is a relay
-    // reconcile + sign + publish. Emitting after it would leave the sheet
-    // inert for the whole window, which is the bug (#7073).
+    // Emitted before the toggle deliberately: it is a relay reconcile + sign
+    // + publish, and emitting after it would leave the sheet inert for the
+    // whole window, which is the bug (#7073).
     emit(state.copyWith(isSaving: true, clearActionResult: true));
 
-    final bookmarksRepository = await _bookmarksRepositoryFuture;
-    if (isClosed) return;
-
+    final bookmarksRepository = _bookmarksRepository;
     if (bookmarksRepository == null) {
       Log.warning(
         'Bookmark service unavailable — cannot save',

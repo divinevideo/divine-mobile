@@ -186,9 +186,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
             // string never matches a real pubkey (#8351).
             currentUserPubkey:
                 ref.read(authServiceProvider).currentPublicKeyHex ?? '',
-            bookmarksRepositoryFuture: ref.read(
-              bookmarksRepositoryProvider.future,
-            ),
+            bookmarksRepository: ref.read(bookmarksRepositoryProvider),
             cacheManager: openVineImageCache,
             videoClipImportService: ref.read(videoClipImportServiceProvider),
           )

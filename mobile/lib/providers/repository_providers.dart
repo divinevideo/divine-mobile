@@ -583,14 +583,23 @@ NotifySubscriptionsRepository notifySubscriptionsRepository(Ref ref) {
 
 /// Bookmark service for NIP-51 bookmarks.
 ///
-/// Deliberately left as an autoDispose `Future` provider by the #6969
-/// package extraction, so that move stayed behaviour-preserving. Both
-/// consumers read it with `ref.read(...future)`, which leaves no listener, so
-/// every read tears the element down and builds a fresh instance — dropping
-/// its in-memory snapshot and its serialization queue. That is #7596, and it
-/// is fixed next, not here.
-@riverpod
-Future<BookmarksRepository> bookmarksRepository(Ref ref) async {
+/// Long-lived so both consumers share one instance. Each repository owns a
+/// private operation queue, and the #7598 guard that serializes a relay read
+/// against a publish only covers operations passing through the same one.
+/// Under `autoDispose` neither consumer registered a listener, so the element
+/// was torn down after every read and the next read built a second repository
+/// — with a second queue, over the one unscoped `global_bookmarks` key
+/// (#7596).
+///
+/// `keepAlive` does not strand the instance across an account switch: this
+/// watches [nostrServiceProvider], which reassigns its state per identity,
+/// and `NostrClient` has no `==`, so the element is always invalidated.
+///
+/// Synchronous because every dependency is: the `async` it carried out of the
+/// #6969 extraction awaited nothing, and only forced both consumers to hold a
+/// `Future` they could not read at build time.
+@Riverpod(keepAlive: true)
+BookmarksRepository bookmarksRepository(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
   final authService = ref.watch(authServiceProvider);
   final prefs = ref.watch(sharedPreferencesProvider);

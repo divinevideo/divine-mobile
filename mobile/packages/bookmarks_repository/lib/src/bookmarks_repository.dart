@@ -172,11 +172,13 @@ class BookmarksRepository {
 
   /// Storage key for [_revision] and its complete publish source.
   ///
-  /// Persisted next to the snapshot because the writing surface builds a new
-  /// [BookmarksRepository] per sheet (#7596): an in-memory-only watermark is
-  /// blank again by the next save, which is the ordinary save/close/save loss
-  /// in #7163. The source tag array and encrypted event content travel in the
-  /// same record so that watermark can never authorize a flattened publish.
+  /// Persisted next to the snapshot because an in-memory-only watermark is
+  /// blank in every [BookmarksRepository] built after the one that saved —
+  /// the next app launch, and, until #7596 gave the app one shared instance,
+  /// the next share sheet too. That blank watermark is the ordinary
+  /// save/close/save loss in #7163. The source tag array and encrypted event
+  /// content travel in the same record so that watermark can never authorize
+  /// a flattened publish.
   /// Cleared with the snapshot on identity change — see
   /// `UserDataCleanupService.userSpecificKeys`.
   static const String globalBookmarksRevisionStorageKey =

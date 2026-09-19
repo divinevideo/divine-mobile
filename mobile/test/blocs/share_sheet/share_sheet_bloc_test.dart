@@ -141,7 +141,10 @@ void main() {
 
     ShareSheetBloc createBloc({
       FollowRepository? followRepository,
-      Future<BookmarksRepository?>? bookmarksRepositoryFuture,
+      BookmarksRepository? bookmarksRepository,
+      // Distinguishes "no bookmark service wired" from "use the default
+      // mock": a bare null would fall through to the mock below.
+      bool withBookmarksRepository = true,
       String relayUrl = 'wss://relay.test.example',
       BaseCacheManager? cacheManager,
       VideoClipImportService? videoClipImportService,
@@ -152,8 +155,9 @@ void main() {
       profileRepository: mockProfileRepository,
       followRepository: followRepository ?? mockFollowRepository,
       currentUserPubkey: currentUserPubkey,
-      bookmarksRepositoryFuture:
-          bookmarksRepositoryFuture ?? Future.value(mockBookmarksRepository),
+      bookmarksRepository: withBookmarksRepository
+          ? (bookmarksRepository ?? mockBookmarksRepository)
+          : null,
       cacheManager: cacheManager,
       videoClipImportService: videoClipImportService,
     );
@@ -1473,9 +1477,7 @@ void main() {
 
       blocTest<ShareSheetBloc, ShareSheetState>(
         'emits $ShareSheetSaveResult with succeeded=false when no bookmark service',
-        build: () => createBloc(
-          bookmarksRepositoryFuture: Future<BookmarksRepository?>.value(),
-        ),
+        build: () => createBloc(withBookmarksRepository: false),
         act: (bloc) => bloc.add(const ShareSheetSaveRequested()),
         expect: () => [
           savePending,
@@ -2205,9 +2207,7 @@ void main() {
 
       blocTest<ShareSheetBloc, ShareSheetState>(
         'stays unknown when the bookmark service is unavailable',
-        build: () => createBloc(
-          bookmarksRepositoryFuture: Future<BookmarksRepository?>.value(),
-        ),
+        build: () => createBloc(withBookmarksRepository: false),
         act: (bloc) => bloc.add(const ShareSheetBookmarkStatusRequested()),
         expect: () => <ShareSheetState>[],
       );
