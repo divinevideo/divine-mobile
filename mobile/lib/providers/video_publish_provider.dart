@@ -400,7 +400,10 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         category: .video,
       );
 
-      DivineVideoClip? finalRenderedClip = draft.finalRenderedClip;
+      // A render cached by an older renderer is rendered again, not published.
+      DivineVideoClip? finalRenderedClip = draft.hasStaleFinalRender
+          ? null
+          : draft.finalRenderedClip;
       String? proofManifestJson = draft.proofManifestJson;
 
       // Stop-motion clips are stored as frames; render them to an mp4 (≥1s)
