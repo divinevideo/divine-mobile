@@ -30,6 +30,7 @@ class SavedVideosScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final videosRepository = ref.watch(videosRepositoryProvider);
+    final bookmarksRepository = ref.watch(bookmarksRepositoryProvider);
     final nostrService = ref.watch(nostrServiceProvider);
     final currentUserPubkey = nostrService.publicKey;
 
@@ -37,12 +38,16 @@ class SavedVideosScreen extends ConsumerWidget {
       backgroundColor: context.vineColors.surfaceContainerHigh,
       appBar: const SavedVideosAppBar(),
       body: BlocProvider<ProfileSavedVideosBloc>(
-        // Re-created when either captured dependency changes identity, so an
+        // Re-created when any captured dependency changes identity, so an
         // account switch cannot leave the grid reading the previous viewer's
         // bookmarks (see rules/state_management.md).
-        key: ValueKey((videosRepository, currentUserPubkey)),
+        key: ValueKey((
+          videosRepository,
+          bookmarksRepository,
+          currentUserPubkey,
+        )),
         create: (_) => ProfileSavedVideosBloc(
-          bookmarksRepository: ref.read(bookmarksRepositoryProvider.future),
+          bookmarksRepository: bookmarksRepository,
           videosRepository: videosRepository,
           currentUserPubkey: currentUserPubkey,
           removedVideoIds: videosRepository.removedVideoIds,

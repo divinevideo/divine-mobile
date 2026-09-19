@@ -82,7 +82,7 @@ void main() {
       Stream<String>? removedVideoIds,
       bool Function(VideoEvent video)? deletedVideoFilter,
     }) => ProfileSavedVideosBloc(
-      bookmarksRepository: Future.value(mockBookmarksRepository),
+      bookmarksRepository: mockBookmarksRepository,
       videosRepository: mockVideosRepository,
       currentUserPubkey: currentUserPubkey,
       removedVideoIds: removedVideoIds ?? const Stream<String>.empty(),
