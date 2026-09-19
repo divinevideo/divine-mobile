@@ -64,6 +64,42 @@ class EventSignerAccountMismatchException implements Exception {
       '$actualPubkey but the active identity is $expectedPubkey';
 }
 
+/// Which post-signing check an event returned by a signer failed.
+enum SignedEventCheck {
+  /// The Schnorr signature does not verify for the event's own pubkey.
+  signature,
+
+  /// The event id does not match the hash of its serialized fields.
+  structure,
+}
+
+/// Thrown when a signer answers for the right account with an event that
+/// fails post-signing validation.
+///
+/// A signing-layer invariant violation: the signer did produce an event, so a
+/// signature that does not verify or an id that does not match its hash is a
+/// broken signer rather than a network condition. Reported to Crashlytics via
+/// [Reportable] (YES on the error-handling matrix), and the caller fails the
+/// publish closed. Carries the event kind only, so it is safe for the
+/// [Reportable] sanitizer.
+class EventSignerInvalidEventException implements Exception {
+  const EventSignerInvalidEventException({
+    required this.check,
+    required this.kind,
+  });
+
+  /// The validation the returned event failed.
+  final SignedEventCheck check;
+
+  /// The kind of the event that was being signed.
+  final int kind;
+
+  @override
+  String toString() =>
+      'EventSignerInvalidEventException: signer returned a kind $kind event '
+      'that failed the ${check.name} check';
+}
+
 /// Builds the atomic signing identity and creates/signs Nostr events.
 ///
 /// Extracted from `AuthService` (#4741) as a client-tier collaborator.
@@ -156,6 +192,7 @@ class SignerFactory {
         pubkey: pubkey,
         rpcSigner: rpc,
         localSigner: localSigner,
+        invalidRpcFallbackReporter: _reportInvalidKeycastRpcFallbackSignature,
       );
     }
     // Local keys only — private key required.
@@ -274,6 +311,12 @@ class SignerFactory {
       // background isolate, because the pure-Dart verify blocked the main
       // isolate for ~10ms per signed event (on-device profiling). The cheap
       // structural check (isValid: id == hash) below always runs.
+      //
+      // Both failures throw for the same reason the account mismatch does:
+      // the signer answered, so a bad event is its defect, and the catch
+      // below is the one place that reports. Callers still get null, and
+      // `ViewEventDropReason.signingFailed` relies on that report having
+      // happened here (#9340).
       if (!identity.signsWithLocalKey &&
           !await _verifyRemoteSignature(signedEvent)) {
         Log.error(
@@ -284,7 +327,10 @@ class SignerFactory {
           name: 'SignerFactory',
           category: LogCategory.auth,
         );
-        return null;
+        throw EventSignerInvalidEventException(
+          check: SignedEventCheck.signature,
+          kind: kind,
+        );
       }
 
       if (!signedEvent.isValid) {
@@ -294,7 +340,10 @@ class SignerFactory {
           name: 'SignerFactory',
           category: LogCategory.auth,
         );
-        return null;
+        throw EventSignerInvalidEventException(
+          check: SignedEventCheck.structure,
+          kind: kind,
+        );
       }
 
       Log.info(
@@ -312,24 +361,59 @@ class SignerFactory {
         error: e,
         stackTrace: stackTrace,
       );
-      // An event signed for a different account is an invariant violation
-      // (YES on the Reportable matrix), not an expected domain/network
-      // failure — surface it to Crashlytics. Other errors keep the existing
-      // log-only behavior to avoid flooding the dashboard.
-      if (e is EventSignerAccountMismatchException || e is Error) {
-        final isAccountMismatch = e is EventSignerAccountMismatchException;
+      // Signing-layer invariants are reported here, once. Everything else is
+      // an expected failure — a remote signer's RPC timeout, 5xx or dropped
+      // connection, a declined NIP-55 prompt — and stays log-only (NO on the
+      // Reportable matrix); the null result is the caller's whole signal
+      // that it happened, and callers must not file it as a defect of their
+      // own (#9340).
+      final report = _invariantReport(e);
+      if (report != null) {
         _reportError?.call(
           Reportable(e, context: 'createAndSignEvent'),
           stackTrace,
-          reason: isAccountMismatch
-              ? 'Signer returned an event for a different account'
-              : 'Unexpected signer invariant failure',
-          logMessage: isAccountMismatch
-              ? 'Signer account mismatch during createAndSignEvent'
-              : 'Unexpected signer invariant failure during createAndSignEvent',
+          reason: report.reason,
+          logMessage: report.logMessage,
         );
       }
       return null;
     }
+  }
+
+  /// Crashlytics annotation for a signing-layer invariant violation, or null
+  /// when [error] is an expected failure that is only logged.
+  static ({String reason, String logMessage})? _invariantReport(Object error) =>
+      switch (error) {
+        EventSignerAccountMismatchException() => (
+          reason: 'Signer returned an event for a different account',
+          logMessage: 'Signer account mismatch during createAndSignEvent',
+        ),
+        EventSignerInvalidEventException(:final check) => (
+          reason:
+              'Signer returned an event that failed the ${check.name} check',
+          logMessage:
+              'Signer ${check.name} validation failed during '
+              'createAndSignEvent',
+        ),
+        Error() => (
+          reason: 'Unexpected signer invariant failure',
+          logMessage:
+              'Unexpected signer invariant failure during createAndSignEvent',
+        ),
+        _ => null,
+      };
+
+  void _reportInvalidKeycastRpcFallbackSignature(
+    KeycastInvalidRpcFallbackSignatureException error,
+    StackTrace stackTrace,
+  ) {
+    _reportError?.call(
+      Reportable(error, context: 'createAndSignEvent'),
+      stackTrace,
+      reason: 'Keycast RPC fallback returned an invalid signature',
+      logMessage:
+          'Keycast RPC fallback signature validation failed during '
+          'createAndSignEvent',
+    );
   }
 }

@@ -250,34 +250,31 @@ void main() {
       verifyNever(() => mockRpc.signEvent(any()));
     });
 
-    test(
-      'signEvent falls back to RPC when local signing fails and the '
-      'RPC signature is valid',
-      () async {
-        final event = Event(testPublicKey, EventKind.textNote, [], 'test')
-          ..sign(testPrivateKey);
-        final mockLocal = _MockLocalKeySigner();
-        when(() => mockLocal.signEvent(any())).thenThrow(
-          const LocalSignerOperationException(
-            LocalSignerOperation.signEvent,
-            SecureKeyException('Local key unavailable'),
-          ),
-        );
-        when(() => mockRpc.signEvent(any())).thenAnswer((_) async => event);
+    test('signEvent falls back to RPC when local signing fails and the '
+        'RPC signature is valid', () async {
+      final event = Event(testPublicKey, EventKind.textNote, [], 'test')
+        ..sign(testPrivateKey);
+      final mockLocal = _MockLocalKeySigner();
+      when(() => mockLocal.signEvent(any())).thenThrow(
+        const LocalSignerOperationException(
+          LocalSignerOperation.signEvent,
+          SecureKeyException('Local key unavailable'),
+        ),
+      );
+      when(() => mockRpc.signEvent(any())).thenAnswer((_) async => event);
 
-        final identity = KeycastNostrIdentity(
-          pubkey: testPublicKey,
-          rpcSigner: mockRpc,
-          localSigner: mockLocal,
-        );
+      final identity = KeycastNostrIdentity(
+        pubkey: testPublicKey,
+        rpcSigner: mockRpc,
+        localSigner: mockLocal,
+      );
 
-        final signed = await identity.signEvent(event);
+      final signed = await identity.signEvent(event);
 
-        expect(signed, equals(event));
-        verify(() => mockLocal.signEvent(any())).called(1);
-        verify(() => mockRpc.signEvent(any())).called(1);
-      },
-    );
+      expect(signed, equals(event));
+      verify(() => mockLocal.signEvent(any())).called(1);
+      verify(() => mockRpc.signEvent(any())).called(1);
+    });
 
     test(
       'signEvent rejects an invalid RPC fallback signature (#5450) so a remote '
@@ -296,40 +293,41 @@ void main() {
           ),
         );
         when(() => mockRpc.signEvent(any())).thenAnswer((_) async => unsigned);
+        final reported = <KeycastInvalidRpcFallbackSignatureException>[];
 
         final identity = KeycastNostrIdentity(
           pubkey: testPublicKey,
           rpcSigner: mockRpc,
           localSigner: mockLocal,
+          invalidRpcFallbackReporter: (error, _) => reported.add(error),
         );
 
         expect(identity.signsWithLocalKey, isTrue);
         final signed = await identity.signEvent(unsigned);
 
         expect(signed, isNull);
+        expect(reported, hasLength(1));
+        expect(reported.single.kind, EventKind.textNote);
         verify(() => mockLocal.signEvent(any())).called(1);
         verify(() => mockRpc.signEvent(any())).called(1);
       },
     );
 
-    test(
-      'signCanonicalPayload returns null when no local signer and rpcSigner '
-      'is a generic NostrSigner (not KeycastRpc)',
-      () async {
-        // Generic NostrSigner doesn't implement signCanonicalPayload, so the
-        // identity must short-circuit to null rather than try to call it.
-        final identity = KeycastNostrIdentity(
-          pubkey: testPublicKey,
-          rpcSigner: mockRpc,
-        );
+    test('signCanonicalPayload returns null when no local signer and rpcSigner '
+        'is a generic NostrSigner (not KeycastRpc)', () async {
+      // Generic NostrSigner doesn't implement signCanonicalPayload, so the
+      // identity must short-circuit to null rather than try to call it.
+      final identity = KeycastNostrIdentity(
+        pubkey: testPublicKey,
+        rpcSigner: mockRpc,
+      );
 
-        final result = await identity.signCanonicalPayload(
-          Uint8List.fromList([1, 2, 3]),
-        );
+      final result = await identity.signCanonicalPayload(
+        Uint8List.fromList([1, 2, 3]),
+      );
 
-        expect(result, isNull);
-      },
-    );
+      expect(result, isNull);
+    });
 
     test(
       'signCanonicalPayload falls back to KeycastRpc when no local signer',
@@ -354,30 +352,27 @@ void main() {
       },
     );
 
-    test(
-      'signCanonicalPayload returns null when KeycastRpc has no backend '
-      'support yet (graceful skip)',
-      () async {
-        // Backend doesn't expose sign_canonical → KeycastRpc returns null →
-        // identity returns null → caller skips creator-binding. Publish is
-        // not blocked.
-        final mockKeycastRpc = _MockKeycastRpc();
-        when(
-          () => mockKeycastRpc.signCanonicalPayload(any()),
-        ).thenAnswer((_) async => null);
+    test('signCanonicalPayload returns null when KeycastRpc has no backend '
+        'support yet (graceful skip)', () async {
+      // Backend doesn't expose sign_canonical → KeycastRpc returns null →
+      // identity returns null → caller skips creator-binding. Publish is
+      // not blocked.
+      final mockKeycastRpc = _MockKeycastRpc();
+      when(
+        () => mockKeycastRpc.signCanonicalPayload(any()),
+      ).thenAnswer((_) async => null);
 
-        final identity = KeycastNostrIdentity(
-          pubkey: testPublicKey,
-          rpcSigner: mockKeycastRpc,
-        );
+      final identity = KeycastNostrIdentity(
+        pubkey: testPublicKey,
+        rpcSigner: mockKeycastRpc,
+      );
 
-        final result = await identity.signCanonicalPayload(
-          Uint8List.fromList([1, 2, 3]),
-        );
+      final result = await identity.signCanonicalPayload(
+        Uint8List.fromList([1, 2, 3]),
+      );
 
-        expect(result, isNull);
-      },
-    );
+      expect(result, isNull);
+    });
 
     test(
       'nip17UnwrapBatch returns null when rpcSigner is a generic NostrSigner',
@@ -451,32 +446,29 @@ void main() {
       verify(() => mockKeycastRpc.nip17WrapBatch(rumor, recipients)).called(1);
     });
 
-    test(
-      'signCanonicalPayload prefers local signer when available',
-      () async {
-        final mockLocal = _MockLocalKeySigner();
-        final mockKeycastRpc = _MockKeycastRpc();
-        when(
-          () => mockLocal.signCanonicalPayload(any()),
-        ).thenAnswer((_) async => 'local_sig_hex');
+    test('signCanonicalPayload prefers local signer when available', () async {
+      final mockLocal = _MockLocalKeySigner();
+      final mockKeycastRpc = _MockKeycastRpc();
+      when(
+        () => mockLocal.signCanonicalPayload(any()),
+      ).thenAnswer((_) async => 'local_sig_hex');
 
-        final identity = KeycastNostrIdentity(
-          pubkey: testPublicKey,
-          rpcSigner: mockKeycastRpc,
-          localSigner: mockLocal,
-        );
+      final identity = KeycastNostrIdentity(
+        pubkey: testPublicKey,
+        rpcSigner: mockKeycastRpc,
+        localSigner: mockLocal,
+      );
 
-        final result = await identity.signCanonicalPayload(
-          Uint8List.fromList([1, 2, 3]),
-        );
+      final result = await identity.signCanonicalPayload(
+        Uint8List.fromList([1, 2, 3]),
+      );
 
-        expect(result, equals('local_sig_hex'));
-        verify(() => mockLocal.signCanonicalPayload(any())).called(1);
-        // Local short-circuit means RPC must NOT be called for the perf
-        // optimisation to hold.
-        verifyNever(() => mockKeycastRpc.signCanonicalPayload(any()));
-      },
-    );
+      expect(result, equals('local_sig_hex'));
+      verify(() => mockLocal.signCanonicalPayload(any())).called(1);
+      // Local short-circuit means RPC must NOT be called for the perf
+      // optimisation to hold.
+      verifyNever(() => mockKeycastRpc.signCanonicalPayload(any()));
+    });
 
     test(
       'signCanonicalPayload falls back to KeycastRpc when local signing fails',
@@ -1009,18 +1001,15 @@ void main() {
     // Regression guard: signCanonicalPayload's null means "capability
     // unsupported" (same as Bunker/Amber/NIP-07, whose protocols have no such
     // verb), not "skipped gate" — so it must stay null and stay unlogged.
-    test(
-      'signCanonicalPayload returns null without logging',
-      () async {
-        await LogCaptureService().clearAllLogs();
+    test('signCanonicalPayload returns null without logging', () async {
+      await LogCaptureService().clearAllLogs();
 
-        expect(
-          await identity.signCanonicalPayload(Uint8List.fromList([1, 2, 3])),
-          isNull,
-        );
-        expect(LogCaptureService().getRecentLogs(), isEmpty);
-      },
-    );
+      expect(
+        await identity.signCanonicalPayload(Uint8List.fromList([1, 2, 3])),
+        isNull,
+      );
+      expect(LogCaptureService().getRecentLogs(), isEmpty);
+    });
 
     test('getRelays returns null without logging', () async {
       await LogCaptureService().clearAllLogs();

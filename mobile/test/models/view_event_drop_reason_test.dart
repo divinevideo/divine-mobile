@@ -19,9 +19,16 @@ void main() {
       expect(ViewEventDropReason.signerNotReady.isStructural, isFalse);
     });
 
+    test('a ready signer that produced no event is not structural', () {
+      // A null from the signer factory is an invariant the factory already
+      // reported, a remote signer's network failure, or a declined NIP-55
+      // prompt. Filing it here re-reported every queued row on every retry
+      // sweep and became the top non-fatal on both platforms (#9340).
+      expect(ViewEventDropReason.signingFailed.isStructural, isFalse);
+    });
+
     test('failures to build a publishable event are structural', () {
       expect(ViewEventDropReason.missingAddressableDTag.isStructural, isTrue);
-      expect(ViewEventDropReason.signingFailed.isStructural, isTrue);
       expect(ViewEventDropReason.unexpectedError.isStructural, isTrue);
     });
 
