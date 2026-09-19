@@ -202,11 +202,10 @@ void main() {
         when(
           () => mockNostrService.subscribe(any(), closeOnEose: true),
         ).thenAnswer((_) {
-          // Emit event and close after a delay
-          Future.delayed(const Duration(milliseconds: 10), () {
-            controller.add(mockEvent);
-            controller.close();
-          });
+          // A single-subscription controller buffers these events until the
+          // cache subscribes, so no timer ownership is needed.
+          controller.add(mockEvent);
+          unawaited(controller.close());
           return controller.stream;
         });
 

@@ -17,6 +17,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -72,7 +73,12 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final cachedState = ref.read(discoveredListsProvider);
       if (cachedState.lists.isEmpty) {
-        _streamPublicLists();
+        runDetached(
+          _streamPublicLists(),
+          'stream public lists',
+          logName: 'DiscoverListsScreen',
+          category: LogCategory.ui,
+        );
       }
     });
   }
@@ -80,7 +86,14 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
   @override
   void dispose() {
     _updateDebounceTimer?.cancel();
-    _subscription?.cancel();
+    if (_subscription case final subscription?) {
+      runDetached(
+        subscription.cancel(),
+        'cancel public lists stream',
+        logName: 'DiscoverListsScreen',
+        category: LogCategory.ui,
+      );
+    }
     disposePagination();
     _scrollController.dispose();
     super.dispose();
@@ -190,7 +203,12 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
                   );
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (mounted && !_isLoadingMore) {
-                      _loadMoreLists();
+                      runDetached(
+                        _loadMoreLists(),
+                        'load more public lists',
+                        logName: 'DiscoverListsScreen',
+                        category: LogCategory.ui,
+                      );
                     }
                   });
                 }
@@ -338,7 +356,12 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
           );
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted && !_isLoadingMore) {
-              _loadMoreLists();
+              runDetached(
+                _loadMoreLists(),
+                'load more public lists',
+                logName: 'DiscoverListsScreen',
+                category: LogCategory.ui,
+              );
             }
           });
         }
@@ -551,13 +574,18 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
             'Tapped discovered list: ${list.name}',
             category: LogCategory.ui,
           );
-          context.push(
-            CuratedListFeedScreen.pathForId(list.id),
-            extra: CuratedListRouteExtra(
-              listName: list.name,
-              videoIds: list.videoEventIds,
-              authorPubkey: list.pubkey,
+          runDetached(
+            context.push<void>(
+              CuratedListFeedScreen.pathForId(list.id),
+              extra: CuratedListRouteExtra(
+                listName: list.name,
+                videoIds: list.videoEventIds,
+                authorPubkey: list.pubkey,
+              ),
             ),
+            'open discovered list',
+            logName: 'DiscoverListsScreen',
+            category: LogCategory.ui,
           );
         },
         borderRadius: BorderRadius.circular(8),

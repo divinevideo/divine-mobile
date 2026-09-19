@@ -1,6 +1,8 @@
 // ABOUTME: Card for one of the viewer's own curated lists, wired to its feed
 // ABOUTME: Shared by the profile Lists tab and the explore tab's My Lists block
 
+import 'dart:async';
+
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -32,9 +34,11 @@ class OwnedListCard extends StatelessWidget {
       showAuthor: false,
       onTap: () {
         onTap?.call();
-        context.push(
-          CuratedListFeedScreen.pathForId(curatedList.id),
-          extra: CuratedListRouteExtra(listName: curatedList.name),
+        unawaited(
+          context.push(
+            CuratedListFeedScreen.pathForId(curatedList.id),
+            extra: CuratedListRouteExtra(listName: curatedList.name),
+          ),
         );
       },
     );

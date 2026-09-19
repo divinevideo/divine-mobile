@@ -16,6 +16,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
@@ -100,20 +101,30 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
         }
         if (failed) {
           final message = context.l10n.peopleListsDeleteFailed;
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            message,
-            Directionality.of(context),
+          runDetached(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              message,
+              Directionality.of(context),
+            ),
+            'announce people list deletion failure',
+            logName: 'UserListPeopleScreen',
+            category: LogCategory.ui,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(message), backgroundColor: VineTheme.error),
           );
           return;
         }
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          context.l10n.curatedListDeletedSnack,
-          Directionality.of(context),
+        runDetached(
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            context.l10n.curatedListDeletedSnack,
+            Directionality.of(context),
+          ),
+          'announce people list deletion',
+          logName: 'UserListPeopleScreen',
+          category: LogCategory.ui,
         );
         if (context.canPop()) {
           context.pop();
@@ -243,7 +254,14 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
   int? _activeVideoIndex;
 
   void _navigateToAddPeople(String listId) {
-    context.push('/people-lists/${Uri.encodeComponent(listId)}/add-people');
+    runDetached(
+      context.push<void>(
+        '/people-lists/${Uri.encodeComponent(listId)}/add-people',
+      ),
+      'open people list members',
+      logName: 'UserListPeopleScreen',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> _confirmDeleteList(UserList userList) async {
@@ -314,10 +332,10 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
               customActions: [
                 if (userList.isEditable)
                   _PeopleListActionsMenu(
-                    onSelected: (action) {
+                    onSelected: (action) async {
                       switch (action) {
                         case _PeopleListAction.delete:
-                          _confirmDeleteList(userList);
+                          await _confirmDeleteList(userList);
                       }
                     },
                   ),
@@ -777,7 +795,12 @@ class _PeopleAvatarItem extends ConsumerWidget {
       child: GestureDetector(
         onTap: () {
           final npub = NostrKeyUtils.encodePubKey(pubkey);
-          context.push(OtherProfileScreen.pathForNpub(npub));
+          runDetached(
+            context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+            'open people list member profile',
+            logName: 'UserListPeopleScreen',
+            category: LogCategory.ui,
+          );
         },
         onLongPress: canRemove
             ? () => _confirmRemove(context, displayName)

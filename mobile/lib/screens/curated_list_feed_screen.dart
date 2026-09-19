@@ -21,6 +21,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
@@ -89,7 +90,14 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
   @override
   void dispose() {
-    _manageCubit?.close();
+    if (_manageCubit case final cubit?) {
+      runDetached(
+        cubit.close(),
+        'close list management',
+        logName: 'CuratedListFeedScreen',
+        category: LogCategory.ui,
+      );
+    }
     super.dispose();
   }
 
@@ -335,7 +343,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
   void _openAuthorProfile(String authorPubkey) {
     final npub = NostrKeyUtils.encodePubKey(authorPubkey);
-    context.push(OtherProfileScreen.pathForNpub(npub));
+    runDetached(
+      context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+      'open list author profile',
+      logName: 'CuratedListFeedScreen',
+      category: LogCategory.ui,
+    );
   }
 
   void _enterManageMode() {
@@ -349,10 +362,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         listId: widget.listId,
       );
     });
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      context.l10n.listManageVideosAction,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        context.l10n.listManageVideosAction,
+        Directionality.of(context),
+      ),
+      'announce list management',
+      logName: 'CuratedListFeedScreen',
+      category: LogCategory.ui,
     );
   }
 
@@ -370,7 +388,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     setState(() {
       _manageCubit = null;
     });
-    cubit.close();
+    runDetached(
+      cubit.close(),
+      'close list management',
+      logName: 'CuratedListFeedScreen',
+      category: LogCategory.ui,
+    );
   }
 
   /// Drop both cached layers: the id-list provider and the video stream
@@ -398,10 +421,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final message = failed
         ? context.l10n.listRemoveVideosFailure(state.failedCount)
         : context.l10n.listRemoveVideosSuccess(state.removedCount);
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce list removal',
+      logName: 'CuratedListFeedScreen',
+      category: LogCategory.ui,
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -565,10 +593,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
     if (!didDelete) {
       final message = context.l10n.curatedListDeleteFailed;
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
+      runDetached(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          message,
+          Directionality.of(context),
+        ),
+        'announce list deletion failure',
+        logName: 'CuratedListFeedScreen',
+        category: LogCategory.ui,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: VineTheme.error),
@@ -578,10 +611,15 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
     ref.invalidate(curatedListsProvider);
     final message = context.l10n.curatedListDeletedSnack;
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      Directionality.of(context),
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce list deletion',
+      logName: 'CuratedListFeedScreen',
+      category: LogCategory.ui,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(

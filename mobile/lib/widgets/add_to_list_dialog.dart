@@ -11,6 +11,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -96,9 +97,14 @@ class SelectListDialog extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () {
-                  showDialog<void>(
-                    context: context,
-                    builder: (_) => CreateListDialog(video: video),
+                  runDetached(
+                    showDialog<void>(
+                      context: context,
+                      builder: (_) => CreateListDialog(video: video),
+                    ),
+                    'open list creation dialog',
+                    logName: 'SelectListDialog',
+                    category: LogCategory.ui,
                   );
                 },
                 child: Text(l10n.listNewList),
@@ -160,10 +166,15 @@ class SelectListDialog extends StatelessWidget {
       );
       // A failure shown only in a SnackBar is invisible to screen readers.
       // Announce it, matching the DM oversized-send path this PR added (#7331).
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        failureMessage,
-        Directionality.of(context),
+      runDetached(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          failureMessage,
+          Directionality.of(context),
+        ),
+        'announce list update failure',
+        logName: 'SelectListDialog',
+        category: LogCategory.ui,
       );
     } catch (e) {
       Log.error(

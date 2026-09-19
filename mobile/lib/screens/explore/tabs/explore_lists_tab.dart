@@ -12,6 +12,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/discover_lists_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/list_card.dart';
@@ -54,7 +55,12 @@ class ExploreListsTab extends ConsumerWidget {
                   'Tapped Discover Lists button',
                   category: LogCategory.ui,
                 );
-                context.push(DiscoverListsScreen.path);
+                runDetached(
+                  context.push<void>(DiscoverListsScreen.path),
+                  'open list discovery',
+                  logName: 'ExploreListsTab',
+                  category: LogCategory.ui,
+                );
               },
             ),
           ),
@@ -70,9 +76,14 @@ class ExploreListsTab extends ConsumerWidget {
                   'Tapped Create New List button',
                   category: LogCategory.ui,
                 );
-                showDialog<void>(
-                  context: context,
-                  builder: (_) => const CreateListDialog(),
+                runDetached(
+                  showDialog<void>(
+                    context: context,
+                    builder: (_) => const CreateListDialog(),
+                  ),
+                  'open list creation dialog',
+                  logName: 'ExploreListsTab',
+                  category: LogCategory.ui,
                 );
               },
             ),
@@ -192,9 +203,14 @@ class ExploreListsTab extends ConsumerWidget {
                             'Tapped user list: ${userList.name}',
                             category: LogCategory.ui,
                           );
-                          context.push(
-                            '/people-lists/'
-                            '${Uri.encodeComponent(userList.id)}',
+                          runDetached(
+                            context.push<void>(
+                              '/people-lists/'
+                              '${Uri.encodeComponent(userList.id)}',
+                            ),
+                            'open people list',
+                            logName: 'ExploreListsTab',
+                            category: LogCategory.ui,
                           );
                         },
                       ),
@@ -317,9 +333,14 @@ class _SubscribedListsSection extends ConsumerWidget {
                 'Tapped subscribed list: ${curatedList.name}',
                 category: LogCategory.ui,
               );
-              context.push(
-                CuratedListFeedScreen.pathForId(curatedList.id),
-                extra: CuratedListRouteExtra(listName: curatedList.name),
+              runDetached(
+                context.push<void>(
+                  CuratedListFeedScreen.pathForId(curatedList.id),
+                  extra: CuratedListRouteExtra(listName: curatedList.name),
+                ),
+                'open subscribed list',
+                logName: 'ExploreListsTab',
+                category: LogCategory.ui,
               );
             },
           ),
