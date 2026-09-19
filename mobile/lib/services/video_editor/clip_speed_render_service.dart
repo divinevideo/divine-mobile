@@ -103,7 +103,15 @@ class ClipSpeedRenderService {
   /// couple of concurrent sessions the platform encoder stops making progress
   /// and `pro_video_editor` fails them with a stall (`progress=0.00` after
   /// 20s), which is slower *and* lossier than encoding them a few at a time.
-  static const _maxConcurrentRenders = 2;
+  ///
+  /// One rather than two since `NativeRenderGate` — `pro_video_editor` shares a
+  /// single compositor config across concurrent renders, so they must not
+  /// overlap at all. A second local slot would only let one more clip sit
+  /// blocked inside that gate while holding a slot here, which buys nothing.
+  /// The queue still earns its place: it hands slots out FIFO, and a backlog
+  /// waiting here is dropped by [clear] instead of encoding bodies nobody will
+  /// play.
+  static const _maxConcurrentRenders = 1;
 
   int _activeRenders = 0;
   final _waitingForSlot = Queue<Completer<void>>();

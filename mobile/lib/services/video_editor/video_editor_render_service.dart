@@ -18,6 +18,7 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
+import 'package:openvine/services/video_editor/native_render_gate.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
@@ -83,6 +84,10 @@ class VideoEditorRenderService {
   static void resetActiveNativeTaskIdsForTesting() {
     NativeRenderTaskRegistry.reset();
     RenderCancellationRegistry.reset();
+    // The gate's queue is process-global, so a suite that leaves a render
+    // pending would otherwise stall every render in every later suite of the
+    // merged isolate.
+    NativeRenderGate.reset();
   }
 
   @visibleForTesting
@@ -1155,7 +1160,11 @@ class VideoEditorRenderService {
       await _cancelNativeTaskOnly(task.id);
     }
     return NativeRenderTaskRegistry.track(task.id, () {
-      return Future.sync(() {
+      // Serialized because pro_video_editor shares one compositor config
+      // across concurrent renders — see [NativeRenderGate].
+      return NativeRenderGate.run(() {
+        // Re-checked inside the gate rather than before it, so a render
+        // cancelled while it was still queued never reaches the native side.
         RenderCancellationRegistry.throwIfRequested(task.id);
         return ProVideoEditor.instance.renderVideoToFile(
           outputPath,

@@ -246,30 +246,35 @@ void main() {
             for (var i = 0; i < 3; i++)
               service.render(clip('a$i', playbackSpeed: 2)),
           ];
-          // Both slots have to be occupied before the cap means anything, and
-          // the fake says so itself. pumpEventQueue only drains the microtask
+          // The slot has to be occupied before the cap means anything, and the
+          // fake says so itself. pumpEventQueue only drains the microtask
           // queue a fixed number of times, which is a race against the awaits
           // the service makes on the way to the encoder.
-          await native.renderStartedAt(1).future;
+          await native.renderStartedAt(0).future;
           await pumpEventQueue();
 
           expect(
             native.renderCount,
-            2,
+            1,
             reason:
-                'the third clip must queue instead of opening a 3rd session',
+                'the other two clips must queue instead of opening a second '
+                'session — pro_video_editor shares one compositor config '
+                'across concurrent renders',
           );
 
-          // Freeing one slot lets exactly one queued clip through — but the
+          // Freeing the slot lets exactly one queued clip through — but the
           // slot is only released after the fake's real writeAsString lands,
           // and pumpEventQueue does not wait for disk I/O.
           native.allowRenderToFinishAt(0).complete();
+          await native.renderStartedAt(1).future;
+          await pumpEventQueue();
+          expect(native.renderCount, 2);
+
+          native.allowRenderToFinishAt(1).complete();
           await native.renderStartedAt(2).future;
           expect(native.renderCount, 3);
 
-          native
-            ..allowRenderToFinishAt(1).complete()
-            ..allowRenderToFinishAt(2).complete();
+          native.allowRenderToFinishAt(2).complete();
           await Future.wait(pending);
         },
       );
@@ -283,22 +288,20 @@ void main() {
           for (var i = 0; i < 3; i++)
             service.render(clip('a$i', playbackSpeed: 2)),
         ];
-        await native.renderStartedAt(1).future;
+        await native.renderStartedAt(0).future;
         await pumpEventQueue();
-        expect(native.renderCount, 2);
+        expect(native.renderCount, 1);
 
         // Closing the editor must not let the backlog keep encoding.
         service.clear();
-        native
-          ..allowRenderToFinishAt(0).complete()
-          ..allowRenderToFinishAt(1).complete();
+        native.allowRenderToFinishAt(0).complete();
         await Future.wait(pending);
         await pumpEventQueue();
 
         expect(
           native.renderCount,
-          2,
-          reason: 'the queued third clip must be abandoned, not encoded',
+          1,
+          reason: 'the two queued clips must be abandoned, not encoded',
         );
       });
     });
@@ -417,10 +420,15 @@ void main() {
           await fakeEditor.renderStartedAt(0).future;
           service.clear();
 
+          // Registered in-flight synchronously by [render], so the ordering
+          // this test cares about — replacement registered before the stale
+          // render finishes — holds without waiting for it to reach the
+          // encoder. It cannot get there first anyway: one native render runs
+          // at a time, and the stale one still holds the slot.
           final replacementRender = service.render(c);
-          await fakeEditor.renderStartedAt(1).future;
           fakeEditor.allowRenderToFinishAt(0).complete();
           await staleRender;
+          await fakeEditor.renderStartedAt(1).future;
 
           expect(service.isRendering(c), isTrue);
           expect(service.render(c), same(replacementRender));
