@@ -198,7 +198,7 @@ class _HttpDownload implements CancellableDownload {
       }
       final response = await _client.send(req);
       if (_isCancelled) {
-        unawaited(response.stream.drain<void>());
+        _discardBody(response);
         _safeComplete(
           CancellableDownloadResult(
             file: null,
@@ -214,7 +214,7 @@ class _HttpDownload implements CancellableDownload {
           name: 'MediaCache',
           category: LogCategory.video,
         );
-        unawaited(response.stream.drain<void>());
+        _discardBody(response);
         _safeComplete(
           CancellableDownloadResult(
             file: null,
@@ -322,6 +322,22 @@ class _HttpDownload implements CancellableDownload {
       await _cleanupPartial();
       _safeComplete(const CancellableDownloadResult(file: null));
     }
+  }
+
+  /// Discards a response body this download will not consume.
+  ///
+  /// A `cancel()` that lands once the headers have arrived is delivered by
+  /// `package:http` as a `RequestAbortedException` on the body stream rather
+  /// than thrown out of `send()`. This drain is the only consumer of such a
+  /// body, so left unhandled, that intentional teardown reached the
+  /// uncaught-zone reporter as a crash (#9339).
+  void _discardBody(http.StreamedResponse response) {
+    unawaited(
+      response.stream.drain<void>().catchError((Object _) {
+        // Nothing is actionable here: the body is unwanted whether the
+        // failure is our own abort or a dropped connection.
+      }),
+    );
   }
 
   /// Settles this download as a failure after the target file could not be

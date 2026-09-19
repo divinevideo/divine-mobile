@@ -63,6 +63,31 @@ class _ResultOnlyDownload extends CancellableDownload {
   void cancel() {}
 }
 
+/// Builds a response whose body behaves like `IOClient`'s once the headers
+/// have arrived: an abort no longer throws out of `send()` but is delivered
+/// on the body stream as a [http.RequestAbortedException], after which the
+/// stream closes.
+http.StreamedResponse _abortableResponse(
+  http.BaseRequest request,
+  int statusCode, {
+  Map<String, String> headers = const {},
+}) {
+  final abortTrigger = (request as http.AbortableRequest).abortTrigger!;
+  late final StreamController<List<int>> body;
+  body = StreamController<List<int>>(
+    onListen: () {
+      unawaited(
+        abortTrigger.whenComplete(() {
+          if (body.isClosed) return;
+          body.addError(http.RequestAbortedException(request.url));
+          unawaited(body.close());
+        }),
+      );
+    },
+  );
+  return http.StreamedResponse(body.stream, statusCode, headers: headers);
+}
+
 void main() {
   group(CancellableDownload, () {
     test('file returns the file from result', () async {
@@ -300,6 +325,83 @@ void main() {
 
         expect(resolved, isNull);
         expect(zoneErrors, isEmpty);
+        expect(target.existsSync(), isFalse);
+      });
+    });
+
+    // Crashlytics 57777ab0fb993019895eb8d52d40ba47 (Android) and
+    // e04a68d4904412fdc3970e4f7648d837 (iOS), #9339: a cancel that lands once
+    // the headers have arrived no longer throws out of `send()` —
+    // `package:http` puts the RequestAbortedException on the body stream
+    // instead. The unawaited drain of a body nobody wanted was its only
+    // consumer, so every feed scroll or thumbnail dispose in that window was
+    // reported as a crash.
+    group('when cancel() lands after the response headers', () {
+      late File target;
+
+      setUp(() {
+        target = File('${tempDir.path}/aborted_body.mp4');
+      });
+
+      test('settles with null and reports nothing when cancelled before the '
+          'body is consumed', () async {
+        final headersArrived = Completer<void>();
+        final client = _CallbackClient((request) async {
+          await headersArrived.future;
+          return _abortableResponse(request, 200);
+        });
+        final downloader = HttpCancellableDownloader(client);
+
+        final zoneErrors = <Object>[];
+        CancellableDownloadResult? resolved;
+        await runZonedGuarded(() async {
+          final download = downloader.download(
+            url: 'https://example.com/aborted_body.mp4',
+            targetFile: target,
+          )..cancel();
+          headersArrived.complete();
+          resolved = await download.result;
+          // Let the aborted body's error land inside the guarded zone.
+          await pumpEventQueue();
+        }, (error, _) => zoneErrors.add(error));
+
+        expect(zoneErrors, isEmpty);
+        expect(resolved?.file, isNull);
+        expect(resolved?.statusCode, equals(200));
+        expect(target.existsSync(), isFalse);
+      });
+
+      test('keeps the status and reports nothing when cancelled while a '
+          'non-OK body is being drained', () async {
+        final client = _CallbackClient(
+          (request) async => _abortableResponse(
+            request,
+            HttpStatus.tooManyRequests,
+            headers: {'retry-after': '10'},
+          ),
+        );
+        final downloader = HttpCancellableDownloader(client);
+
+        final zoneErrors = <Object>[];
+        CancellableDownloadResult? resolved;
+        late CancellableDownload download;
+        await runZonedGuarded(() async {
+          download = downloader.download(
+            url: 'https://example.com/aborted_body.mp4',
+            targetFile: target,
+          );
+          // The result settles before the body finishes draining, which is
+          // the window a caller's dispose-time cancel() lands in.
+          resolved = await download.result;
+          download.cancel();
+          await pumpEventQueue();
+        }, (error, _) => zoneErrors.add(error));
+
+        expect(zoneErrors, isEmpty);
+        expect(resolved?.file, isNull);
+        expect(resolved?.statusCode, equals(HttpStatus.tooManyRequests));
+        expect(resolved?.headers['retry-after'], equals('10'));
+        expect(download.isCancelled, isTrue);
         expect(target.existsSync(), isFalse);
       });
     });
