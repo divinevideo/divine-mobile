@@ -28,7 +28,15 @@ enum ViewEventDropReason {
   /// The video kind is not addressable, so it cannot be cited by an `a` tag.
   nonAddressableVideoKind,
 
-  /// Signing returned no event even though the signer reported it was ready.
+  /// The signer reported it was ready but produced no event.
+  ///
+  /// `SignerFactory.createAndSignEvent` answers null for three things: an
+  /// invariant it has already reported itself (account mismatch, an event
+  /// that fails post-signing validation, an `Error`), a remote signer whose
+  /// network call failed (a Keycast RPC timeout or 5xx, no connection), or a
+  /// NIP-55 prompt the user declined. A local key signer never returns null.
+  /// None of those is a view-event defect, and the durable queue keeps the
+  /// row for a later sweep (#9340).
   signingFailed,
 
   /// An unexpected exception interrupted event construction or publishing.
@@ -57,13 +65,19 @@ enum ViewEventDropReason {
   /// [signerNotReady] is not structural: identity known is not signer ready
   /// (see `.claude/rules/state_management.md`), and the gap resolves itself
   /// once the signer warms up.
+  ///
+  /// [signingFailed] is not structural either. The signer factory reports
+  /// the genuine invariants behind a null itself, so filing the drop here
+  /// only added the expected remote-signer failures — once per queued row
+  /// per retry sweep, which made it the top non-fatal on both platforms
+  /// (#9340).
   bool get isStructural => switch (this) {
     ViewEventDropReason.invalidWatchRange => true,
     ViewEventDropReason.notAuthenticated => false,
     ViewEventDropReason.signerNotReady => false,
     ViewEventDropReason.missingAddressableDTag => true,
     ViewEventDropReason.nonAddressableVideoKind => false,
-    ViewEventDropReason.signingFailed => true,
+    ViewEventDropReason.signingFailed => false,
     ViewEventDropReason.unexpectedError => true,
     ViewEventDropReason.relayRejected => false,
   };
