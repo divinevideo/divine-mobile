@@ -47,6 +47,7 @@ class DivineVideoDraft {
     this.editorStateHistory = const {},
     this.editorEditingParameters = const {},
     this.finalRenderedClip,
+    this.finalRenderVersion = currentFinalRenderVersion,
     this.collaboratorPubkeys = const {},
     this.inspiredByVideo,
     this.inspiredByNpubs = const [],
@@ -209,6 +210,8 @@ class DivineVideoDraft {
               useOriginalPath: useOriginalPath,
             )
           : null,
+      // Renders saved before the version was stamped count as the oldest.
+      finalRenderVersion: json['finalRenderVersion'] as int? ?? 0,
       collaboratorPubkeys: json['collaboratorPubkeys'] != null
           ? Set<String>.from(json['collaboratorPubkeys'] as Iterable)
           : const {},
@@ -308,6 +311,25 @@ class DivineVideoDraft {
   /// Cached to avoid re-rendering when no changes are made.
   final DivineVideoClip? finalRenderedClip;
 
+  /// The [currentFinalRenderVersion] in force when [finalRenderedClip] was
+  /// rendered.
+  final int finalRenderVersion;
+
+  /// Bumped whenever a `pro_video_editor` upgrade changes what a final render
+  /// looks like, so a render cached by an older build is rendered again
+  /// instead of being restored or published as-is.
+  ///
+  /// v1: pro_video_editor 2.13.2 stops concurrent renders on iOS/macOS sharing
+  /// one compositor config (#9338), so a final render from an earlier build
+  /// can carry a preview render's crop, filters or overlays.
+  static const currentFinalRenderVersion = 1;
+
+  /// Whether [finalRenderedClip] was cached by an older renderer and has to
+  /// be rendered again before it is restored or published.
+  bool get hasStaleFinalRender =>
+      finalRenderedClip != null &&
+      finalRenderVersion != currentFinalRenderVersion;
+
   /// Pubkeys of collaborators tagged in this video.
   final Set<String> collaboratorPubkeys;
 
@@ -401,6 +423,7 @@ class DivineVideoDraft {
     Map<String, dynamic>? editorEditingParameters,
     DivineVideoClip? finalRenderedClip,
     bool clearFinalRenderedClip = false,
+    int? finalRenderVersion,
     Set<String>? collaboratorPubkeys,
     InspiredByInfo? inspiredByVideo,
     List<String>? inspiredByNpubs,
@@ -445,6 +468,12 @@ class DivineVideoDraft {
     finalRenderedClip: clearFinalRenderedClip
         ? null
         : (finalRenderedClip ?? this.finalRenderedClip),
+    // A render handed in here was just produced by this build.
+    finalRenderVersion:
+        finalRenderVersion ??
+        (finalRenderedClip != null
+            ? currentFinalRenderVersion
+            : this.finalRenderVersion),
     collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
     inspiredByVideo: inspiredByVideo ?? this.inspiredByVideo,
     inspiredByNpubs: inspiredByNpubs ?? this.inspiredByNpubs,
@@ -505,6 +534,7 @@ class DivineVideoDraft {
       editorStateHistory: editorStateHistory,
       editorEditingParameters: editorEditingParameters,
       finalRenderedClip: finalRenderedClip,
+      finalRenderVersion: finalRenderVersion,
       collaboratorPubkeys: collaboratorPubkeys,
       inspiredByVideo: inspiredByVideo,
       inspiredByNpubs: inspiredByNpubs,
@@ -556,8 +586,10 @@ class DivineVideoDraft {
       'editorEditingParameters': toPortableAudioPaths(
         compactProofManifests(editorEditingParameters),
       ),
-    if (finalRenderedClip != null)
+    if (finalRenderedClip != null) ...{
       'finalRenderedClip': finalRenderedClip!.toJson(),
+      'finalRenderVersion': finalRenderVersion,
+    },
     if (collaboratorPubkeys.isNotEmpty)
       'collaboratorPubkeys': collaboratorPubkeys.toList(),
     if (inspiredByVideo != null) 'inspiredByVideo': inspiredByVideo!.toJson(),

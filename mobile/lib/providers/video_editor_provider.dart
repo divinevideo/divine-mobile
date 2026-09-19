@@ -1189,11 +1189,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       }
     }
 
-    // Validate finalRenderedClip - only restore if file still exists
+    // Validate finalRenderedClip - only restore a current render whose file
+    // still exists
     DivineVideoClip? validFinalRenderedClip;
     final finalClip = draft.finalRenderedClip;
     if (finalClip != null) {
-      if (finalClip.hasResolvableVideoFile) {
+      if (draft.hasStaleFinalRender) {
+        Log.info(
+          '⚠️ Final rendered clip is from an older renderer, will re-render',
+          name: 'VideoEditorNotifier',
+          category: LogCategory.video,
+        );
+      } else if (finalClip.hasResolvableVideoFile) {
         validFinalRenderedClip = finalClip;
         Log.info(
           '✅ Restored final rendered clip',

@@ -494,7 +494,7 @@ class DraftStorageService {
       );
     }
 
-    return _clearMissingFinalRenderedClip(
+    return _clearUnusableFinalRenderedClip(
       draft.copyWith(clips: validClips, skipUpdateLastModified: true),
     );
   }
@@ -529,7 +529,7 @@ class DraftStorageService {
       );
     }
 
-    return _clearMissingFinalRenderedClip(
+    return _clearUnusableFinalRenderedClip(
       draft.copyWith(clips: validClips, skipUpdateLastModified: true),
     );
   }
@@ -552,17 +552,29 @@ class DraftStorageService {
     ];
   }
 
-  DivineVideoDraft _clearMissingFinalRenderedClip(DivineVideoDraft draft) {
+  /// Drops a cached final render that is missing or was rendered by an older
+  /// renderer, so it is rendered again. Only user-facing loads call this:
+  /// bookkeeping loads keep the render so its files are still reaped.
+  DivineVideoDraft _clearUnusableFinalRenderedClip(DivineVideoDraft draft) {
     final finalClip = draft.finalRenderedClip;
     if (finalClip == null) return draft;
 
-    if (finalClip.hasResolvableVideoFile) return draft;
-
-    Log.info(
-      '📝 Draft ${draft.id}: final rendered clip missing, clearing reference',
-      name: 'DraftStorageService',
-      category: LogCategory.video,
-    );
+    if (draft.hasStaleFinalRender) {
+      Log.info(
+        '📝 Draft ${draft.id}: final rendered clip is from an older renderer, '
+        'clearing reference',
+        name: 'DraftStorageService',
+        category: LogCategory.video,
+      );
+    } else if (finalClip.hasResolvableVideoFile) {
+      return draft;
+    } else {
+      Log.info(
+        '📝 Draft ${draft.id}: final rendered clip missing, clearing reference',
+        name: 'DraftStorageService',
+        category: LogCategory.video,
+      );
+    }
     return draft.copyWith(
       clearFinalRenderedClip: true,
       skipUpdateLastModified: true,
