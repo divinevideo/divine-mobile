@@ -345,7 +345,10 @@ class TransitionSeamRenderService {
   /// v5: pro_video_editor 2.13.1 blends an overlap transition across a
   /// rotation flag that 2.13.0 hard-cut (#9321), so every seam persisted by
   /// 2.13.0 at a mixed-orientation boundary is a stale hard cut.
-  static const _seamCacheVersion = 5;
+  /// v6: pro_video_editor 2.13.2 stops concurrent renders on iOS/macOS sharing
+  /// one compositor config (#9338), so a seam that 2.13.1 rendered next to
+  /// another render can carry that render's crop, filters or overlays.
+  static const _seamCacheVersion = 6;
 
   String _key(
     DivineVideoClip clipA,
