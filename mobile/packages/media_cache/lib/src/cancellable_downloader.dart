@@ -332,12 +332,9 @@ class _HttpDownload implements CancellableDownload {
   /// body, so left unhandled, that intentional teardown reached the
   /// uncaught-zone reporter as a crash (#9339).
   void _discardBody(http.StreamedResponse response) {
-    unawaited(
-      response.stream.drain<void>().catchError((Object _) {
-        // Nothing is actionable here: the body is unwanted whether the
-        // failure is our own abort or a dropped connection.
-      }),
-    );
+    // Nothing is actionable if the drain fails: the body is unwanted whether
+    // the failure is our own abort or a dropped connection.
+    response.stream.drain<void>().ignore();
   }
 
   /// Settles this download as a failure after the target file could not be
