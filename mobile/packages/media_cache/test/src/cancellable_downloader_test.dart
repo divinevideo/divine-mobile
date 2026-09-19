@@ -6,7 +6,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:media_cache/src/cancellable_downloader.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+class _MockDirectory extends Mock implements Directory {}
 
 class _CallbackClient extends http.BaseClient {
   _CallbackClient(this._onSend, {this.onClose});
@@ -61,6 +64,31 @@ class _ResultOnlyDownload extends CancellableDownload {
 
   @override
   void cancel() {}
+}
+
+/// Builds a response whose body reports an abort the way `package:http`
+/// clients do once `send()` has returned: as a [http.RequestAbortedException]
+/// on the body stream, which then closes. [onListen] fires when the download
+/// starts reading the body.
+http.StreamedResponse _abortableResponse(
+  http.BaseRequest request,
+  int statusCode, {
+  void Function()? onListen,
+}) {
+  final abortTrigger = (request as http.AbortableRequest).abortTrigger!;
+  late final StreamController<List<int>> body;
+  body = StreamController<List<int>>(
+    onListen: () {
+      onListen?.call();
+      unawaited(
+        abortTrigger.whenComplete(() {
+          body.addError(http.RequestAbortedException(request.url));
+          unawaited(body.close());
+        }),
+      );
+    },
+  );
+  return http.StreamedResponse(body.stream, statusCode);
 }
 
 void main() {
@@ -301,6 +329,172 @@ void main() {
         expect(resolved, isNull);
         expect(zoneErrors, isEmpty);
         expect(target.existsSync(), isFalse);
+      });
+    });
+
+    // Crashlytics 57777ab0fb993019895eb8d52d40ba47 (Android) and
+    // e04a68d4904412fdc3970e4f7648d837 (iOS), #9339: a cancel that lands once
+    // the headers have arrived no longer throws out of `send()` —
+    // `package:http` puts the RequestAbortedException on the body stream
+    // instead. The unawaited drain of a body nobody wanted was its only
+    // consumer, so every feed scroll or thumbnail dispose in that window was
+    // reported as a crash.
+    group('when the abort arrives on the response body', () {
+      late File target;
+
+      setUp(() {
+        target = File('${tempDir.path}/aborted_body.mp4');
+      });
+
+      test('settles with null and reports nothing when the response arrives '
+          'after cancel()', () async {
+        // cupertino_http and cronet_http still return a response whose
+        // headers landed just before the cancel; IOClient would throw out of
+        // send() here instead.
+        final headersArrived = Completer<void>();
+        var bodyListened = false;
+        final client = _CallbackClient((request) async {
+          await headersArrived.future;
+          return _abortableResponse(
+            request,
+            200,
+            onListen: () => bodyListened = true,
+          );
+        });
+        final downloader = HttpCancellableDownloader(client);
+
+        final zoneErrors = <Object>[];
+        CancellableDownloadResult? resolved;
+        await runZonedGuarded(() async {
+          final download = downloader.download(
+            url: 'https://example.com/aborted_body.mp4',
+            targetFile: target,
+          )..cancel();
+          headersArrived.complete();
+          resolved = await download.result;
+          // Let the aborted body's error land inside the guarded zone.
+          await pumpEventQueue();
+        }, (error, _) => zoneErrors.add(error));
+
+        expect(zoneErrors, isEmpty);
+        // An unread body never gives its IOClient connection back to the pool.
+        expect(bodyListened, isTrue);
+        expect(resolved?.file, isNull);
+        expect(resolved?.statusCode, equals(200));
+        expect(target.existsSync(), isFalse);
+      });
+
+      test('reports nothing when cancelled while a non-OK body is being '
+          'drained', () async {
+        var bodyListened = false;
+        final client = _CallbackClient(
+          (request) async => _abortableResponse(
+            request,
+            HttpStatus.tooManyRequests,
+            onListen: () => bodyListened = true,
+          ),
+        );
+        final downloader = HttpCancellableDownloader(client);
+
+        final zoneErrors = <Object>[];
+        late CancellableDownload download;
+        await runZonedGuarded(() async {
+          download = downloader.download(
+            url: 'https://example.com/aborted_body.mp4',
+            targetFile: target,
+          );
+          // The result settles before the body finishes draining, which is
+          // the window a caller's dispose-time cancel() lands in.
+          await download.result;
+          download.cancel();
+          await pumpEventQueue();
+        }, (error, _) => zoneErrors.add(error));
+
+        expect(zoneErrors, isEmpty);
+        // An unread body never gives its IOClient connection back to the pool.
+        expect(bodyListened, isTrue);
+        expect(download.isCancelled, isTrue);
+        expect(target.existsSync(), isFalse);
+      });
+    });
+
+    group('when the target directory has to be created', () {
+      // IOClient only listens to the underlying response if the abort has not
+      // fired by the time the body is first listened to. Otherwise it never
+      // releases the connection, and on a one-slot pool the next request to
+      // the host waits forever.
+      test('reads the body before a cancel() made during the creation can '
+          'land', () async {
+        var aborted = false;
+        var listenedAfterAbort = false;
+        final client = _CallbackClient((request) async {
+          unawaited(
+            (request as http.AbortableRequest).abortTrigger!.whenComplete(
+              () => aborted = true,
+            ),
+          );
+          return _abortableResponse(
+            request,
+            200,
+            onListen: () => listenedAfterAbort = aborted,
+          );
+        });
+        final downloader = HttpCancellableDownloader(client);
+        final parent = Directory('${tempDir.path}/cache')..createSync();
+        late final CancellableDownload download;
+        void cancelSoon() => scheduleMicrotask(download.cancel);
+        final creatingParent = _MockDirectory();
+        when(creatingParent.existsSync).thenReturn(false);
+        when(() => creatingParent.create(recursive: true)).thenAnswer((_) {
+          cancelSoon();
+          // Completes on a later event, as a real mkdir does.
+          return Future(() => creatingParent);
+        });
+        when(
+          () => creatingParent.createSync(recursive: true),
+        ).thenAnswer((_) => cancelSoon());
+
+        download = IOOverrides.runZoned(
+          () => downloader.download(
+            url: 'https://example.com/video.mp4',
+            targetFile: File('${parent.path}/video.mp4'),
+          ),
+          createDirectory: (path) => creatingParent,
+        );
+        await download.result;
+
+        expect(download.isCancelled, isTrue);
+        expect(listenedAfterAbort, isFalse);
+      });
+
+      test('cancels the response body when the directory cannot be '
+          'created', () async {
+        var bodyCancelled = false;
+        final client = _CallbackClient(
+          (_) async => http.StreamedResponse(
+            StreamController<List<int>>(
+              onCancel: () => bodyCancelled = true,
+            ).stream,
+            200,
+          ),
+        );
+        final downloader = HttpCancellableDownloader(client);
+        // A regular file where the parent directory should go, so mkdir fails.
+        final notADirectory = File('${tempDir.path}/not_a_directory')
+          ..createSync();
+
+        final file = await downloader
+            .download(
+              url: 'https://example.com/video.mp4',
+              targetFile: File('${notADirectory.path}/video.mp4'),
+            )
+            .file;
+
+        expect(file, isNull);
+        // Nothing reads this body now. Left alone it keeps its request going:
+        // IOClient holds the connection, and the native clients download the
+        // whole file into memory.
+        expect(bodyCancelled, isTrue);
       });
     });
 
