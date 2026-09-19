@@ -35,7 +35,6 @@ import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/screens/feed/feed_tuning_snackbar.dart';
-import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
@@ -250,21 +249,29 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mediaCache = kIsWeb ? null : ref.read(mediaCacheProvider);
     final blossomAuthService = ref.read(blossomAuthServiceProvider);
+    // Resolved once and handed to the bloc as plain objects / bound methods.
+    // The bloc outlives this element — a route pop closes it while its guard
+    // round trip is still in flight — so nothing passed into `create:` may
+    // close over `ref` (#9341). `videoEventService` is keepAlive and doesn't
+    // flip identity on a block action, so capturing it once is safe; the
+    // version listener in [FullscreenFeedContent] re-runs the filter when the
+    // blocklist changes broadly (account switch / external sync). See #5041.
+    final videoEventService = ref.read(videoEventServiceProvider);
     // Viewer-aware block predicate (blocks ∪ mutes ∪ blocked-us ∪ muted-us) —
     // the same `shouldFilterFromFeeds` every other feed surface filters with.
-    // The bound method reads live blocklist state on each call, so capturing it
-    // once in `create:` is safe: `contentBlocklistRepository` is keepAlive and
-    // doesn't flip identity on a block action. The version listener in
-    // [FullscreenFeedContent] re-runs the filter when the blocklist changes
-    // broadly (account switch / external sync). See #5041.
-    final hideFilter = ref.read(videoEventServiceProvider).shouldHideVideo;
+    // The bound method reads live blocklist state on each call.
+    final hideFilter = videoEventService.shouldHideVideo;
 
     // The removal bus is wired internally (no longer a per-caller parameter):
     // deletion / block / mute emit a removed id here and the bloc drops it,
     // independent of whichever widget opened the route. See #3383.
-    final removedIdsStream = ref
-        .read(videoEventServiceProvider)
-        .removedVideoIds;
+    final removedIdsStream = videoEventService.removedVideoIds;
+
+    // Per-identity tracker + guard behind one object that never rebuilds and
+    // reads live state on every call: before their async init resolves it
+    // filters nothing and confirms nothing, and once it resolves every
+    // subsequent source re-push is filtered. See #5237 / #6251.
+    final unavailabilityGate = ref.read(feedUnavailabilityGateProvider);
 
     // Persist permanently-unavailable ids so the video stays filtered out of
     // every list surface (feed, profile, hashtag, grids) across restarts. The
@@ -272,54 +279,12 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     // requester-independent, terminal moderation verdict explains the media
     // 404 (#6251). An API 404 is session-only.
     void persistConfirmedUnavailable(VideoEvent video) {
-      ref.read(videoEventServiceProvider).removeVideoEventCompletely(video);
+      videoEventService.removeVideoEventCompletely(video);
       unawaited(
-        ref
-            .read(brokenVideoTrackerProvider.future)
-            .then(
-              (tracker) => tracker.markVideoBroken(
-                video.id,
-                'Confirmed unavailable video in fullscreen feed',
-              ),
-            )
-            .catchError((Object error) {
-              Log.warning(
-                'Failed to persist confirmed-unavailable video: $error',
-                name: 'PooledFullscreenVideoFeedScreen',
-                category: LogCategory.video,
-              );
-            }),
-      );
-    }
-
-    // Filter persisted unavailable videos out of the fullscreen list at the
-    // stream boundary. This covers static / by-id sources (liked, saved,
-    // reposts, collabs, curated lists) whose repositories don't run the central
-    // feed filters, so a video confirmed unavailable in a previous session
-    // won't reappear when opened fullscreen. Reads live
-    // tracker state on every call via the provider (rather than capturing a
-    // snapshot in `create:`, which would stay `null` if the tracker's async
-    // init hadn't resolved by first build and never recover): before init
-    // resolves it filters nothing; once it resolves, every subsequent source
-    // re-push is filtered. See #5237.
-    bool unavailableFilter(String videoId) => ref
-        .read(brokenVideoTrackerProvider)
-        .maybeWhen(
-          data: (tracker) => tracker.isVideoBroken(videoId),
-          orElse: () => false,
-        );
-
-    Future<FeedUnavailability> confirmVideoUnavailable({
-      required String videoId,
-      required String? videoUrl,
-      String? explicitSha256,
-    }) async {
-      final guard = ref.read(deadMediaFeedGuardProvider).asData?.value;
-      if (guard == null) return FeedUnavailability.none;
-      return guard.isConfirmedUnavailable(
-        videoId: videoId,
-        videoUrl: videoUrl,
-        explicitSha256: explicitSha256,
+        unavailabilityGate.markVideoBroken(
+          video.id,
+          'Confirmed unavailable video in fullscreen feed',
+        ),
       );
     }
 
@@ -339,17 +304,13 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
             hasMoreStream: feedRepository.watchHasMore(source),
             removedIdsStream: removedIdsStream,
             onLoadMore: () => unawaited(feedRepository.loadMore(source)),
-            onRemoveVideo: (videoId) {
-              ref
-                  .read(videoEventServiceProvider)
-                  .removeVideoCompletely(videoId);
-            },
+            onRemoveVideo: videoEventService.removeVideoCompletely,
             onVideoConfirmedUnavailable: persistConfirmedUnavailable,
-            confirmVideoUnavailable: confirmVideoUnavailable,
+            confirmVideoUnavailable: unavailabilityGate.confirmVideoUnavailable,
             mediaCache: mediaCache,
             blossomAuthService: blossomAuthService,
             hideFilter: hideFilter,
-            unavailableFilter: unavailableFilter,
+            unavailableFilter: unavailabilityGate.isVideoBroken,
             feedTuningRepository: feedTuningRepository,
           )..add(const FullscreenFeedStarted()),
         ),

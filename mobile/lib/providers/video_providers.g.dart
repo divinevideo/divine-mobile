@@ -855,6 +855,86 @@ final class DeadMediaFeedGuardProvider
 String _$deadMediaFeedGuardHash() =>
     r'7b590e30c5cc2dc5bdf1d136b7d671dd66c4c18c';
 
+/// Stable gate over [brokenVideoTrackerProvider] and
+/// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+/// created them.
+///
+/// Never rebuilds: it only listens. Each per-identity dependency is attached
+/// as it resolves and re-attached after an auth transition, so a bound method
+/// captured once in `BlocProvider.create` keeps reading the current identity's
+/// state — without the bloc holding a `WidgetRef`, which throws once the
+/// launching screen is unmounted (#9341). Same reattach shape as
+/// [videoEventServiceProvider]'s tracker listener.
+
+@ProviderFor(feedUnavailabilityGate)
+final feedUnavailabilityGateProvider = FeedUnavailabilityGateProvider._();
+
+/// Stable gate over [brokenVideoTrackerProvider] and
+/// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+/// created them.
+///
+/// Never rebuilds: it only listens. Each per-identity dependency is attached
+/// as it resolves and re-attached after an auth transition, so a bound method
+/// captured once in `BlocProvider.create` keeps reading the current identity's
+/// state — without the bloc holding a `WidgetRef`, which throws once the
+/// launching screen is unmounted (#9341). Same reattach shape as
+/// [videoEventServiceProvider]'s tracker listener.
+
+final class FeedUnavailabilityGateProvider
+    extends
+        $FunctionalProvider<
+          FeedUnavailabilityGate,
+          FeedUnavailabilityGate,
+          FeedUnavailabilityGate
+        >
+    with $Provider<FeedUnavailabilityGate> {
+  /// Stable gate over [brokenVideoTrackerProvider] and
+  /// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+  /// created them.
+  ///
+  /// Never rebuilds: it only listens. Each per-identity dependency is attached
+  /// as it resolves and re-attached after an auth transition, so a bound method
+  /// captured once in `BlocProvider.create` keeps reading the current identity's
+  /// state — without the bloc holding a `WidgetRef`, which throws once the
+  /// launching screen is unmounted (#9341). Same reattach shape as
+  /// [videoEventServiceProvider]'s tracker listener.
+  FeedUnavailabilityGateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'feedUnavailabilityGateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$feedUnavailabilityGateHash();
+
+  @$internal
+  @override
+  $ProviderElement<FeedUnavailabilityGate> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  FeedUnavailabilityGate create(Ref ref) {
+    return feedUnavailabilityGate(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FeedUnavailabilityGate value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FeedUnavailabilityGate>(value),
+    );
+  }
+}
+
+String _$feedUnavailabilityGateHash() =>
+    r'ec116f23b9f502a63b66bf178b1a84feed41ffd5';
+
 /// Provider for VideoLocalStorage instance (SQLite-backed)
 ///
 /// Creates a DbVideoLocalStorage for caching video events locally.

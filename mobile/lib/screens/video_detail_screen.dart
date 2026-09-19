@@ -147,6 +147,9 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
   }
 
   Future<void> _loadVideo({bool allowRelayReadyRetry = true}) async {
+    // Read before the lookup: the catch below runs after the await, when the
+    // screen may already be gone and `ref` can no longer be touched (#9341).
+    final nostrClient = ref.read(nostrServiceProvider);
     try {
       Log.info(
         '📱 Loading video from route ref: ${widget.videoId}',
@@ -154,7 +157,6 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
         category: LogCategory.video,
       );
 
-      final nostrClient = ref.read(nostrServiceProvider);
       final canQueryRelays =
           nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;
 
@@ -235,7 +237,9 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
         }
       }
     } catch (e) {
-      final nostrClient = ref.read(nostrServiceProvider);
+      // A failure that lands after the user left has nothing to retry or
+      // render.
+      if (!mounted) return;
       final canQueryRelays =
           nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;
       if (allowRelayReadyRetry &&

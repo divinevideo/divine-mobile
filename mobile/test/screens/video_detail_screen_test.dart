@@ -1030,6 +1030,30 @@ void main() {
           expect(find.text(l10n.videoErrorRetry), findsOneWidget);
         },
       );
+
+      testWidgets(
+        'stays quiet when the lookup fails after the screen was closed',
+        (tester) async {
+          // Regression (#9341): the catch read `ref` after the await with no
+          // mounted check, so a failure that landed after the user backed out
+          // threw a second, uncaught error from an already-unmounted screen.
+          final lookup = Completer<VideoRouteLookupResult>();
+          when(
+            () => mockVideosRepository.lookupVideoForRouteId(any()),
+          ).thenAnswer((_) => lookup.future);
+
+          await tester.pumpWidget(buildSubject());
+          expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          expect(find.byType(VideoDetailScreen), findsNothing);
+
+          lookup.completeError(Exception('Network error'));
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+        },
+      );
     });
 
     group('explicit route block filtering', () {
