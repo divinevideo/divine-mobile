@@ -2971,6 +2971,55 @@ void main() {
         },
       );
 
+      test('drops a final render cached by an older renderer', () async {
+        final renderedPath = '${tempDir.path}/rendered.mp4';
+        await File(renderedPath).writeAsBytes(const [0]);
+
+        final draft = DivineVideoDraft.create(
+          id: 'draft-1',
+          clips: [
+            DivineVideoClip(
+              id: 'c1',
+              video: EditorVideo.file(clipVideoPath),
+              thumbnailPath: clipThumbnailPath,
+              duration: const Duration(seconds: 3),
+              recordedAt: DateTime.now(),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+          title: 'Title',
+          description: '',
+          hashtags: const {},
+          selectedApproach: 'video',
+          finalRenderedClip: DivineVideoClip(
+            id: 'rendered',
+            video: EditorVideo.file(renderedPath),
+            thumbnailPath: clipThumbnailPath,
+            duration: const Duration(seconds: 3),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          ),
+        ).copyWith(finalRenderVersion: 0);
+        when(
+          () => mockDraftStorage.getDraftById('draft-1'),
+        ).thenAnswer((_) async => draft);
+
+        final result = await container
+            .read(videoEditorProvider.notifier)
+            .restoreDraft('draft-1');
+
+        expect(result, isTrue);
+        expect(
+          container.read(videoEditorProvider).finalRenderedClip,
+          isNull,
+          reason:
+              'a render cached before pro_video_editor 2.13.2 can carry '
+              "another render's crop or filters, so Done must render again",
+        );
+      });
+
       test(
         'viewing a draft is read-only: no re-save fires once the autosave '
         'debounce elapses (#5956)',
