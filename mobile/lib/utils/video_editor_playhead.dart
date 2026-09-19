@@ -70,7 +70,8 @@ bool playheadEmitDue({
 /// playhead ticker instead and jumps to each position rather than gliding.
 ///
 /// The one predicate behind both decisions, so the canvas and the timeline
-/// can never disagree about which loops are short. Both pass the editor
-/// timeline's own length (`ClipEditorBloc.state.totalDuration`).
+/// can never disagree about which loops are short. The canvas derives it from
+/// the native player's composite duration and carries the result to the
+/// timeline.
 bool isShortLoop(Duration duration) =>
     duration < VideoEditorConstants.shortLoopThreshold;
