@@ -79,7 +79,6 @@ http.StreamedResponse _abortableResponse(
       onListen?.call();
       unawaited(
         abortTrigger.whenComplete(() {
-          if (body.isClosed) return;
           body.addError(http.RequestAbortedException(request.url));
           unawaited(body.close());
         }),
