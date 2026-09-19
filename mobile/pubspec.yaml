@@ -394,7 +394,7 @@ dependencies:
   # load-bearing and Android-only — no CI job builds Android, and a fallback
   # hard cut is indistinguishable from a working transition in the UI, so
   # relaxing it back to ^2.13.0 would reintroduce #9321 with no signal at all.
-  pro_video_editor: ^2.13.1
+  pro_video_editor: ^2.13.2
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
