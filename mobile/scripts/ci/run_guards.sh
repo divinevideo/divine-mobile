@@ -43,7 +43,9 @@ Runs every guard listed in the manifest (default scripts/ci/guards.tsv) in
 parallel and replays their output in manifest order.
 
   --manifest FILE   Guard manifest to run (default: scripts/ci/guards.tsv).
-  --jobs N          Parallel workers (default: number of online CPUs).
+  --jobs N          Parallel workers (default: number of online CPUs on
+                    Linux; 1 on macOS, where concurrent `dart run` codesign
+                    steps clobber each other).
   --native BOOL     Whether guards flagged `native` run (default: true).
   --list            Print the guards and whether each would run; run nothing.
 USAGE
