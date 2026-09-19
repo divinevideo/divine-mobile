@@ -92,6 +92,10 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   int _lastSeekMs = 0;
   static const _seekThrottleMs = 16;
 
+  /// How long the timeline glides to a playback position it did not scroll
+  /// to itself.
+  static const _positionChaseDuration = Duration(milliseconds: 200);
+
   /// Whether a trim handle drag is in progress — disables scroll physics.
   bool _isTrimming = false;
   List<DivineVideoClip>? _clipTrimStartClips;
@@ -231,8 +235,10 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
           listenWhen: (prev, curr) =>
               !_isUserScrolling && prev.currentPosition != curr.currentPosition,
-          listener: (context, state) =>
-              _syncScrollToPosition(state.currentPosition, totalDuration),
+          listener: (context, state) => _syncScrollToPosition(
+            state.currentPosition,
+            isShortLoop: state.isShortLoop,
+          ),
         ),
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
           listenWhen: (prev, curr) =>
@@ -1028,9 +1034,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     // Stop-motion stills need a far higher ceiling than second-long video
     // clips to be workable.
     final maxPps =
-        isStopMotionComposition(
-          context.read<ClipEditorBloc>().state.clips,
-        )
+        isStopMotionComposition(context.read<ClipEditorBloc>().state.clips)
         ? TimelineConstants.stopMotionMaxPixelsPerSecond
         : TimelineConstants.maxPixelsPerSecond;
     final newPps = (_pinchBasePps * scale).clamp(
@@ -1115,15 +1119,23 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         wrap: _wrapDisplay,
       );
 
-  void _syncScrollToPosition(Duration position, Duration totalDuration) {
+  void _syncScrollToPosition(Duration position, {required bool isShortLoop}) {
     if (!_scrollController.hasClients) return;
-    if (totalDuration == Duration.zero) return;
 
     final target = _positionToScrollOffset(position);
     final maxExtent = _scrollController.position.maxScrollExtent;
+    // A short loop is over before the glide is: the next position arrives
+    // while the glide is still heading for the last one, and the playhead
+    // hovers mid-strip instead of sweeping. Jumping keeps it on the position
+    // the preview is showing. The canvas decides by the same predicate to
+    // feed these positions from its display-rate playhead ticker.
+    if (isShortLoop) {
+      _scrollController.jumpTo(target.clamp(0, maxExtent));
+      return;
+    }
     _scrollController.animateTo(
       target.clamp(0, maxExtent),
-      duration: const Duration(milliseconds: 200),
+      duration: _positionChaseDuration,
       curve: Curves.linear,
     );
   }

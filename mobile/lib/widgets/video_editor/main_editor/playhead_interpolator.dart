@@ -13,7 +13,8 @@ import 'package:openvine/utils/video_editor_playhead.dart';
 /// play time — so at the raw report rate they visibly step. Each report
 /// re-[anchor]s this clock (correcting drift); between reports a [Ticker]
 /// interpolates forward from the anchor by the wall-clock elapsed, scaled by
-/// playback speed and clamped to the composition's duration.
+/// playback speed and clamped to the composition's duration — or, when the
+/// anchor asks for it, wrapped around the duration like the looping player.
 ///
 /// Runs only while playing. The owner calls [stop] the moment playback ends or
 /// a seek / trim / drag gesture takes over the play time, so the interpolator
@@ -55,6 +56,9 @@ class PlayheadInterpolator {
   /// Player duration captured at the last [anchor], clamping interpolation.
   Duration _maxDuration = Duration.zero;
 
+  /// Whether interpolation wraps around [_maxDuration] instead of stopping.
+  bool _wrap = false;
+
   /// Whether the ticker is running.
   bool get isActive => _ticker?.isActive ?? false;
 
@@ -63,14 +67,20 @@ class PlayheadInterpolator {
   ///
   /// A non-positive [speed] is treated as 1×: the player reports `0` while
   /// paused, and interpolating at 0× would freeze the overlay.
+  ///
+  /// With [wrap] the clock loops around [maxDuration] instead of parking
+  /// there until the next report: on a loop of a few frames the park would
+  /// be most of the loop.
   void anchor({
     required Duration position,
     required double speed,
     required Duration maxDuration,
+    bool wrap = false,
   }) {
     _anchor = position;
     _speed = speed > 0 ? speed : 1;
     _maxDuration = maxDuration;
+    _wrap = wrap;
     _stopwatch
       ..reset()
       ..start();
@@ -101,6 +111,7 @@ class PlayheadInterpolator {
         elapsed: _stopwatch.elapsed,
         speed: _speed,
         maxDuration: _maxDuration,
+        wrap: _wrap,
       ),
     );
   }

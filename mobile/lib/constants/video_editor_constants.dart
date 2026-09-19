@@ -106,14 +106,32 @@ class VideoEditorConstants {
   /// timing and keeping the loop seamless.
   static const stopMotionMinOutputDuration = Duration(seconds: 1);
 
-  /// Minimum spacing between playback-position updates the frames-only
-  /// stop-motion playhead pushes into the editor timeline.
+  /// Compositions shorter than this are too short a loop for the native
+  /// player's position reports to describe.
   ///
-  /// The playhead ticker fires at the display refresh rate, but the timeline
-  /// only needs a coarse position stream to chase (it animates between
-  /// updates). Throttling to this interval keeps scrolling smooth without
-  /// flooding the bloc with ~60 position events per second.
-  static const stopMotionPlayheadEmitInterval = Duration(milliseconds: 40);
+  /// The player reports its position about five times a second. On a loop of
+  /// a few frames those reports land at arbitrary points of the loop: a
+  /// timeline gliding from one to the next twitches in place instead of
+  /// sweeping, and the time label sticks wherever the reports happen to fall.
+  /// Below this length the canvas feeds the timeline from its display-rate
+  /// playhead interpolator instead, wrapping at the loop end, and the
+  /// timeline jumps to each position rather than gliding — a glide lasts
+  /// longer than such a loop does. See `isShortLoop`.
+  ///
+  /// Half a second gives a loop at least two reports per pass, the least a
+  /// glide between reports needs to read as motion.
+  static const shortLoopThreshold = Duration(milliseconds: 500);
+
+  /// Minimum spacing between playback-position updates a display-rate
+  /// playhead ticker pushes into the editor timeline.
+  ///
+  /// The frames-only stop-motion clock and, on a loop shorter than
+  /// [shortLoopThreshold], the composition player's interpolator both tick at
+  /// the display refresh rate, but the timeline only needs a coarse position
+  /// stream to chase (it animates between updates). Throttling to this
+  /// interval keeps scrolling smooth without flooding the bloc with ~60
+  /// position events per second.
+  static const playheadEmitInterval = Duration(milliseconds: 40);
 
   /// Default time offset for extracting video thumbnails.
   static const defaultThumbnailExtractTime = Duration(milliseconds: 200);

@@ -189,6 +189,16 @@ void main() {
       );
     }
 
+    /// The timeline's horizontal scroll view.
+    Finder timelineScrollView() => find.ancestor(
+      of: find.byType(VideoEditorTimelineBody),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is SingleChildScrollView &&
+            widget.scrollDirection == Axis.horizontal,
+      ),
+    );
+
     group('empty state', () {
       testWidgets('renders $SizedBox when clips are empty', (tester) async {
         await tester.pumpWidget(
@@ -373,16 +383,89 @@ void main() {
       });
     });
 
-    group('scrub pause', () {
-      Finder timelineScrollView() => find.ancestor(
-        of: find.byType(VideoEditorTimelineBody),
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is SingleChildScrollView &&
-              widget.scrollDirection == Axis.horizontal,
-        ),
-      );
+    group('playhead follow', () {
+      double scrollOffset(WidgetTester tester) => tester
+          .widget<SingleChildScrollView>(timelineScrollView())
+          .controller!
+          .offset;
 
+      /// Mounts the timeline over one clip of [duration] and publishes one
+      /// playback position, returning the scroll offset right after the
+      /// frame that received it and after the glide would have ended.
+      Future<(double, double)> followTo(
+        WidgetTester tester, {
+        required DivineVideoClip clip,
+        required Duration position,
+        required bool isShortLoop,
+      }) async {
+        final states = StreamController<VideoEditorMainState>.broadcast();
+        addTearDown(states.close);
+        whenListen(
+          mockMainBloc,
+          states.stream,
+          initialState: const VideoEditorMainState(),
+        );
+        await tester.pumpWidget(
+          buildWidget(clipState: ClipEditorState(clips: [clip])),
+        );
+
+        states.add(
+          VideoEditorMainState(
+            currentPosition: position,
+            isShortLoop: isShortLoop,
+          ),
+        );
+        await tester.pump();
+        final onArrival = scrollOffset(tester);
+        await tester.pump(const Duration(milliseconds: 300));
+        return (onArrival, scrollOffset(tester));
+      }
+
+      testWidgets('glides to the position on a loop long enough to '
+          'follow', (tester) async {
+        final (onArrival, settled) = await followTo(
+          tester,
+          clip: _createTestClip(id: 'a', seconds: 6),
+          position: const Duration(seconds: 2),
+          isShortLoop: false,
+        );
+
+        expect(settled, greaterThan(0));
+        expect(onArrival, lessThan(settled));
+      });
+
+      testWidgets('jumps to the position on a short loop', (tester) async {
+        // 130ms of clip is over before a 200ms glide is: the next position
+        // would arrive with the timeline still heading for the last one.
+        final (onArrival, settled) = await followTo(
+          tester,
+          clip: _createTestClip(id: 'a', seconds: 0, milliseconds: 130),
+          position: const Duration(milliseconds: 100),
+          isShortLoop: true,
+        );
+
+        expect(settled, greaterThan(0));
+        expect(onArrival, settled);
+      });
+
+      testWidgets('jumps when a seam makes the player loop short', (
+        tester,
+      ) async {
+        final (onArrival, settled) = await followTo(
+          tester,
+          // The timeline can be longer than the composite handed to the
+          // player after a rendered seam consumes adjacent clip bodies.
+          clip: _createTestClip(id: 'a', seconds: 1),
+          position: const Duration(milliseconds: 100),
+          isShortLoop: true,
+        );
+
+        expect(settled, greaterThan(0));
+        expect(onArrival, settled);
+      });
+    });
+
+    group('scrub pause', () {
       testWidgets('pauses playback when the user drags the timeline', (
         tester,
       ) async {
@@ -803,11 +886,15 @@ DivineVideoClip _stopMotionClip(Directory dir) {
   );
 }
 
-DivineVideoClip _createTestClip({required String id, int seconds = 2}) {
+DivineVideoClip _createTestClip({
+  required String id,
+  int seconds = 2,
+  int milliseconds = 0,
+}) {
   return DivineVideoClip(
     id: id,
     video: EditorVideo.file('/tmp/test_$id.mp4'),
-    duration: Duration(seconds: seconds),
+    duration: Duration(seconds: seconds, milliseconds: milliseconds),
     recordedAt: DateTime(2025),
     originalAspectRatio: 9 / 16,
     targetAspectRatio: .vertical,
