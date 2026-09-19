@@ -532,6 +532,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Last duration dispatched to BLoC — avoids flooding with duplicates.
   Duration _lastReportedDuration = Duration.zero;
 
+  /// Whether the last [VideoEditorDurationChanged] classified the loop as
+  /// short. Tracked apart from [_lastReportedDuration]: a rendered seam
+  /// shortens the composite without moving the editor duration it maps to.
+  bool _lastReportedShortLoop = false;
+
   /// Whether a native seekTo is currently in flight.
   bool _isSeeking = false;
 
@@ -1174,12 +1179,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // The native player reports in composite space. A rendered transition can
     // make that loop shorter than the editor timeline, so classify it from the
     // reported player duration and carry the result to the timeline below.
-    final shortLoop = isShortLoop(playerState.duration);
+    // An unprepared player reports no duration yet; that is not a short loop.
+    final shortLoop =
+        playerState.duration > Duration.zero &&
+        isShortLoop(playerState.duration);
     final timelineDuration = _composition.playerToTimeline(
       playerState.duration,
     );
-    if (timelineDuration != _lastReportedDuration) {
+    if (timelineDuration != _lastReportedDuration ||
+        shortLoop != _lastReportedShortLoop) {
       _lastReportedDuration = timelineDuration;
+      _lastReportedShortLoop = shortLoop;
       bloc.add(
         VideoEditorDurationChanged(timelineDuration, isShortLoop: shortLoop),
       );
