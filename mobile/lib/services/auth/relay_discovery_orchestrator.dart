@@ -349,7 +349,7 @@ class RelayDiscoveryOrchestrator {
         channelFactory: _profileCheckChannelFactory,
       );
       final completer = Completer<bool>();
-      final subscriptionId = 'pc_${DateTime.now().millisecondsSinceEpoch}';
+      final subscriptionId = StringUtil.rndSecureNameStr(16);
 
       relay.onMessage = (relay, json) async {
         if (json.isEmpty) return;

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:clock/clock.dart';
-import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:meta/meta.dart';
 import 'package:nostr_client/src/models/models.dart';
@@ -673,8 +672,6 @@ class NostrClient {
 
   /// Map of active subscriptions
   final Map<String, StreamController<Event>> _subscriptionStreams = {};
-
-  int _anonymousSubscriptionCounter = 0;
 
   /// Publishes an event to relays
   ///
@@ -1688,10 +1685,7 @@ class NostrClient {
   }) {
     final effectiveTempRelays = _allowedRelays(tempRelays);
     final effectiveTargetRelays = _allowedRelays(targetRelays);
-    final filterHash = _generateFilterHash(filters);
-    final id =
-        subscriptionId ??
-        'sub_${filterHash}_${_anonymousSubscriptionCounter++}';
+    final id = subscriptionId ?? StringUtil.rndSecureNameStr(16);
 
     // Explicit subscription IDs are caller-owned. Preserve their sharing
     // semantics so manual unsubscribe call sites keep working as before.
@@ -2399,16 +2393,6 @@ class NostrClient {
     _verifyWorker?.close();
     _verifyWorker = null;
     _isDisposed = true;
-  }
-
-  /// Generates a deterministic hash for filters
-  /// to prevent duplicate subscriptions
-  String _generateFilterHash(List<Filter> filters) {
-    final json = filters.map((f) => f.toJson()).toList();
-    final jsonString = jsonEncode(json);
-    final bytes = utf8.encode(jsonString);
-    final digest = sha256.convert(bytes);
-    return digest.toString().substring(0, 16);
   }
 
   List<Event> _eventsMatchingAnyFilter(

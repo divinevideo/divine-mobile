@@ -357,6 +357,65 @@ void main() {
         expect(channelFactory.createdChannels, hasLength(1));
       });
 
+      test('uses an opaque subscription id for the profile check', () async {
+        final channelFactory = _FakeWebSocketChannelFactory();
+
+        final future = buildOrchestrator(
+          profileCheckChannelFactory: channelFactory,
+          profileCheckIndexerUrl: indexerUrl,
+        ).checkExistingProfile(testPubkey);
+
+        await pumpEventQueue();
+        final request = jsonDecode(
+          channelFactory.lastChannel._sink.added.single as String,
+        ) as List<dynamic>;
+        final subscriptionId = request[1] as String;
+        channelFactory.lastChannel.simulateMessage(
+          jsonEncode(<dynamic>['EOSE', subscriptionId]),
+        );
+        await future;
+
+        expect(subscriptionId, hasLength(16));
+        expect(RegExp(r'^[0-9a-z]{16}$').hasMatch(subscriptionId), isTrue);
+      });
+
+      test(
+        'generates a different id for each profile check',
+        () async {
+          final channelFactory = _FakeWebSocketChannelFactory();
+
+          final firstFuture = buildOrchestrator(
+            profileCheckChannelFactory: channelFactory,
+            profileCheckIndexerUrl: indexerUrl,
+          ).checkExistingProfile(testPubkey);
+          await pumpEventQueue();
+          final firstRequest = jsonDecode(
+            channelFactory.createdChannels[0]._sink.added.single as String,
+          ) as List<dynamic>;
+          final firstId = firstRequest[1] as String;
+          channelFactory.createdChannels[0].simulateMessage(
+            jsonEncode(<dynamic>['EOSE', firstId]),
+          );
+          await firstFuture;
+
+          final secondFuture = buildOrchestrator(
+            profileCheckChannelFactory: channelFactory,
+            profileCheckIndexerUrl: indexerUrl,
+          ).checkExistingProfile(testPubkey);
+          await pumpEventQueue();
+          final secondRequest = jsonDecode(
+            channelFactory.createdChannels[1]._sink.added.single as String,
+          ) as List<dynamic>;
+          final secondId = secondRequest[1] as String;
+          channelFactory.createdChannels[1].simulateMessage(
+            jsonEncode(<dynamic>['EOSE', secondId]),
+          );
+          await secondFuture;
+
+          expect(firstId, isNot(equals(secondId)));
+        },
+      );
+
       test(
         'reports false when the indexer returns EOSE with no event',
         () async {

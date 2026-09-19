@@ -484,7 +484,7 @@ class NostrRemoteSigner extends NostrSigner {
     log(
       '[NIP46] genQueryMsg: using adjusted since=$adjustedSinceTimestamp (original=$sinceTimestamp)',
     );
-    final subscriptionId = StringUtil.rndNameStr(12);
+    final subscriptionId = StringUtil.rndSecureNameStr(12);
     List<dynamic> queryMsg = ["REQ", subscriptionId];
     queryMsg.add(filterJson);
 
