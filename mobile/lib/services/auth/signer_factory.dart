@@ -192,6 +192,7 @@ class SignerFactory {
         pubkey: pubkey,
         rpcSigner: rpc,
         localSigner: localSigner,
+        invalidRpcFallbackReporter: _reportInvalidKeycastRpcFallbackSignature,
       );
     }
     // Local keys only — private key required.
@@ -381,24 +382,38 @@ class SignerFactory {
 
   /// Crashlytics annotation for a signing-layer invariant violation, or null
   /// when [error] is an expected failure that is only logged.
-  static ({String reason, String logMessage})? _invariantReport(
-    Object error,
-  ) => switch (error) {
-    EventSignerAccountMismatchException() => (
-      reason: 'Signer returned an event for a different account',
-      logMessage: 'Signer account mismatch during createAndSignEvent',
-    ),
-    EventSignerInvalidEventException(:final check) => (
-      reason: 'Signer returned an event that failed the ${check.name} check',
+  static ({String reason, String logMessage})? _invariantReport(Object error) =>
+      switch (error) {
+        EventSignerAccountMismatchException() => (
+          reason: 'Signer returned an event for a different account',
+          logMessage: 'Signer account mismatch during createAndSignEvent',
+        ),
+        EventSignerInvalidEventException(:final check) => (
+          reason:
+              'Signer returned an event that failed the ${check.name} check',
+          logMessage:
+              'Signer ${check.name} validation failed during '
+              'createAndSignEvent',
+        ),
+        Error() => (
+          reason: 'Unexpected signer invariant failure',
+          logMessage:
+              'Unexpected signer invariant failure during createAndSignEvent',
+        ),
+        _ => null,
+      };
+
+  void _reportInvalidKeycastRpcFallbackSignature(
+    KeycastInvalidRpcFallbackSignatureException error,
+    StackTrace stackTrace,
+  ) {
+    _reportError?.call(
+      Reportable(error, context: 'createAndSignEvent'),
+      stackTrace,
+      reason: 'Keycast RPC fallback returned an invalid signature',
       logMessage:
-          'Signer ${check.name} validation failed during '
+          'Keycast RPC fallback signature validation failed during '
           'createAndSignEvent',
-    ),
-    Error() => (
-      reason: 'Unexpected signer invariant failure',
-      logMessage:
-          'Unexpected signer invariant failure during createAndSignEvent',
-    ),
-    _ => null,
-  };
+    );
+  }
 }
