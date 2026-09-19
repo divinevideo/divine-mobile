@@ -132,7 +132,6 @@ test/services/relay_capability_service_test.dart	1
 test/services/saved_sounds_service_test.dart	4
 test/services/seen_videos_service_test.dart	2
 test/services/staged_profile_media_store_test.dart	1
-test/services/subscribed_list_video_cache_test.dart	1
 test/services/subscription_manager_cache_test.dart	1
 test/services/supporter_repository_test.dart	4
 test/services/upload_manager_background_cancel_test.dart	1
