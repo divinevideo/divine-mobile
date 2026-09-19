@@ -66,16 +66,18 @@ class _ResultOnlyDownload extends CancellableDownload {
 /// Builds a response whose body behaves like `IOClient`'s once the headers
 /// have arrived: an abort no longer throws out of `send()` but is delivered
 /// on the body stream as a [http.RequestAbortedException], after which the
-/// stream closes.
+/// stream closes. [onListen] fires when the download starts reading the body.
 http.StreamedResponse _abortableResponse(
   http.BaseRequest request,
   int statusCode, {
   Map<String, String> headers = const {},
+  void Function()? onListen,
 }) {
   final abortTrigger = (request as http.AbortableRequest).abortTrigger!;
   late final StreamController<List<int>> body;
   body = StreamController<List<int>>(
     onListen: () {
+      onListen?.call();
       unawaited(
         abortTrigger.whenComplete(() {
           if (body.isClosed) return;
@@ -346,9 +348,14 @@ void main() {
       test('settles with null and reports nothing when cancelled before the '
           'body is consumed', () async {
         final headersArrived = Completer<void>();
+        var bodyListened = false;
         final client = _CallbackClient((request) async {
           await headersArrived.future;
-          return _abortableResponse(request, 200);
+          return _abortableResponse(
+            request,
+            200,
+            onListen: () => bodyListened = true,
+          );
         });
         final downloader = HttpCancellableDownloader(client);
 
@@ -366,6 +373,8 @@ void main() {
         }, (error, _) => zoneErrors.add(error));
 
         expect(zoneErrors, isEmpty);
+        // An unread body never gives its IOClient connection back to the pool.
+        expect(bodyListened, isTrue);
         expect(resolved?.file, isNull);
         expect(resolved?.statusCode, equals(200));
         expect(target.existsSync(), isFalse);
@@ -373,11 +382,13 @@ void main() {
 
       test('keeps the status and reports nothing when cancelled while a '
           'non-OK body is being drained', () async {
+        var bodyListened = false;
         final client = _CallbackClient(
           (request) async => _abortableResponse(
             request,
             HttpStatus.tooManyRequests,
             headers: {'retry-after': '10'},
+            onListen: () => bodyListened = true,
           ),
         );
         final downloader = HttpCancellableDownloader(client);
@@ -398,6 +409,8 @@ void main() {
         }, (error, _) => zoneErrors.add(error));
 
         expect(zoneErrors, isEmpty);
+        // An unread body never gives its IOClient connection back to the pool.
+        expect(bodyListened, isTrue);
         expect(resolved?.file, isNull);
         expect(resolved?.statusCode, equals(HttpStatus.tooManyRequests));
         expect(resolved?.headers['retry-after'], equals('10'));
