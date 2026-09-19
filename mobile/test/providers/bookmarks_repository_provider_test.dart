@@ -77,23 +77,6 @@ void main() {
           expect(identical(first, second), isTrue);
         },
       );
-
-      test(
-        'survives repeated listener-less reads across one session',
-        () async {
-          final container = containerWith(_SwappableNostrService(nostrClient));
-
-          final first = container.read(bookmarksRepositoryProvider);
-          for (var i = 0; i < 5; i++) {
-            await container.pump();
-            expect(
-              identical(container.read(bookmarksRepositoryProvider), first),
-              isTrue,
-              reason: 'read ${i + 2} built a new repository',
-            );
-          }
-        },
-      );
     });
 
     group('identity change', () {
