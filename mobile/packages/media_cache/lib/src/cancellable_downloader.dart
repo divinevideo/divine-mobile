@@ -228,7 +228,14 @@ class _HttpDownload implements CancellableDownload {
         // Synchronous so no cancel() can fire the abort before the body below
         // is read: IOClient never releases a connection whose body is first
         // listened to after the abort.
-        parent.createSync(recursive: true);
+        try {
+          parent.createSync(recursive: true);
+        } on Object {
+          // Nothing will read this body now. Cancel it rather than leave its
+          // request running, or drain a whole media file only to discard it.
+          response.stream.listen(null).cancel().ignore();
+          rethrow;
+        }
       }
       final sink = _file.openWrite();
       _sink = sink;

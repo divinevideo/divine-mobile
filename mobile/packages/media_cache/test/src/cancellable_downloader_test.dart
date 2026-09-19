@@ -466,6 +466,36 @@ void main() {
         expect(download.isCancelled, isTrue);
         expect(listenedAfterAbort, isFalse);
       });
+
+      test('cancels the response body when the directory cannot be '
+          'created', () async {
+        var bodyCancelled = false;
+        final client = _CallbackClient(
+          (_) async => http.StreamedResponse(
+            StreamController<List<int>>(
+              onCancel: () => bodyCancelled = true,
+            ).stream,
+            200,
+          ),
+        );
+        final downloader = HttpCancellableDownloader(client);
+        // A regular file where the parent directory should go, so mkdir fails.
+        final notADirectory = File('${tempDir.path}/not_a_directory')
+          ..createSync();
+
+        final file = await downloader
+            .download(
+              url: 'https://example.com/video.mp4',
+              targetFile: File('${notADirectory.path}/video.mp4'),
+            )
+            .file;
+
+        expect(file, isNull);
+        // Nothing reads this body now. Left alone it keeps its request going:
+        // IOClient holds the connection, and the native clients download the
+        // whole file into memory.
+        expect(bodyCancelled, isTrue);
+      });
     });
 
     test('close releases the underlying client', () async {
