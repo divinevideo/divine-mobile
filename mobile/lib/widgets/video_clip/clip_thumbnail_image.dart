@@ -1,21 +1,26 @@
-// ABOUTME: Error-tolerant Image.file wrapper for clip thumbnail and ghost
-// ABOUTME: frame paths whose backing file can be missing (#5796).
+// ABOUTME: Error-tolerant Image.file wrapper for clip thumbnail, ghost frame
+// ABOUTME: and stop-motion still paths whose backing file can be missing.
 
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// Renders a clip thumbnail / ghost frame from a local file path without
-/// crashing when the file is gone.
+/// Renders a clip thumbnail, ghost frame or stop-motion still from a local
+/// file path without crashing when the file is gone.
 ///
-/// Clip thumbnail and ghost paths are persisted as absolute paths; on iOS
-/// the app container UUID changes on reinstall/update and cached files can
-/// be evicted, so the file may not exist by the time it is decoded. A bare
+/// These paths are persisted as absolute paths; on iOS the app container UUID
+/// changes on reinstall/update and cached files can be evicted, and the
+/// recorder deletes stop-motion frame files on undo, discard, reset and a mode
+/// switch — so the file may not exist by the time it is decoded. A bare
 /// `Image.file` has no image-stream error listener in that case, and the
 /// resulting `PathNotFoundException` is recorded as a fatal crash
 /// (Crashlytics 71e200c8, #5796). This widget renders [placeholder]
 /// instead.
+///
+/// Note that this covers the *displayed* image only. A `precacheImage` of the
+/// same file reports through its own listener, so it needs its own `onError`
+/// — see `StopMotionPlayer`.
 class ClipThumbnailImage extends StatelessWidget {
   const ClipThumbnailImage({
     required this.path,

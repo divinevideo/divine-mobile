@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -39,10 +40,7 @@ void main() {
   Widget wrap(Widget child, {bool reduceMotion = false}) {
     return MediaQuery(
       data: MediaQueryData(disableAnimations: reduceMotion),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: child,
-      ),
+      child: Directionality(textDirection: TextDirection.ltr, child: child),
     );
   }
 
@@ -149,6 +147,63 @@ void main() {
       // clock, so play/pause is respected (a paused editor holds the frame).
       await tester.pump(const Duration(milliseconds: 500));
       expect(currentPath(tester), frames[0].path);
+    });
+  });
+
+  group('missing still', () {
+    // Resolving the file is real I/O, so the failure needs real event-loop
+    // turns to arrive. Polled rather than waited on for a fixed span: one span
+    // is a coin flip once CI runs four shards on one box.
+    Future<void> pumpUntilPlaceholder(WidgetTester tester) async {
+      for (
+        var attempt = 0;
+        attempt < 50 && find.byType(DivineIcon).evaluate().isEmpty;
+        attempt++
+      ) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+    }
+
+    // No image-cache eviction here, unlike clip_thumbnail_image_test: setUp
+    // makes a fresh randomly-named temp dir per test, so a failed resolution
+    // retained under this key can never be read back by another test.
+    Future<void> pumpMissing(WidgetTester tester, String name) async {
+      await tester.pumpWidget(
+        wrap(
+          StopMotionPlayer(
+            frames: [
+              StopMotionClipFrame(
+                path: '${tempDir.path}/$name',
+                duration: const Duration(milliseconds: 100),
+              ),
+            ],
+          ),
+        ),
+      );
+      await pumpUntilPlaceholder(tester);
+    }
+
+    // The recorder deletes a still's file on undo, discard, reset and a mode
+    // switch, and a library row can outlive them, so a frame path without its
+    // file is a reachable state. Decoding it through a bare Image.file throws
+    // PathNotFoundException with no image-stream error listener attached,
+    // which FlutterError.onError records as a *fatal* crash (#5796's class).
+    testWidgets('renders the placeholder instead of throwing when a still is '
+        'gone', (tester) async {
+      await pumpMissing(tester, 'deleted_by_undo.png');
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(DivineIcon), findsOneWidget);
+    });
+
+    // precacheImage always registers its own error listener, so it reports
+    // fatally even once the displayed image carries an errorBuilder. Pumping
+    // the whole player covers both reporters.
+    testWidgets('precaching a gone still reports no error', (tester) async {
+      await pumpMissing(tester, 'never_written.png');
+
+      expect(tester.takeException(), isNull);
     });
   });
 }
