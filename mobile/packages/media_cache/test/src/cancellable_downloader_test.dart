@@ -6,7 +6,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:media_cache/src/cancellable_downloader.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+class _MockDirectory extends Mock implements Directory {}
 
 class _CallbackClient extends http.BaseClient {
   _CallbackClient(this._onSend, {this.onClose});
@@ -412,6 +415,56 @@ void main() {
         expect(bodyListened, isTrue);
         expect(download.isCancelled, isTrue);
         expect(target.existsSync(), isFalse);
+      });
+    });
+
+    group('when the target directory has to be created', () {
+      // IOClient only listens to the underlying response if the abort has not
+      // fired by the time the body is first listened to. Otherwise it never
+      // releases the connection, and on a one-slot pool the next request to
+      // the host waits forever.
+      test('reads the body before a cancel() made during the creation can '
+          'land', () async {
+        var aborted = false;
+        var listenedAfterAbort = false;
+        final client = _CallbackClient((request) async {
+          unawaited(
+            (request as http.AbortableRequest).abortTrigger!.whenComplete(
+              () => aborted = true,
+            ),
+          );
+          return _abortableResponse(
+            request,
+            200,
+            onListen: () => listenedAfterAbort = aborted,
+          );
+        });
+        final downloader = HttpCancellableDownloader(client);
+        final parent = Directory('${tempDir.path}/cache')..createSync();
+        late final CancellableDownload download;
+        void cancelSoon() => scheduleMicrotask(download.cancel);
+        final creatingParent = _MockDirectory();
+        when(creatingParent.existsSync).thenReturn(false);
+        when(() => creatingParent.create(recursive: true)).thenAnswer((_) {
+          cancelSoon();
+          // Completes on a later event, as a real mkdir does.
+          return Future(() => creatingParent);
+        });
+        when(
+          () => creatingParent.createSync(recursive: true),
+        ).thenAnswer((_) => cancelSoon());
+
+        download = IOOverrides.runZoned(
+          () => downloader.download(
+            url: 'https://example.com/video.mp4',
+            targetFile: File('${parent.path}/video.mp4'),
+          ),
+          createDirectory: (path) => creatingParent,
+        );
+        await download.result;
+
+        expect(download.isCancelled, isTrue);
+        expect(listenedAfterAbort, isFalse);
       });
     });
 

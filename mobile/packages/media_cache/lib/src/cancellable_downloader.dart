@@ -225,7 +225,10 @@ class _HttpDownload implements CancellableDownload {
 
       final parent = _file.parent;
       if (!parent.existsSync()) {
-        await parent.create(recursive: true);
+        // Synchronous so no cancel() can fire the abort before the body below
+        // is read: IOClient never releases a connection whose body is first
+        // listened to after the abort.
+        parent.createSync(recursive: true);
       }
       final sink = _file.openWrite();
       _sink = sink;
