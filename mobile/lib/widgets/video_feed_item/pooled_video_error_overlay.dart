@@ -38,6 +38,7 @@ class PooledVideoErrorOverlay extends ConsumerStatefulWidget {
     this.onVerifyAge,
     this.isVerifying = false,
     this.isAuthRetryExhausted = false,
+    this.isAdultContentLocked = false,
     this.shouldPortraitExpand = true,
     this.isSquare = false,
     super.key,
@@ -54,6 +55,9 @@ class PooledVideoErrorOverlay extends ConsumerStatefulWidget {
 
   /// Whether authenticated retry already failed for this video in this session.
   final bool isAuthRetryExhausted;
+
+  /// Whether the account is a protected minor and cannot unlock adult media.
+  final bool isAdultContentLocked;
 
   final VideoErrorType? errorType;
 
@@ -180,12 +184,17 @@ class _PooledVideoErrorOverlayState
     };
     final body = isUnavailableAfterAuthRetry
         ? context.l10n.videoErrorUnavailableBody
+        : isAgeRestricted && widget.isAdultContentLocked
+        ? context.l10n.videoErrorAdultContentLocked
         : isAgeRestricted
         ? context.l10n.videoErrorVerifyAgeBody
         : isModerationRestricted
         ? context.l10n.videoErrorContentRestrictedBody
         : null;
-    final showVerifyAge = isAgeRestricted && widget.onVerifyAge != null;
+    final showVerifyAge =
+        isAgeRestricted &&
+        !widget.isAdultContentLocked &&
+        widget.onVerifyAge != null;
     final showSkip =
         (isUnavailableAfterAuthRetry ||
             (isModerationRestricted && !isAgeRestricted)) &&
@@ -194,7 +203,8 @@ class _PooledVideoErrorOverlayState
         (!isModerationRestricted || (isAgeRestricted && !showVerifyAge)) &&
         !isUnavailableAfterAuthRetry &&
         !showSkip &&
-        !showVerifyAge;
+        !showVerifyAge &&
+        !widget.isAdultContentLocked;
     _maybeAutoRetryAgeRestricted(showVerifyAge: showVerifyAge);
 
     // Hard-walled states (forbidden / moderation-blocked / age-restricted)

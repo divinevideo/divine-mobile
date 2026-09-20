@@ -975,6 +975,8 @@
   "videoErrorSkip": "దాటవేయి",
   "videoErrorVerifyAgeButton": "వయస్సుని ధృవీకరించండి",
   "videoErrorVerifyAgeFailed": "మీ వయస్సుని ధృవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "videoErrorPlaybackStartFailed": "ఈ వీడియోను ప్రారంభించలేకపోయాం. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "videoErrorAdultContentLocked": "ఈ వీడియో పెద్దలకు మాత్రమే అందుబాటులో ఉంది.",
   "videoErrorVerifyAgeSignerUnreachable": "ధృవీకరణ సమయం ముగిసింది. మీ కనెక్షన్‌ని తనిఖీ చేయండి లేదా త్వరలో మళ్లీ ప్రయత్నించండి.",
   "@videoErrorVerifyAgeSignerUnreachable": {
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."

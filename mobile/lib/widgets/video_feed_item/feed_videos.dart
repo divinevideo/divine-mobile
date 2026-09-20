@@ -617,11 +617,15 @@ Future<PooledRetryOutcome> _retryFeedItem(
   int index,
   Map<String, String> httpHeaders,
 ) async {
-  if (feedState == null) return (succeeded: false, errorType: null);
-  final succeeded = await feedState.retryAt(index, httpHeaders: httpHeaders);
+  if (feedState == null) {
+    return (status: VideoRetryResult.notAttempted, errorType: null);
+  }
+  final status = await feedState.retryAt(index, httpHeaders: httpHeaders);
   return (
-    succeeded: succeeded,
-    errorType: succeeded ? null : feedState.errorTypeAt(index),
+    status: status,
+    errorType: status == VideoRetryResult.failed
+        ? feedState.errorTypeAt(index)
+        : null,
   );
 }
 

@@ -556,6 +556,8 @@
     "videoErrorSkip": "Hoppa över",
     "videoErrorVerifyAgeButton": "Verifiera ålder",
     "videoErrorVerifyAgeFailed": "Det gick inte att verifiera din ålder. Försök igen.",
+    "videoErrorPlaybackStartFailed": "Det gick inte att starta den här videon. Försök igen.",
+    "videoErrorAdultContentLocked": "Den här videon är endast tillgänglig för vuxna.",
     "videoErrorVerifyAgeSignerUnreachable": "Timeout vid verifiering. Kontrollera din anslutning eller försök igen om en stund.",
     "videoFollowButtonFollow": "Följ",
     "audioAttributionOriginalSound": "Originalljud",

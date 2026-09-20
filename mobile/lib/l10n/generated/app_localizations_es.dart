@@ -1685,6 +1685,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos verificar tu edad. Inténtalo de nuevo.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'No pudimos iniciar este video. Inténtalo de nuevo.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Este video solo está disponible para adultos.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Se agotó el tiempo de verificación. Revisa tu conexión o vuelve a intentarlo en un momento.';
 

@@ -1599,6 +1599,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Tidak dapat memverifikasi usia kamu. Silakan coba lagi.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Kami tidak dapat memulai video ini. Silakan coba lagi.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Video ini hanya tersedia untuk orang dewasa.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Waktu verifikasi habis. Periksa koneksi kamu atau coba lagi sebentar lagi.';
 

@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
+import 'package:infinite_video_feed/src/models/video_retry_result.dart';
 import 'package:infinite_video_feed/src/services/controller_subscriptions.dart';
 import 'package:infinite_video_feed/src/services/derivative_failure_cache.dart';
 import 'package:infinite_video_feed/src/services/disk_prefetcher.dart';
@@ -1034,7 +1035,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         index + 1 <= lastIndex &&
         !_controllers.containsKey(index + 1) &&
         !_restoreTerminalErrorAt(index + 1)) {
-      unawaited(_initController(index + 1));
+      unawaited(_initController(index + 1).then((_) {}));
     }
 
     // Give the current video a bandwidth head-start before loading the
@@ -1053,7 +1054,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         index - 1 >= 0 &&
         !_controllers.containsKey(index - 1) &&
         !_restoreTerminalErrorAt(index - 1)) {
-      unawaited(_initController(index - 1));
+      unawaited(_initController(index - 1).then((_) {}));
     }
   }
 
@@ -1183,10 +1184,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   // ─── Controller init / retry ────────────────────────────────────────────
 
-  Future<void> _initController(int index, {bool skipCache = false}) async {
-    if (index < 0 || index >= widget.videos.length) return;
+  Future<bool> _initController(int index, {bool skipCache = false}) async {
+    if (index < 0 || index >= widget.videos.length) return false;
 
-    if (_restoreTerminalErrorAt(index)) return;
+    if (_restoreTerminalErrorAt(index)) return false;
 
     final video = widget.videos[index];
 
@@ -1258,7 +1259,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
     try {
       await controller.initialize();
-      if (!guardInitOwnership('initialize')) return;
+      if (!guardInitOwnership('initialize')) return false;
       _firstFrameTimerFor(index)?.markControllerInitialized();
 
       // coverage:ignore-start
@@ -1287,7 +1288,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
               trimToCommonTrackEnd: true,
             ),
           );
-          if (!guardInitOwnership('setSource(cache)')) return;
+          if (!guardInitOwnership('setSource(cache)')) return false;
           _loadedFromCache.add(index);
           // Register network sources with prestart so a runtime parseError
           // on the cached file can still fall over to network URLs.
@@ -1332,7 +1333,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
             onSourceLoadFailure: rememberFailedSource,
           );
-          if (!guardInitOwnership('setSourceWithFallbacks(cache)')) return;
+          if (!guardInitOwnership('setSourceWithFallbacks(cache)')) {
+            return false;
+          }
           _sources.register(index, playbackSources, openedSourceIdx);
           _log(
             'Network fallback source selected index $index (${video.id}): '
@@ -1360,7 +1363,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           onFailoverSourceFailure: _derivativeFailures.recordFailureForSource,
           onSourceLoadFailure: rememberFailedSource,
         );
-        if (!guardInitOwnership('setSourceWithFallbacks(network)')) return;
+        if (!guardInitOwnership('setSourceWithFallbacks(network)')) {
+          return false;
+        }
         _sources.register(index, playbackSources, openedSourceIdx);
         _log(
           'Source selected index $index (${video.id}): '
@@ -1371,15 +1376,15 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _firstFrameTimerFor(index)?.markSourceReady();
 
       await controller.setLooping(looping: true);
-      if (!guardInitOwnership('setLooping')) return;
+      if (!guardInitOwnership('setLooping')) return false;
       await controller.setVolume(_volume);
-      if (!guardInitOwnership('setVolume')) return;
+      if (!guardInitOwnership('setVolume')) return false;
 
       if (index == _currentIndex && _isActive) {
         _log('Playing index $index (${video.id})');
         unawaited(_recordFirstFrame(index, controller));
         await _activateCurrentController(controller, index);
-        if (!guardInitOwnership('play')) return;
+        if (!guardInitOwnership('play')) return false;
       }
 
       _errors.remove(index);
@@ -1389,7 +1394,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     } on Object catch (e, stackTrace) {
       if (!ownsInit()) {
         guardInitOwnership('error handling');
-        return;
+        return false;
       }
       final sourceDetail = lastFailedSource == null
           ? ''
@@ -1424,7 +1429,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       // completes after the widget was unmounted or the index was re-inited.
       // Not reproducible in package widget tests.
       guardInitOwnership('rebuild');
-      return;
+      return false;
       // coverage:ignore-end
     }
     _rebuildPage(index);
@@ -1435,6 +1440,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _scheduleAutoRetryIfEligible(index);
       // coverage:ignore-end
     }
+    return true;
   }
 
   /// The error the player classified for [index], or `null` when that slot is
@@ -1461,7 +1467,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   /// (optimized, HLS, and raw variants), since the age-gate auth token is
   /// hash-bound and valid for any variant URL of the blob. Pass an empty map
   /// to retry anonymously.
-  Future<bool> retryAt(
+  Future<VideoRetryResult> retryAt(
     int index, {
     Map<String, String> httpHeaders = const {},
   }) {
@@ -1470,7 +1476,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     return _retryController(index, httpHeaders: httpHeaders);
   }
 
-  Future<bool> _retryController(
+  Future<VideoRetryResult> _retryController(
     int index, {
     Map<String, String> httpHeaders = const {},
   }) async {
@@ -1496,8 +1502,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _rebuildPage(index);
     // Skip cache on manual retry so a corrupt cached file does not loop
     // the same failure indefinitely.
-    await _initController(index, skipCache: true);
-    return !_errors.contains(index);
+    final initialized = await _initController(index, skipCache: true);
+    return VideoRetryResult.fromInitialization(
+      initialized: initialized,
+      hasError: _errors.contains(index),
+    );
   }
   // coverage:ignore-end
 

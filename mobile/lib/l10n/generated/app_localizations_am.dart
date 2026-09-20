@@ -1622,6 +1622,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoErrorVerifyAgeFailed => 'ዕድሜህን ማረጋገጥ አልተቻለም። እባክህ እንደገና ሞክር';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'ይህን ቪዲዮ ማስጀመር አልቻልንም። እባክህ እንደገና ሞክር።';
+
+  @override
+  String get videoErrorAdultContentLocked => 'ይህ ቪዲዮ ለአዋቂዎች ብቻ ይገኛል።';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'ማረጋገጡ ጊዜው አልፎበታል። ግንኙነትህን አረጋግጥ ወይም ትንሽ ቆይተህ እንደገና ሞክር።';
 

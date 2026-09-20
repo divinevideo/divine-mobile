@@ -1027,6 +1027,14 @@
   "videoErrorSkip": "Skip",
   "videoErrorVerifyAgeButton": "Verify age",
   "videoErrorVerifyAgeFailed": "Couldn't verify your age. Please try again.",
+  "videoErrorPlaybackStartFailed": "We couldn't start this video. Please try again.",
+  "@videoErrorPlaybackStartFailed": {
+    "description": "Snackbar shown when age-gated playback did not start after viewer authentication. It must not imply age verification failed."
+  },
+  "videoErrorAdultContentLocked": "This video is only available to adults.",
+  "@videoErrorAdultContentLocked": {
+    "description": "Body shown on an age-restricted video for a protected-minor account. No verification affordance is available."
+  },
   "videoErrorVerifyAgeSignerUnreachable": "Verification timed out. Check your connection or try again shortly.",
   "@videoErrorVerifyAgeSignerUnreachable": {
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."

@@ -7,7 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart'
-    show VideoErrorType;
+    show VideoErrorType, VideoRetryResult;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -15,6 +15,7 @@ import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/widgets/video_feed_item/verifying_aware_video_error_overlay.dart';
 
@@ -60,6 +61,7 @@ void main() {
       WidgetTester tester, {
       required VideoPlaybackStatusCubit cubit,
       MediaAuthInterceptor? interceptor,
+      bool isProtectedMinor = false,
     }) {
       final authInterceptor = interceptor ?? _MockMediaAuthInterceptor();
       when(
@@ -69,6 +71,7 @@ void main() {
         ProviderScope(
           overrides: [
             mediaAuthInterceptorProvider.overrideWithValue(authInterceptor),
+            isProtectedMinorProvider.overrideWithValue(isProtectedMinor),
           ],
           child: BlocProvider<VideoPlaybackStatusCubit>.value(
             value: cubit,
@@ -81,7 +84,10 @@ void main() {
                   index: 0,
                   resolveSha256: _resolveSha256,
                   onRetry: () {},
-                  retryPlayback: (_) => (succeeded: true, errorType: null),
+                  retryPlayback: (_) => (
+                    status: VideoRetryResult.played,
+                    errorType: null,
+                  ),
                   errorType: VideoErrorType.ageRestricted,
                   shouldPortraitExpand: true,
                   isSquare: false,
@@ -151,6 +157,23 @@ void main() {
       await tester.pump();
       // Cleared in the retry helper's finally once playback reloads.
       expect(cubit.state.isVerifying(_videoId), isFalse);
+    });
+
+    testWidgets('hides Verify age for protected minors', (tester) async {
+      final cubit = VideoPlaybackStatusCubit();
+      addTearDown(cubit.close);
+
+      await pumpOverlay(
+        tester,
+        cubit: cubit,
+        isProtectedMinor: true,
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(_verifyLabel), findsNothing);
+      expect(find.text(l10n.videoErrorRetry), findsNothing);
+      expect(find.text(l10n.videoErrorAdultContentLocked), findsOneWidget);
     });
   });
 }

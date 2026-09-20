@@ -556,6 +556,8 @@
     "videoErrorSkip": "Overslaan",
     "videoErrorVerifyAgeButton": "Leeftijd verifiëren",
     "videoErrorVerifyAgeFailed": "We konden je leeftijd niet verifiëren. Probeer het opnieuw.",
+    "videoErrorPlaybackStartFailed": "We konden deze video niet starten. Probeer het opnieuw.",
+    "videoErrorAdultContentLocked": "Deze video is alleen beschikbaar voor volwassenen.",
     "videoErrorVerifyAgeSignerUnreachable": "Verificatie duurde te lang. Controleer je verbinding of probeer het straks opnieuw.",
     "videoFollowButtonFollow": "Volgen",
     "audioAttributionOriginalSound": "Origineel geluid",

@@ -9,6 +9,7 @@ import 'package:infinite_video_feed/infinite_video_feed.dart'
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/feed/pooled_age_restricted_retry.dart';
 import 'package:openvine/widgets/video_feed_item/pooled_video_error_overlay.dart';
 
@@ -62,24 +63,28 @@ class VerifyingAwareVideoErrorOverlay extends ConsumerWidget {
         isAuthRetryExhausted: state.hasAuthRetryExhausted(video.id),
         isVerifying: state.isVerifying(video.id),
       ),
-      builder: (context, status) => PooledVideoErrorOverlay(
-        video: video,
-        onRetry: onRetry,
-        onSkip: onSkip,
-        onVerifyAge: () => retryAgeRestrictedPooledVideo(
-          context: context,
-          ref: ref,
+      builder: (context, status) {
+        final isAdultContentLocked = ref.watch(isProtectedMinorProvider);
+        return PooledVideoErrorOverlay(
           video: video,
-          index: index,
-          resolveSha256: resolveSha256,
-          retryPlayback: retryPlayback,
-        ),
-        errorType: errorType,
-        isVerifying: status.isVerifying,
-        isAuthRetryExhausted: status.isAuthRetryExhausted,
-        shouldPortraitExpand: shouldPortraitExpand,
-        isSquare: isSquare,
-      ),
+          onRetry: onRetry,
+          onSkip: onSkip,
+          onVerifyAge: () => retryAgeRestrictedPooledVideo(
+            context: context,
+            ref: ref,
+            video: video,
+            index: index,
+            resolveSha256: resolveSha256,
+            retryPlayback: retryPlayback,
+          ),
+          isAdultContentLocked: isAdultContentLocked,
+          errorType: errorType,
+          isVerifying: status.isVerifying,
+          isAuthRetryExhausted: status.isAuthRetryExhausted,
+          shouldPortraitExpand: shouldPortraitExpand,
+          isSquare: isSquare,
+        );
+      },
     );
   }
 }

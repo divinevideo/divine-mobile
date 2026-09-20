@@ -4,7 +4,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart'
-    show VideoErrorType;
+    show VideoErrorType, VideoRetryResult;
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
@@ -28,11 +28,14 @@ typedef PooledAgeRestrictedSha256Resolver = String? Function({
 
 /// Outcome of a viewer-auth playback retry.
 ///
-/// [errorType] carries the error the player classified for the retried item
-/// when [succeeded] is `false`. Only a repeated [VideoErrorType.ageRestricted]
-/// proves the age gate itself is unclearable; every other failure is an
-/// unrelated playback problem that must stay retryable. #6253
-typedef PooledRetryOutcome = ({bool succeeded, VideoErrorType? errorType});
+/// [status] distinguishes completed playback from an initialization that was
+/// skipped. [errorType] carries the player's classification after a completed
+/// failure. Only a repeated [VideoErrorType.ageRestricted] proves the age gate
+/// itself is unclearable; every other result must stay retryable. #6253
+typedef PooledRetryOutcome = ({
+  VideoRetryResult status,
+  VideoErrorType? errorType,
+});
 
 /// Reloads playback for the retried item with signed viewer-auth headers.
 typedef PooledRetryPlayback = FutureOr<PooledRetryOutcome> Function(
@@ -72,7 +75,7 @@ Future<void> retryAgeRestrictedPooledVideo({
         name: _logName,
         category: LogCategory.video,
       );
-      _showVerifyAgeFailed(context);
+      _showPlaybackStartFailed(context);
       return;
     }
 
@@ -88,7 +91,7 @@ Future<void> retryAgeRestrictedPooledVideo({
         name: _logName,
         category: LogCategory.video,
       );
-      _showVerifyAgeFailed(context);
+      _showPlaybackStartFailed(context);
       return;
     }
 
@@ -110,9 +113,15 @@ Future<void> retryAgeRestrictedPooledVideo({
         // (optimized/HLS/raw) for the retried item.
         final outcome = await retryPlayback(headers);
         if (!context.mounted) return;
-        if (!outcome.succeeded) {
+        if (outcome.status != VideoRetryResult.played) {
+          Log.warning(
+            'Age-gated playback retry ${outcome.status.name} for event '
+            '${video.id}; errorType=${outcome.errorType}',
+            name: _logName,
+            category: LogCategory.video,
+          );
           if (!_isAuthRejection(outcome)) {
-            _showVerifyAgeFailed(context);
+            _showPlaybackStartFailed(context);
             return;
           }
           playbackStatusCubit.markAuthRetryExhausted(video.id);
@@ -124,6 +133,11 @@ Future<void> retryAgeRestrictedPooledVideo({
       case ViewerAuthSignerUnreachable():
         // A remote signer timed out — distinct from a verify failure, since the
         // remedy is checking the connection rather than re-verifying.
+        Log.warning(
+          'Age-gated playback signer unreachable for event ${video.id}',
+          name: _logName,
+          category: LogCategory.video,
+        );
         _showSignerUnreachable(context);
       case ViewerAuthBlockedByPreference():
         // The viewer is verified but adult content is switched off in their
@@ -139,6 +153,12 @@ Future<void> retryAgeRestrictedPooledVideo({
             .read(ageVerificationServiceProvider)
             .isAdultContentVerified;
         if (accepted) {
+          Log.warning(
+            'Age-gated playback auth unavailable after verification for '
+            'event ${video.id}',
+            name: _logName,
+            category: LogCategory.video,
+          );
           _showVerifyAgeFailed(context);
         }
     }
@@ -183,7 +203,7 @@ Future<void> autoRetryAgeRestrictedPooledVideo({
       case ViewerAuthAuthorized(:final headers):
         final outcome = await retryPlayback(headers);
         if (!context.mounted) return;
-        if (!outcome.succeeded) {
+        if (outcome.status != VideoRetryResult.played) {
           if (!_isAuthRejection(outcome)) return;
           playbackStatusCubit.markAuthRetryExhausted(video.id);
           playbackStatusCubit.report(video.id, PlaybackStatus.unavailable);
@@ -229,7 +249,18 @@ void _showVideoUnavailable(BuildContext context) {
 /// treating those as an exhausted age gate would strand a recoverable video
 /// as permanently unavailable for the rest of the session.
 bool _isAuthRejection(PooledRetryOutcome outcome) =>
+    outcome.status == VideoRetryResult.failed &&
     outcome.errorType == VideoErrorType.ageRestricted;
+
+/// Tells a viewer that the player did not start after successful viewer auth.
+void _showPlaybackStartFailed(BuildContext context) {
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    DivineSnackbarContainer.snackBar(
+      context.l10n.videoErrorPlaybackStartFailed,
+    ),
+  );
+}
 
 /// Tells an age-verified viewer that adult content is switched off in their
 /// Content Filters and offers to open that screen.

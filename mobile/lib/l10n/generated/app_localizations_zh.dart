@@ -1532,6 +1532,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoErrorVerifyAgeFailed => '无法验证你的年龄，请重试。';
 
   @override
+  String get videoErrorPlaybackStartFailed => '无法开始播放此视频，请重试。';
+
+  @override
+  String get videoErrorAdultContentLocked => '此视频仅限成人观看。';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable => '验证超时。请检查网络连接，或稍后再试。';
 
   @override

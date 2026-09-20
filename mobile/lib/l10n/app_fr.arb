@@ -556,6 +556,8 @@
     "videoErrorSkip": "Passer",
     "videoErrorVerifyAgeButton": "Vérifier l'âge",
     "videoErrorVerifyAgeFailed": "Impossible de vérifier ton âge. Réessaie.",
+    "videoErrorPlaybackStartFailed": "Impossible de lancer cette vidéo. Réessaie.",
+    "videoErrorAdultContentLocked": "Cette vidéo est réservée aux adultes.",
     "videoErrorVerifyAgeSignerUnreachable": "Délai de vérification dépassé. Vérifie ta connexion ou réessaie dans un instant.",
     "videoFollowButtonFollow": "Suivre",
     "audioAttributionOriginalSound": "Son original",

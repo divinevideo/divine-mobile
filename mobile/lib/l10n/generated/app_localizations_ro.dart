@@ -1712,6 +1712,14 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut verifica vârsta. Încearcă din nou.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Nu am putut porni acest videoclip. Încearcă din nou.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Acest videoclip este disponibil doar pentru adulți.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Timpul de verificare a expirat. Verifică-ți conexiunea sau încearcă din nou în scurt timp.';
 

@@ -556,6 +556,8 @@
     "videoErrorSkip": "Salta",
     "videoErrorVerifyAgeButton": "Verifica età",
     "videoErrorVerifyAgeFailed": "Non è stato possibile verificare la tua età. Riprova.",
+    "videoErrorPlaybackStartFailed": "Non siamo riusciti ad avviare questo video. Riprova.",
+    "videoErrorAdultContentLocked": "Questo video è disponibile solo per adulti.",
     "videoErrorVerifyAgeSignerUnreachable": "Verifica scaduta. Controlla la connessione o riprova tra poco.",
     "videoFollowButtonFollow": "Segui",
     "audioAttributionOriginalSound": "Audio originale",

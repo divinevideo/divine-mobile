@@ -1698,6 +1698,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de vérifier ton âge. Réessaie.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Impossible de lancer cette vidéo. Réessaie.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Cette vidéo est réservée aux adultes.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Délai de vérification dépassé. Vérifie ta connexion ou réessaie dans un instant.';
 

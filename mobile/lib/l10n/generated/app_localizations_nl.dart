@@ -1673,6 +1673,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'We konden je leeftijd niet verifiëren. Probeer het opnieuw.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'We konden deze video niet starten. Probeer het opnieuw.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Deze video is alleen beschikbaar voor volwassenen.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Verificatie duurde te lang. Controleer je verbinding of probeer het straks opnieuw.';
 

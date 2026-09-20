@@ -1633,6 +1633,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không xác minh được tuổi của bạn. Vui lòng thử lại.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Không thể bắt đầu video này. Vui lòng thử lại.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Video này chỉ dành cho người lớn.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Xác minh đã hết thời gian chờ. Kiểm tra kết nối của bạn hoặc thử lại sau ít phút.';
 

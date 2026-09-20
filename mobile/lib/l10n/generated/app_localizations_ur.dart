@@ -1666,6 +1666,14 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کی عمر کی تصدیق نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'ہم یہ ویڈیو شروع نہیں کر سکے۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'یہ ویڈیو صرف بالغوں کے لیے دستیاب ہے۔';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'تصدیق کا وقت ختم ہو گیا۔ اپنا کنکشن چیک کریں یا تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 

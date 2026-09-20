@@ -1527,6 +1527,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoErrorVerifyAgeFailed => '나이를 확인할 수 없습니다. 다시 시도해보세요';
 
   @override
+  String get videoErrorPlaybackStartFailed => '이 동영상을 시작할 수 없습니다. 다시 시도해보세요.';
+
+  @override
+  String get videoErrorAdultContentLocked => '이 동영상은 성인만 볼 수 있습니다.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       '확인 시간이 초과되었습니다. 연결을 확인하거나 잠시 후 다시 시도해보세요';
 
