@@ -309,7 +309,7 @@ class FooRepository {
 final crashReporting = ref.read(crashReportingServiceProvider);
 FooRepository(
   errorReporter: (e, st, {required String site}) {
-    ref.read(crashReportingServiceProvider).recordError(
+    crashReporting.recordError(
       e,
       st,
       reason: 'FooRepository.$site',
