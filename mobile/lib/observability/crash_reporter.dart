@@ -26,7 +26,7 @@ abstract interface class CrashReporter {
 
 /// A [CrashReporter] that discards everything.
 ///
-/// The default for the two static utility classes that cannot take a
+/// The default for static utility classes that cannot take a
 /// constructor-injected reporter, so an unwired test never NPEs and never
 /// reaches Firebase. Bootstrap replaces it with the real service.
 class SilentCrashReporter implements CrashReporter {

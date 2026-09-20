@@ -16,6 +16,23 @@ import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 /// a specific call site, use [Reportable].
 abstract interface class ReportableError implements Exception {}
 
+/// Returns [error] in a form that is eligible for crash reporting.
+///
+/// The decision matrix in `.claude/rules/error_handling.md` treats explicit
+/// [ReportableError]s and programming-invariant errors as reportable. All
+/// other failures remain visible in the unified log without reaching the
+/// crash reporter.
+ReportableError? asReportableError(
+  Object error, {
+  required String context,
+}) {
+  if (error is ReportableError) return error;
+  if (error is StateError || error is TypeError || error is RangeError) {
+    return Reportable(error, context: context);
+  }
+  return null;
+}
+
 /// Wraps a foreign error so it can be forwarded to Crashlytics through a
 /// `BlocObserver` filter without modifying the underlying exception type.
 ///

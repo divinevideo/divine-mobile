@@ -71,6 +71,32 @@ void main() {
     });
   });
 
+  group('asReportableError', () {
+    test('preserves explicitly reportable errors', () {
+      final error = Reportable(Exception('invariant'), context: 'test');
+
+      expect(asReportableError(error, context: 'ignored'), same(error));
+    });
+
+    test('wraps bare programming invariant errors', () {
+      final error = StateError('closed');
+
+      final reportable = asReportableError(error, context: 'detached work');
+
+      expect(reportable, isA<Reportable<Object>>());
+      final wrapped = reportable! as Reportable<Object>;
+      expect(wrapped.unwrap(), same(error));
+      expect(wrapped.context, 'detached work');
+    });
+
+    test('leaves expected operational errors unreportable', () {
+      expect(
+        asReportableError(Exception('timed out'), context: 'detached work'),
+        isNull,
+      );
+    });
+  });
+
   group('sanitizeForCrashReport', () {
     test('replaces a single npub with the redaction marker', () {
       const input =

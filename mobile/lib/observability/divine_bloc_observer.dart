@@ -93,7 +93,10 @@ class DivineBlocObserver extends BlocObserver {
       error: error,
       stackTrace: stackTrace,
     );
-    final reportableError = _asReportable(error);
+    final reportableError = asReportableError(
+      error,
+      context: 'DivineBlocObserver.onError',
+    );
     if (reportableError == null) return;
     final reason = sanitizeForCrashReport('Bloc.addError $runtimeType');
     unawaited(
@@ -104,14 +107,6 @@ class DivineBlocObserver extends BlocObserver {
         customKeys: _diagnosticKeys(_diagnostics[bloc]),
       ),
     );
-  }
-
-  ReportableError? _asReportable(Object error) {
-    if (error is ReportableError) return error;
-    if (error is StateError || error is TypeError || error is RangeError) {
-      return Reportable(error, context: 'DivineBlocObserver.onError');
-    }
-    return null;
   }
 
   Map<String, Object> _diagnosticKeys(_BlocDiagnostics? diagnostics) => {

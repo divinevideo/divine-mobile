@@ -102,6 +102,7 @@ GLOBALS=(
   'CaptionGeneratorPlatform\.instance'
   'FlutterError\.onError'
   'Bloc\.observer'
+  'detachedFailureReporter'
 )
 
 # Class 2 — reset-to-default globals, `core:defaultLiteral` (colon-delimited so
