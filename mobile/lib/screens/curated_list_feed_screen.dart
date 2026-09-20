@@ -91,14 +91,18 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   @override
   void dispose() {
     if (_manageCubit case final cubit?) {
-      runDetached(
-        cubit.close(),
-        'close list management',
-        logName: 'CuratedListFeedScreen',
-        category: LogCategory.ui,
-      );
+      _closeManageCubit(cubit);
     }
     super.dispose();
+  }
+
+  void _closeManageCubit(CuratedListManagePostsCubit cubit) {
+    runDetached(
+      cubit.close(),
+      'close list management',
+      logName: 'CuratedListFeedScreen',
+      category: LogCategory.ui,
+    );
   }
 
   @override
@@ -388,12 +392,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     setState(() {
       _manageCubit = null;
     });
-    runDetached(
-      cubit.close(),
-      'close list management',
-      logName: 'CuratedListFeedScreen',
-      category: LogCategory.ui,
-    );
+    _closeManageCubit(cubit);
   }
 
   /// Drop both cached layers: the id-list provider and the video stream
