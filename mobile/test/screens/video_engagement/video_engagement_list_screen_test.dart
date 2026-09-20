@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:likes_repository/likes_repository.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_view.dart';
+import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -62,7 +64,9 @@ void main() {
       (tester) async {
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer(
+          (_) async => LikersPage.empty,
+        );
 
         await tester.pumpWidget(buildSubject());
 
@@ -74,7 +78,7 @@ void main() {
       'shows a loading indicator while the bloc is fetching',
       (tester) async {
         // Completer that never completes — keeps bloc in loading state.
-        final completer = Completer<List<String>>();
+        final completer = Completer<LikersPage>();
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
         ).thenAnswer((_) => completer.future);
@@ -87,7 +91,7 @@ void main() {
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
         // Clean up: complete the future to avoid pending-timer leak.
-        completer.complete([]);
+        completer.complete(LikersPage.empty);
         await tester.pumpAndSettle();
       },
     );
@@ -97,7 +101,9 @@ void main() {
       (tester) async {
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
-        ).thenAnswer((_) async => const [testPubkey1, testPubkey2]);
+        ).thenAnswer(
+          (_) async => const LikersPage(pubkeys: [testPubkey1, testPubkey2]),
+        );
 
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
@@ -112,7 +118,9 @@ void main() {
       (tester) async {
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer(
+          (_) async => LikersPage.empty,
+        );
 
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
@@ -130,7 +138,9 @@ void main() {
       (tester) async {
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer(
+          (_) async => LikersPage.empty,
+        );
 
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
@@ -162,7 +172,9 @@ void main() {
       (tester) async {
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer(
+          (_) async => LikersPage.empty,
+        );
 
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
@@ -173,6 +185,112 @@ void main() {
         ).called(1);
       },
     );
+  });
+
+  // #9358: one page is capped at 500, so without this the list just ended.
+  group('pagination', () {
+    const testPubkey3 =
+        'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+    /// Answers the first request with a cursor and the second without.
+    void stubTwoPages({Object? secondPageError}) {
+      when(
+        () => likesRepository.fetchEventLikers(
+          eventId: testEventId,
+          addressableId: any(named: 'addressableId'),
+          cursor: any(named: 'cursor'),
+        ),
+      ).thenAnswer((invocation) async {
+        final cursor = invocation.namedArguments[#cursor] as String?;
+        if (cursor == null) {
+          return const LikersPage(
+            pubkeys: [testPubkey1, testPubkey2],
+            nextCursor: 'cursor-2',
+          );
+        }
+        if (secondPageError != null) throw secondPageError;
+        return const LikersPage(pubkeys: [testPubkey3]);
+      });
+    }
+
+    testWidgets('asks for the next page as the list nears its end', (
+      tester,
+    ) async {
+      stubTwoPages();
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      verify(
+        () => likesRepository.fetchEventLikers(
+          eventId: testEventId,
+          addressableId: any(named: 'addressableId'),
+          cursor: 'cursor-2',
+        ),
+      ).called(1);
+    });
+
+    testWidgets('renders every page it has loaded', (tester) async {
+      stubTwoPages();
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      // One tile per liker across both pages, and no trailing spinner —
+      // the second page cleared the cursor.
+      expect(find.byType(UserProfileTile), findsNWidgets(3));
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('offers a retry when a page fails', (tester) async {
+      stubTwoPages(secondPageError: Exception('relay down'));
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+    });
+
+    testWidgets('the retry asks for the same page again', (tester) async {
+      var failNext = true;
+      when(
+        () => likesRepository.fetchEventLikers(
+          eventId: testEventId,
+          addressableId: any(named: 'addressableId'),
+          cursor: any(named: 'cursor'),
+        ),
+      ).thenAnswer((invocation) async {
+        final cursor = invocation.namedArguments[#cursor] as String?;
+        if (cursor == null) {
+          return const LikersPage(
+            pubkeys: [testPubkey1, testPubkey2],
+            nextCursor: 'cursor-2',
+          );
+        }
+        if (failNext) {
+          failNext = false;
+          throw Exception('relay down');
+        }
+        return const LikersPage(pubkeys: [testPubkey3]);
+      });
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commonRetry), findsNothing);
+      verify(
+        () => likesRepository.fetchEventLikers(
+          eventId: testEventId,
+          addressableId: any(named: 'addressableId'),
+          cursor: 'cursor-2',
+        ),
+      ).called(2);
+    });
   });
 
   group('VideoEngagementListView (View)', () {

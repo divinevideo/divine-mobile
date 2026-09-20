@@ -13,6 +13,7 @@ import 'package:likes_repository/src/exceptions.dart';
 import 'package:likes_repository/src/likes_local_storage.dart';
 import 'package:likes_repository/src/likes_repository_reportable_sites.dart';
 import 'package:likes_repository/src/models/like_record.dart';
+import 'package:likes_repository/src/models/likers_page.dart';
 import 'package:likes_repository/src/models/likes_sync_result.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -2354,21 +2355,38 @@ class LikesRepository {
   /// The list is per-liker, so it is legitimately shorter than a reaction
   /// count — never assert the two are equal.
   ///
+  /// The API caps a page at [FunnelcakeApiClient.maxVideoLikersLimit], so a
+  /// popular video spans several pages: pass the previous
+  /// [LikersPage.nextCursor] back as [cursor] until it is null. The relay
+  /// fallback is not paginated and always answers with a cursorless page.
+  ///
   /// Parameters:
   /// - [eventId]: Hex event ID of the target event (required).
   /// - [addressableId]: Optional `kind:pubkey:d-tag` for Kind 30000+ events.
+  /// - [cursor]: Continue a previous page. Omit it to ask for the first.
   ///
   /// Throws [FetchLikersFailedException] if the relay fallback fails.
-  Future<List<String>> fetchEventLikers({
+  Future<LikersPage> fetchEventLikers({
     required String eventId,
     String? addressableId,
+    String? cursor,
   }) async {
+    final continuing = cursor != null && cursor.isNotEmpty;
     try {
       final fromApi = await _fetchLikersFromApi(
         eventId: eventId,
         addressableId: addressableId,
+        cursor: cursor,
+        isContinuation: continuing,
       );
-      if (fromApi != null && fromApi.isNotEmpty) return fromApi;
+      if (fromApi != null && fromApi.pubkeys.isNotEmpty) return fromApi;
+
+      // A cursor is a Funnelcake concept: relays cannot continue someone
+      // else's page, and re-running the relay query would replay the likers
+      // already on screen. An exhausted continuation therefore ends the
+      // list; a failed one throws from _fetchLikersFromApi instead, so the
+      // caller can offer a retry rather than silently truncating.
+      if (continuing) return LikersPage.empty;
 
       final likersByEvent = await _fetchResolvedLikersByEvent(
         [eventId],
@@ -2376,7 +2394,7 @@ class LikesRepository {
             ? null
             : {eventId: addressableId},
       );
-      return likersByEvent[eventId] ?? <String>[];
+      return LikersPage(pubkeys: likersByEvent[eventId] ?? const <String>[]);
     } catch (e) {
       throw FetchLikersFailedException(
         'Failed to fetch likers for event $eventId: $e',
@@ -2386,13 +2404,19 @@ class LikesRepository {
 
   /// Likers from Funnelcake, or `null` when the API could not answer.
   ///
-  /// Every failure degrades to `null` so the relay path still runs — an
-  /// unreachable API must not turn a working screen into an error state.
-  /// Capped at [FunnelcakeApiClient.maxVideoLikersLimit], so a video with
-  /// more likers than that is truncated.
-  Future<List<String>?> _fetchLikersFromApi({
+  /// On the first page every failure degrades to `null` so the relay path
+  /// still runs — an unreachable API must not turn a working screen into an
+  /// error state. On a continuation ([isContinuation]) there is no fallback
+  /// to degrade to, so the failure is rethrown: swallowing it would end the
+  /// list early and silently, which is the defect this pagination exists to
+  /// fix (#9358).
+  ///
+  /// One page only: the caller follows [LikersPage.nextCursor] for the rest.
+  Future<LikersPage?> _fetchLikersFromApi({
     required String eventId,
     String? addressableId,
+    String? cursor,
+    bool isContinuation = false,
   }) async {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable || eventId.isEmpty) return null;
@@ -2401,6 +2425,7 @@ class LikesRepository {
       final page = await client.getVideoLikers(
         eventId,
         addressableId: addressableId,
+        cursor: cursor,
       );
       final blockFilter = _blockFilter;
       final filtered = blockFilter == null
@@ -2408,8 +2433,12 @@ class LikesRepository {
           : page.pubkeys.where((pubkey) => !blockFilter(pubkey));
       // Dedupe defensively so the documented per-liker guarantee holds even
       // if the endpoint ever repeats a pubkey; mirrors the relay path.
-      return {...filtered}.toList();
+      return LikersPage(
+        pubkeys: {...filtered}.toList(),
+        nextCursor: page.nextCursor,
+      );
     } on FunnelcakeException catch (e) {
+      if (isContinuation) rethrow;
       Log.warning(
         'Funnelcake likers lookup failed for $eventId, '
         'falling back to relays: $e',

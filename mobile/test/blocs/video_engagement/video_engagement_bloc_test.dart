@@ -53,6 +53,189 @@ void main() {
       addressableId: addressableId,
     );
 
+    // #9358: Funnelcake caps a page at 500, so the Liked-by list showed 500
+    // of 5,565 people and simply ended.
+    group('VideoEngagementLoadMoreRequested', () {
+      const liker3 = 'liker-pubkey-3';
+
+      void stubPage(
+        List<String> pubkeys, {
+        String? nextCursor,
+        String? forCursor,
+      }) {
+        when(
+          () => likesRepository.fetchEventLikers(
+            eventId: testEventId,
+            addressableId: testAddressableId,
+            cursor: forCursor ?? any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => LikersPage(pubkeys: pubkeys, nextCursor: nextCursor),
+        );
+      }
+
+      VideoEngagementState loaded({
+        List<String> pubkeys = const [liker1],
+        String? nextCursor = 'cursor-2',
+        VideoEngagementLoadMoreStatus loadMoreStatus =
+            VideoEngagementLoadMoreStatus.idle,
+      }) => VideoEngagementState(
+        type: VideoEngagementType.likers,
+        status: VideoEngagementStatus.success,
+        pubkeys: pubkeys,
+        loadMoreStatus: loadMoreStatus,
+        nextCursor: nextCursor,
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'appends the next page and carries the new cursor',
+        setUp: () => stubPage([liker2, liker3], nextCursor: 'cursor-3'),
+        build: createBloc,
+        seed: loaded,
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        expect: () => [
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress),
+          loaded(
+            pubkeys: const [liker1, liker2, liker3],
+            nextCursor: 'cursor-3',
+          ),
+        ],
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'clears the cursor on the final page',
+        setUp: () => stubPage([liker2]),
+        build: createBloc,
+        seed: loaded,
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        expect: () => [
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress),
+          loaded(pubkeys: const [liker1, liker2], nextCursor: null),
+        ],
+        verify: (bloc) => expect(bloc.state.hasMore, isFalse),
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'drops a pubkey already shown on an earlier page',
+        setUp: () => stubPage([liker1, liker2]),
+        build: createBloc,
+        seed: loaded,
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        expect: () => [
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress),
+          loaded(pubkeys: const [liker1, liker2], nextCursor: null),
+        ],
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'warms profiles only for the pubkeys that just arrived',
+        setUp: () => stubPage([liker1, liker2]),
+        build: createBloc,
+        seed: loaded,
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        verify: (_) {
+          verify(
+            () => profileRepository.fetchBatchProfiles(pubkeys: [liker2]),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'ignores the event when the list is already complete',
+        build: createBloc,
+        seed: () => loaded(nextCursor: null),
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        expect: () => const <VideoEngagementState>[],
+        verify: (_) {
+          verifyNever(
+            () => likesRepository.fetchEventLikers(
+              eventId: any(named: 'eventId'),
+              addressableId: any(named: 'addressableId'),
+              cursor: any(named: 'cursor'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'keeps the loaded list and its cursor when the page fails',
+        setUp: () {
+          when(
+            () => likesRepository.fetchEventLikers(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenThrow(Exception('relay down'));
+        },
+        build: createBloc,
+        seed: loaded,
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        errors: () => [isA<Exception>()],
+        expect: () => [
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress),
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.failure),
+        ],
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker1]));
+          expect(bloc.state.nextCursor, equals('cursor-2'));
+        },
+      );
+
+      // The view triggers the next page from its item builder, so a failure
+      // that rebuilt the list would re-fire forever without this guard.
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'does not fetch again after a failure unless asked to retry',
+        setUp: () => stubPage([liker2]),
+        build: createBloc,
+        seed: () =>
+            loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.failure),
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        expect: () => const <VideoEngagementState>[],
+        verify: (_) {
+          verifyNever(
+            () => likesRepository.fetchEventLikers(
+              eventId: any(named: 'eventId'),
+              addressableId: any(named: 'addressableId'),
+              cursor: any(named: 'cursor'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'an explicit retry resumes from the same cursor',
+        setUp: () => stubPage([liker2], forCursor: 'cursor-2'),
+        build: createBloc,
+        seed: () =>
+            loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.failure),
+        act: (bloc) =>
+            bloc.add(const VideoEngagementLoadMoreRequested(retry: true)),
+        expect: () => [
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress),
+          loaded(pubkeys: const [liker1, liker2], nextCursor: null),
+        ],
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'reposters never report a further page',
+        setUp: () {
+          when(
+            () => repostsRepository.fetchEventReposters(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer((_) async => const [reposter1]);
+        },
+        build: () => createBloc(type: VideoEngagementType.reposters),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([reposter1]));
+          expect(bloc.state.hasMore, isFalse);
+        },
+      );
+    });
+
     test('initial state has type and initial status', () {
       final bloc = createBloc();
       expect(bloc.state.type, VideoEngagementType.likers);
@@ -70,7 +253,9 @@ void main() {
               eventId: testEventId,
               addressableId: testAddressableId,
             ),
-          ).thenAnswer((_) async => const [liker1, liker2]);
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [liker1, liker2]),
+          );
         },
         build: createBloc,
         act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
@@ -119,7 +304,9 @@ void main() {
             () => likesRepository.fetchEventLikers(
               eventId: testEventId,
             ),
-          ).thenAnswer((_) async => const [liker1]);
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [liker1]),
+          );
         },
         build: () => createBloc(addressableId: null),
         act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
@@ -208,7 +395,9 @@ void main() {
               eventId: testEventId,
               addressableId: testAddressableId,
             ),
-          ).thenAnswer((_) async => const [liker1, liker2]);
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [liker1, liker2]),
+          );
         },
         build: createBloc,
         act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
@@ -229,7 +418,9 @@ void main() {
               eventId: testEventId,
               addressableId: testAddressableId,
             ),
-          ).thenAnswer((_) async => const [liker1]);
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [liker1]),
+          );
           // Simulate the TimeoutException that .timeout(2s) throws when the
           // profile fetch exceeds the deadline. The catchError in the bloc must
           // swallow it so success is still emitted.

@@ -2790,8 +2790,8 @@ void main() {
             addressableId: testAddressableId,
           );
 
-          expect(count, equals(likers.length));
-          expect(likers, [likerC]);
+          expect(count, equals(likers.pubkeys.length));
+          expect(likers.pubkeys, [likerC]);
         },
       );
 
@@ -4020,7 +4020,7 @@ void main() {
 
         repository = createRepository();
         expect(
-          await repository.fetchEventLikers(eventId: targetEventId),
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
           isEmpty,
         );
       });
@@ -4043,10 +4043,13 @@ void main() {
         ]);
 
         repository = createRepository();
-        expect(await repository.fetchEventLikers(eventId: targetEventId), [
-          likerB,
-          likerA,
-        ]);
+        expect(
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+          [
+            likerB,
+            likerA,
+          ],
+        );
       });
 
       test('deduplicates pubkeys across e-tag and a-tag queries', () async {
@@ -4076,8 +4079,8 @@ void main() {
           addressableId: addressableId,
         );
 
-        expect(likers, hasLength(2));
-        expect(likers, [likerB, likerA]);
+        expect(likers.pubkeys, hasLength(2));
+        expect(likers.pubkeys, [likerB, likerA]);
       });
 
       test('attributes a multi-e reaction only to its last e tag', () async {
@@ -4097,9 +4100,12 @@ void main() {
         ]);
 
         repository = createRepository();
-        expect(await repository.fetchEventLikers(eventId: targetEventId), [
-          likerA,
-        ]);
+        expect(
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+          [
+            likerA,
+          ],
+        );
       });
 
       test(
@@ -4122,7 +4128,7 @@ void main() {
           final likers = await repository.fetchEventLikers(
             eventId: targetEventId,
           );
-          expect(likers, hasLength(600));
+          expect(likers.pubkeys, hasLength(600));
 
           final calls = verify(
             () => mockNostrClient.queryEvents(captureAny()),
@@ -4176,9 +4182,12 @@ void main() {
         repository = createRepository(
           blockFilter: (pubkey) => pubkey == likerA,
         );
-        expect(await repository.fetchEventLikers(eventId: targetEventId), [
-          likerB,
-        ]);
+        expect(
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+          [
+            likerB,
+          ],
+        );
       });
 
       test('excludes pubkeys whose only reactions are downvotes', () async {
@@ -4200,9 +4209,12 @@ void main() {
         ]);
 
         repository = createRepository();
-        expect(await repository.fetchEventLikers(eventId: targetEventId), [
-          likerB,
-        ]);
+        expect(
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+          [
+            likerB,
+          ],
+        );
       });
 
       test('excludes pubkeys whose reactions were deleted by author', () async {
@@ -4229,9 +4241,12 @@ void main() {
         ]);
 
         repository = createRepository();
-        expect(await repository.fetchEventLikers(eventId: targetEventId), [
-          likerB,
-        ]);
+        expect(
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+          [
+            likerB,
+          ],
+        );
       });
 
       test(
@@ -4265,10 +4280,13 @@ void main() {
           ]);
 
           repository = createRepository();
-          expect(await repository.fetchEventLikers(eventId: targetEventId), [
-            likerA,
-            likerC,
-          ]);
+          expect(
+            (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+            [
+              likerA,
+              likerC,
+            ],
+          );
         },
       );
 
@@ -4300,10 +4318,13 @@ void main() {
         ]);
 
         repository = createRepository();
-        expect(await repository.fetchEventLikers(eventId: targetEventId), [
-          likerB,
-          likerA,
-        ]);
+        expect(
+          (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
+          [
+            likerB,
+            likerA,
+          ],
+        );
       });
 
       test('throws FetchLikersFailedException when relay query fails', () {
@@ -4339,16 +4360,152 @@ void main() {
           ).thenAnswer((_) async => PaginatedPubkeys(pubkeys: pubkeys));
         }
 
+        // #9358: the endpoint caps a page at 500. Without the cursor the
+        // Liked-by list simply stopped there, showing 500 of 5,565 people
+        // with nothing on screen saying so.
+        group('pagination', () {
+          void stubPage(List<String> pubkeys, {String? nextCursor}) {
+            when(
+              () => mockFunnelcake.getVideoLikers(
+                any(),
+                addressableId: any(named: 'addressableId'),
+                cursor: any(named: 'cursor'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  PaginatedPubkeys(pubkeys: pubkeys, nextCursor: nextCursor),
+            );
+          }
+
+          test('surfaces the cursor for the next page', () async {
+            stubPage([likerA], nextCursor: 'cursor_page_2');
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.nextCursor, equals('cursor_page_2'));
+            expect(page.hasMore, isTrue);
+          });
+
+          test('reports no cursor on the last page', () async {
+            stubPage([likerA]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.hasMore, isFalse);
+            expect(page.nextCursor, isNull);
+          });
+
+          test('forwards the cursor when continuing a page', () async {
+            stubPage([likerB]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            await repository.fetchEventLikers(
+              eventId: targetEventId,
+              cursor: 'cursor_page_2',
+            );
+
+            verify(
+              () => mockFunnelcake.getVideoLikers(
+                targetEventId,
+                addressableId: any(named: 'addressableId'),
+                cursor: 'cursor_page_2',
+              ),
+            ).called(1);
+          });
+
+          // Swallowing this would clear the cursor and end the list early
+          // and silently — the very defect pagination exists to fix.
+          test(
+            'surfaces a failed continuation instead of truncating',
+            () async {
+              when(
+                () => mockFunnelcake.getVideoLikers(
+                  any(),
+                  addressableId: any(named: 'addressableId'),
+                  cursor: any(named: 'cursor'),
+                ),
+              ).thenThrow(const FunnelcakeException('boom'));
+
+              repository = createRepository(
+                funnelcakeApiClient: mockFunnelcake,
+              );
+
+              await expectLater(
+                repository.fetchEventLikers(
+                  eventId: targetEventId,
+                  cursor: 'cursor_page_2',
+                ),
+                throwsA(isA<FetchLikersFailedException>()),
+              );
+              verifyNever(() => mockNostrClient.queryEvents(any()));
+            },
+          );
+
+          // A failing FIRST page keeps its relay fallback — that is what
+          // stops an unreachable API becoming an error screen.
+          test(
+            'still falls back to relays when the first page fails',
+            () async {
+              when(
+                () => mockFunnelcake.getVideoLikers(
+                  any(),
+                  addressableId: any(named: 'addressableId'),
+                  cursor: any(named: 'cursor'),
+                ),
+              ).thenThrow(const FunnelcakeException('boom'));
+              when(
+                () => mockNostrClient.queryEvents(any()),
+              ).thenAnswer((_) async => <Event>[]);
+
+              repository = createRepository(
+                funnelcakeApiClient: mockFunnelcake,
+              );
+              final page = await repository.fetchEventLikers(
+                eventId: targetEventId,
+              );
+
+              expect(page.pubkeys, isEmpty);
+              verify(() => mockNostrClient.queryEvents(any())).called(
+                greaterThan(0),
+              );
+            },
+          );
+
+          // The relay path cannot continue someone else's page, so falling
+          // back on a continuation would re-serve the likers already on
+          // screen instead of ending the list.
+          test('ends the list when a continuation comes back empty', () async {
+            stubPage([]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+              cursor: 'cursor_page_2',
+            );
+
+            expect(page.pubkeys, isEmpty);
+            expect(page.hasMore, isFalse);
+            verifyNever(() => mockNostrClient.queryEvents(any()));
+          });
+        });
+
         test('serves the API list without querying relays', () async {
           stubLikers([likerC, likerA]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
           expect(
-            await repository.fetchEventLikers(
+            (await repository.fetchEventLikers(
               eventId: targetEventId,
               addressableId: addressableId,
-            ),
+            )).pubkeys,
             equals([likerC, likerA]),
           );
           verifyNever(() => mockNostrClient.queryEvents(any()));
@@ -4380,7 +4537,7 @@ void main() {
           );
 
           expect(
-            await repository.fetchEventLikers(eventId: targetEventId),
+            (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
             equals([likerA, likerC]),
           );
         });
@@ -4391,7 +4548,7 @@ void main() {
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
           expect(
-            await repository.fetchEventLikers(eventId: targetEventId),
+            (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
             equals([likerC, likerA]),
           );
         });
@@ -4412,7 +4569,7 @@ void main() {
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
           expect(
-            await repository.fetchEventLikers(eventId: targetEventId),
+            (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
             equals([likerA]),
           );
         });
@@ -4428,7 +4585,7 @@ void main() {
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
           expect(
-            await repository.fetchEventLikers(eventId: targetEventId),
+            (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
             equals([likerA]),
           );
         });
@@ -4444,7 +4601,7 @@ void main() {
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
           expect(
-            await repository.fetchEventLikers(eventId: targetEventId),
+            (await repository.fetchEventLikers(eventId: targetEventId)).pubkeys,
             equals([likerA]),
           );
           verifyNever(
