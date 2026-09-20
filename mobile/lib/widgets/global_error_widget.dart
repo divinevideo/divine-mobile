@@ -13,6 +13,13 @@ import 'package:unified_logger/unified_logger.dart';
 @visibleForTesting
 const globalErrorMascotAsset = 'assets/illustrations/error_mascot_tangled.png';
 
+/// The family the explanation and the hint are set in.
+///
+/// Like [VineTheme.fontFamilyBricolage] it is declared under `fonts:` in
+/// `pubspec.yaml`, so the engine registers it at startup and naming it costs no
+/// asynchronous load.
+const _bodyFontFamily = 'Inter';
+
 /// The smallest surface treated as a whole screen.
 ///
 /// Below it the failure replaced a fragment of a page — an avatar, a list row —
@@ -26,12 +33,16 @@ const _screenSizedSurface = Size(280, 360);
 /// It has to render anywhere in the tree, including before [MaterialApp]
 /// exists, so it brings its own [Directionality] and reads colours through
 /// `context.vineColors`, which follows the ambient appearance inside the app
-/// shell and falls back to the dark palette when no theme exists yet. The copy
-/// sets raw text styles with an explicit `TextDecoration.none` so it paints on
-/// the first frame without waiting on a font. The two actions are the real
-/// design-system buttons: Reload's label variant, Bricolage Grotesque
-/// ExtraBold, ships in `assets/fonts/`, so resolving it is a local asset read
-/// and never a network fetch.
+/// shell and falls back to the dark palette when no theme exists yet.
+///
+/// The copy sets raw text styles that name a bundled family and
+/// `TextDecoration.none`, because what it would inherit depends on where it
+/// lands: outside a `Material` that is `MaterialApp`'s red, underlined,
+/// monospace fallback. Those families are registered at startup, so the copy
+/// paints on the first frame. The two actions are the real design-system
+/// buttons: Reload's label variant, Bricolage Grotesque ExtraBold, ships in
+/// `assets/fonts/`, so resolving it is a local asset read and never a network
+/// fetch.
 ///
 /// Reporting is not this widget's job. Every framework call site reports
 /// [details] through [FlutterError.onError] before it asks the builder for a
@@ -158,6 +169,7 @@ class _ErrorMessage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: context.vineColors.primaryText,
+                  fontFamily: VineTheme.fontFamilyBricolage,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                   decoration: TextDecoration.none,
@@ -172,6 +184,7 @@ class _ErrorMessage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: context.vineColors.onSurfaceVariant,
+                  fontFamily: _bodyFontFamily,
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                   decoration: TextDecoration.none,
@@ -186,6 +199,7 @@ class _ErrorMessage extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: context.vineColors.onSurfaceMuted,
+                  fontFamily: _bodyFontFamily,
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
                   decoration: TextDecoration.none,
