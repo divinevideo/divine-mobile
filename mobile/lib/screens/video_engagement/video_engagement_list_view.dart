@@ -6,8 +6,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
 /// Inner View for the video engagement list screen.
@@ -42,7 +44,14 @@ class VideoEngagementListView extends StatelessWidget {
           ),
         ),
         showBackButton: true,
-        onBackPressed: () => Navigator.of(context).pop(),
+        // safePop: both routes that build this view are registered flat and
+        // top-level, so a link or an account swap enters them on a one-entry
+        // stack and a plain pop empties the router (#9359).
+        onBackPressed: () => context.safePop(
+          fallback: RoutePaths.videoDetailForId(
+            context.read<VideoEngagementBloc>().eventId,
+          ),
+        ),
         backButtonSemanticLabel: context.l10n.commonBack,
       ),
       body: BlocBuilder<VideoEngagementBloc, VideoEngagementState>(
