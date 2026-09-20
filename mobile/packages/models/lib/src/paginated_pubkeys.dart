@@ -10,6 +10,7 @@ class PaginatedPubkeys {
     required this.pubkeys,
     this.total = 0,
     this.hasMore = false,
+    this.nextCursor,
     this.appliedQuery,
   });
 
@@ -40,6 +41,12 @@ class PaginatedPubkeys {
 
     final hasMore =
         json['has_more'] as bool? ?? pagination?['has_more'] as bool? ?? false;
+    // Normalise '' to null: an empty cursor would be re-sent forever, each
+    // request answering with the same page.
+    final rawCursor = pagination?['next_cursor'] as String?;
+    final nextCursor = (rawCursor == null || rawCursor.isEmpty)
+        ? null
+        : rawCursor;
 
     final pubkeys = <String>[];
     for (final entry in pubkeysData) {
@@ -55,6 +62,7 @@ class PaginatedPubkeys {
       pubkeys: pubkeys,
       total: json['total'] as int? ?? pubkeys.length,
       hasMore: hasMore,
+      nextCursor: nextCursor,
       appliedQuery: json['query'] as String?,
     );
   }
@@ -71,6 +79,13 @@ class PaginatedPubkeys {
   /// Whether more results are available for pagination.
   final bool hasMore;
 
+  /// Opaque cursor for the next page, or `null` when there is none.
+  ///
+  /// [hasMore] without this is a dead end — the caller knows more exists and
+  /// cannot ask for it. Pass it back as the `cursor` query parameter. Absent
+  /// on the legacy non-envelope shape, which paginates by `offset` instead.
+  final String? nextCursor;
+
   /// The search filter the server reports having applied, if any.
   ///
   /// `null` means the response is unfiltered — including on a deployment that
@@ -84,6 +99,7 @@ class PaginatedPubkeys {
     if (identical(this, other)) return true;
     if (other is! PaginatedPubkeys) return false;
     if (other.total != total || other.hasMore != hasMore) return false;
+    if (other.nextCursor != nextCursor) return false;
     if (other.appliedQuery != appliedQuery) return false;
     if (other.pubkeys.length != pubkeys.length) return false;
     for (var i = 0; i < pubkeys.length; i++) {
@@ -93,11 +109,17 @@ class PaginatedPubkeys {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(Object.hashAll(pubkeys), total, hasMore, appliedQuery);
+  int get hashCode => Object.hash(
+    Object.hashAll(pubkeys),
+    total,
+    hasMore,
+    nextCursor,
+    appliedQuery,
+  );
 
   @override
   String toString() =>
       'PaginatedPubkeys(count: ${pubkeys.length}, '
-      'total: $total, hasMore: $hasMore, appliedQuery: $appliedQuery)';
+      'total: $total, hasMore: $hasMore, nextCursor: $nextCursor, '
+      'appliedQuery: $appliedQuery)';
 }
