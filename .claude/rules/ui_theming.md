@@ -704,11 +704,15 @@ to make nearby call sites look alike.
 - Use `context.pushWithVideoPause` or
   `context.showVideoPausingDialog` when the presentation needs its own
   `OverlayVisibility` page owner, such as a navigator whose transition the
-  shell does not observe. These helpers release players while the page or
-  dialog is visible and release their owner when it closes.
-- Use the pause-aware bottom-sheet helper for bottom sheets. A sheet retains
-  the current player for fast resume; it is not interchangeable with a page
-  owner.
+  shell does not observe. A page owner releases the *neighbouring* players
+  and their disk prefetch; the current player is retained either way. Only a
+  codec-heavy surface releases the current one, through
+  `releaseCurrentWhenInactive` — the camera, the editor, the exporter.
+- Use the pause-aware bottom-sheet helper for bottom sheets. A sheet keeps
+  the neighbours warm for fast resume, so it is not interchangeable with a
+  page owner. The condition is
+  `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
+  owner and a sheet owner at once loses the retention.
 
 When replacing one overlay with another, take the next owner before dismissing
 the current overlay if a visible resume frame would be unacceptable. Verify a
