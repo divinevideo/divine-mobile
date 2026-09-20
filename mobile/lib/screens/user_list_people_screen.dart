@@ -332,10 +332,15 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
               customActions: [
                 if (userList.isEditable)
                   _PeopleListActionsMenu(
-                    onSelected: (action) async {
+                    onSelected: (action) {
                       switch (action) {
                         case _PeopleListAction.delete:
-                          await _confirmDeleteList(userList);
+                          runDetached(
+                            _confirmDeleteList(userList),
+                            'confirm people list deletion',
+                            logName: 'UserListPeopleScreen',
+                            category: LogCategory.ui,
+                          );
                       }
                     },
                   ),
