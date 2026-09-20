@@ -1,6 +1,8 @@
 // ABOUTME: The app's ErrorWidget.builder: the branded "got a bit tangled"
 // ABOUTME: surface shown in place of any widget that throws during build
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -108,7 +110,14 @@ class _GlobalErrorWidget extends StatelessWidget {
     // The navigator this surface sits in: its box is the area a route fills.
     final navigator = Navigator.maybeOf(context);
     final offersBack = onBack != null && navigator != null;
-    final topInset = MediaQuery.maybePaddingOf(context)?.top ?? 0;
+    // The insets this surface still has to stay clear of: the notch and the
+    // home indicator when it replaced a whole route, nothing when it replaced
+    // a piece of a page, which already sits inside them.
+    final unconsumedInsets = MediaQuery.maybePaddingOf(context);
+    final clearOfInsets = math.max(
+      unconsumedInsets?.top ?? 0.0,
+      unconsumedInsets?.bottom ?? 0.0,
+    );
 
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -118,8 +127,8 @@ class _GlobalErrorWidget extends StatelessWidget {
           children: [
             _ErrorMessage(
               details: details,
-              // Keeps the illustration clear of the Back control.
-              verticalPadding: offersBack ? topInset + 64 : 24,
+              // The same on both sides, so the message stays centred.
+              verticalPadding: 24 + clearOfInsets,
               // This context, not a descendant's: its parent is the element
               // whose build failed.
               onReload: () => _retryFailedBuild(context),

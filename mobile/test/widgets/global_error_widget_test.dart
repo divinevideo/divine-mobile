@@ -495,6 +495,12 @@ void main() {
           expect(find.byType(DivineIconButton), findsOneWidget);
           expect(find.byType(DivineIconButton).hitTestable(), findsNothing);
           expect(find.bySemanticsLabel('Back'), findsNothing);
+          // And no room is kept for the control it does not show.
+          expect(
+            tester.getTopLeft(find.byType(Image)).dy -
+                tester.getTopLeft(_surface()).dy,
+            equals(24),
+          );
 
           semantics.dispose();
         }),
