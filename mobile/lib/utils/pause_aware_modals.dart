@@ -31,7 +31,8 @@ extension PauseAwareModals on BuildContext {
   ///
   /// Takes an [OverlayVisibility] owner token before pushing and releases that
   /// token when the pushed route is popped.
-  /// This releases all video players to free memory.
+  /// This pauses the feed and releases neighbouring players and their disk
+  /// prefetch; the current player remains retained.
   ///
   /// The returned future only completes on a **pop**: go_router completes an
   /// `ImperativeRouteMatch` from `_completeRouteMatch`, which runs on the pop
@@ -61,7 +62,8 @@ extension PauseAwareModals on BuildContext {
   ///
   /// Takes an [OverlayVisibility] owner token before showing and releases that
   /// token after the dialog is dismissed.
-  /// This releases all video players (dialogs block full UI).
+  /// This pauses the feed and releases neighbouring players and their disk
+  /// prefetch; the current player remains retained.
   Future<T?> showVideoPausingDialog<T>({
     required WidgetBuilder builder,
     bool barrierDismissible = true,

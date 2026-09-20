@@ -734,9 +734,9 @@ navigator. So on a navigator the shell does not observe, give the
 presentation its own release path rather than relying on the returned future;
 a stranded owner means the home feed never autoplays again (#6239).
 
-When replacing one overlay with another, take the next owner before dismissing
-the current overlay if a visible resume frame would be unacceptable. Verify a
-reported flicker on a device before changing that sequencing.
+The public helpers acquire and release their own owners; do not coordinate
+`OverlayVisibility` owners directly when replacing overlays. Verify a reported
+resume flicker on a device before changing the owning navigation flow.
 
 ---
 
