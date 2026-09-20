@@ -71,11 +71,9 @@ void main() {
       ).thenAnswer((_) async => false);
     });
 
-    tearDown(() async {
-      await likedIdsController.close();
-      await likedAddressableIdsController.close();
-      await repostedIdsController.close();
-    });
+    tearDown(() => likedIdsController.close());
+    tearDown(() => likedAddressableIdsController.close());
+    tearDown(() => repostedIdsController.close());
 
     VideoInteractionsBloc createBloc({
       String? addressableId,

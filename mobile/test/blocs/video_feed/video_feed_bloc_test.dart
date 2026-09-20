@@ -113,10 +113,8 @@ void main() {
       ).thenAnswer((_) async => {});
     });
 
-    tearDown(() async {
-      await followingController.close();
-      await curatedListsController.close();
-    });
+    tearDown(() => followingController.close());
+    tearDown(() => curatedListsController.close());
 
     VideoFeedBloc createBloc({
       FeedTuningRepository? feedTuningRepository,
@@ -3872,10 +3870,8 @@ void main() {
         ).thenAnswer((_) async {});
       });
 
-      tearDown(() async {
-        await cacheFollowingController.close();
-        await cacheCuratedListsController.close();
-      });
+      tearDown(() => cacheFollowingController.close());
+      tearDown(() => cacheCuratedListsController.close());
 
       VideoFeedBloc createBlocWithCache() => VideoFeedBloc(
         videosRepository: mockVideosRepository,

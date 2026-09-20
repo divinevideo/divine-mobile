@@ -56,10 +56,8 @@ void main() {
       when(() => mockMediaCache.getCachedFileSync(any())).thenReturn(null);
     });
 
-    tearDown(() async {
-      await videosController.close();
-      await hasMoreController.close();
-    });
+    tearDown(() => videosController.close());
+    tearDown(() => hasMoreController.close());
 
     VideoEvent createTestVideo(
       String id, {
