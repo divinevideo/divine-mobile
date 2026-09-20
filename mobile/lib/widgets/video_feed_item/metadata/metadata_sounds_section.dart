@@ -10,6 +10,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_credit.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
@@ -160,11 +161,19 @@ class _OriginalSoundSection extends ConsumerWidget {
     // context.
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     Navigator.of(context).pop();
-    Future<void>.delayed(Duration.zero).then((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      hostContext.pushWithVideoPause(
-        SoundDetailScreen.pathForId(syntheticAudio.id),
-        extra: <String, dynamic>{'sound': syntheticAudio, 'sourceVideo': video},
+      runDetached(
+        hostContext.pushWithVideoPause(
+          SoundDetailScreen.pathForId(syntheticAudio.id),
+          extra: <String, dynamic>{
+            'sound': syntheticAudio,
+            'sourceVideo': video,
+          },
+        ),
+        'open original sound detail',
+        logName: 'MetadataSoundsSection',
+        category: LogCategory.ui,
       );
     });
   }
@@ -375,15 +384,20 @@ class _SoundListItem extends ConsumerWidget {
     // Dismiss the sheet first, then navigate from the root navigator context.
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     Navigator.of(context).pop();
-    Future<void>.delayed(Duration.zero).then((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
       // Pass the resolved sound via `extra` (like [_OriginalSoundSection]):
       // a reused original sound's synthetic `video_<id>` id can't be
       // re-fetched by the detail loader, so without this it dead-ends at
       // "Sound not found".
-      hostContext.pushWithVideoPause(
-        SoundDetailScreen.pathForId(audio.id),
-        extra: <String, dynamic>{'sound': audio, 'sourceVideo': sourceVideo},
+      runDetached(
+        hostContext.pushWithVideoPause(
+          SoundDetailScreen.pathForId(audio.id),
+          extra: <String, dynamic>{'sound': audio, 'sourceVideo': sourceVideo},
+        ),
+        'open sound detail',
+        logName: 'MetadataSoundsSection',
+        category: LogCategory.ui,
       );
     });
   }

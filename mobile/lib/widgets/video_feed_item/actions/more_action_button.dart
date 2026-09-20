@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -37,7 +38,12 @@ class MoreActionButton extends StatelessWidget {
           name: 'MoreActionButton',
           category: LogCategory.ui,
         );
-        MetadataExpandedSheet.show(context, video);
+        runDetached(
+          MetadataExpandedSheet.show(context, video),
+          'present metadata sheet',
+          logName: 'MoreActionButton',
+          category: LogCategory.ui,
+        );
       },
     );
   }

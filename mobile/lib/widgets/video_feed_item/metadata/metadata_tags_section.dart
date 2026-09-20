@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_categories_section.dart'
     show CategoryChip;
@@ -140,7 +141,12 @@ class _HashtagChip extends StatelessWidget {
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      hostContext.pushWithVideoPause(HashtagScreenRouter.pathForTag(tag));
+      runDetached(
+        hostContext.pushWithVideoPause(HashtagScreenRouter.pathForTag(tag)),
+        'open hashtag feed',
+        logName: 'MetadataTagsSection',
+        category: LogCategory.ui,
+      );
     });
   }
 }

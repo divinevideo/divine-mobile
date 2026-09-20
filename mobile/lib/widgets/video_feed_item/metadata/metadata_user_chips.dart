@@ -18,6 +18,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -562,7 +563,12 @@ class _MoreRepostersChip extends StatelessWidget {
     // route stack before we push the destination route.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      hostContext.pushWithVideoPause<void>(location);
+      runDetached(
+        hostContext.pushWithVideoPause<void>(location),
+        'open reposters list',
+        logName: 'MetadataUserChips',
+        category: LogCategory.ui,
+      );
     });
   }
 }
@@ -646,7 +652,12 @@ class _TappableUserChip extends ConsumerWidget {
     // navigator's context.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub));
+      runDetached(
+        hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub)),
+        'open user profile',
+        logName: 'MetadataUserChips',
+        category: LogCategory.ui,
+      );
     });
   }
 }

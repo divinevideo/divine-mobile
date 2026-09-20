@@ -3,6 +3,8 @@
 // ABOUTME: sheet's "Reposted by" chips match the engagement-list screen
 // ABOUTME: (Kind 6+16, Kind 5 deletion filter, dual e+a tag query).
 
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:reposts_repository/reposts_repository.dart';
@@ -37,7 +39,7 @@ class VideoRepostersCubit extends Cubit<VideoRepostersState> {
        _videoId = videoId,
        _addressableId = addressableId,
        super(const VideoRepostersState()) {
-    _fetch();
+    unawaited(_fetch());
   }
 
   final RepostsRepository _repostsRepository;

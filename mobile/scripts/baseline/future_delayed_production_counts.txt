@@ -19,5 +19,4 @@ lib/services/video_editor/video_editor_render_service.dart	1
 lib/services/video_publish/video_publish_service.dart	1
 lib/services/video_thumbnail_service.dart	1
 lib/widgets/video_feed_item/actions/share_action_button.dart	1
-lib/widgets/video_feed_item/metadata/metadata_sounds_section.dart	2
 lib/widgets/video_metadata/modes/capture/video_metadata_capture_bottom_bar.dart	1
