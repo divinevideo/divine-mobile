@@ -20,6 +20,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -178,7 +179,12 @@ class VideoOverlayActions extends ConsumerWidget {
         ? null
         : () {
             onInteracted?.call();
-            MetadataExpandedSheet.show(context, video);
+            runDetached(
+              MetadataExpandedSheet.show(context, video),
+              'present metadata sheet',
+              logName: 'VideoOverlayActions',
+              category: LogCategory.ui,
+            );
           };
 
     // In fullscreen mode, ensure badges clear the status bar icons

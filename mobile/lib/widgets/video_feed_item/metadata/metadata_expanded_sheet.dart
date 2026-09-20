@@ -49,12 +49,12 @@ class MetadataExpandedSheet extends StatelessWidget {
   ///
   /// Creates a [VideoRepostersCubit] to fetch reposter pubkeys from the
   /// relay. The cubit is scoped to the modal and auto-closed on dismiss.
-  static void show(BuildContext context, VideoEvent video) {
+  static Future<void> show(BuildContext context, VideoEvent video) {
     final interactionsBloc = context.read<VideoInteractionsBloc>();
     final container = ProviderScope.containerOf(context, listen: false);
     final repostsRepository = container.read(repostsRepositoryProvider);
 
-    context.showVideoPausingVineBottomSheet<void>(
+    return context.showVideoPausingVineBottomSheet<void>(
       showHeader: false,
       initialChildSize: 0.7,
       buildScrollBody: (scrollController) => MultiBlocProvider(
