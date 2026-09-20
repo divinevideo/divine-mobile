@@ -140,7 +140,7 @@ void main() {
       expect(bloc.state.canLoadMore, isFalse);
     });
 
-    test('load more stays unavailable until hasMoreStream emits true', () {
+    test('canLoadMore defaults to false before FullscreenFeedStarted', () {
       final bloc = createBloc(
         onLoadMore: () {},
         hasMoreStream: hasMoreController.stream,
