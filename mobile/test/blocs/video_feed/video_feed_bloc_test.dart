@@ -113,9 +113,9 @@ void main() {
       ).thenAnswer((_) async => {});
     });
 
-    tearDown(() {
-      followingController.close();
-      curatedListsController.close();
+    tearDown(() async {
+      await followingController.close();
+      await curatedListsController.close();
     });
 
     VideoFeedBloc createBloc({
@@ -194,7 +194,7 @@ void main() {
       expect(bloc.state.hasMore, isTrue);
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.error, isNull);
-      bloc.close();
+      addTearDown(bloc.close);
     });
 
     group('feed tuning', () {
@@ -3872,9 +3872,9 @@ void main() {
         ).thenAnswer((_) async {});
       });
 
-      tearDown(() {
-        cacheFollowingController.close();
-        cacheCuratedListsController.close();
+      tearDown(() async {
+        await cacheFollowingController.close();
+        await cacheCuratedListsController.close();
       });
 
       VideoFeedBloc createBlocWithCache() => VideoFeedBloc(

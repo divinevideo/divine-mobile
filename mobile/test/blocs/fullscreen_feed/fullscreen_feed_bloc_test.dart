@@ -56,9 +56,9 @@ void main() {
       when(() => mockMediaCache.getCachedFileSync(any())).thenReturn(null);
     });
 
-    tearDown(() {
-      videosController.close();
-      hasMoreController.close();
+    tearDown(() async {
+      await videosController.close();
+      await hasMoreController.close();
     });
 
     VideoEvent createTestVideo(
@@ -139,7 +139,7 @@ void main() {
       expect(bloc.state.currentIndex, 2);
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.canLoadMore, isFalse);
-      bloc.close();
+      addTearDown(bloc.close);
     });
 
     test('load more stays unavailable until hasMoreStream emits true', () {
@@ -149,7 +149,7 @@ void main() {
       );
 
       expect(bloc.state.canLoadMore, isFalse);
-      bloc.close();
+      addTearDown(bloc.close);
     });
 
     group('FullscreenFeedState', () {
@@ -743,9 +743,8 @@ void main() {
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
           await pumpEventQueue();
-          videosController
-            ..add(const [])
-            ..close();
+          videosController.add(const []);
+          await videosController.close();
         },
         wait: const Duration(milliseconds: 200),
         verify: (bloc) {
@@ -762,9 +761,8 @@ void main() {
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
           await pumpEventQueue();
-          videosController
-            ..add([createTestVideo('video1')])
-            ..close();
+          videosController.add([createTestVideo('video1')]);
+          await videosController.close();
         },
         wait: const Duration(milliseconds: 200),
         verify: (bloc) {

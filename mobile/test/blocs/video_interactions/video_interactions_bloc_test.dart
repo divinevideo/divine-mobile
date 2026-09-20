@@ -71,10 +71,10 @@ void main() {
       ).thenAnswer((_) async => false);
     });
 
-    tearDown(() {
-      likedIdsController.close();
-      likedAddressableIdsController.close();
-      repostedIdsController.close();
+    tearDown(() async {
+      await likedIdsController.close();
+      await likedAddressableIdsController.close();
+      await repostedIdsController.close();
     });
 
     VideoInteractionsBloc createBloc({
@@ -104,7 +104,7 @@ void main() {
       expect(bloc.state.isReposted, isFalse);
       expect(bloc.state.repostCount, isNull);
       expect(bloc.state.commentCount, isNull);
-      bloc.close();
+      addTearDown(bloc.close);
     });
 
     test('initial state seeds engagement counts from initial counts', () {
@@ -116,7 +116,7 @@ void main() {
       expect(bloc.state.likeCount, equals(42));
       expect(bloc.state.commentCount, equals(3));
       expect(bloc.state.repostCount, equals(7));
-      bloc.close();
+      addTearDown(bloc.close);
     });
 
     group('VideoInteractionsFetchRequested', () {

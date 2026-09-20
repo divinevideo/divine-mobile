@@ -64,7 +64,7 @@ void main() {
         final cubit = buildCubit();
         expect(cubit.state, const FeedLoadingModerationState());
         expect(cubit.state.isRestricted, isFalse);
-        cubit.close();
+        addTearDown(cubit.close);
       });
     });
 
@@ -77,7 +77,7 @@ void main() {
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          cubit.close();
+          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -90,7 +90,7 @@ void main() {
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          cubit.close();
+          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -108,7 +108,7 @@ void main() {
             fake.flushMicrotasks();
             expect(cubit.state.isRestricted, isTrue);
             verify(() => mockService.fetchStatus(sha256)).called(1);
-            cubit.close();
+            addTearDown(cubit.close);
             fake.flushMicrotasks();
           });
         },
@@ -140,7 +140,7 @@ void main() {
               cubit.state.status,
               FeedLoadingModerationStatus.ageRestricted,
             );
-            cubit.close();
+            addTearDown(cubit.close);
             fake.flushMicrotasks();
           });
         },
@@ -166,7 +166,7 @@ void main() {
           expect(cubit.state.isRestricted, isTrue);
           expect(cubit.state.isAgeRestricted, isFalse);
           expect(cubit.state.status, FeedLoadingModerationStatus.restricted);
-          cubit.close();
+          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -182,7 +182,7 @@ void main() {
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          cubit.close();
+          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -198,7 +198,7 @@ void main() {
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          cubit.close();
+          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -222,7 +222,7 @@ void main() {
             fake.flushMicrotasks();
             verify(() => mockService.fetchStatus(explicitSha256)).called(1);
             verifyNever(() => mockService.fetchStatus(sha256));
-            cubit.close();
+            addTearDown(cubit.close);
             fake.flushMicrotasks();
           });
         },
