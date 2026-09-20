@@ -3446,12 +3446,12 @@ void main() {
       });
 
       test('surfaces the cursor for the next page', () async {
-        const pagedResponse = """
+        const pagedResponse = '''
 {
   "data": [{"pubkey": "liker1", "created_at": 1700000100, "event_id": "r1"}],
   "pagination": {"next_cursor": "eyJvZmZzZXQiOjUwMH0", "has_more": true}
 }
-""";
+''';
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
         ).thenAnswer((_) async => http.Response(pagedResponse, 200));
