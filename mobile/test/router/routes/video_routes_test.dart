@@ -1,5 +1,5 @@
-// ABOUTME: Tests for the video routes' recorder page builder.
-// ABOUTME: Pins that the recorder route reads its query into VideoRecorderRoute.
+// ABOUTME: Tests for the video routes' recorder builder and engagement paths.
+// ABOUTME: Pins recorder query parsing and the flat engagement registration.
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,5 +76,35 @@ void main() {
       expect(recorder.entryPoint, CreationEntryPoint.bottomNav);
       expect(recorder.autoRecord, isTrue);
     });
+  });
+
+  group('videoRoutes engagement routes', () {
+    // videoRoutes() is spread straight into GoRouter.routes, so entering
+    // either of these cold leaves a one-entry stack — the reason
+    // VideoEngagementListView's back arrow needs safePop (#9359). The
+    // behavioural test for that builds its own router, so this is the only
+    // check bound to the real table.
+    for (final path in const [
+      '/video/:eventId/likers',
+      '/video/:eventId/reposters',
+    ]) {
+      test('$path is registered flat and top-level', () {
+        final matches = videoRoutes().whereType<GoRoute>().where(
+          (route) => route.path == path,
+        );
+
+        expect(
+          matches,
+          hasLength(1),
+          reason:
+              'Expected exactly one top-level GoRoute at $path. Nesting it '
+              'under another route makes canPop() true on cold entry, which '
+              'retires the safePop fallback in VideoEngagementListView; '
+              'renaming it strands the location hardcoded by '
+              'video_engagement_list_screen_test.dart. Either way, revisit '
+              'that test before updating this one.',
+        );
+      });
+    }
   });
 }
