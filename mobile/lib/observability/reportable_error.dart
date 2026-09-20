@@ -49,8 +49,10 @@ ReportableError? asReportableError(
 /// multiple call sites in the same bloc.
 ///
 /// [toString] runs [sanitizeForCrashReport] over the inner error's
-/// stringification so `npub1…` / `nsec1…` identifiers never reach the crash
-/// reporter, regardless of which call site produced the error.
+/// stringification *and* over [context] so `npub1…` / `nsec1…` identifiers
+/// never reach the crash reporter, regardless of which call site produced the
+/// error. [context] is sanitized too because callers build it from runtime
+/// values — `runDetached` derives it from a caller-supplied description.
 final class Reportable<T extends Object> implements ReportableError {
   const Reportable(this.error, {this.context});
 
@@ -62,7 +64,8 @@ final class Reportable<T extends Object> implements ReportableError {
   @override
   String toString() {
     final sanitized = sanitizeForCrashReport(error.toString());
-    final ctx = context;
+    final rawContext = context;
+    final ctx = rawContext == null ? null : sanitizeForCrashReport(rawContext);
     // Use the inner error's runtime type rather than the generic [T] —
     // most call sites live inside `catch (e, st)` blocks where `e` is
     // statically `Object`, so `T` would erase the actual inner type.
