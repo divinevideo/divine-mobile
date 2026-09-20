@@ -78,7 +78,6 @@ void main() {
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          fake.flushMicrotasks();
         });
       });
 
@@ -91,7 +90,6 @@ void main() {
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          fake.flushMicrotasks();
         });
       });
 
@@ -109,7 +107,6 @@ void main() {
             fake.flushMicrotasks();
             expect(cubit.state.isRestricted, isTrue);
             verify(() => mockService.fetchStatus(sha256)).called(1);
-            fake.flushMicrotasks();
           });
         },
       );
@@ -141,7 +138,6 @@ void main() {
               cubit.state.status,
               FeedLoadingModerationStatus.ageRestricted,
             );
-            fake.flushMicrotasks();
           });
         },
       );
@@ -167,7 +163,6 @@ void main() {
           expect(cubit.state.isRestricted, isTrue);
           expect(cubit.state.isAgeRestricted, isFalse);
           expect(cubit.state.status, FeedLoadingModerationStatus.restricted);
-          fake.flushMicrotasks();
         });
       });
 
@@ -183,7 +178,6 @@ void main() {
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          fake.flushMicrotasks();
         });
       });
 
@@ -199,7 +193,6 @@ void main() {
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          fake.flushMicrotasks();
         });
       });
 
@@ -223,7 +216,6 @@ void main() {
             fake.flushMicrotasks();
             verify(() => mockService.fetchStatus(explicitSha256)).called(1);
             verifyNever(() => mockService.fetchStatus(sha256));
-            fake.flushMicrotasks();
           });
         },
       );
