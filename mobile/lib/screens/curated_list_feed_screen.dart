@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +23,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
@@ -366,15 +366,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         listId: widget.listId,
       );
     });
-    runDetached(
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        context.l10n.listManageVideosAction,
-        Directionality.of(context),
-      ),
-      'announce list management',
+    announceDetached(
+      context,
+      context.l10n.listManageVideosAction,
+      description: 'announce list management',
       logName: 'CuratedListFeedScreen',
-      category: LogCategory.ui,
     );
   }
 
@@ -420,15 +416,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final message = failed
         ? context.l10n.listRemoveVideosFailure(state.failedCount)
         : context.l10n.listRemoveVideosSuccess(state.removedCount);
-    runDetached(
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
-      ),
-      'announce list removal',
+    announceDetached(
+      context,
+      message,
+      description: 'announce list removal',
       logName: 'CuratedListFeedScreen',
-      category: LogCategory.ui,
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -592,15 +584,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
     if (!didDelete) {
       final message = context.l10n.curatedListDeleteFailed;
-      runDetached(
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          message,
-          Directionality.of(context),
-        ),
-        'announce list deletion failure',
+      announceDetached(
+        context,
+        message,
+        description: 'announce list deletion failure',
         logName: 'CuratedListFeedScreen',
-        category: LogCategory.ui,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: VineTheme.error),
@@ -610,15 +598,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
     ref.invalidate(curatedListsProvider);
     final message = context.l10n.curatedListDeletedSnack;
-    runDetached(
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
-      ),
-      'announce list deletion',
+    announceDetached(
+      context,
+      message,
+      description: 'announce list deletion',
       logName: 'CuratedListFeedScreen',
-      category: LogCategory.ui,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(

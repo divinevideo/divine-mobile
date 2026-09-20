@@ -3,7 +3,6 @@
 
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -13,6 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _LoadingIndicator extends StatelessWidget {
@@ -166,15 +166,11 @@ class SelectListDialog extends StatelessWidget {
       );
       // A failure shown only in a SnackBar is invisible to screen readers.
       // Announce it, matching the DM oversized-send path this PR added (#7331).
-      runDetached(
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          failureMessage,
-          Directionality.of(context),
-        ),
-        'announce list update failure',
+      announceDetached(
+        context,
+        failureMessage,
+        description: 'announce list update failure',
         logName: 'SelectListDialog',
-        category: LogCategory.ui,
       );
     } catch (e) {
       Log.error(

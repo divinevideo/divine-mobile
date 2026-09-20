@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +17,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/scroll_to_hide_mixin.dart';
@@ -101,30 +101,22 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
         }
         if (failed) {
           final message = context.l10n.peopleListsDeleteFailed;
-          runDetached(
-            SemanticsService.sendAnnouncement(
-              View.of(context),
-              message,
-              Directionality.of(context),
-            ),
-            'announce people list deletion failure',
+          announceDetached(
+            context,
+            message,
+            description: 'announce people list deletion failure',
             logName: 'UserListPeopleScreen',
-            category: LogCategory.ui,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(message), backgroundColor: VineTheme.error),
           );
           return;
         }
-        runDetached(
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            context.l10n.curatedListDeletedSnack,
-            Directionality.of(context),
-          ),
-          'announce people list deletion',
+        announceDetached(
+          context,
+          context.l10n.curatedListDeletedSnack,
+          description: 'announce people list deletion',
           logName: 'UserListPeopleScreen',
-          category: LogCategory.ui,
         );
         if (context.canPop()) {
           context.pop();
