@@ -339,7 +339,7 @@ class _SubscribedListsSection extends ConsumerWidget {
                   extra: CuratedListRouteExtra(listName: curatedList.name),
                 ),
                 'open subscribed list',
-                logName: 'ExploreListsTab',
+                logName: 'SubscribedListsSection',
                 category: LogCategory.ui,
               );
             },
