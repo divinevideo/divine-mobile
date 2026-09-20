@@ -20,13 +20,6 @@ const globalErrorMascotAsset = 'assets/illustrations/error_mascot_tangled.png';
 /// asynchronous load.
 const _bodyFontFamily = 'Inter';
 
-/// The smallest surface treated as a whole screen.
-///
-/// Below it the failure replaced a fragment of a page — an avatar, a list row —
-/// where a Back control would cover the fragment and pop a route the user
-/// never associated with it.
-const _screenSizedSurface = Size(280, 360);
-
 /// Builds the surface the framework shows in place of a widget whose build
 /// failed. The startup sequence installs it as [ErrorWidget.builder].
 ///
@@ -93,6 +86,16 @@ VoidCallback? _backAction(BuildContext context) {
   return navigator.maybePop;
 }
 
+/// The insets the system reserves on this screen.
+///
+/// Read from the view, not from `MediaQuery`: a `SafeArea` or a `Scaffold`
+/// above this surface has already removed them from the `MediaQuery` it sees.
+EdgeInsets _systemInsets(BuildContext context) {
+  final view = View.maybeOf(context);
+  if (view == null) return EdgeInsets.zero;
+  return EdgeInsets.fromViewPadding(view.viewPadding, view.devicePixelRatio);
+}
+
 /// The surface itself: the message, with the Back control laid over it.
 class _GlobalErrorWidget extends StatelessWidget {
   const _GlobalErrorWidget({required this.details});
@@ -102,6 +105,9 @@ class _GlobalErrorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onBack = _backAction(context);
+    // The navigator this surface sits in: its box is the area a route fills.
+    final navigator = Navigator.maybeOf(context);
+    final offersBack = onBack != null && navigator != null;
     final topInset = MediaQuery.maybePaddingOf(context)?.top ?? 0;
 
     return Directionality(
@@ -113,14 +119,16 @@ class _GlobalErrorWidget extends StatelessWidget {
             _ErrorMessage(
               details: details,
               // Keeps the illustration clear of the Back control.
-              verticalPadding: onBack == null ? 24 : topInset + 64,
+              verticalPadding: offersBack ? topInset + 64 : 24,
               // This context, not a descendant's: its parent is the element
               // whose build failed.
               onReload: () => _retryFailedBuild(context),
             ),
-            if (onBack != null)
+            if (offersBack)
               Positioned.fill(
-                child: _ShownOnScreenSizedSurface(
+                child: _ShownWhenTheRouteIsGone(
+                  navigator: navigator,
+                  systemInsets: _systemInsets(context),
                   child: _BackButton(onPressed: onBack),
                 ),
               ),
@@ -334,33 +342,106 @@ class _ErrorDetailsBlock extends StatelessWidget {
   }
 }
 
-/// Shows its child only when the surface it fills is at least
-/// [_screenSizedSurface]; otherwise the child is laid out but neither painted,
-/// hit-tested nor exposed to assistive technology.
+/// Shows its child only when the surface it fills replaced a whole route;
+/// otherwise the child is laid out but neither painted, hit-tested nor exposed
+/// to assistive technology.
+///
+/// A whole route is as large as its navigator, or as that area inside the
+/// system insets when the page sat under a `SafeArea`. Anything else is a
+/// piece of a page that is still alive around it: a list item, a tile, a body
+/// under a working app bar, the content of a sheet. There a Back control
+/// would cover the piece and pop a route the user never associated with it,
+/// and the page still has its own way out.
 ///
 /// A render object rather than a `LayoutBuilder`: a `LayoutBuilder` throws when
 /// an ancestor probes intrinsic dimensions, and this surface can replace a
 /// widget anywhere, including inside an `IntrinsicHeight` or a dialog.
-class _ShownOnScreenSizedSurface extends SingleChildRenderObjectWidget {
-  const _ShownOnScreenSizedSurface({required Widget super.child});
+class _ShownWhenTheRouteIsGone extends SingleChildRenderObjectWidget {
+  const _ShownWhenTheRouteIsGone({
+    required this.navigator,
+    required this.systemInsets,
+    required Widget super.child,
+  });
+
+  final NavigatorState navigator;
+  final EdgeInsets systemInsets;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderShownOnScreenSizedSurface();
+      _RenderShownWhenTheRouteIsGone(
+        navigator: navigator,
+        systemInsets: systemInsets,
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderShownWhenTheRouteIsGone renderObject,
+  ) {
+    renderObject
+      ..navigator = navigator
+      ..systemInsets = systemInsets;
+  }
 }
 
-class _RenderShownOnScreenSizedSurface extends RenderProxyBox {
+class _RenderShownWhenTheRouteIsGone extends RenderProxyBox {
+  _RenderShownWhenTheRouteIsGone({
+    required NavigatorState navigator,
+    required EdgeInsets systemInsets,
+  }) : _navigator = navigator,
+       _systemInsets = systemInsets;
+
+  NavigatorState get navigator => _navigator;
+  NavigatorState _navigator;
+  set navigator(NavigatorState value) {
+    if (identical(value, _navigator)) return;
+    _navigator = value;
+    markNeedsLayout();
+  }
+
+  EdgeInsets get systemInsets => _systemInsets;
+  EdgeInsets _systemInsets;
+  set systemInsets(EdgeInsets value) {
+    if (value == _systemInsets) return;
+    _systemInsets = value;
+    markNeedsLayout();
+  }
+
   bool _isShown = false;
 
   @override
   void performLayout() {
     super.performLayout();
-    final isShown =
-        size.width >= _screenSizedSurface.width &&
-        size.height >= _screenSizedSurface.height;
+    final isShown = _fillsTheRoute();
     if (isShown == _isShown) return;
     _isShown = isShown;
     markNeedsSemanticsUpdate();
+  }
+
+  bool _fillsTheRoute() {
+    // Resolved here and not during build, where `findRenderObject` is not
+    // valid: it returns null for a navigator inflated in the same frame.
+    final routeArea = _navigator.mounted
+        ? _navigator.context.findRenderObject()
+        : null;
+    if (routeArea is! RenderBox || !routeArea.attached) return false;
+    // Its constraints rather than its size: the framework does not let one
+    // box read another's size during layout, and a navigator fills what it
+    // is given.
+    final route = routeArea.constraints.biggest;
+    return _fills(size.width, route.width, _systemInsets.horizontalPair) &&
+        _fills(size.height, route.height, _systemInsets.verticalPair);
+  }
+
+  /// Whether [extent] is [whole], or [whole] less either or both [insets].
+  static bool _fills(double extent, double whole, (double, double) insets) {
+    final (leading, trailing) = insets;
+    return [
+      whole,
+      whole - leading,
+      whole - trailing,
+      whole - leading - trailing,
+    ].any((expected) => (extent - expected).abs() < 1);
   }
 
   @override
@@ -376,4 +457,9 @@ class _RenderShownOnScreenSizedSurface extends RenderProxyBox {
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     if (_isShown) super.visitChildrenForSemantics(visitor);
   }
+}
+
+extension on EdgeInsets {
+  (double, double) get horizontalPair => (left, right);
+  (double, double) get verticalPair => (top, bottom);
 }
