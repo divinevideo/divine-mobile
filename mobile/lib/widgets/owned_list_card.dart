@@ -1,13 +1,12 @@
 // ABOUTME: Card for one of the viewer's own curated lists, wired to its feed
 // ABOUTME: Shared by the profile Lists tab and the explore tab's My Lists block
 
-import 'dart:async';
-
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/list_card.dart';
 
 /// A [CuratedListCard] for a list the viewer owns, wired to open its feed.
@@ -34,11 +33,14 @@ class OwnedListCard extends StatelessWidget {
       showAuthor: false,
       onTap: () {
         onTap?.call();
-        unawaited(
-          context.push(
+        runDetached(
+          context.push<void>(
             CuratedListFeedScreen.pathForId(curatedList.id),
             extra: CuratedListRouteExtra(listName: curatedList.name),
           ),
+          'open owned list',
+          logName: 'OwnedListCard',
+          category: LogCategory.ui,
         );
       },
     );
