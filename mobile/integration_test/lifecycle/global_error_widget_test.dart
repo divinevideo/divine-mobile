@@ -1,7 +1,9 @@
 // ABOUTME: Boots the real app on a device and proves that a widget which
-// ABOUTME: throws during build is replaced by the branded "tangled vine" surface
-// ABOUTME: main() installs as ErrorWidget.builder (#8647).
+// ABOUTME: throws during build is replaced by the branded error surface main()
+// ABOUTME: installs as ErrorWidget.builder, and that the surface's Back control
+// ABOUTME: leaves the failing page (#8647).
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -26,7 +28,8 @@ void main() {
 
   group('ErrorWidget.builder installed by main()', () {
     testWidgets(
-      'a widget that throws during build renders the tangled vine surface',
+      'a widget that throws during build renders the branded surface, and '
+      'Back leaves it',
       (tester) async {
         final originalOnError = suppressSetStateErrors();
         addTearDown(() => restoreErrorHandler(originalOnError));
@@ -72,8 +75,11 @@ void main() {
           reason: 'main() must install buildGlobalErrorWidget',
         );
 
-        navigator.pop();
-        await pumpUntilSettled(tester, maxSeconds: 1);
+        // The page was pushed over the app's own route, so there is something
+        // to pop and the surface has to offer the way out itself.
+        await tester.tap(find.byType(DivineIconButton));
+        await pumpUntilSettled(tester, maxSeconds: 2);
+        expect(find.text('got a bit tangled'), findsNothing);
 
         drainAsyncErrors(tester);
         // Inline restore is required by the framework's end-of-body

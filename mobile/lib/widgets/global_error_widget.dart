@@ -3,6 +3,8 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -10,6 +12,13 @@ import 'package:unified_logger/unified_logger.dart';
 /// picture says what the copy says — it was us that got tangled, not the user.
 @visibleForTesting
 const globalErrorMascotAsset = 'assets/illustrations/error_mascot_tangled.png';
+
+/// The smallest surface treated as a whole screen.
+///
+/// Below it the failure replaced a fragment of a page — an avatar, a list row —
+/// where a Back control would cover the fragment and pop a route the user
+/// never associated with it.
+const _screenSizedSurface = Size(280, 360);
 
 /// Builds the surface the framework shows in place of a widget whose build
 /// failed. The startup sequence installs it as [ErrorWidget.builder].
@@ -19,10 +28,10 @@ const globalErrorMascotAsset = 'assets/illustrations/error_mascot_tangled.png';
 /// `context.vineColors`, which follows the ambient appearance inside the app
 /// shell and falls back to the dark palette when no theme exists yet. The copy
 /// sets raw text styles with an explicit `TextDecoration.none` so it paints on
-/// the first frame without waiting on a font. Reload is the real
-/// design-system button: its label variant, Bricolage Grotesque ExtraBold,
-/// ships in `assets/fonts/`, so resolving it is a local asset read and never a
-/// network fetch.
+/// the first frame without waiting on a font. The two actions are the real
+/// design-system buttons: Reload's label variant, Bricolage Grotesque
+/// ExtraBold, ships in `assets/fonts/`, so resolving it is a local asset read
+/// and never a network fetch.
 ///
 /// Reporting is not this widget's job. Every framework call site reports
 /// [details] through [FlutterError.onError] before it asks the builder for a
@@ -54,7 +63,26 @@ void _retryFailedBuild(BuildContext context) {
   });
 }
 
-/// The surface itself: the message on the app's background.
+/// The pop this surface can offer, or null when there is nothing to pop.
+///
+/// Null before [MaterialApp] exists, where there is no navigator at all, and
+/// on a route that is the only entry of its stack.
+VoidCallback? _backAction(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  if (router != null) {
+    if (!router.canPop()) return null;
+    return () {
+      // The stack can empty between this build and the tap, and popping an
+      // empty go_router stack throws.
+      if (router.canPop()) router.pop();
+    };
+  }
+  final navigator = Navigator.maybeOf(context);
+  if (navigator == null || !navigator.canPop()) return null;
+  return navigator.maybePop;
+}
+
+/// The surface itself: the message, with the Back control laid over it.
 class _GlobalErrorWidget extends StatelessWidget {
   const _GlobalErrorWidget({required this.details});
 
@@ -62,15 +90,30 @@ class _GlobalErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onBack = _backAction(context);
+    final topInset = MediaQuery.maybePaddingOf(context)?.top ?? 0;
+
     return Directionality(
       textDirection: TextDirection.ltr,
       child: ColoredBox(
         color: context.vineColors.background,
-        child: _ErrorMessage(
-          details: details,
-          // This context, not a descendant's: its parent is the element whose
-          // build failed.
-          onReload: () => _retryFailedBuild(context),
+        child: Stack(
+          children: [
+            _ErrorMessage(
+              details: details,
+              // Keeps the illustration clear of the Back control.
+              verticalPadding: onBack == null ? 24 : topInset + 64,
+              // This context, not a descendant's: its parent is the element
+              // whose build failed.
+              onReload: () => _retryFailedBuild(context),
+            ),
+            if (onBack != null)
+              Positioned.fill(
+                child: _ShownOnScreenSizedSurface(
+                  child: _BackButton(onPressed: onBack),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -81,10 +124,12 @@ class _GlobalErrorWidget extends StatelessWidget {
 class _ErrorMessage extends StatelessWidget {
   const _ErrorMessage({
     required this.details,
+    required this.verticalPadding,
     required this.onReload,
   });
 
   final FlutterErrorDetails details;
+  final double verticalPadding;
   final VoidCallback onReload;
 
   @override
@@ -93,7 +138,7 @@ class _ErrorMessage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          padding: EdgeInsets.symmetric(vertical: verticalPadding),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -162,6 +207,37 @@ class _ErrorMessage extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The top-left Back control, sized and styled like the app bar's own.
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    // Not a SafeArea: that asserts a MediaQuery ancestor, which a bare
+    // Navigator does not provide.
+    final safeArea = MediaQuery.maybePaddingOf(context) ?? EdgeInsets.zero;
+
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: safeArea.left + 12,
+          top: safeArea.top + 8,
+        ),
+        child: DivineIconButton(
+          icon: DivineIconName.caretLeft,
+          type: DivineIconButtonType.secondary,
+          size: DivineIconButtonSize.small,
+          semanticLabel: 'Back',
+          onPressed: onPressed,
         ),
       ),
     );
@@ -241,5 +317,49 @@ class _ErrorDetailsBlock extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Shows its child only when the surface it fills is at least
+/// [_screenSizedSurface]; otherwise the child is laid out but neither painted,
+/// hit-tested nor exposed to assistive technology.
+///
+/// A render object rather than a `LayoutBuilder`: a `LayoutBuilder` throws when
+/// an ancestor probes intrinsic dimensions, and this surface can replace a
+/// widget anywhere, including inside an `IntrinsicHeight` or a dialog.
+class _ShownOnScreenSizedSurface extends SingleChildRenderObjectWidget {
+  const _ShownOnScreenSizedSurface({required Widget super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderShownOnScreenSizedSurface();
+}
+
+class _RenderShownOnScreenSizedSurface extends RenderProxyBox {
+  bool _isShown = false;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final isShown =
+        size.width >= _screenSizedSurface.width &&
+        size.height >= _screenSizedSurface.height;
+    if (isShown == _isShown) return;
+    _isShown = isShown;
+    markNeedsSemanticsUpdate();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (_isShown) super.paint(context, offset);
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) =>
+      _isShown && super.hitTest(result, position: position);
+
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) {
+    if (_isShown) super.visitChildrenForSemantics(visitor);
   }
 }

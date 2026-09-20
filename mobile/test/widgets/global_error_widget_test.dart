@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/global_error_widget.dart';
@@ -146,10 +149,13 @@ void main() {
         );
       });
 
-      testWidgets('offers Reload, and builds without throwing', (tester) async {
+      testWidgets('offers Reload and no Back, and builds without throwing', (
+        tester,
+      ) async {
         await tester.pumpWidget(buildGlobalErrorWidget(details));
 
         expect(find.text('Reload'), findsOneWidget);
+        expect(find.byType(DivineIconButton), findsNothing);
         expect(tester.takeException(), isNull);
       });
     });
@@ -191,12 +197,65 @@ void main() {
       ErrorWidget.builder = originalBuilder;
     }
 
-    Widget app({required Widget home, ThemeData? theme}) => MaterialApp(
+    Widget app({
+      required Widget home,
+      ThemeData? theme,
+      GlobalKey<NavigatorState>? navigatorKey,
+    }) => MaterialApp(
+      navigatorKey: navigatorKey,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: theme ?? VineTheme.theme,
       home: home,
     );
+
+    /// Pushes [page] over a first route, so the failing route can be popped.
+    Future<void> pushOverPreviousPage(WidgetTester tester, Widget page) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        app(navigatorKey: navigatorKey, home: const Text('previous page')),
+      );
+      navigatorKey.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => page),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isA<StateError>());
+    }
+
+    /// The production shape: the app under go_router, with a first route at
+    /// `/` and the failing page at `/broken`, or at `/shell/broken` inside a
+    /// shell that has a navigator of its own.
+    Future<GoRouter> pumpRouterApp(
+      WidgetTester tester, {
+      required String initialLocation,
+    }) async {
+      final router = GoRouter(
+        initialLocation: initialLocation,
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const Text('previous page')),
+          GoRoute(path: '/broken', builder: (_, _) => const _ThrowsOnBuild()),
+          ShellRoute(
+            builder: (_, _, child) => child,
+            routes: [
+              GoRoute(
+                path: '/shell/broken',
+                builder: (_, _) => const _ThrowsOnBuild(),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          routerConfig: router,
+        ),
+      );
+      return router;
+    }
 
     group('renders', () {
       testWidgets(
@@ -247,6 +306,119 @@ void main() {
           expect(attempts, equals([1, 2]));
           expect(find.text('recovered'), findsOneWidget);
           expect(find.text('got a bit tangled'), findsNothing);
+        }),
+      );
+    });
+
+    group('Back', () {
+      testWidgets(
+        'is absent when the failing route has nothing to pop',
+        (tester) => withBrandedBuilder(() async {
+          await tester.pumpWidget(app(home: const _ThrowsOnBuild()));
+          expect(tester.takeException(), isA<StateError>());
+
+          expect(find.text('got a bit tangled'), findsOneWidget);
+          expect(find.byType(DivineIconButton), findsNothing);
+        }),
+      );
+
+      testWidgets(
+        'pops the failing route',
+        (tester) => withBrandedBuilder(() async {
+          await pushOverPreviousPage(tester, const _ThrowsOnBuild());
+          expect(find.text('got a bit tangled'), findsOneWidget);
+
+          await tester.tap(find.byType(DivineIconButton));
+          await tester.pumpAndSettle();
+
+          expect(find.text('previous page'), findsOneWidget);
+          expect(find.text('got a bit tangled'), findsNothing);
+        }),
+      );
+
+      testWidgets(
+        'pops a go_router route',
+        (tester) => withBrandedBuilder(() async {
+          final router = await pumpRouterApp(tester, initialLocation: '/');
+          unawaited(router.push('/broken'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isA<StateError>());
+          expect(find.text('got a bit tangled'), findsOneWidget);
+
+          await tester.tap(find.byType(DivineIconButton));
+          await tester.pumpAndSettle();
+
+          expect(find.text('previous page'), findsOneWidget);
+          expect(find.text('got a bit tangled'), findsNothing);
+        }),
+      );
+
+      testWidgets(
+        'pops out of a nested navigator that has nothing to pop itself',
+        (tester) => withBrandedBuilder(() async {
+          final router = await pumpRouterApp(tester, initialLocation: '/');
+          unawaited(router.push('/shell/broken'));
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isA<StateError>());
+
+          // The shell's own navigator holds one page; only the router knows
+          // the root stack can pop.
+          final surface = tester.element(find.text('got a bit tangled'));
+          expect(Navigator.of(surface).canPop(), isFalse);
+
+          await tester.tap(find.byType(DivineIconButton));
+          await tester.pumpAndSettle();
+
+          expect(find.text('previous page'), findsOneWidget);
+          expect(find.text('got a bit tangled'), findsNothing);
+        }),
+      );
+
+      testWidgets(
+        'is absent on a go_router route with nothing to pop',
+        (tester) => withBrandedBuilder(() async {
+          await pumpRouterApp(tester, initialLocation: '/broken');
+          expect(tester.takeException(), isA<StateError>());
+
+          expect(find.text('got a bit tangled'), findsOneWidget);
+          expect(find.byType(DivineIconButton), findsNothing);
+        }),
+      );
+
+      testWidgets(
+        'is announced as Back',
+        (tester) => withBrandedBuilder(() async {
+          final semantics = tester.ensureSemantics();
+          await pushOverPreviousPage(tester, const _ThrowsOnBuild());
+
+          expect(find.bySemanticsLabel('Back'), findsOneWidget);
+
+          semantics.dispose();
+        }),
+      );
+
+      testWidgets(
+        'stays out of reach when only a fragment of the page failed',
+        (tester) => withBrandedBuilder(() async {
+          final semantics = tester.ensureSemantics();
+          await pushOverPreviousPage(
+            tester,
+            const Center(
+              child: SizedBox(
+                width: 200,
+                height: 200,
+                child: _ThrowsOnBuild(),
+              ),
+            ),
+          );
+
+          // Built, because the route can pop — only the size of the surface
+          // keeps it from the user.
+          expect(find.byType(DivineIconButton), findsOneWidget);
+          expect(find.byType(DivineIconButton).hitTestable(), findsNothing);
+          expect(find.bySemanticsLabel('Back'), findsNothing);
+
+          semantics.dispose();
         }),
       );
     });
