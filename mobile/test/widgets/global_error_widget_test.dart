@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -33,6 +34,16 @@ class _FailsUntilRetried extends StatelessWidget {
     return const Text('recovered');
   }
 }
+
+/// The font family [copy] resolves to once its style has been merged with
+/// whatever the tree above it provides.
+String? _resolvedFontFamily(WidgetTester tester, String copy) => tester
+    .widget<RichText>(
+      find.descendant(of: find.text(copy), matching: find.byType(RichText)),
+    )
+    .text
+    .style
+    ?.fontFamily;
 
 /// The surface's own background, found from the headline upwards so a
 /// `ColoredBox` the app shell paints above it is never mistaken for it.
@@ -169,6 +180,21 @@ void main() {
         expect(data!.lengthInBytes, greaterThan(0));
       });
 
+      testWidgets('declares the families the copy is set in', (tester) async {
+        final manifest = await tester.runAsync(
+          () => rootBundle.loadString('FontManifest.json'),
+        );
+
+        final families = [
+          for (final entry in jsonDecode(manifest!) as List<dynamic>)
+            (entry as Map<String, dynamic>)['family'],
+        ];
+        expect(
+          families,
+          containsAll([VineTheme.fontFamilyBricolage, 'Inter']),
+        );
+      });
+
       testWidgets('ships the Reload label font, so it is never fetched', (
         tester,
       ) async {
@@ -270,6 +296,37 @@ void main() {
           expect(
             find.textContaining('deliberate build failure'),
             findsOneWidget,
+          );
+        }),
+      );
+
+      testWidgets(
+        'in its own bundled fonts where it would inherit a monospace fallback',
+        (tester) => withBrandedBuilder(() async {
+          // A whole page failed, so nothing between MaterialApp and the
+          // surface provides a Material, and the inherited style is
+          // MaterialApp's monospace "missing Material" fallback.
+          await tester.pumpWidget(app(home: const _ThrowsOnBuild()));
+          expect(tester.takeException(), isA<StateError>());
+          final inherited = DefaultTextStyle.of(
+            tester.element(find.text('got a bit tangled')),
+          ).style;
+          expect(inherited.fontFamily, equals('monospace'));
+
+          expect(
+            _resolvedFontFamily(tester, 'got a bit tangled'),
+            equals(VineTheme.fontFamilyBricolage),
+          );
+          expect(
+            _resolvedFontFamily(
+              tester,
+              "something tripped up here.\nit's not you, it's us.",
+            ),
+            equals('Inter'),
+          );
+          expect(
+            _resolvedFontFamily(tester, 'try navigating away and coming back'),
+            equals('Inter'),
           );
         }),
       );
