@@ -215,6 +215,14 @@ void main() {
         verify(
           () => mockNostrService.subscribe(any(), closeOnEose: true),
         ).called(1);
+
+        // The buffered event has to reach the cache. Without this the test
+        // passes even when nothing is emitted at all, which is what the
+        // single-subscription buffering above is relied on to guarantee.
+        expect(
+          cache.getVideos().map((video) => video.id),
+          contains(mockEvent.id),
+        );
       });
 
       test('a refused relay read does not escape syncList', () async {
