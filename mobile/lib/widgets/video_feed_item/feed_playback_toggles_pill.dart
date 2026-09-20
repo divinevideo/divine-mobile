@@ -31,8 +31,8 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
 
   final String? videoId;
 
-  /// Called after the auto-advance toggle is tapped, so the host surface can
-  /// dismiss itself — the top-bar popover closes.
+  /// Called after auto-advance is turned on so the host surface can dismiss.
+  /// Turning it off leaves the top-bar popover open for other settings.
   ///
   /// Resuming playback is not this callback's job. The feed does that from
   /// the cubit state, whether or not a host passes one.
@@ -132,7 +132,9 @@ class _PlaybackModeToggle extends StatelessWidget {
                   ? context.l10n.videoSettingsAutoAdvanceOn
                   : context.l10n.videoSettingsAutoAdvanceOff,
             );
-            onAutoAdvanceToggled?.call();
+            if (cubit.state.enabled) {
+              onAutoAdvanceToggled?.call();
+            }
           },
           child: DivineIcon(
             icon: enabled

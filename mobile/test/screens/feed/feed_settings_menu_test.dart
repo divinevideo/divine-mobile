@@ -254,5 +254,60 @@ void main() {
       );
       expect(find.byType(FeedPlaybackTogglesPill), findsNothing);
     });
+
+    testWidgets('turning Auto off keeps the popover available for captions', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final authService = createMockAuthService();
+      final volumeCubit = _MockVideoVolumeCubit();
+      final autoAdvance = FeedAutoAdvanceCubit()..toggle();
+      addTearDown(autoAdvance.close);
+      when(() => authService.currentPublicKeyHex).thenReturn(ownPubkey);
+      when(() => volumeCubit.state).thenReturn(const VideoVolumeState());
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
+              BlocProvider<FeedAutoAdvanceCubit>.value(value: autoAdvance),
+            ],
+            child: Scaffold(
+              body: Align(
+                alignment: Alignment.topRight,
+                child: FeedSettingsMenu(video: video),
+              ),
+            ),
+          ),
+          mockAuthService: authService,
+        ),
+      );
+
+      await tester.tap(find.bySemanticsLabel(l10n.videoSettingsMenuOpen));
+      await tester.pump();
+      expect(find.byType(FeedPlaybackTogglesPill), findsOneWidget);
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoActionDisableAutoAdvance),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        autoAdvance.state.enabled,
+        isFalse,
+        reason: 'sanity: the tap reached the Auto toggle',
+      );
+      expect(find.byType(FeedPlaybackTogglesPill), findsOneWidget);
+
+      await tester.tap(
+        find.bySemanticsLabel(l10n.videoSettingsCaptionsDisable),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel(l10n.videoSettingsCaptionsEnable),
+        findsOneWidget,
+      );
+    });
   });
 }
