@@ -743,8 +743,8 @@ void main() {
           await pumpEventQueue();
           videosController.add(const []);
           await videosController.close();
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 200),
         verify: (bloc) {
           expect(bloc.state.status, FullscreenFeedStatus.empty);
           expect(bloc.state.videos, isEmpty);
@@ -761,8 +761,8 @@ void main() {
           await pumpEventQueue();
           videosController.add([createTestVideo('video1')]);
           await videosController.close();
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 200),
         verify: (bloc) {
           expect(bloc.state.status, FullscreenFeedStatus.ready);
           expect(bloc.state.videos.single.id, 'video1');
