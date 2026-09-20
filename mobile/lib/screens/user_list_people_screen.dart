@@ -258,7 +258,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView>
       context.push<void>(
         '/people-lists/${Uri.encodeComponent(listId)}/add-people',
       ),
-      'open people list members',
+      'open add-people picker',
       logName: 'UserListPeopleScreen',
       category: LogCategory.ui,
     );
