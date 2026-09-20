@@ -2,11 +2,9 @@
 // ABOUTME: throws during build is replaced by the branded "tangled vine" surface
 // ABOUTME: main() installs as ErrorWidget.builder (#8647).
 
-import 'dart:async';
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/main.dart' as app;
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/widgets/global_error_widget.dart';
@@ -51,10 +49,8 @@ void main() {
           reason: 'the app never reached its root navigator',
         );
 
-        unawaited(
-          navigator!.push(
-            MaterialPageRoute<void>(builder: (_) => const _ThrowsOnBuild()),
-          ),
+        navigator!.push(
+          MaterialPageRoute<void>(builder: (_) => const _ThrowsOnBuild()),
         );
         await pumpUntilSettled(tester, maxSeconds: 2);
 
