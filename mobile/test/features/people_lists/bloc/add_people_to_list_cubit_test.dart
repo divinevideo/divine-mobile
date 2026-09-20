@@ -98,13 +98,13 @@ void main() {
       );
     }
 
-    test('initial state is initial status with empty candidates', () {
+    test('initial state is initial status with empty candidates', () async {
       final cubit = createCubit();
       expect(cubit.state.status, AddPeopleToListStatus.initial);
       expect(cubit.state.candidates, isEmpty);
       expect(cubit.state.query, isEmpty);
       expect(cubit.state.selectedPubkeys, isEmpty);
-      cubit.close();
+      await cubit.close();
     });
 
     group('started', () {

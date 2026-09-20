@@ -21,8 +21,8 @@ void main() {
     setUp(() {
       mockGoRouter = MockGoRouter();
       when(
-        () => mockGoRouter.push<Object?>(any(), extra: any(named: 'extra')),
-      ).thenAnswer((_) async => null);
+        () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
     });
 
     CuratedList buildList({bool isPublic = true}) {
@@ -65,7 +65,7 @@ void main() {
       await tester.pump();
 
       final captured = verify(
-        () => mockGoRouter.push<Object?>(
+        () => mockGoRouter.push<void>(
           captureAny(),
           extra: captureAny(named: 'extra'),
         ),
@@ -90,7 +90,7 @@ void main() {
 
       expect(hookRan, isTrue);
       verify(
-        () => mockGoRouter.push<Object?>(any(), extra: any(named: 'extra')),
+        () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
       ).called(1);
     });
 

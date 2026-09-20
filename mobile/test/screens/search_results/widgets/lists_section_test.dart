@@ -36,8 +36,8 @@ void main() {
       mockBloc = _MockListSearchBloc();
     });
 
-    tearDown(() {
-      mockBloc.close();
+    tearDown(() async {
+      await mockBloc.close();
     });
 
     Widget buildSubject({bool showAll = false}) {
