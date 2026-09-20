@@ -102,6 +102,25 @@ void main() {
         ],
       );
 
+      // A page whose every row the block filter removed arrives empty but
+      // still carrying a cursor. Collapsing that to "done" would end the
+      // list with pages still to come.
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'a fully filtered page advances the cursor and keeps paging',
+        setUp: () => stubPage([], nextCursor: 'cursor-3'),
+        build: createBloc,
+        seed: loaded,
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        expect: () => [
+          loaded(loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress),
+          loaded(nextCursor: 'cursor-3'),
+        ],
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker1]));
+          expect(bloc.state.hasMore, isTrue);
+        },
+      );
+
       blocTest<VideoEngagementBloc, VideoEngagementState>(
         'clears the cursor on the final page',
         setUp: () => stubPage([liker2]),

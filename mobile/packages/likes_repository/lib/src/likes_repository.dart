@@ -2383,10 +2383,13 @@ class LikesRepository {
 
       // A cursor is a Funnelcake concept: relays cannot continue someone
       // else's page, and re-running the relay query would replay the likers
-      // already on screen. An exhausted continuation therefore ends the
-      // list; a failed one throws from _fetchLikersFromApi instead, so the
-      // caller can offer a retry rather than silently truncating.
-      if (continuing) return LikersPage.empty;
+      // already on screen. So a continuation never falls back — it returns
+      // the API's own page, cursor included. An empty page can still carry
+      // a cursor (every row block-filtered above), and collapsing it to
+      // LikersPage.empty would end the list with pages still to come. A
+      // failed continuation throws from _fetchLikersFromApi instead, so
+      // the caller can offer a retry.
+      if (continuing) return fromApi ?? LikersPage.empty;
 
       final likersByEvent = await _fetchResolvedLikersByEvent(
         [eventId],

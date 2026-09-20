@@ -4494,6 +4494,30 @@ void main() {
             expect(page.hasMore, isFalse);
             verifyNever(() => mockNostrClient.queryEvents(any()));
           });
+
+          // A full page whose every row the block filter removed still
+          // carries the cursor for the next one. Dropping it here would end
+          // the list with pages still to come, silently — the defect this
+          // pagination exists to remove.
+          test(
+            'keeps the cursor when a continuation is fully filtered',
+            () async {
+              stubPage([], nextCursor: 'cursor_page_3');
+
+              repository = createRepository(
+                funnelcakeApiClient: mockFunnelcake,
+              );
+              final page = await repository.fetchEventLikers(
+                eventId: targetEventId,
+                cursor: 'cursor_page_2',
+              );
+
+              expect(page.pubkeys, isEmpty);
+              expect(page.nextCursor, equals('cursor_page_3'));
+              expect(page.hasMore, isTrue);
+              verifyNever(() => mockNostrClient.queryEvents(any()));
+            },
+          );
         });
 
         test('serves the API list without querying relays', () async {
