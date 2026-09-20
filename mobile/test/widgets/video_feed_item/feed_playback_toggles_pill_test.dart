@@ -42,8 +42,14 @@ void main() {
       bool provideAutoAdvance = true,
       ThemeData? theme,
       String? videoId,
+      VoidCallback? onAutoAdvanceToggled,
     }) {
-      Widget pill = Scaffold(body: FeedPlaybackTogglesPill(videoId: videoId));
+      Widget pill = Scaffold(
+        body: FeedPlaybackTogglesPill(
+          videoId: videoId,
+          onAutoAdvanceToggled: onAutoAdvanceToggled,
+        ),
+      );
 
       pill = provideAutoAdvance
           ? MultiBlocProvider(
@@ -258,6 +264,26 @@ void main() {
 
         expect(autoAdvanceCubit.state.enabled, isTrue);
         expect(find.text(l10n.videoSettingsAutoAdvanceOn), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'notifies the host after the compilations toggle is tapped',
+      (tester) async {
+        // The top-bar popover uses this to dismiss itself: turning Auto on is
+        // a request to keep watching, so the menu should close and playback
+        // resume rather than staying open over a paused video.
+        var toggled = 0;
+        await tester.pumpWidget(
+          buildSubject(onAutoAdvanceToggled: () => toggled++),
+        );
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoActionEnableAutoAdvance),
+        );
+        await tester.pump();
+
+        expect(toggled, equals(1));
       },
     );
 
