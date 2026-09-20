@@ -1,4 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -62,10 +63,18 @@ void main() {
         );
       });
 
-      testWidgets('the tangled vine illustration', (tester) async {
+      testWidgets('the tangled mascot illustration', (tester) async {
         await tester.pumpWidget(buildGlobalErrorWidget(details));
 
-        expect(find.byType(CustomPaint), findsWidgets);
+        final image = tester.widget<Image>(find.byType(Image));
+        expect(
+          image.image,
+          isA<AssetImage>().having(
+            (asset) => asset.assetName,
+            'assetName',
+            equals(globalErrorMascotAsset),
+          ),
+        );
       });
 
       testWidgets('debug info in debug mode', (tester) async {
@@ -120,6 +129,16 @@ void main() {
           tester.widget<ColoredBox>(_surface()).color,
           equals(VineTheme.darkColors.background),
         );
+      });
+    });
+
+    group('bundled assets', () {
+      testWidgets('ships the mascot illustration', (tester) async {
+        final data = await tester.runAsync(
+          () => rootBundle.load(globalErrorMascotAsset),
+        );
+
+        expect(data!.lengthInBytes, greaterThan(0));
       });
     });
   });
