@@ -2,7 +2,21 @@
 
 **Date:** 2026-08-23
 
-**Status:** Reviewed product and technical recommendation; implementation pending
+**Status:** Draft proposal; product signoff and runtime compatibility evidence pending
+
+**Review update:** 2026-09-20. Source claims refer to the commits pinned in the
+[evidence appendix](2026-08-23-profile-pinning-order-evidence-audit.md), not to
+an assertion that every repository still has the same implementation today.
+
+This proposal belongs to [profile pinning #3868](https://github.com/divinevideo/divine-mobile/issues/3868)
+under [the profile epic #4342](https://github.com/divinevideo/divine-mobile/issues/4342).
+@Chardot's design review is outstanding. The 12-pin cap, badge geometry,
+one-grid/no-heading presentation, recovery flow, and English copy below are
+proposals, not approved product requirements. Twelve is a working value for
+review; this report has no user-research evidence establishing it over Web's
+three. All first-12 rules and corresponding acceptance examples depend on the
+cap decision. Record that signoff before converting this report into an
+implementation contract.
 
 ## Executive Summary
 
@@ -13,21 +27,32 @@ same resolved launch sequence. For a given selected list event, Mobile
 preserves stored managed order among visible candidates, but cross-relay and
 cross-client convergence is not guaranteed.
 
-This is not a new Divine concept. Divine Web already shipped profile video pins
-in commit
+Divine Web introduced code for profile video pins in commit
 [`0058e2f5`](https://github.com/divinevideo/divine-web/commit/0058e2f51091501e0cf04fe3018f05fff0460eb9).
-The mobile design should reuse that established event shape: a kind-`10001`
-replaceable event containing kind-`34236` video `a` coordinates.
+That code supplies a candidate event shape: a kind-`10001` replaceable event
+containing kind-`34236` video `a` coordinates. It does not establish successful
+persistence and readback through Divine's normal relay path. The historical
+kind gate and differing Web read/write relay sets leave that compatibility
+unverified. Reuse is proposed, conditional on the Web and target-environment
+readback gate below; no live probe has been performed for this report.
 
 That event shape is a Divine convention, not standard NIP-51 semantics.
 NIP-51 defines kind `10001` as a list of pinned kind-1 notes using `e` tags.
 The distinction matters because other Nostr clients may ignore Divine's video
 references, and Divine must preserve list data it does not manage.
 
-The recommendation remains deliberately small: one grid, a contextual
-Pin/Unpin action on ordinary video tiles, and no separate pinned section or
-manual drag ordering. A recovery-only management screen is required so stale
-or unavailable references cannot permanently consume every pin slot.
+The proposed ordinary UI is compact: one grid, a contextual Pin/Unpin action
+on video tiles, and no separate pinned section or manual drag ordering. The
+proposed recovery-only management screen makes stale or unavailable references
+removable so they cannot permanently consume every pin slot.
+
+The enabling work is substantial: an awaited snapshot/live client primitive,
+canonical resolver selection and fallback suppression, centralized Cubit
+sequence derivation, route identity, fullscreen pagination/session behavior,
+and the recovery flow. It also includes localization, accessibility, goldens,
+and a bundled icon requiring a store release. Current profile pagination
+re-sorts merged pages; preserving the fullscreen launch prefix changes that
+behavior rather than adding a small guard.
 
 The detailed evidence and engineering risk register are in the
 [evidence appendix](2026-08-23-profile-pinning-order-evidence-audit.md).
@@ -45,7 +70,7 @@ The detailed evidence and engineering risk register are in the
 
 ### Divine Web
 
-Divine Web already:
+At the pinned commit, Divine Web contains code that:
 
 - reads and writes kind `10001`;
 - stores videos as kind-`34236` `a` coordinates;
@@ -126,7 +151,7 @@ necessary.
 | Definite rejection or no participating network relay | Keep local order unchanged; offer Retry, which starts with a fresh settled read. |
 | Publish timeout or lost acknowledgement leaves the outcome unknown | Keep local order unchanged; offer `Check again`, which re-reads and reconciles without blindly republishing. |
 
-### Recovery management
+### Proposed recovery management
 
 The owner-only profile More menu exposes `Manage pinned videos` whenever the
 selected event has managed coordinates. The cap state also links to it. This is
@@ -244,12 +269,19 @@ The full addressable coordinate survives a metadata replacement as long as the
 author and `d` value remain unchanged. Event IDs and `stableId` are not suitable
 stored identities for this feature.
 
-Use a dedicated coordinate value type. It validates kind `34236`, requires the
-canonical 64-character lowercase hexadecimal pubkey and a nonempty `d`, and
-preserves the complete `d` value byte-for-byte, including case and colons.
-Do not reuse `stableId`, `feedDedupKey`, or `canonicalProfileFeedVideoKey`;
-those helpers omit authors or normalize data too aggressively for exact pin
-identity.
+Represent pins with a validated coordinate value type: kind `34236`, a canonical
+64-character lowercase hexadecimal pubkey, and a nonempty `d` preserved
+byte-for-byte, including case and colons. Reuse or extract existing parsing and
+validation before adding another implementation. `BadgeCoordinate.parse`
+already implements these structural rules for fixed kind `30009`
+(`mobile/packages/badge_repository/lib/src/badge_coordinate.dart:26-35`);
+`CuratedListConverter._isAddressableVideoReference` and `DmSharedVideoRef.dTag`
+are partial video-specific precedents. The engineering plan must choose an
+appropriate shared package boundary; this is not a request to depend on badge
+features or accept badge coordinates as video pins.
+
+Do not reuse `stableId`, `feedDedupKey`, or `canonicalProfileFeedVideoKey` as
+exact pin identity: those helpers omit authors or normalize the `d` value.
 
 ### Standards boundary
 
@@ -347,8 +379,17 @@ or filter update can silently replace the pinned sequence with the base feed.
 
 Keep the raw base feed, normally filtered base feed, and pin-augmented displayed
 sequence separate. Pagination counts use the normally filtered base feed. The
-Nostr `until` cursor uses the minimum `nostrCreatedAt` in `_unfilteredVideos`,
-not `createdAt` and not the pin-augmented displayed sequence.
+proposed Nostr `until` cursor uses the minimum `nostrCreatedAt` in
+`_unfilteredVideos`, not the pin-augmented displayed sequence.
+
+**Pagination scope:** the pinned implementation instead takes the minimum
+`createdAt` in filtered `state.videos`
+(`mobile/lib/blocs/profile_feed/profile_feed_cubit.dart:512-516`). The proposal
+changes both the source collection and timestamp; `createdAt` may be the
+original `published_at`, while `nostrCreatedAt` uses the event timestamp when
+known. This changes Nostr-fallback pagination boundaries for profiles with no
+pins as well as pinned profiles. It needs its own regression cases for filtered
+videos, metadata replacements, and profiles without pins.
 
 The published sequence actually rendered by the grid is authoritative for tap
 index, prefetch, and the fullscreen launch snapshot. The tap handler must not
@@ -366,8 +407,18 @@ snapshot. The current index URL remains a backward-compatible, best-effort
 restoration path; an in-app grid launch carries the exact coordinate in route
 state so it cannot open the wrong video.
 
-Canonical replaceable-event selection must use `created_at` descending and
-event ID ascending for ties. The current addressable-video resolver must select
+For kind `10001`, use `created_at` descending and event ID ascending for ties,
+following NIP-01's lowercase "should" recommendation for replaceable events.
+At the pinned NIP revision that sentence does not explicitly cover addressable
+kind `34236`; applying the same comparator to video replacements is a proposed
+Divine consistency policy, not an additional NIP-01 normative requirement.
+
+Reuse the existing ordering in `mobile/packages/creator_sync/lib/src/replaceable_event_order.dart` or
+`mobile/packages/profile_repository/lib/src/identity_event_selection.dart`, or extract its common
+contract to an appropriate owning package. Do not add an independent fourth
+comparator. `compareProfileFeedVideos` also breaks ties by ID, but sorts by
+publication time, so it is not directly interchangeable with raw-event winner
+selection. The current addressable-video resolver must select
 the raw canonical winner before applying visibility filters; arrival order is
 not a valid winner rule. Track raw-resolved coordinates separately from visible
 results so a canonical-but-hidden event is not misclassified as missing and
@@ -387,6 +438,13 @@ Where a coordinate arrives through that path — including the
 already collapsed before Mobile sees it. Treat deterministic selection as
 guaranteed over the raw relay-event path, and treat backend alignment as a
 release dependency rather than something the Mobile comparator can supply.
+That raw-path guarantee is over the candidates actually delivered to Mobile;
+it does not prove that a relay retained every competing revision. The backend
+check must cover kind-`10001` list winners as well as video-coordinate winners:
+its generic read projection also groups replaceable events by author and kind
+and uses `argMax(id, created_at)` without the lexical tie-break
+(`crates/clickhouse/src/event_queries.rs:1591-1601`,
+`crates/clickhouse/src/event_queries.rs:1746-1763` at the pinned commit).
 
 The exact cache backend, package boundary, and same-event enrichment merge are
 engineering choices, not product facts. They should follow the repository's
@@ -416,8 +474,9 @@ existing UI → BLoC → Repository → Client architecture and CI package rules
 
 ## Accessibility and Localization
 
-Use the filled Phosphor `PushPin` geometry already used by Divine Web, exported
-as a bundled Mobile SVG and mapped through a new `DivineIconName`. The badge is
+The proposed badge uses the filled Phosphor `PushPin` geometry present in Divine
+Web, exported as a bundled Mobile SVG and mapped through a new `DivineIconName`.
+Geometry and placement remain pending @Chardot's review. The proposed badge is
 a 16 dp `VineTheme.primaryText` glyph inside a 24 dp circular
 `VineTheme.scrim65` background, inset 4 dp from `AlignmentDirectional.topEnd`.
 It must maintain at least 3:1 non-text contrast over thumbnail imagery and move
@@ -446,8 +505,9 @@ position {gridPosition}.
 the tile. An unresolved recovery row is labeled `Unavailable pinned video,
 stored position {storedPosition}. Remove from pinned videos.`
 
-Use these English source strings as complete localization units. Variables use
-ARB placeholders; no translated fragments are assembled.
+Treat these proposed English strings as copy for design review, not final
+localization instructions. After approval, use complete localization units
+with ARB placeholders; no translated fragments are assembled.
 
 | State or control | English source string |
 |---|---|
@@ -485,7 +545,8 @@ The report recommends coverage for:
 - metadata replacement retaining a pin by coordinate;
 - case-distinct and colon-containing `d` values, plus identical `d` values from
   different authors and uppercase-pubkey coordinates preserved as unrelated;
-- equal-timestamp replaceable-event tie handling;
+- equal-timestamp kind-10001 selection and the explicitly chosen addressable-video
+  tie policy, including the limits of backend-collapsed candidates;
 - canonical raw winner selection before filtering;
 - hidden canonical coordinates suppressing stale visible base-feed copies;
 - cache-first rendering followed by relay revalidation;
@@ -495,9 +556,13 @@ The report recommends coverage for:
   forcing re-reconciliation;
 - stale resolution and subscription races;
 - every Cubit update path retaining the centralized pin overlay;
-- base-feed pagination unaffected by off-page pins and using the oldest raw
-  `nostrCreatedAt` cursor;
-- grid, prefetch, and fullscreen using the identical launch sequence;
+- base-feed pagination unaffected by off-page pins, plus the proposed raw
+  `nostrCreatedAt` cursor change on profiles without pins and with filtered or
+  metadata-replaced videos;
+- grid, prefetch, and fullscreen using the identical launch sequence, including
+  nonempty Cubit state and a stale rendered tile missing at tap time;
+- fullscreen target resolution with two authors sharing a `d` value, including
+  a colliding stable ID before the exact event-ID match;
 - fullscreen preserving its launch prefix during pagination, metadata updates,
   revalidation, and target-already-present live pages;
 - canonical-but-hidden coordinates not being reintroduced by fallback;
@@ -515,14 +580,21 @@ The report recommends coverage for:
 
 ## Implementation and Release Gates
 
-- Before release, use a dedicated test account to publish and read back a
-  synthetic kind-`10001` video-pin event through every target Divine
-  environment and normal Mobile relay path. Verify the selected event, tags,
+- Before treating the product choices as an implementation contract, record
+  @Chardot's signoff under #3868/#4342 for the cap, badge/presentation, recovery
+  flow, and copy. Design review remains open; this report does not supply it.
+- Before treating Web's event shape as proven compatible, validate publish and
+  readback through Web's actual default write/read routing. Before Mobile
+  release, repeat through every target Divine environment and normal Mobile
+  relay path. These are outstanding runtime checks, not completed evidence.
+  When separately authorized, use a dedicated test account and a synthetic
+  kind-`10001` video-pin event. Verify the selected event, tags,
   and opaque `content`, then publish an empty replacement as cleanup while
   assuming old signed revisions may remain on some relays. Minority-relay
   success alone does not prove the normal read path will surface pins.
-- Confirm before release whether Funnelcake's serving path still collapses
-  equal-`created_at` candidates with `argMax(id, created_at)`. Until both
+- Confirm before release how Funnelcake chooses equal-`created_at` candidates
+  for both kind-`10001` lists and video coordinates, including whether the
+  video serving path still uses `argMax(id, created_at)`. Until both
   sides share one tie-break rule, the deterministic-winner guarantee holds
   only for the raw relay-event path, and that limit belongs in the shipped
   behaviour rather than in the comparator's description.
@@ -544,14 +616,17 @@ The report recommends coverage for:
 
 ## Cross-Client Follow-Up
 
-Mobile can ship this design without silently changing Divine Web, but the
-report records existing Web differences and defects:
+A future Mobile implementation can leave Web behavior unchanged, subject to
+the compatibility and design gates above. The report records these differences
+and defects at the pinned Web revision:
 
 - Web caps additions at three while Mobile recommends 12.
 - Web appends new pins while Mobile prepends.
 - Web displays foreign-authored coordinates while Mobile omits them.
 - Web Pin/Unpin currently replaces opaque `content` with an empty string.
 - Web kind-10001 reads use `limit: 1` without the NIP-01 event-ID tie-break.
+- Web's default write fan-out includes relays absent from its default read set;
+  acceptance by one of those relays does not establish readback on Divine.
 
 Those are separate cross-repo corrections. They should not be hidden inside a
 Mobile change, but they matter if Divine wants identical behavior on every
