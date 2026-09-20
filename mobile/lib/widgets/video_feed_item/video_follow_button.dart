@@ -14,6 +14,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Diameter of the painted follow badge.
@@ -85,7 +86,14 @@ class _VideoFollowButtonState extends ConsumerState<VideoFollowButton> {
 
   @override
   void dispose() {
-    _bloc?.close();
+    if (_bloc case final bloc?) {
+      runDetached(
+        bloc.close(),
+        'close following bloc',
+        logName: 'VideoFollowButton',
+        category: LogCategory.ui,
+      );
+    }
     super.dispose();
   }
 

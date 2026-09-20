@@ -98,14 +98,6 @@ discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/user_avatar.dart	1
 discarded_futures|lib/widgets/user_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
-discarded_futures|lib/widgets/video_feed_item/audio_attribution_row.dart	1
-discarded_futures|lib/widgets/video_feed_item/collaborator_avatar_row.dart	3
-discarded_futures|lib/widgets/video_feed_item/feed_playback_toggles_pill.dart	2
-discarded_futures|lib/widgets/video_feed_item/feed_videos.dart	3
-discarded_futures|lib/widgets/video_feed_item/inline_comment_composer_bar.dart	1
-discarded_futures|lib/widgets/video_feed_item/video_feed_item.dart	3
-discarded_futures|lib/widgets/video_feed_item/video_follow_button.dart	1
-discarded_futures|lib/widgets/video_feed_item/video_interactions_restriction_listener.dart	1
 discarded_futures|lib/widgets/video_metadata/modes/classic/video_metadata_classic_preview_thumbnail.dart	3
 discarded_futures|lib/widgets/video_metadata/modes/edit/video_metadata_edit_bottom_bar.dart	1
 discarded_futures|lib/widgets/video_recorder/clip_delete_snackbar.dart	1

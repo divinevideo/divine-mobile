@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -182,7 +183,12 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
       return;
     }
 
-    _showCollaboratorPicker(context, pubkeys);
+    runDetached(
+      _showCollaboratorPicker(context, pubkeys),
+      'present collaborator picker',
+      logName: 'CollaboratorAvatarRow',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> _showCollaboratorPicker(
@@ -227,7 +233,12 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
 
     final npub = normalizeToNpub(pubkey);
     if (npub != null) {
-      context.push(OtherProfileScreen.pathForNpub(npub));
+      runDetached(
+        context.push(OtherProfileScreen.pathForNpub(npub)),
+        'open collaborator profile',
+        logName: 'CollaboratorAvatarRow',
+        category: LogCategory.ui,
+      );
     }
   }
 }
@@ -334,7 +345,12 @@ class _CollaboratorPickerTile extends ConsumerWidget {
     // navigator's context.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub));
+      runDetached(
+        hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub)),
+        'open collaborator profile',
+        logName: 'CollaboratorAvatarRow',
+        category: LogCategory.ui,
+      );
     });
   }
 }

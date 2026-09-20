@@ -4,6 +4,7 @@
 // ABOUTME: affordance in the paused-video overlay. Compilations and
 // ABOUTME: captions confirm their new state in a snackbar.
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -166,12 +167,14 @@ class _AudioToggle extends StatelessWidget {
         context.read<VideoVolumeCubit>().onPlaybackVolumeChanged(
           isMuted ? 1 : 0,
         );
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          isMuted
-              ? context.l10n.videoPlayerUnmute
-              : context.l10n.videoPlayerMute,
-          Directionality.of(context),
+        unawaited(
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            isMuted
+                ? context.l10n.videoPlayerUnmute
+                : context.l10n.videoPlayerMute,
+            Directionality.of(context),
+          ),
         );
       },
       child: DivineIcon(
@@ -205,7 +208,7 @@ class _CaptionsToggle extends ConsumerWidget {
           : context.l10n.videoSettingsCaptionsEnable,
       onTap: () {
         if (videoId == null) {
-          ref.read(subtitleVisibilityProvider.notifier).toggle();
+          unawaited(ref.read(subtitleVisibilityProvider.notifier).toggle());
         } else {
           ref
               .read(subtitleVisibilityOverrideProvider.notifier)

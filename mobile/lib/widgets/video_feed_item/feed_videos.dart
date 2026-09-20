@@ -35,6 +35,7 @@ import 'package:openvine/services/community_content_label_service.dart';
 import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/scroll_driven_opacity.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
@@ -806,10 +807,20 @@ class __OverlayState extends ConsumerState<_Overlay> {
       // after a pause and nothing lifted it until the next swipe.
       case PlayerTapAction.play:
         widget.onResumeAutoAdvance?.call();
-        controller.play();
+        runDetached(
+          controller.play(),
+          'resume video playback',
+          logName: 'FeedVideos',
+          category: LogCategory.ui,
+        );
       case PlayerTapAction.pause:
         widget.onSuppressAutoAdvance?.call();
-        controller.pause();
+        runDetached(
+          controller.pause(),
+          'pause video playback',
+          logName: 'FeedVideos',
+          category: LogCategory.ui,
+        );
     }
   }
 
@@ -966,13 +977,18 @@ class __OverlayState extends ConsumerState<_Overlay> {
           labels: labels,
           onReveal: widget.onContentWarningRevealed,
           onHideSimilar: () {
-            hideContentWarningsLikeThese(
-              context: context,
-              ref: ref,
-              labels: contentWarningOverlayLabels(
-                contentWarningLabels: video.contentWarningLabels,
-                warnLabels: video.warnLabels,
+            runDetached(
+              hideContentWarningsLikeThese(
+                context: context,
+                ref: ref,
+                labels: contentWarningOverlayLabels(
+                  contentWarningLabels: video.contentWarningLabels,
+                  warnLabels: video.warnLabels,
+                ),
               ),
+              'hide similar content warnings',
+              logName: 'FeedVideos',
+              category: LogCategory.ui,
             );
           },
         );
