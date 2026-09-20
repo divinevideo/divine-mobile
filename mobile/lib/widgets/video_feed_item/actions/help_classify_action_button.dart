@@ -1,8 +1,6 @@
 // ABOUTME: Video overlay action that opens the "Help classify this" sheet.
 // ABOUTME: Lets a viewer suggest content-warning labels for a video (#4771).
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,6 +10,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/community_suggest/community_suggest_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
 
@@ -55,13 +54,16 @@ class HelpClassifyActionButton extends ConsumerWidget {
       labelWhenZero: context.l10n.communitySuggestActionLabel,
       onPressed: () {
         onInteracted?.call();
-        unawaited(
+        runDetached(
           CommunitySuggestSheet.show(
             context,
             video: video,
             repository: repository,
             myPubkey: myPubkey,
           ),
+          'present community suggest sheet',
+          logName: 'HelpClassifyActionButton',
+          category: LogCategory.ui,
         );
       },
     );

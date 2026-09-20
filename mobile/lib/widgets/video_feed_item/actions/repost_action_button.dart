@@ -3,8 +3,6 @@
 // ABOUTME: toggles the repost; on the owner's own video it opens the list of
 // ABOUTME: users who reposted the video instead.
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
 
 /// Repost action button with count display for video overlay.
@@ -123,7 +122,7 @@ class _ActionButton extends StatelessWidget {
 
   static void _openRepostersList(BuildContext context, VideoEvent video) {
     final addressableId = video.addressableId;
-    unawaited(
+    runDetached(
       context.pushNamed(
         VideoEngagementListScreen.repostersRouteName,
         pathParameters: {'eventId': video.id},
@@ -131,6 +130,9 @@ class _ActionButton extends StatelessWidget {
             ? const {}
             : {'a': addressableId},
       ),
+      'open reposters list',
+      logName: 'RepostActionButton',
+      category: LogCategory.ui,
     );
   }
 }

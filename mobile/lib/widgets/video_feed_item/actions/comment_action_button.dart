@@ -1,14 +1,13 @@
 // ABOUTME: Comment action button for video feed overlay.
 // ABOUTME: Displays comment icon with count, navigates to comments screen.
 
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/comments.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -61,7 +60,7 @@ class CommentActionButton extends StatelessWidget {
               category: LogCategory.ui,
             );
             final interactionsBloc = context.read<VideoInteractionsBloc?>();
-            unawaited(
+            runDetached(
               CommentsScreen.show(
                 context,
                 video,
@@ -76,6 +75,9 @@ class CommentActionButton extends StatelessWidget {
                         }
                       },
               ),
+              'present comments screen',
+              logName: 'VideoFeedItem',
+              category: LogCategory.ui,
             );
           },
         );
