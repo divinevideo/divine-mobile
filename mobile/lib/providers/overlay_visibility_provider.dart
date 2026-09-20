@@ -15,11 +15,19 @@ class OverlayVisibilityState {
   });
 
   /// Full-screen page overlay (e.g., settings, profile).
-  /// When open, all video players are released.
+  ///
+  /// When open, the feed pauses and the neighbouring players and their disk
+  /// prefetch are released; the current player is retained. Only a
+  /// codec-heavy surface releases the current player, through
+  /// `InfiniteVideoFeed.releaseCurrentWhenInactive`, which this state never
+  /// drives.
   final bool isPageOpen;
 
   /// Bottom sheet overlay (e.g., comments, share).
-  /// When open, only the current player is paused but retained.
+  ///
+  /// When open, the feed pauses but the neighbours stay warm for a fast
+  /// resume — see [shouldRetainPlayer], which additionally requires that no
+  /// page owner is held.
   final bool isBottomSheetOpen;
 
   /// Returns true if any overlay that should pause videos is visible
