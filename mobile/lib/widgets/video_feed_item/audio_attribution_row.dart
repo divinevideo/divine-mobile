@@ -10,6 +10,7 @@ import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/original_sound_detail_screen.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_credit.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -113,9 +114,14 @@ class _AudioAttributionContent extends ConsumerWidget {
       category: LogCategory.ui,
     );
 
-    context.pushWithVideoPause(
-      SoundDetailScreen.pathForId(audio.id),
-      extra: <String, dynamic>{'sound': audio, 'sourceVideo': sourceVideo},
+    runDetached(
+      context.pushWithVideoPause(
+        SoundDetailScreen.pathForId(audio.id),
+        extra: <String, dynamic>{'sound': audio, 'sourceVideo': sourceVideo},
+      ),
+      'open sound detail',
+      logName: 'AudioAttributionRow',
+      category: LogCategory.ui,
     );
   }
 }

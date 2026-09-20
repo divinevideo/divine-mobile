@@ -354,7 +354,12 @@ class VideoOverlayActions extends ConsumerWidget {
                       );
                       final npub = normalizeToNpub(authorPubkey);
                       if (npub != null) {
-                        context.push(OtherProfileScreen.pathForNpub(npub));
+                        runDetached(
+                          context.push(OtherProfileScreen.pathForNpub(npub)),
+                          'open author profile',
+                          logName: 'VideoFeedItem',
+                          category: LogCategory.ui,
+                        );
                       }
                     }
 
@@ -537,13 +542,18 @@ class VideoOverlayActions extends ConsumerWidget {
                             curatedListService?.getListById(listId),
                         onListTap: (listId, listName) {
                           final list = curatedListService?.getListById(listId);
-                          context.push(
-                            CuratedListFeedScreen.pathForId(listId),
-                            extra: CuratedListRouteExtra(
-                              listName: listName,
-                              videoIds: list?.videoEventIds,
-                              authorPubkey: list?.pubkey,
+                          runDetached(
+                            context.push(
+                              CuratedListFeedScreen.pathForId(listId),
+                              extra: CuratedListRouteExtra(
+                                listName: listName,
+                                videoIds: list?.videoEventIds,
+                                authorPubkey: list?.pubkey,
+                              ),
                             ),
+                            'open curated list',
+                            logName: 'VideoFeedItem',
+                            category: LogCategory.ui,
                           );
                         },
                       );
@@ -1052,7 +1062,12 @@ class _ContentWarningDetailsSheet extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  context.push('/content-filters');
+                  runDetached(
+                    context.push('/content-filters'),
+                    'open content filters',
+                    logName: 'VideoFeedItem',
+                    category: LogCategory.ui,
+                  );
                 },
                 icon: DivineIcon(
                   icon: DivineIconName.slidersHorizontal,

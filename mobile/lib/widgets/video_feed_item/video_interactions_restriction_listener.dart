@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Navigates to Account Status when the interactions BLoC confirms a ban.
 class VideoInteractionsRestrictionListener extends StatelessWidget {
@@ -28,7 +30,12 @@ class VideoInteractionsRestrictionListener extends StatelessWidget {
         final router = GoRouter.of(context);
         if (router.routerDelegate.currentConfiguration.uri.path !=
             AccountStatusScreen.path) {
-          context.pushNamed(AccountStatusScreen.routeName, extra: true);
+          runDetached(
+            context.pushNamed(AccountStatusScreen.routeName, extra: true),
+            'open account status',
+            logName: 'VideoInteractionsRestrictionListener',
+            category: LogCategory.ui,
+          );
         }
       },
       child: child,

@@ -9,6 +9,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
 import 'package:openvine/blocs/inline_comment_composer/inline_comment_composer_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Comment composer pinned to the bottom of [PooledFullscreenVideoFeedScreen].
 ///
@@ -90,9 +92,14 @@ class _InlineCommentComposerBarState extends State<InlineCommentComposerBar> {
     // cubit owns the snackbar via the BlocListener wired below, which
     // also restores [_pendingDraft] into the field on failure.
     _pendingDraft = text;
-    context.read<InlineCommentComposerCubit>().submit(
-      video: video,
-      content: text,
+    runDetached(
+      context.read<InlineCommentComposerCubit>().submit(
+        video: video,
+        content: text,
+      ),
+      'submit inline comment',
+      logName: 'InlineCommentComposerBar',
+      category: LogCategory.ui,
     );
     _controller.clear();
     _focusNode.unfocus();

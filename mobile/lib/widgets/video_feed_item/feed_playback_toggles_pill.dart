@@ -7,7 +7,6 @@
 import 'dart:ui';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +14,9 @@ import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Scrim-30 backdrop-blurred capsule housing the three playback toggles:
 /// auto-advance ("compilations"), audio mute, and closed-captions.
@@ -166,12 +168,13 @@ class _AudioToggle extends StatelessWidget {
         context.read<VideoVolumeCubit>().onPlaybackVolumeChanged(
           isMuted ? 1 : 0,
         );
-        SemanticsService.sendAnnouncement(
-          View.of(context),
+        announceDetached(
+          context,
           isMuted
               ? context.l10n.videoPlayerUnmute
               : context.l10n.videoPlayerMute,
-          Directionality.of(context),
+          description: 'announce mute toggle',
+          logName: 'FeedPlaybackTogglesPill',
         );
       },
       child: DivineIcon(
@@ -205,7 +208,12 @@ class _CaptionsToggle extends ConsumerWidget {
           : context.l10n.videoSettingsCaptionsEnable,
       onTap: () {
         if (videoId == null) {
-          ref.read(subtitleVisibilityProvider.notifier).toggle();
+          runDetached(
+            ref.read(subtitleVisibilityProvider.notifier).toggle(),
+            'persist global captions preference',
+            logName: 'FeedPlaybackTogglesPill',
+            category: LogCategory.ui,
+          );
         } else {
           ref
               .read(subtitleVisibilityOverrideProvider.notifier)
