@@ -43,6 +43,13 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
 
   // Debounce timer for batching rapid stream updates
   Timer? _updateDebounceTimer;
+
+  /// Pending auto-pagination timers, held so [dispose] can cancel them.
+  ///
+  /// Two call sites schedule these and both can be pending at once, so this
+  /// is a set rather than a single timer — collapsing them would drop one of
+  /// the attempts already counted against [_maxAutoPaginationAttempts].
+  final Set<Timer> _autoPaginateTimers = {};
   List<CuratedList>? _pendingLists;
 
   /// Track if we're in refresh mode (need to merge lists, not replace)
@@ -86,6 +93,10 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
   @override
   void dispose() {
     _updateDebounceTimer?.cancel();
+    for (final timer in _autoPaginateTimers) {
+      timer.cancel();
+    }
+    _autoPaginateTimers.clear();
     if (_subscription case final subscription?) {
       runDetached(
         subscription.cancel(),
@@ -201,16 +212,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
                     'currently have ${providerState.lists.length} lists)',
                     category: LogCategory.ui,
                   );
-                  Future.delayed(const Duration(milliseconds: 500), () {
-                    if (mounted && !_isLoadingMore) {
-                      runDetached(
-                        _loadMoreLists(),
-                        'load more public lists',
-                        logName: 'DiscoverListsScreen',
-                        category: LogCategory.ui,
-                      );
-                    }
-                  });
+                  _scheduleAutoPaginate();
                 }
               }
             });
@@ -261,6 +263,23 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
         );
       }
     }
+  }
+
+  /// Re-runs pagination shortly after a page lands, so a page that arrives
+  /// mostly filtered out still fills the viewport.
+  void _scheduleAutoPaginate() {
+    late final Timer timer;
+    timer = Timer(const Duration(milliseconds: 500), () {
+      _autoPaginateTimers.remove(timer);
+      if (!mounted || _isLoadingMore) return;
+      runDetached(
+        _loadMoreLists(),
+        'load more public lists',
+        logName: 'DiscoverListsScreen',
+        category: LogCategory.ui,
+      );
+    });
+    _autoPaginateTimers.add(timer);
   }
 
   Future<void> _loadMoreLists() async {
@@ -354,16 +373,7 @@ class _DiscoverListsScreenState extends ConsumerState<DiscoverListsScreen>
             'have ${finalState.lists.length} lists)',
             category: LogCategory.ui,
           );
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted && !_isLoadingMore) {
-              runDetached(
-                _loadMoreLists(),
-                'load more public lists',
-                logName: 'DiscoverListsScreen',
-                category: LogCategory.ui,
-              );
-            }
-          });
+          _scheduleAutoPaginate();
         }
       }
     }
