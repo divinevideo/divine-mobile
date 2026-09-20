@@ -1,11 +1,31 @@
 // ABOUTME: Tests for the provider-layer wrapper around detached lifecycle work.
-// ABOUTME: Pins that provider failures reach the log under the system category.
+// ABOUTME: Pins the system log category and the reporter hand-off.
 
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+}
 
 void main() {
   group('runProviderDetached', () {
@@ -45,5 +65,23 @@ void main() {
         );
       },
     );
+
+    test('forwards an injected reporter to the shared helper', () async {
+      final reporter = _RecordingCrashReporter();
+      final errors = <Object>[];
+
+      await runZonedGuarded(() async {
+        runProviderDetached(
+          Future<void>.error(StateError('boom')),
+          'initialize the follow repository',
+          logName: 'FollowRepository',
+          reporter: reporter,
+        );
+        await pumpEventQueue();
+      }, (error, _) => errors.add(error));
+
+      expect(errors, isEmpty);
+      expect(reporter.recordedErrors, hasLength(1));
+    });
   });
 }

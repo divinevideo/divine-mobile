@@ -297,6 +297,31 @@ void main() {
           await cubit.close();
         },
       );
+
+      test(
+        'does not emit when profile hydration completes after close',
+        () async {
+          final cachedProfile = Completer<UserProfile?>();
+          when(
+            () => followRepository.followingPubkeys,
+          ).thenReturn([_alicePubkey]);
+          when(
+            () => followRepository.watchMyFollowers(),
+          ).thenAnswer((_) => const Stream.empty());
+          when(
+            () => profileRepository.getCachedProfile(pubkey: _alicePubkey),
+          ).thenAnswer((_) => cachedProfile.future);
+
+          final cubit = createCubit();
+          await cubit.started();
+          await cubit.close();
+
+          cachedProfile.complete(_profile(pubkey: _alicePubkey));
+          await _flush();
+
+          expect(cubit.isClosed, isTrue);
+        },
+      );
     });
 
     group('queryChanged', () {

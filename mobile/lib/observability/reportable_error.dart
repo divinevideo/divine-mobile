@@ -16,6 +16,23 @@ import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 /// a specific call site, use [Reportable].
 abstract interface class ReportableError implements Exception {}
 
+/// Returns [error] in a form that is eligible for crash reporting.
+///
+/// The decision matrix in `.claude/rules/error_handling.md` treats explicit
+/// [ReportableError]s and programming-invariant errors as reportable. All
+/// other failures remain visible in the unified log without reaching the
+/// crash reporter.
+ReportableError? asReportableError(
+  Object error, {
+  required String context,
+}) {
+  if (error is ReportableError) return error;
+  if (error is StateError || error is TypeError || error is RangeError) {
+    return Reportable(error, context: context);
+  }
+  return null;
+}
+
 /// Wraps a foreign error so it can be forwarded to Crashlytics through a
 /// `BlocObserver` filter without modifying the underlying exception type.
 ///
@@ -32,8 +49,10 @@ abstract interface class ReportableError implements Exception {}
 /// multiple call sites in the same bloc.
 ///
 /// [toString] runs [sanitizeForCrashReport] over the inner error's
-/// stringification so `npub1…` / `nsec1…` identifiers never reach the crash
-/// reporter, regardless of which call site produced the error.
+/// stringification *and* over [context] so `npub1…` / `nsec1…` identifiers
+/// never reach the crash reporter, regardless of which call site produced the
+/// error. [context] is sanitized too because callers build it from runtime
+/// values — `runDetached` derives it from a caller-supplied description.
 final class Reportable<T extends Object> implements ReportableError {
   const Reportable(this.error, {this.context});
 
@@ -45,7 +64,8 @@ final class Reportable<T extends Object> implements ReportableError {
   @override
   String toString() {
     final sanitized = sanitizeForCrashReport(error.toString());
-    final ctx = context;
+    final rawContext = context;
+    final ctx = rawContext == null ? null : sanitizeForCrashReport(rawContext);
     // Use the inner error's runtime type rather than the generic [T] —
     // most call sites live inside `catch (e, st)` blocks where `e` is
     // statically `Object`, so `T` would erase the actual inner type.

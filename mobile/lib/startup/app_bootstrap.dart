@@ -55,6 +55,7 @@ import 'package:openvine/startup/database_bootstrap_failure_app.dart';
 import 'package:openvine/startup/startup_coordinator_factory.dart';
 import 'package:openvine/startup/window_size_constants.dart';
 import 'package:openvine/utils/app_uptime.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/expected_network_error.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -247,6 +248,7 @@ Future<void> startOpenVineApp({
   // reporter seams are assigned here. Without this they keep their silent
   // default and their reports are lost (#4743).
   _shorebirdCrashReporter = crashReporting;
+  detachedFailureReporter = crashReporting;
   VideoThumbnailService.crashReporter = crashReporting;
   ZendeskSupportService.crashlytics = crashReporting;
   VideoRenderWatchdog.crashReporter = crashReporting;

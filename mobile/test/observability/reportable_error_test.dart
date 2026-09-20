@@ -1,5 +1,5 @@
 // ABOUTME: Tests for ReportableError marker, Reportable<T> wrapper, and the
-// ABOUTME: npub/nsec sanitizer that runs on Reportable.toString().
+// ABOUTME: npub/nsec sanitizer that runs over both halves of that toString().
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -59,6 +59,30 @@ void main() {
       expect(wrapped.toString(), isNot(contains(npub)));
     });
 
+    test('toString sanitizes npub identifiers in the context', () {
+      const npub =
+          'npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvw';
+      final wrapped = Reportable(
+        StateError('boom'),
+        context: 'runDetached refresh profile for $npub',
+      );
+
+      expect(wrapped.toString(), contains('npub1<redacted>'));
+      expect(wrapped.toString(), isNot(contains(npub)));
+    });
+
+    test('toString sanitizes nsec identifiers in the context', () {
+      const nsec =
+          'nsec1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvw';
+      final wrapped = Reportable(
+        StateError('boom'),
+        context: 'runDetached rotate $nsec',
+      );
+
+      expect(wrapped.toString(), contains('nsec1<redacted>'));
+      expect(wrapped.toString(), isNot(contains(nsec)));
+    });
+
     test('toString sanitizes nsec identifiers in the inner message', () {
       const nsec =
           'nsec1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvw';
@@ -68,6 +92,32 @@ void main() {
 
       expect(wrapped.toString(), contains('nsec1<redacted>'));
       expect(wrapped.toString(), isNot(contains(nsec)));
+    });
+  });
+
+  group('asReportableError', () {
+    test('preserves explicitly reportable errors', () {
+      final error = Reportable(Exception('invariant'), context: 'test');
+
+      expect(asReportableError(error, context: 'ignored'), same(error));
+    });
+
+    test('wraps bare programming invariant errors', () {
+      final error = StateError('closed');
+
+      final reportable = asReportableError(error, context: 'detached work');
+
+      expect(reportable, isA<Reportable<Object>>());
+      final wrapped = reportable! as Reportable<Object>;
+      expect(wrapped.unwrap(), same(error));
+      expect(wrapped.context, 'detached work');
+    });
+
+    test('leaves expected operational errors unreportable', () {
+      expect(
+        asReportableError(Exception('timed out'), context: 'detached work'),
+        isNull,
+      );
     });
   });
 

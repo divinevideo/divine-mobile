@@ -179,6 +179,18 @@ bugs.
 | Project-owned `*InvariantException` types | YES | Domain code intentionally signaling impossibility. |
 | When in doubt | NO | Better to under-report and migrate later than flood. |
 
+### Detached work
+
+`runDetached` owns intentionally unawaited lifecycle and event-handler work.
+It always records failures in the unified log, then applies the same
+`asReportableError` gate as `DivineBlocObserver`: explicit `ReportableError`s
+and bare `StateError`, `TypeError`, or `RangeError` values are forwarded as
+non-fatal crash reports; expected operational failures remain log-only.
+
+Do not use `runDetached` to silence a reportable failure. Fix the underlying
+invariant violation, or classify a project-owned invariant with
+`ReportableError`; detached work does not make a defect non-reportable.
+
 ### Migration recipe
 
 If the matrix says YES, wrap the inner error at the `addError` call site:
@@ -259,7 +271,7 @@ Pure-Dart packages under `mobile/packages/` cannot import
 `package:openvine/observability/...` without inverting the layer
 boundary. The approved alternative is a **reporter-port typedef**
 injected as a nullable constructor parameter, wired in the app layer
-to `CrashReportingService.instance.recordError`.
+to the app-layer `crashReportingServiceProvider` reporter.
 
 Shape (the canonical reference is `dm_repository` — see
 `mobile/packages/dm_repository/lib/src/dm_repository.dart` and
@@ -293,10 +305,11 @@ class FooRepository {
   }
 }
 
-// In the app layer (provider wiring)
+// In the app layer (provider wiring, where `ref` is available)
+final crashReporting = ref.read(crashReportingServiceProvider);
 FooRepository(
   errorReporter: (e, st, {required String site}) {
-    CrashReportingService.instance.recordError(
+    crashReporting.recordError(
       e,
       st,
       reason: 'FooRepository.$site',

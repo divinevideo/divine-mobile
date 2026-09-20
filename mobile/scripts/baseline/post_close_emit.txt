@@ -17,5 +17,4 @@ lib/blocs/email_verification/email_verification_cubit.dart	14
 lib/blocs/notifications/badge/notification_badge_cubit.dart	1
 lib/blocs/signature_verification_policy/signature_verification_policy_cubit.dart	1
 lib/blocs/storage/storage_cubit.dart	12
-lib/features/people_lists/bloc/add_people_to_list_cubit.dart	6
 lib/widgets/profile/pending_collaborator_invite_banner_cubit.dart	1

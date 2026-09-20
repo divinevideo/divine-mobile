@@ -220,6 +220,10 @@ State management:
   bug, not the fix. An `on<Event>` handler's own `emit` parameter is
   exempt — `Bloc.close()` cancels it. See
   [`state_management.md`](state_management.md#work-that-outlives-close-emitifopen--addifopen).
+- [ ] Detached work uses `runDetached` only when the caller does not need its
+  result; it still reports `ReportableError` and programming-invariant
+  failures. Do not use it to silence a defect. See
+  [`error_handling.md`](error_handling.md#detached-work).
 - [ ] No error strings / exception objects in BLoC `state`. Use status
   enums + `addError`. See [`state_management.md`](state_management.md).
 - [ ] No mutable instance variables on a BLoC class. All state lives in

@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/features/people_lists/bloc/add_people_to_list_state.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -24,7 +25,8 @@ import 'package:profile_repository/profile_repository.dart';
 ///   * resolve [ProfileRepository] metadata for each candidate without
 ///     blocking the picker — cached profiles are used when present, and
 ///     a fresh fetch is fired-and-forgotten for the rest.
-class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
+class AddPeopleToListCubit extends Cubit<AddPeopleToListState>
+    with CloseGuardedEmit<AddPeopleToListState> {
   /// Creates a new cubit scoped to a single picker instance.
   ///
   /// [existingMemberPubkeys] should contain the full-hex pubkeys already in
@@ -53,7 +55,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
   /// Load candidates. Emits [AddPeopleToListStatus.ready] on success and
   /// [AddPeopleToListStatus.failure] on error.
   Future<void> started() async {
-    emit(state.copyWith(status: AddPeopleToListStatus.loading));
+    emitIfOpen(state.copyWith(status: AddPeopleToListStatus.loading));
     try {
       _candidatesByPubkey.clear();
 
@@ -84,7 +86,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
       // Resolve profile metadata for seeded pubkeys off the critical path.
       unawaited(_hydrateProfiles(_candidatesByPubkey.keys.toList()));
 
-      emit(
+      emitIfOpen(
         state.copyWith(
           status: AddPeopleToListStatus.ready,
           candidates: _sortedCandidates(),
@@ -92,14 +94,14 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(status: AddPeopleToListStatus.failure));
+      emitIfOpen(state.copyWith(status: AddPeopleToListStatus.failure));
     }
   }
 
   /// Update the current search query.
   void queryChanged(String query) {
     if (query == state.query) return;
-    emit(state.copyWith(query: query));
+    emitIfOpen(state.copyWith(query: query));
   }
 
   /// Toggle whether [pubkey] is selected for batch-add.
@@ -112,7 +114,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
     if (!next.add(pubkey)) {
       next.remove(pubkey);
     }
-    emit(state.copyWith(selectedPubkeys: next));
+    emitIfOpen(state.copyWith(selectedPubkeys: next));
   }
 
   /// Re-run the loader after a prior failure.
@@ -173,7 +175,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
 
     if (newlyAdded.isNotEmpty) unawaited(_hydrateProfiles(newlyAdded));
 
-    emit(
+    emitIfOpen(
       state.copyWith(
         status: AddPeopleToListStatus.ready,
         candidates: _sortedCandidates(),
@@ -199,7 +201,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
 
     if (newlyAdded.isNotEmpty) unawaited(_hydrateProfiles(newlyAdded));
 
-    emit(
+    emitIfOpen(
       state.copyWith(
         status: AddPeopleToListStatus.ready,
         candidates: _sortedCandidates(),
@@ -238,7 +240,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
     }
 
     if (changed) {
-      emit(state.copyWith(candidates: _sortedCandidates()));
+      emitIfOpen(state.copyWith(candidates: _sortedCandidates()));
     }
   }
 
@@ -248,7 +250,7 @@ class AddPeopleToListCubit extends Cubit<AddPeopleToListState> {
     try {
       final profile = await repo.fetchFreshProfile(pubkey: pubkey);
       if (profile != null && _applyProfile(pubkey, profile)) {
-        emit(state.copyWith(candidates: _sortedCandidates()));
+        emitIfOpen(state.copyWith(candidates: _sortedCandidates()));
       }
     } catch (error, stackTrace) {
       // Deliberate fallback: if the fetch fails, the candidate keeps its
