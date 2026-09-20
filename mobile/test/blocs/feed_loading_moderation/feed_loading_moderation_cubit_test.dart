@@ -1,5 +1,6 @@
 // ABOUTME: Tests for FeedLoadingModerationCubit.
-// ABOUTME: Covers deferred moderation check, timer cancellation, and error handling.
+// ABOUTME: Covers deferred moderation check, the post-await close guard,
+// ABOUTME: and error handling.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:fake_async/fake_async.dart';
