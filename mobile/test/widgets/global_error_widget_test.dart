@@ -15,6 +15,15 @@ class _ThrowsOnBuild extends StatelessWidget {
   }
 }
 
+/// The surface's own background, found from the headline upwards so a
+/// `ColoredBox` the app shell paints above it is never mistaken for it.
+Finder _surface() => find
+    .ancestor(
+      of: find.text('got a bit tangled'),
+      matching: find.byType(ColoredBox),
+    )
+    .first;
+
 void main() {
   group('buildGlobalErrorWidget', () {
     late FlutterErrorDetails details;
@@ -28,134 +37,145 @@ void main() {
       );
     });
 
-    testWidgets('renders tangled vine headline', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
+    group('renders', () {
+      testWidgets('the headline', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
 
-      expect(find.text('got a bit tangled'), findsOneWidget);
+        expect(find.text('got a bit tangled'), findsOneWidget);
+      });
+
+      testWidgets('the friendly explanation', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(
+          find.text("something tripped up here.\nit's not you, it's us."),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('the navigation hint', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(
+          find.text('try navigating away and coming back'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('the tangled vine illustration', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(find.byType(CustomPaint), findsWidgets);
+      });
+
+      testWidgets('debug info in debug mode', (tester) async {
+        // kDebugMode is true during tests
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(find.text('debug info'), findsOneWidget);
+        expect(
+          find.textContaining('Test error: widget build failed'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('the library name in debug mode', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(find.text('library: widgets library'), findsOneWidget);
+      });
+
+      testWidgets('the error context in debug mode', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(find.text('building TestWidget'), findsOneWidget);
+      });
+
+      testWidgets('error details without a context', (tester) async {
+        final minimalDetails = FlutterErrorDetails(
+          exception: Exception('Minimal error'),
+        );
+
+        await tester.pumpWidget(buildGlobalErrorWidget(minimalDetails));
+
+        expect(find.text('got a bit tangled'), findsOneWidget);
+      });
+
+      testWidgets('inside a scroll view for long error messages', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+      });
     });
 
-    testWidgets('renders friendly explanation text', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
+    group('before any app shell exists', () {
+      // Pumped as the root widget: no MaterialApp, no Theme, no MediaQuery and
+      // no Navigator, which is the shape of a failure during startup.
+      testWidgets('uses the dark background', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
 
-      expect(
-        find.text("something tripped up here.\nit's not you, it's us."),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('renders navigation hint', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      expect(find.text('try navigating away and coming back'), findsOneWidget);
-    });
-
-    testWidgets('renders tangled vine illustration', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      expect(find.byType(CustomPaint), findsWidgets);
-    });
-
-    testWidgets('shows debug info in debug mode', (tester) async {
-      // kDebugMode is true during tests
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      expect(find.text('debug info'), findsOneWidget);
-      expect(
-        find.textContaining('Test error: widget build failed'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('shows library name in debug mode', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      expect(find.text('library: widgets library'), findsOneWidget);
-    });
-
-    testWidgets('shows error context in debug mode', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      expect(find.text('building TestWidget'), findsOneWidget);
-    });
-
-    testWidgets('handles error details without context gracefully', (
-      tester,
-    ) async {
-      final minimalDetails = FlutterErrorDetails(
-        exception: Exception('Minimal error'),
-      );
-
-      await tester.pumpWidget(buildGlobalErrorWidget(minimalDetails));
-
-      expect(find.text('got a bit tangled'), findsOneWidget);
-    });
-
-    testWidgets('uses the dark background when no theme exists yet', (
-      tester,
-    ) async {
-      // Pumped as the root widget: no MaterialApp, no Theme, no Directionality,
-      // which is the shape of a failure before the app shell is up.
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      final container = tester.widget<Container>(find.byType(Container).first);
-      expect(container.color, equals(VineTheme.darkColors.background));
-    });
-
-    testWidgets('is scrollable for long error messages', (tester) async {
-      await tester.pumpWidget(buildGlobalErrorWidget(details));
-
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
+        expect(
+          tester.widget<ColoredBox>(_surface()).color,
+          equals(VineTheme.darkColors.background),
+        );
+      });
     });
   });
 
   group('installed as ErrorWidget.builder', () {
-    Widget themedApp({required ThemeData theme}) => MaterialApp(
+    /// Runs [body] with the branded builder installed.
+    ///
+    /// Installed inside the test body, not in `setUp`: the framework records
+    /// the builder when the body starts and fails the test if it differs at the
+    /// end, before any `addTearDown` runs. So the restore is inline, and the
+    /// tear-down only covers a body that throws first.
+    Future<void> withBrandedBuilder(Future<void> Function() body) async {
+      final originalBuilder = ErrorWidget.builder;
+      addTearDown(() => ErrorWidget.builder = originalBuilder);
+      ErrorWidget.builder = buildGlobalErrorWidget;
+      await body();
+      ErrorWidget.builder = originalBuilder;
+    }
+
+    Widget app({required Widget home, ThemeData? theme}) => MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: theme,
-      home: const _ThrowsOnBuild(),
+      theme: theme ?? VineTheme.theme,
+      home: home,
     );
 
-    testWidgets('replaces a widget that throws during build', (tester) async {
-      final originalBuilder = ErrorWidget.builder;
-      addTearDown(() => ErrorWidget.builder = originalBuilder);
-      ErrorWidget.builder = buildGlobalErrorWidget;
+    group('renders', () {
+      testWidgets(
+        'in place of a widget that throws during build',
+        (tester) => withBrandedBuilder(() async {
+          await tester.pumpWidget(app(home: const _ThrowsOnBuild()));
 
-      await tester.pumpWidget(themedApp(theme: VineTheme.theme));
-
-      // The framework reports the failure before it asks the builder for a
-      // replacement; the report is what the test binding hands back here.
-      expect(tester.takeException(), isA<StateError>());
-      expect(find.text('got a bit tangled'), findsOneWidget);
-      expect(find.textContaining('deliberate build failure'), findsOneWidget);
-
-      // Inline restore: the framework verifies the builder is unchanged at
-      // end-of-body, before addTearDown runs.
-      ErrorWidget.builder = originalBuilder;
-    });
-
-    testWidgets('follows the light appearance inside a light-themed app', (
-      tester,
-    ) async {
-      final originalBuilder = ErrorWidget.builder;
-      addTearDown(() => ErrorWidget.builder = originalBuilder);
-      ErrorWidget.builder = buildGlobalErrorWidget;
-
-      await tester.pumpWidget(themedApp(theme: VineTheme.lightTheme));
-      expect(tester.takeException(), isA<StateError>());
-
-      final surface = tester.widget<Container>(
-        find
-            .ancestor(
-              of: find.text('got a bit tangled'),
-              matching: find.byType(Container),
-            )
-            .first,
+          // The framework reports the failure before it asks the builder for
+          // a replacement; the report is what the test binding hands back.
+          expect(tester.takeException(), isA<StateError>());
+          expect(find.text('got a bit tangled'), findsOneWidget);
+          expect(
+            find.textContaining('deliberate build failure'),
+            findsOneWidget,
+          );
+        }),
       );
-      expect(surface.color, equals(VineTheme.lightColors.background));
-      expect(surface.color, isNot(equals(VineTheme.darkColors.background)));
 
-      ErrorWidget.builder = originalBuilder;
+      testWidgets(
+        'in the light appearance inside a light-themed app',
+        (tester) => withBrandedBuilder(() async {
+          await tester.pumpWidget(
+            app(home: const _ThrowsOnBuild(), theme: VineTheme.lightTheme),
+          );
+          expect(tester.takeException(), isA<StateError>());
+
+          final color = tester.widget<ColoredBox>(_surface()).color;
+          expect(color, equals(VineTheme.lightColors.background));
+          expect(color, isNot(equals(VineTheme.darkColors.background)));
+        }),
+      );
     });
   });
 }
