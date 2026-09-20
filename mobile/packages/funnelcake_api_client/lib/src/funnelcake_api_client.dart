@@ -93,10 +93,11 @@ class FunnelcakeApiClient {
   static const String profileSortFollowers = 'followers';
 
   /// Server-side cap on the engagement-list endpoints, used as the default
-  /// page size for [getVideoLikers] because the list renders in one screen.
+  /// page size for [getVideoLikers].
   ///
   /// Larger values are clamped to this by the API, so a video with more
-  /// likers is truncated here rather than paginated.
+  /// likers than this needs more than one request: pass the response's
+  /// `nextCursor` back as `cursor` until it comes back null (#9358).
   static const int maxVideoLikersLimit = 500;
 
   static const Set<String> _diagnosticStructuralKeys = {
@@ -1808,7 +1809,10 @@ class FunnelcakeApiClient {
   /// [eventId] is the Nostr event ID (or d-tag) for the video.
   /// [addressableId] is the optional `kind:pubkey:d-tag` coordinate; the
   /// server resolves one itself when omitted, and an explicit value wins.
-  /// [limit] is clamped server-side to [maxVideoLikersLimit].
+  /// [limit] is clamped server-side to [maxVideoLikersLimit], so a video with
+  /// more likers than that needs several calls: pass the previous response's
+  /// [PaginatedPubkeys.nextCursor] as [cursor] until it is null. Omitting
+  /// [cursor] asks for the first page.
   ///
   /// Resolves the whole NIP-33 coordinate, not just the id passed in: the
   /// `e`-tag arm expands across every sibling revision, so reactions left on
@@ -1830,6 +1834,7 @@ class FunnelcakeApiClient {
     String eventId, {
     String? addressableId,
     int limit = maxVideoLikersLimit,
+    String? cursor,
   }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -1842,6 +1847,9 @@ class FunnelcakeApiClient {
     final queryParams = <String, String>{'limit': limit.toString()};
     if (addressableId != null && addressableId.isNotEmpty) {
       queryParams['a'] = addressableId;
+    }
+    if (cursor != null && cursor.isNotEmpty) {
+      queryParams['cursor'] = cursor;
     }
 
     final uri = Uri.parse(
