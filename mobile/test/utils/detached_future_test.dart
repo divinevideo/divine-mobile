@@ -117,7 +117,7 @@ void main() {
         final reporter = _RecordingCrashReporter();
         final error = Reportable(Exception('invariant'), context: 'test');
 
-        await unhandledErrorsWhile(() async {
+        final unhandledErrors = await unhandledErrorsWhile(() async {
           runDetached(
             Future<void>.error(error),
             'load badges',
@@ -127,6 +127,7 @@ void main() {
           );
         });
 
+        expect(unhandledErrors, isEmpty);
         expect(reporter.recordedErrors, hasLength(1));
         expect(reporter.recordedErrors.single.error, same(error));
       },
@@ -137,7 +138,7 @@ void main() {
       () async {
         final reporter = _RecordingCrashReporter();
 
-        await unhandledErrorsWhile(() async {
+        final unhandledErrors = await unhandledErrorsWhile(() async {
           runDetached(
             Future<void>.error(TimeoutException('offline')),
             'load badges',
@@ -147,6 +148,7 @@ void main() {
           );
         });
 
+        expect(unhandledErrors, isEmpty);
         expect(reporter.recordedErrors, isEmpty);
         expect(logCapture.getRecentLogs(), hasLength(1));
       },

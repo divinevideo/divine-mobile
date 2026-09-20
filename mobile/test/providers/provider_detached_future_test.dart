@@ -68,6 +68,7 @@ void main() {
 
     test('forwards an injected reporter to the shared helper', () async {
       final reporter = _RecordingCrashReporter();
+      final errors = <Object>[];
 
       await runZonedGuarded(() async {
         runProviderDetached(
@@ -77,8 +78,9 @@ void main() {
           reporter: reporter,
         );
         await pumpEventQueue();
-      }, (_, _) {});
+      }, (error, _) => errors.add(error));
 
+      expect(errors, isEmpty);
       expect(reporter.recordedErrors, hasLength(1));
     });
   });
