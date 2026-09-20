@@ -34,7 +34,7 @@ Widget buildGlobalErrorWidget(FlutterErrorDetails details) {
   return _GlobalErrorWidget(details: details);
 }
 
-/// The surface itself: the illustration, the copy, and a details block.
+/// The surface itself: the message on the app's background.
 class _GlobalErrorWidget extends StatelessWidget {
   const _GlobalErrorWidget({required this.details});
 
@@ -44,136 +44,162 @@ class _GlobalErrorWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: Container(
+      child: ColoredBox(
         color: context.vineColors.background,
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // The tangled vine illustration
-                const SizedBox(
-                  width: 140,
-                  height: 140,
-                  child: CustomPaint(painter: _TangledVinePainter()),
-                ),
-                const SizedBox(height: 28),
+        child: _ErrorMessage(details: details),
+      ),
+    );
+  }
+}
 
-                // Headline
-                Text(
-                  'got a bit tangled',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: context.vineColors.primaryText,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    decoration: TextDecoration.none,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 10),
+/// The illustration and the copy, centred and scrollable.
+class _ErrorMessage extends StatelessWidget {
+  const _ErrorMessage({required this.details});
 
-                // Friendly explanation
-                Text(
-                  "something tripped up here.\nit's not you, it's us.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: context.vineColors.onSurfaceVariant,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    decoration: TextDecoration.none,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
+  final FlutterErrorDetails details;
 
-                // Gentle nudge
-                Text(
-                  'try navigating away and coming back',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: context.vineColors.onSurfaceMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    decoration: TextDecoration.none,
-                  ),
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // The tangled vine illustration
+              const SizedBox(
+                width: 140,
+                height: 140,
+                child: CustomPaint(painter: _TangledVinePainter()),
+              ),
+              const SizedBox(height: 28),
 
-                // Debug info for developers; on web the exception text is
-                // shown in every build mode.
-                if (kDebugMode || kIsWeb) ...[
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.vineColors.card,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: context.vineColors.disabled),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'debug info',
-                          style: TextStyle(
-                            color: context.vineColors.accentPositive,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.none,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          details.exceptionAsString(),
-                          maxLines: 6,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: VineTheme.error,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            fontFamily: 'monospace',
-                            decoration: TextDecoration.none,
-                            height: 1.4,
-                          ),
-                        ),
-                        if (details.context != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            details.context!.toDescription(),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: context.vineColors.onSurfaceMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              fontFamily: 'monospace',
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ],
-                        if (details.library != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            'library: ${details.library}',
-                            style: TextStyle(
-                              color: context.vineColors.onSurfaceMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                              fontFamily: 'monospace',
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
+              // Headline
+              Text(
+                'got a bit tangled',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: context.vineColors.primaryText,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.none,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Friendly explanation
+              Text(
+                "something tripped up here.\nit's not you, it's us.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: context.vineColors.onSurfaceVariant,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  decoration: TextDecoration.none,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Gentle nudge
+              Text(
+                'try navigating away and coming back',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: context.vineColors.onSurfaceMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+
+              // Debug info for developers; on web the exception text is shown
+              // in every build mode.
+              if (kDebugMode || kIsWeb) ...[
+                const SizedBox(height: 24),
+                _ErrorDetailsBlock(details: details),
               ],
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// What failed, for developers.
+class _ErrorDetailsBlock extends StatelessWidget {
+  const _ErrorDetailsBlock({required this.details});
+
+  final FlutterErrorDetails details;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.vineColors.card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.vineColors.disabled),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'debug info',
+            style: TextStyle(
+              color: context.vineColors.accentPositive,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              decoration: TextDecoration.none,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            details.exceptionAsString(),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: VineTheme.error,
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              fontFamily: 'monospace',
+              decoration: TextDecoration.none,
+              height: 1.4,
+            ),
+          ),
+          if (details.context != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              details.context!.toDescription(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.vineColors.onSurfaceMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'monospace',
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
+          if (details.library != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'library: ${details.library}',
+              style: TextStyle(
+                color: context.vineColors.onSurfaceMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                fontFamily: 'monospace',
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
