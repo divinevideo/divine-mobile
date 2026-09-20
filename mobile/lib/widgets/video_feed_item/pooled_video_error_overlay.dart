@@ -182,9 +182,13 @@ class _PooledVideoErrorOverlayState
       (VideoErrorType.generic, false, false, _) =>
         context.l10n.videoErrorPlayback,
     };
+    // `isAdultContentLocked` is a property of the account, not of this video,
+    // so it may only wall off age-restricted media. An unrelated playback
+    // error on any other video stays retryable for the same account.
+    final isAdultContentWalled = isAgeRestricted && widget.isAdultContentLocked;
     final body = isUnavailableAfterAuthRetry
         ? context.l10n.videoErrorUnavailableBody
-        : isAgeRestricted && widget.isAdultContentLocked
+        : isAdultContentWalled
         ? context.l10n.videoErrorAdultContentLocked
         : isAgeRestricted
         ? context.l10n.videoErrorVerifyAgeBody
@@ -192,9 +196,7 @@ class _PooledVideoErrorOverlayState
         ? context.l10n.videoErrorContentRestrictedBody
         : null;
     final showVerifyAge =
-        isAgeRestricted &&
-        !widget.isAdultContentLocked &&
-        widget.onVerifyAge != null;
+        isAgeRestricted && !isAdultContentWalled && widget.onVerifyAge != null;
     final showSkip =
         (isUnavailableAfterAuthRetry ||
             (isModerationRestricted && !isAgeRestricted)) &&
@@ -204,7 +206,7 @@ class _PooledVideoErrorOverlayState
         !isUnavailableAfterAuthRetry &&
         !showSkip &&
         !showVerifyAge &&
-        !widget.isAdultContentLocked;
+        !isAdultContentWalled;
     _maybeAutoRetryAgeRestricted(showVerifyAge: showVerifyAge);
 
     // Hard-walled states (forbidden / moderation-blocked / age-restricted)

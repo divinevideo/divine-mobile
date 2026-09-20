@@ -62,6 +62,7 @@ void main() {
       required VideoPlaybackStatusCubit cubit,
       MediaAuthInterceptor? interceptor,
       bool isProtectedMinor = false,
+      VideoErrorType errorType = VideoErrorType.ageRestricted,
     }) {
       final authInterceptor = interceptor ?? _MockMediaAuthInterceptor();
       when(
@@ -88,7 +89,7 @@ void main() {
                     status: VideoRetryResult.played,
                     errorType: null,
                   ),
-                  errorType: VideoErrorType.ageRestricted,
+                  errorType: errorType,
                   shouldPortraitExpand: true,
                   isSquare: false,
                 ),
@@ -174,6 +175,27 @@ void main() {
       expect(find.text(_verifyLabel), findsNothing);
       expect(find.text(l10n.videoErrorRetry), findsNothing);
       expect(find.text(l10n.videoErrorAdultContentLocked), findsOneWidget);
+    });
+
+    testWidgets('keeps Retry for protected minors on an unrelated playback '
+        'error', (tester) async {
+      final cubit = VideoPlaybackStatusCubit();
+      addTearDown(cubit.close);
+
+      await pumpOverlay(
+        tester,
+        cubit: cubit,
+        isProtectedMinor: true,
+        errorType: VideoErrorType.generic,
+      );
+      await tester.pump();
+
+      // The account-level lock walls off adult media, not every video the
+      // account fails to play.
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+      expect(find.text(l10n.videoErrorAdultContentLocked), findsNothing);
+      expect(find.text(_verifyLabel), findsNothing);
     });
   });
 }
