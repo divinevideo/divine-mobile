@@ -1,5 +1,5 @@
 // ABOUTME: Fire-and-forget async helper for widget lifecycle callbacks
-// ABOUTME: Logs a failure instead of leaving it an unhandled Future rejection
+// ABOUTME: Logs every failure, reports the reportable ones, leaks no rejection
 
 import 'dart:async';
 

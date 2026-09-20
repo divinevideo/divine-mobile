@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the provider-layer wrapper around detached lifecycle work.
-// ABOUTME: Pins that provider failures reach the log under the system category.
+// ABOUTME: Pins the system log category and the reporter hand-off.
 
 import 'dart:async';
 

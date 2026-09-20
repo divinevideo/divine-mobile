@@ -1,5 +1,5 @@
 // ABOUTME: Observes intentionally detached provider lifecycle futures.
-// ABOUTME: Routes asynchronous failures through the shared application logger.
+// ABOUTME: Routes their failures to the shared logger and the crash reporter.
 
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/utils/detached_future.dart';
