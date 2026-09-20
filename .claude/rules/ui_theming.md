@@ -695,7 +695,10 @@ so they live in the always-visible sliver region.
 
 Video playback is paused by more than one mechanism. Choose the owner based
 on the navigator and presentation type; do not add a pause-aware wrapper just
-to make nearby call sites look alike.
+to make nearby call sites look alike. All four helpers named below are the
+`PauseAwareModals` extension on `BuildContext`, in
+`mobile/lib/utils/pause_aware_modals.dart` — they resolve only once that
+library is imported.
 
 - A dialog or pushed page on the root navigator is already covered by route
   lifecycle: `AppShell` marks the shell obscured and pooled feeds observe the
@@ -711,11 +714,16 @@ to make nearby call sites look alike.
   and their disk prefetch; the current player is retained either way. Only a
   codec-heavy surface releases the current one, through
   `releaseCurrentWhenInactive` — the camera, the editor, the exporter.
-- Use the pause-aware bottom-sheet helper for bottom sheets. A sheet keeps
+- Use `context.showVideoPausingVineBottomSheet`, or
+  `context.showVideoPausingSelectionMenu` for a selection menu. A sheet keeps
   the neighbours warm for fast resume, so it is not interchangeable with a
-  page owner. The condition is
+  page owner: the condition is
   `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
-  owner and a sheet owner at once loses the retention.
+  owner and a sheet owner at once loses the retention. The two differ on
+  navigator — the first forwards `useRootNavigator` and defaults it to
+  `true`, while the second takes none and inherits `VineBottomSheet.show`'s
+  `false`, so it always lands on the branch navigator where the `AppShell`
+  net above cannot fire.
 
 `pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
 which runs on a **pop** alone: a `go()`-style dismissal — the Android back
