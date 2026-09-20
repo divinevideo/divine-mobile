@@ -62,9 +62,9 @@ void main() {
     group('initial state', () {
       test('is loading and not restricted', () {
         final cubit = buildCubit();
+        addTearDown(cubit.close);
         expect(cubit.state, const FeedLoadingModerationState());
         expect(cubit.state.isRestricted, isFalse);
-        addTearDown(cubit.close);
       });
     });
 
@@ -72,12 +72,12 @@ void main() {
       test('is a no-op when videoUrl is null', () {
         fakeAsync((fake) {
           final cubit = buildCubit();
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 5));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -85,12 +85,12 @@ void main() {
       test('is a no-op when videoUrl host is not a divine host', () {
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: 'https://example.com/video.mp4');
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 5));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -104,11 +104,11 @@ void main() {
 
           fakeAsync((fake) {
             final cubit = buildCubit(videoUrl: divineUrl);
+            addTearDown(cubit.close);
             cubit.start();
             fake.flushMicrotasks();
             expect(cubit.state.isRestricted, isTrue);
             verify(() => mockService.fetchStatus(sha256)).called(1);
-            addTearDown(cubit.close);
             fake.flushMicrotasks();
           });
         },
@@ -131,6 +131,7 @@ void main() {
 
           fakeAsync((fake) {
             final cubit = buildCubit(videoUrl: divineUrl);
+            addTearDown(cubit.close);
             cubit.start();
             fake.elapse(const Duration(seconds: 2));
             fake.flushMicrotasks();
@@ -140,7 +141,6 @@ void main() {
               cubit.state.status,
               FeedLoadingModerationStatus.ageRestricted,
             );
-            addTearDown(cubit.close);
             fake.flushMicrotasks();
           });
         },
@@ -161,12 +161,12 @@ void main() {
 
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
           cubit.start();
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isTrue);
           expect(cubit.state.isAgeRestricted, isFalse);
           expect(cubit.state.status, FeedLoadingModerationStatus.restricted);
-          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -178,11 +178,11 @@ void main() {
 
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -194,11 +194,11 @@ void main() {
 
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          addTearDown(cubit.close);
           fake.flushMicrotasks();
         });
       });
@@ -217,12 +217,12 @@ void main() {
               explicitSha256: explicitSha256,
               videoUrl: divineUrl,
             );
+            addTearDown(cubit.close);
             cubit.start();
             fake.elapse(const Duration(seconds: 3));
             fake.flushMicrotasks();
             verify(() => mockService.fetchStatus(explicitSha256)).called(1);
             verifyNever(() => mockService.fetchStatus(sha256));
-            addTearDown(cubit.close);
             fake.flushMicrotasks();
           });
         },

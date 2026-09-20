@@ -98,13 +98,13 @@ void main() {
 
     test('initial state is initial with default values', () {
       final bloc = createBloc();
+      addTearDown(bloc.close);
       expect(bloc.state.status, VideoInteractionsStatus.initial);
       expect(bloc.state.isLiked, isFalse);
       expect(bloc.state.likeCount, isNull);
       expect(bloc.state.isReposted, isFalse);
       expect(bloc.state.repostCount, isNull);
       expect(bloc.state.commentCount, isNull);
-      addTearDown(bloc.close);
     });
 
     test('initial state seeds engagement counts from initial counts', () {
@@ -113,10 +113,10 @@ void main() {
         initialCommentCount: 3,
         initialRepostCount: 7,
       );
+      addTearDown(bloc.close);
       expect(bloc.state.likeCount, equals(42));
       expect(bloc.state.commentCount, equals(3));
       expect(bloc.state.repostCount, equals(7));
-      addTearDown(bloc.close);
     });
 
     group('VideoInteractionsFetchRequested', () {

@@ -188,13 +188,13 @@ void main() {
 
     test('initial state is correct', () {
       final bloc = createBloc();
+      addTearDown(bloc.close);
       expect(bloc.state.status, VideoFeedStatus.loading);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.mode, FeedMode.forYou);
       expect(bloc.state.hasMore, isTrue);
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.error, isNull);
-      addTearDown(bloc.close);
     });
 
     group('feed tuning', () {

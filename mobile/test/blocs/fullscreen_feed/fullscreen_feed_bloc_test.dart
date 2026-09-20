@@ -134,12 +134,12 @@ void main() {
 
     test('initial state has correct values', () {
       final bloc = createBloc(initialIndex: 2);
+      addTearDown(bloc.close);
       expect(bloc.state.status, FullscreenFeedStatus.initial);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.currentIndex, 2);
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.canLoadMore, isFalse);
-      addTearDown(bloc.close);
     });
 
     test('load more stays unavailable until hasMoreStream emits true', () {
@@ -147,9 +147,9 @@ void main() {
         onLoadMore: () {},
         hasMoreStream: hasMoreController.stream,
       );
+      addTearDown(bloc.close);
 
       expect(bloc.state.canLoadMore, isFalse);
-      addTearDown(bloc.close);
     });
 
     group('FullscreenFeedState', () {
