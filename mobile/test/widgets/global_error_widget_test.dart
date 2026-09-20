@@ -16,6 +16,21 @@ class _ThrowsOnBuild extends StatelessWidget {
   }
 }
 
+/// Fails its first build and succeeds from the second on, recording each
+/// attempt in [attempts] so a test can tell a retry from a stray rebuild.
+class _FailsUntilRetried extends StatelessWidget {
+  const _FailsUntilRetried(this.attempts);
+
+  final List<int> attempts;
+
+  @override
+  Widget build(BuildContext context) {
+    attempts.add(attempts.length + 1);
+    if (attempts.length == 1) throw StateError('first build fails');
+    return const Text('recovered');
+  }
+}
+
 /// The surface's own background, found from the headline upwards so a
 /// `ColoredBox` the app shell paints above it is never mistaken for it.
 Finder _surface() => find
@@ -130,12 +145,30 @@ void main() {
           equals(VineTheme.darkColors.background),
         );
       });
+
+      testWidgets('offers Reload, and builds without throwing', (tester) async {
+        await tester.pumpWidget(buildGlobalErrorWidget(details));
+
+        expect(find.text('Reload'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
     });
 
     group('bundled assets', () {
       testWidgets('ships the mascot illustration', (tester) async {
         final data = await tester.runAsync(
           () => rootBundle.load(globalErrorMascotAsset),
+        );
+
+        expect(data!.lengthInBytes, greaterThan(0));
+      });
+
+      testWidgets('ships the Reload label font, so it is never fetched', (
+        tester,
+      ) async {
+        final data = await tester.runAsync(
+          () =>
+              rootBundle.load('assets/fonts/BricolageGrotesque-ExtraBold.ttf'),
         );
 
         expect(data!.lengthInBytes, greaterThan(0));
@@ -193,6 +226,27 @@ void main() {
           final color = tester.widget<ColoredBox>(_surface()).color;
           expect(color, equals(VineTheme.lightColors.background));
           expect(color, isNot(equals(VineTheme.darkColors.background)));
+        }),
+      );
+    });
+
+    group('Reload', () {
+      testWidgets(
+        're-runs the failed build and restores the widget',
+        (tester) => withBrandedBuilder(() async {
+          final attempts = <int>[];
+          await tester.pumpWidget(app(home: _FailsUntilRetried(attempts)));
+          expect(tester.takeException(), isA<StateError>());
+          expect(find.text('got a bit tangled'), findsOneWidget);
+          // Nothing but Reload may have caused the second build.
+          expect(attempts, equals([1]));
+
+          await tester.tap(find.text('Reload'));
+          await tester.pumpAndSettle();
+
+          expect(attempts, equals([1, 2]));
+          expect(find.text('recovered'), findsOneWidget);
+          expect(find.text('got a bit tangled'), findsNothing);
         }),
       );
     });

@@ -15,12 +15,14 @@ const globalErrorMascotAsset = 'assets/illustrations/error_mascot_tangled.png';
 /// failed. The startup sequence installs it as [ErrorWidget.builder].
 ///
 /// It has to render anywhere in the tree, including before [MaterialApp]
-/// exists, so it brings its own [Directionality] and sets raw text styles with
-/// an explicit `TextDecoration.none` rather than reaching for a [VineTheme]
-/// font helper: those resolve a Google font asynchronously, and a crash screen
-/// is the worst place to start a font fetch. Colours come from
+/// exists, so it brings its own [Directionality] and reads colours through
 /// `context.vineColors`, which follows the ambient appearance inside the app
-/// shell and falls back to the dark palette when no theme exists yet.
+/// shell and falls back to the dark palette when no theme exists yet. The copy
+/// sets raw text styles with an explicit `TextDecoration.none` so it paints on
+/// the first frame without waiting on a font. Reload is the real
+/// design-system button: its label variant, Bricolage Grotesque ExtraBold,
+/// ships in `assets/fonts/`, so resolving it is a local asset read and never a
+/// network fetch.
 ///
 /// Reporting is not this widget's job. Every framework call site reports
 /// [details] through [FlutterError.onError] before it asks the builder for a
@@ -39,6 +41,19 @@ Widget buildGlobalErrorWidget(FlutterErrorDetails details) {
   return _GlobalErrorWidget(details: details);
 }
 
+/// Re-runs the build that failed.
+///
+/// The framework mounts this surface as the direct child of the element whose
+/// build threw, so marking that parent dirty makes it build again, and a build
+/// that succeeds replaces this surface with the real subtree.
+void _retryFailedBuild(BuildContext context) {
+  if (!context.mounted) return;
+  context.visitAncestorElements((failedElement) {
+    failedElement.markNeedsBuild();
+    return false;
+  });
+}
+
 /// The surface itself: the message on the app's background.
 class _GlobalErrorWidget extends StatelessWidget {
   const _GlobalErrorWidget({required this.details});
@@ -51,17 +66,26 @@ class _GlobalErrorWidget extends StatelessWidget {
       textDirection: TextDirection.ltr,
       child: ColoredBox(
         color: context.vineColors.background,
-        child: _ErrorMessage(details: details),
+        child: _ErrorMessage(
+          details: details,
+          // This context, not a descendant's: its parent is the element whose
+          // build failed.
+          onReload: () => _retryFailedBuild(context),
+        ),
       ),
     );
   }
 }
 
-/// The illustration and the copy, centred and scrollable.
+/// The illustration, the copy and the Reload action, centred and scrollable.
 class _ErrorMessage extends StatelessWidget {
-  const _ErrorMessage({required this.details});
+  const _ErrorMessage({
+    required this.details,
+    required this.onReload,
+  });
 
   final FlutterErrorDetails details;
+  final VoidCallback onReload;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +145,13 @@ class _ErrorMessage extends StatelessWidget {
                   fontWeight: FontWeight.w400,
                   decoration: TextDecoration.none,
                 ),
+              ),
+              const SizedBox(height: 24),
+
+              DivineButton(
+                label: 'Reload',
+                type: DivineButtonType.secondary,
+                onPressed: onReload,
               ),
 
               // Debug info for developers; on web the exception text is shown
