@@ -1420,6 +1420,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       // The removal above means ownsInit() no longer holds, so the rebuild
       // after this block is skipped; the error layer still has to show.
       _rebuildPage(index);
+      // Initialization reached a definite outcome and recorded the failure.
+      // Falling through to the stale-init guard below would return `false` —
+      // which `_retryController` reads as "never attempted" — and a repeated
+      // age-gate rejection would then never reach `retryAt`'s caller as one.
+      return true;
     }
     // coverage:ignore-end
 
