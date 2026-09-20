@@ -455,6 +455,72 @@ void main() {
       );
 
       testWidgets(
+        'is offered when the failed page sat inside the safe area',
+        (tester) => withBrandedBuilder(() async {
+          const notch = FakeViewPadding(top: 141, bottom: 102);
+          tester.view.padding = notch;
+          tester.view.viewPadding = notch;
+          addTearDown(tester.view.resetPadding);
+          addTearDown(tester.view.resetViewPadding);
+          await pushOverPreviousPage(
+            tester,
+            const SafeArea(child: _ThrowsOnBuild()),
+          );
+
+          // Smaller than the navigator by exactly the system insets.
+          expect(tester.getSize(_surface()).height, lessThan(600));
+          expect(find.byType(DivineIconButton).hitTestable(), findsOneWidget);
+        }),
+      );
+
+      testWidgets(
+        'stays out of reach on a failed item of a list',
+        (tester) => withBrandedBuilder(() async {
+          final semantics = tester.ensureSemantics();
+          await pushOverPreviousPage(
+            tester,
+            Scaffold(
+              body: ListView.builder(
+                itemCount: 3,
+                itemBuilder: (_, index) => index == 1
+                    ? const _ThrowsOnBuild()
+                    : const SizedBox(height: 40, child: Text('a healthy row')),
+              ),
+            ),
+          );
+
+          // A list does not bound its items, so the failed one grows to the
+          // height of its content, which is taller than many whole screens.
+          expect(tester.getSize(_surface()).height, greaterThan(360));
+          expect(find.byType(DivineIconButton), findsOneWidget);
+          expect(find.byType(DivineIconButton).hitTestable(), findsNothing);
+          expect(find.bySemanticsLabel('Back'), findsNothing);
+
+          semantics.dispose();
+        }),
+      );
+
+      testWidgets(
+        'stays out of reach under an app bar that still works',
+        (tester) => withBrandedBuilder(() async {
+          await pushOverPreviousPage(
+            tester,
+            Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: const Text('a live app bar'),
+              ),
+              body: const _ThrowsOnBuild(),
+            ),
+          );
+
+          expect(find.text('a live app bar'), findsOneWidget);
+          expect(find.byType(DivineIconButton), findsOneWidget);
+          expect(find.byType(DivineIconButton).hitTestable(), findsNothing);
+        }),
+      );
+
+      testWidgets(
         'stays out of reach when only a fragment of the page failed',
         (tester) => withBrandedBuilder(() async {
           final semantics = tester.ensureSemantics();
