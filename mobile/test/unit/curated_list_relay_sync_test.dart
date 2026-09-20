@@ -193,7 +193,7 @@ void main() {
       streamController.add(mockEvent);
 
       // Close stream to complete
-      await streamController.close();
+      unawaited(streamController.close());
       await future;
 
       // Verify: List was created from the event
@@ -263,7 +263,7 @@ void main() {
       streamController.add(newerEvent);
 
       // Close stream to complete
-      await streamController.close();
+      unawaited(streamController.close());
       await future;
 
       // Verify: Only one list exists with the newer version
@@ -291,7 +291,7 @@ void main() {
 
       // First sync
       final future1 = curatedListService.fetchUserListsFromRelays();
-      await streamController.close();
+      unawaited(streamController.close());
       await future1;
 
       // Second sync should return early
@@ -380,7 +380,7 @@ void main() {
         // Sync from relay
         final future = freshService.fetchUserListsFromRelays();
         streamController.add(relayEvent);
-        await streamController.close();
+        unawaited(streamController.close());
         await future;
 
         // Verify: Local list was updated with relay version
