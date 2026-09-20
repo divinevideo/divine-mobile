@@ -2,6 +2,8 @@
 // ABOUTME: Covers deferred moderation check, the post-await close guard,
 // ABOUTME: and error handling.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -239,6 +241,44 @@ void main() {
         wait: const Duration(milliseconds: 50),
         errors: () => [isA<Exception>()],
         expect: () => const <FeedLoadingModerationState>[],
+      );
+    });
+
+    group('close', () {
+      late Completer<VideoModerationStatus?> pendingStatus;
+
+      setUp(() {
+        pendingStatus = Completer<VideoModerationStatus?>();
+      });
+
+      // Pins the post-await isClosed guard in _checkModeration. Without it the
+      // resumed emit throws onto a closed cubit and that StateError reaches
+      // the observer, so an empty `errors` is what makes this test bite.
+      blocTest<FeedLoadingModerationCubit, FeedLoadingModerationState>(
+        'drops an in-flight result instead of reporting after close',
+        build: () {
+          when(
+            () => mockService.fetchStatus(sha256),
+          ).thenAnswer((_) => pendingStatus.future);
+          return FeedLoadingModerationCubit(
+            service: mockService,
+            explicitSha256: sha256,
+            videoUrl: divineUrl,
+          );
+        },
+        act: (cubit) async {
+          cubit.start();
+          await pumpEventQueue();
+          await cubit.close();
+          pendingStatus.complete(blockedStatus);
+          await pumpEventQueue();
+        },
+        errors: () => const <Object>[],
+        expect: () => const <FeedLoadingModerationState>[],
+        verify: (_) {
+          // Positive control: the fetch really was in flight across close().
+          verify(() => mockService.fetchStatus(sha256)).called(1);
+        },
       );
     });
   });
