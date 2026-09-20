@@ -714,6 +714,15 @@ to make nearby call sites look alike.
   `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
   owner and a sheet owner at once loses the retention.
 
+`pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
+which runs on a **pop** alone: a `go()`-style dismissal — the Android back
+handler, a deep link, a refresh redirect — drops the completer. The
+compensating net is `AppShell` clearing the flag when the shell is uncovered,
+and that only fires for a route directly above the shell on the root
+navigator. So on a navigator the shell does not observe, give the
+presentation its own release path rather than relying on the returned future;
+a stranded owner means the home feed never autoplays again (#6239).
+
 When replacing one overlay with another, take the next owner before dismissing
 the current overlay if a visible resume frame would be unacceptable. Verify a
 reported flicker on a device before changing that sequencing.
