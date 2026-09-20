@@ -56,7 +56,7 @@ class CommentActionButton extends StatelessWidget {
             onInteracted?.call();
             Log.info(
               '💬 Comment button tapped for ${video.id}',
-              name: 'VideoFeedItem',
+              name: 'CommentActionButton',
               category: LogCategory.ui,
             );
             final interactionsBloc = context.read<VideoInteractionsBloc?>();
@@ -76,7 +76,7 @@ class CommentActionButton extends StatelessWidget {
                       },
               ),
               'present comments screen',
-              logName: 'VideoFeedItem',
+              logName: 'CommentActionButton',
               category: LogCategory.ui,
             );
           },
