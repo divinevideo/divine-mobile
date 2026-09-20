@@ -716,6 +716,8 @@
   "videoErrorSkip": "Langkau",
   "videoErrorVerifyAgeButton": "Sahkan umur",
   "videoErrorVerifyAgeFailed": "Tidak dapat mengesahkan umur anda. Sila cuba lagi.",
+  "videoErrorPlaybackStartFailed": "Kami tidak dapat memulakan video ini. Sila cuba lagi.",
+  "videoErrorAdultContentLocked": "Video ini hanya tersedia untuk orang dewasa.",
   "videoErrorVerifyAgeSignerUnreachable": "Pengesahan tamat masa. Semak sambungan anda atau cuba lagi sebentar nanti.",
   "@videoErrorVerifyAgeSignerUnreachable": {
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."

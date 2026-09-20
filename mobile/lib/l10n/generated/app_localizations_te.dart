@@ -1705,6 +1705,14 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ వయస్సుని ధృవీకరించడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'ఈ వీడియోను ప్రారంభించలేకపోయాం. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'ఈ వీడియో పెద్దలకు మాత్రమే అందుబాటులో ఉంది.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'ధృవీకరణ సమయం ముగిసింది. మీ కనెక్షన్‌ని తనిఖీ చేయండి లేదా త్వరలో మళ్లీ ప్రయత్నించండి.';
 

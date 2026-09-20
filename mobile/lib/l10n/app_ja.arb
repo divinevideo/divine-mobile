@@ -556,6 +556,8 @@
     "videoErrorSkip": "スキップ",
     "videoErrorVerifyAgeButton": "年齢を確認",
     "videoErrorVerifyAgeFailed": "年齢を確認できませんでした。もう一回試してみて",
+    "videoErrorPlaybackStartFailed": "この動画を開始できませんでした。もう一回試してみて。",
+    "videoErrorAdultContentLocked": "この動画は成人のみ視聴できます。",
     "videoErrorVerifyAgeSignerUnreachable": "確認がタイムアウトしました。接続を確認するか、少し時間をおいてもう一回試してみて",
     "videoFollowButtonFollow": "フォロー",
     "audioAttributionOriginalSound": "オリジナルサウンド",

@@ -1643,6 +1643,14 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat mengesahkan umur anda. Sila cuba lagi.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Kami tidak dapat memulakan video ini. Sila cuba lagi.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Video ini hanya tersedia untuk orang dewasa.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Pengesahan tamat masa. Semak sambungan anda atau cuba lagi sebentar nanti.';
 

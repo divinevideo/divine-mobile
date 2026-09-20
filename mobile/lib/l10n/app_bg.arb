@@ -595,6 +595,8 @@
     "videoErrorSkip": "Пропусни",
     "videoErrorVerifyAgeButton": "Потвърди възрастта",
     "videoErrorVerifyAgeFailed": "Възрастта ти не можа да бъде потвърдена. Опитай пак.",
+    "videoErrorPlaybackStartFailed": "Не успяхме да стартираме този видеоклип. Опитай пак.",
+    "videoErrorAdultContentLocked": "Този видеоклип е достъпен само за възрастни.",
     "videoErrorVerifyAgeSignerUnreachable": "Потвърждаването изтече. Провери връзката си или опитай пак след малко.",
     "videoFollowButtonFollow": "Следвай",
     "audioAttributionOriginalSound": "Оригинален звук",

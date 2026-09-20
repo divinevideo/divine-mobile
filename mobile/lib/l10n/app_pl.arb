@@ -556,6 +556,8 @@
     "videoErrorSkip": "Pomiń",
     "videoErrorVerifyAgeButton": "Zweryfikuj wiek",
     "videoErrorVerifyAgeFailed": "Nie udało się zweryfikować Twojego wieku. Spróbuj ponownie.",
+    "videoErrorPlaybackStartFailed": "Nie udało się uruchomić tego filmu. Spróbuj ponownie.",
+    "videoErrorAdultContentLocked": "Ten film jest dostępny tylko dla dorosłych.",
     "videoErrorVerifyAgeSignerUnreachable": "Przekroczono czas weryfikacji. Sprawdź połączenie lub spróbuj ponownie za chwilę.",
     "videoFollowButtonFollow": "Obserwuj",
     "audioAttributionOriginalSound": "Oryginalny dźwięk",

@@ -556,6 +556,8 @@
     "videoErrorSkip": "Pular",
     "videoErrorVerifyAgeButton": "Verificar idade",
     "videoErrorVerifyAgeFailed": "Não foi possível verificar sua idade. Por favor, tente novamente.",
+    "videoErrorPlaybackStartFailed": "Não foi possível iniciar este vídeo. Tente novamente.",
+    "videoErrorAdultContentLocked": "Este vídeo está disponível apenas para adultos.",
     "videoErrorVerifyAgeSignerUnreachable": "Tempo de verificação esgotado. Verifique sua conexão ou tente novamente em breve.",
     "videoFollowButtonFollow": "Seguir",
     "audioAttributionOriginalSound": "Som original",

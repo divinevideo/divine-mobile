@@ -716,6 +716,8 @@
   "videoErrorSkip": "Bỏ qua",
   "videoErrorVerifyAgeButton": "Xác minh tuổi",
   "videoErrorVerifyAgeFailed": "Không xác minh được tuổi của bạn. Vui lòng thử lại.",
+  "videoErrorPlaybackStartFailed": "Không thể bắt đầu video này. Vui lòng thử lại.",
+  "videoErrorAdultContentLocked": "Video này chỉ dành cho người lớn.",
   "videoErrorVerifyAgeSignerUnreachable": "Xác minh đã hết thời gian chờ. Kiểm tra kết nối của bạn hoặc thử lại sau ít phút.",
   "@videoErrorVerifyAgeSignerUnreachable": {
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."

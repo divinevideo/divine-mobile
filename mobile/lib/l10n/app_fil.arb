@@ -426,6 +426,8 @@
     "videoErrorSkip": "Laktawan",
     "videoErrorVerifyAgeButton": "I-verify ang edad",
     "videoErrorVerifyAgeFailed": "Hindi na-verify ang edad mo. Subukan ulit.",
+    "videoErrorPlaybackStartFailed": "Hindi namin masimulan ang video na ito. Subukan ulit.",
+    "videoErrorAdultContentLocked": "Para lang sa mga adult ang video na ito.",
     "videoErrorVerifyAgeSignerUnreachable": "Nag-timeout ang pag-verify. I-check ang koneksyon mo o subukan ulit mamaya.",
     "videoFollowButtonFollow": "Sundan",
     "audioAttributionOriginalSound": "Orihinal na sound",

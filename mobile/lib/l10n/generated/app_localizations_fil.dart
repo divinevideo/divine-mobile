@@ -1660,6 +1660,14 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-verify ang edad mo. Subukan ulit.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Hindi namin masimulan ang video na ito. Subukan ulit.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Para lang sa mga adult ang video na ito.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Nag-timeout ang pag-verify. I-check ang koneksyon mo o subukan ulit mamaya.';
 

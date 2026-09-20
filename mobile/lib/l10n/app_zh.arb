@@ -716,6 +716,8 @@
   "videoErrorSkip": "跳过",
   "videoErrorVerifyAgeButton": "验证年龄",
   "videoErrorVerifyAgeFailed": "无法验证你的年龄，请重试。",
+  "videoErrorPlaybackStartFailed": "无法开始播放此视频，请重试。",
+  "videoErrorAdultContentLocked": "此视频仅限成人观看。",
   "videoErrorVerifyAgeSignerUnreachable": "验证超时。请检查网络连接，或稍后再试。",
   "@videoErrorVerifyAgeSignerUnreachable": {
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."

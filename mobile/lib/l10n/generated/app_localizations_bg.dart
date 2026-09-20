@@ -1687,6 +1687,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Възрастта ти не можа да бъде потвърдена. Опитай пак.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Не успяхме да стартираме този видеоклип. Опитай пак.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Този видеоклип е достъпен само за възрастни.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Потвърждаването изтече. Провери връзката си или опитай пак след малко.';
 

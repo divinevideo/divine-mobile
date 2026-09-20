@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
+import 'package:infinite_video_feed/src/models/video_retry_result.dart';
 import 'package:infinite_video_feed/src/widgets/infinite_video_feed.dart';
 import 'package:infinite_video_feed/src/widgets/video_item.dart';
 import 'package:media_cache/media_cache.dart';
@@ -4234,6 +4235,67 @@ void main() {
           );
           // Out-of-range and healthy slots stay null.
           expect(key.currentState!.errorTypeAt(1), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+    });
+
+    group('retryAt', () {
+      testWidgets('reports a completed failure rather than a skipped init '
+          'when the retried source keeps failing', (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const <int>[0, 1, 2, 3]);
+        final key = GlobalKey<InfiniteVideoFeedState>();
+
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: [_makeVideo('retry_still_rejected')],
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+                errorBuilder: (_, _, _, _) => const Text('VIDEO_ERROR'),
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(key.currentState!.errorTypeAt(0), isNull);
+
+          // Every source the retry opens is rejected the way the media server
+          // rejects an age-gated blob, so initialization runs to completion and
+          // records the failure.
+          for (final playerId in const <int>[1, 2, 3]) {
+            harness.setClipsFailures[playerId] = List<Exception>.generate(
+              12,
+              (_) => PlatformException(
+                code: 'network_error',
+                message: 'HTTP 401 Unauthorized',
+              ),
+            );
+          }
+
+          final pending = key.currentState!.retryAt(0);
+          await tester.pump();
+          await tester.pump();
+          await tester.pump();
+          final result = await pending;
+          await tester.pump();
+
+          // `failed` — not `notAttempted`: the caller can only recognise a
+          // repeated age-gate rejection, and stop offering Verify age, when a
+          // completed failure is distinguishable from a skipped init.
+          expect(result, equals(VideoRetryResult.failed));
+          expect(
+            key.currentState!.errorTypeAt(0),
+            equals(VideoErrorType.ageRestricted),
+          );
         } finally {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();

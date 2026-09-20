@@ -556,6 +556,8 @@
     "videoErrorSkip": "Lewati",
     "videoErrorVerifyAgeButton": "Verifikasi usia",
     "videoErrorVerifyAgeFailed": "Tidak dapat memverifikasi usia kamu. Silakan coba lagi.",
+    "videoErrorPlaybackStartFailed": "Kami tidak dapat memulai video ini. Silakan coba lagi.",
+    "videoErrorAdultContentLocked": "Video ini hanya tersedia untuk orang dewasa.",
     "videoErrorVerifyAgeSignerUnreachable": "Waktu verifikasi habis. Periksa koneksi kamu atau coba lagi sebentar lagi.",
     "videoFollowButtonFollow": "Ikuti",
     "audioAttributionOriginalSound": "Suara asli",

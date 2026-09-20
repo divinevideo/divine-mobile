@@ -716,6 +716,8 @@
   "videoErrorSkip": "چھوڑیں",
   "videoErrorVerifyAgeButton": "عمر کی تصدیق کریں",
   "videoErrorVerifyAgeFailed": "آپ کی عمر کی تصدیق نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "videoErrorPlaybackStartFailed": "ہم یہ ویڈیو شروع نہیں کر سکے۔ براہ کرم دوبارہ کوشش کریں۔",
+  "videoErrorAdultContentLocked": "یہ ویڈیو صرف بالغوں کے لیے دستیاب ہے۔",
   "videoErrorVerifyAgeSignerUnreachable": "تصدیق کا وقت ختم ہو گیا۔ اپنا کنکشن چیک کریں یا تھوڑی دیر بعد دوبارہ کوشش کریں۔",
   "@videoErrorVerifyAgeSignerUnreachable": {
     "description": "Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age."

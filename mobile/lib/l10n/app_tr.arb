@@ -556,6 +556,8 @@
     "videoErrorSkip": "Atla",
     "videoErrorVerifyAgeButton": "Yaşı doğrula",
     "videoErrorVerifyAgeFailed": "Yaşın doğrulanamadı. Lütfen tekrar dene.",
+    "videoErrorPlaybackStartFailed": "Bu video başlatılamadı. Lütfen tekrar dene.",
+    "videoErrorAdultContentLocked": "Bu video yalnızca yetişkinler için kullanılabilir.",
     "videoErrorVerifyAgeSignerUnreachable": "Doğrulama zaman aşımına uğradı. Bağlantını kontrol et ya da birazdan tekrar dene.",
     "videoFollowButtonFollow": "Takip et",
     "audioAttributionOriginalSound": "Orijinal ses",

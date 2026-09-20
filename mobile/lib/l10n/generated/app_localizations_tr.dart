@@ -1600,6 +1600,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yaşın doğrulanamadı. Lütfen tekrar dene.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Bu video başlatılamadı. Lütfen tekrar dene.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Bu video yalnızca yetişkinler için kullanılabilir.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Doğrulama zaman aşımına uğradı. Bağlantını kontrol et ya da birazdan tekrar dene.';
 

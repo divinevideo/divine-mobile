@@ -2882,6 +2882,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t verify your age. Please try again.'**
   String get videoErrorVerifyAgeFailed;
 
+  /// Snackbar shown when age-gated playback did not start after viewer authentication. It must not imply age verification failed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t start this video. Please try again.'**
+  String get videoErrorPlaybackStartFailed;
+
+  /// Body shown on an age-restricted video for a protected-minor account. No verification affordance is available.
+  ///
+  /// In en, this message translates to:
+  /// **'This video is only available to adults.'**
+  String get videoErrorAdultContentLocked;
+
   /// Snackbar shown when tapping Verify age on an age-restricted video and the remote signer didn't respond in time (timeout). Distinct from videoErrorVerifyAgeFailed because the remedy is checking connectivity, not re-verifying age.
   ///
   /// In en, this message translates to:

@@ -1657,6 +1657,14 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att verifiera din ålder. Försök igen.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'Det gick inte att starta den här videon. Försök igen.';
+
+  @override
+  String get videoErrorAdultContentLocked =>
+      'Den här videon är endast tillgänglig för vuxna.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'Timeout vid verifiering. Kontrollera din anslutning eller försök igen om en stund.';
 

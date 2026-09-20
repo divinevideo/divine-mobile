@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart'
-    show VideoErrorType;
+    show VideoErrorType, VideoRetryResult;
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -49,19 +49,32 @@ String get _failureText =>
 String get _unavailableText =>
     lookupAppLocalizations(const Locale('en')).videoErrorUnavailableBody;
 
+String get _playbackStartFailedText =>
+    lookupAppLocalizations(const Locale('en')).videoErrorPlaybackStartFailed;
+
 /// Retry recovered playback.
-const PooledRetryOutcome _retryRecovered = (succeeded: true, errorType: null);
+const PooledRetryOutcome _retryRecovered = (
+  status: VideoRetryResult.played,
+  errorType: null,
+);
 
 /// Retry ran with valid auth headers and the media server rejected it again.
 const PooledRetryOutcome _retryStillUnauthorized = (
-  succeeded: false,
+  status: VideoRetryResult.failed,
   errorType: VideoErrorType.ageRestricted,
 );
 
 /// Retry failed for a reason unrelated to the age gate (network, decode).
 const PooledRetryOutcome _retryFailedUnrelated = (
-  succeeded: false,
+  status: VideoRetryResult.failed,
   errorType: VideoErrorType.generic,
+);
+
+/// The player did not begin initialization, for example after losing its
+/// ownership race while the age-gate request was in flight.
+const PooledRetryOutcome _retryNotAttempted = (
+  status: VideoRetryResult.notAttempted,
+  errorType: null,
 );
 
 String get _signerUnreachableText => lookupAppLocalizations(
@@ -437,8 +450,45 @@ void main() {
         playbackStatusCubit.state.hasAuthRetryExhausted(_videoId),
         isFalse,
       );
-      expect(find.text(_failureText), findsOneWidget);
+      expect(find.text(_playbackStartFailedText), findsOneWidget);
+      expect(find.text(_failureText), findsNothing);
       expect(find.text(_unavailableText), findsNothing);
+    });
+
+    testWidgets('explains when authenticated playback was not attempted', (
+      tester,
+    ) async {
+      final mediaAuthInterceptor = _MockMediaAuthInterceptor();
+      final playbackStatusCubit = VideoPlaybackStatusCubit();
+      addTearDown(playbackStatusCubit.close);
+
+      when(
+        () => mediaAuthInterceptor.handleUnauthorizedMedia(
+          context: any(named: 'context'),
+          sha256Hash: _sha256,
+          url: _videoUrl,
+          serverUrl: 'https://media.divine.video',
+          category: 'video',
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const ViewerAuthAuthorized({'Authorization': 'Nostr token'}),
+      );
+
+      await tester.pumpWidget(
+        _RetryHarness(
+          mediaAuthInterceptor: mediaAuthInterceptor,
+          playbackStatusCubit: playbackStatusCubit,
+          retryPlayback: (_) => _retryNotAttempted,
+        ),
+      );
+
+      await tester.tap(find.text('Verify'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(_playbackStartFailedText), findsOneWidget);
+      expect(find.text(_failureText), findsNothing);
     });
 
     testWidgets('offers the Content Filters sheet when playback is blocked by '
@@ -801,7 +851,8 @@ void main() {
           playbackStatusCubit.state.statusFor(_videoId),
           PlaybackStatus.ageRestricted,
         );
-        expect(find.text(_failureText), findsOneWidget);
+        expect(find.text(_playbackStartFailedText), findsOneWidget);
+        expect(find.text(_failureText), findsNothing);
       },
     );
   });

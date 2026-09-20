@@ -38,6 +38,7 @@ class PooledVideoErrorOverlay extends ConsumerStatefulWidget {
     this.onVerifyAge,
     this.isVerifying = false,
     this.isAuthRetryExhausted = false,
+    this.isAdultContentLocked = false,
     this.shouldPortraitExpand = true,
     this.isSquare = false,
     super.key,
@@ -54,6 +55,9 @@ class PooledVideoErrorOverlay extends ConsumerStatefulWidget {
 
   /// Whether authenticated retry already failed for this video in this session.
   final bool isAuthRetryExhausted;
+
+  /// Whether the account is a protected minor and cannot unlock adult media.
+  final bool isAdultContentLocked;
 
   final VideoErrorType? errorType;
 
@@ -178,14 +182,21 @@ class _PooledVideoErrorOverlayState
       (VideoErrorType.generic, false, false, _) =>
         context.l10n.videoErrorPlayback,
     };
+    // `isAdultContentLocked` is a property of the account, not of this video,
+    // so it may only wall off age-restricted media. An unrelated playback
+    // error on any other video stays retryable for the same account.
+    final isAdultContentWalled = isAgeRestricted && widget.isAdultContentLocked;
     final body = isUnavailableAfterAuthRetry
         ? context.l10n.videoErrorUnavailableBody
+        : isAdultContentWalled
+        ? context.l10n.videoErrorAdultContentLocked
         : isAgeRestricted
         ? context.l10n.videoErrorVerifyAgeBody
         : isModerationRestricted
         ? context.l10n.videoErrorContentRestrictedBody
         : null;
-    final showVerifyAge = isAgeRestricted && widget.onVerifyAge != null;
+    final showVerifyAge =
+        isAgeRestricted && !isAdultContentWalled && widget.onVerifyAge != null;
     final showSkip =
         (isUnavailableAfterAuthRetry ||
             (isModerationRestricted && !isAgeRestricted)) &&
@@ -194,7 +205,8 @@ class _PooledVideoErrorOverlayState
         (!isModerationRestricted || (isAgeRestricted && !showVerifyAge)) &&
         !isUnavailableAfterAuthRetry &&
         !showSkip &&
-        !showVerifyAge;
+        !showVerifyAge &&
+        !isAdultContentWalled;
     _maybeAutoRetryAgeRestricted(showVerifyAge: showVerifyAge);
 
     // Hard-walled states (forbidden / moderation-blocked / age-restricted)

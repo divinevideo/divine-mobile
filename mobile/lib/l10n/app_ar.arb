@@ -556,6 +556,8 @@
     "videoErrorSkip": "تخطّي",
     "videoErrorVerifyAgeButton": "تحقّق من العمر",
     "videoErrorVerifyAgeFailed": "تعذّر التحقق من عمرك. يرجى المحاولة مرّة أخرى.",
+    "videoErrorPlaybackStartFailed": "تعذّر بدء هذا الفيديو. يرجى المحاولة مرّة أخرى.",
+    "videoErrorAdultContentLocked": "هذا الفيديو متاح للبالغين فقط.",
     "videoErrorVerifyAgeSignerUnreachable": "انتهت مهلة التحقق. تحقّق من اتصالك أو حاول مرّة أخرى بعد قليل.",
     "videoFollowButtonFollow": "متابعة",
     "audioAttributionOriginalSound": "صوت أصلي",

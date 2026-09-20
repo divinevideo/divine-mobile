@@ -656,6 +656,8 @@
     "videoErrorSkip": "ዝለል",
     "videoErrorVerifyAgeButton": "ዕድሜን ያረጋግጡ",
     "videoErrorVerifyAgeFailed": "ዕድሜህን ማረጋገጥ አልተቻለም። እባክህ እንደገና ሞክር",
+    "videoErrorPlaybackStartFailed": "ይህን ቪዲዮ ማስጀመር አልቻልንም። እባክህ እንደገና ሞክር።",
+    "videoErrorAdultContentLocked": "ይህ ቪዲዮ ለአዋቂዎች ብቻ ይገኛል።",
     "videoErrorVerifyAgeSignerUnreachable": "ማረጋገጡ ጊዜው አልፎበታል። ግንኙነትህን አረጋግጥ ወይም ትንሽ ቆይተህ እንደገና ሞክር።",
     "videoFollowButtonFollow": "ተከተል",
     "audioAttributionOriginalSound": "ኦሪጅናል ድምጽ",

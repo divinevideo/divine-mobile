@@ -1652,6 +1652,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر التحقق من عمرك. يرجى المحاولة مرّة أخرى.';
 
   @override
+  String get videoErrorPlaybackStartFailed =>
+      'تعذّر بدء هذا الفيديو. يرجى المحاولة مرّة أخرى.';
+
+  @override
+  String get videoErrorAdultContentLocked => 'هذا الفيديو متاح للبالغين فقط.';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       'انتهت مهلة التحقق. تحقّق من اتصالك أو حاول مرّة أخرى بعد قليل.';
 

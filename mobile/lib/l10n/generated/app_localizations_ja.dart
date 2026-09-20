@@ -1517,6 +1517,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoErrorVerifyAgeFailed => '年齢を確認できませんでした。もう一回試してみて';
 
   @override
+  String get videoErrorPlaybackStartFailed => 'この動画を開始できませんでした。もう一回試してみて。';
+
+  @override
+  String get videoErrorAdultContentLocked => 'この動画は成人のみ視聴できます。';
+
+  @override
   String get videoErrorVerifyAgeSignerUnreachable =>
       '確認がタイムアウトしました。接続を確認するか、少し時間をおいてもう一回試してみて';
 
