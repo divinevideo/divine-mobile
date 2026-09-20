@@ -1,6 +1,8 @@
 // ABOUTME: Comment action button for video feed overlay.
 // ABOUTME: Displays comment icon with count, navigates to comments screen.
 
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -59,19 +61,21 @@ class CommentActionButton extends StatelessWidget {
               category: LogCategory.ui,
             );
             final interactionsBloc = context.read<VideoInteractionsBloc?>();
-            CommentsScreen.show(
-              context,
-              video,
-              initialCommentCount: data.count,
-              onCommentCountChanged: interactionsBloc == null
-                  ? null
-                  : (count) {
-                      if (!interactionsBloc.isClosed) {
-                        interactionsBloc.add(
-                          VideoInteractionsCommentCountUpdated(count),
-                        );
-                      }
-                    },
+            unawaited(
+              CommentsScreen.show(
+                context,
+                video,
+                initialCommentCount: data.count,
+                onCommentCountChanged: interactionsBloc == null
+                    ? null
+                    : (count) {
+                        if (!interactionsBloc.isClosed) {
+                          interactionsBloc.add(
+                            VideoInteractionsCommentCountUpdated(count),
+                          );
+                        }
+                      },
+              ),
             );
           },
         );

@@ -98,11 +98,6 @@ discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/user_avatar.dart	1
 discarded_futures|lib/widgets/user_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
-discarded_futures|lib/widgets/video_feed_item/actions/comment_action_button.dart	1
-discarded_futures|lib/widgets/video_feed_item/actions/help_classify_action_button.dart	1
-discarded_futures|lib/widgets/video_feed_item/actions/like_action_button.dart	1
-discarded_futures|lib/widgets/video_feed_item/actions/report_action_button.dart	1
-discarded_futures|lib/widgets/video_feed_item/actions/repost_action_button.dart	1
 discarded_futures|lib/widgets/video_feed_item/audio_attribution_row.dart	1
 discarded_futures|lib/widgets/video_feed_item/collaborator_avatar_row.dart	3
 discarded_futures|lib/widgets/video_feed_item/feed_playback_toggles_pill.dart	2

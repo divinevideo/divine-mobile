@@ -1,6 +1,8 @@
 // ABOUTME: Video overlay action that opens the "Help classify this" sheet.
 // ABOUTME: Lets a viewer suggest content-warning labels for a video (#4771).
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -53,11 +55,13 @@ class HelpClassifyActionButton extends ConsumerWidget {
       labelWhenZero: context.l10n.communitySuggestActionLabel,
       onPressed: () {
         onInteracted?.call();
-        CommunitySuggestSheet.show(
-          context,
-          video: video,
-          repository: repository,
-          myPubkey: myPubkey,
+        unawaited(
+          CommunitySuggestSheet.show(
+            context,
+            video: video,
+            repository: repository,
+            myPubkey: myPubkey,
+          ),
         );
       },
     );

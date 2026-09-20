@@ -1,6 +1,8 @@
 // ABOUTME: Report action button for video feed overlay.
 // ABOUTME: Opens the report-content dialog for the current video.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -31,7 +33,7 @@ class ReportActionButton extends StatelessWidget {
       labelWhenZero: context.l10n.videoActionReportLabel,
       onPressed: () {
         onInteracted?.call();
-        ReportContentDialog.show(context, video: video);
+        unawaited(ReportContentDialog.show(context, video: video));
       },
     );
   }

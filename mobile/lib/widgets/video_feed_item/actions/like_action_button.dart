@@ -3,6 +3,8 @@
 // ABOUTME: tapping toggles the like; on the owner's own video it opens the
 // ABOUTME: list of users who liked the video instead.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -120,10 +122,14 @@ class _ActionButton extends StatelessWidget {
 
   static void _openLikersList(BuildContext context, VideoEvent video) {
     final addressableId = video.addressableId;
-    context.pushNamed(
-      VideoEngagementListScreen.likersRouteName,
-      pathParameters: {'eventId': video.id},
-      queryParameters: addressableId == null ? const {} : {'a': addressableId},
+    unawaited(
+      context.pushNamed(
+        VideoEngagementListScreen.likersRouteName,
+        pathParameters: {'eventId': video.id},
+        queryParameters: addressableId == null
+            ? const {}
+            : {'a': addressableId},
+      ),
     );
   }
 }
