@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
 
@@ -31,7 +32,12 @@ class ReportActionButton extends StatelessWidget {
       labelWhenZero: context.l10n.videoActionReportLabel,
       onPressed: () {
         onInteracted?.call();
-        ReportContentDialog.show(context, video: video);
+        runDetached(
+          ReportContentDialog.show(context, video: video),
+          'present report dialog',
+          logName: 'ReportActionButton',
+          category: LogCategory.ui,
+        );
       },
     );
   }

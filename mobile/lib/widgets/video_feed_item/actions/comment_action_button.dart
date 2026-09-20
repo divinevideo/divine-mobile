@@ -7,6 +7,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/comments.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -59,19 +60,24 @@ class CommentActionButton extends StatelessWidget {
               category: LogCategory.ui,
             );
             final interactionsBloc = context.read<VideoInteractionsBloc?>();
-            CommentsScreen.show(
-              context,
-              video,
-              initialCommentCount: data.count,
-              onCommentCountChanged: interactionsBloc == null
-                  ? null
-                  : (count) {
-                      if (!interactionsBloc.isClosed) {
-                        interactionsBloc.add(
-                          VideoInteractionsCommentCountUpdated(count),
-                        );
-                      }
-                    },
+            runDetached(
+              CommentsScreen.show(
+                context,
+                video,
+                initialCommentCount: data.count,
+                onCommentCountChanged: interactionsBloc == null
+                    ? null
+                    : (count) {
+                        if (!interactionsBloc.isClosed) {
+                          interactionsBloc.add(
+                            VideoInteractionsCommentCountUpdated(count),
+                          );
+                        }
+                      },
+              ),
+              'present comments screen',
+              logName: 'VideoFeedItem',
+              category: LogCategory.ui,
             );
           },
         );
