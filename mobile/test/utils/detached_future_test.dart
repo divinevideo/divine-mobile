@@ -183,6 +183,41 @@ void main() {
       },
     );
 
+    group('detachedFailureReporter', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+      });
+
+      test('receives reportable failures when no reporter is passed', () async {
+        final error = StateError('closed');
+
+        final unhandledErrors = await unhandledErrorsWhile(() async {
+          runDetached(
+            Future<void>.error(error),
+            'load badges',
+            logName: 'BadgeLoader',
+            category: LogCategory.ui,
+          );
+        });
+
+        expect(unhandledErrors, isEmpty);
+        expect(reporter.recordedErrors, hasLength(1));
+        expect(
+          (reporter.recordedErrors.single.error as Reportable<Object>).unwrap(),
+          same(error),
+        );
+      });
+    });
+
     test('logs nothing when the operation completes', () async {
       final errors = await unhandledErrorsWhile(() async {
         runDetached(
