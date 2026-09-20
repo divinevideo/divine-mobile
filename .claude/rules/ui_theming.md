@@ -691,6 +691,31 @@ so they live in the always-visible sliver region.
 
 ---
 
+## Video-aware navigation and overlays
+
+Video playback is paused by more than one mechanism. Choose the owner based
+on the navigator and presentation type; do not add a pause-aware wrapper just
+to make nearby call sites look alike.
+
+- A dialog or pushed page on the root navigator is already covered by route
+  lifecycle: `AppShell` marks the shell obscured and pooled feeds observe the
+  route transition. Use the normal navigator API when that is the intended
+  owner.
+- Use `context.pushWithVideoPause` or
+  `context.showVideoPausingDialog` when the presentation needs its own
+  `OverlayVisibility` page owner, such as a navigator whose transition the
+  shell does not observe. These helpers release players while the page or
+  dialog is visible and release their owner when it closes.
+- Use the pause-aware bottom-sheet helper for bottom sheets. A sheet retains
+  the current player for fast resume; it is not interchangeable with a page
+  owner.
+
+When replacing one overlay with another, take the next owner before dismissing
+the current overlay if a visible resume frame would be unacceptable. Verify a
+reported flicker on a device before changing that sequencing.
+
+---
+
 ## Accessibility
 
 See `accessibility.md` for the full accessibility guide (semantic labels, announcements, traversal order, contrast, font responsiveness, motion, and testing).
