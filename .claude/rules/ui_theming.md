@@ -699,8 +699,11 @@ to make nearby call sites look alike.
 
 - A dialog or pushed page on the root navigator is already covered by route
   lifecycle: `AppShell` marks the shell obscured and pooled feeds observe the
-  route transition. Use the normal navigator API when that is the intended
-  owner.
+  route transition. That covers the pause on its own, so do not add an owner
+  purely to pause. It is still not a licence for a bare `showDialog`:
+  `check_raw_dialog_ceiling.sh` fails a raw dialog or sheet in any file not
+  already in its baseline, and names this file as the rule it enforces. The
+  pause-aware helpers below are wrappers, so they clear that guard.
 - Use `context.pushWithVideoPause` or
   `context.showVideoPausingDialog` when the presentation needs its own
   `OverlayVisibility` page owner, such as a navigator whose transition the
