@@ -12,6 +12,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController;
+import 'package:feed_repository/feed_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +40,8 @@ import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/services/broken_video_tracker.dart';
+import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
@@ -60,6 +63,24 @@ class _MockVideoVolumeCubit extends MockCubit<VideoVolumeState>
     implements VideoVolumeCubit {}
 
 class MockMediaAuthInterceptor extends Mock implements MediaAuthInterceptor {}
+
+class _MockDeadMediaFeedGuard extends Mock implements DeadMediaFeedGuard {}
+
+class _MockBrokenVideoTracker extends Mock implements BrokenVideoTracker {}
+
+/// Captures what [FullscreenFeedBloc] routes through [Bloc.onError] so a test
+/// can assert that work finishing after the feed closed reports nothing.
+/// Scoped to the feed bloc: the per-item interaction blocs also report their
+/// unstubbed count lookups here, and those are not under test.
+class _FeedBlocErrorObserver extends BlocObserver {
+  final List<Object> errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    if (bloc is FullscreenFeedBloc) errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 class _FakeBuildContext extends Fake implements BuildContext {}
 
@@ -215,6 +236,7 @@ void main() {
       registerFallbackValue(Duration.zero);
       registerFallbackValue(_FakeBuildContext());
       registerFallbackValue(<String, String>{});
+      registerFallbackValue(createTestVideoEvent(id: 'fallback_video'));
     });
 
     setUp(() {
@@ -1924,6 +1946,195 @@ void main() {
           await tester.pump();
 
           expect(tester.takeException(), isNull);
+        },
+      );
+    });
+
+    group('leaving while a video is being confirmed unavailable', () {
+      for (final verdict in [
+        FeedUnavailability.sessionOnly,
+        FeedUnavailability.persistent,
+      ]) {
+        testWidgets(
+          'pending $verdict confirmation removes from the replacement service',
+          (tester) async {
+            final video = createTestVideos(count: 1).single;
+            final confirmation = Completer<FeedUnavailability>();
+            final guard = _MockDeadMediaFeedGuard();
+            when(
+              () => guard.isConfirmedUnavailable(
+                videoId: any(named: 'videoId'),
+                videoUrl: any(named: 'videoUrl'),
+                explicitSha256: any(named: 'explicitSha256'),
+              ),
+            ).thenAnswer((_) => confirmation.future);
+            final tracker = _MockBrokenVideoTracker();
+            when(() => tracker.isVideoBroken(any())).thenReturn(false);
+            when(() => tracker.markVideoBroken(any(), any()))
+                .thenAnswer((_) async {});
+            final oldService = createMockVideoEventService();
+            final newService = createMockVideoEventService();
+            for (final service in [oldService, newService]) {
+              when(() => service.shouldHideVideo(any())).thenReturn(false);
+            }
+            var currentService = oldService;
+            await tester.pumpWidget(
+              BlocProvider<VideoVolumeCubit>.value(
+                value: videoVolumeCubit,
+                child: testMaterialApp(
+                  mockProfileRepository: mockProfileRepository,
+                  mockNip05VerificationService: mockNip05VerificationService,
+                  additionalOverrides: [
+                    videoEventServiceProvider.overrideWith(
+                      (ref) => currentService,
+                    ),
+                    brokenVideoTrackerProvider.overrideWith(
+                      (ref) async => tracker,
+                    ),
+                    deadMediaFeedGuardProvider.overrideWith(
+                      (ref) async => guard,
+                    ),
+                  ],
+                  home: PooledFullscreenVideoFeedScreen(
+                    source: SingleVideoViewSource(video),
+                    feedRepository: StaticFeedRepository(),
+                    initialIndex: 0,
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+            final element = tester.element(find.byType(FullscreenFeedContent));
+            final container = ProviderScope.containerOf(element);
+            final bloc = BlocProvider.of<FullscreenFeedBloc>(element);
+            bloc.add(FullscreenFeedVideoUnavailable(video.id));
+            await tester.pump();
+            verify(
+              () => guard.isConfirmedUnavailable(
+                videoId: video.id,
+                videoUrl: video.videoUrl,
+                explicitSha256: video.sha256,
+              ),
+            ).called(1);
+
+            currentService = newService;
+            container.invalidate(videoEventServiceProvider);
+            expect(container.read(videoEventServiceProvider), same(newService));
+            await tester.pump();
+            confirmation.complete(verdict);
+            await tester.pump();
+
+            verify(() => newService.removeVideoCompletely(video.id)).called(1);
+            verifyNever(() => oldService.removeVideoCompletely(any()));
+            if (verdict == FeedUnavailability.persistent) {
+              verify(() => newService.removeVideoEventCompletely(video))
+                  .called(1);
+              verifyNever(() => oldService.removeVideoEventCompletely(any()));
+            }
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
+      testWidgets(
+        'a confirmation that lands after the feed is closed reports nothing',
+        (tester) async {
+          // Regression (#9341): the callbacks handed to the real bloc closed
+          // over this widget's `ref`. The guard round trip outlives a popped
+          // route, so the resumed handler read `ref` on a dead element and
+          // filed a Reportable<StateError> through the bloc observer.
+          final observer = _FeedBlocErrorObserver();
+          final previousObserver = Bloc.observer;
+          Bloc.observer = observer;
+          addTearDown(() => Bloc.observer = previousObserver);
+
+          final video = createTestVideos(count: 1).single;
+          final confirmation = Completer<FeedUnavailability>();
+          final guard = _MockDeadMediaFeedGuard();
+          when(
+            () => guard.isConfirmedUnavailable(
+              videoId: any(named: 'videoId'),
+              videoUrl: any(named: 'videoUrl'),
+              explicitSha256: any(named: 'explicitSha256'),
+            ),
+          ).thenAnswer((_) => confirmation.future);
+          final tracker = _MockBrokenVideoTracker();
+          when(() => tracker.isVideoBroken(any())).thenReturn(false);
+          final videoEventService = createMockVideoEventService();
+          when(
+            () => videoEventService.shouldHideVideo(any()),
+          ).thenReturn(false);
+
+          await tester.pumpWidget(
+            // The volume cubit lives above the app's navigator; the pushed
+            // route reads it from there.
+            BlocProvider<VideoVolumeCubit>.value(
+              value: videoVolumeCubit,
+              child: testMaterialApp(
+                mockProfileRepository: mockProfileRepository,
+                mockNip05VerificationService: mockNip05VerificationService,
+                mockVideoEventService: videoEventService,
+                additionalOverrides: [
+                  brokenVideoTrackerProvider.overrideWith(
+                    (ref) async => tracker,
+                  ),
+                  deadMediaFeedGuardProvider.overrideWith((ref) async => guard),
+                ],
+                home: Builder(
+                  builder: (context) => Scaffold(
+                    body: ElevatedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => PooledFullscreenVideoFeedScreen(
+                            source: SingleVideoViewSource(video),
+                            feedRepository: StaticFeedRepository(),
+                            initialIndex: 0,
+                          ),
+                        ),
+                      ),
+                      child: const Text('open'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('open'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+          expect(find.byType(FeedVideos), findsOneWidget);
+
+          // The player reports the video missing; the bloc asks the guard and
+          // waits for its verdict.
+          final bloc = BlocProvider.of<FullscreenFeedBloc>(
+            tester.element(find.byType(FullscreenFeedContent)),
+          );
+          bloc.add(FullscreenFeedVideoUnavailable(video.id));
+          await tester.pump();
+          verify(
+            () => guard.isConfirmedUnavailable(
+              videoId: video.id,
+              videoUrl: video.videoUrl,
+              explicitSha256: video.sha256,
+            ),
+          ).called(1);
+
+          // The user backs out before the guard answers.
+          tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          expect(find.byType(FullscreenFeedContent), findsNothing);
+
+          confirmation.complete(FeedUnavailability.sessionOnly);
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          expect(observer.errors, isEmpty);
+          // The verdict still purges the video from the shared caches.
+          verify(
+            () => videoEventService.removeVideoCompletely(video.id),
+          ).called(1);
         },
       );
     });

@@ -148,13 +148,13 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
 
   Future<void> _loadVideo({bool allowRelayReadyRetry = true}) async {
     try {
+      final nostrClient = ref.read(nostrServiceProvider);
       Log.info(
         '📱 Loading video from route ref: ${widget.videoId}',
         name: 'VideoDetailScreen',
         category: LogCategory.video,
       );
 
-      final nostrClient = ref.read(nostrServiceProvider);
       final canQueryRelays =
           nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;
 
@@ -235,6 +235,11 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
         }
       }
     } catch (e) {
+      // A failure that lands after the user left has nothing to retry or
+      // render.
+      if (!mounted) return;
+      // Recovery may have disposed the client used by the failed lookup.
+      // Read its replacement only after the lifecycle check (#9341).
       final nostrClient = ref.read(nostrServiceProvider);
       final canQueryRelays =
           nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;

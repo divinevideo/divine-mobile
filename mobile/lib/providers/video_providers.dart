@@ -38,6 +38,7 @@ import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
+import 'package:openvine/services/feed_unavailability_gate.dart';
 import 'package:openvine/services/nsfw_content_filter.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
@@ -542,6 +543,31 @@ Future<DeadMediaFeedGuard> deadMediaFeedGuard(Ref ref) async {
     eventMissingChecker: (videoId) async =>
         await funnelcakeClient.getVideoEvent(videoId) == null,
   );
+}
+
+/// Stable gate over [videoEventServiceProvider], [brokenVideoTrackerProvider]
+/// and [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+/// created them.
+///
+/// Never rebuilds: it only listens. Each per-identity dependency is attached
+/// as it resolves and re-attached after an auth transition, so a bound method
+/// captured once in `BlocProvider.create` keeps reading the current identity's
+/// state — without the bloc holding a `WidgetRef`, which throws once the
+/// launching screen is unmounted (#9341). Same reattach shape as
+/// [videoEventServiceProvider]'s tracker listener.
+@Riverpod(keepAlive: true)
+FeedUnavailabilityGate feedUnavailabilityGate(Ref ref) {
+  final gate = FeedUnavailabilityGate();
+  ref.listen(videoEventServiceProvider, (_, next) {
+    gate.attachVideoEventService(next);
+  }, fireImmediately: true);
+  ref.listen(brokenVideoTrackerProvider, (_, next) {
+    gate.attachTracker(next.asData?.value);
+  }, fireImmediately: true);
+  ref.listen(deadMediaFeedGuardProvider, (_, next) {
+    gate.attachGuard(next.asData?.value);
+  }, fireImmediately: true);
+  return gate;
 }
 
 /// Provider for VideoLocalStorage instance (SQLite-backed)
