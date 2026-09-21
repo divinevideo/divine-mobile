@@ -414,7 +414,14 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
         }
         warmOutputs.removeAll()
         videoOutput = nil
+        // The raster thread can still be calling `copyPixelBuffer()` while
+        // this runs: on a teardown path `unregisterTexture` is skipped, so
+        // the texture stays registered and the shell keeps calling in.
+        // Every other access to the buffer takes the lock; releasing it
+        // without one races that read.
+        os_unfair_lock_lock(&pixelBufferLock)
         latestPixelBuffer = nil
+        os_unfair_lock_unlock(&pixelBufferLock)
         onFirstFrame = nil
     }
 
