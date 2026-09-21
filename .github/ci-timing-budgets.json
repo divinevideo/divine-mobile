@@ -33,6 +33,7 @@
     "Format": { "warn": 90, "fail": 180 },
     "VGV Tag Gate": { "warn": 30, "fail": 90 },
     "Goldens": { "warn": 150, "fail": 300 },
-    "Web Bundle Size": { "warn": 300, "fail": 480 }
+    "Web Bundle Size": { "warn": 300, "fail": 480 },
+    "iOS Native Tests": { "warn": 1800, "fail": 2700 }
   }
 }

@@ -7,7 +7,7 @@ set -euo pipefail
 changed_files="$(mktemp)"
 trap 'rm -f "$changed_files"' EXIT
 
-scope_names=(docs_only app native android ios service maestro_static smoke performance ci_config)
+scope_names=(docs_only app native ios_native android ios service maestro_static smoke performance ci_config)
 
 write_all_true() {
   for scope in "${scope_names[@]}"; do
@@ -90,6 +90,7 @@ cat "$changed_files"
 docs_only=true
 app=false
 native=false
+ios_native=false
 android=false
 ios=false
 service=false
@@ -111,8 +112,9 @@ while IFS= read -r path; do
     .gitattributes|analytics-contract.lock|analytics-contract.manifest.json|.github/ci-timing-budgets.json)
       app=true ;;
     .github/workflows/mobile_ci.yaml|mobile/scripts/ci/detect_mobile_ci_scope.sh)
-      app=true; native=true; android=true; ios=true; service=true
-      maestro_static=true; smoke=true; performance=true; ci_config=true ;;
+      app=true; native=true; ios_native=true; android=true; ios=true
+      service=true; maestro_static=true; smoke=true; performance=true
+      ci_config=true ;;
     .github/workflows/*)
       # Four `guards`-job guards read workflow files as their only input
       # (package coverage floor, package CI floor, backend host defaults,
@@ -138,6 +140,32 @@ while IFS= read -r path; do
     # gated scripts does.
     .gitattributes|mobile/android/*|mobile/ios/*|mobile/macos/*|mobile/scripts/check_native_transport_security.sh|mobile/scripts/check_ios_shipping_versions.sh|mobile/scripts/check_gradle_wrapper_checksum.sh|mobile/scripts/ci/detect_mobile_ci_scope.sh|mobile/scripts/ci/guards.tsv|mobile/scripts/ci/run_guards.sh)
       native=true ;;
+  esac
+
+  case "$path" in
+    # The iOS Native Tests job compiles the Runner target together with every
+    # plugin's Darwin sources and links whatever pods and Swift packages
+    # pubspec.lock resolves, so each of those inputs can break it while the
+    # Dart jobs stay green (#9381). `mobile/lib` is deliberately absent: the
+    # XCTests never run Dart, and a macOS runner costs ten Linux minutes per
+    # minute.
+    #
+    # `*` spans `/` in a case glob, so a package's example app would match
+    # the arms below; nothing in the Runner target ever compiles one.
+    mobile/packages/*/example/*) ;;
+    mobile/ios/*|mobile/packages/*/ios/*|mobile/packages/*/darwin/*)
+      ios_native=true ;;
+    # Plugin registration and the generated Swift package are decided by the
+    # pubspecs, and a pub workspace member never appears in pubspec.lock, so
+    # each plugin's own pubspec has to be named here.
+    mobile/pubspec.lock|mobile/pubspec.yaml|mobile/packages/*/pubspec.yaml)
+      ios_native=true ;;
+    # Both of these run inside the job itself: the ruby script as its own
+    # step, and pre_build_ios.sh as the shared Runner scheme's BuildAction
+    # pre-action. Same rule as check_gradle_wrapper_checksum.sh in the native
+    # arm (#7201) — a change to the script must still schedule the job.
+    mobile/scripts/ensure_ios_swift_package_floor.rb|mobile/pre_build_ios.sh)
+      ios_native=true ;;
   esac
 
   case "$path" in

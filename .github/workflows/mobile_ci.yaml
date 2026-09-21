@@ -33,6 +33,7 @@ jobs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
       app: ${{ steps.scope.outputs.app }}
       native: ${{ steps.scope.outputs.native }}
+      ios_native: ${{ steps.scope.outputs.ios_native }}
       android: ${{ steps.scope.outputs.android }}
       ios: ${{ steps.scope.outputs.ios }}
       service: ${{ steps.scope.outputs.service }}
@@ -592,6 +593,154 @@ jobs:
       - name: Check web bundle file sizes
         run: bash scripts/check_web_bundle_file_size.sh build/web
 
+  ios-native-tests:
+    name: iOS Native Tests
+    # The XCTests in mobile/ios/RunnerTests cover the Swift the Dart jobs
+    # cannot reach: plugin registration and engine teardown, the camera's
+    # media-session scoping, the Nostr bridge's frame attestation, and the
+    # ProofMode vendor gate. Until this job existed nothing in CI compiled or
+    # ran them, so a regression shipped with every check green (#9381). It
+    # also builds the whole Runner target the way `flutter build ios` does,
+    # which catches a pod or Swift-package resolution break on the PR instead
+    # of on Codemagic after merge. Gated on the ios_native scope because a
+    # macOS runner costs ten Linux minutes per minute.
+    needs: changes
+    # A regeneration dispatch falls open to every scope and then has its
+    # verdict discarded by the gate below, so it must not pay for a macOS
+    # runner.
+    if: ${{ needs.changes.outputs.ios_native == 'true' && !inputs.update_goldens }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select Xcode 26
+        # The image defaults to Xcode 16; divine_camera targets iOS 26 API
+        # behind `#available(iOS 26.0, *)`, which needs the iOS 26 SDK.
+        run: |
+          xcode="$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)"
+          if [ ! -d "$xcode" ]; then
+            echo "::error::No Xcode 26 on this runner image"
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Restore dart hook downloads
+        # package:sqlite3's hook fetches the simulator dylib from GitHub
+        # Releases in one unretried GET during the Xcode build phase, so a
+        # dropped connection costs the whole build (#7197; run 35612736422
+        # failed on a hash mismatch this way). A hit here means no download
+        # at all. The Linux jobs share one key per OS; this is the macOS
+        # counterpart, saved at the end of a green run.
+        uses: actions/cache/restore@v6
+        with:
+          path: mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-dart-hooks-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dart-hooks-
+      - name: Generate the iOS project and install pods
+        # --config-only writes the plugin Swift package and runs pod install
+        # without compiling. Flutter raises the generated package's deployment
+        # target itself, before the --config-only return, so this repair is
+        # insurance for the one path that does nothing quietly: the bump is a
+        # replaceFirst of Flutter's default platform string, which no-ops on a
+        # manifest that no longer carries it. Only the plugin package:
+        # FlutterFramework ships without a platforms block, and giving it one
+        # at 16.0 makes every plugin that still declares iOS 12–15
+        # unresolvable against it — run 35595153208 failed exactly that way.
+        # --simulator already implies a debug build, so --debug is redundant.
+        run: |
+          flutter build ios --config-only --simulator
+          ruby scripts/ensure_ios_swift_package_floor.rb \
+            'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift'
+      - name: Pick a simulator
+        id: simulator
+        # The newest available iOS runtime's first iPhone; device names change
+        # with every Xcode, a runtime-sorted lookup does not.
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r '
+            .devices | to_entries
+            | map(select(.key | contains("SimRuntime.iOS-")))
+            | sort_by(.key | ltrimstr("com.apple.CoreSimulator.SimRuntime.iOS-")
+                             | split("-") | map(tonumber? // 0))
+            | reverse
+            | map(.value[] | select(.isAvailable and (.name | startswith("iPhone"))))
+            | first | .udid // empty')"
+          if [ -z "$udid" ]; then
+            echo "::error::No available iPhone simulator"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          # Diagnostic only: this is the step's last command, so a no-match
+          # would fail it after the output was already written.
+          xcrun simctl list devices available | grep "$udid" || true
+      - name: Run RunnerTests
+        working-directory: mobile/ios
+        env:
+          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          # grep must not own the pipeline's status: under pipefail a run
+          # whose output carries no matching line fails a green build, and a
+          # real failure surfaces as grep's 1 instead of xcodebuild's 65.
+          # --config-only already resolved the Swift package graph, so point
+          # xcodebuild at the same clone instead of re-resolving into
+          # DerivedData.
+          #
+          # One retry, and only when the Flutter build phase died fetching a
+          # native asset (the cache above missed and GitHub Releases dropped
+          # the GET). The hook re-hashes the file it left behind and fetches
+          # again, and DerivedData makes the second build incremental. A test
+          # failure or any other build error is never retried.
+          set +e
+          for attempt in 1 2; do
+            rm -rf "${RUNNER_TEMP}/RunnerTests.xcresult"
+            xcodebuild test \
+              -workspace Runner.xcworkspace \
+              -scheme Runner \
+              -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
+              -only-testing:RunnerTests \
+              -resultBundlePath "${RUNNER_TEMP}/RunnerTests.xcresult" \
+              -clonedSourcePackagesDirPath "${GITHUB_WORKSPACE}/mobile/build/ios/SourcePackages" \
+              CODE_SIGNING_ALLOWED=NO \
+              2>&1 | tee "${RUNNER_TEMP}/xcodebuild-test-${attempt}.log" \
+              | grep -E --line-buffered '^(Test [Cc]ase|Test [Ss]uite|Testing failed|The following build commands failed|\*\* (TEST|BUILD))|error:'
+            status="${PIPESTATUS[0]}"
+            if [ "$status" -eq 0 ] || [ "$attempt" -eq 2 ] \
+              || ! grep -q 'Building native assets failed' "${RUNNER_TEMP}/xcodebuild-test-${attempt}.log"; then
+              break
+            fi
+            echo "::warning::Native-asset download failed during the build; retrying xcodebuild once"
+          done
+          exit "$status"
+      - name: Save dart hook downloads
+        # A pull request's save serves that PR's later runs; a push to main
+        # serves every PR. The merge queue can restore but not save (#7197).
+        if: ${{ github.event_name != 'merge_group' }}
+        uses: actions/cache/save@v6
+        with:
+          path: mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-dart-hooks-${{ hashFiles('mobile/pubspec.lock') }}
+      - name: Upload test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: runner-tests-results
+          path: |
+            ${{ runner.temp }}/RunnerTests.xcresult
+            ${{ runner.temp }}/xcodebuild-test-*.log
+          if-no-files-found: ignore
+
   mobile-ci:
     name: Mobile CI
     if: ${{ always() }}
@@ -608,6 +757,7 @@ jobs:
       - vgv-tag-gate
       - goldens
       - web-bundle-size
+      - ios-native-tests
     runs-on: ubuntu-24.04
     steps:
       - name: Verify upstream jobs
@@ -623,7 +773,9 @@ jobs:
           VGV_TAG_GATE_RESULT: ${{ needs.vgv-tag-gate.result }}
           GOLDENS_RESULT: ${{ needs.goldens.result }}
           WEB_BUNDLE_SIZE_RESULT: ${{ needs.web-bundle-size.result }}
+          IOS_NATIVE_TESTS_RESULT: ${{ needs.ios-native-tests.result }}
           APP_CI_REQUIRED: ${{ needs.changes.outputs.app }}
+          IOS_NATIVE_REQUIRED: ${{ needs.changes.outputs.ios_native }}
           UPDATE_GOLDENS: ${{ inputs.update_goldens }}
         run: |
           echo "app-ci-required: ${APP_CI_REQUIRED}"
@@ -638,6 +790,8 @@ jobs:
           echo "vgv-tag-gate: ${VGV_TAG_GATE_RESULT}"
           echo "goldens: ${GOLDENS_RESULT}"
           echo "web-bundle-size: ${WEB_BUNDLE_SIZE_RESULT}"
+          echo "ios-native-required: ${IOS_NATIVE_REQUIRED}"
+          echo "ios-native-tests: ${IOS_NATIVE_TESTS_RESULT}"
 
           # A regeneration dispatch skips `golden.sh verify`, so this run
           # compared no pixels. It publishes a check run named "Mobile CI" on
@@ -681,6 +835,15 @@ jobs:
             exit 1
           elif [[ "${WEB_BUNDLE_SIZE_RESULT}" != "success" && "${WEB_BUNDLE_SIZE_RESULT}" != "skipped" ]]; then
             echo "Web bundle size failed or was cancelled despite app CI not being required."
+            exit 1
+          fi
+
+          # The native XCTests follow their own scope, narrower than app: a
+          # Dart-only change never needs a macOS runner, an iOS one always does.
+          if [ "${IOS_NATIVE_REQUIRED}" = "true" ]; then
+            required_results+=("${IOS_NATIVE_TESTS_RESULT}")
+          elif [[ "${IOS_NATIVE_TESTS_RESULT}" != "success" && "${IOS_NATIVE_TESTS_RESULT}" != "skipped" ]]; then
+            echo "iOS native tests failed or were cancelled despite not being required."
             exit 1
           fi
 
