@@ -51,8 +51,7 @@ class VideoRouteRef {
     final trimmed = routeId.trim();
     if (trimmed.isEmpty) return null;
 
-    if (trimmed.length == 64 &&
-        RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(trimmed)) {
+    if (NostrHexUtils.isValidEventId(trimmed)) {
       return VideoRouteRef(
         eventId: trimmed.toLowerCase(),
         stableId: trimmed,
