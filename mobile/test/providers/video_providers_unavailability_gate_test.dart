@@ -8,6 +8,8 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 
+import '../helpers/test_provider_overrides.dart';
+
 class _MockTracker extends Mock implements BrokenVideoTracker {}
 
 class _MockGuard extends Mock implements DeadMediaFeedGuard {}
@@ -43,6 +45,9 @@ void main() {
         var identity = 0;
         final container = ProviderContainer(
           overrides: [
+            videoEventServiceProvider.overrideWithValue(
+              createMockVideoEventService(),
+            ),
             brokenVideoTrackerProvider.overrideWith(
               (ref) async => trackers[identity],
             ),

@@ -545,8 +545,8 @@ Future<DeadMediaFeedGuard> deadMediaFeedGuard(Ref ref) async {
   );
 }
 
-/// Stable gate over [brokenVideoTrackerProvider] and
-/// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+/// Stable gate over [videoEventServiceProvider], [brokenVideoTrackerProvider]
+/// and [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
 /// created them.
 ///
 /// Never rebuilds: it only listens. Each per-identity dependency is attached
@@ -558,6 +558,9 @@ Future<DeadMediaFeedGuard> deadMediaFeedGuard(Ref ref) async {
 @Riverpod(keepAlive: true)
 FeedUnavailabilityGate feedUnavailabilityGate(Ref ref) {
   final gate = FeedUnavailabilityGate();
+  ref.listen(videoEventServiceProvider, (_, next) {
+    gate.attachVideoEventService(next);
+  }, fireImmediately: true);
   ref.listen(brokenVideoTrackerProvider, (_, next) {
     gate.attachTracker(next.asData?.value);
   }, fireImmediately: true);

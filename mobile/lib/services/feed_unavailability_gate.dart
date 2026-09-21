@@ -1,15 +1,19 @@
 // ABOUTME: Live handle to the per-identity broken-video tracker and dead-media
 // ABOUTME: guard, so a feed BLoC can ask about unavailable videos without a ref
 
+import 'package:models/models.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Answers the fullscreen feed's unavailability questions on behalf of the
 /// per-identity [BrokenVideoTracker] and [DeadMediaFeedGuard].
 ///
-/// Both are async providers scoped to the signed-in identity, so a BLoC
-/// cannot hold either directly: the tracker may not have resolved by the
+/// Also routes removals through the current [VideoEventService], which client
+/// recovery and identity changes can replace while a confirmation is pending.
+/// The tracker and guard are async providers scoped to the signed-in identity,
+/// so a BLoC cannot hold either directly: the tracker may not have resolved by the
 /// feed's first build, and an account switch replaces both. The gate is the
 /// one stable object in between. The provider graph keeps the tracker and
 /// guard current through `ref.listen` — the way `videoEventServiceProvider`
@@ -22,6 +26,21 @@ import 'package:unified_logger/unified_logger.dart';
 class FeedUnavailabilityGate {
   BrokenVideoTracker? _tracker;
   DeadMediaFeedGuard? _guard;
+  late VideoEventService _videoEventService;
+
+  /// Reattaches removals when client recovery or an identity change replaces
+  /// the video service. The provider attaches it before exposing this gate.
+  void attachVideoEventService(VideoEventService service) =>
+      _videoEventService = service;
+
+  /// Removes from the current service, even if a confirmation began before
+  /// the previous service was disposed.
+  void removeVideoCompletely(String videoId) =>
+      _videoEventService.removeVideoCompletely(videoId);
+
+  /// Also removes every version of an addressable video from current caches.
+  void removeVideoEventCompletely(VideoEvent video) =>
+      _videoEventService.removeVideoEventCompletely(video);
 
   /// Attaches the current identity's tracker; null while it has not resolved.
   void attachTracker(BrokenVideoTracker? tracker) => _tracker = tracker;

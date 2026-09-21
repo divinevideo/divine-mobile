@@ -1951,6 +1951,91 @@ void main() {
     });
 
     group('leaving while a video is being confirmed unavailable', () {
+      for (final verdict in [
+        FeedUnavailability.sessionOnly,
+        FeedUnavailability.persistent,
+      ]) {
+        testWidgets(
+          'pending $verdict confirmation removes from the replacement service',
+          (tester) async {
+            final video = createTestVideos(count: 1).single;
+            final confirmation = Completer<FeedUnavailability>();
+            final guard = _MockDeadMediaFeedGuard();
+            when(
+              () => guard.isConfirmedUnavailable(
+                videoId: any(named: 'videoId'),
+                videoUrl: any(named: 'videoUrl'),
+                explicitSha256: any(named: 'explicitSha256'),
+              ),
+            ).thenAnswer((_) => confirmation.future);
+            final tracker = _MockBrokenVideoTracker();
+            when(() => tracker.isVideoBroken(any())).thenReturn(false);
+            when(() => tracker.markVideoBroken(any(), any()))
+                .thenAnswer((_) async {});
+            final oldService = createMockVideoEventService();
+            final newService = createMockVideoEventService();
+            for (final service in [oldService, newService]) {
+              when(() => service.shouldHideVideo(any())).thenReturn(false);
+            }
+            var currentService = oldService;
+            await tester.pumpWidget(
+              BlocProvider<VideoVolumeCubit>.value(
+                value: videoVolumeCubit,
+                child: testMaterialApp(
+                  mockProfileRepository: mockProfileRepository,
+                  mockNip05VerificationService: mockNip05VerificationService,
+                  additionalOverrides: [
+                    videoEventServiceProvider.overrideWith(
+                      (ref) => currentService,
+                    ),
+                    brokenVideoTrackerProvider.overrideWith(
+                      (ref) async => tracker,
+                    ),
+                    deadMediaFeedGuardProvider.overrideWith(
+                      (ref) async => guard,
+                    ),
+                  ],
+                  home: PooledFullscreenVideoFeedScreen(
+                    source: SingleVideoViewSource(video),
+                    feedRepository: StaticFeedRepository(),
+                    initialIndex: 0,
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+            final element = tester.element(find.byType(FullscreenFeedContent));
+            final container = ProviderScope.containerOf(element);
+            final bloc = BlocProvider.of<FullscreenFeedBloc>(element);
+            bloc.add(FullscreenFeedVideoUnavailable(video.id));
+            await tester.pump();
+            verify(
+              () => guard.isConfirmedUnavailable(
+                videoId: video.id,
+                videoUrl: video.videoUrl,
+                explicitSha256: video.sha256,
+              ),
+            ).called(1);
+
+            currentService = newService;
+            container.invalidate(videoEventServiceProvider);
+            expect(container.read(videoEventServiceProvider), same(newService));
+            await tester.pump();
+            confirmation.complete(verdict);
+            await tester.pump();
+
+            verify(() => newService.removeVideoCompletely(video.id)).called(1);
+            verifyNever(() => oldService.removeVideoCompletely(any()));
+            if (verdict == FeedUnavailability.persistent) {
+              verify(() => newService.removeVideoEventCompletely(video))
+                  .called(1);
+              verifyNever(() => oldService.removeVideoEventCompletely(any()));
+            }
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
       testWidgets(
         'a confirmation that lands after the feed is closed reports nothing',
         (tester) async {

@@ -252,10 +252,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     // Resolved once and handed to the bloc as plain objects / bound methods.
     // The bloc outlives this element — a route pop closes it while its guard
     // round trip is still in flight — so nothing passed into `create:` may
-    // close over `ref` (#9341). `videoEventService` is keepAlive and doesn't
-    // flip identity on a block action, so capturing it once is safe; the
-    // version listener in [FullscreenFeedContent] re-runs the filter when the
-    // blocklist changes broadly (account switch / external sync). See #5041.
+    // close over `ref` (#9341). The service can be replaced on client recovery
+    // or account changes, so async removals use the reattaching gate below.
+    // The existing filter and removal stream remain scoped to this feed.
     final videoEventService = ref.read(videoEventServiceProvider);
     // Viewer-aware block predicate (blocks ∪ mutes ∪ blocked-us ∪ muted-us) —
     // the same `shouldFilterFromFeeds` every other feed surface filters with.
@@ -279,7 +278,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     // requester-independent, terminal moderation verdict explains the media
     // 404 (#6251). An API 404 is session-only.
     void persistConfirmedUnavailable(VideoEvent video) {
-      videoEventService.removeVideoEventCompletely(video);
+      unavailabilityGate.removeVideoEventCompletely(video);
       unawaited(
         unavailabilityGate.markVideoBroken(
           video.id,
@@ -304,7 +303,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
             hasMoreStream: feedRepository.watchHasMore(source),
             removedIdsStream: removedIdsStream,
             onLoadMore: () => unawaited(feedRepository.loadMore(source)),
-            onRemoveVideo: videoEventService.removeVideoCompletely,
+            onRemoveVideo: unavailabilityGate.removeVideoCompletely,
             onVideoConfirmedUnavailable: persistConfirmedUnavailable,
             confirmVideoUnavailable: unavailabilityGate.confirmVideoUnavailable,
             mediaCache: mediaCache,

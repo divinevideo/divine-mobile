@@ -855,8 +855,8 @@ final class DeadMediaFeedGuardProvider
 String _$deadMediaFeedGuardHash() =>
     r'7b590e30c5cc2dc5bdf1d136b7d671dd66c4c18c';
 
-/// Stable gate over [brokenVideoTrackerProvider] and
-/// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+/// Stable gate over [videoEventServiceProvider], [brokenVideoTrackerProvider]
+/// and [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
 /// created them.
 ///
 /// Never rebuilds: it only listens. Each per-identity dependency is attached
@@ -869,8 +869,8 @@ String _$deadMediaFeedGuardHash() =>
 @ProviderFor(feedUnavailabilityGate)
 final feedUnavailabilityGateProvider = FeedUnavailabilityGateProvider._();
 
-/// Stable gate over [brokenVideoTrackerProvider] and
-/// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+/// Stable gate over [videoEventServiceProvider], [brokenVideoTrackerProvider]
+/// and [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
 /// created them.
 ///
 /// Never rebuilds: it only listens. Each per-identity dependency is attached
@@ -888,8 +888,8 @@ final class FeedUnavailabilityGateProvider
           FeedUnavailabilityGate
         >
     with $Provider<FeedUnavailabilityGate> {
-  /// Stable gate over [brokenVideoTrackerProvider] and
-  /// [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
+  /// Stable gate over [videoEventServiceProvider], [brokenVideoTrackerProvider]
+  /// and [deadMediaFeedGuardProvider] for BLoCs that outlive the widget that
   /// created them.
   ///
   /// Never rebuilds: it only listens. Each per-identity dependency is attached
@@ -933,7 +933,7 @@ final class FeedUnavailabilityGateProvider
 }
 
 String _$feedUnavailabilityGateHash() =>
-    r'ec116f23b9f502a63b66bf178b1a84feed41ffd5';
+    r'e6bdbe891fa7d22dfcb0cc6c7c35db7aa0722b12';
 
 /// Provider for VideoLocalStorage instance (SQLite-backed)
 ///
