@@ -6225,6 +6225,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get commonBack => 'Bumalik';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Isara';
 
   @override

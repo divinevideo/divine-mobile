@@ -6121,6 +6121,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commonBack => 'Geri';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Kapat';
 
   @override

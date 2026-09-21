@@ -486,6 +486,9 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // The error screen's Reload action (#8673). Its Back label reuses the
+  // translated commonBack; Reload waits for the next translation pass.
+  'commonReload',
   // Viewer stats-visibility toggles (#7632). Deferred to the next
   // human pass rather than machine-translated so the loop/date wording stays
   // natural in each locale.

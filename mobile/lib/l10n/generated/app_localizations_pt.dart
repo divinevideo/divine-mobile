@@ -6229,6 +6229,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonBack => 'Voltar';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Fechar';
 
   @override

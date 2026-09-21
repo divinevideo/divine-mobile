@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The illustration above the copy: the Divine mascot caught in a vine, so the
@@ -87,6 +88,14 @@ VoidCallback? _backAction(BuildContext context) {
   if (navigator == null || !navigator.canPop()) return null;
   return navigator.maybePop;
 }
+
+/// The app's strings, when this surface sits below the app's `Localizations`.
+///
+/// Null before `MaterialApp` exists and for a failure above it, where the
+/// English copy stands in. Not `context.l10n`, whose `!` would make this
+/// surface the second thing to fail.
+AppLocalizations? _l10n(BuildContext context) =>
+    Localizations.of<AppLocalizations>(context, AppLocalizations);
 
 /// The insets the system reserves on this screen.
 ///
@@ -225,7 +234,7 @@ class _ErrorMessage extends StatelessWidget {
               const SizedBox(height: 24),
 
               DivineButton(
-                label: 'Reload',
+                label: _l10n(context)?.commonReload ?? 'Reload',
                 type: DivineButtonType.secondary,
                 onPressed: onReload,
               ),
@@ -267,7 +276,7 @@ class _BackButton extends StatelessWidget {
           icon: DivineIconName.caretLeft,
           type: DivineIconButtonType.secondary,
           size: DivineIconButtonSize.small,
-          semanticLabel: 'Back',
+          semanticLabel: _l10n(context)?.commonBack ?? 'Back',
           onPressed: onPressed,
         ),
       ),

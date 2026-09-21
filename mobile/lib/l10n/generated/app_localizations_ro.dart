@@ -6345,6 +6345,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commonBack => 'Înapoi';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Închide';
 
   @override

@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/global_error_widget.dart';
 
@@ -44,6 +46,32 @@ String? _resolvedFontFamily(WidgetTester tester, String copy) => tester
     .text
     .style
     ?.fontFamily;
+
+/// Serves [_MarkedLocalizations] for `en`, so a test can tell a label that
+/// came through the app's localizations from the English fallback without
+/// depending on any translation.
+class _MarkedLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
+  const _MarkedLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) => locale.languageCode == 'en';
+
+  @override
+  Future<AppLocalizations> load(Locale locale) =>
+      SynchronousFuture<AppLocalizations>(_MarkedLocalizations());
+
+  @override
+  bool shouldReload(_MarkedLocalizationsDelegate old) => false;
+}
+
+class _MarkedLocalizations extends AppLocalizationsEn {
+  @override
+  String get commonReload => 'Reload (localized)';
+
+  @override
+  String get commonBack => 'Back (localized)';
+}
 
 /// The surface's own background, found from the headline upwards so a
 /// `ColoredBox` the app shell paints above it is never mistaken for it.
@@ -227,19 +255,32 @@ void main() {
       required Widget home,
       ThemeData? theme,
       GlobalKey<NavigatorState>? navigatorKey,
+      Locale? locale,
+      List<LocalizationsDelegate<Object?>> extraDelegates = const [],
     }) => MaterialApp(
       navigatorKey: navigatorKey,
-      localizationsDelegates: appLocalizationsDelegates,
+      locale: locale,
+      localizationsDelegates: [...extraDelegates, ...appLocalizationsDelegates],
       supportedLocales: AppLocalizations.supportedLocales,
       theme: theme ?? VineTheme.theme,
       home: home,
     );
 
     /// Pushes [page] over a first route, so the failing route can be popped.
-    Future<void> pushOverPreviousPage(WidgetTester tester, Widget page) async {
+    Future<void> pushOverPreviousPage(
+      WidgetTester tester,
+      Widget page, {
+      Locale? locale,
+      List<LocalizationsDelegate<Object?>> extraDelegates = const [],
+    }) async {
       final navigatorKey = GlobalKey<NavigatorState>();
       await tester.pumpWidget(
-        app(navigatorKey: navigatorKey, home: const Text('previous page')),
+        app(
+          navigatorKey: navigatorKey,
+          home: const Text('previous page'),
+          locale: locale,
+          extraDelegates: extraDelegates,
+        ),
       );
       navigatorKey.currentState!.push(
         MaterialPageRoute<void>(builder: (_) => page),
@@ -342,6 +383,45 @@ void main() {
           final color = tester.widget<ColoredBox>(_surface()).color;
           expect(color, equals(VineTheme.lightColors.background));
           expect(color, isNot(equals(VineTheme.darkColors.background)));
+        }),
+      );
+    });
+
+    group('labels', () {
+      testWidgets(
+        "come from the app's localizations when they are in scope",
+        (tester) => withBrandedBuilder(() async {
+          await pushOverPreviousPage(
+            tester,
+            const _ThrowsOnBuild(),
+            extraDelegates: const [_MarkedLocalizationsDelegate()],
+          );
+
+          expect(find.text('Reload (localized)'), findsOneWidget);
+          expect(find.text('Reload'), findsNothing);
+          expect(
+            tester.getSemantics(find.byType(DivineIconButton)).label,
+            equals('Back (localized)'),
+          );
+        }),
+      );
+
+      testWidgets(
+        'follow the language of a non-English app',
+        (tester) => withBrandedBuilder(() async {
+          final semantics = tester.ensureSemantics();
+          final german = lookupAppLocalizations(const Locale('de'));
+          await pushOverPreviousPage(
+            tester,
+            const _ThrowsOnBuild(),
+            locale: const Locale('de'),
+          );
+
+          expect(german.commonBack, isNot(equals('Back')));
+          expect(find.bySemanticsLabel(german.commonBack), findsOneWidget);
+          expect(find.text(german.commonReload), findsOneWidget);
+
+          semantics.dispose();
         }),
       );
     });
