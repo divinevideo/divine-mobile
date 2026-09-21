@@ -218,9 +218,16 @@ List<RouteBase> videoRoutes() {
 /// link can arrive as a hex event id, a NIP-19 `note1` / `nevent1` / `naddr1`,
 /// or a raw coordinate. The first-party API resolves a hex id or a d tag and
 /// 404s on bech32, so an undecoded reference silently renders an empty list
-/// instead of the video's likers (#9359 follow-up). Decoding here keeps the
-/// sub-routes consistent with the detail route, which already resolves
-/// through the same [VideoRouteRef].
+/// instead of the video's likers (#9359 follow-up).
+///
+/// The detail route shares that identifier space but not this decode step:
+/// its builder passes the segment through untouched, and
+/// `VideosRepository.lookupVideoForRouteId` resolves the reference to a
+/// concrete VideoEvent through cache, REST and author-scoped relay lookups.
+/// These screens query by identifier and have no resolver of their own, so
+/// the decode happens here — which also means they never learn the event id
+/// behind an addressable reference, and the relay `#e` arm stays unusable
+/// for one.
 @visibleForTesting
 Widget buildVideoEngagementList(
   BuildContext ctx,
