@@ -271,8 +271,9 @@ void main() {
 
     testWidgets('survives the round trip to the detail route', (tester) async {
       final location = RoutePaths.videoDetailForId(coordinate);
-      // Raw, the `?` ended the path and `/c` opened a third segment, so the
-      // location named a different video before it ever reached the router.
+      // Raw, the `?` ended the path at `…:a` and carried `b/c` into the
+      // query and `d` into the fragment, so the location named a different
+      // video before it ever reached the router.
       expect(Uri.parse(location).pathSegments, equals(['video', coordinate]));
 
       String? seen;
