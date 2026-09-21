@@ -172,7 +172,6 @@ discarded_futures|test/services/crossposting_api_client_test.dart	1
 discarded_futures|test/services/media_viewer_auth_service_test.dart	3
 discarded_futures|test/services/network/rate_limiter_test.dart	1
 discarded_futures|test/services/page_load_observer_test.dart	1
-discarded_futures|test/services/saved_sounds_service_test.dart	9
 discarded_futures|test/services/subscription_manager_cache_test.dart	1
 discarded_futures|test/services/supporter_repository_test.dart	1
 discarded_futures|test/services/upload_manager_recovery_test.dart	1
@@ -221,7 +220,6 @@ unawaited_futures|test/services/auth_service_signing_mismatch_test.dart	1
 unawaited_futures|test/services/back_button_handler_test.dart	1
 unawaited_futures|test/services/profile_editing_race_condition_test.dart	6
 unawaited_futures|test/services/profile_editing_test.dart	1
-unawaited_futures|test/services/saved_sounds_service_test.dart	4
 unawaited_futures|test/services/support/auth_service_test_harness.dart	1
 unawaited_futures|test/widgets/community_suggest/community_suggest_sheet_test.dart	1
 unawaited_futures|test/widgets/composable_video_grid_test.dart	1
