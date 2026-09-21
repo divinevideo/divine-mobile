@@ -94,15 +94,19 @@ class VideoEditorConstants {
   /// before it is treated as never returning (#9347).
   ///
   /// Also a liveness bound, and one that has to clear a whole fan-out rather
-  /// than one render: the preview asks for every seam and every retimed clip
-  /// at once on each timeline change, `pro_video_editor` encodes them one at
-  /// a time through its single native slot, and each render's HDR
-  /// pre-transcodes run ungated next to every other's — the plugin measured
-  /// a 4K re-encode at ~43 s under three-way contention against ~19 s alone.
-  /// The last render of a six-clip HDR timeline on a throttled phone can
-  /// therefore legitimately wait well over a minute, and cancelling it there
-  /// would only re-queue the same work. A stalled preview render costs an
-  /// overlay and a retry rather than the user's export, so this sits below
+  /// than one render. A seam's ≤ 6.3 s bounds only its output: before the
+  /// trims apply, `pro_video_editor` re-encodes each HDR source *file* in
+  /// full, so a seam between two minute-long 4K HDR gallery clips pays two
+  /// whole transcodes (the plugin measured a 4K re-encode at ~19 s alone).
+  /// The preview asks for every seam and every retimed clip at once on each
+  /// timeline change, all queued one at a time through the plugin's single
+  /// encoder slot, so the last render of a six-clip HDR timeline on a
+  /// throttled phone can legitimately wait well over a minute — and
+  /// cancelling it there would only re-queue the same work. A render that
+  /// genuinely stalls is ended by the plugin's own 20 s no-progress watchdog
+  /// long before this fires; this is the outer net for one that never comes
+  /// back at all. A stalled preview render costs an overlay and a retry
+  /// rather than the user's export, so this sits below
   /// [renderWatchdogTimeout] but not by an order of magnitude.
   static const Duration previewRenderWatchdogTimeout = Duration(minutes: 2);
 
