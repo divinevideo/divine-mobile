@@ -239,11 +239,18 @@ Widget buildVideoEngagementList(
     // exists to remove, with no error state to explain it.
     return RouteErrorScreen(message: ctx.l10n.routeInvalidVideoId);
   }
+  // An naddr carries the coordinate the liker query wants; an explicit `?a=`
+  // from an in-app push still wins. A bare or empty `?a=` in an external
+  // link is not explicit: `queryParameters['a']` is then '' rather than
+  // null, so `??` kept it, and the decoded coordinate was lost. For
+  // reposters that leaves a relay `#e` filter on a d tag and nothing else,
+  // so the list renders empty — without the `?a=` the same link worked.
+  final explicitCoordinate = st.uri.queryParameters['a'];
   return VideoEngagementListScreen(
     eventId: lookupId,
     type: type,
-    // An naddr carries the coordinate the liker query wants; an explicit
-    // `?a=` from an in-app push still wins.
-    addressableId: st.uri.queryParameters['a'] ?? ref?.addressableId,
+    addressableId: explicitCoordinate == null || explicitCoordinate.isEmpty
+        ? ref?.addressableId
+        : explicitCoordinate,
   );
 }

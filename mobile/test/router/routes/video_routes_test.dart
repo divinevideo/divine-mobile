@@ -185,6 +185,14 @@ void main() {
       expect(screen.addressableId, equals('34236:$authorHex:other'));
     });
 
+    test('ignores an empty ?a= and keeps the decoded coordinate', () {
+      // '' is not null, so `??` kept it: the naddr's own coordinate was
+      // dropped and the reposters query fell back to an `#e` filter on a d
+      // tag, which cannot match.
+      expect(build(naddr, 'a=').addressableId, equals(coordinate));
+      expect(build(naddr, 'a').addressableId, equals(coordinate));
+    });
+
     test('forwards ?a= for a plain hex link', () {
       expect(build(hexId, 'a=$coordinate').addressableId, equals(coordinate));
     });
