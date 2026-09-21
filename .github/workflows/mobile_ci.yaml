@@ -637,17 +637,17 @@ jobs:
         run: flutter pub get
       - name: Generate the iOS project and install pods
         # --config-only writes the plugin Swift package and runs pod install
-        # without compiling. Flutter then raises the package's deployment
-        # target to the project's, but skips that step when its
-        # `xcodebuild -showBuildSettings` probe exceeds 60 s on a cold
-        # machine, so the floor is repaired explicitly, like the Runner
-        # scheme's pre-action does. Only the plugin package: FlutterFramework
-        # ships without a platforms block, and giving it one at 16.0 makes
-        # every plugin package that still declares iOS 12–15 unresolvable
-        # against it. Codemagic can pass that manifest too only because its
-        # full `flutter build ios` regenerates it before Xcode resolves.
+        # without compiling. Flutter raises the generated package's deployment
+        # target itself, before the --config-only return, so this repair is
+        # insurance for the one path that does nothing quietly: the bump is a
+        # replaceFirst of Flutter's default platform string, which no-ops on a
+        # manifest that no longer carries it. Only the plugin package:
+        # FlutterFramework ships without a platforms block, and giving it one
+        # at 16.0 makes every plugin that still declares iOS 12–15
+        # unresolvable against it — run 35595153208 failed exactly that way.
+        # --simulator already implies a debug build, so --debug is redundant.
         run: |
-          flutter build ios --config-only --simulator --debug
+          flutter build ios --config-only --simulator
           ruby scripts/ensure_ios_swift_package_floor.rb \
             'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift'
       - name: Pick a simulator
