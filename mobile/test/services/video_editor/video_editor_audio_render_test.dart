@@ -2,6 +2,7 @@
 // ABOUTME: Covers timing, diagnostics, fail-on-unavailable, and empty fallback.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -223,7 +224,7 @@ void main() {
     );
 
     test(
-      'downloads a network sound to a temp file and reports it for cleanup',
+      'reports every materialized sound file for cleanup',
       () async {
         final tempFilePaths = <String>[];
         final result = await resolveRenderAudioTracks(
@@ -242,10 +243,35 @@ void main() {
         expect(
           tempFilePaths,
           [result.first.path],
-          reason: 'only the downloaded file is ours to delete',
+          reason: 'the static file belongs to the caller',
         );
       },
     );
+
+    test('reports an in-memory sound file for cleanup', () async {
+      final tempFilePaths = <String>[];
+      final result = await resolveRenderAudioTracks(
+        [
+          AudioTrack(
+            id: 'memory',
+            title: 'memory',
+            subtitle: 'test',
+            duration: const Duration(seconds: 3),
+            audio: EditorAudio.memory(Uint8List.fromList([1, 2, 3, 4])),
+            startTime: Duration.zero,
+            endTime: const Duration(seconds: 3),
+          ),
+        ],
+        logName: 'test',
+        tempFilePaths: tempFilePaths,
+      );
+      addTearDown(() {
+        final file = File(result.single.path);
+        if (file.existsSync()) file.deleteSync();
+      });
+
+      expect(tempFilePaths, [result.single.path]);
+    });
 
     test(
       'clamps a track window that outlasts the video to the video duration',

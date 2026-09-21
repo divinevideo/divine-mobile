@@ -117,7 +117,7 @@ class RenderAudioFetcher {
         baseDelay: baseDelay,
         maxDelay: baseDelay * 4,
         retryWhen: (error) =>
-            error is! RenderAudioFetchException || error.isTransient,
+            error is RenderAudioFetchException && error.isTransient,
         debugName: 'render audio download',
       );
     } finally {
@@ -182,10 +182,19 @@ class RenderAudioFetcher {
         );
       }
 
+      final headBytes = head.takeBytes();
+      final contentType = response.headers[HttpHeaders.contentTypeHeader];
+      if (_isClearlyNotAudioBody(headBytes, contentType)) {
+        throw RenderAudioFetchException(
+          url,
+          cause: 'text response for an audio request',
+          permanent: true,
+        );
+      }
       final extension = audioFileExtensionFor(
-        head.takeBytes(),
+        headBytes,
         url: url,
-        contentType: response.headers[HttpHeaders.contentTypeHeader],
+        contentType: contentType,
       );
       final file = await partial.rename('$base$extension');
       Log.info(
@@ -194,16 +203,31 @@ class RenderAudioFetcher {
         category: LogCategory.video,
       );
       return file.path;
-    } catch (_) {
-      await sink?.close();
-      if (partial.existsSync()) {
-        try {
-          partial.deleteSync();
-        } on FileSystemException {
-          // Best-effort: a stranded .part file costs disk, not correctness.
-        }
+    } catch (error) {
+      try {
+        await sink?.close();
+      } catch (closeError, closeStackTrace) {
+        Log.warning(
+          'Could not close a failed render-audio download',
+          name: _logName,
+          category: LogCategory.video,
+          error: closeError,
+          stackTrace: closeStackTrace,
+        );
       }
-      rethrow;
+      try {
+        if (partial.existsSync()) {
+          partial.deleteSync();
+        }
+      } on FileSystemException {
+        // Best-effort: a stranded .part file costs disk, not correctness.
+      }
+      if (error is RenderAudioFetchException) rethrow;
+      throw RenderAudioFetchException(
+        url,
+        cause: error,
+        permanent: error is FileSystemException,
+      );
     } finally {
       client.close();
     }
@@ -267,3 +291,10 @@ String? _sniffContainer(Uint8List head) {
   }
   return null;
 }
+
+/// A text response cannot be muxed as audio, unless its bytes identify an
+/// audio container despite an incorrect content type.
+bool _isClearlyNotAudioBody(Uint8List head, String? contentType) =>
+    contentType?.split(';').first.trim().toLowerCase().startsWith('text/') ==
+        true &&
+    _sniffContainer(head) == null;

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
@@ -56,6 +58,19 @@ void main() {
     );
 
     group('native', () {
+      test('classifies a Dart disk-full write as insufficientStorage', () {
+        final failure = VideoRenderFailedException.native(
+          const FileSystemException(
+            'write failed',
+            '/tmp/render-audio.part',
+            OSError('No space left on device', 28),
+          ),
+        );
+
+        expect(failure.reason, VideoRenderFailureReason.insufficientStorage);
+        expect(failure.traceValue, 'insufficient_storage:disk_full');
+      });
+
       test('classifies an out-of-storage export as insufficientStorage by the '
           "platform's code, not its wording", () {
         final failure = VideoRenderFailedException.native(

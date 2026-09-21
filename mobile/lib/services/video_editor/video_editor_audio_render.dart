@@ -211,8 +211,8 @@ List<AudioTrack> buildRenderAudioTracks({
 /// Resolves each render [AudioTrack] to a [VideoAudioTrack] with a local file
 /// path, downloading network sources through [fetcher].
 ///
-/// A track whose source cannot be resolved — a network download that failed
-/// every attempt, a missing local file — fails the render with
+/// A track whose network source cannot be resolved after every attempt fails
+/// the render with
 /// [VideoRenderFailedException] and [VideoRenderFailureReason.audioUnavailable].
 /// It used to be skipped with a log line, and the export carried on without
 /// the sound the user had picked; the editor preview plays the same sound
@@ -250,12 +250,19 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
         error: e,
         stackTrace: stackTrace,
       );
-      throw VideoRenderFailedException(
-        VideoRenderFailureReason.audioUnavailable,
-        cause: e,
-      );
+      final fileSystemCause = switch (e) {
+        FileSystemException() => e,
+        RenderAudioFetchException(:final FileSystemException cause) => cause,
+        _ => null,
+      };
+      throw fileSystemCause == null
+          ? VideoRenderFailedException(
+              VideoRenderFailureReason.audioUnavailable,
+              cause: e,
+            )
+          : VideoRenderFailedException.native(fileSystemCause);
     }
-    if (track.audio.type == EditorAudioType.network) {
+    if (track.audio.type != EditorAudioType.file) {
       tempFilePaths?.add(audioPath);
     }
 

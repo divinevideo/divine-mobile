@@ -156,6 +156,30 @@ void main() {
       expect(attempts, 1);
     });
 
+    test('does not retry a local temp-file failure', () async {
+      final blocker = File(p.join(tempDir.path, 'not-a-directory'));
+      blocker.writeAsStringSync('file');
+      var attempts = 0;
+
+      await expectLater(
+        RenderAudioFetcher(
+          clientFactory: () => MockClient((request) async {
+            attempts++;
+            return http.Response.bytes(_wavBytes(), 200);
+          }),
+          tempDirectory: Directory(blocker.path),
+          baseDelay: Duration.zero,
+        ).localPathFor(EditorAudio.network(_url.toString()), logName: 't'),
+        throwsA(
+          isA<RenderAudioFetchException>()
+              .having((e) => e.cause, 'cause', isA<FileSystemException>())
+              .having((e) => e.isTransient, 'isTransient', isFalse),
+        ),
+      );
+
+      expect(attempts, 1);
+    });
+
     test('treats a body that stops arriving as a failed attempt', () async {
       var attempts = 0;
       await expectLater(
@@ -229,6 +253,32 @@ void main() {
       );
 
       expect(attempts, 1);
+    });
+
+    test('rejects a text response once', () async {
+      var attempts = 0;
+      await expectLater(
+        fetcher(
+          () => MockClient((request) async {
+            attempts++;
+            return http.Response(
+              '<html>sign in</html>',
+              200,
+              headers: {'content-type': 'text/html'},
+            );
+          }),
+        ).localPathFor(EditorAudio.network(_url.toString()), logName: 't'),
+        throwsA(
+          isA<RenderAudioFetchException>().having(
+            (e) => e.isTransient,
+            'isTransient',
+            isFalse,
+          ),
+        ),
+      );
+
+      expect(attempts, 1);
+      expect(tempDir.listSync(), isEmpty);
     });
   });
 
