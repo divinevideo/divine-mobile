@@ -83,8 +83,14 @@ class DatabaseEncryptionBootstrap {
   ///
   /// One instance is enough to reach an item written before #9343 under the old
   /// accessibility: the iOS plugin leaves the accessibility out of its read
-  /// query, and its write deletes the entry under every accessibility value
-  /// before re-adding it. Only `delete` filters on the class, which is why
+  /// query, and a write it cannot apply in place falls back to deleting the
+  /// item and re-adding it. That fallback loops over six accessibility values,
+  /// but only the first — `nil`, which omits `kSecAttrAccessible` from the
+  /// query entirely — is what removes an item of another class. The other five
+  /// pass raw `kSecAttrAccessible*` constants to the plugin's own name parser,
+  /// which does not recognise them and resolves all five to `WhenUnlocked`.
+  ///
+  /// A delete the *app* issues does carry the class, which is why
   /// [resetEncryptedDatabaseCache] still takes a second, legacy-options
   /// instance.
   final FlutterSecureStorage _secureStorage;
@@ -344,12 +350,15 @@ class DatabaseEncryptionBootstrap {
   ///   the database-failure screen, and the only thing lost by skipping is the
   ///   locked-launch fix, until the next attempt.
   ///
-  /// The one cost: on the launch that does move an item between classes, the
-  /// plugin deletes it before re-adding it, so a process kill inside that
-  /// window loses the key and the next launch wipes the database through
-  /// key-loss recovery. It is two consecutive Keychain calls, once per device,
-  /// and the alternative — a second slot — trades it for a rollback that wipes
-  /// unconditionally.
+  /// The one cost: whenever `SecItemUpdate` fails to match, the plugin deletes
+  /// the item before re-adding it, so a process kill between those two Keychain
+  /// calls loses the key and the next launch wipes the database through
+  /// key-loss recovery. The launch that upgrades the class is the expected
+  /// occurrence — a matching update succeeds, so a device that has been
+  /// rewritten does not re-enter the path — but any other `SecItemUpdate`
+  /// failure re-enters it too, so the window is not bounded to one launch per
+  /// device. The alternative, a second slot, trades a window of two consecutive
+  /// calls for a rollback that wipes unconditionally.
   Future<void> _upgradeKeyAccessibility(String key) async {
     if (await _isProtectedDataAvailable() != true) return;
     try {

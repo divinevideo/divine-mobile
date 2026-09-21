@@ -56,10 +56,12 @@ write puts the accessibility into its `SecItemUpdate` query, so an item already
 under the current class updates in place and only a mismatched one takes the
 delete-and-re-add path. The rewrite is best-effort and skipped while protected
 data is unavailable, because the caller already holds a key that opens the
-database. Its one cost: on the launch that does move an item between classes
-the plugin deletes before it re-adds, so a process kill inside those two
-consecutive Keychain calls loses the key. That is the price of not having a
-second slot, and a second slot costs an unconditional wipe on every rollback.
+database. Its one cost: whenever `SecItemUpdate` fails to match, the plugin
+deletes before it re-adds, so a process kill between those two Keychain calls
+loses the key. The launch that upgrades the class is the expected occurrence,
+since a matching update succeeds, but any other update failure re-enters the
+same path. That is the price of not having a second slot, and a second slot
+costs an unconditional wipe on every rollback.
 macOS keeps `unlocked` (#5563), so nothing is rewritten there.
 
 `first_unlock_this_device` is deliberately **not** used. It is readable at
