@@ -101,9 +101,13 @@ void main() {
         migrate: (_) async => outcome,
         deleteDatabase: () async => onDelete(),
         onDatabaseReset: onReset == null ? null : () async => onReset(),
-        canOpenEncryptedDatabase: canOpenEncryptedDatabase == null
-            ? null
-            : (rawKeyHex) async => canOpenEncryptedDatabase(rawKeyHex),
+        // Default to "the database opens cleanly". Left null, the production
+        // probe runs, and it creates and opens a real SQLCipher file at the
+        // app's shared database path — so a test asserting key resolution
+        // fails or passes on whatever a previous run left on disk, and the
+        // merged isolate hands that file to the next suite.
+        canOpenEncryptedDatabase: (rawKeyHex) async =>
+            canOpenEncryptedDatabase?.call(rawKeyHex) ?? true,
         // Default to "nothing to salvage" so the corruption branch falls
         // through to the wipe unless a test opts in.
         salvageDatabase: (rawKeyHex) async =>
