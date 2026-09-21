@@ -174,10 +174,16 @@ void main() {
       );
       expect(
         _createBody(),
-        contains('engine: Self.engineId(for: messenger)'),
+        allOf(
+          contains('engine: engineId'),
+          isNot(contains('engine: Self.engineId(')),
+        ),
         reason:
             'create must record the receiving engine as the owner so teardown '
-            "and hot-restart register can identify this engine's players.",
+            "and hot-restart register can identify this engine's players. It "
+            'must use the key captured at register rather than re-deriving '
+            'one: two independent derivations can diverge, and '
+            'registrar.messenger() reads through a weak engine reference.',
       );
       expect(
         _registrySetBody(),

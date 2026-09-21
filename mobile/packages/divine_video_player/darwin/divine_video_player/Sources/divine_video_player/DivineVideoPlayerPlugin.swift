@@ -250,11 +250,12 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         switch call.method {
         case "create":
             guard let id = args["id"] as? Int,
-                  let registrar = self.registrar else {
+                  let registrar = self.registrar,
+                  let engineId else {
                 result(
                     FlutterError(
                         code: "INVALID_ARGS",
-                        message: "Missing player id",
+                        message: "Missing player id or engine registration",
                         details: nil
                     )
                 )
@@ -271,15 +272,19 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
                 playerId: id,
                 debugLabel: debugLabel
             )
-            // Record the owning engine by its binary messenger. The plugin
+            // Record the owning engine using the key captured at register,
+            // not a second resolution through the registrar. The plugin
             // instance whose global channel received this `create` is the
             // engine the Dart side is talking to, so its teardown and its
             // hot-restart re-register dispose this player; another live
-            // engine's never touches it. See #5397.
+            // engine's never touches it. See #5397. Re-deriving here would
+            // give the filing key and every sweeping key two independent
+            // derivations, and `registrar.messenger()` reads through a weak
+            // engine reference that can already be nil.
             PlayerRegistry.shared.set(
                 instance,
                 for: id,
-                engine: Self.engineId(for: messenger)
+                engine: engineId
             )
 
             let useTexture = args["useTexture"] as? Bool ?? false
