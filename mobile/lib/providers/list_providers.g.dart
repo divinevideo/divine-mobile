@@ -151,8 +151,10 @@ final class CuratedListVideosFamily extends $Family
 /// holds from those members shows first, so a list of followed people paints
 /// before the round trip returns; the fetched set is then merged in. A fetch
 /// that fails after that first paint keeps the pooled videos; one that fails
-/// with nothing to show surfaces the error, so a network failure never reads
-/// as "no videos yet".
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -169,8 +171,10 @@ final userListMemberVideosProvider = UserListMemberVideosFamily._();
 /// holds from those members shows first, so a list of followed people paints
 /// before the round trip returns; the fetched set is then merged in. A fetch
 /// that fails after that first paint keeps the pooled videos; one that fails
-/// with nothing to show surfaces the error, so a network failure never reads
-/// as "no videos yet".
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -192,8 +196,10 @@ final class UserListMemberVideosProvider
   /// holds from those members shows first, so a list of followed people paints
   /// before the round trip returns; the fetched set is then merged in. A fetch
   /// that fails after that first paint keeps the pooled videos; one that fails
-  /// with nothing to show surfaces the error, so a network failure never reads
-  /// as "no videos yet".
+  /// with nothing to show surfaces the error at once, with no automatic retry,
+  /// so a network failure never reads as "no videos yet" or as endless loading.
+  /// Only an [Exception] is absorbed that way: an [Error] is a bug and
+  /// surfaces whatever is pooled.
   ///
   /// The body is a plain function so every `Ref` read happens synchronously
   /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -202,7 +208,7 @@ final class UserListMemberVideosProvider
     required UserListMemberVideosFamily super.from,
     required List<String> super.argument,
   }) : super(
-         retry: null,
+         retry: _noAutomaticRetry,
          name: r'userListMemberVideosProvider',
          isAutoDispose: true,
          dependencies: null,
@@ -243,7 +249,7 @@ final class UserListMemberVideosProvider
 }
 
 String _$userListMemberVideosHash() =>
-    r'52d59ab8b736188ae4c361d56d5ce702ce198e75';
+    r'e216e4fae32f67daeecb59a6d4075c69037b7223';
 
 /// Provider for the videos published by the members of a user list.
 ///
@@ -253,8 +259,10 @@ String _$userListMemberVideosHash() =>
 /// holds from those members shows first, so a list of followed people paints
 /// before the round trip returns; the fetched set is then merged in. A fetch
 /// that fails after that first paint keeps the pooled videos; one that fails
-/// with nothing to show surfaces the error, so a network failure never reads
-/// as "no videos yet".
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
@@ -264,7 +272,7 @@ final class UserListMemberVideosFamily extends $Family
     with $FunctionalFamilyOverride<Stream<List<VideoEvent>>, List<String>> {
   UserListMemberVideosFamily._()
     : super(
-        retry: null,
+        retry: _noAutomaticRetry,
         name: r'userListMemberVideosProvider',
         dependencies: null,
         $allTransitiveDependencies: null,
@@ -279,8 +287,10 @@ final class UserListMemberVideosFamily extends $Family
   /// holds from those members shows first, so a list of followed people paints
   /// before the round trip returns; the fetched set is then merged in. A fetch
   /// that fails after that first paint keeps the pooled videos; one that fails
-  /// with nothing to show surfaces the error, so a network failure never reads
-  /// as "no videos yet".
+  /// with nothing to show surfaces the error at once, with no automatic retry,
+  /// so a network failure never reads as "no videos yet" or as endless loading.
+  /// Only an [Exception] is absorbed that way: an [Error] is a bug and
+  /// surfaces whatever is pooled.
   ///
   /// The body is a plain function so every `Ref` read happens synchronously
   /// during `build` — see [_LiveDeps] for why an `async*` body cannot

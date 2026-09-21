@@ -15,13 +15,27 @@ import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_member_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+/// An empty feed pool, so the members feed has nothing to paint before its
+/// fetch answers.
+class _EmptyVideoEventsPool extends VideoEvents {
+  @override
+  Stream<List<VideoEvent>> build() async* {
+    yield const [];
+  }
+}
 
 const _ownerPubkey =
     'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
@@ -254,6 +268,68 @@ void main() {
       expect(find.text('Crew'), findsOneWidget);
       expect(find.text(l10n.peopleListsLoadFailed), findsNothing);
     });
+
+    testWidgets(
+      'a members feed that fails to load offers a retry, not a spinner',
+      (tester) async {
+        const member =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        final list = _buildList(pubkeys: const [member]);
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+        final videosRepository = _MockVideosRepository();
+        var attempts = 0;
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async {
+          attempts++;
+          throw Exception('relay down');
+        });
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventsProvider.overrideWith(_EmptyVideoEventsPool.new),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: UserListPeopleScreen(listId: list.id),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+
+        // A provider that retries on its own stays loading while it carries
+        // the error, and the viewer never reaches this view.
+        expect(find.text(l10n.peopleListsFailedToLoadVideos), findsOneWidget);
+        expect(attempts, equals(1));
+
+        await tester.tap(find.text(l10n.commonRetry));
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+
+        expect(attempts, equals(2));
+        expect(find.text(l10n.peopleListsFailedToLoadVideos), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'reacts to bloc emitting updated list without rebuilding the route',

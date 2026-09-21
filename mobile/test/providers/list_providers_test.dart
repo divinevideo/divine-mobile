@@ -211,9 +211,36 @@ void main() {
 
       final states = await collect(buildContainer(), [_ownerA]);
 
-      expect(states.last.hasError, isTrue);
+      // The state type, not `hasError`: a provider that is quietly retrying
+      // is loading while carrying the error, which the screen renders as a
+      // spinner rather than its retry view.
+      expect(states.last, isA<AsyncError<List<VideoEvent>>>());
       expect(idsOf(states), isEmpty);
+      verify(
+        () => videosRepository.getVideosByAuthors(
+          authorPubkeys: any(named: 'authorPubkeys'),
+        ),
+      ).called(1);
     });
+
+    test(
+      'lets a programming error through instead of keeping the pooled videos',
+      () async {
+        final pooledMember = _video(id: 'pooled', pubkey: _ownerA);
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenThrow(StateError('bug'));
+
+        final states = await collect(buildContainer(pooled: [pooledMember]), [
+          _ownerA,
+        ]);
+
+        expect(states.last, isA<AsyncError<List<VideoEvent>>>());
+        expect(states.last.error, isA<StateError>());
+      },
+    );
   });
 
   group(videoEventsByIdsProvider, () {
