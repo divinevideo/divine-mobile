@@ -4,8 +4,6 @@
 // ABOUTME: peopleListSearch feature flag is enabled (injected via BLoC),
 // ABOUTME: people lists (kind 30000).
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +18,7 @@ import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -355,23 +354,31 @@ void _navigateToPeopleList(
   BuildContext context,
   PeopleListSearchResult result,
 ) {
-  unawaited(
-    context.push(
+  runDetached(
+    context.push<void>(
       RoutePaths.peopleListForId(
         result.list.id,
         ownerPubkey: result.ownerPubkey,
       ),
     ),
+    'open people list search result',
+    logName: 'ListsSection',
+    category: LogCategory.ui,
   );
 }
 
 void _navigateToCuratedList(BuildContext context, CuratedList list) {
-  context.push(
-    CuratedListFeedScreen.pathForId(list.id),
-    extra: CuratedListRouteExtra(
-      listName: list.name,
-      videoIds: list.videoEventIds,
-      authorPubkey: list.pubkey,
+  runDetached(
+    context.push<void>(
+      CuratedListFeedScreen.pathForId(list.id),
+      extra: CuratedListRouteExtra(
+        listName: list.name,
+        videoIds: list.videoEventIds,
+        authorPubkey: list.pubkey,
+      ),
     ),
+    'open curated list search result',
+    logName: 'ListsSection',
+    category: LogCategory.ui,
   );
 }

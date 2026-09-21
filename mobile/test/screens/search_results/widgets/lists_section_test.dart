@@ -153,8 +153,8 @@ void main() {
         (tester) async {
           final goRouter = MockGoRouter();
           when(
-            () => goRouter.push<Object?>(any()),
-          ).thenAnswer((_) async => null);
+            () => goRouter.push<void>(any()),
+          ).thenAnswer((_) async {});
           when(() => mockBloc.state).thenReturn(
             ListSearchState(
               status: ListSearchStatus.success,
@@ -207,7 +207,7 @@ void main() {
           await tester.tap(find.text('Crew'));
 
           verify(
-            () => goRouter.push<Object?>('/people-lists/pl1?owner=$_authorOne'),
+            () => goRouter.push<void>('/people-lists/pl1?owner=$_authorOne'),
           ).called(1);
         },
       );
