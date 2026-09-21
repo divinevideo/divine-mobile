@@ -37,6 +37,12 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     /// `destroyContext` and dereference the null shell.
     private var isEngineTornDown = false
 
+    /// Which plugin instance last installed the process-wide sink. A
+    /// teardown hands the sink back only while this instance still owns
+    /// it, so it never mutes a second live engine. Weak, so the record
+    /// cannot keep a torn-down plugin alive.
+    private static weak var logSinkOwner: DivineVideoPlayerPlugin?
+
     /// Per-instance forwarder pushing native diagnostics over THIS engine's
     /// global channel. `DivineVideoPlayerLog.shared.sink` is a process-wide
     /// singleton, so a second FlutterEngine (e.g. the FCM background isolate
@@ -56,6 +62,7 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
 
     private func installLogSink() {
         DivineVideoPlayerLog.shared.sink = logSink
+        Self.logSinkOwner = self
     }
 
     /// Resolves the binary messenger for `registrar`, bridging the iOS
@@ -199,6 +206,16 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
             "Engine tearing down — disposing this engine's players",
             name: "DivineVideoPlayer.Lifecycle"
         )
+        // `logSink` drops every entry once `isEngineTornDown` is set, and
+        // the sink it is installed on is process-wide. Leaving this
+        // instance's closure in place would mute native video logging for
+        // every OTHER live engine until one of them next handled a method
+        // call and re-claimed it. Hand it back, but only while this
+        // instance is still the installer.
+        if Self.logSinkOwner === self {
+            DivineVideoPlayerLog.shared.sink = nil
+            Self.logSinkOwner = nil
+        }
         PlayerRegistry.shared.disposeForEngine(engineId, engineTearingDown: true)
     }
 
