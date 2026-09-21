@@ -691,6 +691,55 @@ so they live in the always-visible sliver region.
 
 ---
 
+## Video-aware navigation and overlays
+
+Video playback is paused by more than one mechanism. Choose the owner based
+on the navigator and presentation type; do not add a pause-aware wrapper just
+to make nearby call sites look alike. All four helpers named below are the
+`PauseAwareModals` extension on `BuildContext`, in
+`mobile/lib/utils/pause_aware_modals.dart` — they resolve only once that
+library is imported.
+
+- A dialog or pushed page on the root navigator is already covered by route
+  lifecycle: `AppShell` marks the shell obscured and pooled feeds observe the
+  route transition. That covers the pause on its own, so do not add an owner
+  purely to pause. It is still not a licence for a bare `showDialog`:
+  `check_raw_dialog_ceiling.sh` fails a raw dialog or sheet in any file not
+  already in its baseline, and names this file as the rule it enforces. The
+  pause-aware helpers below are wrappers, so they clear that guard.
+- Use `context.pushWithVideoPause` or
+  `context.showVideoPausingDialog` when the presentation needs its own
+  `OverlayVisibility` page owner, such as a navigator whose transition the
+  shell does not observe. A page owner releases the *neighbouring* players
+  and their disk prefetch; the current player is retained either way. Only a
+  codec-heavy surface releases the current one, through
+  `releaseCurrentWhenInactive` — the camera, the editor, the exporter.
+- Use `context.showVideoPausingVineBottomSheet`, or
+  `context.showVideoPausingSelectionMenu` for a selection menu. A sheet keeps
+  the neighbours warm for fast resume, so it is not interchangeable with a
+  page owner: the condition is
+  `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
+  owner and a sheet owner at once loses the retention. The two differ on
+  navigator — the first forwards `useRootNavigator` and defaults it to
+  `true`, while the second takes none and inherits `VineBottomSheet.show`'s
+  `false`, so it always lands on the branch navigator where the `AppShell`
+  net above cannot fire.
+
+`pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
+which runs on a **pop** alone: a `go()`-style dismissal — the Android back
+handler, a deep link, a refresh redirect — drops the completer. The
+compensating net is `AppShell` clearing the flag when the shell is uncovered,
+and that only fires for a route directly above the shell on the root
+navigator. So on a navigator the shell does not observe, give the
+presentation its own release path rather than relying on the returned future;
+a stranded owner means the home feed never autoplays again (#6239).
+
+The public helpers acquire and release their own owners; do not coordinate
+`OverlayVisibility` owners directly when replacing overlays. Verify a reported
+resume flicker on a device before changing the owning navigation flow.
+
+---
+
 ## Accessibility
 
 See `accessibility.md` for the full accessibility guide (semantic labels, announcements, traversal order, contrast, font responsiveness, motion, and testing).

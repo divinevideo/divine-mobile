@@ -181,6 +181,13 @@ Scroll and navigation:
   `topInset` in the delegate when the outer layout is edge-to-edge (no
   `SafeArea`). See
   [`ui_theming.md`](ui_theming.md#nestedscrollview-edge-to-edge-and-pinned-headers).
+- [ ] For a video-adjacent navigation, choose pause ownership by navigator and
+  presentation type: root-navigator route lifecycle already pauses the feed,
+  so an owner is not needed for the pause alone — but prefer a pause-aware
+  helper over a raw `showDialog`, which `check_raw_dialog_ceiling.sh` fails.
+  A page owner releases the neighbouring players; a sheet keeps them warm,
+  and holding both owners at once loses that. See
+  [`ui_theming.md`](ui_theming.md#video-aware-navigation-and-overlays).
 
 State management:
 
