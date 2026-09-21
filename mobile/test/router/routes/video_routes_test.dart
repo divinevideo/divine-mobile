@@ -1,11 +1,15 @@
 // ABOUTME: Tests for the video routes' recorder builder and engagement paths.
-// ABOUTME: Pins recorder query parsing and the flat engagement registration.
+// ABOUTME: Pins recorder query parsing, the flat engagement registration and
+// ABOUTME: the detail location an engagement screen falls back to.
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_error_screen.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
@@ -254,6 +258,55 @@ void main() {
         ),
         isA<RouteErrorScreen>(),
       );
+    });
+  });
+
+  group('the detail location an engagement screen falls back to', () {
+    // The cold-entry back fallback builds its location from a coordinate or
+    // a bare d tag, both arbitrary UTF-8 decoded from an untrusted naddr1.
+    const dTag = 'a?b/c#d';
+    const coordinate =
+        '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+        ':$dTag';
+
+    testWidgets('survives the round trip to the detail route', (tester) async {
+      final location = RoutePaths.videoDetailForId(coordinate);
+      // Raw, the `?` ended the path and `/c` opened a third segment, so the
+      // location named a different video before it ever reached the router.
+      expect(Uri.parse(location).pathSegments, equals(['video', coordinate]));
+
+      String? seen;
+      final router = GoRouter(
+        initialLocation: location,
+        routes: [
+          GoRoute(
+            path: '/video/:id',
+            builder: (_, state) {
+              seen = state.pathParameters['id'];
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // go_router percent-decodes every path parameter, so the builder reads
+      // back exactly what RoutePaths encoded.
+      expect(seen, equals(coordinate));
+
+      final aid = AId.fromString(seen!);
+      expect(aid, isNotNull);
+      expect(aid!.kind, equals(34236));
+      expect(aid.dTag, equals(dTag));
     });
   });
 }
