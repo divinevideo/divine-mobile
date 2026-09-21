@@ -22,6 +22,9 @@ end
 # METADATA_REJECTED, INVALID_BINARY and WAITING_FOR_EXPORT_COMPLIANCE. A
 # version in one of those states has never been released, so reusing it is
 # valid and must not block a release.
+# NOT_APPLICABLE is also deliberately excluded from the legacy appStoreState
+# fallback because it does not represent a version that has claimed a release
+# train.
 #
 # appVersionState is the current App Store Connect field; appStoreState is the
 # deprecated spelling that older API responses still carry.
@@ -34,6 +37,10 @@ TAKEN_STATES = %w[
   REPLACED_WITH_NEW_VERSION
   READY_FOR_SALE
   PROCESSING_FOR_APP_STORE
+  REMOVED_FROM_SALE
+  DEVELOPER_REMOVED_FROM_SALE
+  PREORDER_READY_FOR_SALE
+  PENDING_CONTRACT
 ].freeze
 
 def numeric_version(value, label)
@@ -69,20 +76,20 @@ taken_versions = payload.filter_map do |resource|
 end
 
 if taken_versions.empty?
-  puts "No released App Store version found; #{candidate_version} is the first release on this train."
+  puts "No taken App Store version found; #{candidate_version} is the first release on this train."
   exit 0
 end
 
-released_version = taken_versions.max_by { |version| numeric_version(version, 'App Store version') }
+taken_version = taken_versions.max_by { |version| numeric_version(version, 'App Store version') }
 
 candidate_parts = numeric_version(candidate_version, 'candidate version')
-released_parts = numeric_version(released_version, 'released App Store version')
+taken_parts = numeric_version(taken_version, 'taken App Store version')
 
-unless (candidate_parts <=> released_parts) == 1
+unless (candidate_parts <=> taken_parts) == 1
   abort(
-    "ERROR: candidate version #{candidate_version} must be newer than released App Store version " \
-    "#{released_version}. Bump mobile/pubspec.yaml before cutting a Shorebird release.",
+    "ERROR: candidate version #{candidate_version} must be newer than taken App Store version " \
+    "#{taken_version}. Bump mobile/pubspec.yaml before cutting a Shorebird release.",
   )
 end
 
-puts "Candidate version #{candidate_version} is newer than released App Store version #{released_version}."
+puts "Candidate version #{candidate_version} is newer than taken App Store version #{taken_version}."
