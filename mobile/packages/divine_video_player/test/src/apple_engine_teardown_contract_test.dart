@@ -54,7 +54,7 @@ void main() {
       );
       expect(
         _willTerminateBody(),
-        contains('tearDownEngine()'),
+        contains('tearDownIfRendering()'),
         reason:
             'App termination destroys the shell too and the process keeps a '
             'live run loop for a while afterwards.',
@@ -63,8 +63,33 @@ void main() {
         _detachBody(),
         contains('tearDownEngine()'),
         reason:
-            'Engine dealloc is the backstop for a view-controller dealloc, the '
-            'one shell teardown with no lifecycle callback ahead of it.',
+            'Engine dealloc is the last backstop; the app can hold the engine '
+            'past its shell, so nothing may depend on it arriving in time.',
+      );
+      expect(
+        register,
+        allOf(
+          contains('selector: #selector(flutterViewControllerWillDealloc(_:))'),
+          contains('name: Self.viewControllerWillDeallocNotification'),
+        ),
+        reason:
+            'A view-controller dealloc runs destroyContext from '
+            'notifyViewControllerDeallocated with no delegate callback ahead '
+            'of it; the controller posts FlutterViewControllerWillDealloc '
+            'synchronously first, and that is the only hook for that path '
+            'that does not wait on an engine dealloc.',
+      );
+      expect(
+        _viewControllerWillDeallocBody(),
+        allOf(
+          contains('ObjectIdentifier(controller) == renderingViewControllerId'),
+          contains('tearDownEngine()'),
+        ),
+        reason:
+            "Inside the controller's dealloc every weak reference to it reads "
+            'nil, so the notification object must be matched against an '
+            "identity captured earlier — and only that controller's dealloc "
+            'may tear this engine down.',
       );
       expect(
         source,
@@ -74,6 +99,41 @@ void main() {
         reason:
             'addSceneDelegate only accepts a FlutterSceneLifeCycleDelegate; '
             'the conformance is what makes sceneDidDisconnect reachable.',
+      );
+    });
+
+    test('tears down only engines whose shell the event destroys', () {
+      expect(
+        _tearDownIfRenderingBody(),
+        contains('guard registrar?.viewController != nil else { return }'),
+        reason:
+            'addApplicationDelegate registers on the shared app delegate and '
+            'the engine registers every plugin instance with the single '
+            'scene, so a headless engine (the notification isolate) receives '
+            'both callbacks although no controller destroys its shell. '
+            'Tearing it down would strand players it creates later and skip '
+            'unregisterTexture against a live registry.',
+      );
+      expect(
+        _sceneDisconnectBody(),
+        allOf(
+          contains('guard let controller = registrar?.viewController'),
+          contains('windowScene !== scene'),
+        ),
+        reason:
+            'The scene hook mirrors '
+            'FlutterViewController.shouldHandleSceneNotification: — no '
+            'controller means no shell teardown, a controller in another '
+            'scene is not the one going away, and a detached window still '
+            'counts, which is the memory-reclaim shape.',
+      );
+      expect(
+        _createBody(),
+        contains('guard !isEngineTornDown else {'),
+        reason:
+            'The teardown is one-way: its observers are gone and it never '
+            'runs again, so a player created afterwards would be the zombie '
+            'it exists to prevent.',
       );
     });
 
@@ -378,7 +438,19 @@ String _detachBody() => _slice(
 String _willTerminateBody() => _slice(
   _pluginSource(),
   'public func applicationWillTerminate(',
-  'private func tearDownEngine()',
+  '@objc private func flutterViewControllerWillDealloc(',
+);
+
+String _viewControllerWillDeallocBody() => _slice(
+  _pluginSource(),
+  '@objc private func flutterViewControllerWillDealloc(',
+  'private func tearDownIfRendering()',
+);
+
+String _tearDownIfRenderingBody() => _slice(
+  _pluginSource(),
+  'private func tearDownIfRendering()',
+  'private func noteRenderingViewController()',
 );
 
 /// Slices the shared teardown body, up to the `handle` method.

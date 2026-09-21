@@ -37,6 +37,25 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     /// `destroyContext` and dereference the null shell.
     private var isEngineTornDown = false
 
+    #if os(iOS)
+    /// Identity of the `FlutterViewController` this engine renders into,
+    /// captured from the registrar the first time a method call arrives.
+    /// Stored as an `ObjectIdentifier` because it is compared inside that
+    /// controller's `dealloc`, when every weak reference to it — including
+    /// `registrar.viewController` — already reads nil. Stays nil for a
+    /// headless engine, which has no controller and whose shell no
+    /// controller destroys.
+    private var renderingViewControllerId: ObjectIdentifier?
+
+    /// Posted by `FlutterViewController` at the top of its `dealloc`; the
+    /// engine's own observer answers it with `destroyContext`. Not in a
+    /// public header, but it is the event the engine itself keys on, and
+    /// missing it degrades to the engine-dealloc backstop rather than to a
+    /// crash.
+    private static let viewControllerWillDeallocNotification =
+        Notification.Name("FlutterViewControllerWillDealloc")
+    #endif
+
     /// Which plugin instance last installed the process-wide sink. A
     /// teardown hands the sink back only while this instance still owns
     /// it, so it never mutes a second live engine. Weak, so the record
@@ -133,6 +152,19 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         // shell goes. See #9342.
         registrar.addSceneDelegate(plugin)
         registrar.addApplicationDelegate(plugin)
+        // A view controller released for any other reason runs the same
+        // `destroyContext` from `notifyViewControllerDeallocated`, with no
+        // delegate callback ahead of it. The controller posts this
+        // notification first, synchronously, so the players are gone
+        // before the engine's observer destroys the shell — without
+        // waiting for an engine dealloc that the app may hold off
+        // indefinitely (see `detachFromEngine`).
+        NotificationCenter.default.addObserver(
+            plugin,
+            selector: #selector(flutterViewControllerWillDealloc(_:)),
+            name: Self.viewControllerWillDeallocNotification,
+            object: nil
+        )
         #endif
 
         // Observe app lifecycle to pause/resume all players.
@@ -170,11 +202,13 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         PlayerRegistry.shared.forEngine(engineId) { $0.onAppForegrounded() }
     }
 
-    /// Runs inside `-[FlutterEngine dealloc]`. It is the backstop for the
-    /// one teardown with no lifecycle callback ahead of it — a
-    /// `FlutterViewController` dealloc, which destroys the shell on its way
-    /// out — and the engine only delivers it because `register` published
-    /// the plugin.
+    /// Runs inside `-[FlutterEngine dealloc]`, which the engine delivers
+    /// only because `register` published the plugin. It is the last
+    /// backstop, not a hook to rely on: an app can keep the engine alive
+    /// past its shell — Divine's `NostrBridgeAttestationPlugin` holds the
+    /// plugin registry, which is the engine, in a static until the next
+    /// engine replaces it — so the shell-destroying events above are what
+    /// tear the players down in time.
     public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
         tearDownEngine()
     }
@@ -182,15 +216,47 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     #if os(iOS)
     /// `FlutterViewController` answers `UIApplicationWillTerminateNotification`
     /// with `destroyContext`; the plugin lifecycle delegate hands this to us
-    /// from the same notification.
+    /// from the same notification. It reaches every engine's plugin
+    /// instance in the process — the registration is on the shared app
+    /// delegate — hence the rendering gate.
     public func applicationWillTerminate(_ application: UIApplication) {
+        tearDownIfRendering()
+    }
+
+    @objc private func flutterViewControllerWillDealloc(_ note: Notification) {
+        guard let renderingViewControllerId,
+              let controller = note.object as AnyObject?,
+              ObjectIdentifier(controller) == renderingViewControllerId
+        else { return }
         tearDownEngine()
+    }
+
+    /// Only an engine that renders into a `FlutterViewController` has its
+    /// shell destroyed by the scene and application events: a headless
+    /// engine (the notification isolate runs one) keeps its shell, so
+    /// tearing it down would strand the players it may create later and
+    /// skip `unregisterTexture` against a registry that is still alive.
+    private func tearDownIfRendering() {
+        guard registrar?.viewController != nil else { return }
+        tearDownEngine()
+    }
+
+    /// Remembers which controller this engine renders into, for the
+    /// dealloc notification above. Cheap enough to run on every call; the
+    /// controller is attached only after plugin registration, so `register`
+    /// is too early to read it.
+    private func noteRenderingViewController() {
+        guard renderingViewControllerId == nil,
+              let controller = registrar?.viewController
+        else { return }
+        renderingViewControllerId = ObjectIdentifier(controller)
     }
     #endif
 
     /// Disposes this engine's players without touching the engine. Called
     /// once the shell is gone or about to go, from every path that destroys
-    /// it: scene disconnect, app termination, and engine dealloc. Disposal
+    /// it: scene disconnect, app termination, view-controller dealloc, and
+    /// engine dealloc. One-way: `create` refuses afterwards. Disposal
     /// here skips `unregisterTexture` and the channel log because both
     /// dereference the shell exactly like `textureFrameAvailable:`; the
     /// messenger's handler-clearing paths are shell-guarded by the engine.
@@ -222,6 +288,9 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         // Re-claim the shared sink in case another FlutterEngine overwrote it.
         installLogSink()
+        #if os(iOS)
+        noteRenderingViewController()
+        #endif
         if call.method == "getDiagnostics" {
             result(PlayerRegistry.shared.diagnostics())
             return
@@ -256,6 +325,19 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
                     FlutterError(
                         code: "INVALID_ARGS",
                         message: "Missing player id or engine registration",
+                        details: nil
+                    )
+                )
+                return
+            }
+            // The teardown is one-way: its observers are gone and it will
+            // not run again, so a player created now would be the zombie
+            // the teardown exists to prevent. The shell is going anyway.
+            guard !isEngineTornDown else {
+                result(
+                    FlutterError(
+                        code: "ENGINE_TORN_DOWN",
+                        message: "The Flutter engine is shutting down",
                         details: nil
                     )
                 )
@@ -381,7 +463,18 @@ extension DivineVideoPlayerPlugin: FlutterSceneLifeCycleDelegate {
     /// switcher, or to reclaim a backgrounded app's memory; the process
     /// survives either. `FlutterViewController` answers the matching
     /// `UISceneDidDisconnectNotification` with `destroyContext`.
+    ///
+    /// The engine registers every plugin instance with the single scene,
+    /// headless ones included, so this mirrors the controller's own
+    /// `shouldHandleSceneNotification:`: no controller, no shell teardown;
+    /// a controller whose window sits in another scene is not the one
+    /// going away; a controller whose window is already detached is.
     public func sceneDidDisconnect(_ scene: UIScene) {
+        guard let controller = registrar?.viewController else { return }
+        if let windowScene = controller.viewIfLoaded?.window?.windowScene,
+           windowScene !== scene {
+            return
+        }
         tearDownEngine()
     }
 }

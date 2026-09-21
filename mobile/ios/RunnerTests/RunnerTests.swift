@@ -413,7 +413,9 @@ private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
   private(set) var applicationDelegates: [AnyObject] = []
   private(set) var messengerResolutions = 0
 
-  var viewController: UIViewController? { nil }
+  /// The controller this engine renders into. Nil is a headless engine —
+  /// the notification isolate's shape — whose shell no controller destroys.
+  var viewController: UIViewController?
 
   func messenger() -> FlutterBinaryMessenger {
     messengerResolutions += 1
@@ -602,10 +604,15 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
 
   private var registrar: FakePluginRegistrar!
   private var plugin: DivineVideoPlayerPlugin!
+  /// Held for the test's lifetime so the plugin sees the same controller
+  /// on every call; released (and its dealloc simulated) explicitly.
+  private var viewController: UIViewController!
 
   override func setUpWithError() throws {
     try super.setUpWithError()
+    viewController = UIViewController()
     registrar = FakePluginRegistrar()
+    registrar.viewController = viewController
     DivineVideoPlayerPlugin.register(with: registrar)
     plugin = try XCTUnwrap(
       registrar.published as? DivineVideoPlayerPlugin,
@@ -618,7 +625,17 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
     plugin?.detachFromEngine(for: registrar)
     plugin = nil
     registrar = nil
+    viewController = nil
     super.tearDown()
+  }
+
+  /// A second engine that renders into its own controller.
+  private func makeRenderingPlugin() throws -> (FakePluginRegistrar, DivineVideoPlayerPlugin) {
+    let otherRegistrar = FakePluginRegistrar()
+    otherRegistrar.viewController = UIViewController()
+    DivineVideoPlayerPlugin.register(with: otherRegistrar)
+    let otherPlugin = try XCTUnwrap(otherRegistrar.published as? DivineVideoPlayerPlugin)
+    return (otherRegistrar, otherPlugin)
   }
 
   private func createTexturePlayer(
@@ -715,6 +732,89 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
     XCTAssertEqual(registrar.fakeTextures.unregistered, [])
   }
 
+  /// `FlutterViewController` posts this at the top of its `dealloc`, and
+  /// the engine's own observer answers it with `destroyContext`. It is the
+  /// one shell teardown with no delegate callback ahead of it, and the
+  /// engine dealloc that would otherwise back it up can be held off
+  /// indefinitely by the app (`NostrBridgeAttestationPlugin.shared` keeps
+  /// the engine). Every weak reference to the controller already reads nil
+  /// inside its dealloc, so the plugin must match the notification's object
+  /// against an identity it captured earlier.
+  func testViewControllerDeallocReleasesPlayersWithoutTouchingTheEngine() throws {
+    let before = try registeredPlayers(plugin)
+    _ = try createTexturePlayer(plugin, id: Self.playerIdBase + 8)
+
+    NotificationCenter.default.post(
+      name: Notification.Name("FlutterViewControllerWillDealloc"),
+      object: viewController
+    )
+
+    XCTAssertEqual(try registeredPlayers(plugin), before)
+    XCTAssertEqual(registrar.fakeTextures.unregistered, [])
+  }
+
+  func testAnotherControllersDeallocLeavesPlayersAlone() throws {
+    let before = try registeredPlayers(plugin)
+    _ = try createTexturePlayer(plugin, id: Self.playerIdBase + 9)
+
+    NotificationCenter.default.post(
+      name: Notification.Name("FlutterViewControllerWillDealloc"),
+      object: UIViewController()
+    )
+
+    XCTAssertEqual(
+      try registeredPlayers(plugin), before + 1,
+      "a controller this engine does not render into takes no shell with it"
+    )
+  }
+
+  /// The engine registers every plugin instance with the single scene and
+  /// the shared app delegate, so a headless engine — the notification
+  /// isolate's — receives both callbacks although no controller destroys
+  /// its shell. Tearing it down would strand players it creates later and
+  /// skip `unregisterTexture` against a registry that is still alive.
+  func testHeadlessEngineIsNotTornDownBySceneOrApplicationEvents() throws {
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first)
+    let headlessRegistrar = FakePluginRegistrar()
+    DivineVideoPlayerPlugin.register(with: headlessRegistrar)
+    let headlessPlugin = try XCTUnwrap(headlessRegistrar.published as? DivineVideoPlayerPlugin)
+    defer { headlessPlugin.detachFromEngine(for: headlessRegistrar) }
+    let before = try registeredPlayers(plugin)
+    let id = Self.playerIdBase + 10
+    let textureId = try createTexturePlayer(headlessPlugin, id: id)
+
+    headlessPlugin.sceneDidDisconnect(scene)
+    headlessPlugin.applicationWillTerminate(UIApplication.shared)
+
+    XCTAssertEqual(try registeredPlayers(plugin), before + 1, "its shell is alive; nothing to tear down")
+
+    headlessPlugin.handle(FlutterMethodCall(methodName: "dispose", arguments: ["id": id])) { _ in }
+    XCTAssertEqual(
+      headlessRegistrar.fakeTextures.unregistered, [textureId],
+      "a live engine still gets its texture back"
+    )
+  }
+
+  /// The teardown is one-way — its observers are gone and it never runs
+  /// again — so a player created afterwards would be exactly the zombie it
+  /// exists to prevent.
+  func testCreateIsRefusedAfterTeardown() throws {
+    plugin.applicationWillTerminate(UIApplication.shared)
+
+    var error: FlutterError?
+    plugin.handle(
+      FlutterMethodCall(
+        methodName: "create",
+        arguments: ["id": Self.playerIdBase + 12, "useTexture": true]
+      )
+    ) { result in
+      error = result as? FlutterError
+    }
+
+    XCTAssertEqual(error?.code, "ENGINE_TORN_DOWN")
+    XCTAssertEqual(registrar.fakeTextures.registered, [], "no texture may be registered on a shell that is going")
+  }
+
   func testDartDisposeStillUnregistersTheTexture() throws {
     let id = Self.playerIdBase + 3
     let textureId = try createTexturePlayer(plugin, id: id)
@@ -728,9 +828,7 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
   }
 
   func testTeardownLeavesAnotherEnginesPlayersAlone() throws {
-    let otherRegistrar = FakePluginRegistrar()
-    DivineVideoPlayerPlugin.register(with: otherRegistrar)
-    let otherPlugin = try XCTUnwrap(otherRegistrar.published as? DivineVideoPlayerPlugin)
+    let (otherRegistrar, otherPlugin) = try makeRenderingPlugin()
     defer { otherPlugin.detachFromEngine(for: otherRegistrar) }
 
     let before = try registeredPlayers(plugin)
@@ -748,9 +846,7 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
   }
 
   func testDartDisposeAllReleasesOnlyTheCallingEnginesPlayers() throws {
-    let otherRegistrar = FakePluginRegistrar()
-    DivineVideoPlayerPlugin.register(with: otherRegistrar)
-    let otherPlugin = try XCTUnwrap(otherRegistrar.published as? DivineVideoPlayerPlugin)
+    let (otherRegistrar, otherPlugin) = try makeRenderingPlugin()
     defer { otherPlugin.detachFromEngine(for: otherRegistrar) }
 
     let before = try registeredPlayers(plugin)
