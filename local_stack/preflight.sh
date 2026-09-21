@@ -500,12 +500,16 @@ print(int((now - created).total_seconds() // 86400), sys.argv[2])
 ' "$created" "$tags" 2>/dev/null || return 1
 }
 
-# Image overrides that select one of the local stack's buildable services.
-# Keep this list shared: both pre-flights must learn about a new override.
-_STACK_IMAGE_OVERRIDE_VARS=(
+# Image overrides for the Funnelcake services that the staleness check covers.
+_FUNNELCAKE_IMAGE_OVERRIDE_VARS=(
     FUNNELCAKE_MIGRATE_IMAGE
     FUNNELCAKE_RELAY_IMAGE
     FUNNELCAKE_API_IMAGE
+)
+
+# Image overrides that select one of the local stack's buildable services.
+_STACK_IMAGE_OVERRIDE_VARS=(
+    "${_FUNNELCAKE_IMAGE_OVERRIDE_VARS[@]}"
     KEYCAST_IMAGE
 )
 
@@ -525,8 +529,7 @@ preflight_image_staleness() {
     local package age_and_tags age tags stale="" var
 
     # An explicit image override means the developer already knows.
-    for var in "${_STACK_IMAGE_OVERRIDE_VARS[@]}"; do
-        [[ "$var" == KEYCAST_IMAGE ]] && continue
+    for var in "${_FUNNELCAKE_IMAGE_OVERRIDE_VARS[@]}"; do
         [[ -z "${!var:-}" ]] || return 0
     done
 
