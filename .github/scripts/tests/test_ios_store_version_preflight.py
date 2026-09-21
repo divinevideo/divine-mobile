@@ -151,6 +151,28 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
             "must be newer than released App Store version 1.0.23", result.stderr
         )
 
+    def test_blocks_version_equal_to_accepted_version(self) -> None:
+        # ACCEPTED means App Review passed while a sibling submission item is
+        # still outstanding, so the version string is taken.
+        result = self.run_preflight(
+            [
+                app_store_version("1.0.23", state="ACCEPTED"),
+                app_store_version("1.0.22", state="READY_FOR_DISTRIBUTION"),
+            ],
+            candidate_version="1.0.23",
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "must be newer than released App Store version 1.0.23", result.stderr
+        )
+
+    def test_fails_closed_on_empty_version_list(self) -> None:
+        result = self.run_preflight([])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("returned no App Store versions", result.stderr)
+
     def test_fails_closed_on_invalid_json_shape(self) -> None:
         result = self.run_preflight({"buildId": "build-id", "version": "1.0.22"})
 

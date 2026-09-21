@@ -13,6 +13,10 @@ end
 # been taken by App Store Connect, so a new build cannot be attached to it and
 # a Shorebird release for it would be rejected after the build.
 #
+# ACCEPTED means App Review passed this version while a sibling item in the
+# same submission is still outstanding, so the version string is already taken
+# even though it is not yet distributing.
+#
 # Deliberately excluded: PREPARE_FOR_SUBMISSION, READY_FOR_REVIEW,
 # WAITING_FOR_REVIEW, IN_REVIEW, REJECTED, DEVELOPER_REJECTED,
 # METADATA_REJECTED, INVALID_BINARY and WAITING_FOR_EXPORT_COMPLIANCE. A
@@ -22,6 +26,7 @@ end
 # appVersionState is the current App Store Connect field; appStoreState is the
 # deprecated spelling that older API responses still carry.
 TAKEN_STATES = %w[
+  ACCEPTED
   READY_FOR_DISTRIBUTION
   PROCESSING_FOR_DISTRIBUTION
   PENDING_APPLE_RELEASE
@@ -42,6 +47,13 @@ end
 payload = JSON.parse(File.read(json_path))
 unless payload.is_a?(Array)
   abort('ERROR: expected a JSON array of App Store versions from App Store Connect.')
+end
+
+if payload.empty?
+  abort(
+    'ERROR: App Store Connect returned no App Store versions for this app. ' \
+    'Refusing to treat an empty lookup as a first release.',
+  )
 end
 
 taken_versions = payload.filter_map do |resource|
