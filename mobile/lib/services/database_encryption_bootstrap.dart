@@ -11,9 +11,23 @@ import 'package:openvine/services/database_recovery_store.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Secure-storage key for the at-rest DB cipher key. Versioned so a future
-/// rotation can introduce `.v2` without colliding.
+/// rotation can introduce `.v3` without colliding.
+///
+/// `.v2` holds the same key material as `.v1` did; it is a new slot because
+/// the iOS Keychain accessibility changed (#9343) and the plugin cannot report
+/// which accessibility an existing item carries. A key found here has been
+/// stored under the current options and needs no migration.
 @visibleForTesting
-const dbCipherKeyStorageKey = 'db.cipher.key.v1';
+const dbCipherKeyStorageKey = 'db.cipher.key.v2';
+
+/// The slot the cipher key lived in before #9343. On iOS that item carries the
+/// package-default `unlocked` accessibility, which the Keychain refuses
+/// whenever the device is locked. It is only ever read once and moved to
+/// [dbCipherKeyStorageKey], then deleted — through the storage instance that
+/// still names its accessibility, because the iOS plugin puts the accessibility
+/// into its delete query.
+@visibleForTesting
+const legacyDbCipherKeyStorageKey = 'db.cipher.key.v1';
 
 /// Resolves the SQLite3MultipleCiphers key for the local database before the first
 /// `AppDatabase` open and performs the one-time plaintext→encrypted migration.
@@ -26,6 +40,8 @@ const dbCipherKeyStorageKey = 'db.cipher.key.v1';
 class DatabaseEncryptionBootstrap {
   DatabaseEncryptionBootstrap({
     required FlutterSecureStorage secureStorage,
+    required FlutterSecureStorage legacySecureStorage,
+    Future<bool?> Function()? isProtectedDataAvailable,
     Future<void> Function()? ensureRuntime,
     bool Function()? isCipherAvailable,
     Future<CipherMigrationOutcome> Function(String rawKeyHex)? migrate,
@@ -40,6 +56,10 @@ class DatabaseEncryptionBootstrap {
     Future<bool> Function()? hasPendingCorruptionRecovery,
     Future<void> Function()? clearPendingCorruptionRecovery,
   }) : _secureStorage = secureStorage,
+       _legacySecureStorage = legacySecureStorage,
+       _isProtectedDataAvailable =
+           isProtectedDataAvailable ??
+           (() => _iosProtectedDataAvailable(secureStorage)),
        _recordRecovery = recordRecovery,
        _persistRecoveryOutcome = persistRecoveryOutcome,
        _hasPendingCorruptionRecovery =
@@ -64,7 +84,21 @@ class DatabaseEncryptionBootstrap {
            encryptedKeyMatches ??
            ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex));
 
+  /// Reads and writes [dbCipherKeyStorageKey] under the current options — on
+  /// iOS `first_unlock_this_device`, see `appDbCipherKeyIosSecureStorageOptions`.
   final FlutterSecureStorage _secureStorage;
+
+  /// Reaches [legacyDbCipherKeyStorageKey] under the pre-#9343 options. Read
+  /// and delete only; nothing is ever written through it.
+  final FlutterSecureStorage _legacySecureStorage;
+
+  /// Whether the platform can currently decrypt `unlocked`-class data — iOS's
+  /// `UIApplication.isProtectedDataAvailable`. `null` where the bootstrap has
+  /// no such signal to consult (Android, web, and macOS — see
+  /// [_iosProtectedDataAvailable]). Consulted before generating a key: see
+  /// [_requireReadableKeystore].
+  final Future<bool?> Function() _isProtectedDataAvailable;
+
   final Future<void> Function() _ensureRuntime;
   final bool Function() _isCipherAvailable;
   final Future<CipherMigrationOutcome> Function(String rawKeyHex) _migrate;
@@ -130,9 +164,9 @@ class DatabaseEncryptionBootstrap {
   ///   active SQLite build — a build misconfiguration that must fail loudly
   ///   rather than silently ship an unencrypted database.
   /// * [DatabaseCipherStorageUnavailableException] when the keystore holding
-  ///   the cipher key cannot be read or written, most often a launch before
-  ///   the device's first unlock. Raised by the Keychain backends only — see
-  ///   the platform note on that class.
+  ///   the cipher key cannot be read or written, or cannot be trusted to have
+  ///   shown it, most often a launch before the device's first unlock. Raised
+  ///   by the Keychain backends only — see the platform note on that class.
   /// * [DatabaseUnreadableError] when the database file is structurally
   ///   corrupt. Distinct from the deferral above: that one hands back a `null`
   ///   key for a database that genuinely is readable plaintext, this one has no
@@ -260,14 +294,89 @@ class DatabaseEncryptionBootstrap {
   }
 
   Future<(String, bool)> _readOrCreateKey() async {
-    final existing = await _readCipherKey();
-    if (existing != null && _isValidCipherKey(existing)) {
-      return (existing, false);
+    final existing = await _readCipherKey(
+      _secureStorage,
+      dbCipherKeyStorageKey,
+    );
+    if (existing != null) {
+      if (_isValidCipherKey(existing)) return (existing, false);
+      return (await _createKey(), true);
     }
 
+    final legacy = await _readCipherKey(
+      _legacySecureStorage,
+      legacyDbCipherKeyStorageKey,
+    );
+    if (legacy != null && _isValidCipherKey(legacy)) {
+      await _migrateLegacyCipherKey(legacy);
+      return (legacy, false);
+    }
+    // Both slots read back empty. Only a keystore that could have answered
+    // makes that a fresh install rather than a key it refused to hand over.
+    if (legacy == null) await _requireReadableKeystore();
+    return (await _createKey(), true);
+  }
+
+  Future<String> _createKey() async {
     final key = generateCipherKeyHex();
     await _writeCipherKey(key);
-    return (key, true);
+    return key;
+  }
+
+  /// Moves a key stored before #9343 into [dbCipherKeyStorageKey] under the
+  /// current options — on iOS from `unlocked` to `first_unlock_this_device`.
+  ///
+  /// Write first, delete second: a launch that dies in between finds the
+  /// migrated key next time and only leaves the stale copy behind. The delete
+  /// is best-effort for the same reason — the key is already in its new slot,
+  /// so a leftover copy under the old accessibility cannot fail a launch.
+  Future<void> _migrateLegacyCipherKey(String key) async {
+    await _writeCipherKey(key);
+    try {
+      await _legacySecureStorage.delete(key: legacyDbCipherKeyStorageKey);
+    } on Object catch (error) {
+      Log.warning(
+        'Migrated the DB cipher key to its new keystore slot but could not '
+        'remove the old copy (non-fatal): $error',
+        name: _logName,
+      );
+    }
+  }
+
+  /// Refuses to treat an empty keystore as a fresh install while the platform
+  /// cannot decrypt `unlocked`-class data.
+  ///
+  /// On the Keychain backends an item the current device state cannot decrypt
+  /// reads back as `null`, not as a throw: `flutter_secure_storage`'s iOS
+  /// `read` drops the `errSecInteractionNotAllowed` (-25308) status when it
+  /// retries the query as synchronizable, and that retry reports "not found".
+  /// So before the device's first unlock — or, for a key not yet migrated off
+  /// the `unlocked` class, whenever the device is locked — an absent key is
+  /// indistinguishable from one that is merely locked away. Generating a
+  /// replacement then would strand the database the real key opens (#9343).
+  ///
+  /// Throws [DatabaseCipherStorageUnavailableException] in that state; the
+  /// launch fails closed and the next unlocked launch reads the key as usual.
+  /// A `null` probe means the platform has no protected-data notion (Android,
+  /// web), where a `null` read has to be trusted — see the platform note on
+  /// [DatabaseCipherStorageUnavailableException].
+  Future<void> _requireReadableKeystore() async {
+    if (await _isProtectedDataAvailable() ?? true) return;
+    throw DatabaseCipherStorageUnavailableException(
+      const ProtectedDataUnavailableException(),
+    );
+  }
+
+  /// The default probe, iOS only. macOS also answers
+  /// `isCupertinoProtectedDataAvailable` (macOS 12+), but its key stays on the
+  /// `unlocked` class (#5563), a Mac app never launches while the login
+  /// session is locked, and a wrong `false` there would fail every fresh
+  /// install closed for good — so macOS trusts a `null` read as it always has.
+  static Future<bool?> _iosProtectedDataAvailable(
+    FlutterSecureStorage storage,
+  ) async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return null;
+    return storage.isCupertinoProtectedDataAvailable();
   }
 
   /// Reads the stored cipher key, translating a platform secure-storage
@@ -276,11 +385,14 @@ class DatabaseEncryptionBootstrap {
   /// Rethrows rather than degrading a failed read into "no key stored": the
   /// caller would generate a replacement and overwrite the only key that can
   /// open the existing database. Covers failures that surface as a thrown
-  /// platform error — see the platform note on
-  /// [DatabaseCipherStorageUnavailableException].
-  Future<String?> _readCipherKey() async {
+  /// platform error; the ones that surface as `null` are caught by
+  /// [_requireReadableKeystore] instead.
+  Future<String?> _readCipherKey(
+    FlutterSecureStorage storage,
+    String storageKey,
+  ) async {
     try {
-      return await _secureStorage.read(key: dbCipherKeyStorageKey);
+      return await storage.read(key: storageKey);
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
         DatabaseCipherStorageUnavailableException(error),
@@ -367,19 +479,24 @@ class DatabaseRecoveryEvent implements Exception {
 /// read or written during startup.
 ///
 /// The key material is intact and only unreachable right now. The common cause
-/// is a launch while the device is still locked — a push or background fetch
-/// before the first unlock after boot — where the Keychain refuses the read.
+/// is a launch while the device is still locked — a push, a background fetch
+/// or a prewarmed launch before the first unlock after boot — where the
+/// Keychain refuses the read. The refusal surfaces either as a thrown platform
+/// error or, because the iOS plugin drops the status on its read path, as a
+/// `null` read while protected data is unavailable; [cause] is then a
+/// [ProtectedDataUnavailableException].
 ///
 /// Distinct from a corrupt or key-mismatched database, and deliberately NOT
 /// repairable by clearing the local cache: that path deletes the cipher key
 /// this error merely failed to reach, turning a transient lock into permanent
 /// data loss. See [shouldRepairLocalDatabaseCacheAfterBootstrapError].
 ///
-/// Platform note: only the Keychain backends (iOS, macOS) surface the failure
-/// as a throw and therefore reach this type. Android's
-/// `encryptedSharedPreferences` backend falls back to plaintext preferences
-/// when the keystore cannot be initialised and reads back `null`, which this
-/// bootstrap cannot tell apart from a fresh install.
+/// Platform note: only the Keychain backends (iOS, macOS) reach this type —
+/// they either throw, or report protected data unavailable next to a `null`
+/// read. Android's `encryptedSharedPreferences` backend falls back to
+/// plaintext preferences when the keystore cannot be initialised and reads
+/// back `null` with no availability signal, which this bootstrap cannot tell
+/// apart from a fresh install.
 class DatabaseCipherStorageUnavailableException implements Exception {
   DatabaseCipherStorageUnavailableException(this.cause);
 
@@ -391,6 +508,25 @@ class DatabaseCipherStorageUnavailableException implements Exception {
   String toString() =>
       'DatabaseCipherStorageUnavailableException: '
       'secure storage is unavailable ($cause)';
+}
+
+/// The [DatabaseCipherStorageUnavailableException.cause] recorded when both
+/// cipher-key slots read back empty while the device has not been unlocked
+/// since boot, so the bootstrap refused to generate a replacement key.
+///
+/// Not a platform error: the Keychain reported nothing wrong, it merely could
+/// not be trusted to have shown an existing item. Named separately so a
+/// Crashlytics reader can tell this refusal from a `-25308` that the platform
+/// did raise.
+class ProtectedDataUnavailableException implements Exception {
+  const ProtectedDataUnavailableException();
+
+  @override
+  String toString() =>
+      'ProtectedDataUnavailableException: the cipher key read back empty '
+      'while protected data was unavailable (device locked), so an absent '
+      'key cannot be told apart from one the Keychain refused to read; '
+      'refusing to generate a replacement';
 }
 
 /// Thrown when the local database file exists but is structurally corrupt: a
@@ -498,16 +634,20 @@ bool shouldRepairLocalDatabaseCacheAfterBootstrapError(Object error) {
 /// fresh one.
 ///
 /// [deleteCipherKey] additionally removes the DB cipher key (and nothing else
-/// from the keystore). Pass `false` when the caller cannot prove the stored key
-/// is stale: the backup this call leaves behind is encrypted under that key, so
-/// deleting it makes the backup permanently unreadable — while a retained key
-/// opens a fresh database just as well as a rotated one.
+/// from the keystore) from both of its slots — the current one through
+/// [secureStorage] and the pre-#9343 one through [legacySecureStorage], which
+/// on iOS is the only instance whose delete query matches that item. Pass
+/// `false` when the caller cannot prove the stored key is stale: the backup
+/// this call leaves behind is encrypted under that key, so deleting it makes
+/// the backup permanently unreadable — while a retained key opens a fresh
+/// database just as well as a rotated one.
 ///
 /// [deleteDatabase] overrides that backup step. Callers that have proved the
 /// file is plaintext-shaped pass [deleteSharedDatabase] via
 /// [resetUnreadablePlaintextDatabaseCache], which leaves no backup at all.
 Future<void> resetEncryptedDatabaseCache({
   required FlutterSecureStorage secureStorage,
+  required FlutterSecureStorage legacySecureStorage,
   bool deleteCipherKey = true,
   Future<void> Function()? deleteDatabase,
   Future<void> Function()? onDatabaseReset,
@@ -518,6 +658,7 @@ Future<void> resetEncryptedDatabaseCache({
   await (deleteDatabase ?? backUpAndRemoveSharedDatabase)();
   if (deleteCipherKey) {
     await secureStorage.delete(key: dbCipherKeyStorageKey);
+    await legacySecureStorage.delete(key: legacyDbCipherKeyStorageKey);
   }
   if (recoveryOutcome != null) {
     try {
@@ -540,12 +681,14 @@ Future<void> resetEncryptedDatabaseCache({
 /// path keeps the cipher key but hard-deletes the database and sidecars.
 Future<void> resetUnreadablePlaintextDatabaseCache({
   required FlutterSecureStorage secureStorage,
+  required FlutterSecureStorage legacySecureStorage,
   @visibleForTesting Future<void> Function()? deleteDatabase,
   Future<void> Function()? onDatabaseReset,
   Future<void> Function(DatabaseRecoveryOutcome outcome)?
   persistRecoveryOutcome,
 }) => resetEncryptedDatabaseCache(
   secureStorage: secureStorage,
+  legacySecureStorage: legacySecureStorage,
   deleteCipherKey: false,
   deleteDatabase: deleteDatabase ?? deleteSharedDatabase,
   onDatabaseReset: onDatabaseReset,
