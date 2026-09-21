@@ -1852,8 +1852,13 @@ class FunnelcakeApiClient {
       queryParams['cursor'] = cursor;
     }
 
+    // Percent-encoded: [eventId] is a hex id or a `d` tag, and a d tag is
+    // arbitrary UTF-8 that can arrive from an untrusted `naddr1` in a deep
+    // link. Interpolated raw, a `?`, `#` or `/` in it retargets the request
+    // — 'a?b' drops the `/likers` suffix and hits the video-details
+    // endpoint, whose 200 response reduces to an empty liker list.
     final uri = Uri.parse(
-      '$_baseUrl/api/videos/$eventId/likers',
+      '$_baseUrl/api/videos/${Uri.encodeComponent(eventId)}/likers',
     ).replace(queryParameters: queryParams);
 
     try {

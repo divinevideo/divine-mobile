@@ -381,6 +381,69 @@ void main() {
         expect(find.text('video detail'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'cold entry back from an addressable link keeps the coordinate',
+      (tester) async {
+        // An naddr1 or coordinate link reaches this screen with the d tag as
+        // eventId and the coordinate as addressableId. Falling back to
+        // /video/<d tag> would resolve without the author the link carried,
+        // so the fallback must be the coordinate.
+        const dTag = 'ip1dd9tAlmw';
+        const coordinate =
+            '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+            ':$dTag';
+        when(
+          () => likesRepository.fetchEventLikers(
+            eventId: dTag,
+            addressableId: coordinate,
+          ),
+        ).thenAnswer((_) async => const LikersPage(pubkeys: [testPubkey1]));
+
+        final router = GoRouter(
+          initialLocation: '/video/$dTag/likers?a=$coordinate',
+          routes: [
+            GoRoute(
+              path: '/video/:id',
+              builder: (_, state) =>
+                  Scaffold(body: Text('detail ${state.pathParameters['id']}')),
+            ),
+            GoRoute(
+              path: '/video/:eventId/likers',
+              builder: (_, state) => VideoEngagementListScreen(
+                eventId: state.pathParameters['eventId']!,
+                type: VideoEngagementType.likers,
+                addressableId: state.uri.queryParameters['a'],
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              likesRepositoryProvider.overrideWithValue(likesRepository),
+              repostsRepositoryProvider.overrideWithValue(repostsRepository),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(router.canPop(), isFalse);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.bySemanticsLabel(l10n.commonBack));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('detail $coordinate'), findsOneWidget);
+      },
+    );
   });
 }
 

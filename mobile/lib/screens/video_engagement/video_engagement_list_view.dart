@@ -46,10 +46,13 @@ class VideoEngagementListView extends StatelessWidget {
         showBackButton: true,
         // safePop: both routes that build this view are registered flat and
         // top-level, so a link or an account swap enters them on a one-entry
-        // stack and a plain pop empties the router (#9359).
+        // stack and a plain pop empties the router (#9359). The fallback is
+        // the bloc's videoRouteId, not its eventId: for an naddr1 or
+        // coordinate link the latter is a bare d tag, which the detail route
+        // would resolve without the author the link carried.
         onBackPressed: () => context.safePop(
           fallback: RoutePaths.videoDetailForId(
-            context.read<VideoEngagementBloc>().eventId,
+            context.read<VideoEngagementBloc>().videoRouteId,
           ),
         ),
         backButtonSemanticLabel: context.l10n.commonBack,

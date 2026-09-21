@@ -3344,6 +3344,33 @@ void main() {
         expect(likers.hasMore, isFalse);
       });
 
+      test('keeps a punctuated d tag in one path segment', () async {
+        // A d tag decoded from an untrusted naddr1 is arbitrary UTF-8.
+        // Interpolated raw, 'a?b' made the path /api/videos/a — the
+        // video-details endpoint — and the 200 it answers reduces to an
+        // empty liker list, so the screen said "No likes yet".
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(likersResponse, 200));
+
+        await client.getVideoLikers('a?b/c#d');
+
+        final uri =
+            verify(
+                  () => mockHttpClient.get(
+                    captureAny(),
+                    headers: any(named: 'headers'),
+                  ),
+                ).captured.first
+                as Uri;
+
+        expect(
+          uri.pathSegments,
+          equals(['api', 'videos', 'a?b/c#d', 'likers']),
+        );
+        expect(uri.path, equals('/api/videos/a%3Fb%2Fc%23d/likers'));
+      });
+
       test('constructs correct URL with the server-max limit', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),

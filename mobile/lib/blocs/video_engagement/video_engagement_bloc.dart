@@ -48,7 +48,11 @@ class VideoEngagementBloc
     );
   }
 
-  /// Hex id of the target video event.
+  /// Identifier the engagement query addresses the video by.
+  ///
+  /// Usually the hex event id. For an addressable reference that names no
+  /// single version — an `naddr1` or a raw coordinate — this is the `d` tag,
+  /// which the first-party API resolves the same way.
   final String eventId;
 
   /// Optional `kind:pubkey:d-tag` for addressable video events (Kind 30000+).
@@ -56,6 +60,20 @@ class VideoEngagementBloc
 
   /// Whether to load likers or reposters.
   final VideoEngagementType type;
+
+  /// The `/video/:id` reference that names this list's video most precisely.
+  ///
+  /// A hex [eventId] names one exact event and is returned as is. Otherwise
+  /// [eventId] is a `d` tag, which the detail route resolves without an
+  /// author, so the coordinate in [addressableId] is preferred when the link
+  /// carried one: a same-d-tag video from another creator must not answer
+  /// for this one.
+  String get videoRouteId {
+    if (NostrHexUtils.isValidEventId(eventId)) return eventId;
+    final coordinate = addressableId;
+    if (coordinate != null && coordinate.isNotEmpty) return coordinate;
+    return eventId;
+  }
 
   final LikesRepository _likesRepository;
   final RepostsRepository _repostsRepository;

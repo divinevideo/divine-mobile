@@ -467,6 +467,52 @@ void main() {
       );
     });
 
+    group('videoRouteId', () {
+      const hexEventId =
+          'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+      const coordinate =
+          '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+          ':ip1dd9tAlmw';
+
+      VideoEngagementBloc blocFor({
+        required String eventId,
+        String? addressableId,
+      }) => VideoEngagementBloc(
+        eventId: eventId,
+        type: VideoEngagementType.likers,
+        likesRepository: likesRepository,
+        repostsRepository: repostsRepository,
+        profileRepository: profileRepository,
+        addressableId: addressableId,
+      );
+
+      test('is the hex event id whenever one is known', () {
+        // In-app pushes send both; the exact event still wins, so the
+        // back fallback for those callers is unchanged.
+        final bloc = blocFor(eventId: hexEventId, addressableId: coordinate);
+        addTearDown(bloc.close);
+
+        expect(bloc.videoRouteId, equals(hexEventId));
+      });
+
+      test('is the coordinate when the event id is only a d tag', () {
+        // An naddr1 or coordinate link: the route hands the bloc the d tag
+        // as eventId. A bare d tag would send the detail route to an
+        // unscoped lookup, so the author-carrying coordinate is preferred.
+        final bloc = blocFor(eventId: 'ip1dd9tAlmw', addressableId: coordinate);
+        addTearDown(bloc.close);
+
+        expect(bloc.videoRouteId, equals(coordinate));
+      });
+
+      test('falls back to the d tag when no coordinate is known', () {
+        final bloc = blocFor(eventId: 'ip1dd9tAlmw');
+        addTearDown(bloc.close);
+
+        expect(bloc.videoRouteId, equals('ip1dd9tAlmw'));
+      });
+    });
+
     group('VideoEngagementState.copyWith', () {
       test('preserves type and updates only supplied fields', () {
         const original = VideoEngagementState(

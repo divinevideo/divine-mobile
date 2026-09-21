@@ -36,9 +36,12 @@ void main() {
     const testPubkey =
         'test_pubkey_hex_64_chars_'
         '00000000000000000000000000000000000000';
+    // Synthetic, but a real event id's shape: 32 bytes of hex. The relay
+    // `#e` filter is only built for an identifier that could appear in an
+    // `e` tag, so a fixture that merely had the right length would skip it.
     const testEventId =
-        'test_event_id_64_chars_00'
-        '000000000000000000000000000000000000000';
+        'deadbeefdeadbeefdeadbeefdeadbeef'
+        'deadbeefdeadbeefdeadbeefdeadbeef';
     const testAddressableId = '34236:author_pubkey:test-dtag';
     const testAuthorPubkey = 'author_pubkey';
     const testRepostEventId =
@@ -1996,6 +1999,29 @@ void main() {
           return eFilterEvents;
         });
       }
+
+      test('queries only the coordinate for an addressable target', () async {
+        // The engagement route passes a `d` tag as eventId for an naddr
+        // reference. An `e` filter on a d tag matches nothing on any relay,
+        // so it is a wasted round trip inside the query budget — and when
+        // the caller sends no coordinate it was the only filter there was.
+        wireQueryEvents();
+
+        final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+        await repository.fetchEventReposters(
+          eventId: 'test-dtag',
+          addressableId: testAddressableId,
+        );
+
+        final sent = verify(
+          () => mockNostrClient.queryEvents(captureAny()),
+        ).captured.cast<List<Filter>>();
+
+        expect(sent, hasLength(1));
+        expect(sent.single.single.a, equals([testAddressableId]));
+        expect(sent.single.single.e, isNull);
+      });
 
       test('returns empty list when no reposts exist', () async {
         wireQueryEvents();
