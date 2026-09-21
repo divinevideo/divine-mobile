@@ -327,7 +327,10 @@ Then:
   `Tests (shard N/total)` for every shard, `Goldens`, aggregate
   `Mobile CI`, `Format`, `Generated Files`, `Guards`, `Async Safety` all green before requesting
   review — plus `iOS Native Tests` whenever the change touches `mobile/ios`,
-  a package's `ios/` or `darwin/` directory, or `mobile/pubspec.lock`. A red `Goldens` on a UI change is usually a real visual
+  a package's `ios/` or `darwin/` directory, a `pubspec.yaml`/`pubspec.lock`
+  that decides plugin registration, or the workflow and detector themselves.
+  It also runs on any fail-open path — an API failure, a PR at the 300-file
+  compare cap or over 3000 changed files. A red `Goldens` on a UI change is usually a real visual
   regression — download its `golden-failures` artifact and look at the
   diff before assuming drift.
 - [ ] **Checks watched to completion after the push**
