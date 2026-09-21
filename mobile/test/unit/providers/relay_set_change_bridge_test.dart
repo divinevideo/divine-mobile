@@ -97,8 +97,8 @@ void main() {
       stubRelayCounts(mockNostrClient);
     });
 
-    tearDown(() {
-      statusController.close();
+    tearDown(() async {
+      await statusController.close();
     });
 
     ProviderContainer createContainer({
@@ -120,6 +120,14 @@ void main() {
       // Activate the provider
       container.read(relaySetChangeBridgeProvider);
       return container;
+    }
+
+    StreamController<Map<String, RelayConnectionStatus>>
+    createReplacementStatusController() {
+      final controller =
+          StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+      addTearDown(controller.close);
+      return controller;
     }
 
     void stubClientScope(
@@ -548,8 +556,7 @@ void main() {
     test('keeps a pending relay edit for a same-account retry client', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const removedRelay = 'wss://relay-old.example.com';
         const addedRelay = 'wss://relay1.example.com';
         final replacementRelays = <String>{defaultRelay, removedRelay};
@@ -669,7 +676,6 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
@@ -678,8 +684,7 @@ void main() {
       () {
         fakeAsync((async) {
           final replacementClient = MockNostrClient();
-          final replacementStatuses =
-              StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+          final replacementStatuses = createReplacementStatusController();
           const removedRelay = 'wss://relay-old.example.com';
           const addedRelay = 'wss://relay1.example.com';
           final replacementRelays = <String>{defaultRelay, removedRelay};
@@ -804,7 +809,6 @@ void main() {
 
           bridgeSubscription.close();
           container.dispose();
-          replacementStatuses.close();
         });
       },
     );
@@ -812,8 +816,7 @@ void main() {
     test('discards a pending relay edit when the environment changes', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const stagingDefault = 'wss://relay.staging.divine.video';
         const editedRelay = 'wss://user-relay.example.com';
         final replacementRelays = <String>{stagingDefault};
@@ -889,15 +892,13 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
     test('discards a pending relay edit when the identity changes', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const editedRelay = 'wss://user-relay.example.com';
         final replacementRelays = <String>{defaultRelay};
         var replacementPublicKey = '';
@@ -999,15 +1000,13 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
     test('retries a partial replacement reconciliation before reset', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const editedRelay = 'wss://user-relay.example.com';
         final replacementRelays = <String>{defaultRelay};
         var addAttempts = 0;
@@ -1082,7 +1081,6 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
@@ -1091,8 +1089,7 @@ void main() {
       () {
         fakeAsync((async) {
           final replacementClient = MockNostrClient();
-          final replacementStatuses =
-              StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+          final replacementStatuses = createReplacementStatusController();
           const suppressedRelay = 'wss://removed.example.com';
           const retainedRelay = 'wss://retained.example.com';
           final replacementRelays = <String>{defaultRelay};
@@ -1179,7 +1176,6 @@ void main() {
 
           bridgeSubscription.close();
           container.dispose();
-          replacementStatuses.close();
         });
       },
     );
@@ -1187,8 +1183,7 @@ void main() {
     test('retries a thrown replacement reconciliation before reset', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const editedRelay = 'wss://user-relay.example.com';
         final replacementRelays = <String>{defaultRelay};
         var addAttempts = 0;
@@ -1260,15 +1255,13 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
     test('retries a failed relay removal before reset', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const removedRelay = 'wss://relay-old.example.com';
         const editedRelay = 'wss://user-relay.example.com';
         final replacementRelays = <String>{defaultRelay, removedRelay};
@@ -1358,15 +1351,13 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
     test('does not retry an ordinary reconnect failure', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const editedRelay = 'wss://user-relay.example.com';
         final replacementRelays = <String>{defaultRelay};
 
@@ -1430,15 +1421,13 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
     test('bounds retries for a persistently invalid relay target', () {
       fakeAsync((async) {
         final replacementClient = MockNostrClient();
-        final replacementStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final replacementStatuses = createReplacementStatusController();
         const editedRelay = 'wss://invalid-relay.example.com';
         final replacementRelays = <String>{defaultRelay};
 
@@ -1497,7 +1486,6 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        replacementStatuses.close();
       });
     });
 
@@ -1505,10 +1493,8 @@ void main() {
       fakeAsync((async) {
         final firstReplacement = MockNostrClient();
         final secondReplacement = MockNostrClient();
-        final firstStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
-        final secondStatuses =
-            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        final firstStatuses = createReplacementStatusController();
+        final secondStatuses = createReplacementStatusController();
         final firstAddGate = Completer<void>();
         const editedRelay = 'wss://user-relay.example.com';
         final firstRelays = <String>{defaultRelay};
@@ -1609,8 +1595,6 @@ void main() {
 
         bridgeSubscription.close();
         container.dispose();
-        firstStatuses.close();
-        secondStatuses.close();
       });
     });
   });
