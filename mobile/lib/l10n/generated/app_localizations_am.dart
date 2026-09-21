@@ -11854,4 +11854,68 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'ዝማኔ አለ';
+
+  @override
+  String get soundUploadAction => 'ድምፅ ይስቀሉ';
+
+  @override
+  String get soundUploadTitle => 'ድምፅ ይስቀሉ';
+
+  @override
+  String get soundUploadIntro =>
+      'ቢት፣ ጂንግል ወይም የተቀዳ ንግግር ያጋሩ፤ በ Divine ላይ ማንኛውም ሰው በዚያ ቪዲዮ መሥራት ይችላል።';
+
+  @override
+  String get soundUploadChooseFile => 'የኦዲዮ ፋይል ይምረጡ';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC፣ M4A፣ MP3፣ WAV ወይም WebM';
+
+  @override
+  String get soundUploadChangeFile => 'ይቀይሩ';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'በ Divine ላይ ማንኛውም ሰው ይህን ድምፅ በቪዲዮዎቹ ውስጥ መጠቀም ይችላል። በእያንዳንዱ ጊዜ ስምዎ ይጠቀሳል።';
+
+  @override
+  String get soundUploadShareAction => 'ድምፅ ያጋሩ';
+
+  @override
+  String get soundUploadShared => 'ድምፅዎ ታትሟል እና ወደ ድምፆች ተቀምጧል።';
+
+  @override
+  String get soundUploadFailed => 'ያን ድምፅ ማጋራት አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get soundUploadSignInFirst => 'ድምፅ ለማጋራት ይግቡ።';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'መለያዎ የተገደበ ስለሆነ ይህ ድምፅ ሊጋራ አልቻለም።';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'ይህን ድምፅ ይሰረዝ?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'የእርስዎ ስለሆነ ለሁሉም ሰው ከ Divine ማስወገድ ይችላሉ። አስቀድመው የሚጠቀሙበት ቪዲዮዎች ኦዲዮቸውን ይይዛሉ።';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'ለሁሉም ይሰርዙ';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'ከድምፆች ብቻ ያስወግዱ';
+
+  @override
+  String get savedSoundDeleted => 'ድምፁ ተሰርዟል';
+
+  @override
+  String get savedSoundDeleteFailed => 'ያን ድምፅ መሰረዝ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner => 'እርስዎ ያጋሯቸውን ድምፆች ብቻ መሰረዝ ይችላሉ።';
+
+  @override
+  String get audioPickerTypeGroup => 'ኦዲዮ';
 }

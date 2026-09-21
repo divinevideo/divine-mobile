@@ -12322,4 +12322,73 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Update verfügbar';
+
+  @override
+  String get soundUploadAction => 'Sound hochladen';
+
+  @override
+  String get soundUploadTitle => 'Sound hochladen';
+
+  @override
+  String get soundUploadIntro =>
+      'Teile einen Beat, einen Jingle oder eine Sprachaufnahme, damit alle auf Divine ein Video daraus machen können.';
+
+  @override
+  String get soundUploadChooseFile => 'Audiodatei auswählen';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV oder WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Ändern';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Alle auf Divine können diesen Sound in ihren Videos verwenden. Du wirst jedes Mal genannt.';
+
+  @override
+  String get soundUploadShareAction => 'Sound teilen';
+
+  @override
+  String get soundUploadShared =>
+      'Dein Sound ist online und in Sounds gespeichert.';
+
+  @override
+  String get soundUploadFailed =>
+      'Der Sound konnte nicht geteilt werden. Versuch es erneut.';
+
+  @override
+  String get soundUploadSignInFirst =>
+      'Melde dich an, um einen Sound zu teilen.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Dein Konto ist eingeschränkt, deshalb konnte der Sound nicht geteilt werden.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Diesen Sound löschen?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Er gehört dir, also kannst du ihn für alle von Divine nehmen. Videos, die ihn schon verwenden, behalten ihre Tonspur.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Für alle löschen';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Nur aus Sounds entfernen';
+
+  @override
+  String get savedSoundDeleted => 'Sound gelöscht';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Der Sound konnte nicht gelöscht werden. Versuch es erneut.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Du kannst nur Sounds löschen, die du geteilt hast.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

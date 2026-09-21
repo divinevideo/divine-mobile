@@ -12260,4 +12260,72 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Atualização disponível';
+
+  @override
+  String get soundUploadAction => 'Enviar um som';
+
+  @override
+  String get soundUploadTitle => 'Enviar um som';
+
+  @override
+  String get soundUploadIntro =>
+      'Compartilhe um beat, um jingle ou uma frase gravada para qualquer pessoa no Divine montar um vídeo em cima.';
+
+  @override
+  String get soundUploadChooseFile => 'Escolher um arquivo de áudio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV ou WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Trocar';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Qualquer pessoa no Divine pode usar este som nos vídeos dela. Você recebe o crédito toda vez.';
+
+  @override
+  String get soundUploadShareAction => 'Compartilhar som';
+
+  @override
+  String get soundUploadShared => 'Seu som está no ar e salvo em Sons.';
+
+  @override
+  String get soundUploadFailed =>
+      'Não foi possível compartilhar esse som. Tente de novo.';
+
+  @override
+  String get soundUploadSignInFirst =>
+      'Entre na sua conta para compartilhar um som.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Sua conta está restrita, então este som não pôde ser compartilhado.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Excluir este som?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Ele é seu, então você pode tirá-lo do Divine para todo mundo. Os vídeos que já usam esse som continuam com o áudio.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Excluir para todo mundo';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Só remover de Sons';
+
+  @override
+  String get savedSoundDeleted => 'Som excluído';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Não foi possível excluir esse som. Tente de novo.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Você só pode excluir sons que você compartilhou.';
+
+  @override
+  String get audioPickerTypeGroup => 'Áudio';
 }

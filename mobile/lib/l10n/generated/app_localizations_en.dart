@@ -12260,4 +12260,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Update available';
+
+  @override
+  String get soundUploadAction => 'Upload a sound';
+
+  @override
+  String get soundUploadTitle => 'Upload a sound';
+
+  @override
+  String get soundUploadIntro =>
+      'Share a beat, a jingle, or a voice line so anyone on Divine can build a video around it.';
+
+  @override
+  String get soundUploadChooseFile => 'Choose an audio file';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV, or WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Change';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Anyone on Divine can use this sound in their videos. You\'re credited every time.';
+
+  @override
+  String get soundUploadShareAction => 'Share sound';
+
+  @override
+  String get soundUploadShared => 'Your sound is live and saved to Sounds.';
+
+  @override
+  String get soundUploadFailed => 'Couldn\'t share that sound. Try again.';
+
+  @override
+  String get soundUploadSignInFirst => 'Sign in to share a sound.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Your account is restricted, so this sound couldn\'t be shared.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Delete this sound?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'It\'s yours, so you can take it off Divine for everyone. Videos that already use it keep their audio.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Delete for everyone';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Just remove it from Sounds';
+
+  @override
+  String get savedSoundDeleted => 'Sound deleted';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Couldn\'t delete that sound. Try again.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'You can only delete sounds you shared.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

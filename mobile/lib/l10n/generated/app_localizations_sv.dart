@@ -12171,4 +12171,70 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Uppdatering tillgänglig';
+
+  @override
+  String get soundUploadAction => 'Ladda upp ett ljud';
+
+  @override
+  String get soundUploadTitle => 'Ladda upp ett ljud';
+
+  @override
+  String get soundUploadIntro =>
+      'Dela en beat, en jingel eller en inspelad replik så att vem som helst på Divine kan bygga en video runt den.';
+
+  @override
+  String get soundUploadChooseFile => 'Välj en ljudfil';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV eller WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Byt';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Vem som helst på Divine kan använda det här ljudet i sina videor. Du krediteras varje gång.';
+
+  @override
+  String get soundUploadShareAction => 'Dela ljud';
+
+  @override
+  String get soundUploadShared => 'Ditt ljud är live och sparat i Ljud.';
+
+  @override
+  String get soundUploadFailed => 'Kunde inte dela det ljudet. Försök igen.';
+
+  @override
+  String get soundUploadSignInFirst => 'Logga in för att dela ett ljud.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Ditt konto är begränsat, så det här ljudet kunde inte delas.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Ta bort det här ljudet?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Det är ditt, så du kan ta bort det från Divine för alla. Videor som redan använder det behåller sitt ljud.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Ta bort för alla';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Ta bara bort det från Ljud';
+
+  @override
+  String get savedSoundDeleted => 'Ljudet är borttaget';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Kunde inte ta bort det ljudet. Försök igen.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Du kan bara ta bort ljud som du själv har delat.';
+
+  @override
+  String get audioPickerTypeGroup => 'Ljud';
 }

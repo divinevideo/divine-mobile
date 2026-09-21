@@ -14,6 +14,7 @@ import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
@@ -86,7 +87,12 @@ class VideoAudioPublisher {
        _audioExtractionService = audioExtractionService,
        _savedSoundsService = savedSoundsService,
        _soundSyncRepositoryGetter = soundSyncRepositoryGetter,
-       _audioReuseConsentChecker = audioReuseConsentChecker;
+       _audioReuseConsentChecker = audioReuseConsentChecker,
+       _localAudioPublisher = LocalAudioEventPublisher(
+         relayPublisher: relayPublisher,
+         authService: authService,
+         blossomUploadService: blossomUploadService,
+       );
 
   static const String _logName = 'VideoAudioPublisher';
 
@@ -97,6 +103,10 @@ class VideoAudioPublisher {
   final ProfileRepository? _profileRepository;
   final AudioExtractionService? _audioExtractionService;
   final SavedSoundsService? _savedSoundsService;
+
+  /// Mints the Kind 1063 for an imported file; shared with the standalone
+  /// sound upload, which calls it without a source-video coordinate.
+  final LocalAudioEventPublisher _localAudioPublisher;
 
   /// Reads the current cross-device sync repository at call time, or null
   /// until the vault key resolves. A getter rather than a captured value:
@@ -433,100 +443,18 @@ class VideoAudioPublisher {
     required String pubkey,
     required String relayHint,
   }) async {
-    final filePath = audio.localFilePath;
-    final blossomService = _blossomUploadService;
-    if (filePath == null || blossomService == null) {
-      return null;
-    }
-
-    final audioFile = File(filePath);
-    if (!audioFile.existsSync()) {
-      Log.error(
-        'Imported audio file does not exist: $filePath',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return null;
-    }
-
-    final uploadResult = await blossomService.uploadAudio(
-      audioFile: audioFile,
-      mimeType: audio.mimeType ?? 'audio/mpeg',
-    );
-    final audioUrl = uploadResult.fallbackUrl ?? uploadResult.url;
-    if (!uploadResult.success ||
-        audioUrl == null ||
-        uploadResult.videoId == null) {
-      Log.error(
-        'Imported audio upload failed: ${uploadResult.errorMessage}',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return null;
-    }
-
-    final publishedAudio = AudioEvent(
-      id: '',
-      pubkey: pubkey,
-      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      url: audioUrl,
-      mimeType: audio.mimeType ?? 'audio/mpeg',
-      sha256: uploadResult.videoId,
-      fileSize: await audioFile.length(),
-      duration: audio.duration,
-      title: attribution.title.trim(),
-      source: attribution.sourceUrl?.trim(),
+    final result = await _localAudioPublisher.publish(
+      audio: audio,
+      attribution: attribution,
+      allowAudioReuse: allowAudioReuse,
       sourceVideoReference: _sourceVideoReference(pubkey, videoDTag),
       sourceVideoRelay: relayHint,
-      creatorName: attribution.creatorName.trim(),
-      creatorPubkey: attribution.creatorPubkey,
-      creatorUrl: attribution.creatorUrl,
-      licenseName: attribution.licenseName,
-      licenseUrl: attribution.licenseUrl,
-      publicTags: attribution.publicTags,
-      allowsReuse: allowAudioReuse,
     );
-
-    final authService = _authService;
-    if (authService == null || !authService.isAuthenticated) {
-      Log.error(
-        'Auth service not available or not authenticated',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return null;
-    }
-
-    final signedAudioEvent = await authService.createAndSignEvent(
-      kind: audioEventKind,
-      content: _audioCreditContent(
-        title: attribution.title,
-        creatorName: attribution.creatorName,
-        sourceUrl: attribution.sourceUrl,
-        licenseName: attribution.licenseName,
-      ),
-      tags: publishedAudio.toTags(),
-    );
-    if (signedAudioEvent == null) {
-      Log.error(
-        'Failed to create and sign imported audio event',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return null;
-    }
-
-    final published = await _relayPublisher.publishViaWebSocket(
-      signedAudioEvent,
-    );
-    if (published != EventPublishOutcome.published) {
-      Log.error(
-        'Failed to publish imported audio event to relays',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      return null;
-    }
+    final signedAudioEvent = switch (result) {
+      LocalAudioPublished(:final event) => event,
+      LocalAudioPublishFailed() => null,
+    };
+    if (signedAudioEvent == null) return null;
 
     final savedSoundsService = _savedSoundsService;
     if (savedSoundsService != null) {
@@ -609,7 +537,7 @@ class VideoAudioPublisher {
     if (authService == null || !authService.isAuthenticated) return null;
     final event = await authService.createAndSignEvent(
       kind: audioEventKind,
-      content: _audioCreditContent(
+      content: audioEventCreditContent(
         title: title,
         creatorName: creatorName,
         sourceUrl: external.sourceUrl,
@@ -792,7 +720,7 @@ class VideoAudioPublisher {
 
       final signedAudioEvent = await authService.createAndSignEvent(
         kind: audioEventKind,
-        content: _audioCreditContent(
+        content: audioEventCreditContent(
           title: audioTitle,
           creatorName: creditedCreator,
           sourceUrl: attribution?.sourceUrl,
@@ -937,20 +865,4 @@ class VideoAudioPublisher {
   /// The `kind:pubkey:d-tag` coordinate of the video a sound came from.
   static String _sourceVideoReference(String pubkey, String videoDTag) =>
       '${NIP71VideoKinds.getPreferredAddressableKind()}:$pubkey:$videoDTag';
-
-  static String _audioCreditContent({
-    required String title,
-    required String creatorName,
-    String? sourceUrl,
-    String? licenseName,
-  }) {
-    final lines = <String>[
-      title.trim(),
-      'Created by ${creatorName.trim()}',
-      if (sourceUrl?.trim().isNotEmpty ?? false) 'Source: ${sourceUrl!.trim()}',
-      if (licenseName?.trim().isNotEmpty ?? false)
-        'License: ${licenseName!.trim()}',
-    ];
-    return lines.join('\n');
-  }
 }

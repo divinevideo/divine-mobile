@@ -9,7 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, NostrHexUtils;
 import 'package:openvine/blocs/creator_sync/sound_sync_cubit.dart';
 import 'package:openvine/blocs/creator_sync/sound_sync_state.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
@@ -18,7 +18,8 @@ import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
-import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
+import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/widgets/library/saved_sound_card.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
@@ -38,8 +39,20 @@ class SoundsTab extends ConsumerStatefulWidget {
   ConsumerState<SoundsTab> createState() => _SoundsTabState();
 }
 
-class _SoundsTabState extends ConsumerState<SoundsTab> {
+class _SoundsTabState extends ConsumerState<SoundsTab>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  /// Whether the search field has focus, so the keyboard is up.
+  ///
+  /// The action rows above the list fold away while it is: with the keyboard
+  /// covering the lower half of the screen, two buttons the user is not about
+  /// to tap would otherwise leave almost no room for the results.
+  bool _searching = false;
+
+  /// Whether the keyboard was up at the last metrics change.
+  bool _keyboardVisible = false;
   String? _previewingSoundId;
 
   /// Whether the preview named by [_previewingSoundId] is paused.
@@ -78,14 +91,45 @@ class _SoundsTabState extends ConsumerState<SoundsTab> {
   AudioPlaybackService? _audioService;
 
   @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(_onSearchFocusChanged);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
     _previewSession++;
     _playEpoch++;
     if (_previewingSoundId != null && _audioService != null) {
       _audioService!.stop();
     }
+    WidgetsBinding.instance.removeObserver(this);
+    _searchFocusNode
+      ..removeListener(_onSearchFocusChanged)
+      ..dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchFocusChanged() {
+    final searching = _searchFocusNode.hasFocus;
+    if (searching == _searching) return;
+    setState(() => _searching = searching);
+  }
+
+  /// Drops search focus when the keyboard goes away underneath it.
+  ///
+  /// Android's back button dismisses the IME without moving focus, which
+  /// would leave the field focused, its cursor blinking, and the action rows
+  /// folded away with no keyboard to make room for.
+  @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    final visible = View.of(context).viewInsets.bottom > 0;
+    if (visible == _keyboardVisible) return;
+    _keyboardVisible = visible;
+    if (!visible && _searchFocusNode.hasFocus) _searchFocusNode.unfocus();
   }
 
   void _onSearchChanged(String query) {
@@ -224,9 +268,20 @@ class _SoundsTabState extends ConsumerState<SoundsTab> {
     });
   }
 
+  /// Whether [sound] is a Kind 1063 the signed-in user published, which
+  /// the trash action can retract from relays rather than only drop here.
+  bool _isOwnPublishedSound(SavedSound sound) {
+    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
+    return viewer != null &&
+        viewer.isNotEmpty &&
+        sound.audio.pubkey == viewer &&
+        NostrHexUtils.isValidEventId(sound.audio.id);
+  }
+
   Future<void> _onRemoveTap(SavedSound sound) async {
     await _stopPreview();
     if (!mounted) return;
+    if (_isOwnPublishedSound(sound)) return _onRemoveOwnSoundTap(sound);
 
     final confirmed = await VineBottomSheetPrompt.show<bool>(
       context: context,
@@ -240,7 +295,66 @@ class _SoundsTabState extends ConsumerState<SoundsTab> {
       onSecondaryPressed: () => Navigator.of(context).pop(false),
     );
     if (confirmed != true || !mounted) return;
+    await _removeSavedSound(sound);
+  }
 
+  /// The trash action on a sound the user published: retract it from relays,
+  /// or only drop it from this library and leave it public.
+  Future<void> _onRemoveOwnSoundTap(SavedSound sound) async {
+    final choice = await VineBottomSheetPrompt.show<_OwnSoundRemoval>(
+      context: context,
+      sticker: .alert,
+      title: context.l10n.savedSoundDeleteConfirmTitle,
+      subtitle: context.l10n.savedSoundDeleteConfirmMessage,
+      primaryButtonText: context.l10n.savedSoundDeleteForEveryone,
+      primaryButtonType: DivineButtonType.error,
+      onPrimaryPressed: () =>
+          Navigator.of(context).pop(_OwnSoundRemoval.deleteEverywhere),
+      secondaryButtonText: context.l10n.savedSoundRemoveLocallyOnly,
+      onSecondaryPressed: () =>
+          Navigator.of(context).pop(_OwnSoundRemoval.removeLocally),
+      tertiaryButtonText: context.l10n.commonCancel,
+      onTertiaryPressed: () => Navigator.of(context).pop(),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case null:
+        return;
+      case _OwnSoundRemoval.deleteEverywhere:
+        await _deletePublishedSound(sound);
+      case _OwnSoundRemoval.removeLocally:
+        await _removeSavedSound(sound);
+    }
+  }
+
+  /// Retracts the user's own sound from relays, then drops it here.
+  Future<void> _deletePublishedSound(SavedSound sound) async {
+    String message;
+    var error = false;
+    try {
+      final result = await context.read<SavedSoundsBloc>().deletePublishedSound(
+        sound.id,
+      );
+      if (!mounted) return;
+      message =
+          localizedPartialDeleteMessage(context, result) ??
+          context.l10n.savedSoundDeleted;
+    } on SavedSoundDeleteException catch (e) {
+      if (!mounted) return;
+      message = localizedSoundDeleteFailureMessage(context, e.result);
+      error = true;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        message,
+        error: error,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _removeSavedSound(SavedSound sound) async {
     var removed = true;
     try {
       await context.read<SavedSoundsBloc>().removeSound(sound.id);
@@ -299,6 +413,12 @@ class _SoundsTabState extends ConsumerState<SoundsTab> {
     await _onEditTap(saved.first);
   }
 
+  Future<void> _onUploadSoundTap() async {
+    await _stopPreview();
+    if (!mounted) return;
+    await context.push(SoundUploadScreen.path);
+  }
+
   Future<void> _onOpenDetails(SavedSound sound) async {
     await _stopPreview();
     if (!mounted) return;
@@ -329,12 +449,20 @@ class _SoundsTabState extends ConsumerState<SoundsTab> {
         SliverFloatingHeader(
           child: _SearchInput(
             controller: _searchController,
+            focusNode: _searchFocusNode,
             onChanged: _onSearchChanged,
           ),
         ),
-        if (kDebugMode && !kIsWeb)
+        if (!kIsWeb)
           SliverToBoxAdapter(
-            child: _DebugAudioPickerLauncher(onTap: _onAddAudioTap),
+            child: _CollapsibleActions(
+              collapsed: _searching,
+              children: [
+                _UploadSoundAction(onTap: _onUploadSoundTap),
+                if (kDebugMode)
+                  _DebugAudioPickerLauncher(onTap: _onAddAudioTap),
+              ],
+            ),
           ),
         if (locked)
           const SliverToBoxAdapter(child: _SyncLockedBanner())
@@ -535,6 +663,32 @@ class _SyncLockedBanner extends StatelessWidget {
   }
 }
 
+/// How the user chose to take one of their own published sounds out of the
+/// library.
+enum _OwnSoundRemoval { deleteEverywhere, removeLocally }
+
+/// Opens the standalone sound upload flow.
+class _UploadSoundAction extends StatelessWidget {
+  const _UploadSoundAction({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: DivineButton(
+        key: const Key('sounds_tab_upload_sound'),
+        label: context.l10n.soundUploadAction,
+        leadingIcon: DivineIconName.musicNotesSimple,
+        type: DivineButtonType.secondary,
+        expanded: true,
+        onPressed: onTap,
+      ),
+    );
+  }
+}
+
 class _DebugAudioPickerLauncher extends StatelessWidget {
   const _DebugAudioPickerLauncher({required this.onTap});
 
@@ -553,10 +707,39 @@ class _DebugAudioPickerLauncher extends StatelessWidget {
   }
 }
 
+/// Folds [children] away to nothing while [collapsed], animating the height.
+class _CollapsibleActions extends StatelessWidget {
+  const _CollapsibleActions({required this.collapsed, required this.children});
+
+  final bool collapsed;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 200),
+      alignment: Alignment.topCenter,
+      child: collapsed
+          ? const SizedBox(width: double.infinity)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+    );
+  }
+}
+
 class _SearchInput extends StatelessWidget {
-  const _SearchInput({required this.controller, required this.onChanged});
+  const _SearchInput({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+  });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final ValueChanged<String> onChanged;
 
   @override
@@ -566,7 +749,9 @@ class _SearchInput extends StatelessWidget {
       color: context.vineColors.surfaceContainerHigh,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         onChanged: onChanged,
+        onTapOutside: (_) => focusNode.unfocus(),
         style: TextStyle(color: context.vineColors.primaryText),
         decoration: InputDecoration(
           hintText: context.l10n.soundsSearchHint,

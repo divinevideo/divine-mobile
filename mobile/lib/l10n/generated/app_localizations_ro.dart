@@ -12420,4 +12420,72 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Actualizare disponibilă';
+
+  @override
+  String get soundUploadAction => 'Încarcă un sunet';
+
+  @override
+  String get soundUploadTitle => 'Încarcă un sunet';
+
+  @override
+  String get soundUploadIntro =>
+      'Împărtășește un beat, un jingle sau o replică înregistrată, ca oricine de pe Divine să poată construi un video în jurul lui.';
+
+  @override
+  String get soundUploadChooseFile => 'Alege un fișier audio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV sau WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Schimbă';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Oricine de pe Divine poate folosi acest sunet în videoclipurile sale. Ești creditat de fiecare dată.';
+
+  @override
+  String get soundUploadShareAction => 'Împărtășește sunetul';
+
+  @override
+  String get soundUploadShared => 'Sunetul tău e live și salvat în Sunete.';
+
+  @override
+  String get soundUploadFailed =>
+      'Nu am putut împărtăși acel sunet. Încearcă din nou.';
+
+  @override
+  String get soundUploadSignInFirst =>
+      'Conectează-te ca să împărtășești un sunet.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Contul tău e restricționat, așa că acest sunet nu a putut fi împărtășit.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Ștergi acest sunet?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'E al tău, deci îl poți scoate de pe Divine pentru toată lumea. Videoclipurile care îl folosesc deja își păstrează sunetul.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Șterge pentru toată lumea';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Doar elimină-l din Sunete';
+
+  @override
+  String get savedSoundDeleted => 'Sunet șters';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Nu am putut șterge acel sunet. Încearcă din nou.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Poți șterge doar sunetele pe care le-ai împărtășit tu.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

@@ -12080,4 +12080,70 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Pembaruan tersedia';
+
+  @override
+  String get soundUploadAction => 'Unggah suara';
+
+  @override
+  String get soundUploadTitle => 'Unggah suara';
+
+  @override
+  String get soundUploadIntro =>
+      'Bagikan beat, jingle, atau rekaman suara supaya siapa pun di Divine bisa membuat video dengannya.';
+
+  @override
+  String get soundUploadChooseFile => 'Pilih file audio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV, atau WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Ganti';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Siapa pun di Divine bisa memakai suara ini di video mereka. Namamu selalu ikut tercantum.';
+
+  @override
+  String get soundUploadShareAction => 'Bagikan suara';
+
+  @override
+  String get soundUploadShared =>
+      'Suaramu sudah tayang dan tersimpan di Suara.';
+
+  @override
+  String get soundUploadFailed => 'Suara itu gagal dibagikan. Coba lagi.';
+
+  @override
+  String get soundUploadSignInFirst => 'Masuk dulu untuk membagikan suara.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Akunmu dibatasi, jadi suara ini tidak bisa dibagikan.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Hapus suara ini?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Suara ini milikmu, jadi kamu bisa menghapusnya dari Divine untuk semua orang. Video yang sudah memakainya tetap punya audionya.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Hapus untuk semua orang';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Hapus dari Suara saja';
+
+  @override
+  String get savedSoundDeleted => 'Suara dihapus';
+
+  @override
+  String get savedSoundDeleteFailed => 'Suara itu gagal dihapus. Coba lagi.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Kamu hanya bisa menghapus suara yang kamu bagikan sendiri.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

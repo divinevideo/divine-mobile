@@ -11568,4 +11568,68 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'アップデートがあります';
+
+  @override
+  String get soundUploadAction => 'サウンドをアップロード';
+
+  @override
+  String get soundUploadTitle => 'サウンドをアップロード';
+
+  @override
+  String get soundUploadIntro =>
+      'ビート、ジングル、セリフの録音を共有すると、Divine の誰でもそれを使って動画を作れます。';
+
+  @override
+  String get soundUploadChooseFile => '音声ファイルを選ぶ';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC、M4A、MP3、WAV、WebM';
+
+  @override
+  String get soundUploadChangeFile => '変更';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Divine の誰でもこのサウンドを動画に使えます。使われるたびにあなたの名前が表示されます。';
+
+  @override
+  String get soundUploadShareAction => 'サウンドを共有';
+
+  @override
+  String get soundUploadShared => 'サウンドを公開し、サウンドに保存しました。';
+
+  @override
+  String get soundUploadFailed => 'そのサウンドを共有できませんでした。もう一度お試しください。';
+
+  @override
+  String get soundUploadSignInFirst => 'サウンドを共有するにはログインしてください。';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'アカウントが制限されているため、このサウンドを共有できませんでした。';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'このサウンドを削除しますか？';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'あなたのサウンドなので、Divine 上から全員に対して削除できます。すでに使われている動画の音声はそのまま残ります。';
+
+  @override
+  String get savedSoundDeleteForEveryone => '全員に対して削除';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'サウンドから外すだけ';
+
+  @override
+  String get savedSoundDeleted => 'サウンドを削除しました';
+
+  @override
+  String get savedSoundDeleteFailed => 'そのサウンドを削除できませんでした。もう一度お試しください。';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner => '削除できるのは自分が共有したサウンドだけです。';
+
+  @override
+  String get audioPickerTypeGroup => '音声';
 }

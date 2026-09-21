@@ -12172,4 +12172,71 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Kemas kini tersedia';
+
+  @override
+  String get soundUploadAction => 'Muat naik bunyi';
+
+  @override
+  String get soundUploadTitle => 'Muat naik bunyi';
+
+  @override
+  String get soundUploadIntro =>
+      'Kongsi beat, jingle atau rakaman suara supaya sesiapa sahaja di Divine boleh membina video dengannya.';
+
+  @override
+  String get soundUploadChooseFile => 'Pilih fail audio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV atau WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Tukar';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Sesiapa sahaja di Divine boleh menggunakan bunyi ini dalam video mereka. Nama anda sentiasa dikreditkan.';
+
+  @override
+  String get soundUploadShareAction => 'Kongsi bunyi';
+
+  @override
+  String get soundUploadShared =>
+      'Bunyi anda sudah disiarkan dan disimpan ke Bunyi.';
+
+  @override
+  String get soundUploadFailed => 'Bunyi itu tidak dapat dikongsi. Cuba lagi.';
+
+  @override
+  String get soundUploadSignInFirst => 'Log masuk untuk berkongsi bunyi.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Akaun anda dihadkan, jadi bunyi ini tidak dapat dikongsi.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Padam bunyi ini?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Bunyi ini milik anda, jadi anda boleh mengeluarkannya daripada Divine untuk semua orang. Video yang sudah menggunakannya mengekalkan audionya.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Padam untuk semua orang';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Alih keluar daripada Bunyi sahaja';
+
+  @override
+  String get savedSoundDeleted => 'Bunyi dipadam';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Bunyi itu tidak dapat dipadam. Cuba lagi.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Anda hanya boleh memadam bunyi yang anda kongsi sendiri.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

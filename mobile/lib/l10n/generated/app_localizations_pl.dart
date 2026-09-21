@@ -12405,4 +12405,72 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Dostępna aktualizacja';
+
+  @override
+  String get soundUploadAction => 'Prześlij dźwięk';
+
+  @override
+  String get soundUploadTitle => 'Prześlij dźwięk';
+
+  @override
+  String get soundUploadIntro =>
+      'Udostępnij bit, dżingiel albo nagraną kwestię, żeby każdy na Divine mógł zbudować wokół tego wideo.';
+
+  @override
+  String get soundUploadChooseFile => 'Wybierz plik audio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV lub WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Zmień';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Każdy na Divine może użyć tego dźwięku w swoich wideo. Za każdym razem widać, że jest twój.';
+
+  @override
+  String get soundUploadShareAction => 'Udostępnij dźwięk';
+
+  @override
+  String get soundUploadShared =>
+      'Twój dźwięk jest już online i zapisany w Dźwiękach.';
+
+  @override
+  String get soundUploadFailed =>
+      'Nie udało się udostępnić tego dźwięku. Spróbuj ponownie.';
+
+  @override
+  String get soundUploadSignInFirst => 'Zaloguj się, aby udostępnić dźwięk.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Twoje konto ma ograniczenia, więc tego dźwięku nie udało się udostępnić.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Usunąć ten dźwięk?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Jest twój, więc możesz go zdjąć z Divine dla wszystkich. Wideo, które już go używają, zachowują swoje audio.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Usuń dla wszystkich';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Usuń tylko z Dźwięków';
+
+  @override
+  String get savedSoundDeleted => 'Dźwięk usunięty';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Nie udało się usunąć tego dźwięku. Spróbuj ponownie.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Możesz usuwać tylko dźwięki, które sam(a) udostępniłeś(-aś).';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

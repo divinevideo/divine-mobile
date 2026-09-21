@@ -16,10 +16,30 @@ import 'package:openvine/blocs/saved_sounds/saved_sounds_reportable_sites.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_state.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+
+export 'package:openvine/services/saved_sounds_service.dart'
+    show SavedSoundSaveResult;
 
 export 'saved_sounds_event.dart';
 export 'saved_sounds_state.dart';
+
+/// Resolves the deletion service at call time, so the bloc — built once per
+/// account above the router — never captures a stale instance.
+typedef ContentDeletionServiceGetter =
+    Future<ContentDeletionService> Function();
+
+/// No relay took the NIP-09 for a published sound; [result] says why.
+class SavedSoundDeleteException implements Exception {
+  const SavedSoundDeleteException(this.result);
+
+  final DeleteResult result;
+
+  @override
+  String toString() =>
+      'SavedSoundDeleteException: ${result.failureKind?.name ?? 'unknown'}';
+}
 
 class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
   /// [syncRepositoryStream] must emit each successive [SoundSyncRepository]
@@ -37,10 +57,14 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
     required Stream<SoundSyncRepository?> syncRepositoryStream,
     DateTime Function()? now,
     FutureOr<bool> Function(String path)? localFileExists,
+    ContentDeletionServiceGetter? contentDeletionService,
+    void Function(String soundId)? onPublishedSoundDeleted,
   }) : _service = service,
        _mediaProbe = mediaProbe,
        _now = now ?? DateTime.now,
        _localFileExists = localFileExists,
+       _contentDeletionService = contentDeletionService,
+       _onPublishedSoundDeleted = onPublishedSoundDeleted,
        super(const SavedSoundsState()) {
     on<SavedSoundsEvent>(_onEvent, transformer: sequential());
     _syncRepositorySubscription = syncRepositoryStream.listen(
@@ -72,6 +96,13 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
   /// Injectable so the missing-file path can be exercised without touching
   /// the filesystem.
   final FutureOr<bool> Function(String path)? _localFileExists;
+
+  /// Publishes the NIP-09 for the user's own sounds; null disables deletion.
+  final ContentDeletionServiceGetter? _contentDeletionService;
+
+  /// Told after a relay took the deletion, so the caller can drop the sound
+  /// from whatever else still lists it (the community sounds cache).
+  final void Function(String soundId)? _onPublishedSoundDeleted;
 
   @override
   Future<void> close() async {
@@ -133,6 +164,17 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
     return completer.future;
   }
 
+  /// Retracts the user's own published sound [soundId] from relays with a
+  /// NIP-09 deletion, then removes it from the library.
+  ///
+  /// Completes with a [SavedSoundDeleteException] when no relay took the
+  /// deletion; the record stays so the user can retry.
+  Future<DeleteResult> deletePublishedSound(String soundId) {
+    final completer = Completer<DeleteResult>();
+    add(SavedSoundDeleteRequested(soundId, completer: completer));
+    return completer.future;
+  }
+
   Future<void> _onEvent(
     SavedSoundsEvent event,
     Emitter<SavedSoundsState> emit,
@@ -157,6 +199,8 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
         await _edit(event, emit);
       case SavedSoundRemoveRequested():
         await _remove(event, emit);
+      case SavedSoundDeleteRequested():
+        await _delete(event, emit);
       case SavedSoundsQueryChanged():
         emit(state.copyWith(query: event.query));
       case SavedSoundsHashtagSelected():
@@ -341,6 +385,58 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
       () => _syncRepository!.publishLocalDeletion(event.soundId),
       context: SavedSoundsReportableSites.mirrorRemove,
     );
+  }
+
+  Future<void> _delete(
+    SavedSoundDeleteRequested event,
+    Emitter<SavedSoundsState> emit,
+  ) async {
+    final completer = event.completer;
+    final record = state.sounds
+        .where((sound) => sound.id == event.soundId)
+        .firstOrNull;
+    final getService = _contentDeletionService;
+    if (record == null || getService == null) {
+      completer.completeError(
+        SavedSoundDeleteException(
+          DeleteResult.failure(
+            'Sound is not in the library or deletion is unavailable',
+            DeleteFailureKind.notInitialized,
+          ),
+        ),
+      );
+      return;
+    }
+
+    DeleteResult result;
+    try {
+      final service = await getService();
+      result = await service.deleteSound(
+        sound: record.audio,
+        reason: 'Creator removed a shared sound',
+      );
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      completer.completeError(
+        SavedSoundDeleteException(
+          DeleteResult.failure('$error', DeleteFailureKind.unknown),
+        ),
+        stackTrace,
+      );
+      return;
+    }
+    if (!result.success) {
+      completer.completeError(SavedSoundDeleteException(result));
+      return;
+    }
+
+    // A relay took the tombstone, so the deletion is done whatever happens
+    // to the library entry next: the remove path reports its own failure and
+    // leaves the row for a retry, which would only republish the same
+    // deletion.
+    _onPublishedSoundDeleted?.call(event.soundId);
+    await _remove(SavedSoundRemoveRequested(event.soundId), emit);
+    completer.complete(result);
   }
 
   Future<void> _applyProbe(

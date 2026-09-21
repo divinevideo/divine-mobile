@@ -39,7 +39,6 @@ lib/widgets/divine_video_metrics_tracker.dart
 lib/widgets/find_people_sheet.dart
 lib/widgets/gallery_permission_sheet.dart
 lib/widgets/geo_blocking_gate.dart
-lib/widgets/library/sounds_tab.dart
 lib/widgets/profile_editor/username_status_indicator.dart
 lib/widgets/report_content_dialog.dart
 lib/widgets/save_original_progress_sheet.dart

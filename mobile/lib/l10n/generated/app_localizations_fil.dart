@@ -12276,4 +12276,72 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'May update';
+
+  @override
+  String get soundUploadAction => 'Mag-upload ng sound';
+
+  @override
+  String get soundUploadTitle => 'Mag-upload ng sound';
+
+  @override
+  String get soundUploadIntro =>
+      'I-share ang isang beat, jingle, o voice line para kahit sino sa Divine ay makagawa ng video gamit ito.';
+
+  @override
+  String get soundUploadChooseFile => 'Pumili ng audio file';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV, o WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Palitan';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Kahit sino sa Divine ay puwedeng gumamit ng sound na ito sa mga video nila. Lagi kang naka-credit.';
+
+  @override
+  String get soundUploadShareAction => 'I-share ang sound';
+
+  @override
+  String get soundUploadShared =>
+      'Live na ang sound mo at naka-save na sa Sounds.';
+
+  @override
+  String get soundUploadFailed =>
+      'Hindi na-share ang sound na iyon. Subukan ulit.';
+
+  @override
+  String get soundUploadSignInFirst => 'Mag-sign in para mag-share ng sound.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Restricted ang account mo, kaya hindi na-share ang sound na ito.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'I-delete ang sound na ito?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Sa iyo ito, kaya puwede mo itong tanggalin sa Divine para sa lahat. Mananatili ang audio ng mga video na gumagamit na nito.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'I-delete para sa lahat';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Alisin lang sa Sounds';
+
+  @override
+  String get savedSoundDeleted => 'Na-delete ang sound';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Hindi na-delete ang sound na iyon. Subukan ulit.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Mga sound lang na ikaw ang nag-share ang puwede mong i-delete.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

@@ -12348,4 +12348,71 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Mise à jour disponible';
+
+  @override
+  String get soundUploadAction => 'Importer un son';
+
+  @override
+  String get soundUploadTitle => 'Importer un son';
+
+  @override
+  String get soundUploadIntro =>
+      'Partage un beat, un jingle ou une phrase enregistrée pour que n\'importe qui sur Divine en fasse une vidéo.';
+
+  @override
+  String get soundUploadChooseFile => 'Choisir un fichier audio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV ou WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Changer';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'N\'importe qui sur Divine peut utiliser ce son dans ses vidéos. Tu es crédité à chaque fois.';
+
+  @override
+  String get soundUploadShareAction => 'Partager le son';
+
+  @override
+  String get soundUploadShared =>
+      'Ton son est en ligne et enregistré dans Sons.';
+
+  @override
+  String get soundUploadFailed => 'Impossible de partager ce son. Réessaie.';
+
+  @override
+  String get soundUploadSignInFirst => 'Connecte-toi pour partager un son.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Ton compte est restreint, ce son n\'a donc pas pu être partagé.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Supprimer ce son ?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Il est à toi, tu peux donc le retirer de Divine pour tout le monde. Les vidéos qui l\'utilisent déjà gardent leur audio.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Supprimer pour tout le monde';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Le retirer de Sons seulement';
+
+  @override
+  String get savedSoundDeleted => 'Son supprimé';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Impossible de supprimer ce son. Réessaie.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Tu ne peux supprimer que les sons que tu as partagés.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
 }

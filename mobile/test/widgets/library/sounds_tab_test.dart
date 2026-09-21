@@ -12,16 +12,21 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
+import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
+import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/widgets/library/saved_sound_card.dart';
 import 'package:openvine/widgets/library/sounds_tab.dart';
@@ -29,6 +34,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
 
 class _MockSoundSyncRepository extends Mock implements SoundSyncRepository {}
+
+class _MockAuthService extends Mock implements AuthService {}
+
+class _MockContentDeletionService extends Mock
+    implements ContentDeletionService {}
+
+class _FakeAudioEvent extends Fake implements AudioEvent {}
 
 /// Stands in for just_audio's ownership of the `play()` future: it stays
 /// pending until playback ends, and resolves early when `pause()` or `stop()`
@@ -104,14 +116,18 @@ class _TestNostrSession extends NostrSession {
   NostrSessionReadiness build() => _readiness;
 }
 
+const _viewerPubkey =
+    'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
+
 AudioEvent _sound({
   required String id,
   required String title,
   int createdAt = 1700000000,
+  String pubkey = 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
 }) {
   return AudioEvent(
     id: id,
-    pubkey: 'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    pubkey: pubkey,
     createdAt: createdAt,
     title: title,
     duration: 6,
@@ -134,6 +150,19 @@ void main() {
       sharedPreferences = await SharedPreferences.getInstance();
     });
 
+    late _MockAuthService authService;
+    late _MockContentDeletionService deletionService;
+    late List<String> evictedSoundIds;
+
+    setUpAll(() => registerFallbackValue(_FakeAudioEvent()));
+
+    setUp(() {
+      authService = _MockAuthService();
+      when(() => authService.currentPublicKeyHex).thenReturn(_viewerPubkey);
+      deletionService = _MockContentDeletionService();
+      evictedSoundIds = [];
+    });
+
     Future<void> pumpSoundsTab(
       WidgetTester tester, {
       Future<AudioEvent?> Function(BuildContext)? showAudioPicker,
@@ -145,6 +174,7 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             documentsPathProvider.overrideWithValue('/documents'),
+            authServiceProvider.overrideWithValue(authService),
             if (audioService != null)
               audioPlaybackServiceProvider.overrideWithValue(audioService),
           ],
@@ -152,6 +182,8 @@ void main() {
             service: SavedSoundsService(sharedPreferences),
             mediaProbe: const _NoopSavedSoundMediaProbe(),
             localFileExists: localFileExists,
+            contentDeletionService: () async => deletionService,
+            onPublishedSoundDeleted: evictedSoundIds.add,
             child: MaterialApp.router(
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
@@ -169,6 +201,11 @@ void main() {
                     builder: (context, state) => Text(
                       'sound detail ${state.pathParameters['id']}',
                     ),
+                  ),
+                  GoRoute(
+                    path: SoundUploadScreen.path,
+                    builder: (context, state) =>
+                        const Text('sound upload screen'),
                   ),
                 ],
               ),
@@ -513,6 +550,180 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Original sound - rabble'), findsOneWidget);
+    });
+
+    testWidgets('opens the sound upload flow from the upload row', (
+      tester,
+    ) async {
+      await pumpSoundsTab(tester);
+
+      await tester.tap(find.byKey(const Key('sounds_tab_upload_sound')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('sound upload screen'), findsOneWidget);
+    });
+
+    testWidgets('folds the action rows away while searching', (tester) async {
+      await SavedSoundsService(
+        sharedPreferences,
+      ).saveSound(_sound(id: 'sound1', title: 'Original sound - rabble'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await pumpSoundsTab(tester);
+      expect(
+        tester.getSize(find.byKey(const Key('sounds_tab_upload_sound'))).height,
+        greaterThan(0),
+      );
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsNothing);
+      expect(find.text('Original sound - rabble'), findsOneWidget);
+
+      // Tapping anywhere outside the field drops focus and brings them back
+      // (the list header, so no card handles the tap).
+      await tester.tapAt(
+        tester.getCenter(find.text(l10n.soundsSavedLibraryTitle)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+        isFalse,
+      );
+    });
+
+    testWidgets('drops search focus when the keyboard is dismissed', (
+      tester,
+    ) async {
+      await pumpSoundsTab(tester);
+      addTearDown(tester.view.resetViewInsets);
+
+      await tester.tap(find.byType(TextField));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsNothing);
+
+      // Android's back button hides the IME without moving focus.
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+        isFalse,
+      );
+      expect(find.byKey(const Key('sounds_tab_upload_sound')), findsOneWidget);
+    });
+
+    group('own published sound', () {
+      final ownId = 'a' * 64;
+
+      Future<void> saveOwnSound() => SavedSoundsService(
+        sharedPreferences,
+      ).saveSound(_sound(id: ownId, title: 'My beat', pubkey: _viewerPubkey));
+
+      testWidgets('offers to delete it for everyone and does so', (
+        tester,
+      ) async {
+        await saveOwnSound();
+        when(
+          () => deletionService.deleteSound(
+            sound: any(named: 'sound'),
+            reason: any(named: 'reason'),
+          ),
+        ).thenAnswer(
+          (_) async => DeleteResult.createSuccess(
+            'b' * 64,
+            acceptance: DeleteAcceptance.everyRelay,
+            deleteEvent: Event.fromJson({
+              'id': 'b' * 64,
+              'pubkey': _viewerPubkey,
+              'created_at': 0,
+              'kind': 5,
+              'tags': <List<String>>[],
+              'content': '',
+              'sig': 'sig',
+            }),
+          ),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await pumpSoundsTab(tester);
+        await tester.tap(find.byKey(const Key('saved_sound_remove')));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.savedSoundDeleteConfirmTitle), findsOneWidget);
+        expect(find.text(l10n.savedSoundRemoveConfirmTitle), findsNothing);
+
+        await tester.tap(find.text(l10n.savedSoundDeleteForEveryone));
+        await tester.pumpAndSettle();
+
+        expect(find.text('My beat'), findsNothing);
+        expect(find.text(l10n.savedSoundDeleted), findsOneWidget);
+        expect(evictedSoundIds, [ownId]);
+        final deleted =
+            verify(
+                  () => deletionService.deleteSound(
+                    sound: captureAny(named: 'sound'),
+                    reason: any(named: 'reason'),
+                  ),
+                ).captured.single
+                as AudioEvent;
+        expect(deleted.id, ownId);
+      });
+
+      testWidgets('keeps it public when only removed from the library', (
+        tester,
+      ) async {
+        await saveOwnSound();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await pumpSoundsTab(tester);
+        await tester.tap(find.byKey(const Key('saved_sound_remove')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.savedSoundRemoveLocallyOnly));
+        await tester.pumpAndSettle();
+
+        expect(find.text('My beat'), findsNothing);
+        verifyNever(
+          () => deletionService.deleteSound(
+            sound: any(named: 'sound'),
+            reason: any(named: 'reason'),
+          ),
+        );
+      });
+
+      testWidgets('keeps the sound and says why when no relay took it', (
+        tester,
+      ) async {
+        await saveOwnSound();
+        when(
+          () => deletionService.deleteSound(
+            sound: any(named: 'sound'),
+            reason: any(named: 'reason'),
+          ),
+        ).thenAnswer(
+          (_) async => DeleteResult.failure(
+            'silent',
+            DeleteFailureKind.relayNoResponse,
+          ),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await pumpSoundsTab(tester);
+        await tester.tap(find.byKey(const Key('saved_sound_remove')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.savedSoundDeleteForEveryone));
+        await tester.pumpAndSettle();
+
+        expect(find.text('My beat'), findsOneWidget);
+        expect(
+          find.text(l10n.shareMenuDeleteFailedRelayNoResponse),
+          findsOneWidget,
+        );
+        expect(evictedSoundIds, isEmpty);
+      });
     });
 
     testWidgets('edit sheet keeps its fields above the keyboard', (

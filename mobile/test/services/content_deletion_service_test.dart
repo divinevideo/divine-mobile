@@ -891,6 +891,139 @@ void main() {
       );
     });
 
+    group('deleteSound', () {
+      AudioEvent ownSound({String? pubkey}) => AudioEvent(
+        id: 'a' * 64,
+        pubkey: pubkey ?? testPublicKey,
+        createdAt: 1,
+        title: 'My beat',
+        url: 'https://cdn.example/beat.m4a',
+      );
+
+      test(
+        'publishes a kind 5 tagged with the sound id and kind 1063, and '
+        'records it once a relay confirms',
+        () async {
+          final deleteEvent = createTestEvent(
+            pubkey: testPublicKey,
+            kind: 5,
+            tags: [
+              ['e', 'a' * 64],
+              ['k', '1063'],
+            ],
+            content: 'CONTENT DELETION',
+          );
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => deleteEvent);
+          when(
+            () => mockNostrService.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => accepted(deleteEvent.id));
+
+          final result = await service.deleteSound(
+            sound: ownSound(),
+            reason: 'Creator removed a shared sound',
+          );
+
+          expect(result.success, isTrue);
+          expect(result.acceptance, DeleteAcceptance.everyRelay);
+          expect(service.hasBeenDeleted('a' * 64), isTrue);
+          final tags =
+              verify(
+                    () => mockAuthService.createAndSignEvent(
+                      kind: 5,
+                      content: any(named: 'content'),
+                      tags: captureAny(named: 'tags'),
+                    ),
+                  ).captured.single
+                  as List<List<String>>;
+          expect(tags, anyElement(equals(['e', 'a' * 64])));
+          expect(tags, anyElement(equals(['k', '1063'])));
+          expect(
+            tags.where((tag) => tag.first == 'a'),
+            isEmpty,
+            reason:
+                'a sound is not addressable, so no coordinate is tombstoned',
+          );
+          verifyNever(() => mockProfileStatsDao.deleteStats(any()));
+        },
+      );
+
+      test('refuses a sound published by someone else', () async {
+        final result = await service.deleteSound(
+          sound: ownSound(pubkey: 'b' * 64),
+          reason: 'Creator removed a shared sound',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.failureKind, DeleteFailureKind.notOwner);
+        verifyNever(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
+      });
+
+      test('refuses a sound with no relay event to tombstone', () async {
+        final result = await service.deleteSound(
+          sound: AudioEvent.fromLocalImport(
+            id: '${AudioEvent.localImportMarker}_1',
+            filePath: '/tmp/beat.m4a',
+            createdAt: 1,
+            title: 'Unpublished',
+            mimeType: 'audio/mp4',
+          ).copyWith(pubkey: testPublicKey),
+          reason: 'Creator removed a shared sound',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.failureKind, DeleteFailureKind.notOwner);
+      });
+
+      test('leaves no record when no relay confirms', () async {
+        final deleteEvent = createTestEvent(
+          pubkey: testPublicKey,
+          kind: 5,
+          tags: [
+            ['e', 'a' * 64],
+            ['k', '1063'],
+          ],
+          content: 'CONTENT DELETION',
+        );
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async => deleteEvent);
+        when(
+          () => mockNostrService.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => timedOut(deleteEvent.id));
+
+        final result = await service.deleteSound(
+          sound: ownSound(),
+          reason: 'Creator removed a shared sound',
+        );
+
+        expect(result.success, isFalse);
+        expect(result.failureKind, DeleteFailureKind.relayNoResponse);
+        expect(service.hasBeenDeleted('a' * 64), isFalse);
+      });
+    });
+
     group('quickDelete', () {
       test('maps enum reason to the expected reason text', () async {
         final video = createTestVideoEvent(testPublicKey);

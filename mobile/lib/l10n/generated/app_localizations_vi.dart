@@ -12117,4 +12117,72 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Có bản cập nhật';
+
+  @override
+  String get soundUploadAction => 'Tải lên âm thanh';
+
+  @override
+  String get soundUploadTitle => 'Tải lên âm thanh';
+
+  @override
+  String get soundUploadIntro =>
+      'Chia sẻ một đoạn beat, một đoạn nhạc hiệu hay một câu thoại để bất kỳ ai trên Divine cũng có thể dựng video từ đó.';
+
+  @override
+  String get soundUploadChooseFile => 'Chọn tệp âm thanh';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV hoặc WebM';
+
+  @override
+  String get soundUploadChangeFile => 'Đổi';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Bất kỳ ai trên Divine cũng có thể dùng âm thanh này trong video của họ. Bạn luôn được ghi tên.';
+
+  @override
+  String get soundUploadShareAction => 'Chia sẻ âm thanh';
+
+  @override
+  String get soundUploadShared =>
+      'Âm thanh của bạn đã lên sóng và được lưu vào Âm thanh.';
+
+  @override
+  String get soundUploadFailed =>
+      'Không chia sẻ được âm thanh đó. Thử lại nhé.';
+
+  @override
+  String get soundUploadSignInFirst => 'Đăng nhập để chia sẻ âm thanh.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Tài khoản của bạn đang bị hạn chế nên không chia sẻ được âm thanh này.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Xóa âm thanh này?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Đây là âm thanh của bạn, nên bạn có thể gỡ nó khỏi Divine cho tất cả mọi người. Những video đã dùng nó vẫn giữ nguyên phần âm thanh.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Xóa cho tất cả mọi người';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Chỉ gỡ khỏi Âm thanh';
+
+  @override
+  String get savedSoundDeleted => 'Đã xóa âm thanh';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Không xóa được âm thanh đó. Thử lại nhé.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Bạn chỉ có thể xóa những âm thanh do chính bạn chia sẻ.';
+
+  @override
+  String get audioPickerTypeGroup => 'Âm thanh';
 }

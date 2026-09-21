@@ -12157,4 +12157,72 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'اپ ڈیٹ دستیاب ہے';
+
+  @override
+  String get soundUploadAction => 'ساؤنڈ اپ لوڈ کریں';
+
+  @override
+  String get soundUploadTitle => 'ساؤنڈ اپ لوڈ کریں';
+
+  @override
+  String get soundUploadIntro =>
+      'کوئی بیٹ، جِنگل یا ریکارڈ کی ہوئی آواز شیئر کریں تاکہ Divine پر کوئی بھی اس پر ویڈیو بنا سکے۔';
+
+  @override
+  String get soundUploadChooseFile => 'آڈیو فائل منتخب کریں';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC، M4A، MP3، WAV یا WebM';
+
+  @override
+  String get soundUploadChangeFile => 'تبدیل کریں';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Divine پر کوئی بھی یہ ساؤنڈ اپنی ویڈیوز میں استعمال کر سکتا ہے۔ ہر بار آپ کا نام دیا جائے گا۔';
+
+  @override
+  String get soundUploadShareAction => 'ساؤنڈ شیئر کریں';
+
+  @override
+  String get soundUploadShared =>
+      'آپ کا ساؤنڈ شائع ہو گیا اور آوازوں میں محفوظ ہو گیا۔';
+
+  @override
+  String get soundUploadFailed =>
+      'وہ ساؤنڈ شیئر نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get soundUploadSignInFirst => 'ساؤنڈ شیئر کرنے کے لیے سائن اِن کریں۔';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'آپ کا اکاؤنٹ محدود ہے، اس لیے یہ ساؤنڈ شیئر نہیں ہو سکا۔';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'کیا یہ ساؤنڈ حذف کر دیں؟';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'یہ آپ کا ہے، اس لیے آپ اسے سب کے لیے Divine سے ہٹا سکتے ہیں۔ جو ویڈیوز پہلے سے اسے استعمال کر رہی ہیں ان کی آواز برقرار رہے گی۔';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'سب کے لیے حذف کریں';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'صرف آوازوں سے ہٹائیں';
+
+  @override
+  String get savedSoundDeleted => 'ساؤنڈ حذف ہو گیا';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'وہ ساؤنڈ حذف نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'آپ صرف وہی ساؤنڈز حذف کر سکتے ہیں جو آپ نے خود شیئر کیے ہوں۔';
+
+  @override
+  String get audioPickerTypeGroup => 'آڈیو';
 }

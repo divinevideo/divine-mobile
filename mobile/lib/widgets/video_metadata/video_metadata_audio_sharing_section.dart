@@ -7,6 +7,7 @@ import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
 
 /// Lets the creator offer the post's audio for reuse and edit the public
 /// credit that ships with it.
@@ -73,9 +74,19 @@ class VideoMetadataAudioSharingSection extends ConsumerWidget {
           child: external != null
               ? _ProviderAudioCredit(sound: sound!)
               : allowAudioReuse
-              ? _PublicAudioCreditEditor(
+              ? PublicAudioCreditEditor(
                   key: ValueKey(sound?.id ?? 'original-audio'),
-                  sound: sound,
+                  attribution:
+                      editorState.audioShareAttribution ??
+                      AudioShareAttribution(
+                        title: sound?.title ?? '',
+                        creatorName: '',
+                        publicTags: const [],
+                        confirmedOwnWork: false,
+                      ),
+                  onChanged: ref
+                      .read(videoEditorProvider.notifier)
+                      .setAudioShareAttribution,
                 )
               : null,
         ),
@@ -166,198 +177,6 @@ class _ProviderAudioCredit extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PublicAudioCreditEditor extends ConsumerStatefulWidget {
-  const _PublicAudioCreditEditor({required this.sound, super.key});
-
-  final AudioEvent? sound;
-
-  @override
-  ConsumerState<_PublicAudioCreditEditor> createState() =>
-      _PublicAudioCreditEditorState();
-}
-
-class _PublicAudioCreditEditorState
-    extends ConsumerState<_PublicAudioCreditEditor> {
-  late final TextEditingController _titleController;
-  late final TextEditingController _creatorController;
-  late final TextEditingController _sourceController;
-  late final TextEditingController _tagsController;
-
-  AudioShareAttribution get _attribution =>
-      ref.read(videoEditorProvider).audioShareAttribution ??
-      AudioShareAttribution(
-        title: widget.sound?.title ?? '',
-        creatorName: '',
-        publicTags: const [],
-        confirmedOwnWork: false,
-      );
-
-  @override
-  void initState() {
-    super.initState();
-    final attribution = _attribution;
-    _titleController = TextEditingController(text: attribution.title);
-    _creatorController = TextEditingController(text: attribution.creatorName);
-    _sourceController = TextEditingController(text: attribution.sourceUrl);
-    _tagsController = TextEditingController(
-      text: attribution.publicTags.map((tag) => '#$tag').join(' '),
-    );
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _creatorController.dispose();
-    _sourceController.dispose();
-    _tagsController.dispose();
-    super.dispose();
-  }
-
-  void _update({
-    String? title,
-    String? creatorName,
-    String? sourceUrl,
-    List<String>? publicTags,
-    bool? confirmedOwnWork,
-  }) {
-    final current = _attribution;
-    ref
-        .read(videoEditorProvider.notifier)
-        .setAudioShareAttribution(
-          current.copyWith(
-            title: title,
-            creatorName: creatorName,
-            sourceUrl: sourceUrl,
-            publicTags: publicTags,
-            confirmedOwnWork: confirmedOwnWork,
-          ),
-        );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final attribution = ref.watch(
-      videoEditorProvider.select((state) => state.audioShareAttribution),
-    );
-    final ownWork = attribution?.confirmedOwnWork ?? false;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 8,
-      children: [
-        Padding(
-          padding: const .fromLTRB(16, 16, 16, 0),
-          child: Text(
-            context.l10n.soundPublicCredit,
-            style: VineTheme.titleSmallFont(
-              color: context.vineColors.onSurface,
-            ),
-          ),
-        ),
-        // Filled: these sit inside the section's own card, so an unfilled
-        // field takes the card's color and reads as a label rather than an
-        // input.
-        Padding(
-          padding: const .symmetric(horizontal: 16),
-          child: DivineTextField(
-            key: const Key('audio_credit_title'),
-            controller: _titleController,
-            labelText: context.l10n.soundCreditTitleLabel,
-            filled: true,
-            textInputAction: .next,
-            onChanged: (value) => _update(title: value),
-          ),
-        ),
-        Padding(
-          padding: const .symmetric(horizontal: 16),
-          child: DivineTextField(
-            key: const Key('audio_credit_creator'),
-            controller: _creatorController,
-            labelText: context.l10n.soundCreditCreatorLabel,
-            filled: true,
-            keyboardType: .name,
-            textInputAction: .next,
-            onChanged: (value) => _update(creatorName: value),
-          ),
-        ),
-        // The source field carries its own top gap so that collapsing it
-        // leaves the checkbox row a single [Column.spacing] away from the
-        // hashtags field, not two.
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Material(
-              type: MaterialType.transparency,
-              child: DivineCheckboxTile(
-                value: ownWork,
-                title: context.l10n.soundOwnWork,
-                onChanged: (value) => _update(confirmedOwnWork: value),
-              ),
-            ),
-            AnimatedReveal(
-              child: ownWork
-                  ? null
-                  : Padding(
-                      padding: const .fromLTRB(16, 8, 16, 0),
-                      child: DivineTextField(
-                        key: const Key('audio_credit_source'),
-                        controller: _sourceController,
-                        labelText: context.l10n.soundCreditSourceUrlLabel,
-                        keyboardType: TextInputType.url,
-                        filled: true,
-                        autocorrect: false,
-                        textInputAction: .next,
-                        onChanged: (value) => _update(sourceUrl: value),
-                      ),
-                    ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const .symmetric(horizontal: 16),
-          child: DivineTextField(
-            key: const Key('audio_credit_tags'),
-            controller: _tagsController,
-            labelText: context.l10n.soundCreditPublicHashtagsLabel,
-            filled: true,
-            autocorrect: false,
-            textInputAction: .done,
-            onChanged: (value) =>
-                _update(publicTags: value.split(RegExp(r'[,\s]+'))),
-          ),
-        ),
-        Container(
-          margin: const .symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: context.vineColors.outlineMuted),
-            ),
-          ),
-          child: ListTile(
-            contentPadding: const .symmetric(horizontal: 16),
-            title: Text(
-              context.l10n.soundSharedAs,
-              style: VineTheme.labelMediumFont(
-                color: context.vineColors.onSurfaceVariant,
-              ),
-            ),
-            subtitle: Text(
-              [
-                _titleController.text.trim(),
-                if (_creatorController.text.trim().isNotEmpty)
-                  context.l10n.soundCreatorBy(_creatorController.text.trim()),
-              ].where((value) => value.isNotEmpty).join(' · '),
-              key: const Key('audio_credit_preview'),
-              style: VineTheme.bodySmallFont(
-                color: context.vineColors.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

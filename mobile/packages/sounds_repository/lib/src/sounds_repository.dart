@@ -605,6 +605,16 @@ class SoundsRepository {
     }
   }
 
+  /// Drop one sound from the cache, as after the user deletes it.
+  ///
+  /// The relay stops serving a tombstoned event, but nothing re-queries this
+  /// cache on its own, so the sound would otherwise stay listed until the
+  /// next [refresh]. A no-op for an id that is not cached.
+  void removeCachedSound(String eventId) {
+    if (_cache.remove(eventId) == null) return;
+    _emitSounds();
+  }
+
   /// Clear all cached sounds.
   ///
   /// Useful for debugging or forcing a refresh.
