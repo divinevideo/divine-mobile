@@ -90,6 +90,14 @@ the same session, asking the author to review the changes, and re-requesting or
 naming reviewers whose review the push made stale. Changing visible state does
 not recall notifications. Reversibility never grants authority.
 
+**Titles and descriptions.** Pull-request and issue titles use Conventional Commit format:
+`type(scope): summary`, or `type: summary` when no scope applies.
+Pull requests use `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`,
+`build`, `ci`, `style`, and `revert`; issues use those plus `task` and `epic`.
+Prefer a scope over inventing a type. Write titles and descriptions for a human
+with no prior context, and set the title correctly when opening the pull request
+or issue. A format check does not prove that the summary is meaningful.
+
 ### Divine Brain
 
 When a task needs company context that is not in this checkout, use the Divine
@@ -98,10 +106,8 @@ Brain search or ask tool. Tool names vary by client.
 A failed client connection is not the same as Brain being unavailable. If no
 Brain tool is registered or its connection fails, reach the same endpoint from
 the shell with `brain-cli`, installed by
-`npx skills add divinevideo/divine-brain -s brain-cli -g`. Keep the `-g`: the
-project-scope default writes into `.claude/skills/` and `.agents/skills/`,
-which this repository generates and checks. It uses the same Cloudflare Access
-service token. Try it before continuing without company memory.
+`npx skills add divinevideo/divine-brain -s brain-cli -g`. Try it before
+continuing without company memory.
 
 If the credentials themselves are missing or revoked, both surfaces fail.
 Continue from local repo docs and say the shared context was unavailable.
