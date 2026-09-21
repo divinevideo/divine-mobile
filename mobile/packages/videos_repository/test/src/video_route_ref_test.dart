@@ -115,6 +115,20 @@ void main() {
       );
     });
 
+    test('returns null for an naddr1 that is not a video kind', () {
+      // Same d tag and author as `naddr` above, kind 30023 (long-form
+      // article). Ungated, this built the coordinate '30023:<author>:<d
+      // tag>' and the relay `#a` arm answered with that article's
+      // reactions, rendered as the video's likers.
+      expect(
+        VideoRouteRef.parse(
+          'naddr1qq9kjup3v3jrjazpd3khwq3qsxktkuz8tw9hzhpc6pevaymknj3827parpu'
+          'eqyt7crqpa2zfh72sxpqqqp65wdhulxv',
+        ),
+        isNull,
+      );
+    });
+
     test('treats a stable id that merely starts with note as a stable id', () {
       // Nip19.isNoteId is `indexOf('note') == 0`, so this used to enter the
       // note1 branch, fail to decode, and come back null — losing an id the

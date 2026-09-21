@@ -101,6 +101,13 @@ class VideoRouteRef {
       // carried, and it goes into the coordinate that becomes an `#a` filter
       // value and a REST query parameter.
       if (!NostrHexUtils.isValidPubkey(decoded.author)) return null;
+      // Gated on the same kinds as the raw-coordinate branch below. An
+      // naddr can encode any kind, and an ungated one built a video
+      // coordinate out of, say, a long-form article: the detail route
+      // degraded quietly because a non-video event never hydrates into a
+      // VideoEvent, but the engagement routes have no such step and
+      // rendered that article's reactions as the video's likers.
+      if (!NIP71VideoKinds.isAcceptableVideoKind(decoded.kind)) return null;
       return VideoRouteRef(
         addressableId: AId(
           kind: decoded.kind,
@@ -115,9 +122,9 @@ class VideoRouteRef {
     // Raw NIP-33 addressable coordinate: "kind:pubkey:d-tag"
     // Produced by VideoNotification.videoAddressableId for stable notification
     // navigation and by DM share-card fallbacks, which can reference any
-    // acceptable NIP-71 kind (e.g. 34235). Accepts the same kinds as the
-    // naddr branch above; the 34236-only isVideoKind check would let a
-    // 34235 coordinate fall through to an unmatched d-tag lookup.
+    // acceptable NIP-71 kind (e.g. 34235); the 34236-only isVideoKind check
+    // would let a 34235 coordinate fall through to an unmatched d-tag
+    // lookup.
     final aid = AId.fromString(trimmed);
     if (aid != null && NIP71VideoKinds.isAcceptableVideoKind(aid.kind)) {
       return VideoRouteRef(
