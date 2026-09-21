@@ -915,8 +915,8 @@ class RepostsRepository {
   /// provided). Both are queried for a concrete event that is also
   /// addressable, because clients may reference it either way and querying
   /// one alone would miss reposters tagged with the other. An `e` tag never
-  /// holds a `d` tag, so that filter is skipped rather than sent when
-  /// [eventId] is one.
+  /// holds a `d` tag, so the `e` filter is skipped rather than sent when
+  /// [eventId] is a `d` tag.
   ///
   /// Filters out reposts deleted via Kind 5 deletion events from their
   /// author, and reposters hidden by the injected block filter
