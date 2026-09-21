@@ -50,7 +50,7 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("newer than released App Store version 1.0.22", result.stdout)
+        self.assertIn("newer than taken App Store version 1.0.22", result.stdout)
 
     def test_blocks_same_version_as_released_version(self) -> None:
         result = self.run_preflight(
@@ -60,7 +60,7 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(
-            "must be newer than released App Store version 1.0.22", result.stderr
+            "must be newer than taken App Store version 1.0.22", result.stderr
         )
 
     def test_blocks_version_below_released_version(self) -> None:
@@ -71,7 +71,7 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(
-            "must be newer than released App Store version 1.2.0", result.stderr
+            "must be newer than taken App Store version 1.2.0", result.stderr
         )
 
     def test_uses_the_highest_released_version(self) -> None:
@@ -85,7 +85,7 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
         )
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("released App Store version 1.0.22", result.stderr)
+        self.assertIn("taken App Store version 1.0.22", result.stderr)
 
     def test_recognises_the_deprecated_app_store_state_field(self) -> None:
         result = self.run_preflight(
@@ -93,7 +93,24 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("newer than released App Store version 1.0.22", result.stdout)
+        self.assertIn("newer than taken App Store version 1.0.22", result.stdout)
+
+    def test_blocks_taken_legacy_app_store_states(self) -> None:
+        for state in (
+            "REMOVED_FROM_SALE",
+            "DEVELOPER_REMOVED_FROM_SALE",
+            "PREORDER_READY_FOR_SALE",
+            "PENDING_CONTRACT",
+        ):
+            with self.subTest(state=state):
+                result = self.run_preflight(
+                    [app_store_version("1.0.23", state=state, legacy_state=True)]
+                )
+
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "must be newer than taken App Store version 1.0.23", result.stderr
+                )
 
     def test_compares_numeric_components_instead_of_lexically(self) -> None:
         result = self.run_preflight(
@@ -116,7 +133,7 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("newer than released App Store version 1.0.22", result.stdout)
+        self.assertIn("newer than taken App Store version 1.0.22", result.stdout)
 
     def test_allows_version_that_is_still_in_review(self) -> None:
         result = self.run_preflight(
@@ -148,8 +165,30 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn(
-            "must be newer than released App Store version 1.0.23", result.stderr
+            "must be newer than taken App Store version 1.0.23", result.stderr
         )
+
+    def test_blocks_version_equal_to_accepted_version(self) -> None:
+        # ACCEPTED means App Review passed while a sibling submission item is
+        # still outstanding, so the version string is taken.
+        result = self.run_preflight(
+            [
+                app_store_version("1.0.23", state="ACCEPTED"),
+                app_store_version("1.0.22", state="READY_FOR_DISTRIBUTION"),
+            ],
+            candidate_version="1.0.23",
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "must be newer than taken App Store version 1.0.23", result.stderr
+        )
+
+    def test_fails_closed_on_empty_version_list(self) -> None:
+        result = self.run_preflight([])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("returned no App Store versions", result.stderr)
 
     def test_fails_closed_on_invalid_json_shape(self) -> None:
         result = self.run_preflight({"buildId": "build-id", "version": "1.0.22"})
@@ -176,7 +215,7 @@ class IosStoreVersionPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("newer than released App Store version 1.0.22", result.stdout)
+        self.assertIn("newer than taken App Store version 1.0.22", result.stdout)
 
 
 if __name__ == "__main__":
