@@ -509,15 +509,13 @@ _STACK_IMAGE_OVERRIDE_VARS=(
     KEYCAST_IMAGE
 )
 
-# Returns success when a reference has no explicit registry host. The stack's
-# local builders produce unqualified references (for example
-# keycast:262-local); its published references use ghcr.io/....
+# Returns success only for an unqualified local-builder reference. The stack's
+# local builders produce references such as keycast:262-local; a slash makes
+# the reference registry-backed, including Docker Hub namespace references.
 _stack_image_reference_is_local() {
-    local reference="$1" first_component
-    first_component="${reference%%/*}"
-
+    local reference="$1"
     [[ "$reference" != */* ]] && return 0
-    [[ "$first_component" != *.* && "$first_component" != *:* && "$first_component" != localhost ]]
+    return 1
 }
 
 # preflight_image_staleness <script_dir>

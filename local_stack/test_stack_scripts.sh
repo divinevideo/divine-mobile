@@ -881,6 +881,15 @@ run_pinned_images FUNNELCAKE_API_IMAGE=ghcr.io/divinevideo/funnelcake-api:latest
 
 assert_status 0 "$last_status" "a registry reference should not be checked locally"
 
+# Docker Hub namespace references also have no explicit registry host. Compose
+# can pull them, so they must not be rejected just because the image is absent
+# from the local cache.
+reset_fixtures
+: >"${FIXTURES}/images.txt"
+run_pinned_images FUNNELCAKE_API_IMAGE=acme/funnelcake-api:dev
+
+assert_status 0 "$last_status" "a Docker Hub namespace reference should not be checked locally"
+
 # --- Unqualified tags are locally built, not registry references ------------
 
 reset_fixtures
