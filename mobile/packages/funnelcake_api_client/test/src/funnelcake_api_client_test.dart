@@ -3702,8 +3702,9 @@ void main() {
       });
 
       test('keeps a punctuated d tag in one path segment', () async {
-        // The route lookup passes `stableId ?? eventId`, so a d tag decoded
-        // from an untrusted naddr1 arrives here as arbitrary UTF-8.
+        // An addressable reference carries no event id, so the route
+        // lookup's `eventId ?? stableId` falls through to a d tag decoded
+        // from an untrusted naddr1, which is arbitrary UTF-8.
         // Interpolated raw, 'a?b/c#d' asked for /api/videos/a with the rest
         // as a query and fragment, so a different video answered.
         when(
