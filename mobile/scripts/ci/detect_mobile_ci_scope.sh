@@ -149,6 +149,10 @@ while IFS= read -r path; do
     # Dart jobs stay green (#9381). `mobile/lib` is deliberately absent: the
     # XCTests never run Dart, and a macOS runner costs ten Linux minutes per
     # minute.
+    #
+    # `*` spans `/` in a case glob, so a package's example app would match
+    # the arms below; nothing in the Runner target ever compiles one.
+    mobile/packages/*/example/*) ;;
     mobile/ios/*|mobile/packages/*/ios/*|mobile/packages/*/darwin/*)
       ios_native=true ;;
     # Plugin registration and the generated Swift package are decided by the
