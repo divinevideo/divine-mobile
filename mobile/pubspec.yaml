@@ -18,7 +18,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # Marketing-version changes are release decisions. Keep the current train until
 # approval; ask a maintainer and follow ../docs/RELEASE_CHECKLIST.md before editing.
-version: 1.0.23+820
+version: 1.0.24+820
 
 environment:
   sdk: ^3.13.0
