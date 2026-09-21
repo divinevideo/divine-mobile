@@ -29,6 +29,9 @@ enum VideoFeedSourceType {
   /// Videos from one subscribed curated list.
   subscribedList,
 
+  /// Videos from the members of one followed people list.
+  peopleList,
+
   /// Most recently published videos (chronological).
   newVideos,
 
@@ -53,12 +56,14 @@ extension VideoFeedSourceTypeAnalytics on VideoFeedSourceType {
   /// rather than the list id, unlike the hashtag and search-query call sites
   /// that pass their discriminating value. A list id is unbounded in
   /// cardinality and closer to user data than a public hashtag is, and the
-  /// question this field answers — which of the five home modes served the
-  /// view — is answered without it.
+  /// question this field answers — which of the home modes served the view —
+  /// is answered without it. [VideoFeedSourceType.peopleList] reports the bare
+  /// `peoplelist` for the same reason.
   String get analyticsTag => switch (this) {
     VideoFeedSourceType.forYou => 'foryou',
     VideoFeedSourceType.following => 'following',
     VideoFeedSourceType.subscribedList => 'list',
+    VideoFeedSourceType.peopleList => 'peoplelist',
     VideoFeedSourceType.newVideos => 'new',
     VideoFeedSourceType.classic => 'classic',
   };
@@ -70,31 +75,46 @@ final class VideoFeedSource extends Equatable {
   const VideoFeedSource.forYou()
     : type = VideoFeedSourceType.forYou,
       listId = null,
-      listName = null;
+      listName = null,
+      listOwnerPubkey = null;
 
   /// Videos from followed creators.
   const VideoFeedSource.following()
     : type = VideoFeedSourceType.following,
       listId = null,
-      listName = null;
+      listName = null,
+      listOwnerPubkey = null;
 
   /// Videos from a subscribed curated list.
   const VideoFeedSource.subscribedList({
     required String this.listId,
     required String this.listName,
-  }) : type = VideoFeedSourceType.subscribedList;
+  }) : type = VideoFeedSourceType.subscribedList,
+       listOwnerPubkey = null;
+
+  /// Videos from the members of a followed people list.
+  ///
+  /// A people list's id is its `d` tag, which two owners can share, so the
+  /// source carries [listOwnerPubkey] to name the one list that was followed.
+  const VideoFeedSource.peopleList({
+    required String this.listId,
+    required String this.listName,
+    required String this.listOwnerPubkey,
+  }) : type = VideoFeedSourceType.peopleList;
 
   /// Most recently published videos (chronological).
   const VideoFeedSource.newVideos()
     : type = VideoFeedSourceType.newVideos,
       listId = null,
-      listName = null;
+      listName = null,
+      listOwnerPubkey = null;
 
   /// Popular classic Vine archive videos.
   const VideoFeedSource.classic()
     : type = VideoFeedSourceType.classic,
       listId = null,
-      listName = null;
+      listName = null,
+      listOwnerPubkey = null;
 
   /// Compatibility conversion for legacy mode-based callers.
   factory VideoFeedSource.fromMode(FeedMode mode) => switch (mode) {
@@ -107,11 +127,17 @@ final class VideoFeedSource extends Equatable {
   /// The source type.
   final VideoFeedSourceType type;
 
-  /// Selected curated list ID when [type] is subscribedList.
+  /// Selected list ID when [type] is subscribedList or peopleList.
   final String? listId;
 
-  /// Selected curated list name when [type] is subscribedList.
+  /// Selected list name when [type] is subscribedList or peopleList.
   final String? listName;
+
+  /// Full hex pubkey of the selected list's owner when [type] is peopleList.
+  final String? listOwnerPubkey;
+
+  /// Prefix of [persistenceValue] for a followed people list.
+  static const peopleListPersistencePrefix = 'people:';
 
   /// Legacy mode projection for compatibility.
   FeedMode get mode => switch (type) {
@@ -119,7 +145,8 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.newVideos => FeedMode.latest,
     VideoFeedSourceType.classic => FeedMode.classic,
     VideoFeedSourceType.following ||
-    VideoFeedSourceType.subscribedList => FeedMode.following,
+    VideoFeedSourceType.subscribedList ||
+    VideoFeedSourceType.peopleList => FeedMode.following,
   };
 
   /// Label fallback for UI surfaces that do not have localized copy.
@@ -128,7 +155,8 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.newVideos => FeedMode.latest.name,
     VideoFeedSourceType.following => FeedMode.following.name,
     VideoFeedSourceType.classic => FeedMode.classic.name,
-    VideoFeedSourceType.subscribedList => listName ?? '',
+    VideoFeedSourceType.subscribedList ||
+    VideoFeedSourceType.peopleList => listName ?? '',
   };
 
   /// SharedPreferences value for this source.
@@ -138,10 +166,14 @@ final class VideoFeedSource extends Equatable {
     VideoFeedSourceType.following => FeedMode.following.name,
     VideoFeedSourceType.classic => FeedMode.classic.name,
     VideoFeedSourceType.subscribedList => 'list:$listId',
+    // The hex pubkey has no separator in it, so the first one after the
+    // prefix always ends the owner, whatever the `d` tag contains.
+    VideoFeedSourceType.peopleList =>
+      '$peopleListPersistencePrefix$listOwnerPubkey:$listId',
   };
 
   @override
-  List<Object?> get props => [type, listId, listName];
+  List<Object?> get props => [type, listId, listName, listOwnerPubkey];
 }
 
 /// Status of the video feed.
@@ -208,6 +240,7 @@ final class VideoFeedBlocState extends Equatable {
     FeedMode mode = FeedMode.forYou,
     VideoFeedSource? source,
     this.subscribedLists = const [],
+    this.followedPeopleLists = const [],
     this.hasMore = true,
     this.isLoadingMore = false,
     this.error,
@@ -240,6 +273,10 @@ final class VideoFeedBlocState extends Equatable {
 
   /// Subscribed curated lists available to Home.
   final List<CuratedList> subscribedLists;
+
+  /// People lists the viewer follows, available to Home as feeds of their
+  /// members' videos.
+  final List<PeopleListSearchResult> followedPeopleLists;
 
   /// Whether more videos can be loaded via pagination.
   final bool hasMore;
@@ -315,6 +352,23 @@ final class VideoFeedBlocState extends Equatable {
   bool get isSubscribedListSelected =>
       source.type == VideoFeedSourceType.subscribedList;
 
+  /// The followed people list [source] names, or `null` when it is not a
+  /// people-list source or that list is no longer followed.
+  PeopleListSearchResult? followedPeopleListFor(VideoFeedSource source) {
+    if (source.type != VideoFeedSourceType.peopleList) return null;
+    for (final followed in followedPeopleLists) {
+      if (followed.ownerPubkey == source.listOwnerPubkey &&
+          followed.list.id == source.listId) {
+        return followed;
+      }
+    }
+    return null;
+  }
+
+  /// The followed people list the active source names, if any.
+  PeopleListSearchResult? get selectedPeopleList =>
+      followedPeopleListFor(source);
+
   /// Create a copy with updated values.
   VideoFeedBlocState copyWith({
     VideoFeedStatus? status,
@@ -322,6 +376,7 @@ final class VideoFeedBlocState extends Equatable {
     FeedMode? mode,
     VideoFeedSource? source,
     List<CuratedList>? subscribedLists,
+    List<PeopleListSearchResult>? followedPeopleLists,
     bool? hasMore,
     bool? isLoadingMore,
     VideoFeedError? error,
@@ -343,6 +398,7 @@ final class VideoFeedBlocState extends Equatable {
           source ??
           (mode != null ? VideoFeedSource.fromMode(mode) : this.source),
       subscribedLists: subscribedLists ?? this.subscribedLists,
+      followedPeopleLists: followedPeopleLists ?? this.followedPeopleLists,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       error: clearError ? null : (error ?? this.error),
@@ -365,6 +421,7 @@ final class VideoFeedBlocState extends Equatable {
     videos,
     source,
     subscribedLists,
+    followedPeopleLists,
     hasMore,
     isLoadingMore,
     error,

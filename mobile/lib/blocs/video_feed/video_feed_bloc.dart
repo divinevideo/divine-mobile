@@ -16,7 +16,9 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/home_feed_resume_manager.dart';
+import 'package:openvine/blocs/video_feed/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -49,6 +51,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
     required CuratedListRepository curatedListRepository,
+    PeopleListsRepository? peopleListsRepository,
     ProfileRepository? profileRepository,
     ContentBlocklistRepository? contentBlocklistRepository,
     String? userPubkey,
@@ -62,6 +65,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
+       _peopleListsRepository = peopleListsRepository,
        _profileRepository = profileRepository,
        _blocklistRepository = contentBlocklistRepository,
        _userPubkey = userPubkey,
@@ -93,6 +97,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
     on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
     on<VideoFeedCuratedListsChanged>(_onCuratedListsChanged);
+    on<VideoFeedFollowedPeopleListsChanged>(
+      _onFollowedPeopleListsChanged,
+      transformer: sequential(),
+    );
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
@@ -103,6 +111,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final VideosRepository _videosRepository;
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
+
+  /// Where the people lists the viewer follows live. `null` leaves Home
+  /// without people-list feeds.
+  final PeopleListsRepository? _peopleListsRepository;
   final ProfileRepository? _profileRepository;
   final ContentBlocklistRepository? _blocklistRepository;
   final String? _userPubkey;
@@ -120,6 +132,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   final FeedModePreferenceStore _modePreferences;
   StreamSubscription<List<String>>? _followingSubscription;
   StreamSubscription<List<CuratedList>>? _curatedListsSubscription;
+  StreamSubscription<List<PeopleListSearchResult>>?
+  _followedPeopleListsSubscription;
   int _sourceSelectionSequence = 0;
 
   /// Tracks when the last successful load completed, used by
@@ -139,7 +153,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
   /// the active video is replaced with fresh server data on every load
   /// (via [HomeFeedResumeManager]), so the feed is never stale beyond the
   /// current video. Subscribed curated lists are excluded — they are derived
-  /// from locally held list IDs, not a server feed.
+  /// from locally held list IDs, not a server feed — and so are followed
+  /// people lists, whose members can change between launches.
   bool _usesHomeFeedCache(VideoFeedSource source) =>
       source.type == VideoFeedSourceType.forYou ||
       source.type == VideoFeedSourceType.following ||
@@ -238,9 +253,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
+    final followedPeopleLists = await _readFollowedPeopleLists();
     final source = event.forceMode
         ? VideoFeedSource.fromMode(event.mode)
-        : _modePreferences.restoreSource(event.mode);
+        : _modePreferences.restoreSource(
+            event.mode,
+            followedPeopleLists: followedPeopleLists,
+          );
     if (!event.forceMode &&
         _sharedPreferences?.getString(_modePreferences.key) !=
             source.persistenceValue) {
@@ -254,6 +273,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         status: VideoFeedStatus.loading,
         source: source,
         subscribedLists: subscribedLists,
+        followedPeopleLists: followedPeopleLists,
         isLoadingMore: false,
         clearPaginationCursor: true,
       ),
@@ -292,6 +312,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
 
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _followedPeopleListsSubscription?.cancel();
 
     // Subscribe to following list changes.
     //
@@ -323,6 +344,63 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         .listen((lists) {
           addIfOpen(VideoFeedCuratedListsChanged(lists));
         });
+
+    _followedPeopleListsSubscription = _watchFollowedPeopleLists();
+  }
+
+  /// The people lists the viewer follows, or none when signed out, when Home
+  /// was built without the repository, or when the local read fails: a cache
+  /// that cannot be read must not take the feed down with it.
+  Future<List<PeopleListSearchResult>> _readFollowedPeopleLists() async {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (repository == null || viewerPubkey == null) return const [];
+    try {
+      return await repository.readFollowedLists(viewerPubkey: viewerPubkey);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: could not read followed people lists',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const [];
+    } catch (error, stackTrace) {
+      // A box that will not open throws a `HiveError`, which is an `Error`.
+      // It is reported, and Home still loads without the people-list feeds.
+      addError(
+        Reportable(
+          error,
+          context: VideoFeedBlocReportableSites.readFollowedPeopleLists,
+        ),
+        stackTrace,
+      );
+      return const [];
+    }
+  }
+
+  /// Follows and unfollows made while Home is alive. The stream replays the
+  /// current set first; the handler drops a set equal to the one in state.
+  StreamSubscription<List<PeopleListSearchResult>>?
+  _watchFollowedPeopleLists() {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (repository == null || viewerPubkey == null) return null;
+    return repository
+        .watchFollowedLists(viewerPubkey: viewerPubkey)
+        .listen(
+          (lists) => addIfOpen(VideoFeedFollowedPeopleListsChanged(lists)),
+          onError: (Object error, StackTrace stackTrace) {
+            Log.warning(
+              'VideoFeedBloc: followed people lists stream failed',
+              name: 'VideoFeedBloc',
+              category: LogCategory.storage,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
   }
 
   @override
@@ -332,8 +410,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     _resumeManager.dispose();
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
+    await _followedPeopleListsSubscription?.cancel();
     _followingSubscription = null;
     _curatedListsSubscription = null;
+    _followedPeopleListsSubscription = null;
     return super.close();
   }
 
@@ -411,7 +491,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
   }
 
-  bool _listsEqual(List<String> a, List<String> b) {
+  bool _listsEqual<T>(List<T> a, List<T> b) {
     if (a.length != b.length) return false;
 
     for (var i = 0; i < a.length; i++) {
@@ -727,15 +807,63 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
       await _modePreferences.persist(nextSource);
     }
 
+    await _restartFeed(nextSource, emit, subscribedLists: subscribedLists);
+  }
+
+  /// Handle follows, unfollows and refreshed copies of followed people lists.
+  ///
+  /// The selected list going away falls back to For You, as an unsubscribed
+  /// curated list does. Its members changing reloads it, since the feed is
+  /// exactly those members' videos. Anything else only updates the menu.
+  Future<void> _onFollowedPeopleListsChanged(
+    VideoFeedFollowedPeopleListsChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    final followed = event.followedPeopleLists;
+    if (_listsEqual(followed, state.followedPeopleLists)) return;
+
+    final updated = state.copyWith(followedPeopleLists: followed);
+    final source = state.source;
+    if (source.type != VideoFeedSourceType.peopleList ||
+        state.status == VideoFeedStatus.loading) {
+      emit(updated);
+      return;
+    }
+
+    final before = state.selectedPeopleList;
+    final after = updated.selectedPeopleList;
+    if (after == null) {
+      const fallback = VideoFeedSource.forYou();
+      await _modePreferences.persist(fallback);
+      await _restartFeed(fallback, emit, followedPeopleLists: followed);
+      return;
+    }
+    if (before == null ||
+        !_listsEqual(before.list.pubkeys, after.list.pubkeys)) {
+      await _restartFeed(source, emit, followedPeopleLists: followed);
+      return;
+    }
+    emit(updated);
+  }
+
+  /// Clears the feed and loads [source] from the network, carrying whichever
+  /// list collection just changed into the loading state.
+  Future<void> _restartFeed(
+    VideoFeedSource source,
+    Emitter<VideoFeedBlocState> emit, {
+    List<CuratedList>? subscribedLists,
+    List<PeopleListSearchResult>? followedPeopleLists,
+  }) async {
     emit(
       state.copyWith(
         status: VideoFeedStatus.loading,
-        source: nextSource,
+        source: source,
         videos: [],
         hasMore: true,
         isLoadingMore: false,
         clearError: true,
         subscribedLists: subscribedLists,
+        followedPeopleLists: followedPeopleLists,
         videoListSources: const {},
         listOnlyVideoIds: const {},
         clearPaginationCursor: true,
@@ -744,11 +872,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     );
 
     final feedLoad = _feedTracker?.startFeedLoad(
-      nextSource.mode.name,
+      source.mode.name,
       reason: FeedLoadReason.refresh,
     );
 
-    await _loadVideos(nextSource, emit, feedLoad: feedLoad, skipCache: true);
+    await _loadVideos(source, emit, feedLoad: feedLoad, skipCache: true);
   }
 
   /// Handle blocklist changes.
@@ -1104,6 +1232,14 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
             _curatedListRepository.getOrderedVideoIds(source.listId!),
           )
           .then((videos) => HomeFeedResult(videos: videos)),
+    VideoFeedSourceType.peopleList =>
+      _videosRepository
+          .getVideosByAuthors(
+            authorPubkeys:
+                state.followedPeopleListFor(source)?.list.pubkeys ?? const [],
+            until: until,
+          )
+          .then((videos) => HomeFeedResult(videos: videos)),
     VideoFeedSourceType.newVideos =>
       paginationCursor == null
           ? _videosRepository.getNewVideos(
@@ -1155,7 +1291,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
           .catchError((Object error, StackTrace stackTrace) {
             if (!isClosed) {
               addError(
-                Reportable(error, context: '_scheduleNostrEnrichment'),
+                Reportable(
+                  error,
+                  context: VideoFeedBlocReportableSites.scheduleNostrEnrichment,
+                ),
                 stackTrace,
               );
             }
