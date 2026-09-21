@@ -425,6 +425,35 @@ class BookmarksRepository {
   bool get hasUnreadablePrivateItems =>
       _privateItemsState == _PrivateItemsState.unreadable;
 
+  /// Announces [globalBookmarks] after a sync or a publish replaces the list.
+  final _globalBookmarksController =
+      StreamController<List<BookmarkItem>>.broadcast();
+
+  /// [globalBookmarks], each time a sync or a publish replaces the list.
+  ///
+  /// Changes only: a new listener reads [globalBookmarks] for the value it
+  /// starts from. A sync that adopts the list it already held still emits, so
+  /// a listener compares against what it is showing rather than treating every
+  /// event as a difference.
+  ///
+  /// This is what lets a surface that is already on screen learn about a save
+  /// made elsewhere — the share sheet writes through the same instance.
+  Stream<List<BookmarkItem>> watchGlobalBookmarks() =>
+      _globalBookmarksController.stream;
+
+  /// Guarded because an operation already in flight can finish after
+  /// [dispose] — an account switch tears the instance down mid-publish.
+  void _emitGlobalBookmarks() {
+    if (_globalBookmarksController.isClosed) return;
+    _globalBookmarksController.add(globalBookmarks);
+  }
+
+  /// Closes [watchGlobalBookmarks]. Operations still in flight finish; they
+  /// just stop announcing.
+  void dispose() {
+    unawaited(_globalBookmarksController.close());
+  }
+
   /// Reconciles [globalBookmarks] against the user's kind-10003 on the relay.
   ///
   /// Returns `false` when the remote list could not be established — signed
@@ -601,6 +630,7 @@ class BookmarksRepository {
       }
 
       await _saveBookmarksToSharedPreferences();
+      _emitGlobalBookmarks();
 
       Log.info(
         'Synced ${globalBookmarks.length} global bookmarks from relay '
@@ -1017,6 +1047,7 @@ class BookmarksRepository {
             : _PrivateItemsState.readable;
       }
       await _saveBookmarksToSharedPreferences();
+      _emitGlobalBookmarks();
 
       Log.debug(
         'Published global bookmarks to Nostr: ${event.id} '

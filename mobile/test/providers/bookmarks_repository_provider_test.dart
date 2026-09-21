@@ -101,6 +101,24 @@ void main() {
               "account's bookmarks.",
         );
       });
+
+      test("closes the previous instance's change stream", () async {
+        final nostrService = _SwappableNostrService(nostrClient);
+        final container = containerWith(nostrService);
+
+        final before = container.read(bookmarksRepositoryProvider);
+        final closed = expectLater(before.watchGlobalBookmarks(), emitsDone);
+
+        nostrService.replaceWith(_MockNostrClient());
+        await container.pump();
+        // The element is only rebuilt — and the old one disposed — on the
+        // next read.
+        container.read(bookmarksRepositoryProvider);
+
+        // A grid still subscribed to the previous account's repository is
+        // released instead of being left listening to it.
+        await closed;
+      });
     });
   });
 }

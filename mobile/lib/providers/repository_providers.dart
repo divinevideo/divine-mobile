@@ -604,11 +604,13 @@ BookmarksRepository bookmarksRepository(Ref ref) {
   final authService = ref.watch(authServiceProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
 
-  return BookmarksRepository(
+  final repository = BookmarksRepository(
     nostrClient: nostrService,
     signer: BookmarkSignerAdapter(authService),
     prefs: prefs,
   );
+  ref.onDispose(repository.dispose);
+  return repository;
 }
 
 /// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).

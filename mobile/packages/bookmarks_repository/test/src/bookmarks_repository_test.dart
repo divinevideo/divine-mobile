@@ -2232,6 +2232,123 @@ void main() {
       });
     });
 
+    group('watchGlobalBookmarks', () {
+      /// Collects what the stream announces, as lists of ids.
+      List<List<String>> recordChanges(BookmarksRepository service) {
+        final changes = <List<String>>[];
+        final subscription = service.watchGlobalBookmarks().listen(
+          (items) => changes.add([for (final item in items) item.id]),
+        );
+        addTearDown(subscription.cancel);
+        return changes;
+      }
+
+      test('announces the list a sync adopted', () async {
+        stubRelay(
+          events: [
+            bookmarkListEvent(['video-a', 'video-b']),
+          ],
+        );
+        final service = createService();
+        final changes = recordChanges(service);
+
+        await service.syncGlobalBookmarks();
+        await pumpEventQueue();
+
+        expect(
+          changes,
+          equals([
+            ['video-a', 'video-b'],
+          ]),
+        );
+      });
+
+      test('announces a save once the relay accepted it', () async {
+        stubRelay(
+          events: [
+            bookmarkListEvent(['video-a']),
+          ],
+        );
+        final service = createService();
+        final changes = recordChanges(service);
+
+        final added = await service.addToGlobalBookmarks(
+          const BookmarkItem(type: 'e', id: 'new-one'),
+        );
+        await pumpEventQueue();
+
+        expect(added, isTrue);
+        // The reconcile that precedes every publish announces first, then the
+        // publish itself — which is the one a listener is waiting for.
+        expect(
+          changes,
+          equals([
+            ['video-a'],
+            ['video-a', 'new-one'],
+          ]),
+        );
+      });
+
+      test('does not announce a save the relay rejected', () async {
+        stubRelay(
+          events: [
+            bookmarkListEvent(['video-a']),
+          ],
+        );
+        stubPublishRejected();
+        final service = createService();
+        final changes = recordChanges(service);
+
+        final added = await service.addToGlobalBookmarks(
+          const BookmarkItem(type: 'e', id: 'new-one'),
+        );
+        await pumpEventQueue();
+
+        expect(added, isFalse);
+        expect(
+          changes,
+          equals([
+            ['video-a'],
+          ]),
+          reason: 'only the reconcile landed; the list never gained new-one',
+        );
+      });
+
+      test('closes on dispose and lets a sync in flight finish', () async {
+        final relayAnswer =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) => relayAnswer.future);
+        final service = createService();
+        final closed = expectLater(service.watchGlobalBookmarks(), emitsDone);
+
+        final sync = service.syncGlobalBookmarks();
+        service.dispose();
+        relayAnswer.complete((
+          events: [
+            bookmarkListEvent(['video-a']),
+          ],
+          timedOut: false,
+          noRelays: false,
+        ));
+
+        // The account switch that disposes the instance does not cancel the
+        // read it interrupted, so that read must not announce into a closed
+        // stream.
+        expect(await sync, isTrue);
+        expect(
+          service.globalBookmarks.map((item) => item.id),
+          equals(['video-a']),
+        );
+        await closed;
+      });
+    });
+
     group('error paths', () {
       /// Syncs a list holding one private item, then swaps in a signer whose
       /// crypto misbehaves. Removal must be refused rather than publishing a
