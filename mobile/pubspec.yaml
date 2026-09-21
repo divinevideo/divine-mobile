@@ -389,6 +389,14 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
+  # 2.13.3 is the first release that runs the iOS/macOS HDR pre-transcode and
+  # overlap-transition pre-render under the plugin's export gate and stall
+  # watchdog; on 2.13.2 a stall in either setup stage never settles
+  # (hm21/pro_video_editor#201, our #9347), and 2.13.2 also ran every render's
+  # pre-transcode ungated next to every other's. VideoRenderWatchdog bounds
+  # that app-side, so a relaxed floor costs a preview two minutes and an export
+  # five rather than the session — but it is still only caught on a device,
+  # since no CI job renders on iOS or macOS.
   # 2.13.2 is the first release where concurrent iOS/macOS renders stop
   # sharing one compositor config; 2.13.1 crashes (#9338) or bakes one
   # render's crop, filters and overlays into another, and no CI job renders
