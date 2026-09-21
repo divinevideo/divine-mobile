@@ -937,21 +937,19 @@ class RepostsRepository {
     const repostKinds = [EventKind.repost, EventKind.genericRepost];
 
     try {
-      final eventFilter = Filter(kinds: repostKinds, e: [eventId]);
-      final results = <List<Event>>[];
-      if (addressableId != null && addressableId.isNotEmpty) {
-        final addressableFilter = Filter(
-          kinds: repostKinds,
-          a: [addressableId],
-        );
-        final fetched = await Future.wait([
-          _nostrClient.queryEvents([eventFilter]),
-          _nostrClient.queryEvents([addressableFilter]),
-        ]);
-        results.addAll(fetched);
-      } else {
-        results.add(await _nostrClient.queryEvents([eventFilter]));
-      }
+      // An `e` tag holds a 32-byte hex event id, so that filter is built
+      // only when [eventId] is one. For an addressable target it is the `d`
+      // tag instead, which can never appear in an `e` tag: the query could
+      // only ever come back empty, and [addressableId] is what finds those
+      // reposts.
+      final filters = <Filter>[
+        if (keyIsValid(eventId)) Filter(kinds: repostKinds, e: [eventId]),
+        if (addressableId != null && addressableId.isNotEmpty)
+          Filter(kinds: repostKinds, a: [addressableId]),
+      ];
+      final results = await Future.wait([
+        for (final filter in filters) _nostrClient.queryEvents([filter]),
+      ]);
 
       final repostsById = <String, Event>{};
       for (final batch in results) {
