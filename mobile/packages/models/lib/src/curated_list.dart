@@ -148,8 +148,8 @@ class CuratedList extends Equatable {
 
   /// Whether the list references at least one video.
   ///
-  /// Discovery, search and other creators' profiles hide a list with no
-  /// videos; only the viewer's own My Lists tab shows one.
+  /// Discovery and search hide a list with no videos; only the viewer's own
+  /// My Lists tab shows one.
   bool get hasVideos => videoEventIds.isNotEmpty;
 
   /// When the list was created.
