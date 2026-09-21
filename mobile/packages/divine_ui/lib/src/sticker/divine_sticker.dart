@@ -5,17 +5,30 @@ import 'package:material_ui/material_ui.dart';
 
 /// Sticker names from the Divine design system sticker set.
 ///
-/// Each value maps to an OpenMoji SVG asset in `assets/stickers/`.
+/// Names match the `DivineSticker` collection in Figma, which is the source of
+/// truth for them. Each value maps to an OpenMoji SVG asset in
+/// `assets/stickers/`.
+///
+/// [fileName] is not derived from the variant name. The video editor's sticker
+/// manifest, its locale files and saved drafts all key stickers by asset path,
+/// so a file keeps its original name when its variant is renamed to follow
+/// Figma.
 enum DivineStickerName {
-  adjustableDumbbell('adjustable_dumbbell'),
-  alert('alert'),
-  angryCat('angry_cat'),
+  /// The siren. `assets/stickers/alert.svg` is the older warning triangle,
+  /// which only the video editor and the upload failure sheet still use.
+  alert('police_siren'),
   avocado('avocado'),
-  ballonDog('ballon_dog'),
+  balloonDog('ballon_dog'),
+  banana('peeled_banana'),
   bicep('bicep'),
-  blocked('blocked'),
+
+  /// The stop hand. `assets/stickers/blocked.svg` is the older prohibition
+  /// sign, which only the video editor still offers.
+  blocked('raised_hand'),
   boom('boom'),
   brokenHeart('broken_heart'),
+  cat('angry_cat'),
+  cellPhone('nokia_3310'),
   chatteringTeeth('chattering_teeth'),
   clover('clover'),
   confetti('confetti'),
@@ -24,15 +37,17 @@ enum DivineStickerName {
   discoHelmet('disco_helmet'),
   doubleCheeseburger('double_cheeseburger'),
   donut('donut'),
+  earthGlobe('world_map'),
   eggplant('eggplant'),
   email('email'),
   espressoMartini('espresso_martini'),
   fingerPointing('finger_pointing'),
-  floatingLilo('floating_lilo'),
   foamFinger('foam_finger'),
   forgotPassword('forgot_password'),
-  forgotPasswordAlt('forgot_password_alt'),
-  glitterDonut('glitter_donut'),
+  gameController('videogame'),
+
+  /// Not in Figma. Kept as a deliberate exception until design decides its
+  /// name; it backs the recorder's six-second explainer.
   grandfather('grandfather'),
   hangLoose('hang_loose'),
   heart('heart'),
@@ -40,25 +55,21 @@ enum DivineStickerName {
   holographicJacket('holographic_jacket'),
   idLicense('id_license'),
   indexFingerPointingUp('index_finger_pointing_up'),
-  inflatableFlamingo('inflatable_flamingo_pool_float'),
   knightInArmor('knight_in_armor'),
   lipPiercing('lip_piercing'),
   mapleLeaf('maple_leaf'),
   matrixMessageSign('matrix_message_sign'),
   nailPolish('nail_polish'),
-  nokia3310('nokia_3310'),
   oldFashionMic('old_fashion_mic'),
-  password('password'),
+  padlock('password'),
   pause('pause'),
   peach('peach'),
-  peeledBanana('peeled_banana'),
-  policeSiren('police_siren'),
+  pinkDumbbells('adjustable_dumbbell'),
   poopEmoji('poop_emoji'),
   profile('profile'),
   programmer('programmer'),
   purpleDiamond('purple_diamond'),
   radar('radar'),
-  raisedHand('raised_hand'),
   samoyedDog('samoyed_dog'),
   shrimp('shrimp'),
   skeletonKey('skeleton_key'),
@@ -69,14 +80,16 @@ enum DivineStickerName {
   trailSign('trail_sign'),
   trollFace('troll_face'),
   underConstructionSign('under_construction_sign'),
+
+  /// Figma folds two earlier floats into this one. The flamingo float artwork
+  /// is the one kept.
+  unicornFloat('inflatable_flamingo_pool_float'),
   verified('verified'),
   videoClapBoard('video_clap_board'),
   videoCamera('video_camera'),
-  videogame('videogame'),
   vintageTvTestPattern('vintage_tv_test_pattern'),
   vinylRecord('vinyl_record'),
   wavePool('wave_pool'),
-  worldMap('world_map'),
   x('x');
 
   const DivineStickerName(this.fileName);

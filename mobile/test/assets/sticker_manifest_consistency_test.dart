@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 
@@ -75,5 +76,19 @@ void main() {
         }
       });
     }
+  });
+
+  group(DivineStickerName, () {
+    // A variant's file name is independent of its name, so a rename to follow
+    // Figma can leave it pointing at a file that is not bundled.
+    test('every variant points at a bundled SVG', () {
+      for (final sticker in DivineStickerName.values) {
+        expect(
+          File(sticker.assetPath).existsSync(),
+          isTrue,
+          reason: '${sticker.name} points at ${sticker.assetPath}.',
+        );
+      }
+    });
   });
 }
