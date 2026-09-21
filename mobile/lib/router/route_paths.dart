@@ -50,6 +50,7 @@ abstract final class RoutePaths {
   static const libraryClipsOnly = '/clips-only';
   static const libraryDrafts = '/drafts';
   static const librarySounds = '/sounds';
+  static const importSound = '$librarySounds/import';
   static const likedVideos = '/liked-videos';
   static const messageRequests = '/inbox/message-requests';
   static const minorAccountReview = '/account-review';

@@ -2523,6 +2523,30 @@
   "soundsSavedLibraryTitle": "My Sounds",
   "soundsSavedEmptyTitle": "No saved sounds yet",
   "soundsSavedEmptyDescription": "Tap Use Sound on a video to save it here.",
+  "soundsAddSound": "Add sound",
+  "@soundsAddSound": {
+    "description": "Label of the permanent button above the My Sounds list that opens the private file import flow."
+  },
+  "soundsImportPromptTitle": "Import a sound",
+  "@soundsImportPromptTitle": {
+    "description": "Heading shown on the import screen before a file is picked."
+  },
+  "soundsImportPromptDescription": "Pick an audio file from your device. It stays private in My Sounds.",
+  "@soundsImportPromptDescription": {
+    "description": "Explains that an imported file is copied into the private library and does not make it public."
+  },
+  "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
+  "@soundsImportUnsupportedFormat": {
+    "description": "Shown when the picked file's extension is not a supported audio container."
+  },
+  "soundsImportUnreadable": "That audio file couldn't be read.",
+  "@soundsImportUnreadable": {
+    "description": "Shown when the picked file exists but cannot be opened or decoded as audio."
+  },
+  "soundsImportAccountChanged": "You switched accounts, so this import was cancelled.",
+  "@soundsImportAccountChanged": {
+    "description": "Shown when the account changes while an import is in flight, so the copy was abandoned rather than saved into the new account."
+  },
   "soundsRemoveSavedSound": "Remove sound",
   "savedSoundSaveAction": "Save",
   "@savedSoundSaveAction": {
@@ -7623,7 +7647,7 @@
   },
   "savedSoundYourLabel": "Your label",
   "savedSoundAddHashtags": "Add hashtags",
-  "savedSoundDeviceOnly": "Saved on this device",
+  "savedSoundDeviceOnly": "Audio stays on this device. Details sync across your devices.",
   "savedSoundDetailsRetry": "Couldn’t save those details. Tap to retry.",
   "savedSoundFallbackTitle": "Saved sound",
   "savedSoundPreviewAction": "Preview sound",

@@ -7012,6 +7012,42 @@ abstract class AppLocalizations {
   /// **'Tap Use Sound on a video to save it here.'**
   String get soundsSavedEmptyDescription;
 
+  /// Label of the permanent button above the My Sounds list that opens the private file import flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Add sound'**
+  String get soundsAddSound;
+
+  /// Heading shown on the import screen before a file is picked.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a sound'**
+  String get soundsImportPromptTitle;
+
+  /// Explains that an imported file is copied into the private library and does not make it public.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an audio file from your device. It stays private in My Sounds.'**
+  String get soundsImportPromptDescription;
+
+  /// Shown when the picked file's extension is not a supported audio container.
+  ///
+  /// In en, this message translates to:
+  /// **'That file type isn\'t supported. Pick an audio file.'**
+  String get soundsImportUnsupportedFormat;
+
+  /// Shown when the picked file exists but cannot be opened or decoded as audio.
+  ///
+  /// In en, this message translates to:
+  /// **'That audio file couldn\'t be read.'**
+  String get soundsImportUnreadable;
+
+  /// Shown when the account changes while an import is in flight, so the copy was abandoned rather than saved into the new account.
+  ///
+  /// In en, this message translates to:
+  /// **'You switched accounts, so this import was cancelled.'**
+  String get soundsImportAccountChanged;
+
   /// No description provided for @soundsRemoveSavedSound.
   ///
   /// In en, this message translates to:
@@ -19119,7 +19155,7 @@ abstract class AppLocalizations {
   /// No description provided for @savedSoundDeviceOnly.
   ///
   /// In en, this message translates to:
-  /// **'Saved on this device'**
+  /// **'Audio stays on this device. Details sync across your devices.'**
   String get savedSoundDeviceOnly;
 
   /// No description provided for @savedSoundDetailsRetry.

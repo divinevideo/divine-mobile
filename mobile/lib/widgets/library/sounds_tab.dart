@@ -4,7 +4,6 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,21 +18,20 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
+import 'package:openvine/screens/sounds/import_sound_page.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/widgets/library/saved_sound_card.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
-import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// User-saved sounds tab for the Library screen.
 ///
-/// Shows sounds saved through the out-of-flow "Use Sound" actions. Editor
+/// Shows sounds saved through the out-of-flow "Use Sound" actions plus files
+/// the user imported directly with the permanent Add sound action. Editor
 /// selection remains inside the recording/editor flow.
 class SoundsTab extends ConsumerStatefulWidget {
-  const SoundsTab({this.showAudioPicker, super.key});
-
-  final Future<AudioEvent?> Function(BuildContext context)? showAudioPicker;
+  const SoundsTab({super.key});
 
   @override
   ConsumerState<SoundsTab> createState() => _SoundsTabState();
@@ -375,42 +373,15 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     );
   }
 
-  Future<void> _onAddAudioTap() async {
+  /// Opens the private file import flow.
+  ///
+  /// Deliberately not the editor's catalog/trimming picker: adding a sound to
+  /// the library imports the whole file and never starts a video, so nothing
+  /// here needs a draft or a trim decision.
+  Future<void> _onAddSoundTap() async {
     await _stopPreview();
     if (!mounted) return;
-
-    final selectedSound =
-        await (widget.showAudioPicker?.call(context) ??
-            AudioSelectionBottomSheet.show(context));
-    if (selectedSound == null || !mounted) return;
-
-    final bloc = context.read<SavedSoundsBloc>();
-    SavedSoundSaveResult? result;
-    try {
-      result = await bloc.saveSound(selectedSound);
-    } catch (_) {
-      result = null;
-    }
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(switch (result) {
-          SavedSoundSaveResult.saved => context.l10n.soundsSavedToLibrary,
-          SavedSoundSaveResult.alreadySaved =>
-            context.l10n.soundsAlreadySavedToLibrary,
-          null => context.l10n.soundsSaveFailed,
-        }),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    if (result == null) return;
-    final saved = bloc.state.sounds.where(
-      (record) => record.id == selectedSound.id,
-    );
-    if (saved.isEmpty) return;
-    await _onEditTap(saved.first);
+    await context.push<void>(ImportSoundPage.path);
   }
 
   Future<void> _onUploadSoundTap() async {
@@ -453,15 +424,12 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
             onChanged: _onSearchChanged,
           ),
         ),
+        SliverToBoxAdapter(child: _AddSoundButton(onTap: _onAddSoundTap)),
         if (!kIsWeb)
           SliverToBoxAdapter(
             child: _CollapsibleActions(
               collapsed: _searching,
-              children: [
-                _UploadSoundAction(onTap: _onUploadSoundTap),
-                if (kDebugMode)
-                  _DebugAudioPickerLauncher(onTap: _onAddAudioTap),
-              ],
+              children: [_UploadSoundAction(onTap: _onUploadSoundTap)],
             ),
           ),
         if (locked)
@@ -689,8 +657,14 @@ class _UploadSoundAction extends StatelessWidget {
   }
 }
 
-class _DebugAudioPickerLauncher extends StatelessWidget {
-  const _DebugAudioPickerLauncher({required this.onTap});
+/// Permanent Add sound action, shown above the saved cards in every state.
+///
+/// It used to be a debug-only "Add audio" launcher that opened the editor's
+/// catalog/trimming sheet, so release builds could not add a sound to the
+/// library at all (#8024 follow-up). It now always routes to the private file
+/// import flow and never opens the editor picker.
+class _AddSoundButton extends StatelessWidget {
+  const _AddSoundButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -699,7 +673,8 @@ class _DebugAudioPickerLauncher extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: DivineButton(
-        label: context.l10n.videoEditorAudioAddAudio,
+        key: const Key('sounds_add_sound'),
+        label: context.l10n.soundsAddSound,
         type: DivineButtonType.secondary,
         onPressed: onTap,
       ),

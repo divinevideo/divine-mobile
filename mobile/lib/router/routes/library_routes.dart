@@ -6,9 +6,16 @@ import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
+import 'package:openvine/screens/sounds/import_sound_page.dart';
 
 List<RouteBase> libraryRoutes() {
   return [
+    GoRoute(
+      path: ImportSoundPage.path,
+      name: ImportSoundPage.routeName,
+      pageBuilder: (_, state) =>
+          fadeUpwardsPage(state: state, child: const ImportSoundPage()),
+    ),
     GoRoute(
       path: LibraryScreen.draftsPath,
       name: LibraryScreen.draftsRouteName,

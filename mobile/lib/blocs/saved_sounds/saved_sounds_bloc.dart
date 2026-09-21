@@ -144,12 +144,14 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
   Future<SavedSoundSaveResult> saveSound(
     AudioEvent sound, {
     SavedSoundSourceContext? sourceContext,
+    String? personalLabel,
   }) {
     final completer = Completer<SavedSoundSaveResult>();
     add(
       SavedSoundSaveRequested(
         sound: sound,
         sourceContext: sourceContext,
+        personalLabel: personalLabel,
         completer: completer,
       ),
     );
@@ -261,6 +263,7 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
     final record = SavedSound(
       audio: event.sound,
       savedAt: _now().toUtc(),
+      personalLabel: _normalizedLabel(event.personalLabel),
       personalHashtags: const [],
       catalogTags: event.sound.externalSource?.catalogTags ?? const [],
       waveformSamples: const [],
@@ -467,6 +470,11 @@ class SavedSoundsBloc extends Bloc<SavedSoundsEvent, SavedSoundsState> {
       // Optional enrichment must never turn a successful save into an error.
     }
   }
+}
+
+String? _normalizedLabel(String? label) {
+  final trimmed = label?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
 Set<String> _findMissingFileIds(Map<String, String> localPaths) {
