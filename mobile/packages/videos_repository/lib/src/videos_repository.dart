@@ -2517,6 +2517,11 @@ class VideosRepository {
   /// relay holding the videos is still busy. An empty answer that every relay
   /// did give is returned as the empty list it is.
   ///
+  /// [until] bounds the read to videos no newer than that Unix timestamp, on
+  /// both paths, so a feed can page backwards from its oldest video. A relay
+  /// treats the bound as inclusive, so that video can come back again; the
+  /// caller drops the repeat.
+  ///
   /// Returns an empty list when [authorPubkeys] is empty.
   ///
   /// Throws:
@@ -2531,6 +2536,7 @@ class VideosRepository {
   Future<List<VideoEvent>> getVideosByAuthors({
     required List<String> authorPubkeys,
     int limit = _defaultLimit,
+    int? until,
   }) async {
     if (authorPubkeys.isEmpty) return const [];
     final authors = authorPubkeys.take(_membersFeedRelayAuthorCap).toList();
@@ -2543,7 +2549,12 @@ class VideosRepository {
       // partial answer reads as "these people have no videos".
       final read = await _nostrClient.queryEventsDetailed(
         [
-          Filter(kinds: [_videoKind], authors: authors, limit: limit),
+          Filter(
+            kinds: [_videoKind],
+            authors: authors,
+            limit: limit,
+            until: until,
+          ),
         ],
         requireAllRelaysSettled: true,
       );
@@ -2563,6 +2574,7 @@ class VideosRepository {
         api,
         authors.take(_membersFeedApiAuthorCap).toList(),
         limit: limit,
+        until: until,
       );
     }
 
@@ -2579,9 +2591,11 @@ class VideosRepository {
     FunnelcakeApiClient api,
     List<String> authors, {
     required int limit,
+    int? until,
   }) async {
     final pages = await Future.wait([
-      for (final author in authors) _authorPageOrEmpty(api, author, limit),
+      for (final author in authors)
+        _authorPageOrEmpty(api, author, limit, until),
     ]);
     final videos = <VideoEvent>[];
     final seenVideoKeys = <String>{};
@@ -2607,9 +2621,14 @@ class VideosRepository {
     FunnelcakeApiClient api,
     String author,
     int limit,
+    int? until,
   ) async {
     try {
-      final page = await api.getVideosByAuthor(pubkey: author, limit: limit);
+      final page = await api.getVideosByAuthor(
+        pubkey: author,
+        limit: limit,
+        before: until,
+      );
       return page.videos;
     } on FunnelcakeNotFoundException {
       return const [];

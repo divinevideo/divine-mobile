@@ -10480,6 +10480,69 @@ void main() {
         expect(filters.single.limit, equals(10));
       });
 
+      test('bounds the relay filter by until when paging', () async {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
+
+        await repository.getVideosByAuthors(
+          authorPubkeys: const ['member-a'],
+          until: 1704067200,
+        );
+
+        final filters =
+            verify(
+                  () => mockNostrClient.queryEventsDetailed(
+                    captureAny(),
+                    requireAllRelaysSettled: any(
+                      named: 'requireAllRelaysSettled',
+                    ),
+                  ),
+                ).captured.single
+                as List<Filter>;
+        expect(filters.single.until, equals(1704067200));
+      });
+
+      test('bounds the Funnelcake fallback by until as well', () async {
+        final mockFunnelcakeClient = MockFunnelcakeApiClient();
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenThrow(Exception('relay down'));
+        when(
+          () => mockFunnelcakeClient.getVideosByAuthor(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(pageFor);
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
+
+        await repo.getVideosByAuthors(
+          authorPubkeys: const ['member-1'],
+          until: 1704067200,
+        );
+
+        verify(
+          () => mockFunnelcakeClient.getVideosByAuthor(
+            pubkey: 'member-1',
+            limit: any(named: 'limit'),
+            before: 1704067200,
+          ),
+        ).called(1);
+      });
+
       test('reads at most 100 members in the relay filter', () async {
         when(
           () => mockNostrClient.queryEventsDetailed(
