@@ -434,10 +434,14 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
     def test_ios_release_rejects_closed_app_store_version_before_shorebird(self) -> None:
         workflow = self._workflow_block("ios-build")
         self.assertIn(
+            "app-store-connect apps app-store-versions",
+            self.contents,
+        )
+        self.assertIn("--platform IOS --json", self.contents)
+        self.assertNotIn(
             "app-store-connect get-latest-app-store-build-number",
             self.contents,
         )
-        self.assertIn("--include-version --json", self.contents)
         self.assertEqual(1, self.contents.count("ios_store_version_preflight.rb"))
         self.assertLess(
             workflow.index("- *preflight_shorebird_ios_release"),

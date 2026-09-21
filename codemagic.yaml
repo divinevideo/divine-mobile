@@ -404,11 +404,16 @@ definitions:
         fi
         APP_STORE_APP_ID=6747959501 # co.openvine.app
         ASC_LOOKUP_LOG=$(mktemp)
-        ASC_STORE_VERSION_JSON=$(mktemp)
-        trap 'rm -f "$ASC_LOOKUP_LOG" "$ASC_STORE_VERSION_JSON"' EXIT
-        if ! app-store-connect get-latest-app-store-build-number "$APP_STORE_APP_ID" \
-          --platform=IOS --include-version --json > "$ASC_STORE_VERSION_JSON" 2>"$ASC_LOOKUP_LOG"; then
-          echo "ERROR: could not read the latest approved App Store version."
+        ASC_STORE_VERSIONS_JSON=$(mktemp)
+        trap 'rm -f "$ASC_LOOKUP_LOG" "$ASC_STORE_VERSIONS_JSON"' EXIT
+        # List every App Store version, not the highest version that has a
+        # build. `get-latest-app-store-build-number` returns the highest
+        # appStoreVersion record in any state, so a version that only ever
+        # reached TestFlight looks "approved" and wrongly blocks the next
+        # release. The preflight script keeps only released/approved states.
+        if ! app-store-connect apps app-store-versions "$APP_STORE_APP_ID" \
+          --platform IOS --json > "$ASC_STORE_VERSIONS_JSON" 2>"$ASC_LOOKUP_LOG"; then
+          echo "ERROR: could not read the App Store versions."
           if [ -s "$ASC_LOOKUP_LOG" ]; then
             echo "       App Store Connect lookup output:"
             sed 's/^/       /' "$ASC_LOOKUP_LOG"
@@ -416,7 +421,7 @@ definitions:
           echo "       Refusing to create a Shorebird release that Apple may reject after the build."
           exit 1
         fi
-        ruby scripts/ios_store_version_preflight.rb "$ASC_STORE_VERSION_JSON" "$BUILD_NAME"
+        ruby scripts/ios_store_version_preflight.rb "$ASC_STORE_VERSIONS_JSON" "$BUILD_NAME"
         : > "$ASC_LOOKUP_LOG"
         if ! LATEST_IOS_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_STORE_APP_ID" 2>"$ASC_LOOKUP_LOG"); then
           LATEST_IOS_BUILD_NUMBER=
