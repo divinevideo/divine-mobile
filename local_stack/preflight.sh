@@ -500,16 +500,37 @@ print(int((now - created).total_seconds() // 86400), sys.argv[2])
 ' "$created" "$tags" 2>/dev/null || return 1
 }
 
+# Image overrides that select one of the local stack's buildable services.
+# Keep this list shared: both pre-flights must learn about a new override.
+_STACK_IMAGE_OVERRIDE_VARS=(
+    FUNNELCAKE_MIGRATE_IMAGE
+    FUNNELCAKE_RELAY_IMAGE
+    FUNNELCAKE_API_IMAGE
+    KEYCAST_IMAGE
+)
+
+# Returns success when a reference has no explicit registry host. The stack's
+# local builders produce unqualified references (for example
+# keycast:262-local); its published references use ghcr.io/....
+_stack_image_reference_is_local() {
+    local reference="$1" first_component
+    first_component="${reference%%/*}"
+
+    [[ "$reference" != */* ]] && return 0
+    [[ "$first_component" != *.* && "$first_component" != *:* && "$first_component" != localhost ]]
+}
+
 # preflight_image_staleness <script_dir>
 # Warns when the default funnelcake images are stale. Always returns 0.
 preflight_image_staleness() {
     local script_dir="$1"
-    local package age_and_tags age tags stale=""
+    local package age_and_tags age tags stale="" var
 
     # An explicit image override means the developer already knows.
-    if [[ -n "${FUNNELCAKE_RELAY_IMAGE:-}${FUNNELCAKE_API_IMAGE:-}${FUNNELCAKE_MIGRATE_IMAGE:-}" ]]; then
-        return 0
-    fi
+    for var in "${_STACK_IMAGE_OVERRIDE_VARS[@]}"; do
+        [[ "$var" == KEYCAST_IMAGE ]] && continue
+        [[ -z "${!var:-}" ]] || return 0
+    done
 
     for package in funnelcake-migrate funnelcake-relay funnelcake-api; do
         age_and_tags="$(_stack_ghcr_image_age "$package")" || continue
@@ -551,19 +572,23 @@ preflight_image_staleness() {
 # nor the script that rebuilds it.
 preflight_pinned_images() {
     local script_dir="$1"
-    local var value missing=""
+    local var value missing="" missing_funnelcake="" missing_keycast=""
 
-    for var in FUNNELCAKE_MIGRATE_IMAGE FUNNELCAKE_RELAY_IMAGE \
-               FUNNELCAKE_API_IMAGE KEYCAST_IMAGE; do
+    for var in "${_STACK_IMAGE_OVERRIDE_VARS[@]}"; do
         value="${!var:-}"
         [[ -n "$value" ]] || continue
-        # Only locally-built tags are checked: a registry reference is the
-        # daemon's job to fetch, and failing here would break an offline-capable
-        # pull that compose would otherwise satisfy from its own cache.
-        [[ "$value" == *:local || "$value" == *:local-* ]] || continue
+        # Registry references are the daemon's job to fetch, and failing here
+        # would break an offline-capable pull that compose could otherwise
+        # satisfy from its own cache.
+        _stack_image_reference_is_local "$value" || continue
         if ! docker image inspect "$value" >/dev/null 2>&1; then
             missing="${missing}  ${var}=${value}
 "
+            if [[ "$var" == KEYCAST_IMAGE ]]; then
+                missing_keycast=1
+            else
+                missing_funnelcake=1
+            fi
         fi
     done
 
@@ -575,10 +600,15 @@ preflight_pinned_images() {
         echo ""
         printf '%s' "$missing"
         echo ""
-        echo "Rebuild them, or drop the override lines from ${script_dir}/.env to"
-        echo "fall back to the published images:"
+        echo "Rebuild them, or drop the override lines from ${script_dir}/.env to fall"
+        echo "back to the published images:"
         echo ""
-        echo "    bash ${script_dir}/build_funnelcake.sh"
+        if [[ -n "$missing_funnelcake" ]]; then
+            echo "    bash ${script_dir}/build_funnelcake.sh"
+        fi
+        if [[ -n "$missing_keycast" ]]; then
+            echo "    Rebuild the Keycast image from its checkout with the tag above."
+        fi
         echo ""
     } >&2
     return 1

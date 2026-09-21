@@ -23,6 +23,7 @@ ENV_HAD_FILE=0
 if [[ -f "$ENV_FILE" ]]; then
     cp "$ENV_FILE" "$ENV_BACKUP"
     ENV_HAD_FILE=1
+    rm -f "$ENV_FILE"
 fi
 cleanup() {
     if [[ "$ENV_HAD_FILE" -eq 1 ]]; then
@@ -879,6 +880,23 @@ reset_fixtures
 run_pinned_images FUNNELCAKE_API_IMAGE=ghcr.io/divinevideo/funnelcake-api:latest
 
 assert_status 0 "$last_status" "a registry reference should not be checked locally"
+
+# --- Unqualified tags are locally built, not registry references ------------
+
+reset_fixtures
+: >"${FIXTURES}/images.txt"
+run_pinned_images KEYCAST_IMAGE=keycast:262-local
+
+assert_status 1 "$last_status" "a missing Keycast local tag should fail pre-flight"
+assert_stderr_contains 'KEYCAST_IMAGE=keycast:262-local' "the Keycast override should be named"
+assert_stderr_contains 'Rebuild the Keycast image' "the Keycast rebuild guidance should be named"
+
+reset_fixtures
+: >"${FIXTURES}/images.txt"
+run_pinned_images FUNNELCAKE_API_IMAGE=funnelcake-api:issue-9369
+
+assert_status 1 "$last_status" "a missing custom Funnelcake local tag should fail pre-flight"
+assert_stderr_contains 'FUNNELCAKE_API_IMAGE=funnelcake-api:issue-9369' "the custom Funnelcake override should be named"
 
 # --- No overrides at all is the common case and must pass ------------------
 
