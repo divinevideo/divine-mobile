@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -319,6 +320,65 @@ void main() {
 
         // Initial state renders a loading indicator.
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      },
+    );
+  });
+
+  group('back navigation', () {
+    testWidgets(
+      'cold entry back lands on the video instead of emptying the stack',
+      (tester) async {
+        when(
+          () => likesRepository.fetchEventLikers(eventId: testEventId),
+        ).thenAnswer((_) async => const LikersPage(pubkeys: [testPubkey1]));
+
+        // `/video/:eventId/likers` is registered flat and top-level, so a
+        // deep link into it leaves a one-entry stack: popping it removes the
+        // last page and leaves nothing on screen (#9359).
+        final router = GoRouter(
+          initialLocation: '/video/$testEventId/likers',
+          routes: [
+            GoRoute(
+              path: '/video/:id',
+              builder: (_, _) => const Scaffold(body: Text('video detail')),
+            ),
+            GoRoute(
+              path: '/video/:eventId/likers',
+              builder: (_, state) => VideoEngagementListScreen(
+                eventId: state.pathParameters['eventId']!,
+                type: VideoEngagementType.likers,
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              likesRepositoryProvider.overrideWithValue(likesRepository),
+              repostsRepositoryProvider.overrideWithValue(repostsRepository),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Pins the precondition: if this route is ever re-nested it stops
+        // being the cold-entry case and the test proves nothing.
+        expect(router.canPop(), isFalse);
+        expect(find.byType(VideoEngagementListView), findsOneWidget);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.bySemanticsLabel(l10n.commonBack));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('video detail'), findsOneWidget);
       },
     );
   });
