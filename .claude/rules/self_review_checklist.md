@@ -326,7 +326,8 @@ Then:
 - [ ] CI: `build / build` (divine_ui coverage), `Analyze`,
   `Tests (shard N/total)` for every shard, `Goldens`, aggregate
   `Mobile CI`, `Format`, `Generated Files`, `Guards`, `Async Safety` all green before requesting
-  review. A red `Goldens` on a UI change is usually a real visual
+  review — plus `iOS Native Tests` whenever the change touches `mobile/ios`,
+  a package's `ios/` or `darwin/` directory, or `mobile/pubspec.lock`. A red `Goldens` on a UI change is usually a real visual
   regression — download its `golden-failures` artifact and look at the
   diff before assuming drift.
 - [ ] **Checks watched to completion after the push**

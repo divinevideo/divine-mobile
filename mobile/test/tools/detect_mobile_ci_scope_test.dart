@@ -129,6 +129,7 @@ esac
           'docs_only',
           'app',
           'native',
+          'ios_native',
           'android',
           'ios',
           'service',
@@ -156,6 +157,7 @@ esac
             native: false,
             also: const {
               'docs_only': false,
+              'ios_native': false,
               'android': true,
               'ios': true,
               'smoke': true,
@@ -229,7 +231,12 @@ esac
             ),
             app: true,
             native: true,
-            also: const {'android': false, 'ios': true, 'smoke': true},
+            also: const {
+              'ios_native': true,
+              'android': false,
+              'ios': true,
+              'smoke': true,
+            },
           );
         });
       });
@@ -287,6 +294,41 @@ esac
       );
     });
 
+    test('plugin Darwin sources run the native iOS tests', () {
+      // RunnerTests links every plugin's Swift into the Runner target, but a
+      // package's native directory is outside the `native` guard scope and
+      // outside the `ios` smoke scope (#9381).
+      const plugin =
+          'mobile/packages/background_uploader/darwin/background_uploader/'
+          'Sources/background_uploader/BackgroundUploaderPlugin.swift';
+      expectScope(
+        runDetector(
+          event: 'pull_request',
+          changedFiles: [plugin],
+          changedTotal: 1,
+        ),
+        app: true,
+        native: false,
+        also: const {'ios_native': true, 'ios': false, 'smoke': false},
+      );
+    });
+
+    test('a lockfile change runs the native iOS tests', () {
+      // The job resolves the pods and Swift packages the lock pins, so a
+      // plugin bump that breaks iOS resolution fails here rather than on
+      // Codemagic after merge.
+      expectScope(
+        runDetector(
+          event: 'pull_request',
+          changedFiles: ['mobile/pubspec.lock'],
+          changedTotal: 1,
+        ),
+        app: true,
+        native: false,
+        also: const {'ios_native': true, 'ios': true, 'smoke': true},
+      );
+    });
+
     test('repo-root script changes run app CI', () {
       // mobile/test/tools/ only runs in the app matrix, so a scripts/-only PR
       // must not skip the one job that tests it (#8761).
@@ -311,6 +353,7 @@ esac
         app: true,
         native: true,
         also: const {
+          'ios_native': true,
           'android': true,
           'ios': true,
           'service': true,

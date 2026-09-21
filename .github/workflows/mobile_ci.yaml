@@ -33,6 +33,7 @@ jobs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
       app: ${{ steps.scope.outputs.app }}
       native: ${{ steps.scope.outputs.native }}
+      ios_native: ${{ steps.scope.outputs.ios_native }}
       android: ${{ steps.scope.outputs.android }}
       ios: ${{ steps.scope.outputs.ios }}
       service: ${{ steps.scope.outputs.service }}
@@ -592,6 +593,105 @@ jobs:
       - name: Check web bundle file sizes
         run: bash scripts/check_web_bundle_file_size.sh build/web
 
+  ios-native-tests:
+    name: iOS Native Tests
+    # The XCTests in mobile/ios/RunnerTests cover the Swift the Dart jobs
+    # cannot reach: plugin registration and engine teardown, the camera's
+    # media-session scoping, the Nostr bridge's frame attestation, and the
+    # ProofMode vendor gate. Until this job existed nothing in CI compiled or
+    # ran them, so a regression shipped with every check green (#9381). It
+    # also builds the whole Runner target the way `flutter build ios` does,
+    # which catches a pod or Swift-package resolution break on the PR instead
+    # of on Codemagic after merge. Gated on the ios_native scope because a
+    # macOS runner costs ten Linux minutes per minute.
+    needs: changes
+    if: ${{ needs.changes.outputs.ios_native == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile/
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select Xcode 26
+        # The image defaults to Xcode 16; divine_camera targets iOS 26 API
+        # behind `#available(iOS 26.0, *)`, which needs the iOS 26 SDK.
+        run: |
+          xcode="$(printf '%s\n' /Applications/Xcode_26*.app | sort -V | tail -1)"
+          if [ ! -d "$xcode" ]; then
+            echo "::error::No Xcode 26 on this runner image"
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Generate the iOS project and install pods
+        # --config-only writes the plugin Swift package and runs pod install
+        # without compiling. Flutter then raises the package's deployment
+        # target to the project's, but skips that step when its
+        # `xcodebuild -showBuildSettings` probe exceeds 60 s on a cold
+        # machine, so the floor is repaired explicitly, like the Runner
+        # scheme's pre-action does. Only the plugin package: FlutterFramework
+        # ships without a platforms block, and giving it one at 16.0 makes
+        # every plugin package that still declares iOS 12–15 unresolvable
+        # against it. Codemagic can pass that manifest too only because its
+        # full `flutter build ios` regenerates it before Xcode resolves.
+        run: |
+          flutter build ios --config-only --simulator --debug
+          ruby scripts/ensure_ios_swift_package_floor.rb \
+            'ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift'
+      - name: Pick a simulator
+        id: simulator
+        # The newest available iOS runtime's first iPhone; device names change
+        # with every Xcode, a runtime-sorted lookup does not.
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r '
+            .devices | to_entries
+            | map(select(.key | contains("SimRuntime.iOS-")))
+            | sort_by(.key | ltrimstr("com.apple.CoreSimulator.SimRuntime.iOS-")
+                             | split("-") | map(tonumber))
+            | reverse
+            | map(.value[] | select(.isAvailable and (.name | startswith("iPhone"))))
+            | first | .udid // empty')"
+          if [ -z "$udid" ]; then
+            echo "::error::No available iPhone simulator"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices available | grep "$udid"
+      - name: Run RunnerTests
+        working-directory: mobile/ios
+        env:
+          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
+            -only-testing:RunnerTests \
+            -resultBundlePath "${RUNNER_TEMP}/RunnerTests.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "${RUNNER_TEMP}/xcodebuild-test.log" \
+            | grep -E --line-buffered '^(Test [Cc]ase|Test [Ss]uite|\*\* (TEST|BUILD))|error:'
+      - name: Upload test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: runner-tests-results
+          path: |
+            ${{ runner.temp }}/RunnerTests.xcresult
+            ${{ runner.temp }}/xcodebuild-test.log
+          if-no-files-found: ignore
+
   mobile-ci:
     name: Mobile CI
     if: ${{ always() }}
@@ -608,6 +708,7 @@ jobs:
       - vgv-tag-gate
       - goldens
       - web-bundle-size
+      - ios-native-tests
     runs-on: ubuntu-24.04
     steps:
       - name: Verify upstream jobs
@@ -623,7 +724,9 @@ jobs:
           VGV_TAG_GATE_RESULT: ${{ needs.vgv-tag-gate.result }}
           GOLDENS_RESULT: ${{ needs.goldens.result }}
           WEB_BUNDLE_SIZE_RESULT: ${{ needs.web-bundle-size.result }}
+          IOS_NATIVE_TESTS_RESULT: ${{ needs.ios-native-tests.result }}
           APP_CI_REQUIRED: ${{ needs.changes.outputs.app }}
+          IOS_NATIVE_REQUIRED: ${{ needs.changes.outputs.ios_native }}
           UPDATE_GOLDENS: ${{ inputs.update_goldens }}
         run: |
           echo "app-ci-required: ${APP_CI_REQUIRED}"
@@ -638,6 +741,8 @@ jobs:
           echo "vgv-tag-gate: ${VGV_TAG_GATE_RESULT}"
           echo "goldens: ${GOLDENS_RESULT}"
           echo "web-bundle-size: ${WEB_BUNDLE_SIZE_RESULT}"
+          echo "ios-native-required: ${IOS_NATIVE_REQUIRED}"
+          echo "ios-native-tests: ${IOS_NATIVE_TESTS_RESULT}"
 
           # A regeneration dispatch skips `golden.sh verify`, so this run
           # compared no pixels. It publishes a check run named "Mobile CI" on
@@ -681,6 +786,15 @@ jobs:
             exit 1
           elif [[ "${WEB_BUNDLE_SIZE_RESULT}" != "success" && "${WEB_BUNDLE_SIZE_RESULT}" != "skipped" ]]; then
             echo "Web bundle size failed or was cancelled despite app CI not being required."
+            exit 1
+          fi
+
+          # The native XCTests follow their own scope, narrower than app: a
+          # Dart-only change never needs a macOS runner, an iOS one always does.
+          if [ "${IOS_NATIVE_REQUIRED}" = "true" ]; then
+            required_results+=("${IOS_NATIVE_TESTS_RESULT}")
+          elif [[ "${IOS_NATIVE_TESTS_RESULT}" != "success" && "${IOS_NATIVE_TESTS_RESULT}" != "skipped" ]]; then
+            echo "iOS native tests failed or were cancelled despite not being required."
             exit 1
           fi
 
