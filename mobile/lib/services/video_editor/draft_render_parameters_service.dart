@@ -15,6 +15,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
@@ -62,6 +63,27 @@ class DraftRenderParametersService {
   final LayerRasterizer _rasterizer;
 
   static const _logName = 'DraftRenderParametersService';
+
+  /// Re-renders a persisted draft for a background publish retry.
+  ///
+  /// Reconstruct the same overlays and audio as a library publish, and replace
+  /// the proof together with the media it describes. Failure propagates so the
+  /// caller cannot fall back to uploading the unedited source footage.
+  Future<DivineVideoDraft> renderDraft(DivineVideoDraft draft) async {
+    final parameters = await buildForDraft(draft);
+    final (clip, proofJson) = await VideoEditorRenderService.renderVideoToClip(
+      clips: draft.clips,
+      parameters: parameters,
+      editorStateHistory: draft.editorStateHistory,
+      taskId: draft.id,
+    );
+    return draft.copyWith(
+      finalRenderedClip: clip,
+      proofManifestJson: proofJson,
+      clearProofManifestJson: proofJson == null,
+      skipUpdateLastModified: true,
+    );
+  }
 
   /// Returns render parameters for [draft] with its overlays restored, or
   /// `null` when the draft carries nothing to restore (a plain recording with

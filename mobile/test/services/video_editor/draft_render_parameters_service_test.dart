@@ -12,6 +12,7 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -78,7 +79,61 @@ void main() {
       service = DraftRenderParametersService(rasterizer: rasterizer);
     });
 
-    tearDown(() => rasterizer.dispose());
+    tearDown(() {
+      rasterizer.dispose();
+      VideoEditorRenderService.renderVideoToClipOverride = null;
+    });
+
+    for (final freshProof in [null, '{"fresh":"proof"}']) {
+      test(
+        're-renders saved layers and replaces the proof with $freshProof',
+        () async {
+          final stub = _StubLayerRasterizer();
+          addTearDown(stub.dispose);
+          final draft =
+              _draft(
+                editorEditingParameters: _persistedParameters(
+                  bodySize: const Size(300, 500),
+                ),
+                editorStateHistory: _historyWithTextLayer(),
+              ).copyWith(
+                finalRenderVersion: 0,
+                proofManifestJson: '{"old":"proof"}',
+              );
+          final output = _clip().copyWith(
+            video: EditorVideo.file('/tmp/fresh.mp4'),
+          );
+          VideoEditorRenderService.renderVideoToClipOverride =
+              ({
+                required clips,
+                required editorStateHistory,
+                parameters,
+                taskId,
+              }) async {
+                expect(parameters!.capturedLayers, hasLength(1));
+                expect(
+                  parameters.capturedLayers.single.bytes,
+                  orderedEquals([1, 2, 3]),
+                );
+                expect(clips, draft.clips);
+                expect(editorStateHistory, draft.editorStateHistory);
+                expect(taskId, draft.id);
+                return (output, freshProof);
+              };
+
+          final result = await DraftRenderParametersService(rasterizer: stub)
+              .renderDraft(draft);
+
+          expect(result.finalRenderedClip, same(output));
+          expect(
+            result.finalRenderVersion,
+            DivineVideoDraft.currentFinalRenderVersion,
+          );
+          expect(result.proofManifestJson, freshProof);
+          expect(result.lastModified, draft.lastModified);
+        },
+      );
+    }
 
     test('returns null when the draft carries no editor state', () async {
       expect(await service.buildForDraft(_draft()), isNull);

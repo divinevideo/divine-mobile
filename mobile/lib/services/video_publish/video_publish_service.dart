@@ -181,6 +181,7 @@ class VideoPublishService {
     this.collaboratorInviteService,
     this.languagePreferenceService,
     this.mentionResolutionService,
+    this.rerenderDraft,
     PerformanceTraceMonitor? performanceMonitor,
     DraftUploadMaterializer draftMaterializer = const DraftUploadMaterializer(),
     Duration subtitlePublishTimeout = _defaultSubtitlePublishTimeout,
@@ -215,6 +216,13 @@ class VideoPublishService {
 
   /// Resolves typed mentions before publishing Nostr video events.
   final MentionResolutionService? mentionResolutionService;
+
+  /// Rebuilds an invalidated draft from its saved editor state before retrying.
+  ///
+  /// The app injects its layer rasterizer through this boundary. Without a
+  /// renderer, legacy drafts fail closed rather than uploading source clips.
+  final Future<DivineVideoDraft> Function(DivineVideoDraft draft)?
+  rerenderDraft;
 
   /// Reports the publish phase breakdown to Firebase Performance. Optional so
   /// unit tests get the no-op monitor and never reach Firebase.
@@ -283,7 +291,7 @@ class VideoPublishService {
       // Inside `run` so the phases the upload and Nostr legs time for
       // themselves are attributed to this publish's trace.
       return result = await timeline.run<PublishResult>(
-        () => _publishVideo(draft: draft, timeline: timeline),
+        () => _publishVideo(originalDraft: draft, timeline: timeline),
       );
     } finally {
       timeline.finish(
@@ -297,9 +305,10 @@ class VideoPublishService {
   }
 
   Future<PublishResult> _publishVideo({
-    required DivineVideoDraft draft,
+    required DivineVideoDraft originalDraft,
     required PublishTimeline timeline,
   }) async {
+    var draft = originalDraft;
     // An account switch while the upload was in flight leaves the previous
     // account's draft reachable from this session. Publishing it would sign the
     // video with the wrong identity, and the `publishing` save below would
@@ -314,13 +323,46 @@ class VideoPublishService {
       return const PublishError(PublishErrorKind.accountChanged);
     }
 
-    // Check if we have a background upload ID and its status
-    if (_backgroundUploadId != null) {
-      final error = await _handleActiveUpload(draft.id);
-      if (error != null) return error;
-    }
-
     try {
+      // Validated storage loads clear old renders but retain their version.
+      // Startup retries enter here directly, bypassing the editor/provider's
+      // render step. Rebuild before looking up an upload by its old file path.
+      if (draft.finalRenderVersion !=
+          DivineVideoDraft.currentFinalRenderVersion) {
+        _backgroundUploadId = null;
+        final render = rerenderDraft;
+        if (render == null) {
+          throw StateError(
+            'A legacy draft requires a fresh render before upload',
+          );
+        }
+        // Rendering can outlive an account switch. Neither a successful
+        // render nor its error handler may save/upload under the new account.
+        final renderPubkey = authService.currentPublicKeyHex;
+        try {
+          draft = await render(draft);
+        } catch (_) {
+          if (authService.currentPublicKeyHex != renderPubkey) {
+            return const PublishError(PublishErrorKind.accountChanged);
+          }
+          rethrow;
+        }
+        if (authService.currentPublicKeyHex != renderPubkey) {
+          return const PublishError(PublishErrorKind.accountChanged);
+        }
+        if (draft.finalRenderedClip == null || draft.hasStaleFinalRender) {
+          throw StateError(
+            'Draft re-render did not produce a current final render',
+          );
+        }
+      }
+
+      // Check if we have a background upload ID and its status.
+      if (_backgroundUploadId != null) {
+        final error = await _handleActiveUpload(draft.id);
+        if (error != null) return error;
+      }
+
       final publishing = draft.copyWith(publishStatus: .publishing);
       await draftService.saveDraft(publishing);
 

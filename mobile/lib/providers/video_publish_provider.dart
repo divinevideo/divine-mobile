@@ -158,6 +158,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     required OnProgressChanged onProgressChanged,
   }) async {
     return VideoPublishService(
+      rerenderDraft: DraftRenderParametersService(
+        rasterizer: ref.read(layerRasterizerProvider),
+      ).renderDraft,
       uploadManager: ref.read(uploadManagerProvider),
       authService: ref.read(authServiceProvider),
       videoEventPublisher: ref.read(videoEventPublisherProvider),
