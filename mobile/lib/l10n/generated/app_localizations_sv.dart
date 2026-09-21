@@ -6057,6 +6057,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get commonBack => 'Tillbaka';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Stäng';
 
   @override

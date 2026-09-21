@@ -6142,6 +6142,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commonBack => 'Retour';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Fermer';
 
   @override

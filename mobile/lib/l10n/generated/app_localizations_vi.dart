@@ -6033,6 +6033,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commonBack => 'Quay lại';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Đóng';
 
   @override

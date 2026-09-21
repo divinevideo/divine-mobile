@@ -6261,6 +6261,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get commonBack => 'వెనుకకు';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'మూసివేయండి';
 
   @override

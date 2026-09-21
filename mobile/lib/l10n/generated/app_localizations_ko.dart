@@ -5765,6 +5765,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonBack => '뒤로';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => '닫기';
 
   @override

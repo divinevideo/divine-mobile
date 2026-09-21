@@ -3930,6 +3930,7 @@
   "commonDelete": "Delete",
   "commonCancel": "Cancel",
   "commonBack": "Back",
+  "commonReload": "Reload",
   "commonClose": "Close",
   "commonNotNow": "Not now",
   "commonLoading": "Loading",

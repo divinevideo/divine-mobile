@@ -6069,6 +6069,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commonBack => 'واپس';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'بند کریں';
 
   @override

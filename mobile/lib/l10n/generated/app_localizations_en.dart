@@ -6154,6 +6154,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonBack => 'Back';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Close';
 
   @override

@@ -486,6 +486,9 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // The error screen's Reload action (#8673). Its Back label reuses the
+  // translated commonBack; Reload waits for the next translation pass.
+  'commonReload',
   // Explicit campaign-consent copy (#6745 / divine-push-service#40). Keep the
   // opt-in wording in English until a human translation pass can preserve the
   // distinction between product updates and social notifications.

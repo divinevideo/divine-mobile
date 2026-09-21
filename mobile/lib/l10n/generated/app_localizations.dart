@@ -10438,6 +10438,12 @@ abstract class AppLocalizations {
   /// **'Back'**
   String get commonBack;
 
+  /// No description provided for @commonReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get commonReload;
+
   /// No description provided for @commonClose.
   ///
   /// In en, this message translates to:
