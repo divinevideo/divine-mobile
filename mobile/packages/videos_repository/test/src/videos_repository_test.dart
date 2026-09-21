@@ -10418,11 +10418,21 @@ void main() {
         );
 
         expect(result, isEmpty);
-        verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        verifyNever(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
       });
 
       test('reads one relay filter over the members, newest first', () async {
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => (
             events: [
               _createVideoEvent(
@@ -10457,7 +10467,12 @@ void main() {
         expect(result.map((video) => video.id), equals(['newer', 'older']));
         final filters =
             verify(
-                  () => mockNostrClient.queryEventsDetailed(captureAny()),
+                  () => mockNostrClient.queryEventsDetailed(
+                    captureAny(),
+                    requireAllRelaysSettled: any(
+                      named: 'requireAllRelaysSettled',
+                    ),
+                  ),
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.authors, equals(['member-a', 'member-b']));
@@ -10467,7 +10482,10 @@ void main() {
 
       test('reads at most 100 members in the relay filter', () async {
         when(
-          () => mockNostrClient.queryEventsDetailed(any()),
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: false),
         );
@@ -10477,7 +10495,12 @@ void main() {
 
         final filters =
             verify(
-                  () => mockNostrClient.queryEventsDetailed(captureAny()),
+                  () => mockNostrClient.queryEventsDetailed(
+                    captureAny(),
+                    requireAllRelaysSettled: any(
+                      named: 'requireAllRelaysSettled',
+                    ),
+                  ),
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.authors, equals(members.take(100).toList()));
@@ -10487,7 +10510,10 @@ void main() {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
         when(
-          () => mockNostrClient.queryEventsDetailed(any()),
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenThrow(Exception('relay down'));
         when(
           () => mockFunnelcakeClient.getVideosByAuthor(
@@ -10523,7 +10549,10 @@ void main() {
 
       test('rethrows the relay error without a Funnelcake client', () async {
         when(
-          () => mockNostrClient.queryEventsDetailed(any()),
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenThrow(Exception('relay down'));
 
         await expectLater(
@@ -10536,7 +10565,10 @@ void main() {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
         when(
-          () => mockNostrClient.queryEventsDetailed(any()),
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenThrow(Exception('relay down'));
         final repo = VideosRepository(
           nostrClient: mockNostrClient,
@@ -10557,7 +10589,12 @@ void main() {
       });
 
       test('reports an empty answer every relay gave as empty', () async {
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: false),
         );
 
@@ -10571,7 +10608,12 @@ void main() {
       test('pages Funnelcake when no relay took the read', () async {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: true),
         );
         when(
@@ -10596,7 +10638,12 @@ void main() {
       test('pages Funnelcake when the read timed out', () async {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: true, noRelays: false),
         );
         when(
@@ -10619,7 +10666,12 @@ void main() {
       });
 
       test('raises an unreachable read with no Funnelcake client', () async {
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: true),
         );
 
@@ -10634,6 +10686,31 @@ void main() {
           ),
         );
       });
+
+      test(
+        'asks for every relay to settle before trusting an empty read',
+        () async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+
+          await repository.getVideosByAuthors(
+            authorPubkeys: const ['member-a'],
+          );
+
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).called(1);
+        },
+      );
     });
 
     group('getVideosByAuthor', () {

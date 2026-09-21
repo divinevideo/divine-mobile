@@ -2506,12 +2506,15 @@ class VideosRepository {
   /// and the API is available, the first [_membersFeedApiAuthorCap] members
   /// are paged one videos-by-author call each and merged.
   ///
-  /// A read that reached no relay, or that ran out of time, counts as a
-  /// failure even though the relay layer reports it as an empty list. Those
-  /// two answers are the same value and mean opposite things, and taking the
-  /// empty one at face value leaves a caller rendering "no videos" for a
-  /// network failure, with nothing to retry because nothing threw. An empty
-  /// answer that every relay did give is returned as the empty list it is.
+  /// A read that reached no relay, ran out of time, or settled before every
+  /// relay answered counts as a failure even though the relay layer reports
+  /// it as an empty list. Those answers are the same value as a genuinely
+  /// empty one and mean the opposite, and taking them at face value leaves a
+  /// caller rendering "no videos" for a network failure, with nothing to
+  /// retry because nothing threw. The partial case is the common one: the
+  /// public relays answer this filter at once with nothing, while the Divine
+  /// relay holding the videos is still busy. An empty answer that every relay
+  /// did give is returned as the empty list it is.
   ///
   /// Returns an empty list when [authorPubkeys] is empty.
   ///
@@ -2532,12 +2535,19 @@ class VideosRepository {
 
     final List<Event> events;
     try {
-      final read = await _nostrClient.queryEventsDetailed([
-        Filter(kinds: [_videoKind], authors: authors, limit: limit),
-      ]);
-      // A read nothing answered comes back as an empty list, the same value
-      // a genuinely empty answer has. Raise it so the fallback below runs,
-      // rather than reporting "these people have no videos".
+      // Full settlement matters here: the public relays answer this filter
+      // quickly with nothing, and the Divine relay that actually holds the
+      // videos can still be busy when the pool settles. Without it an empty
+      // partial answer reads as "these people have no videos".
+      final read = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(kinds: [_videoKind], authors: authors, limit: limit),
+        ],
+        requireAllRelaysSettled: true,
+      );
+      // A read nothing answered, or that not every relay answered, comes
+      // back as an empty list, the same value a genuinely empty answer has.
+      // Raise it so the fallback below runs.
       if (read.events.isEmpty && (read.noRelays || read.timedOut)) {
         throw RelayReadUnavailableException(
           read.noRelays ? 'no relay took the read' : 'the read timed out',
