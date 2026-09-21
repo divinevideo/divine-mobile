@@ -120,6 +120,7 @@ results influence work.
 - Project-scoped settings and lifecycle hooks live under `.codex/`. Codex loads this layer only after the repository or worktree is trusted; use `/hooks` to review and trust changed hook definitions.
 - `.claude/skills/` is the canonical source for repository skills. `.agents/skills/` is the generated Codex-compatible mirror and must not be edited directly.
 - After changing a canonical skill or a Codex-specific transformation, run `.codex/scripts/sync-agent-skills.sh --write`, then `.codex/scripts/test-config.sh`. CI runs the same sync and hook regression checks.
+- Personal tooling installed with `npx skills add`, such as the `brain-cli` fallback above, keeps the `-g` flag. The project-scope default writes into `.claude/skills/` and `.agents/skills/`, which this repository tracks and checks, so a project-scope install lands as unreviewed repository skills.
 
 ## Worktree-First Task Workflow
 
