@@ -910,11 +910,13 @@ class RepostsRepository {
   /// Fetch the list of pubkeys that reposted the given video event.
   ///
   /// Queries Nostr relays for NIP-18 repost events (kind 6 and kind 16)
-  /// that reference the target event via the `e` tag and (when
-  /// [addressableId] is provided) the `a` tag. Both filters are queried
-  /// because clients may reference addressable Kind 30000+ events using
-  /// either form, and querying only one would miss reposters tagged with
-  /// the other.
+  /// that reference the target event via the `e` tag (when [eventId] is a
+  /// 32-byte hex event id) and via the `a` tag (when [addressableId] is
+  /// provided). Both are queried for a concrete event that is also
+  /// addressable, because clients may reference it either way and querying
+  /// one alone would miss reposters tagged with the other. An `e` tag never
+  /// holds a `d` tag, so that filter is skipped rather than sent when
+  /// [eventId] is one.
   ///
   /// Filters out reposts deleted via Kind 5 deletion events from their
   /// author, and reposters hidden by the injected block filter
