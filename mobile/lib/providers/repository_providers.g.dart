@@ -698,7 +698,7 @@ final class PeopleListsRepositoryProvider
 }
 
 String _$peopleListsRepositoryHash() =>
-    r'486b3f30391906e12735ed541fe1ba87672ed796';
+    r'29ccfec83f8cccd479775296fed8c0a2afb3c349';
 
 /// Repository for the reserved kind 30000 `d=notify` subscription list.
 ///

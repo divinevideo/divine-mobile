@@ -6,11 +6,13 @@ import 'dart:async';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:people_lists_repository/src/followed_people_lists_store.dart';
 import 'package:people_lists_repository/src/local_people_lists_cache.dart';
 import 'package:people_lists_repository/src/nip51_people_list_codec.dart';
 import 'package:people_lists_repository/src/people_list_publish_result.dart';
 import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:people_lists_repository/src/people_lists_repository.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Logger name for repository-level diagnostics.
@@ -31,20 +33,26 @@ typedef BlockedPeopleListOwnerFilter = bool Function(String ownerPubkey);
 /// no optimistic cache write is performed.
 ///
 /// Constructor injection only — the repository never resolves dependencies
-/// implicitly. All mutable state lives in the injected cache; the repository
-/// itself is effectively stateless.
+/// implicitly. All mutable state lives in the injected cache and follow store;
+/// the repository itself is effectively stateless.
 class PeopleListsRepositoryImpl implements PeopleListsRepository {
-  /// Creates a repository bound to [nostrClient] and [cache].
+  /// Creates a repository bound to [nostrClient], [cache] and
+  /// [followedListsStore].
   PeopleListsRepositoryImpl({
     required NostrClient nostrClient,
     required LocalPeopleListsCache cache,
+    required FollowedPeopleListsStore followedListsStore,
     BlockedPeopleListOwnerFilter? blockFilter,
   }) : _nostrClient = nostrClient,
        _cache = cache,
+       _followedListsStore = followedListsStore,
        _blockFilter = blockFilter;
 
   final NostrClient _nostrClient;
   final LocalPeopleListsCache _cache;
+
+  /// Which lists each viewer follows. [_cache] only mirrors their contents.
+  final FollowedPeopleListsStore _followedListsStore;
   final BlockedPeopleListOwnerFilter? _blockFilter;
 
   @override
@@ -334,6 +342,165 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       }
     }
     return null;
+  }
+
+  @override
+  Stream<List<PeopleListSearchResult>> watchFollowedLists({
+    required String viewerPubkey,
+  }) {
+    return Rx.combineLatest2(
+      _followedListsStore.watch(viewerPubkey: viewerPubkey),
+      _cache.watchFollowedCopies(viewerPubkey: viewerPubkey),
+      _followedInOrder,
+    ).map(_withoutBlockedOwners);
+  }
+
+  @override
+  Future<List<PeopleListSearchResult>> readFollowedLists({
+    required String viewerPubkey,
+  }) async {
+    final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
+    if (refs.isEmpty) return const [];
+    final copies = await _cache.readFollowedCopies(viewerPubkey: viewerPubkey);
+    return _withoutBlockedOwners(_followedInOrder(refs, copies));
+  }
+
+  /// The copies of the lists [refs] names, in follow order.
+  ///
+  /// A follow whose copy is not held yet is left out until a sync brings it
+  /// back: after a cache reset there is no name or member to show for it. A
+  /// copy no follow names is ignored, so an unfollow holds even when a late
+  /// relay refresh rewrites the copy behind it.
+  static List<PeopleListSearchResult> _followedInOrder(
+    List<FollowedPeopleListRef> refs,
+    List<PeopleListSearchResult> copies,
+  ) {
+    final copyByRef = {
+      for (final copy in copies)
+        FollowedPeopleListRef(
+          ownerPubkey: copy.ownerPubkey,
+          listId: copy.list.id,
+        ): copy,
+    };
+    return List.unmodifiable([for (final ref in refs) ?copyByRef[ref]]);
+  }
+
+  List<PeopleListSearchResult> _withoutBlockedOwners(
+    List<PeopleListSearchResult> lists,
+  ) {
+    final blockFilter = _blockFilter;
+    if (blockFilter == null) return lists;
+    return List.unmodifiable(
+      lists.where((followed) => !blockFilter(followed.ownerPubkey)),
+    );
+  }
+
+  @override
+  Future<void> followList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  }) async {
+    // The copy first, so the follow never shows up with nothing to show.
+    await _cache.putFollowedCopy(
+      viewerPubkey: viewerPubkey,
+      ownerPubkey: ownerPubkey,
+      // Someone else's list: the copy must never offer the owner's
+      // affordances, whatever the caller resolved it as.
+      list: list.copyWith(isEditable: false),
+    );
+    await _followedListsStore.add(
+      viewerPubkey: viewerPubkey,
+      ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: list.id),
+    );
+  }
+
+  @override
+  Future<void> unfollowList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    await _followedListsStore.remove(
+      viewerPubkey: viewerPubkey,
+      ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
+    );
+    try {
+      await _cache.removeFollowedCopy(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ownerPubkey,
+        listId: listId,
+      );
+    } on Object catch (error, stackTrace) {
+      // The unfollow already holds; a copy left behind is never shown and is
+      // replaced by the next follow. Failing here would report a failed
+      // unfollow that in fact succeeded.
+      Log.warning(
+        'Failed to remove the copy of an unfollowed people list',
+        name: _logName,
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<void> syncFollowedLists({required String viewerPubkey}) async {
+    final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
+    if (refs.isEmpty) return;
+
+    final List<Event> events;
+    try {
+      // One filter for the whole set. Authors and `d` tags combine as AND, so
+      // it can also match an owner's other list that shares a followed
+      // list's `d` tag; the lookup below drops those.
+      events = await _nostrClient.queryEvents([
+        Filter(
+          kinds: const [Nip51PeopleListCodec.kind],
+          authors: {for (final ref in refs) ref.ownerPubkey}.toList(),
+          d: {for (final ref in refs) ref.listId}.toList(),
+        ),
+      ]);
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Failed to refresh followed people lists; keeping the stored copies',
+        name: _logName,
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+
+    final followed = refs.toSet();
+    final newest = <FollowedPeopleListRef, UserList>{};
+    for (final event in events) {
+      final list = Nip51PeopleListCodec.decode(event);
+      if (list == null) continue;
+      final ref = FollowedPeopleListRef(
+        ownerPubkey: event.pubkey,
+        listId: list.id,
+      );
+      if (!followed.contains(ref)) continue;
+      final existing = newest[ref];
+      if (existing != null && !_supersedes(list, existing)) continue;
+      newest[ref] = list;
+    }
+
+    for (final MapEntry(key: ref, value: list) in newest.entries) {
+      await _cache.refreshFollowedCopy(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ref.ownerPubkey,
+        list: list.copyWith(isEditable: false),
+      );
+    }
+  }
+
+  @override
+  Future<void> clearFollowedLists({required String viewerPubkey}) async {
+    await _followedListsStore.clear(viewerPubkey: viewerPubkey);
+    await _cache.clearFollowedCopies(viewerPubkey: viewerPubkey);
   }
 
   /// Shared relay query + decode + filter + coordinate-dedup pipeline behind

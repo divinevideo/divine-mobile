@@ -18,6 +18,7 @@ import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
@@ -974,6 +975,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           await requiredDelete(
             'pendingReports',
             () => db.pendingReportsDao.deleteAllForUser(userPubkey),
+          );
+          // The people lists this account follows. Their keys carry the
+          // viewer's pubkey, so no other account ever saw them; this is so a
+          // deleted account leaves none behind.
+          await requiredCleanup(
+            'followedPeopleLists',
+            () => ref.read(followedPeopleListsClearProvider)(userPubkey),
           );
         }
       };
