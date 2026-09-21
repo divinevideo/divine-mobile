@@ -73,16 +73,14 @@ abstract class CancellableDownloader {
 
 /// Default [CancellableDownloader] backed by an [http.Client].
 ///
-/// Once the response stream has started, cancelling unsubscribes from it,
-/// which `dart:io` interprets as a signal to release the underlying socket
-/// back to the pool. This sidesteps the connection-pool starvation problem
-/// that occurs when stalled `flutter_cache_manager` downloads cannot be torn
-/// down and continue to occupy `maxConnectionsPerHost` slots until their
-/// `connectionTimeout` (often >> our stall window) trips.
-///
-/// Note: if `cancel()` is called while the initial request is still in
-/// flight (before headers arrive), the socket cannot be interrupted and
-/// remains in use until the response headers are received.
+/// Requests are [http.AbortableRequest]s, and `cancel()` fires their abort
+/// trigger: before the response headers arrive that aborts the request, and
+/// once the body is streaming the download also unsubscribes from it. Either
+/// way `dart:io` closes the connection, freeing its `maxConnectionsPerHost`
+/// slot at once. This sidesteps the connection-pool starvation problem that
+/// occurs when stalled `flutter_cache_manager` downloads cannot be torn down
+/// and continue to occupy those slots until their `connectionTimeout` (often
+/// >> our stall window) trips.
 class HttpCancellableDownloader implements CancellableDownloader {
   /// Creates a downloader that issues requests on the given [http.Client].
   HttpCancellableDownloader(this._client);
@@ -198,7 +196,7 @@ class _HttpDownload implements CancellableDownload {
       }
       final response = await _client.send(req);
       if (_isCancelled) {
-        unawaited(response.stream.drain<void>());
+        _discardBody(response);
         _safeComplete(
           CancellableDownloadResult(
             file: null,
@@ -214,7 +212,7 @@ class _HttpDownload implements CancellableDownload {
           name: 'MediaCache',
           category: LogCategory.video,
         );
-        unawaited(response.stream.drain<void>());
+        _discardBody(response);
         _safeComplete(
           CancellableDownloadResult(
             file: null,
@@ -227,7 +225,17 @@ class _HttpDownload implements CancellableDownload {
 
       final parent = _file.parent;
       if (!parent.existsSync()) {
-        await parent.create(recursive: true);
+        // Synchronous so no cancel() can fire the abort before the body below
+        // is read: IOClient never releases a connection whose body is first
+        // listened to after the abort.
+        try {
+          parent.createSync(recursive: true);
+        } on Object {
+          // Nothing will read this body now. Cancel it rather than leave its
+          // request running, or drain a whole media file only to discard it.
+          response.stream.listen(null).cancel().ignore();
+          rethrow;
+        }
       }
       final sink = _file.openWrite();
       _sink = sink;
@@ -322,6 +330,19 @@ class _HttpDownload implements CancellableDownload {
       await _cleanupPartial();
       _safeComplete(const CancellableDownloadResult(file: null));
     }
+  }
+
+  /// Discards a response body this download will not consume.
+  ///
+  /// A `cancel()` that lands once the headers have arrived is delivered by
+  /// `package:http` as a `RequestAbortedException` on the body stream rather
+  /// than thrown out of `send()`. This drain is the only consumer of such a
+  /// body, so left unhandled, that intentional teardown reached the
+  /// uncaught-zone reporter as a crash (#9339).
+  void _discardBody(http.StreamedResponse response) {
+    // Nothing is actionable if the drain fails: the body is unwanted whether
+    // the failure is our own abort or a dropped connection.
+    response.stream.drain<void>().ignore();
   }
 
   /// Settles this download as a failure after the target file could not be
