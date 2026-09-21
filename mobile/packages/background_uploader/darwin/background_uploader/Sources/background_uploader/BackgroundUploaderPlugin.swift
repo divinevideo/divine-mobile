@@ -66,6 +66,11 @@ private final class BackgroundUploadCoordinator: NSObject {
   /// These bridge brief suspensions but are not the source of truth for whether
   /// a publish is complete.
   private var backgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
+
+  /// The engine whose Dart opened each foreground session, so a torn-down
+  /// engine's sessions can be closed on its behalf: its isolate is gone and
+  /// will never send `endForegroundSession`.
+  private var foregroundSessionOwners: [String: ObjectIdentifier] = [:]
   #endif
 
   private lazy var session: URLSession = {
@@ -84,6 +89,7 @@ private final class BackgroundUploadCoordinator: NSObject {
   }()
 
   func attach(_ channel: FlutterMethodChannel) {
+    dispatchPrecondition(condition: .onQueue(.main))
     channels.append(channel)
     // Touch the lazy session so its delegate is connected immediately. This
     // lets tasks that completed while the app was dead deliver their terminal
@@ -91,8 +97,31 @@ private final class BackgroundUploadCoordinator: NSObject {
     _ = session
   }
 
+  /// Drops one engine's channel so upload events stop fanning out to it, and
+  /// closes the foreground sessions its Dart opened, since that isolate can
+  /// no longer end them and an open one holds every later background wake
+  /// until the watchdog fires. Runs inside that engine's `dealloc`, so it
+  /// must not touch the channel.
   func detach(_ channel: FlutterMethodChannel) {
+    dispatchPrecondition(condition: .onQueue(.main))
+    #if os(iOS)
+    let owner = ObjectIdentifier(channel)
+    for sessionId in foregroundSessionOwners.keys.sorted()
+    where foregroundSessionOwners[sessionId] == owner {
+      endForegroundSession(sessionId)
+    }
+    #endif
     channels.removeAll { $0 === channel }
+  }
+
+  /// Counters for tests and support: how many engines are attached, and on
+  /// iOS how many publish sessions still hold the background wake open.
+  func diagnostics() -> [String: Any] {
+    var result: [String: Any] = ["attachedChannels": channels.count]
+    #if os(iOS)
+    result["activeForegroundSessions"] = activeForegroundSessionIds.count
+    #endif
+    return result
   }
 
   func enqueue(
@@ -132,9 +161,13 @@ private final class BackgroundUploadCoordinator: NSObject {
   }
 
   #if os(iOS)
-  func beginForegroundSession(_ sessionId: String) {
+  func beginForegroundSession(
+    _ sessionId: String,
+    owner channel: FlutterMethodChannel
+  ) {
     expireBackgroundTaskAssertion(sessionId)
     activeForegroundSessionIds.insert(sessionId)
+    foregroundSessionOwners[sessionId] = ObjectIdentifier(channel)
     let task = UIApplication.shared.beginBackgroundTask(
       withName: "co.openvine.background_uploader.\(sessionId)"
     ) { [weak self] in
@@ -145,6 +178,7 @@ private final class BackgroundUploadCoordinator: NSObject {
 
   func endForegroundSession(_ sessionId: String) {
     activeForegroundSessionIds.remove(sessionId)
+    foregroundSessionOwners.removeValue(forKey: sessionId)
     expireBackgroundTaskAssertion(sessionId)
     finishBackgroundEventsIfReady()
   }
@@ -303,14 +337,44 @@ public class BackgroundUploaderPlugin: NSObject, FlutterPlugin {
       binaryMessenger: messenger
     )
     let instance = BackgroundUploaderPlugin(channel: channel)
+    // Flutter delivers `detachFromEngine(for:)` only to a plugin that
+    // published itself (FlutterPlugin.h). Without this line the hook below
+    // never ran, and the coordinator kept every torn-down engine's channel
+    // for the life of the process. Only iOS delivers it: the macOS
+    // `FlutterPlugin` protocol declares no detach hook, and a macOS engine
+    // lives as long as the process anyway. See #9342.
+    registrar.publish(instance)
     registrar.addMethodCallDelegate(instance, channel: channel)
     #if os(iOS)
     registrar.addApplicationDelegate(instance)
     #endif
   }
 
+  /// Runs inside `-[FlutterEngine dealloc]` (iOS only, see `register`). The
+  /// coordinator outlives every engine, so without this its channel list
+  /// grows by one entry per engine, each upload event keeps fanning out to
+  /// the dead ones — a "Communicating on a dead channel" warning per
+  /// progress tick, forever — and a publish session the dead engine's Dart
+  /// opened holds every later background wake until the watchdog fires.
+  ///
+  /// Nothing here may go through `registrar`: every weak reference to a
+  /// deallocating object already reads nil, so `registrar.messenger()` hands
+  /// Swift a nil where it expects a `FlutterBinaryMessenger`. The channel
+  /// captured at init is all the coordinator needs. This hook does not cover
+  /// the window between `destroyContext` and dealloc, in which the engine
+  /// object is alive but its shell is gone; a send there still trips the
+  /// shell assert in `sendOnChannel:`.
   public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
-    BackgroundUploadCoordinator.shared.detach(channel)
+    // The coordinator's state is main-queue-confined and dealloc runs on
+    // whichever thread dropped the engine's last reference.
+    let channel = self.channel
+    if Thread.isMainThread {
+      BackgroundUploadCoordinator.shared.detach(channel)
+    } else {
+      DispatchQueue.main.async {
+        BackgroundUploadCoordinator.shared.detach(channel)
+      }
+    }
   }
 
   public func handle(
@@ -330,6 +394,8 @@ public class BackgroundUploaderPlugin: NSObject, FlutterPlugin {
       beginForegroundSession(call.arguments, result: result)
     case "endForegroundSession":
       endForegroundSession(call.arguments, result: result)
+    case "diagnostics":
+      result(BackgroundUploadCoordinator.shared.diagnostics())
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -356,7 +422,10 @@ public class BackgroundUploaderPlugin: NSObject, FlutterPlugin {
       )
       return
     }
-    BackgroundUploadCoordinator.shared.beginForegroundSession(sessionId)
+    BackgroundUploadCoordinator.shared.beginForegroundSession(
+      sessionId,
+      owner: channel
+    )
     #endif
     result(nil)
   }
