@@ -5,9 +5,12 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
+import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+
+import '../../helpers/l10n.dart';
 
 class _FakeBuildContext extends Fake implements BuildContext {}
 
@@ -16,7 +19,8 @@ class _FakeBuildContext extends Fake implements BuildContext {}
 class _EngagementState extends Fake implements GoRouterState {
   _EngagementState(this._eventId, [String query = ''])
     : uri = Uri.parse(
-        '/video/$_eventId/likers${query.isEmpty ? '' : '?$query'}',
+        '/video/${Uri.encodeComponent(_eventId)}/likers'
+        '${query.isEmpty ? '' : '?$query'}',
       );
 
   final String _eventId;
@@ -193,6 +197,55 @@ void main() {
       ) as VideoEngagementListScreen;
 
       expect(screen.type, equals(VideoEngagementType.reposters));
+    });
+  });
+
+  group('buildVideoEngagementList rejects an id it cannot decode', () {
+    // RouteErrorScreen reads ctx.l10n, so these need a real localized
+    // context rather than the Fake the cases above can use.
+    Future<Widget> buildFor(WidgetTester tester, String id) async {
+      late BuildContext captured;
+      await tester.pumpWidget(
+        buildLocalizedWidget(
+          Builder(
+            builder: (context) {
+              captured = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+      return buildVideoEngagementList(
+        captured,
+        _EngagementState(id),
+        VideoEngagementType.likers,
+      );
+    }
+
+    testWidgets('a whitespace-only segment', (tester) async {
+      // `raw.isEmpty` let this through and the API was asked for
+      // /api/videos/%20%20%20/likers, which answers nothing.
+      expect(await buildFor(tester, '   '), isA<RouteErrorScreen>());
+    });
+
+    testWidgets('an nevent1 that does not decode', (tester) async {
+      // A truncated or mistyped shared link. Forwarded raw, it 404s at the
+      // API and misses at the relay, and the list renders empty.
+      expect(
+        await buildFor(tester, 'nevent1qvqsqxvr2tz'),
+        isA<RouteErrorScreen>(),
+      );
+    });
+
+    testWidgets('an naddr1 for a kind that is not a video', (tester) async {
+      expect(
+        await buildFor(
+          tester,
+          'naddr1qq9kjup3v3jrjazpd3khwq3qsxktkuz8tw9hzhpc6pevaymknj3827parpu'
+          'eqyt7crqpa2zfh72sxpqqqp65wdhulxv',
+        ),
+        isA<RouteErrorScreen>(),
+      );
     });
   });
 }
