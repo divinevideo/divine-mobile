@@ -16,7 +16,16 @@ enum VideoRenderFailureReason {
 
   /// The export ran past the render watchdog without settling — a native
   /// call stopped responding (#8488).
-  timedOut('timed_out');
+  timedOut('timed_out'),
+
+  /// A sound on the timeline could not be fetched for muxing: every download
+  /// attempt failed.
+  ///
+  /// The export stops here rather than shipping the video without the sound
+  /// the user picked. The editor preview plays the same sound straight from
+  /// the network, so a silent export used to be the only sign the download
+  /// had failed — and it came after the post was already public.
+  audioUnavailable('audio_unavailable');
 
   const VideoRenderFailureReason(this.traceValue);
 

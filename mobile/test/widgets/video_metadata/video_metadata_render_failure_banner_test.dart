@@ -55,6 +55,20 @@ void main() {
         expect(card.tone, DivineInfoCardTone.error);
       });
 
+      testWidgets('the connection copy when a sound could not be fetched', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            renderFailed: true,
+            reason: VideoRenderFailureReason.audioUnavailable,
+          ),
+        );
+
+        expect(find.text(l10n.publishErrorServerUnreachable), findsOneWidget);
+        expect(find.text(l10n.videoMetadataGenerationFailed), findsNothing);
+      });
+
       testWidgets('the generic copy for every other failure', (tester) async {
         await tester.pumpWidget(
           buildWidget(

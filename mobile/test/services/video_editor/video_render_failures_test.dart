@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -34,6 +35,25 @@ void main() {
 
       expect(failure.traceValue, 'canceled:RenderCanceledException');
     });
+
+    test(
+      'traceValue names a sound that could not be fetched without its URL',
+      () {
+        final failure = VideoRenderFailedException(
+          VideoRenderFailureReason.audioUnavailable,
+          cause: RenderAudioFetchException(
+            Uri.parse('https://media.example/blob'),
+            statusCode: 503,
+          ),
+        );
+
+        expect(
+          failure.traceValue,
+          'audio_unavailable:RenderAudioFetchException',
+        );
+        expect(failure.traceValue, isNot(contains('media.example')));
+      },
+    );
 
     group('native', () {
       test('classifies an out-of-storage export as insufficientStorage by the '

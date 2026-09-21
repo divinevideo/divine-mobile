@@ -42,11 +42,17 @@ class VideoMetadataRenderFailureBanner extends ConsumerWidget {
   }
 }
 
-/// The copy for [reason]; only a full disk changes what the user is told.
+/// The copy for [reason].
+///
+/// A full disk and a sound that could not be fetched each change what the
+/// user is told, because the remedy differs: free up space, or get back on
+/// the network and retry. Everything else gets the generic failure.
 String _message(AppLocalizations l10n, VideoRenderFailureReason? reason) =>
     switch (reason) {
       VideoRenderFailureReason.insufficientStorage =>
         l10n.publishErrorLowStorage,
+      VideoRenderFailureReason.audioUnavailable =>
+        l10n.publishErrorServerUnreachable,
       _ => l10n.videoMetadataGenerationFailed,
     };
 

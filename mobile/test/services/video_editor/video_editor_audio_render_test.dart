@@ -1,24 +1,41 @@
 // ABOUTME: Unit tests for building and resolving render audio tracks.
-// ABOUTME: Covers timing, diagnostics, skip-on-failure, and empty fallback.
+// ABOUTME: Covers timing, diagnostics, fail-on-unavailable, and empty fallback.
 
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:models/models.dart';
+import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// An [EditorAudio] whose [safeFilePath] always fails, standing in for a track
-/// whose source cannot be resolved (e.g. a failed network download).
-class _UnresolvableAudio extends EditorAudio {
-  _UnresolvableAudio() : super(networkUrl: 'https://example.com/missing.mp3');
+const _missingUrl = 'https://example.com/missing';
 
-  @override
-  Future<String> safeFilePath({String? fileExtension}) async {
-    throw const FileSystemException('cannot resolve audio for render');
-  }
-}
+/// A fetcher whose every network request answers 404, standing in for a
+/// sound whose blob is gone. No retries, so the test does not wait on the
+/// backoff ladder.
+RenderAudioFetcher _missingBlobFetcher(Directory tempDir) => RenderAudioFetcher(
+  clientFactory: () =>
+      MockClient((request) async => http.Response('gone', 404)),
+  tempDirectory: tempDir,
+  baseDelay: Duration.zero,
+);
+
+/// A fetcher that serves a small WAV body for every request.
+RenderAudioFetcher _servingFetcher(Directory tempDir) => RenderAudioFetcher(
+  clientFactory: () => MockClient(
+    (request) async => http.Response.bytes(
+      [...'RIFF'.codeUnits, 0, 0, 0, 0, ...'WAVE'.codeUnits, 1, 2, 3, 4],
+      200,
+    ),
+  ),
+  tempDirectory: tempDir,
+  baseDelay: Duration.zero,
+);
 
 AudioTrack _fileTrack({
   required String id,
@@ -45,25 +62,32 @@ AudioTrack _fileTrack({
   );
 }
 
-AudioTrack _unresolvableTrack(String id) {
+AudioTrack _networkTrack(String id, {String url = _missingUrl}) {
   return AudioTrack(
     id: id,
     title: id,
     subtitle: 'test',
     duration: const Duration(seconds: 3),
-    audio: _UnresolvableAudio(),
+    audio: EditorAudio.network(url),
+    startTime: Duration.zero,
+    endTime: const Duration(seconds: 3),
   );
 }
 
 void main() {
   late LogCaptureService capture;
+  late Directory tempDir;
 
   setUp(() async {
     capture = LogCaptureService();
     await capture.clearAllLogs();
+    tempDir = Directory.systemTemp.createTempSync('audio_render_test');
   });
 
-  tearDown(() => capture.clearAllLogs());
+  tearDown(() async {
+    await capture.clearAllLogs();
+    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+  });
 
   group('buildRenderAudioTracks', () {
     AudioEvent sound({
@@ -169,29 +193,59 @@ void main() {
     );
 
     test(
-      'skips a track that cannot be resolved while keeping the resolvable ones',
+      'fails the render when a sound cannot be fetched instead of shipping '
+      'the video without it',
       () async {
-        final result = await resolveRenderAudioTracks(
-          [
-            _unresolvableTrack('bad'),
-            _fileTrack(id: 'good', path: '/tmp/good.mp3'),
-          ],
-          logName: 'test',
+        await expectLater(
+          resolveRenderAudioTracks(
+            [
+              _fileTrack(id: 'good', path: '/tmp/good.mp3'),
+              _networkTrack('bad'),
+            ],
+            logName: 'test',
+            fetcher: _missingBlobFetcher(tempDir),
+          ),
+          throwsA(
+            isA<VideoRenderFailedException>()
+                .having(
+                  (e) => e.reason,
+                  'reason',
+                  VideoRenderFailureReason.audioUnavailable,
+                )
+                .having(
+                  (e) => e.cause,
+                  'cause',
+                  isA<RenderAudioFetchException>(),
+                ),
+          ),
         );
-
-        expect(result, hasLength(1));
-        expect(result.single.path, equals('/tmp/good.mp3'));
       },
     );
 
-    test('returns an empty list when no requested track resolves', () async {
-      final result = await resolveRenderAudioTracks(
-        [_unresolvableTrack('bad-1'), _unresolvableTrack('bad-2')],
-        logName: 'test',
-      );
+    test(
+      'downloads a network sound to a temp file and reports it for cleanup',
+      () async {
+        final tempFilePaths = <String>[];
+        final result = await resolveRenderAudioTracks(
+          [
+            _networkTrack('song', url: 'https://example.com/song'),
+            _fileTrack(id: 'local', path: '/tmp/local.mp3'),
+          ],
+          logName: 'test',
+          fetcher: _servingFetcher(tempDir),
+          tempFilePaths: tempFilePaths,
+        );
 
-      expect(result, isEmpty);
-    });
+        expect(result, hasLength(2));
+        expect(result.first.path, endsWith('.wav'));
+        expect(File(result.first.path).existsSync(), isTrue);
+        expect(
+          tempFilePaths,
+          [result.first.path],
+          reason: 'only the downloaded file is ours to delete',
+        );
+      },
+    );
 
     test(
       'clamps a track window that outlasts the video to the video duration',
