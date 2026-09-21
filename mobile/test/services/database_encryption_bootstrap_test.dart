@@ -10,6 +10,22 @@ import 'package:openvine/services/database_recovery_store.dart';
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
 
 void main() {
+  group('cipher-key storage slots', () {
+    // Both literals are a wire format: they name the Keychain items shipped
+    // installs actually wrote, and nothing else records what those are.
+    // Rename either and the migration looks for an item that does not exist,
+    // the empty read is trusted, a fresh key is generated, and the existing
+    // encrypted database becomes permanently unopenable — with every other
+    // test in this file still green, because they all reference the symbols.
+    test('names the current slot db.cipher.key.v2', () {
+      expect(dbCipherKeyStorageKey, equals('db.cipher.key.v2'));
+    });
+
+    test('names the pre-#9343 slot db.cipher.key.v1', () {
+      expect(legacyDbCipherKeyStorageKey, equals('db.cipher.key.v1'));
+    });
+  });
+
   group('generateCipherKeyHex', () {
     test('returns 64 lower-case hex characters (a raw 32-byte key)', () {
       final key = generateCipherKeyHex();
