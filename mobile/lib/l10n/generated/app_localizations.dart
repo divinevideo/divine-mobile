@@ -2474,12 +2474,6 @@ abstract class AppLocalizations {
   /// **'Captions off'**
   String get videoSettingsCaptionsOff;
 
-  /// Snackbar confirming that captions were just turned on for the current video from the playback-settings pill.
-  ///
-  /// In en, this message translates to:
-  /// **'Captions on for this video'**
-  String get videoSettingsCaptionsOnForVideo;
-
   /// Snackbar confirming that captions were just turned off for the current video from the playback-settings pill.
   ///
   /// In en, this message translates to:

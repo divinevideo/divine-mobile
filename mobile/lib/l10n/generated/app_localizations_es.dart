@@ -1458,10 +1458,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Subtítulos desactivados';
 
   @override
-  String get videoSettingsCaptionsOnForVideo =>
-      'Subtítulos activados para este video';
-
-  @override
   String get videoSettingsCaptionsOffForVideo =>
       'Subtítulos desactivados para este video';
 

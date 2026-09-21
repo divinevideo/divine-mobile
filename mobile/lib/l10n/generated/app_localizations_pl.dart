@@ -1485,10 +1485,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Napisy wyłączone';
 
   @override
-  String get videoSettingsCaptionsOnForVideo =>
-      'Napisy włączone dla tego filmu';
-
-  @override
   String get videoSettingsCaptionsOffForVideo =>
       'Napisy wyłączone dla tego filmu';
 

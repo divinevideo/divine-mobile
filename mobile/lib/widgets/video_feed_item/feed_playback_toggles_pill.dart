@@ -214,10 +214,22 @@ class _CaptionsToggle extends ConsumerWidget {
             logName: 'FeedPlaybackTogglesPill',
             category: LogCategory.ui,
           );
+        } else if (enabled) {
+          ref
+              .read(subtitleVisibilityOverrideProvider.notifier)
+              .setForVideo(videoId, false);
         } else {
           ref
               .read(subtitleVisibilityOverrideProvider.notifier)
-              .toggleForVideo(videoId);
+              .clearForVideo(videoId);
+          if (!ref.read(subtitleVisibilityProvider)) {
+            runDetached(
+              ref.read(subtitleVisibilityProvider.notifier).setEnabled(true),
+              'persist enabled captions preference',
+              logName: 'FeedPlaybackTogglesPill',
+              category: LogCategory.ui,
+            );
+          }
         }
         _showToggleFeedback(
           context,
@@ -227,7 +239,7 @@ class _CaptionsToggle extends ConsumerWidget {
                     : context.l10n.videoSettingsCaptionsOn
               : enabled
               ? context.l10n.videoSettingsCaptionsOffForVideo
-              : context.l10n.videoSettingsCaptionsOnForVideo,
+              : context.l10n.videoSettingsCaptionsOn,
         );
       },
       child: DivineIcon(

@@ -935,10 +935,6 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
-  "videoSettingsCaptionsOnForVideo": "Captions on for this video",
-  "@videoSettingsCaptionsOnForVideo": {
-    "description": "Snackbar confirming that captions were just turned on for the current video from the playback-settings pill."
-  },
   "videoSettingsCaptionsOffForVideo": "Captions off for this video",
   "@videoSettingsCaptionsOffForVideo": {
     "description": "Snackbar confirming that captions were just turned off for the current video from the playback-settings pill."

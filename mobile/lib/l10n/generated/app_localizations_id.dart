@@ -1379,9 +1379,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Teks nonaktif';
 
   @override
-  String get videoSettingsCaptionsOnForVideo => 'Takarir aktif untuk video ini';
-
-  @override
   String get videoSettingsCaptionsOffForVideo =>
       'Takarir nonaktif untuk video ini';
 

@@ -883,10 +883,6 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
-  "videoSettingsCaptionsOnForVideo": "ఈ వీడియో కోసం శీర్షికలు ఆన్‌లో ఉన్నాయి",
-  "@videoSettingsCaptionsOnForVideo": {
-    "description": "Snackbar confirming that captions were just turned on for the current video from the playback-settings pill."
-  },
   "videoSettingsCaptionsOffForVideo": "ఈ వీడియోకు శీర్షికలు ఆఫ్ చేయబడ్డాయి",
   "@videoSettingsCaptionsOffForVideo": {
     "description": "Snackbar confirming that captions were just turned off for the current video from the playback-settings pill."
