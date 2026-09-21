@@ -277,7 +277,11 @@ class _SoundUploadViewState extends State<SoundUploadView> {
                     builder: (context, snapshot) => _PickedSound(
                       sound: sound,
                       isPlaying: snapshot.data ?? false,
-                      enabled: !state.isBusy,
+                      // A published sound whose library write failed still
+                      // needs its retry: picking another file would leave the
+                      // bar bound to the sound already on the relay, and the
+                      // new pick with no way to publish it.
+                      enabled: !state.isBusy && !_librarySaveFailed,
                       onTogglePreview: () => _togglePreview(sound),
                       onChangeFile: _pickFile,
                     ),

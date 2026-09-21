@@ -434,6 +434,29 @@ void main() {
         );
       });
 
+      testWidgets('cannot swap the file while a failed save is outstanding', (
+        tester,
+      ) async {
+        final service = _FlakySavedSoundsService(sharedPreferences);
+        await pumpUpload(tester, savedSoundsService: service);
+        await pickFile(tester);
+
+        await tester.tap(find.byKey(const Key('sound_upload_share')));
+        await tester.pumpAndSettle();
+
+        // The bar is bound to the sound already on the relay. Picking another
+        // file here would leave that bar in place with no way to publish the
+        // new pick, so Change stays disabled until the retry settles.
+        expect(
+          find.byKey(const Key('sound_upload_retry_save')),
+          findsOneWidget,
+        );
+        final change = tester.widget<DivineButton>(
+          find.byKey(const Key('sound_upload_change_file')),
+        );
+        expect(change.onPressed, isNull);
+      });
+
       testWidgets('reports an unreadable file and keeps the picker', (
         tester,
       ) async {
