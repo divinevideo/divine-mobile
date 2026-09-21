@@ -922,7 +922,10 @@ class RepostsRepository {
   /// repost recency, most recent first.
   ///
   /// Parameters:
-  /// - [eventId]: Hex event ID of the target event (required).
+  /// - [eventId]: Hex event ID of the target event, or — for an addressable
+  ///   target that names no single version — its `d` tag (required). This
+  ///   path is relay-only, and the `e` filter matches a hex event id alone,
+  ///   so an addressable target is found through [addressableId].
   /// - [addressableId]: Optional `kind:pubkey:d-tag` for Kind 30000+
   ///   events.
   ///

@@ -2361,7 +2361,11 @@ class LikesRepository {
   /// fallback is not paginated and always answers with a cursorless page.
   ///
   /// Parameters:
-  /// - [eventId]: Hex event ID of the target event (required).
+  /// - [eventId]: Hex event ID of the target event, or — for an addressable
+  ///   target that names no single version — its `d` tag, which the API
+  ///   resolves the same way. The relay fallback's `e` filter matches only a
+  ///   hex event id, so an addressable target depends on [addressableId]
+  ///   there (required).
   /// - [addressableId]: Optional `kind:pubkey:d-tag` for Kind 30000+ events.
   /// - [cursor]: Continue a previous page. Omit it to ask for the first.
   ///

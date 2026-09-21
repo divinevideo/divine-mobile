@@ -48,7 +48,11 @@ class VideoEngagementBloc
     );
   }
 
-  /// Hex id of the target video event.
+  /// Identifier the engagement query addresses the video by.
+  ///
+  /// Usually the hex event id. For an addressable reference that names no
+  /// single version — an `naddr1` or a raw coordinate — this is the `d` tag,
+  /// which the first-party API resolves the same way.
   final String eventId;
 
   /// Optional `kind:pubkey:d-tag` for addressable video events (Kind 30000+).
