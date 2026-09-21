@@ -677,16 +677,24 @@ jobs:
         env:
           SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
         run: |
-          set -o pipefail
+          # grep must not own the pipeline's status: under pipefail a run
+          # whose output carries no matching line fails a green build, and a
+          # real failure surfaces as grep's 1 instead of xcodebuild's 65.
+          # --config-only already resolved the Swift package graph, so point
+          # xcodebuild at the same clone instead of re-resolving into
+          # DerivedData.
+          set +e
           xcodebuild test \
             -workspace Runner.xcworkspace \
             -scheme Runner \
             -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
             -only-testing:RunnerTests \
             -resultBundlePath "${RUNNER_TEMP}/RunnerTests.xcresult" \
+            -clonedSourcePackagesDirPath "${GITHUB_WORKSPACE}/mobile/build/ios/SourcePackages" \
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee "${RUNNER_TEMP}/xcodebuild-test.log" \
-            | grep -E --line-buffered '^(Test [Cc]ase|Test [Ss]uite|\*\* (TEST|BUILD))|error:'
+            | grep -E --line-buffered '^(Test [Cc]ase|Test [Ss]uite|Testing failed|The following build commands failed|\*\* (TEST|BUILD))|error:'
+          exit "${PIPESTATUS[0]}"
       - name: Upload test results
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
