@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -57,6 +58,31 @@ const _memberC =
 const _blockedOwnerPubkey =
     '4444444444444444444444444444444444444444444444444444444444444444';
 
+/// A follow store whose writes fail, as a full disk would make them.
+class _FailingFollowStore extends InMemoryFollowedPeopleListsStore {
+  @override
+  Future<void> add({
+    required String viewerPubkey,
+    required FollowedPeopleListRef ref,
+  }) async {
+    throw const FileSystemException('disk full');
+  }
+}
+
+/// A cache that cannot delete a followed-list copy.
+class _CopyRemovalFailingCache extends LocalPeopleListsCache {
+  _CopyRemovalFailingCache({required super.openBox});
+
+  @override
+  Future<void> removeFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    throw HiveError('box is closed');
+  }
+}
+
 const int _peopleListKind = 30000;
 const int _deletionKind = 5;
 
@@ -93,11 +119,14 @@ void main() {
     PeopleListsRepositoryImpl buildRepository({
       required NostrClient nostrClient,
       LocalPeopleListsCache? cache,
+      FollowedPeopleListsStore? followedListsStore,
       BlockedPeopleListOwnerFilter? blockFilter,
     }) {
       return PeopleListsRepositoryImpl(
         nostrClient: nostrClient,
         cache: cache ?? LocalPeopleListsCache(openBox: makeOpener()),
+        followedListsStore:
+            followedListsStore ?? InMemoryFollowedPeopleListsStore(),
         blockFilter: blockFilter,
       );
     }
@@ -1997,6 +2026,586 @@ void main() {
         expect(emissions.first, isEmpty);
         expect(emissions.last, hasLength(1));
         expect(emissions.last.single.pubkeys, equals(const [_memberA]));
+      });
+    });
+
+    group('followed lists', () {
+      const viewer =
+          '6666666666666666666666666666666666666666666666666666666666666666';
+      const otherOwner =
+          '7777777777777777777777777777777777777777777777777777777777777777';
+
+      UserList listOf(
+        String id, {
+        String name = 'Crew',
+        List<String> pubkeys = const [_memberA],
+        DateTime? updatedAt,
+        bool isEditable = true,
+      }) {
+        final stamp = updatedAt ?? DateTime.utc(2026);
+        return UserList(
+          id: id,
+          name: name,
+          pubkeys: pubkeys,
+          createdAt: stamp,
+          updatedAt: stamp,
+          isEditable: isEditable,
+        );
+      }
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required List<String> members,
+        required int createdAt,
+        String title = 'Crew',
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            for (final member in members) ['p', member],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      group('followList', () {
+        test('keeps a read-only copy under the viewer', () async {
+          final repository = buildRepository(nostrClient: _MockNostrClient());
+
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed, hasLength(1));
+          expect(followed.single.ownerPubkey, equals(_ownerPubkey));
+          expect(followed.single.list.id, equals('crew'));
+          expect(followed.single.list.isEditable, isFalse);
+        });
+
+        test('publishes nothing', () async {
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client);
+
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          verifyNever(() => client.publishEvent(any()));
+        });
+
+        test("does not add the list to the owner's or the viewer's own "
+            'lists', () async {
+          final repository = buildRepository(nostrClient: _MockNostrClient());
+
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          expect(await repository.readLists(ownerPubkey: viewer), isEmpty);
+          expect(
+            await repository.readLists(ownerPubkey: _ownerPubkey),
+            isEmpty,
+          );
+        });
+
+        test(
+          'lists follows oldest first, whatever their coordinates',
+          () async {
+            final repository = buildRepository(nostrClient: _MockNostrClient());
+            for (final id in ['zebra', 'apple']) {
+              await repository.followList(
+                viewerPubkey: viewer,
+                ownerPubkey: _ownerPubkey,
+                list: listOf(id),
+              );
+            }
+
+            final followed = await repository.readFollowedLists(
+              viewerPubkey: viewer,
+            );
+
+            expect(followed.map((f) => f.list.id), equals(['zebra', 'apple']));
+          },
+        );
+
+        test(
+          'following again keeps its place and takes the new copy',
+          () async {
+            final repository = buildRepository(nostrClient: _MockNostrClient());
+            for (final id in ['early', 'late']) {
+              await repository.followList(
+                viewerPubkey: viewer,
+                ownerPubkey: _ownerPubkey,
+                list: listOf(id),
+              );
+            }
+
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('early', name: 'Renamed'),
+            );
+
+            final followed = await repository.readFollowedLists(
+              viewerPubkey: viewer,
+            );
+            expect(followed.map((f) => f.list.id), equals(['early', 'late']));
+            expect(followed.first.list.name, equals('Renamed'));
+          },
+        );
+
+        test('reports a follow that could not be recorded', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            followedListsStore: _FailingFollowStore(),
+          );
+
+          await expectLater(
+            repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            ),
+            throwsA(isA<FileSystemException>()),
+          );
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+        });
+      });
+
+      group('unfollowList', () {
+        test('removes only the named follow', () async {
+          final repository = buildRepository(nostrClient: _MockNostrClient());
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('keep'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('drop'),
+          );
+
+          await repository.unfollowList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            listId: 'drop',
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.map((f) => f.list.id), equals(['keep']));
+        });
+
+        test('holds even when the copy cannot be removed', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: _CopyRemovalFailingCache(openBox: makeOpener()),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await expectLater(
+            repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            ),
+            completes,
+          );
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+        });
+      });
+
+      group('readFollowedLists', () {
+        test('leaves out a list whose owner is blocked', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            blockFilter: (pubkey) => pubkey == _blockedOwnerPubkey,
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('fine'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _blockedOwnerPubkey,
+            list: listOf('blocked'),
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+
+          expect(followed.map((f) => f.list.id), equals(['fine']));
+        });
+      });
+
+      group('watchFollowedLists', () {
+        test('emits on follow and unfollow, without blocked owners', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            blockFilter: (pubkey) => pubkey == _blockedOwnerPubkey,
+          );
+          final emissions = <List<String>>[];
+          final subscription = repository
+              .watchFollowedLists(viewerPubkey: viewer)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await pumpEventQueue();
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _blockedOwnerPubkey,
+            list: listOf('blocked'),
+          );
+          await pumpEventQueue();
+          await repository.unfollowList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            listId: 'crew',
+          );
+          await pumpEventQueue();
+
+          expect(emissions.first, isEmpty);
+          expect(emissions, contains(equals(['crew'])));
+          expect(emissions.last, isEmpty);
+          expect(
+            emissions.expand((ids) => ids),
+            isNot(contains('blocked')),
+          );
+        });
+
+        test('reaches a listener holding another repository instance over '
+            'the same store and box', () async {
+          final opener = makeOpener();
+          final store = InMemoryFollowedPeopleListsStore();
+          final listening = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: LocalPeopleListsCache(openBox: opener),
+            followedListsStore: store,
+          );
+          final writing = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: LocalPeopleListsCache(openBox: opener),
+            followedListsStore: store,
+          );
+          final emissions = <List<String>>[];
+          final subscription = listening
+              .watchFollowedLists(viewerPubkey: viewer)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await writing.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await pumpEventQueue();
+
+          expect(emissions.last, equals(['crew']));
+        });
+      });
+
+      group('syncFollowedLists', () {
+        test('asks relays nothing when nothing is followed', () async {
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client);
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          verifyNever(() => client.queryEvents(any()));
+        });
+
+        test('asks for the followed coordinates in one filter', () async {
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: otherOwner,
+            list: listOf('friends'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final filter =
+              (verify(() => client.queryEvents(captureAny())).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.kinds, equals([_peopleListKind]));
+          expect(filter.authors, unorderedEquals([_ownerPubkey, otherOwner]));
+          expect(filter.d, unorderedEquals(['crew', 'friends']));
+        });
+
+        test("takes the owner's newer revision, read-only", () async {
+          final client = _MockNostrClient();
+          when(() => client.queryEvents(any())).thenAnswer(
+            (_) async => [
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA],
+                createdAt: 1800000000,
+              ),
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA, _memberB],
+                createdAt: 1800000100,
+                title: 'Crew, grown',
+              ),
+            ],
+          );
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.single.list.name, equals('Crew, grown'));
+          expect(followed.single.list.pubkeys, equals([_memberA, _memberB]));
+          expect(followed.single.list.isEditable, isFalse);
+        });
+
+        test("ignores another owner's list that shares a followed d tag "
+            'and events that do not decode', () async {
+          final client = _MockNostrClient();
+          when(() => client.queryEvents(any())).thenAnswer(
+            (_) async => [
+              // `otherOwner` is followed for `friends`, not for `crew`.
+              peopleEvent(
+                pubkey: otherOwner,
+                dTag: 'crew',
+                members: const [_memberC],
+                createdAt: 1800000100,
+              ),
+              Event(otherOwner, _peopleListKind, const [], ''),
+            ],
+          );
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: otherOwner,
+            list: listOf('friends'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(
+            followed.map((f) => f.addressableId),
+            equals([
+              '$_peopleListKind:$_ownerPubkey:crew',
+              '$_peopleListKind:$otherOwner:friends',
+            ]),
+          );
+          expect(followed.first.list.pubkeys, equals([_memberA]));
+        });
+
+        test('a follow outlives a wiped cache, and the sync brings its copy '
+            'back in place', () async {
+          final client = _MockNostrClient();
+          when(() => client.queryEvents(any())).thenAnswer(
+            (_) async => [
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'first',
+                members: const [_memberA],
+                createdAt: 1800000000,
+              ),
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'second',
+                members: const [_memberB],
+                createdAt: 1800000000,
+              ),
+            ],
+          );
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final repository = buildRepository(nostrClient: client, cache: cache);
+          for (final id in ['second', 'first']) {
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf(id),
+            );
+          }
+
+          // What "Reset app data" does to this box: every copy is gone.
+          await cache.clearFollowedCopies(viewerPubkey: viewer);
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.map((f) => f.list.id), equals(['second', 'first']));
+          expect(followed.first.list.pubkeys, equals([_memberB]));
+          expect(followed.first.list.isEditable, isFalse);
+        });
+
+        test('keeps the stored copies when the relay read fails', () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEvents(any()),
+          ).thenThrow(Exception('relay down'));
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await expectLater(
+            repository.syncFollowedLists(viewerPubkey: viewer),
+            completes,
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.single.list.pubkeys, equals([_memberA]));
+        });
+
+        test('does not bring back a list unfollowed during the read', () async {
+          final client = _MockNostrClient();
+          late PeopleListsRepositoryImpl repository;
+          when(() => client.queryEvents(any())).thenAnswer((_) async {
+            await repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            return [
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA, _memberB],
+                createdAt: 1800000100,
+              ),
+            ];
+          });
+          repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+        });
+      });
+
+      group('clearFollowedLists', () {
+        test("removes that viewer's follows only", () async {
+          final repository = buildRepository(nostrClient: _MockNostrClient());
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('leaving'),
+          );
+          await repository.followList(
+            viewerPubkey: otherOwner,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('staying'),
+          );
+
+          await repository.clearFollowedLists(viewerPubkey: viewer);
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+          expect(
+            await repository.readFollowedLists(viewerPubkey: otherOwner),
+            hasLength(1),
+          );
+        });
+
+        test('removes the copies as well as the follows', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final store = InMemoryFollowedPeopleListsStore();
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: cache,
+            followedListsStore: store,
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('leaving'),
+          );
+
+          await repository.clearFollowedLists(viewerPubkey: viewer);
+
+          expect(await store.read(viewerPubkey: viewer), isEmpty);
+          expect(await cache.readFollowedCopies(viewerPubkey: viewer), isEmpty);
+        });
       });
     });
   });
