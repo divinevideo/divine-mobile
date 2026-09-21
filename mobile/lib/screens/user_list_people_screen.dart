@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/features/people_lists/bloc/people_list_follow_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_members_cubit.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/people_list_hero_header.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -424,6 +426,12 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
                     ),
                 ],
                 customActions: [
+                  if (widget.ownerPubkey case final owner?
+                      when !userList.isEditable)
+                    _FollowPeopleListAction(
+                      ownerPubkey: owner,
+                      userList: userList,
+                    ),
                   if (userList.isEditable)
                     _PeopleListActionsMenu(
                       onSelected: (action) {
@@ -678,6 +686,98 @@ class _MemberVideos extends ConsumerWidget {
           };
         },
       ),
+    );
+  }
+}
+
+/// The Follow pill on someone else's list. Following it adds the list to the
+/// feed selector in Home, as following a video list does.
+///
+/// Page half of the split: bridges the repository and the signed-in viewer
+/// into a [PeopleListFollowCubit], re-keyed on both so an account switch
+/// follows on behalf of the right viewer.
+class _FollowPeopleListAction extends ConsumerWidget {
+  const _FollowPeopleListAction({
+    required this.ownerPubkey,
+    required this.userList,
+  });
+
+  final String ownerPubkey;
+  final UserList userList;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final viewerPubkey = context.select(
+      (PeopleListsBloc bloc) => bloc.state.ownerPubkey,
+    );
+    // Follows are kept per viewer, so signed out there is nobody to follow as.
+    if (viewerPubkey == null) return const SizedBox.shrink();
+
+    final repository = ref.watch(peopleListsRepositoryProvider);
+    return BlocProvider<PeopleListFollowCubit>(
+      key: ValueKey((repository, viewerPubkey, ownerPubkey, userList.id)),
+      create: (_) {
+        final cubit = PeopleListFollowCubit(
+          repository: repository,
+          viewerPubkey: viewerPubkey,
+          ownerPubkey: ownerPubkey,
+          listId: userList.id,
+        );
+        runDetached(
+          cubit.started(),
+          'watch people list follow',
+          logName: 'FollowPeopleListAction',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
+      child: _FollowPeopleListButton(userList: userList),
+    );
+  }
+}
+
+class _FollowPeopleListButton extends StatelessWidget {
+  const _FollowPeopleListButton({required this.userList});
+
+  final UserList userList;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<PeopleListFollowCubit, PeopleListFollowState>(
+      // Only a failed follow or unfollow: a failed read of the stored
+      // follows has nothing the viewer did to report on.
+      listenWhen: (previous, current) =>
+          previous.status == PeopleListFollowStatus.updating &&
+          current.status == PeopleListFollowStatus.failure,
+      listener: (context, state) {
+        final message = context.l10n.discoverListsFailedToUpdateSubscription;
+        announceDetached(
+          context,
+          message,
+          description: 'announce people list follow failure',
+          logName: 'FollowPeopleListButton',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: VineTheme.error),
+        );
+      },
+      builder: (context, state) {
+        // Nothing until the follows are read, rather than a Follow label that
+        // flips to Following a frame later.
+        if (state.status == PeopleListFollowStatus.loading) {
+          return const SizedBox.shrink();
+        }
+        return FollowListButton(
+          isFollowing: state.isFollowing,
+          isBusy: state.status == PeopleListFollowStatus.updating,
+          onPressed: () => runDetached(
+            context.read<PeopleListFollowCubit>().toggled(userList),
+            'toggle people list follow',
+            logName: 'FollowPeopleListButton',
+            category: LogCategory.ui,
+          ),
+        );
+      },
     );
   }
 }

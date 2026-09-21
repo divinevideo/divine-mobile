@@ -19,6 +19,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -27,6 +29,9 @@ class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockPeopleListsRepository extends Mock
+    implements PeopleListsRepository {}
 
 /// An empty feed pool, so the members feed has nothing to paint before its
 /// fetch answers.
@@ -330,6 +335,215 @@ void main() {
         expect(find.text(l10n.peopleListsFailedToLoadVideos), findsOneWidget);
       },
     );
+
+    group('Follow', () {
+      const listOwner =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      const member =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+      late _MockPeopleListsRepository repository;
+      late StreamController<List<PeopleListSearchResult>> followedController;
+      late UserList discovered;
+
+      setUp(() {
+        repository = _MockPeopleListsRepository();
+        followedController =
+            StreamController<List<PeopleListSearchResult>>.broadcast();
+        discovered = _buildList(
+          id: 'crew',
+          name: 'Crew',
+          pubkeys: const [member],
+          isEditable: false,
+        );
+        when(
+          () => repository.watchFollowedLists(
+            viewerPubkey: any(named: 'viewerPubkey'),
+          ),
+        ).thenAnswer((_) => followedController.stream);
+      });
+
+      setUpAll(() => registerFallbackValue(_buildList()));
+
+      tearDown(() => followedController.close());
+
+      /// Pumps someone else's list as [viewerPubkey], and lets the follows
+      /// land so the pill has something to say.
+      Future<void> pumpDiscovered(
+        WidgetTester tester, {
+        String? viewerPubkey = _ownerPubkey,
+        List<PeopleListSearchResult> followed = const [],
+      }) async {
+        final bloc = _MockPeopleListsBloc();
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: viewerPubkey,
+          ),
+        );
+        final videosRepository = _MockVideosRepository();
+        when(
+          () => videosRepository.getVideosByAuthors(
+            authorPubkeys: any(named: 'authorPubkeys'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              publicPeopleListProvider(
+                ownerPubkey: listOwner,
+                listId: 'crew',
+              ).overrideWith((ref) async => discovered),
+              peopleListsRepositoryProvider.overrideWithValue(repository),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventsProvider.overrideWith(_EmptyVideoEventsPool.new),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: const UserListPeopleScreen(
+                  listId: 'crew',
+                  ownerPubkey: listOwner,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        followedController.add(followed);
+        await tester.pump();
+        await tester.pump();
+      }
+
+      testWidgets("follows someone else's list for the signed-in viewer", (
+        tester,
+      ) async {
+        when(
+          () => repository.followList(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            list: any(named: 'list'),
+          ),
+        ).thenAnswer((_) async {});
+        await pumpDiscovered(tester);
+
+        expect(find.text(l10n.listFollowButton), findsOneWidget);
+
+        await tester.tap(find.byType(FollowListButton));
+        await tester.pump();
+
+        verify(
+          () => repository.followList(
+            viewerPubkey: _ownerPubkey,
+            ownerPubkey: listOwner,
+            list: discovered,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('unfollows a list that is already followed', (tester) async {
+        when(
+          () => repository.unfollowList(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+          ),
+        ).thenAnswer((_) async {});
+        await pumpDiscovered(
+          tester,
+          followed: [
+            PeopleListSearchResult(ownerPubkey: listOwner, list: discovered),
+          ],
+        );
+
+        expect(find.text(l10n.listFollowingButton), findsOneWidget);
+
+        await tester.tap(find.byType(FollowListButton));
+        await tester.pump();
+
+        verify(
+          () => repository.unfollowList(
+            viewerPubkey: _ownerPubkey,
+            ownerPubkey: listOwner,
+            listId: 'crew',
+          ),
+        ).called(1);
+      });
+
+      testWidgets('says so when the follow cannot be saved', (tester) async {
+        when(
+          () => repository.followList(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            list: any(named: 'list'),
+          ),
+        ).thenThrow(Exception('disk full'));
+        await pumpDiscovered(tester);
+
+        await tester.tap(find.byType(FollowListButton));
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text(l10n.discoverListsFailedToUpdateSubscription),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.listFollowButton), findsOneWidget);
+      });
+
+      testWidgets('offers no Follow to a signed-out viewer', (tester) async {
+        await pumpDiscovered(tester, viewerPubkey: null);
+
+        expect(find.text('Crew'), findsOneWidget);
+        expect(find.byType(FollowListButton), findsNothing);
+      });
+
+      testWidgets("offers no Follow on the viewer's own list", (tester) async {
+        final bloc = _MockPeopleListsBloc();
+        final own = _buildList(id: 'mine', name: 'Mine');
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [own],
+          ),
+        );
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              peopleListsRepositoryProvider.overrideWithValue(repository),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<PeopleListsBloc>.value(
+                value: bloc,
+                child: UserListPeopleScreen(listId: own.id),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('Mine'), findsOneWidget);
+        expect(find.byType(FollowListButton), findsNothing);
+        verifyNever(
+          () => repository.watchFollowedLists(
+            viewerPubkey: any(named: 'viewerPubkey'),
+          ),
+        );
+      });
+    });
 
     testWidgets(
       'reacts to bloc emitting updated list without rebuilding the route',
