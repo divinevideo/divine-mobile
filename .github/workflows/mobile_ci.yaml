@@ -605,7 +605,10 @@ jobs:
     # of on Codemagic after merge. Gated on the ios_native scope because a
     # macOS runner costs ten Linux minutes per minute.
     needs: changes
-    if: ${{ needs.changes.outputs.ios_native == 'true' }}
+    # A regeneration dispatch falls open to every scope and then has its
+    # verdict discarded by the gate below, so it must not pay for a macOS
+    # runner.
+    if: ${{ needs.changes.outputs.ios_native == 'true' && !inputs.update_goldens }}
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
