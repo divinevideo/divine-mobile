@@ -89,6 +89,43 @@ void main() {
       expect(ref.stableId, equals(dTag));
     });
 
+    test('decodes an nevent1 reference in upper case', () {
+      // bech32 permits an all-upper-case string and the decoder handles it,
+      // so a link that arrived shouted is still a reference, not a stable id.
+      expect(VideoRouteRef.parse(nevent.toUpperCase())!.eventId, equals(hexId));
+    });
+
+    test('returns null for a note1 that decodes to a short id', () {
+      // Valid bech32 over a 4-byte payload: Nip19.decode hex-encodes it
+      // whole, so without a length check this became the event id
+      // 'deadbeef' and went on to be a REST path segment and an `#e` filter
+      // value.
+      expect(VideoRouteRef.parse('note1m6kmamc02xm08'), isNull);
+    });
+
+    test('returns null for an naddr1 whose author is not a pubkey', () {
+      // The author comes back hex-encoded at whatever length the TLV
+      // carried; a 3-byte one would otherwise build the coordinate
+      // '34236:aabbcc:<d tag>' and query relays with it.
+      expect(
+        VideoRouteRef.parse(
+          'naddr1qq9kjup3v3jrjazpd3khwqsr42aucqcyqqqgt0qa0gfft',
+        ),
+        isNull,
+      );
+    });
+
+    test('treats a stable id that merely starts with note as a stable id', () {
+      // Nip19.isNoteId is `indexOf('note') == 0`, so this used to enter the
+      // note1 branch, fail to decode, and come back null — losing an id the
+      // first-party API resolves.
+      final ref = VideoRouteRef.parse('notebook-clip-42');
+
+      expect(ref, isNotNull);
+      expect(ref!.stableId, equals('notebook-clip-42'));
+      expect(ref.eventId, isNull);
+    });
+
     test('treats an unrecognized reference as a first-party stable id', () {
       final ref = VideoRouteRef.parse(dTag);
 

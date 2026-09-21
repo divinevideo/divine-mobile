@@ -58,12 +58,26 @@ class VideoRouteRef {
       );
     }
 
-    if (Nip19.isNoteId(trimmed)) {
+    // Matched on the full `1`-separated prefix, and on a lower-cased copy
+    // because bech32 is case-insensitive and both decoders accept either
+    // case. The SDK's own isNoteId / isNevent / isNaddr test for `note` /
+    // `nevent` / `naddr` alone (`Nip19.isKey` is `indexOf(hrp) == 0`), so a
+    // first-party stable id or a d tag that merely begins with those letters
+    // entered the branch, failed to decode, and returned null — discarding
+    // an id the API resolves.
+    final lower = trimmed.toLowerCase();
+
+    if (lower.startsWith('note1')) {
+      // Nip19.decode returns '' on failure and otherwise hex-encodes
+      // whatever the payload held, at any length. Without this check a
+      // truncated reference yields an id like 'deadbeef' that goes on to be
+      // used as a REST path segment and an `#e` filter value.
       final eventId = Nip19.decode(trimmed);
-      return eventId.isEmpty ? null : VideoRouteRef(eventId: eventId);
+      if (!NostrHexUtils.isValidEventId(eventId)) return null;
+      return VideoRouteRef(eventId: eventId);
     }
 
-    if (NIP19Tlv.isNevent(trimmed)) {
+    if (lower.startsWith('nevent1')) {
       // decodeNevent runs its TLV loop outside any try/catch, unlike
       // decodeNaddr. A string whose bech32 checksum is valid but whose TLV
       // payload is malformed reaches getInt32 on a short kind entry or
@@ -72,16 +86,21 @@ class VideoRouteRef {
       // rather than the route error screen — errorBuilder only covers
       // route-matching failures.
       try {
-        final decoded = NIP19Tlv.decodeNevent(trimmed);
-        return decoded == null ? null : VideoRouteRef(eventId: decoded.id);
+        final eventId = NIP19Tlv.decodeNevent(trimmed)?.id;
+        if (!NostrHexUtils.isValidEventId(eventId)) return null;
+        return VideoRouteRef(eventId: eventId);
       } on Object catch (_) {
         return null;
       }
     }
 
-    if (NIP19Tlv.isNaddr(trimmed)) {
+    if (lower.startsWith('naddr1')) {
       final decoded = NIP19Tlv.decodeNaddr(trimmed);
       if (decoded == null) return null;
+      // The author is hex-encoded from the TLV payload at whatever length it
+      // carried, and it goes into the coordinate that becomes an `#a` filter
+      // value and a REST query parameter.
+      if (!NostrHexUtils.isValidPubkey(decoded.author)) return null;
       return VideoRouteRef(
         addressableId: AId(
           kind: decoded.kind,
