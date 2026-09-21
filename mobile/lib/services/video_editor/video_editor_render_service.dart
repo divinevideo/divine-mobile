@@ -601,6 +601,7 @@ class VideoEditorRenderService {
         parameters: parameters,
         maxOutputDuration: maxOutputDuration,
         imageLayerOverride: detachedPass.baseImageLayers,
+        tempFilePaths: tempFilePaths,
       );
 
       final outputPath = await detachedPass.composite(
@@ -624,8 +625,11 @@ class VideoEditorRenderService {
 
       return outputPath;
     } on VideoRenderFailedException {
-      // Already classified (the test override's null return) — re-wrapping it
-      // below would report it a second time under the wrong cause.
+      // Already classified (the test override's null return, a sound that
+      // could not be fetched) — re-wrapping it below would report it a second
+      // time under the wrong cause. The normalized clips written so far are
+      // still ours to remove.
+      await _cleanupTempFiles([...tempFilePaths, ?finalOutputPath]);
       rethrow;
     } on RenderCanceledException catch (e) {
       Log.info(
@@ -801,6 +805,7 @@ class VideoEditorRenderService {
     required Duration? maxOutputDuration,
     CropParameters? globalTransform,
     List<ExportedLayer>? imageLayerOverride,
+    List<String>? tempFilePaths,
   }) async {
     // Overlap transitions shorten the rendered output, so the true video
     // length is the transition-mapped output duration, capped by
@@ -814,11 +819,14 @@ class VideoEditorRenderService {
         ? maxOutputDuration
         : timelineMap.outputDuration;
 
+    // Throws VideoRenderFailedException(audioUnavailable) when a sound cannot
+    // be fetched: the export must not ship without the sound the user picked.
     final customTracks = parameters?.audioTracks ?? const <AudioTrack>[];
     final audioTracks = await resolveRenderAudioTracks(
       customTracks,
       logName: _logName,
       videoDuration: videoContentDuration,
+      tempFilePaths: tempFilePaths,
     );
 
     final volumeSegments = segments

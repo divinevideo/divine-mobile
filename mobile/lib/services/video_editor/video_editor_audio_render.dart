@@ -4,6 +4,8 @@
 import 'dart:io';
 
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -207,14 +209,19 @@ List<AudioTrack> buildRenderAudioTracks({
 }
 
 /// Resolves each render [AudioTrack] to a [VideoAudioTrack] with a local file
-/// path, downloading network sources on demand.
+/// path, downloading network sources through [fetcher].
 ///
-/// A track that cannot be resolved (e.g. a failed network download) is skipped
-/// and logged rather than aborting the whole render. A warning is logged when
-/// audio was requested but none could be resolved, so a silent (audio-less)
-/// export is diagnosable from logs. Every successfully-resolved track is also
-/// logged under [logName], recording its final composition and source timing
-/// for mux diagnostics.
+/// A track whose network source cannot be resolved after every attempt fails
+/// the render with
+/// [VideoRenderFailedException] and [VideoRenderFailureReason.audioUnavailable].
+/// It used to be skipped with a log line, and the export carried on without
+/// the sound the user had picked; the editor preview plays the same sound
+/// straight from the network, so the first sign was a silent post. Every
+/// successfully-resolved track is logged under [logName], recording its final
+/// composition and source timing for mux diagnostics.
+///
+/// Paths this call downloaded are appended to [tempFilePaths] when given, so
+/// the caller can delete them once the render is done.
 ///
 /// When [videoDuration] is set, each track's composition window is clamped to
 /// it (see [clampAudioWindowToVideo]) so audio cannot outlast the video track.
@@ -222,61 +229,84 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
   List<AudioTrack> customTracks, {
   required String logName,
   Duration? videoDuration,
+  RenderAudioFetcher? fetcher,
+  List<String>? tempFilePaths,
 }) async {
+  final audioFetcher = fetcher ?? RenderAudioFetcher();
   final audioTracks = <VideoAudioTrack>[];
   for (final track in customTracks) {
+    final String audioPath;
     try {
-      final audioPath = await track.audio.safeFilePath();
-      final window = clampAudioWindowToVideo(
-        startTime: track.startTime,
-        endTime: track.endTime,
-        videoDuration: videoDuration,
-      );
-      if (window == null) {
-        Log.warning(
-          'Audio track ${track.id} starts at or after the end of the video '
-          '— skipping it',
-          name: logName,
-          category: LogCategory.video,
-        );
-        continue;
-      }
-      final (:startTime, :endTime) = window;
-      final resolvedTrack = VideoAudioTrack(
-        path: audioPath,
-        startTime: startTime,
-        endTime: endTime,
-        audioStartTime: track.audioStartTime,
-        audioEndTime: track.audioEndTime,
-        loop: track.loop,
-        volume: track.volume,
-      );
-      audioTracks.add(resolvedTrack);
-      Log.warning(
-        'Resolved audio track ${track.id} for mux: '
-        'composition=[${_durationMs(resolvedTrack.startTime)}, '
-        '${_durationMs(resolvedTrack.endTime)}], '
-        'source=[${_durationMs(resolvedTrack.audioStartTime)}, '
-        '${_durationMs(resolvedTrack.audioEndTime)}], '
-        'videoDuration=${_durationMs(videoDuration)}',
-        name: logName,
-        category: LogCategory.video,
+      audioPath = await audioFetcher.localPathFor(
+        track.audio,
+        logName: logName,
       );
     } catch (e, stackTrace) {
       Log.error(
-        'Failed to resolve audio track ${track.id} for render — skipping it',
+        'Failed to resolve audio track ${track.id} for render — the export '
+        'stops rather than shipping the video without its sound',
         name: logName,
         category: LogCategory.video,
         error: e,
         stackTrace: stackTrace,
       );
+      final fileSystemCause = switch (e) {
+        FileSystemException() => e,
+        RenderAudioFetchException(:final FileSystemException cause) => cause,
+        _ => null,
+      };
+      throw fileSystemCause == null
+          ? VideoRenderFailedException(
+              VideoRenderFailureReason.audioUnavailable,
+              cause: e,
+            )
+          : VideoRenderFailedException.native(fileSystemCause);
     }
+    if (track.audio.type != EditorAudioType.file) {
+      tempFilePaths?.add(audioPath);
+    }
+
+    final window = clampAudioWindowToVideo(
+      startTime: track.startTime,
+      endTime: track.endTime,
+      videoDuration: videoDuration,
+    );
+    if (window == null) {
+      Log.warning(
+        'Audio track ${track.id} starts at or after the end of the video '
+        '— skipping it',
+        name: logName,
+        category: LogCategory.video,
+      );
+      continue;
+    }
+    final (:startTime, :endTime) = window;
+    final resolvedTrack = VideoAudioTrack(
+      path: audioPath,
+      startTime: startTime,
+      endTime: endTime,
+      audioStartTime: track.audioStartTime,
+      audioEndTime: track.audioEndTime,
+      loop: track.loop,
+      volume: track.volume,
+    );
+    audioTracks.add(resolvedTrack);
+    Log.warning(
+      'Resolved audio track ${track.id} for mux: '
+      'composition=[${_durationMs(resolvedTrack.startTime)}, '
+      '${_durationMs(resolvedTrack.endTime)}], '
+      'source=[${_durationMs(resolvedTrack.audioStartTime)}, '
+      '${_durationMs(resolvedTrack.audioEndTime)}], '
+      'videoDuration=${_durationMs(videoDuration)}',
+      name: logName,
+      category: LogCategory.video,
+    );
   }
 
   if (customTracks.isNotEmpty && audioTracks.isEmpty) {
     Log.warning(
       'Render produced no usable audio from ${customTracks.length} '
-      'requested track(s); custom audio will be missing from the output',
+      'requested track(s): every window lies past the end of the video',
       name: logName,
       category: LogCategory.video,
     );

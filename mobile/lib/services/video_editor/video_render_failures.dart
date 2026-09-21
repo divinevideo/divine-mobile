@@ -1,6 +1,8 @@
 // ABOUTME: Failure types for video render operations
 // ABOUTME: Keeps render error telemetry stable across service refactors
 
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -11,7 +13,8 @@ export 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 class VideoRenderFailedException implements Exception {
   const VideoRenderFailedException(this.reason, {this.cause});
 
-  /// Classifies a failure thrown by the native pipeline.
+  /// Classifies a failure thrown by the native pipeline or while preparing its
+  /// local input.
   ///
   /// Out-of-storage failures get their own [reason] so callers can tell the
   /// user what to do; everything else is a [VideoRenderFailureReason.nativeRender]
@@ -62,6 +65,9 @@ const _diskFullLabel = 'disk_full';
 String nativeRenderFailureLabel(Object cause) {
   if (cause is RenderEncoderException) {
     return cause.isTransient ? 'codec_exhausted' : 'encoder_unsupported';
+  }
+  if (cause is FileSystemException && cause.osError?.errorCode == 28) {
+    return _diskFullLabel;
   }
   if (cause is! PlatformException) return cause.runtimeType.toString();
 

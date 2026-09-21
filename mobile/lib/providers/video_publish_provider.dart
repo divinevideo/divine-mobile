@@ -506,28 +506,33 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           // error state, so the `.preparing` scrim would just vanish (#6058).
           // A draft whose stop-motion assembly failed has its own copy, a
           // device out of storage gets the same message an upload would
-          // (#7125); every other failure gets the generic one.
-          final assemblyFailed =
-              error.reason == VideoRenderFailureReason.stopMotionAssembly;
-          final outOfStorage =
-              error.reason == VideoRenderFailureReason.insufficientStorage;
+          // (#7125), and a sound that could not be fetched gets the
+          // server-unreachable one.
           final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
-          final message =
-              (assemblyFailed ? stopMotionFailedMessage : null) ??
-              l10n.publishErrorMessage(
-                outOfStorage
-                    ? PublishErrorKind.lowStorage
-                    : PublishErrorKind.generic,
-              );
+          final (message, analyticsReason) = switch (error.reason) {
+            VideoRenderFailureReason.stopMotionAssembly => (
+              stopMotionFailedMessage ??
+                  l10n.publishErrorMessage(PublishErrorKind.generic),
+              'stop_motion_render_failed',
+            ),
+            VideoRenderFailureReason.insufficientStorage => (
+              l10n.publishErrorMessage(PublishErrorKind.lowStorage),
+              'render_low_storage',
+            ),
+            VideoRenderFailureReason.audioUnavailable => (
+              l10n.publishErrorMessage(PublishErrorKind.serverUnreachable),
+              'render_audio_unavailable',
+            ),
+            _ => (
+              l10n.publishErrorMessage(PublishErrorKind.generic),
+              'render_failed',
+            ),
+          };
           setError(message);
           _showPublishError(message);
           await creationTracker.publishFailed(
             mode: recorderMode,
-            reason: assemblyFailed
-                ? 'stop_motion_render_failed'
-                : outOfStorage
-                ? 'render_low_storage'
-                : 'render_failed',
+            reason: analyticsReason,
           );
           return;
         }
