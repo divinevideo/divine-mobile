@@ -5,107 +5,200 @@ import 'package:material_ui/material_ui.dart';
 
 /// Sticker names from the Divine design system sticker set.
 ///
-/// Names match the `DivineSticker` collection in Figma, which is the source of
-/// truth for them. Each value maps to an OpenMoji SVG asset in
-/// `assets/stickers/`.
+/// The `DivineSticker` collection in Figma is the source of truth for the
+/// catalog, the names and the artwork. Each value maps to a photographic
+/// cutout exported from its Figma component into `assets/divine_stickers/`: a
+/// transparent PNG at most 512 px on its long edge, in its original
+/// proportions.
 ///
-/// [fileName] is not derived from the variant name. The video editor's sticker
-/// manifest, its locale files and saved drafts all key stickers by asset path,
-/// so a file keeps its original name when its variant is renamed to follow
-/// Figma.
+/// The OpenMoji SVGs in `assets/stickers/` belong to the video editor's sticker
+/// picker and are a separate set. [grandfather] is the only variant still drawn
+/// from them.
 enum DivineStickerName {
-  /// The siren. `assets/stickers/alert.svg` is the older warning triangle,
-  /// which only the video editor and the upload failure sheet still use.
-  alert('police_siren'),
-  avocado('avocado'),
-  balloonDog('ballon_dog'),
-  banana('peeled_banana'),
-  bicep('bicep'),
+  /// The siren. [hazardSign] is a separate sticker.
+  alert('alert'),
 
-  /// The stop hand. `assets/stickers/blocked.svg` is the older prohibition
-  /// sign, which only the video editor still offers.
-  blocked('raised_hand'),
+  art('art'),
+  avocado('avocado'),
+  balloonDog('balloon_dog'),
+  banana('banana'),
+  beachBall('beach_ball'),
+  bicep('bicep'),
+  binoculars('binoculars'),
+
+  /// The stop hand. [stopSign] is a separate sticker.
+  blocked('blocked'),
+
+  bobRoss('bob_ross'),
   boom('boom'),
   brokenHeart('broken_heart'),
-  cat('angry_cat'),
-  cellPhone('nokia_3310'),
+  cactusVase('cactus_vase'),
+  cassetteTape('cassette_tape'),
+  cat('cat'),
+  cd('cd'),
+  cellPhone('cell_phone'),
+  ceramicHands('ceramic_hands'),
+  chat('chat'),
   chatteringTeeth('chattering_teeth'),
+  cherries('cherries'),
+  chiliPepper('chili_pepper'),
   clover('clover'),
   confetti('confetti'),
   crackedPhoneScreen('cracked_phone_screen'),
+  crtMonitor('crt_monitor'),
+
+  /// Named `d&d` in Figma, which is not a valid Dart identifier.
+  dAndD('d_and_d', figmaName: 'd&d'),
+
+  dealWithItGlasses('deal_with_it_glasses'),
+  detergentPod('detergent_pod'),
+  devilHornsHand('devil_horns_hand'),
   discoBall('disco_ball'),
   discoHelmet('disco_helmet'),
-  doubleCheeseburger('double_cheeseburger'),
+  dogCorgi('dog_corgi'),
+  dogInHoodie('dog_in_hoodie'),
+  dogShibaInu('dog_shiba_inu'),
   donut('donut'),
-  earthGlobe('world_map'),
+  doubleCheeseburger('double_cheeseburger'),
+  ear('ear'),
+  earthGlobe('earth_globe'),
   eggplant('eggplant'),
   email('email'),
   espressoMartini('espresso_martini'),
   fingerPointing('finger_pointing'),
   foamFinger('foam_finger'),
+  forest('forest'),
   forgotPassword('forgot_password'),
-  gameController('videogame'),
+  fortuneCookie('fortune_cookie'),
+  frenchBulldog('french_bulldog'),
+  gameBoy('game_boy'),
+  gameController('game_controller'),
+  glitterLips('glitter_lips'),
 
-  /// Not in Figma. Kept as a deliberate exception until design decides its
-  /// name; it backs the recorder's six-second explainer.
-  grandfather('grandfather'),
+  /// Legacy exception. Figma has no counterpart, so this keeps its original
+  /// OpenMoji SVG until design decides. It backs the recorder's six-second
+  /// explainer.
+  grandfather.legacySvg('grandfather'),
+
+  handGrip('hand_grip'),
+
+  /// The shaka hand. [ceramicHands] is a separate sticker.
   hangLoose('hang_loose'),
+
+  hazardSign('hazard_sign'),
+  headphones('headphones'),
   heart('heart'),
   hibiscusFlower('hibiscus_flower'),
   holographicJacket('holographic_jacket'),
+  holographicShape('holographic_shape'),
+  horse('horse'),
+  hotAirBalloon('hot_air_balloon'),
   idLicense('id_license'),
   indexFingerPointingUp('index_finger_pointing_up'),
   knightInArmor('knight_in_armor'),
+  lavaLamp('lava_lamp'),
   lipPiercing('lip_piercing'),
+  lipstick('lipstick'),
+  luggage('luggage'),
+  mannequinHand('mannequin_hand'),
   mapleLeaf('maple_leaf'),
   matrixMessageSign('matrix_message_sign'),
+  middleFinger('middle_finger'),
+  mirrorBall('mirror_ball'),
+  mittens('mittens'),
   nailPolish('nail_polish'),
+  newsCamera('news_camera'),
+  oakTree('oak_tree'),
   oldFashionMic('old_fashion_mic'),
-  padlock('password'),
+  onAirSign('on_air_sign'),
+  padlock('padlock'),
   pause('pause'),
+  peaceSign('peace_sign'),
+  peaceSignNeon('peace_sign_neon'),
   peach('peach'),
-  pinkDumbbells('adjustable_dumbbell'),
+  pineapplePizza('pineapple_pizza'),
+  pinkDumbbells('pink_dumbbells'),
+  pizzaSlice('pizza_slice'),
+  polaroid('polaroid'),
+  polaroidCamera('polaroid_camera'),
   poopEmoji('poop_emoji'),
   profile('profile'),
   programmer('programmer'),
+  psychedelicTv('psychedelic_tv'),
   purpleDiamond('purple_diamond'),
   radar('radar'),
+  rainforest('rainforest'),
+  rollerSkates('roller_skates'),
+  rotaryPhone('rotary_phone'),
   samoyedDog('samoyed_dog'),
+  schoolBackpack('school_backpack'),
+  schoolNotebook('school_notebook'),
+  secureVault('secure_vault'),
+  serumDropper('serum_dropper'),
+  shockedMan('shocked_man'),
   shrimp('shrimp'),
+  skateboard('skateboard'),
   skeletonKey('skeleton_key'),
+  soccerBall('soccer_ball'),
+  spaceInvader('space_invader'),
   sparkle('sparkle'),
+  speakers('speakers'),
+  stopSign('stop_sign'),
   storyboard('storyboard'),
+  sunglasses('sunglasses'),
+  tamagotchi('tamagotchi'),
+  tapedBanana('taped_banana'),
   teeth('teeth'),
+  toaster('toaster'),
+  trafficBarrel('traffic_barrel'),
   trafficCone('traffic_cone'),
   trailSign('trail_sign'),
   trollFace('troll_face'),
+  tulip('tulip'),
   underConstructionSign('under_construction_sign'),
-
-  /// Figma folds two earlier floats into this one. The flamingo float artwork
-  /// is the one kept.
-  unicornFloat('inflatable_flamingo_pool_float'),
+  unicornFloat('unicorn_float'),
   verified('verified'),
-  videoClapBoard('video_clap_board'),
   videoCamera('video_camera'),
+  videoClapBoard('video_clap_board'),
   vintageTvTestPattern('vintage_tv_test_pattern'),
   vinylRecord('vinyl_record'),
   wavePool('wave_pool'),
   x('x');
 
-  const DivineStickerName(this.fileName);
+  const DivineStickerName(this.fileName, {String? figmaName})
+    : _figmaName = figmaName,
+      isLegacySvg = false;
 
-  /// The file name (without extension) in the assets/stickers directory.
+  /// A variant with no Figma counterpart, still drawn from the OpenMoji SVGs.
+  const DivineStickerName.legacySvg(this.fileName)
+    : _figmaName = null,
+      isLegacySvg = true;
+
+  /// The file name, without extension, of this sticker's asset.
   final String fileName;
 
+  /// Whether this variant is a legacy SVG rather than Figma artwork.
+  final bool isLegacySvg;
+
+  final String? _figmaName;
+
+  /// The name of this sticker's component in Figma, or `null` when Figma has
+  /// no counterpart.
+  ///
+  /// Equal to [name] unless the Figma name is not a valid Dart identifier.
+  String? get figmaName => isLegacySvg ? null : _figmaName ?? name;
+
   /// The full asset path for this sticker.
-  String get assetPath => 'assets/stickers/$fileName.svg';
+  String get assetPath => isLegacySvg
+      ? 'assets/stickers/$fileName.svg'
+      : 'assets/divine_stickers/$fileName.png';
 }
 
-/// A sticker widget that renders OpenMoji SVG stickers from the Divine
-/// design system.
+/// A sticker from the Divine design system.
 ///
-/// [DivineSticker] loads an SVG asset by name and renders it at the
-/// specified [size]. Stickers are vector SVGs from the OpenMoji set.
+/// Renders [sticker] inside a [size] by [size] box. The artwork is scaled to
+/// fit with its proportions kept, so a wide or tall sticker is letterboxed
+/// rather than stretched.
 ///
 /// Example usage:
 /// ```dart
@@ -126,10 +219,17 @@ class DivineSticker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SvgPicture.asset(
+    if (sticker.isLegacySvg) {
+      return SvgPicture.asset(sticker.assetPath, width: size, height: size);
+    }
+
+    return Image.asset(
       sticker.assetPath,
       width: size,
       height: size,
+      // Image defaults to scaleDown, which would leave artwork smaller than
+      // the box unscaled. The SVG this replaced always filled its box.
+      fit: BoxFit.contain,
     );
   }
 }
