@@ -669,7 +669,9 @@ jobs:
             exit 1
           fi
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
-          xcrun simctl list devices available | grep "$udid"
+          # Diagnostic only: this is the step's last command, so a no-match
+          # would fail it after the output was already written.
+          xcrun simctl list devices available | grep "$udid" || true
       - name: Run RunnerTests
         working-directory: mobile/ios
         env:
