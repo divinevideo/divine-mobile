@@ -16,6 +16,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -1028,6 +1029,46 @@ void main() {
           expect(find.byType(BrandedLoadingIndicator), findsNothing);
           expect(find.text(l10n.videoDetailLoadError), findsOneWidget);
           expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'shows a lookup error when the replacement client is already ready',
+        (tester) async {
+          final lookup = Completer<VideoRouteLookupResult>();
+          when(() => mockVideosRepository.lookupVideoForRouteId(any()))
+              .thenAnswer((_) => lookup.future);
+          await tester.pumpWidget(buildSubject());
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(VideoDetailScreen)),
+          );
+          final replacement = createMockNostrService();
+          when(() => replacement.isInitialized).thenReturn(true);
+          when(() => replacement.connectedRelayCount).thenReturn(1);
+          // Recovery disposes the old client and closes its relay stream.
+          when(() => mockNostrClient.isInitialized).thenReturn(false);
+          when(() => mockNostrClient.connectedRelayCount).thenReturn(0);
+          when(() => mockNostrClient.relayStatusStream).thenAnswer(
+            (_) => const Stream<Map<String, RelayConnectionStatus>>.empty(),
+          );
+          container.updateOverrides([
+            ...getStandardTestOverrides(
+              mockNostrService: replacement,
+              mockFollowRepository: mockFollowRepository,
+            ),
+            videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              mockBlocklistRepository,
+            ),
+            videosRepositoryProvider.overrideWithValue(mockVideosRepository),
+          ]);
+          expect(container.read(nostrServiceProvider), same(replacement));
+          lookup.completeError(Exception('Old client disposed'));
+          await tester.pump();
+
+          expect(find.byType(BrandedLoadingIndicator), findsNothing);
+          expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+          expect(tester.takeException(), isNull);
         },
       );
 
