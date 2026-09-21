@@ -223,6 +223,16 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         tearDownIfRendering()
     }
 
+    /// Correct only for an engine created with `allowHeadlessExecution: NO`,
+    /// because only then does the controller's dealloc destroy the shell
+    /// (`notifyViewControllerDeallocated`). An engine created with YES keeps
+    /// its shell and just loses its owner; tearing it down here would latch
+    /// a live engine, and `create` would refuse from then on. This app's
+    /// storyboard controller builds its own engine with NO. It would instead
+    /// adopt `FlutterAppDelegate`'s launch engine, created with YES, if
+    /// anything registered plugins through the app delegate, as
+    /// `GeneratedPluginRegistrant.register(with: self)` does. `FlutterEngine`
+    /// exposes no getter for the flag, so this cannot check it at runtime.
     @objc private func flutterViewControllerWillDealloc(_ note: Notification) {
         guard let renderingViewControllerId,
               let controller = note.object as AnyObject?,
