@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 
 /// Feed mode picker overlay that displays the current feed mode
 /// and allows users to switch between modes via a bottom sheet.
@@ -61,6 +62,8 @@ class FeedModeSwitch extends StatelessWidget {
                       buildWhen: (prev, curr) =>
                           prev.source != curr.source ||
                           prev.subscribedLists != curr.subscribedLists ||
+                          prev.followedPeopleLists !=
+                              curr.followedPeopleLists ||
                           prev.currentIndex != curr.currentIndex ||
                           prev.videos != curr.videos,
                       builder: (context, state) {
@@ -113,6 +116,12 @@ class FeedModeSwitch extends StatelessWidget {
             value: 'list:${list.id}',
           ),
         ),
+        ...state.followedPeopleLists.map(
+          (followed) => VineBottomSheetSelectionOptionData(
+            label: followed.list.name,
+            value: _sourceForPeopleList(followed).persistenceValue,
+          ),
+        ),
       ],
     );
 
@@ -142,9 +151,20 @@ VideoFeedSource _sourceForSelection(String selected, VideoFeedBlocState state) {
     final list = state.subscribedLists.firstWhere((list) => list.id == listId);
     return VideoFeedSource.subscribedList(listId: list.id, listName: list.name);
   }
+  for (final followed in state.followedPeopleLists) {
+    final source = _sourceForPeopleList(followed);
+    if (source.persistenceValue == selected) return source;
+  }
 
   return const VideoFeedSource.forYou();
 }
+
+VideoFeedSource _sourceForPeopleList(PeopleListSearchResult followed) =>
+    VideoFeedSource.peopleList(
+      listId: followed.list.id,
+      listName: followed.list.name,
+      listOwnerPubkey: followed.ownerPubkey,
+    );
 
 String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) {
   final source = state.source;
@@ -155,6 +175,9 @@ String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) {
     VideoFeedSourceType.classic => l10n.feedModeClassics,
     VideoFeedSourceType.subscribedList =>
       _listNameForSource(state) ?? source.listName ?? source.labelFallback,
+    // The followed copy first: it follows a rename, the source does not.
+    VideoFeedSourceType.peopleList =>
+      state.selectedPeopleList?.list.name ?? source.labelFallback,
   };
 }
 

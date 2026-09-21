@@ -79,6 +79,7 @@ class VideoFeedPage extends ConsumerWidget {
     final videosRepository = ref.watch(videosRepositoryProvider);
     final followRepository = ref.watch(followRepositoryProvider);
     final curatedListRepository = ref.watch(curatedListRepositoryProvider);
+    final peopleListsRepository = ref.watch(peopleListsRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
     final authService = ref.watch(authServiceProvider);
     final sharedPreferences = ref.watch(sharedPreferencesProvider);
@@ -99,6 +100,11 @@ class VideoFeedPage extends ConsumerWidget {
                 videosRepository: videosRepository,
                 followRepository: followRepository,
                 curatedListRepository: curatedListRepository,
+                // Only read for the viewer's follows. Those live in the
+                // app-wide follow store and the shared local cache, not in
+                // the instance, so this one still hears every follow after
+                // the provider rebuilds on an identity change.
+                peopleListsRepository: peopleListsRepository,
                 profileRepository: profileRepository,
                 contentBlocklistRepository: blocklistRepository,
                 userPubkey: authService.currentPublicKeyHex,
