@@ -556,7 +556,7 @@ void main() {
       );
 
       test(
-        'still reports signingFailed when a ready signer returns null',
+        'drops without alarm when a ready signer returns no event',
         () async {
           final drops =
               <({ViewEventDropReason reason, String videoId, String method})>[];
@@ -587,6 +587,11 @@ void main() {
             endSeconds: 5,
           );
 
+          // The factory collapses a Keycast RPC timeout, a 5xx, a dropped
+          // connection and a declined NIP-55 prompt into the same null, and
+          // has already reported any signer invariant itself. The drop is
+          // still recorded, so the queue retries it, but it must not reach
+          // Crashlytics as a defect of this publisher (#9340).
           expect(result, isFalse);
           expect(drops, [
             (
@@ -595,7 +600,7 @@ void main() {
               method: 'publishViewEvent',
             ),
           ]);
-          expect(drops.single.reason.isStructural, isTrue);
+          expect(drops.single.reason.isStructural, isFalse);
           verifyNever(() => mockNostr.publishEvent(any()));
         },
       );

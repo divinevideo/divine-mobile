@@ -475,28 +475,129 @@ void main() {
         );
       });
 
-      test('returns null when a remote signature fails verification', () async {
-        final remoteSigner = _MockNostrSigner();
-        // Correct pubkey but no signature — remote identities must fail the
-        // schnorr verification (local identities skip it).
-        when(
-          () => remoteSigner.signEvent(any()),
-        ).thenAnswer((_) async => Event(testPublicKey, 1, [], 'unsigned'));
-        final identity = BunkerNostrIdentity(
-          pubkey: testPublicKey,
-          remoteSigner: remoteSigner,
-        );
+      test(
+        'collapses a remote signer network failure into null without '
+        'reporting',
+        () async {
+          // A Keycast RPC timeout is the decision-matrix network row, not an
+          // invariant. The null is the caller's only signal, so callers must
+          // not file it as a defect of their own (#9340).
+          final remoteSigner = _MockNostrSigner();
+          when(() => remoteSigner.signEvent(any())).thenThrow(
+            RpcTimeoutException('sign_event timed out', method: 'sign_event'),
+          );
+          final identity = BunkerNostrIdentity(
+            pubkey: testPublicKey,
+            remoteSigner: remoteSigner,
+          );
 
-        final event = await factory.createAndSignEvent(
-          identity: identity,
-          authSource: AuthenticationSource.bunker,
-          kind: 1,
-          content: 'unsigned',
-        );
+          final event = await factory.createAndSignEvent(
+            identity: identity,
+            authSource: AuthenticationSource.divineOAuth,
+            kind: 22236,
+            content: '',
+          );
 
-        expect(event, isNull);
-        expect(reported, isEmpty);
-      });
+          expect(event, isNull);
+          expect(reported, isEmpty);
+        },
+      );
+
+      test(
+        'returns null and reports when a remote signature fails verification',
+        () async {
+          final remoteSigner = _MockNostrSigner();
+          // Correct pubkey but no signature — remote identities must fail the
+          // schnorr verification (local identities skip it).
+          when(
+            () => remoteSigner.signEvent(any()),
+          ).thenAnswer((_) async => Event(testPublicKey, 1, [], 'unsigned'));
+          final identity = BunkerNostrIdentity(
+            pubkey: testPublicKey,
+            remoteSigner: remoteSigner,
+          );
+
+          final event = await factory.createAndSignEvent(
+            identity: identity,
+            authSource: AuthenticationSource.bunker,
+            kind: 1,
+            content: 'unsigned',
+          );
+
+          // The signer answered for the right account with an event it did
+          // not sign correctly: a broken signer, reported once here so that
+          // the null the caller sees needs no report of its own (#9340).
+          expect(event, isNull);
+          expect(reported, hasLength(1));
+          expect(
+            reported.single.error,
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<EventSignerInvalidEventException>()
+                  .having((e) => e.check, 'check', SignedEventCheck.signature)
+                  .having((e) => e.kind, 'kind', 1),
+            ),
+          );
+          expect(
+            reported.single.reason,
+            equals('Signer returned an event that failed the signature check'),
+          );
+          expect(
+            reported.single.logMessage,
+            equals(
+              'Signer signature validation failed during createAndSignEvent',
+            ),
+          );
+        },
+      );
+
+      test(
+        'returns null and reports when a signed event id does not match its '
+        'hash',
+        () async {
+          final remoteSigner = _MockNostrSigner();
+          // A real signature over the id, then tampered content: isSigned
+          // still holds, so only the structural id-equals-hash check fails.
+          when(() => remoteSigner.signEvent(any())).thenAnswer((inv) async {
+            final event = inv.positionalArguments.first as Event;
+            final signed = await LocalNostrSigner(
+              testPrivateKey,
+            ).signEvent(event);
+            return signed!..content = 'tampered after signing';
+          });
+          final identity = BunkerNostrIdentity(
+            pubkey: testPublicKey,
+            remoteSigner: remoteSigner,
+          );
+
+          final event = await factory.createAndSignEvent(
+            identity: identity,
+            authSource: AuthenticationSource.bunker,
+            kind: 1,
+            content: 'original',
+          );
+
+          expect(event, isNull);
+          expect(reported, hasLength(1));
+          expect(
+            reported.single.error,
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<EventSignerInvalidEventException>().having(
+                (e) => e.check,
+                'check',
+                SignedEventCheck.structure,
+              ),
+            ),
+          );
+          expect(
+            reported.single.reason,
+            equals('Signer returned an event that failed the structure check'),
+          );
+        },
+      );
 
       test(
         'skips the schnorr re-verification for local-key identities',

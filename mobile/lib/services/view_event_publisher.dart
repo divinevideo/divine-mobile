@@ -150,8 +150,7 @@ class ViewEventPublisher {
 
       // Explicit publish-readiness gate. `isAuthenticated` only says the
       // pubkey is known: a Keycast identity with no local key is authenticated
-      // well before its signer works, and signing in that window returns null,
-      // which used to be filed as a structural `signingFailed` invariant
+      // well before its signer works, and signing in that window returns null
       // (#7505). Sampled at the moment of use, per the getter's contract.
       //
       // Deliberately below the addressable check: a missing `d` tag is a
@@ -212,6 +211,9 @@ class ViewEventPublisher {
         tags: tags,
       );
 
+      // Null carries no cause: the factory has already reported any signer
+      // invariant behind it, and the rest is a remote signer that could not
+      // be reached, which the durable queue retries (#9340).
       if (event == null) {
         return _drop(ViewEventDropReason.signingFailed, video.id, method);
       }

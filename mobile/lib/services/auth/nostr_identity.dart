@@ -61,6 +61,31 @@ sealed class NostrIdentity implements NostrSigner {
   bool get signsWithLocalKey;
 }
 
+/// A Keycast RPC fallback returned an event without a valid signature.
+///
+/// The fallback is reached only after local signing failed. The invalid event
+/// is rejected and the nullable [NostrSigner.signEvent] contract is preserved,
+/// but this remains a signer invariant that callers must be able to report.
+class KeycastInvalidRpcFallbackSignatureException implements Exception {
+  const KeycastInvalidRpcFallbackSignatureException({required this.kind});
+
+  /// The kind of the rejected event.
+  final int kind;
+
+  @override
+  String toString() =>
+      'KeycastInvalidRpcFallbackSignatureException: RPC fallback returned '
+      'an invalid signature for kind $kind';
+}
+
+/// Reporting port for a rejected Keycast RPC fallback signature.
+///
+/// Implementations must not throw; rejection still returns null to callers.
+typedef KeycastInvalidRpcFallbackReporter = void Function(
+  KeycastInvalidRpcFallbackSignatureException error,
+  StackTrace stackTrace,
+);
+
 /// Identity backed by a local [SecureKeyContainer] with a private key.
 class LocalNostrIdentity extends NostrIdentity implements IsolateDecryptSigner {
   LocalNostrIdentity({required SecureKeyContainer keyContainer})
@@ -228,11 +253,14 @@ class KeycastNostrIdentity extends NostrIdentity
     required this.pubkey,
     required NostrSigner rpcSigner,
     LocalKeySigner? localSigner,
+    KeycastInvalidRpcFallbackReporter? invalidRpcFallbackReporter,
   }) : _rpcSigner = rpcSigner,
-       _localSigner = localSigner;
+       _localSigner = localSigner,
+       _invalidRpcFallbackReporter = invalidRpcFallbackReporter;
 
   final NostrSigner _rpcSigner;
   final LocalKeySigner? _localSigner;
+  final KeycastInvalidRpcFallbackReporter? _invalidRpcFallbackReporter;
 
   @override
   final String pubkey;
@@ -259,6 +287,10 @@ class KeycastNostrIdentity extends NostrIdentity
           'Keycast RPC fallback returned an invalid signature; rejecting',
           name: 'KeycastNostrIdentity',
           category: LogCategory.auth,
+        );
+        _invalidRpcFallbackReporter?.call(
+          KeycastInvalidRpcFallbackSignatureException(kind: event.kind),
+          StackTrace.current,
         );
         return null;
       }
@@ -537,10 +569,8 @@ class AmberNostrIdentity extends NostrIdentity {
 /// [NostrSigner]; the local container is pub-key-only, so
 /// [signCanonicalPayload] is unsupported.
 class Nip07NostrIdentity extends NostrIdentity {
-  Nip07NostrIdentity({
-    required this.pubkey,
-    required NostrSigner nip07Signer,
-  }) : _nip07Signer = nip07Signer;
+  Nip07NostrIdentity({required this.pubkey, required NostrSigner nip07Signer})
+    : _nip07Signer = nip07Signer;
 
   final NostrSigner _nip07Signer;
 
