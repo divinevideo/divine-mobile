@@ -542,3 +542,44 @@ preflight_image_staleness() {
     } >&2
     return 0
 }
+
+# Fails when an image override in .env names a locally-built tag that no longer
+# exists. `build_funnelcake.sh` prints FUNNELCAKE_*_IMAGE=...:local lines to add
+# to .env, and they persist there; once the matching image is pruned, compose
+# aborts partway through startup with a bare
+# `No such image: funnelcake-migrate:local`, which names neither the override
+# nor the script that rebuilds it.
+preflight_pinned_images() {
+    local script_dir="$1"
+    local var value missing=""
+
+    for var in FUNNELCAKE_MIGRATE_IMAGE FUNNELCAKE_RELAY_IMAGE \
+               FUNNELCAKE_API_IMAGE KEYCAST_IMAGE; do
+        value="${!var:-}"
+        [[ -n "$value" ]] || continue
+        # Only locally-built tags are checked: a registry reference is the
+        # daemon's job to fetch, and failing here would break an offline-capable
+        # pull that compose would otherwise satisfy from its own cache.
+        [[ "$value" == *:local || "$value" == *:local-* ]] || continue
+        if ! docker image inspect "$value" >/dev/null 2>&1; then
+            missing="${missing}  ${var}=${value}
+"
+        fi
+    done
+
+    [[ -n "$missing" ]] || return 0
+
+    {
+        echo ""
+        echo "ERROR: ${script_dir}/.env pins locally-built image(s) that do not exist:"
+        echo ""
+        printf '%s' "$missing"
+        echo ""
+        echo "Rebuild them, or drop the override lines from ${script_dir}/.env to"
+        echo "fall back to the published images:"
+        echo ""
+        echo "    bash ${script_dir}/build_funnelcake.sh"
+        echo ""
+    } >&2
+    return 1
+}

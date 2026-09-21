@@ -127,6 +127,13 @@ stub_rc() {
 }
 
 case "${1:-}" in
+  image)
+    # `docker image inspect <ref>`: present only when the case listed it.
+    if [[ "${2:-}" == inspect ]]; then
+      grep -qxF "${3:-}" "${STUB_FIXTURES}/images.txt" 2>/dev/null || exit 1
+      exit 0
+    fi
+    ;;
   ps)
     # The daemon liveness probe: `docker ps --format '{{.Names}}'`.
     if [[ "${3:-}" == '{{.Names}}' ]]; then
@@ -335,6 +342,20 @@ run_in_sandbox() {
 run_preflight() {
     set +e
     run_in_sandbox 'preflight_ports "$2"'
+    last_status=$?
+    set -e
+}
+
+# run_pinned_images [VAR=value]...
+# sandbox_env runs `env -i`, so an override only reaches the function if the
+# snippet exports it itself.
+run_pinned_images() {
+    local exports="" assignment
+    for assignment in "$@"; do
+        exports="${exports}export ${assignment}; "
+    done
+    set +e
+    run_in_sandbox "${exports}"'preflight_pinned_images "$(dirname "$1")"'
     last_status=$?
     set -e
 }
@@ -742,6 +763,10 @@ FUNNELCAKE_MIGRATE_IMAGE=funnelcake-migrate:local
 FUNNELCAKE_PULL_POLICY=never
 STACK_STALE_AFTER_DAYS=9999
 ENV
+# This case is about .env being loaded, so the pinned images have to look
+# built — preflight_pinned_images rejects an override whose image is gone.
+printf '%s\n' funnelcake-relay:local funnelcake-api:local \
+    funnelcake-migrate:local >"${FIXTURES}/images.txt"
 run_up_sh
 rm -f "$ENV_FILE"
 
@@ -821,6 +846,47 @@ run_staleness
 
 assert_status 0 "$last_status" "an unreachable registry must not block the stack"
 assert_stderr_lacks 'stale' "nothing is known, so nothing should be claimed"
+
+
+# --- A pinned *:local image that no longer exists is named -----------------
+# The bug: build_funnelcake.sh's override lines persist in .env, and once the
+# image is pruned compose aborts mid-startup with a bare "No such image" that
+# names neither the override nor the script that rebuilds it.
+
+reset_fixtures
+: >"${FIXTURES}/images.txt"
+run_pinned_images FUNNELCAKE_MIGRATE_IMAGE=funnelcake-migrate:local
+
+assert_status 1 "$last_status" "a missing *:local pin should fail pre-flight"
+assert_stderr_contains 'FUNNELCAKE_MIGRATE_IMAGE=funnelcake-migrate:local' "the override should be named"
+assert_stderr_contains 'build_funnelcake.sh' "the rebuild script should be named"
+assert_stderr_lacks 'invalid option' "no bash-4-only syntax should reach stderr"
+
+# --- A pinned *:local image that exists passes -----------------------------
+
+reset_fixtures
+echo 'funnelcake-migrate:local' >"${FIXTURES}/images.txt"
+run_pinned_images FUNNELCAKE_MIGRATE_IMAGE=funnelcake-migrate:local
+
+assert_status 0 "$last_status" "an existing *:local pin should pass pre-flight"
+
+# --- A registry reference is the daemon's job, not ours --------------------
+# Failing here would break an offline `up` that compose could satisfy from its
+# own cache, so only locally built tags are checked.
+
+reset_fixtures
+: >"${FIXTURES}/images.txt"
+run_pinned_images FUNNELCAKE_API_IMAGE=ghcr.io/divinevideo/funnelcake-api:latest
+
+assert_status 0 "$last_status" "a registry reference should not be checked locally"
+
+# --- No overrides at all is the common case and must pass ------------------
+
+reset_fixtures
+: >"${FIXTURES}/images.txt"
+run_pinned_images
+
+assert_status 0 "$last_status" "no image overrides should pass pre-flight"
 
 # ----------------------------------------------------------------------------
 

@@ -46,6 +46,12 @@ if ! preflight_ports "$COMPOSE_FILE"; then
   exit 1
 fi
 
+# A stale *:local override in .env otherwise surfaces as a bare
+# "No such image" partway through startup.
+if ! preflight_pinned_images "$SCRIPT_DIR"; then
+  exit 1
+fi
+
 # Advisory only — an old image may not support the features being tested.
 preflight_image_staleness "$SCRIPT_DIR"
 
