@@ -16,7 +16,7 @@ import 'package:path/path.dart' as p;
 const String preCipherMigrationBackupSuffix = '.pre_cipher_migration_backup';
 
 /// Every suffix under which a recovery sets the shared database aside instead
-/// of deleting it, newest-first retention applies to each independently.
+/// of deleting it; newest-first retention applies to each independently.
 ///
 /// Each entry is a whole database: the rename carries the rollback journal,
 /// WAL and SHM with it, and nothing is ever overwritten. Keeping the bytes is
@@ -46,8 +46,9 @@ const String legacyMigrationBackupSuffix = '.pre_legacy_migration_backup';
 /// data, so neither could be dropped.
 const String legacyConflictBackupSuffix = '.legacy_conflict_backup';
 
-/// How long a preserved copy is kept after it stops being the newest of its
-/// kind.
+/// How long the newest preserved copy of each kind is kept, measured from the
+/// stamp in its name. A copy superseded by a newer one of its kind is deleted
+/// at once, whatever its age; the window only ever applies to the survivor.
 ///
 /// Long enough to cover a monthly-active user noticing their local-only data
 /// is gone and reporting it; short enough that a full-size database is not
