@@ -156,6 +156,25 @@ void main() {
           equals('/profile/$npub/7'),
         );
       });
+
+      test('keeps a punctuated segment in one path segment', () {
+        // The link's segment is arbitrary UTF-8 once decoded. Raw, the `?`
+        // ends the path and the location names a different profile.
+        expect(
+          universalLinkToRouterPath(
+            Uri.parse('https://divine.video/profile/a%3Fb%3Dc'),
+          ),
+          equals('/profile/a%3Fb%3Dc'),
+        );
+        expect(
+          Uri.parse(
+            universalLinkToRouterPath(
+              Uri.parse('https://divine.video/profile/a%2Fb'),
+            )!,
+          ).pathSegments,
+          equals(['profile', 'a/b']),
+        );
+      });
     });
 
     group('list', () {

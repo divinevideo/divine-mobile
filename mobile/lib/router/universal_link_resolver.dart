@@ -31,8 +31,13 @@ String? _pushRouteForDeepLink(DeepLink deepLink) {
       if (videoRef == null || videoRef.isEmpty) return null;
       return VideoDetailScreen.pathForId(videoRef);
     case DeepLinkType.profile:
-      final npub = deepLink.npub;
-      if (npub == null || npub.isEmpty) return null;
+      final rawNpub = deepLink.npub;
+      if (rawNpub == null || rawNpub.isEmpty) return null;
+      // The segment arrives already decoded from the link, so it is arbitrary
+      // UTF-8. These builders take a pre-encoded value — page_context_provider
+      // encodes before calling them the same way — and raw, a `?` or `/` here
+      // binds npub to a prefix and names a different profile.
+      final npub = Uri.encodeComponent(rawNpub);
       final index = deepLink.index;
       if (index != null) {
         return ProfileScreenRouter.pathForIndex(npub, index);
