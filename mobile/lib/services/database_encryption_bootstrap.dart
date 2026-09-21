@@ -661,9 +661,11 @@ Future<void> resetEncryptedDatabaseCache({
     // `_migrateLegacyCipherKey`: there the key is already safe in the current
     // slot, so a leftover copy is harmless, while here a leftover copy is the
     // whole problem. Deleting the current slot first and then throwing leaves
-    // the pre-#9343 copy as the only one, and the next launch migrates it
-    // straight back — the reset rotates nothing while reporting that it
-    // failed. This order makes a throw leave both copies in place instead.
+    // the pre-#9343 copy as the only survivor, and the next launch migrates
+    // it straight back — the reset rotates nothing while reporting that it
+    // failed. This order cannot reach that state: a throw leaves either both
+    // copies or only the current one, and the resolver reads the current slot
+    // first, so neither survivor is a stale copy waiting to be migrated back.
     await legacySecureStorage.delete(key: legacyDbCipherKeyStorageKey);
     await secureStorage.delete(key: dbCipherKeyStorageKey);
   }
