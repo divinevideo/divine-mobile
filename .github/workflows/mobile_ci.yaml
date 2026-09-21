@@ -635,6 +635,19 @@ jobs:
           cache: true
       - name: Install dependencies
         run: flutter pub get
+      - name: Restore dart hook downloads
+        # package:sqlite3's hook fetches the simulator dylib from GitHub
+        # Releases in one unretried GET during the Xcode build phase, so a
+        # dropped connection costs the whole build (#7197; run 35612736422
+        # failed on a hash mismatch this way). A hit here means no download
+        # at all. The Linux jobs share one key per OS; this is the macOS
+        # counterpart, saved at the end of a green run.
+        uses: actions/cache/restore@v6
+        with:
+          path: mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-dart-hooks-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dart-hooks-
       - name: Generate the iOS project and install pods
         # --config-only writes the plugin Swift package and runs pod install
         # without compiling. Flutter raises the generated package's deployment
@@ -683,18 +696,41 @@ jobs:
           # --config-only already resolved the Swift package graph, so point
           # xcodebuild at the same clone instead of re-resolving into
           # DerivedData.
+          #
+          # One retry, and only when the Flutter build phase died fetching a
+          # native asset (the cache above missed and GitHub Releases dropped
+          # the GET). The hook re-hashes the file it left behind and fetches
+          # again, and DerivedData makes the second build incremental. A test
+          # failure or any other build error is never retried.
           set +e
-          xcodebuild test \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
-            -only-testing:RunnerTests \
-            -resultBundlePath "${RUNNER_TEMP}/RunnerTests.xcresult" \
-            -clonedSourcePackagesDirPath "${GITHUB_WORKSPACE}/mobile/build/ios/SourcePackages" \
-            CODE_SIGNING_ALLOWED=NO \
-            2>&1 | tee "${RUNNER_TEMP}/xcodebuild-test.log" \
-            | grep -E --line-buffered '^(Test [Cc]ase|Test [Ss]uite|Testing failed|The following build commands failed|\*\* (TEST|BUILD))|error:'
-          exit "${PIPESTATUS[0]}"
+          for attempt in 1 2; do
+            rm -rf "${RUNNER_TEMP}/RunnerTests.xcresult"
+            xcodebuild test \
+              -workspace Runner.xcworkspace \
+              -scheme Runner \
+              -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
+              -only-testing:RunnerTests \
+              -resultBundlePath "${RUNNER_TEMP}/RunnerTests.xcresult" \
+              -clonedSourcePackagesDirPath "${GITHUB_WORKSPACE}/mobile/build/ios/SourcePackages" \
+              CODE_SIGNING_ALLOWED=NO \
+              2>&1 | tee "${RUNNER_TEMP}/xcodebuild-test-${attempt}.log" \
+              | grep -E --line-buffered '^(Test [Cc]ase|Test [Ss]uite|Testing failed|The following build commands failed|\*\* (TEST|BUILD))|error:'
+            status="${PIPESTATUS[0]}"
+            if [ "$status" -eq 0 ] || [ "$attempt" -eq 2 ] \
+              || ! grep -q 'Building native assets failed' "${RUNNER_TEMP}/xcodebuild-test-${attempt}.log"; then
+              break
+            fi
+            echo "::warning::Native-asset download failed during the build; retrying xcodebuild once"
+          done
+          exit "$status"
+      - name: Save dart hook downloads
+        # A pull request's save serves that PR's later runs; a push to main
+        # serves every PR. The merge queue can restore but not save (#7197).
+        if: ${{ github.event_name != 'merge_group' }}
+        uses: actions/cache/save@v6
+        with:
+          path: mobile/.dart_tool/hooks_runner/shared
+          key: ${{ runner.os }}-dart-hooks-${{ hashFiles('mobile/pubspec.lock') }}
       - name: Upload test results
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
@@ -702,7 +738,7 @@ jobs:
           name: runner-tests-results
           path: |
             ${{ runner.temp }}/RunnerTests.xcresult
-            ${{ runner.temp }}/xcodebuild-test.log
+            ${{ runner.temp }}/xcodebuild-test-*.log
           if-no-files-found: ignore
 
   mobile-ci:
