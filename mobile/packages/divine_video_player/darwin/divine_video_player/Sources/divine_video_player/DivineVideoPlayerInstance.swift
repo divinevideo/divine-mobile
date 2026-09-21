@@ -1724,12 +1724,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var isBackgrounded = false
 
     func onAppBackgrounded() {
-        // Stop the texture frame driver first. A display-link or
-        // AVFoundation-notification frame delivered during the
-        // resign-active → suspend window dereferences a torn-down Flutter
-        // shell and crashes. Unconditional: the driver polls even while the
-        // player is paused, and a paused-player seek/forceRefresh can still
-        // push a frame.
+        // Stop the texture frame driver first: nothing renders while the
+        // app is inactive, so every frame pushed now is wasted work.
+        // Unconditional: the driver polls even while the player is paused,
+        // and a paused-player seek/forceRefresh can still push a frame.
+        // This gate does not protect the engine's shell — a player created
+        // after this point starts with delivery enabled — so the plugin
+        // disposes the engine's players before the shell is destroyed
+        // (#9342).
         textureOutput?.suspendFrameDelivery()
         wasPlayingBeforePause = player?.rate ?? 0 > 0
         if wasPlayingBeforePause {
@@ -1761,7 +1763,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     // MARK: - Dispose
 
-    func dispose() {
+    /// Releases the player. With `engineTearingDown` the owning engine's
+    /// shell is being destroyed (or already is), so nothing here may call
+    /// into it: the texture stays registered — the shell drops the registry
+    /// with itself — and the channel handlers are cleared through the
+    /// messenger's own shell-guarded paths.
+    func dispose(engineTearingDown: Bool = false) {
         diagnosticDisposed = true
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
@@ -1780,7 +1787,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         clearSetClipsTimeout()
         clearBufferingWatchdog(resetReported: true)
         NotificationCenter.default.removeObserver(self)
-        textureOutput?.dispose()
+        textureOutput?.dispose(unregisterTexture: !engineTearingDown)
         textureOutput = nil
         playerLooper = nil
         player?.pause()

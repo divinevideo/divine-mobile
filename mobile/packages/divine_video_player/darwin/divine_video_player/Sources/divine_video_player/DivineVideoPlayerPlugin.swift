@@ -23,6 +23,20 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
 
     private var globalChannel: FlutterMethodChannel?
 
+    /// Identity of the engine this instance serves, keyed by its binary
+    /// messenger (stable across hot restart). Captured at `register`
+    /// because `detachFromEngine(for:)` runs inside the engine's `dealloc`,
+    /// where `registrar.messenger()` resolves through a weak engine
+    /// reference that already reads as nil.
+    private var engineId: ObjectIdentifier?
+
+    /// Set once this engine's shell is gone or about to go. Every path that
+    /// could still reach the engine afterwards checks it: the log sink
+    /// below delivers asynchronously on the main queue, so an entry logged
+    /// during teardown would otherwise land in `sendOnChannel:` after
+    /// `destroyContext` and dereference the null shell.
+    private var isEngineTornDown = false
+
     /// Per-instance forwarder pushing native diagnostics over THIS engine's
     /// global channel. `DivineVideoPlayerLog.shared.sink` is a process-wide
     /// singleton, so a second FlutterEngine (e.g. the FCM background isolate
@@ -32,7 +46,8 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     private lazy var logSink: (String, String, String) -> Void = {
         [weak self] level, message, name in
         DispatchQueue.main.async {
-            self?.globalChannel?.invokeMethod(
+            guard let self, !self.isEngineTornDown else { return }
+            self.globalChannel?.invokeMethod(
                 "onNativeLog",
                 arguments: ["level": level, "message": message, "name": name]
             )
@@ -45,9 +60,8 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
 
     /// Resolves the binary messenger for `registrar`, bridging the iOS
     /// `messenger()` method vs the macOS `messenger` property. Every
-    /// ownership key (`register`, `create`, `detachFromEngine`) derives from
-    /// this single resolution so all three always agree on the engine's
-    /// identity.
+    /// ownership key (`register`, `create`) derives from this single
+    /// resolution so they always agree on the engine's identity.
     private static func messenger(
         for registrar: FlutterPluginRegistrar
     ) -> FlutterBinaryMessenger {
@@ -58,8 +72,18 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         #endif
     }
 
+    /// The engine's identity as the registry records it. `ObjectIdentifier`
+    /// holds no strong reference, so an orphaned record never keeps a
+    /// torn-down messenger alive.
+    private static func engineId(
+        for messenger: FlutterBinaryMessenger
+    ) -> ObjectIdentifier {
+        ObjectIdentifier(messenger as AnyObject)
+    }
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let messenger = Self.messenger(for: registrar)
+        let engineId = Self.engineId(for: messenger)
 
         // Hot restart re-calls register(with:) on the SAME engine without
         // disposing the previous run's players, leaving zombie timers /
@@ -69,7 +93,7 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         // players. The previous-run plugin instance can leak (retain cycle
         // with its channel), so we key on the engine's messenger, which is
         // stable across hot restart, not the plugin instance. See #5397.
-        PlayerRegistry.shared.disposeForEngine(messenger)
+        PlayerRegistry.shared.disposeForEngine(engineId)
 
         let globalChannel = FlutterMethodChannel(
             name: "divine_video_player",
@@ -77,14 +101,32 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         )
         let plugin = DivineVideoPlayerPlugin()
         plugin.registrar = registrar
+        plugin.engineId = engineId
         plugin.globalChannel = globalChannel
         plugin.installLogSink()
+        // Flutter delivers `detachFromEngine(for:)` only to a plugin that
+        // published itself (FlutterPlugin.h). Without this line the hook
+        // below never runs and an engine torn down through view-controller
+        // dealloc leaves its players' display links firing into the freed
+        // shell. See #9342.
+        registrar.publish(plugin)
         registrar.addMethodCallDelegate(plugin, channel: globalChannel)
 
         registrar.register(
             DivineVideoPlayerViewFactory(messenger: messenger),
             withId: "divine_video_player_view"
         )
+
+        #if os(iOS)
+        // Scene disconnect and app termination both make the view
+        // controller destroy the engine's shell (`-[FlutterEngine
+        // destroyContext]`) while the engine object stays alive. These are
+        // the delegate callbacks UIKit sends in the same dispatch, so
+        // `tearDownEngine()` disposes this engine's players before the
+        // shell goes. See #9342.
+        registrar.addSceneDelegate(plugin)
+        registrar.addApplicationDelegate(plugin)
+        #endif
 
         // Observe app lifecycle to pause/resume all players.
         #if os(iOS)
@@ -108,32 +150,56 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         )
     }
 
+    /// Only this engine's players: the registry is process-wide, and after
+    /// a scene reconnect the new engine's plugin instance must not re-arm
+    /// frame delivery on players that belong to the torn-down engine.
     @objc private func appWillResignActive() {
-        PlayerRegistry.shared.forAll { $0.onAppBackgrounded() }
+        guard let engineId else { return }
+        PlayerRegistry.shared.forEngine(engineId) { $0.onAppBackgrounded() }
     }
 
     @objc private func appDidBecomeActive() {
-        PlayerRegistry.shared.forAll { $0.onAppForegrounded() }
+        guard let engineId else { return }
+        PlayerRegistry.shared.forEngine(engineId) { $0.onAppForegrounded() }
     }
 
-    /// Called when this plugin's `FlutterEngine` is torn down — including
-    /// the teardown paths the Dart `dispose`/`disposeAll` channel never
-    /// reaches (OOM reclaim of the `FlutterViewController`, `destroyContext`,
-    /// multi-engine teardown). Without this, a `VideoTextureOutput`'s
-    /// `CADisplayLink` (which strongly retains the output) keeps firing
-    /// `textureFrameAvailable` into the freed engine shell.
-    ///
-    /// Scoped to this engine's own players via `disposeForEngine(_:)` so that
-    /// the FCM background isolate's engine detaching does not dispose the UI
-    /// engine's live players (`PlayerRegistry.shared` is process-wide).
+    /// Runs inside `-[FlutterEngine dealloc]`. It is the backstop for the
+    /// one teardown with no lifecycle callback ahead of it — a
+    /// `FlutterViewController` dealloc, which destroys the shell on its way
+    /// out — and the engine only delivers it because `register` published
+    /// the plugin.
     public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+        tearDownEngine()
+    }
+
+    #if os(iOS)
+    /// `FlutterViewController` answers `UIApplicationWillTerminateNotification`
+    /// with `destroyContext`; the plugin lifecycle delegate hands this to us
+    /// from the same notification.
+    public func applicationWillTerminate(_ application: UIApplication) {
+        tearDownEngine()
+    }
+    #endif
+
+    /// Disposes this engine's players without touching the engine. Called
+    /// once the shell is gone or about to go, from every path that destroys
+    /// it: scene disconnect, app termination, and engine dealloc. Disposal
+    /// here skips `unregisterTexture` and the channel log because both
+    /// dereference the shell exactly like `textureFrameAvailable:`; the
+    /// messenger's handler-clearing paths are shell-guarded by the engine.
+    /// Nothing may run between the shell going and this — UIKit delivers
+    /// the delegate callback and the notification the view controller reacts
+    /// to in one dispatch, so no display-link tick or AVFoundation callback
+    /// can slip in — and after it there is no output left to deliver.
+    private func tearDownEngine() {
+        guard !isEngineTornDown, let engineId else { return }
+        isEngineTornDown = true
+        NotificationCenter.default.removeObserver(self)
         DivineVideoPlayerLog.shared.info(
-            "Engine detaching — disposing this engine's players",
+            "Engine tearing down — disposing this engine's players",
             name: "DivineVideoPlayer.Lifecycle"
         )
-        let messenger = Self.messenger(for: registrar)
-        PlayerRegistry.shared.disposeForEngine(messenger)
-        NotificationCenter.default.removeObserver(self)
+        PlayerRegistry.shared.disposeForEngine(engineId, engineTearingDown: true)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -147,10 +213,14 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
         // args guard to avoid returning FlutterMethodNotImplemented.
         if call.method == "disposeAll" {
             DivineVideoPlayerLog.shared.info(
-                "disposeAll — releasing all players",
+                "disposeAll — releasing this engine's players",
                 name: "DivineVideoPlayer.Lifecycle"
             )
-            PlayerRegistry.shared.disposeAll()
+            // Dart asks for the players of the engine it runs in; another
+            // live engine's players are not its to release.
+            if let engineId {
+                PlayerRegistry.shared.disposeForEngine(engineId)
+            }
             result(nil)
             return
         }
@@ -186,10 +256,14 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
             )
             // Record the owning engine by its binary messenger. The plugin
             // instance whose global channel received this `create` is the
-            // engine the Dart side is talking to, so its detach and its
+            // engine the Dart side is talking to, so its teardown and its
             // hot-restart re-register dispose this player; another live
             // engine's never touches it. See #5397.
-            PlayerRegistry.shared.set(instance, for: id, engine: messenger)
+            PlayerRegistry.shared.set(
+                instance,
+                for: id,
+                engine: Self.engineId(for: messenger)
+            )
 
             let useTexture = args["useTexture"] as? Bool ?? false
             let logTarget = debugLabel.map { "Player \(id) (\($0))" }
@@ -279,16 +353,29 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
     }
 }
 
+#if os(iOS)
+extension DivineVideoPlayerPlugin: FlutterSceneLifeCycleDelegate {
+    /// UIKit disconnects the scene when the user swipes the app away in the
+    /// switcher, or to reclaim a backgrounded app's memory; the process
+    /// survives either. `FlutterViewController` answers the matching
+    /// `UISceneDidDisconnectNotification` with `destroyContext`.
+    public func sceneDidDisconnect(_ scene: UIScene) {
+        tearDownEngine()
+    }
+}
+#endif
+
 /// Global registry so that ``DivineVideoPlayerViewFactory`` can find
 /// instances created during the `create` method call.
 ///
 /// `shared` is process-wide and outlives any single `FlutterEngine`. Each
 /// player records the engine that created it — keyed by the engine's binary
-/// messenger identity — so a teardown or hot-restart of one engine disposes
-/// only its own players via `disposeForEngine(_:)`. A blanket `disposeAll()`
-/// on detach or register would otherwise free the UI engine's live players
-/// when the FCM background isolate's engine detaches or registers.
-/// Main-thread only, like all plugin entry points.
+/// messenger identity — so every operation a plugin instance performs
+/// (teardown, hot-restart re-register, Dart's `disposeAll`, the app
+/// lifecycle notifications) reaches only that engine's players. A blanket
+/// sweep would otherwise free — or re-arm — the players of another engine:
+/// the FCM background isolate's, or the torn-down engine's after a scene
+/// reconnect. Main-thread only, like all plugin entry points.
 final class PlayerRegistry {
     static let shared = PlayerRegistry()
     private var players: [Int: DivineVideoPlayerInstance] = [:]
@@ -305,11 +392,11 @@ final class PlayerRegistry {
     func set(
         _ instance: DivineVideoPlayerInstance,
         for id: Int,
-        engine messenger: FlutterBinaryMessenger
+        engine engineId: ObjectIdentifier
     ) {
         players[id] = instance
         PlaybackDiagnostics.shared.track(instance)
-        engines[id] = ObjectIdentifier(messenger as AnyObject)
+        engines[id] = engineId
     }
     @discardableResult
     func remove(_ id: Int) -> DivineVideoPlayerInstance? {
@@ -317,27 +404,33 @@ final class PlayerRegistry {
         let instance = players.removeValue(forKey: id)
         return instance
     }
-    func disposeAll() {
-        players.values.forEach { $0.dispose() }
-        players.removeAll()
-        engines.removeAll()
-    }
 
     /// Disposes only the players created by the engine identified by
-    /// `messenger` (one `FlutterEngine`), leaving every other engine's
-    /// players running. Called on engine detach and at hot-restart register
-    /// so a torn-down or restarted engine cannot leave a zombie
-    /// `CADisplayLink` firing `textureFrameAvailable` into its freed shell —
-    /// without disposing a second live engine's players.
-    func disposeForEngine(_ messenger: FlutterBinaryMessenger) {
-        let engineId = ObjectIdentifier(messenger as AnyObject)
-        let ownedIds = engines.compactMap { $0.value == engineId ? $0.key : nil }
-        for id in ownedIds {
-            remove(id)?.dispose()
+    /// `engineId` (one `FlutterEngine`), leaving every other engine's
+    /// players running. With `engineTearingDown` the engine's shell is being
+    /// destroyed, so the players are released without calling into it.
+    func disposeForEngine(
+        _ engineId: ObjectIdentifier,
+        engineTearingDown: Bool = false
+    ) {
+        for id in ownedIds(of: engineId) {
+            remove(id)?.dispose(engineTearingDown: engineTearingDown)
         }
     }
-    func forAll(_ action: (DivineVideoPlayerInstance) -> Void) {
-        players.values.forEach(action)
+
+    func forEngine(
+        _ engineId: ObjectIdentifier,
+        _ action: (DivineVideoPlayerInstance) -> Void
+    ) {
+        for id in ownedIds(of: engineId) {
+            if let instance = players[id] {
+                action(instance)
+            }
+        }
+    }
+
+    private func ownedIds(of engineId: ObjectIdentifier) -> [Int] {
+        engines.compactMap { $0.value == engineId ? $0.key : nil }
     }
 
     func diagnostics() -> [String: Any] {

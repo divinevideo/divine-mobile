@@ -111,11 +111,15 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     /// Gates every path that calls `registry.textureFrameAvailable`.
     /// Flipped to `false` while the app is backgrounded (and on
     /// `dispose`) so the display-link / AVFoundation-notification / preroll
-    /// paths stop pushing frames into the Flutter engine during the
-    /// resign-active → suspend window. Delivering a frame in that window
-    /// dereferences a torn-down `Shell` inside
-    /// `-[FlutterEngine textureFrameAvailable:]` and crashes with
-    /// EXC_BAD_ACCESS. Read/written on the main thread only.
+    /// paths stop pushing frames the engine cannot render anyway.
+    ///
+    /// This is not what keeps the engine's shell safe: the shell is
+    /// destroyed by `-[FlutterEngine destroyContext]`, which the view
+    /// controller runs on scene disconnect and app termination while this
+    /// output — and a player created after the last resign-active — can
+    /// still be delivering. `DivineVideoPlayerPlugin` disposes every output
+    /// of that engine from the matching lifecycle hooks before the shell
+    /// goes (#9342). Read/written on the main thread only.
     private var isFrameDeliveryEnabled = true
 
     /// Set once `dispose()` has run. Guards `resumeFrameDelivery()` so a
@@ -391,13 +395,23 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     }
 
     /// Cleans up the frame driver and unregisters the texture.
-    func dispose() {
+    ///
+    /// Pass `unregisterTexture: false` when the owning engine is tearing
+    /// down its shell (scene disconnect, app termination, view-controller
+    /// dealloc). `-[FlutterEngine unregisterTexture:]` dereferences the
+    /// shell exactly like `textureFrameAvailable:` does, so calling it on
+    /// that path is the same EXC_BAD_ACCESS this class exists to prevent.
+    /// The shell owns the texture registry and drops the entry with it, so
+    /// nothing leaks by skipping the call.
+    func dispose(unregisterTexture: Bool = true) {
         isDisposed = true
         isFrameDeliveryEnabled = false
         stopFrameDriver()
         itemStatusObservation?.invalidate()
         itemStatusObservation = nil
-        registry.unregisterTexture(textureId)
+        if unregisterTexture {
+            registry.unregisterTexture(textureId)
+        }
         warmOutputs.removeAll()
         videoOutput = nil
         latestPixelBuffer = nil

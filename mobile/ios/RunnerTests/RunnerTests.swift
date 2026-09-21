@@ -2,6 +2,7 @@ import XCTest
 import WebKit
 import background_uploader
 import divine_camera
+import divine_video_player
 import Flutter
 import LibProofMode
 import ObjectivePGP
@@ -339,12 +340,27 @@ final class LibProofModeNetworkFieldsTests: XCTestCase {
   }
 }
 
+/// Records what the plugin asks of its engine's texture registry, so a test
+/// can assert what reaches the engine — and, on the teardown path, what must
+/// not: `-[FlutterEngine unregisterTexture:]` dereferences the shell exactly
+/// like `textureFrameAvailable:` does.
 private final class FakeTextureRegistry: NSObject, FlutterTextureRegistry {
-  func register(_ texture: FlutterTexture) -> Int64 { 0 }
+  private var nextId: Int64 = 1
+  private(set) var registered: [Int64] = []
+  private(set) var unregistered: [Int64] = []
+
+  func register(_ texture: FlutterTexture) -> Int64 {
+    let id = nextId
+    nextId += 1
+    registered.append(id)
+    return id
+  }
 
   func textureFrameAvailable(_ textureId: Int64) {}
 
-  func unregisterTexture(_ textureId: Int64) {}
+  func unregisterTexture(_ textureId: Int64) {
+    unregistered.append(textureId)
+  }
 }
 
 /// Records every send, so a test can prove a teardown path never talks to
@@ -384,9 +400,10 @@ private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
   static let pluginKey = "BackgroundUploaderPlugin"
 
   let fakeMessenger = FakeBinaryMessenger()
-  private let fakeTextures = FakeTextureRegistry()
+  let fakeTextures = FakeTextureRegistry()
   private(set) var published: NSObject?
   private(set) var methodCallDelegates: [AnyObject] = []
+  private(set) var sceneDelegates: [AnyObject] = []
   private(set) var applicationDelegates: [AnyObject] = []
   private(set) var messengerResolutions = 0
 
@@ -417,7 +434,9 @@ private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
     applicationDelegates.append(delegate)
   }
 
-  func addSceneDelegate(_ delegate: FlutterSceneLifeCycleDelegate) {}
+  func addSceneDelegate(_ delegate: FlutterSceneLifeCycleDelegate) {
+    sceneDelegates.append(delegate)
+  }
 
   func lookupKey(forAsset asset: String) -> String { asset }
 
@@ -555,5 +574,166 @@ final class BackgroundUploaderEngineTeardownTests: XCTestCase {
       registrar.fakeMessenger.sentChannels, [],
       "detach has nothing to tell the engine; a send would only log a dead channel"
     )
+  }
+}
+
+/// `FlutterViewController` answers scene disconnect and app termination with
+/// `-[FlutterEngine destroyContext]`, which frees the engine's shell while
+/// the engine object, the plugin and every player stay alive; the next
+/// display-link tick or AVFoundation callback then dereferenced the null
+/// shell inside `textureFrameAvailable:` (#9342). The plugin's only teardown
+/// hook, `detachFromEngine`, had never run: Flutter delivers it solely to a
+/// plugin that published itself.
+///
+/// These tests pin the contract on a fake engine: registration hooks the
+/// callbacks that precede each teardown and publishes the plugin, and every
+/// hook releases the engine's own players — nobody else's — without calling
+/// back into the engine.
+final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
+  /// Far above any id the host app's Dart side hands out, so a test player
+  /// never displaces one of the host's in the process-wide registry.
+  private static let playerIdBase = Int.max - 100
+
+  private var registrar: FakePluginRegistrar!
+  private var plugin: DivineVideoPlayerPlugin!
+
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    registrar = FakePluginRegistrar()
+    DivineVideoPlayerPlugin.register(with: registrar)
+    plugin = try XCTUnwrap(
+      registrar.published as? DivineVideoPlayerPlugin,
+      "register must publish the plugin: Flutter delivers detachFromEngine to published plugins only"
+    )
+  }
+
+  override func tearDown() {
+    // Idempotent; releases whatever a failing test left behind.
+    plugin?.detachFromEngine(for: registrar)
+    plugin = nil
+    registrar = nil
+    super.tearDown()
+  }
+
+  private func createTexturePlayer(
+    _ plugin: DivineVideoPlayerPlugin,
+    id: Int
+  ) throws -> Int64 {
+    var textureId: Int64?
+    plugin.handle(
+      FlutterMethodCall(
+        methodName: "create",
+        arguments: ["id": id, "useTexture": true]
+      )
+    ) { result in
+      textureId = (result as? [String: Any])?["textureId"] as? Int64
+    }
+    return try XCTUnwrap(textureId, "create must answer synchronously with a texture id")
+  }
+
+  /// Process-wide count; the host app's own players are in it too, so
+  /// tests compare deltas rather than absolute values.
+  private func registeredPlayers(_ plugin: DivineVideoPlayerPlugin) throws -> Int {
+    var count: Int?
+    plugin.handle(FlutterMethodCall(methodName: "getDiagnostics", arguments: nil)) { result in
+      count = (result as? [String: Any])?["registeredPlayers"] as? Int
+    }
+    return try XCTUnwrap(count)
+  }
+
+  func testRegisterHooksEveryCallbackThatPrecedesShellTeardown() {
+    XCTAssertTrue(
+      registrar.sceneDelegates.contains { $0 === plugin },
+      "scene disconnect destroys the shell; the plugin must hear it first"
+    )
+    XCTAssertTrue(
+      registrar.applicationDelegates.contains { $0 === plugin },
+      "app termination destroys the shell; the plugin must hear it first"
+    )
+  }
+
+  func testWillTerminateReleasesPlayersWithoutTouchingTheEngine() throws {
+    let before = try registeredPlayers(plugin)
+    let textureId = try createTexturePlayer(plugin, id: Self.playerIdBase)
+    XCTAssertEqual(registrar.fakeTextures.registered, [textureId])
+    XCTAssertEqual(try registeredPlayers(plugin), before + 1)
+
+    plugin.applicationWillTerminate(UIApplication.shared)
+
+    XCTAssertEqual(try registeredPlayers(plugin), before)
+    XCTAssertEqual(
+      registrar.fakeTextures.unregistered, [],
+      "unregisterTexture dereferences the shell like textureFrameAvailable; teardown must not call it"
+    )
+  }
+
+  func testSceneDisconnectReleasesPlayersWithoutTouchingTheEngine() throws {
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first)
+    let before = try registeredPlayers(plugin)
+    _ = try createTexturePlayer(plugin, id: Self.playerIdBase + 1)
+
+    plugin.sceneDidDisconnect(scene)
+
+    XCTAssertEqual(try registeredPlayers(plugin), before)
+    XCTAssertEqual(registrar.fakeTextures.unregistered, [])
+  }
+
+  func testDetachFromEngineReleasesPlayersWithoutTouchingTheEngine() throws {
+    let before = try registeredPlayers(plugin)
+    _ = try createTexturePlayer(plugin, id: Self.playerIdBase + 2)
+
+    plugin.detachFromEngine(for: registrar)
+
+    XCTAssertEqual(try registeredPlayers(plugin), before)
+    XCTAssertEqual(registrar.fakeTextures.unregistered, [])
+  }
+
+  func testDartDisposeStillUnregistersTheTexture() throws {
+    let id = Self.playerIdBase + 3
+    let textureId = try createTexturePlayer(plugin, id: id)
+
+    plugin.handle(FlutterMethodCall(methodName: "dispose", arguments: ["id": id])) { _ in }
+
+    XCTAssertEqual(
+      registrar.fakeTextures.unregistered, [textureId],
+      "a live engine still gets its texture back"
+    )
+  }
+
+  func testTeardownLeavesAnotherEnginesPlayersAlone() throws {
+    let otherRegistrar = FakePluginRegistrar()
+    DivineVideoPlayerPlugin.register(with: otherRegistrar)
+    let otherPlugin = try XCTUnwrap(otherRegistrar.published as? DivineVideoPlayerPlugin)
+    defer { otherPlugin.detachFromEngine(for: otherRegistrar) }
+
+    let before = try registeredPlayers(plugin)
+    _ = try createTexturePlayer(plugin, id: Self.playerIdBase + 4)
+    _ = try createTexturePlayer(otherPlugin, id: Self.playerIdBase + 5)
+    XCTAssertEqual(try registeredPlayers(plugin), before + 2)
+
+    otherPlugin.applicationWillTerminate(UIApplication.shared)
+
+    XCTAssertEqual(
+      try registeredPlayers(plugin), before + 1,
+      "the registry is process-wide; a torn-down engine releases only its own players"
+    )
+    XCTAssertEqual(registrar.fakeTextures.unregistered, [])
+  }
+
+  func testDartDisposeAllReleasesOnlyTheCallingEnginesPlayers() throws {
+    let otherRegistrar = FakePluginRegistrar()
+    DivineVideoPlayerPlugin.register(with: otherRegistrar)
+    let otherPlugin = try XCTUnwrap(otherRegistrar.published as? DivineVideoPlayerPlugin)
+    defer { otherPlugin.detachFromEngine(for: otherRegistrar) }
+
+    let before = try registeredPlayers(plugin)
+    _ = try createTexturePlayer(plugin, id: Self.playerIdBase + 6)
+    let otherTextureId = try createTexturePlayer(otherPlugin, id: Self.playerIdBase + 7)
+
+    otherPlugin.handle(FlutterMethodCall(methodName: "disposeAll", arguments: nil)) { _ in }
+
+    XCTAssertEqual(try registeredPlayers(plugin), before + 1)
+    XCTAssertEqual(otherRegistrar.fakeTextures.unregistered, [otherTextureId])
+    XCTAssertEqual(registrar.fakeTextures.unregistered, [])
   }
 }
