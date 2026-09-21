@@ -24,10 +24,10 @@ void main() {
   group('DatabaseEncryptionBootstrap.resolveCipherKey', () {
     late _MockSecureStorage storage;
     late Map<String, String> store;
-    // The pre-#9343 slot lives behind its own storage instance (the one that
-    // still names the old iOS accessibility), so it gets its own backing map:
-    // a test that seeds only `legacyStore` models an install that has not
-    // migrated yet.
+    // There is one slot. The second instance differs only in the iOS
+    // accessibility it names, and exists because `delete` is the one operation
+    // that filters on the class. It gets its own backing map so a test can tell
+    // which instance issued a delete.
     late _MockSecureStorage legacyStorage;
     late Map<String, String> legacyStore;
 
@@ -1149,8 +1149,10 @@ void main() {
           deleteDatabase: () async {},
         );
 
-        // Otherwise the next launch would migrate the stale copy back into the
-        // current slot and the reset would not have rotated anything.
+        // The key is in one slot, but an item this device has not rewritten yet
+        // still carries the pre-#9343 class, and only `delete` filters on it.
+        // Without the second delete that item survives the reset, and the next
+        // launch reads the key the reset was supposed to rotate.
         expect(legacyStore, isEmpty);
         verify(
           () => legacyStorage.delete(key: dbCipherKeyStorageKey),
