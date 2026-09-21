@@ -54,12 +54,10 @@ class SubtitleVisibilityOverrideNotifier
     state = (videoId: videoId, visible: visible);
   }
 
-  void toggleForVideo(String videoId) {
-    final current = state;
-    final currentlyVisible = current?.videoId == videoId
-        ? current!.visible
-        : ref.read(subtitleVisibilityProvider);
-    setForVideo(videoId, !currentlyVisible);
+  /// Removes this video's scoped visibility override, if it owns one.
+  void clearForVideo(String videoId) {
+    if (!ref.mounted || state?.videoId != videoId) return;
+    state = null;
   }
 
   void syncOwnerToVideo(Object owner, String videoId) {

@@ -104,27 +104,22 @@ void main() {
       expect(prefs.getBool('subtitle_visibility_enabled'), isNull);
     });
 
-    test('replaces the active override when another video is toggled', () {
+    test('clears only the matching visibility override', () {
       final notifier = container.read(
         subtitleVisibilityOverrideProvider.notifier,
       );
 
       notifier.setForVideo(videoA, false);
-      notifier.toggleForVideo(videoB);
+      notifier.clearForVideo(videoB);
 
       expect(container.read(subtitleVisibilityOverrideProvider), (
-        videoId: videoB,
+        videoId: videoA,
         visible: false,
       ));
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(videoA)),
-        isTrue,
-      );
-      expect(
-        container.read(subtitleVisibilityForVideoProvider(videoB)),
-        isFalse,
-      );
-      expect(prefs.getBool('subtitle_visibility_enabled'), isNull);
+
+      notifier.clearForVideo(videoA);
+
+      expect(container.read(subtitleVisibilityOverrideProvider), isNull);
     });
 
     test('clears overrides when the owning feed changes video or exits', () {

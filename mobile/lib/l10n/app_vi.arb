@@ -633,7 +633,6 @@
   "videoSettingsAutoAdvanceOff": "Đã tắt tự động chuyển video",
   "videoSettingsCaptionsOn": "Đã bật phụ đề",
   "videoSettingsCaptionsOff": "Đã tắt phụ đề",
-  "videoSettingsCaptionsOnForVideo": "Đã bật phụ đề cho video này",
   "videoSettingsCaptionsOffForVideo": "Đã tắt phụ đề cho video này",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."

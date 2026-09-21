@@ -633,7 +633,6 @@
   "videoSettingsAutoAdvanceOff": "自动连播已关闭",
   "videoSettingsCaptionsOn": "字幕已开启",
   "videoSettingsCaptionsOff": "字幕已关闭",
-  "videoSettingsCaptionsOnForVideo": "已为此视频开启字幕",
   "videoSettingsCaptionsOffForVideo": "已为此视频关闭字幕",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."

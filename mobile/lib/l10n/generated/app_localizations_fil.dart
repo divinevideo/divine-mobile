@@ -1429,10 +1429,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Naka-off ang captions';
 
   @override
-  String get videoSettingsCaptionsOnForVideo =>
-      'Naka-on ang captions para sa video na ito';
-
-  @override
   String get videoSettingsCaptionsOffForVideo =>
       'Naka-off ang captions para sa video na ito';
 

@@ -633,7 +633,6 @@
   "videoSettingsAutoAdvanceOff": "خودکار آگے بڑھنا آف",
   "videoSettingsCaptionsOn": "کیپشن آن",
   "videoSettingsCaptionsOff": "کیپشن آف",
-  "videoSettingsCaptionsOnForVideo": "اس ویڈیو کے لیے کیپشنز آن ہیں",
   "videoSettingsCaptionsOffForVideo": "اس ویڈیو کے لیے کیپشنز آف ہیں",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."
