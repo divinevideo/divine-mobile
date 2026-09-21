@@ -860,3 +860,50 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
     XCTAssertEqual(registrar.fakeTextures.unregistered, [])
   }
 }
+
+/// The registry iOS hands this plugin *is* the `FlutterEngine`, and the plugin
+/// lives in a process-lifetime static — so a strong reference there stops
+/// `-[FlutterEngine dealloc]` from ever running, and that is the only non-test
+/// place Flutter dispatches `detachFromEngineForRegistrar:` (#9393). It
+/// therefore disabled the hook #9381 had just published to make reachable.
+/// `NostrBridgeAttestationPlugin.pluginRegistry` carries the full rationale.
+final class NostrBridgeAttestationEnginePinTests: XCTestCase {
+  func testSetupDoesNotRetainThePluginRegistry() {
+    weak var weakRegistry: FakePluginRegistry?
+
+    autoreleasepool {
+      let registry = FakePluginRegistry()
+      weakRegistry = registry
+      NostrBridgeAttestationPlugin.setup(
+        messenger: FakeBinaryMessenger(),
+        pluginRegistry: registry
+      )
+      XCTAssertNotNil(
+        weakRegistry,
+        "positive control: the registry is observably alive while this scope holds it"
+      )
+    }
+
+    XCTAssertNil(
+      weakRegistry,
+      """
+      setup must not strongly retain the plugin registry. On iOS that registry \
+      is the FlutterEngine, and the plugin's process-lifetime `shared` static \
+      turns any strong reference here into a permanent one — which stops \
+      -[FlutterEngine dealloc] from ever running and disables \
+      detachFromEngine(for:) for every plugin in the app (#9393).
+      """
+    )
+  }
+}
+
+/// The three-method registry protocol `FlutterEngine` itself implements.
+/// Deliberately inert: the pin test needs only an object whose lifetime it can
+/// observe, never a working registry.
+private final class FakePluginRegistry: NSObject, FlutterPluginRegistry {
+  func registrar(forPlugin pluginKey: String) -> (any FlutterPluginRegistrar)? { nil }
+
+  func hasPlugin(_ pluginKey: String) -> Bool { false }
+
+  func valuePublished(byPlugin pluginKey: String) -> NSObject? { nil }
+}
