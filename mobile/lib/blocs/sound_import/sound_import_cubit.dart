@@ -191,7 +191,12 @@ class SoundImportCubit extends Cubit<SoundImportState>
         error: error,
         stackTrace: stackTrace,
       );
-      if (isClosed) return;
+      if (isClosed) {
+        // close() left this copy alone because a save owned it. That save just
+        // failed, so nothing owns it and no later pass reclaims it by path.
+        await _reclaim(audio);
+        return;
+      }
       // The copy is retained so Retry writes the same file rather than making
       // the user pick it again.
       emitIfOpen(

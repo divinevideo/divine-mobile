@@ -288,6 +288,25 @@ void main() {
         expect(reclaimed, isEmpty);
       });
 
+      test('reclaims the copy when the in-flight save then fails', () async {
+        final completer = Completer<SavedSoundSaveResult>();
+        final cubit = build(
+          saveSound: (audio, {String? personalLabel}) => completer.future,
+        );
+
+        await cubit.pickFileAndImport();
+        final copiedPath = cubit.state.audio!.localFilePath;
+        final save = cubit.save();
+        // close() hands ownership of the copy to the in-flight save.
+        await cubit.close();
+
+        completer.completeError(StateError('disk full'));
+        await save;
+
+        // The save never took ownership, so nothing else will ever reclaim it.
+        expect(reclaimed, equals([copiedPath]));
+      });
+
       test('does not reclaim a copy whose save is still in flight', () async {
         final completer = Completer<SavedSoundSaveResult>();
         final cubit = build(
