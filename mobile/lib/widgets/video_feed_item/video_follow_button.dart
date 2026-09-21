@@ -35,7 +35,7 @@ const double followButtonPadding =
 
 /// Page widget that creates the [MyFollowingBloc] and provides it to the view.
 ///
-/// Uses StatefulConsumerWidget to avoid unnecessary rebuilds - the follow
+/// Uses ConsumerStatefulWidget to avoid unnecessary rebuilds - the follow
 /// repository and nostr client are read once during initState, not on every
 /// build. The BLoC is created once and reused.
 ///

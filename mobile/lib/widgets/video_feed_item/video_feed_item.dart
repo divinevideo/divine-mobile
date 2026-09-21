@@ -357,7 +357,7 @@ class VideoOverlayActions extends ConsumerWidget {
                         runDetached(
                           context.push(OtherProfileScreen.pathForNpub(npub)),
                           'open author profile',
-                          logName: 'VideoFeedItem',
+                          logName: 'VideoOverlayActions',
                           category: LogCategory.ui,
                         );
                       }
@@ -552,7 +552,7 @@ class VideoOverlayActions extends ConsumerWidget {
                               ),
                             ),
                             'open curated list',
-                            logName: 'VideoFeedItem',
+                            logName: 'VideoOverlayActions',
                             category: LogCategory.ui,
                           );
                         },
