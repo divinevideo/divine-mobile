@@ -2,7 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/constants/og_beta_testers.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
@@ -166,14 +166,14 @@ class UserName extends ConsumerWidget {
     final showCheckmark =
         showProfileBadges && shouldShowSpecialProfileCheckmark(effectivePubkey);
     // The beta chit yields to both the checkmark and the OG Viner chit, so a
-    // name never carries two of them. The Viner rosters are disjoint by
-    // construction; many team accounts also appear on the beta roster, so the
-    // checkmark still has to be checked here.
+    // name never carries two of them. Team members can also be eligible beta
+    // testers, so checkmark precedence is still required.
     final isOgBetaTester =
         showProfileBadges &&
         !isOgViner &&
         !showCheckmark &&
-        isOgBetaTesterPubkey(effectivePubkey);
+        (ref.watch(ogDivinerEligibilityProvider(effectivePubkey)).value ??
+            false);
 
     return Row(
       mainAxisSize: MainAxisSize.min,

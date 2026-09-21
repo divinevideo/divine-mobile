@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/constants/og_beta_testers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/user_name.dart';
 
@@ -30,6 +30,7 @@ void main() {
         nip05VerificationProvider.overrideWith(
           (ref, pubkey) async => Nip05VerificationStatus.verified,
         ),
+        ogDivinerEligibilityProvider.overrideWith((ref, pubkey) async => false),
       ],
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -71,13 +72,10 @@ void main() {
       expect(_specialCheckmark(), findsOneWidget);
     });
 
-    testWidgets('does not show a checkmark for a non-team beta tester', (
+    testWidgets('does not show a checkmark for a non-team account', (
       tester,
     ) async {
-      final pubkey = ogBetaTesterPubkeys.firstWhere(
-        (candidate) => !kDivineTeamPubkeys.contains(candidate),
-      );
-      await tester.pumpWidget(buildSubject(pubkey: pubkey));
+      await tester.pumpWidget(buildSubject());
       await tester.pump();
 
       expect(find.text('Alice'), findsOneWidget);
@@ -114,6 +112,9 @@ void main() {
             nip05VerificationProvider.overrideWith(
               (ref, pubkey) async => Nip05VerificationStatus.none,
             ),
+            ogDivinerEligibilityProvider.overrideWith(
+              (ref, pubkey) async => false,
+            ),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -139,9 +140,7 @@ void main() {
 
     testWidgets(
       'sanitizes embedded display name fallback while profile loads',
-      (
-        tester,
-      ) async {
+      (tester) async {
         final malformedName = String.fromCharCodes([0xD800, 0xD83D, 0xDE00]);
 
         await tester.pumpWidget(
@@ -152,6 +151,9 @@ void main() {
               ).overrideWith((ref) => const Stream<UserProfile?>.empty()),
               nip05VerificationProvider.overrideWith(
                 (ref, pubkey) async => Nip05VerificationStatus.none,
+              ),
+              ogDivinerEligibilityProvider.overrideWith(
+                (ref, pubkey) async => false,
               ),
             ],
             child: MaterialApp(
