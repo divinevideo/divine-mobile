@@ -187,10 +187,8 @@ class _VideoFanMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Skeletonizer(
+    return ListSkeletonizer(
       enabled: pending,
-      ignoreContainers: true,
-      effect: listSkeletonEffectOf(context),
       child: _FanFrame(
         slotBuilder: (index) {
           final url = _urlAt(index);
@@ -324,10 +322,8 @@ class _PeopleCollageMedia extends ConsumerWidget {
         },
     ];
     final pending = profiles.any((profile) => profile?.isLoading ?? false);
-    return Skeletonizer(
+    return ListSkeletonizer(
       enabled: pending,
-      ignoreContainers: true,
-      effect: listSkeletonEffectOf(context),
       child: _CollageFrame(
         tileBuilder: (slot, seams) {
           final profile = profiles[slot];
@@ -712,19 +708,38 @@ class _PlainLinkText extends StatelessWidget {
   }
 }
 
-/// The shimmer every list-card placeholder uses, in the fan placeholder's
-/// own fill so a bone and a flat slot read as the same surface, sweeping
-/// left to right so a tall fan slot, a wide collage tile and a whole
-/// loading column all show the sweep at the same angle, with the
-/// highlight spread across the whole sweep rather than a narrow band.
-PaintingEffect listSkeletonEffectOf(BuildContext context) =>
-    vineSkeletonEffectOf(
-      context,
-      baseColor: context.vineColors.containerLow,
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-      stops: const [0, 0.5, 1],
+/// The skeleton every list-card placeholder renders under.
+///
+/// The shimmer is in the fan placeholder's own fill so a bone and a flat slot
+/// read as the same surface, sweeping left to right so a tall fan slot, a
+/// wide collage tile and a whole loading column all show the sweep at the
+/// same angle, with the highlight spread across the whole sweep rather than
+/// a narrow band. Only the leaves the silhouettes mark are bones; the seams
+/// and outlines between them keep painting so the structure shows.
+class ListSkeletonizer extends StatelessWidget {
+  const ListSkeletonizer({required this.child, this.enabled = true, super.key});
+
+  final Widget child;
+
+  /// Whether the bones paint; `false` shows [child] as it is.
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonizer(
+      enabled: enabled,
+      ignoreContainers: true,
+      effect: vineSkeletonEffectOf(
+        context,
+        baseColor: context.vineColors.containerLow,
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        stops: const [0, 0.5, 1],
+      ),
+      child: child,
     );
+  }
+}
 
 /// The card's silhouette while its list is still on its way.
 ///

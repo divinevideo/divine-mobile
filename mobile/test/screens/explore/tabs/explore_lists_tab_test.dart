@@ -235,8 +235,8 @@ void main() {
     ) async {
       final goRouter = MockGoRouter();
       when(
-        () => goRouter.push<Object?>(any(), extra: any(named: 'extra')),
-      ).thenAnswer((_) async => null);
+        () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
       whenListen(
         cubit,
         const Stream<ListsDiscoveryState>.empty(),
@@ -253,7 +253,7 @@ void main() {
       await tester.tap(find.text('Video skate'));
 
       verify(
-        () => goRouter.push<Object?>(
+        () => goRouter.push<void>(
           '/list/skate',
           extra: any(named: 'extra'),
         ),
@@ -264,7 +264,7 @@ void main() {
       tester,
     ) async {
       final goRouter = MockGoRouter();
-      when(() => goRouter.push<Object?>(any())).thenAnswer((_) async => null);
+      when(() => goRouter.push<void>(any())).thenAnswer((_) async {});
       whenListen(
         cubit,
         const Stream<ListsDiscoveryState>.empty(),
@@ -281,7 +281,7 @@ void main() {
       await tester.tap(find.text('People crew'));
 
       verify(
-        () => goRouter.push<Object?>('/people-lists/crew?owner=$_author'),
+        () => goRouter.push<void>('/people-lists/crew?owner=$_author'),
       ).called(1);
     });
   });

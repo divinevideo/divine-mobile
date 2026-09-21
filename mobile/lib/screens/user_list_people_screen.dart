@@ -5,7 +5,6 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +20,8 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
@@ -122,20 +123,22 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
         }
         if (failed) {
           final message = context.l10n.peopleListsDeleteFailed;
-          SemanticsService.sendAnnouncement(
-            View.of(context),
+          announceDetached(
+            context,
             message,
-            Directionality.of(context),
+            description: 'announce people list deletion failure',
+            logName: 'UserListPeopleScreen',
           );
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(message), backgroundColor: VineTheme.error),
           );
           return;
         }
-        SemanticsService.sendAnnouncement(
-          View.of(context),
+        announceDetached(
+          context,
           context.l10n.curatedListDeletedSnack,
-          Directionality.of(context),
+          description: 'announce people list deletion',
+          logName: 'UserListPeopleScreen',
         );
         if (context.canPop()) {
           context.pop();
@@ -331,7 +334,14 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
   int? _activeVideoIndex;
 
   void _navigateToAddPeople(String listId) {
-    context.push('/people-lists/${Uri.encodeComponent(listId)}/add-people');
+    runDetached(
+      context.push<void>(
+        '/people-lists/${Uri.encodeComponent(listId)}/add-people',
+      ),
+      'open add-people picker',
+      logName: 'UserListPeopleScreen',
+      category: LogCategory.ui,
+    );
   }
 
   Future<void> _confirmDeleteList(UserList userList) async {
@@ -419,7 +429,12 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
                       onSelected: (action) {
                         switch (action) {
                           case _PeopleListAction.delete:
-                            _confirmDeleteList(userList);
+                            runDetached(
+                              _confirmDeleteList(userList),
+                              'confirm people list deletion',
+                              logName: 'UserListPeopleScreen',
+                              category: LogCategory.ui,
+                            );
                         }
                       },
                     ),
@@ -685,11 +700,16 @@ class _RosterHero extends StatelessWidget {
         previewPubkeys: [for (final member in state.members) member.pubkey],
         totalVideos: state.totalVideos,
         totalLoops: state.totalLoops,
-        onViewAll: () => context.push(
-          RoutePaths.peopleListMembersForId(
-            userList.id,
-            ownerPubkey: ownerPubkey,
+        onViewAll: () => runDetached(
+          context.push<void>(
+            RoutePaths.peopleListMembersForId(
+              userList.id,
+              ownerPubkey: ownerPubkey,
+            ),
           ),
+          'open people list roster',
+          logName: 'RosterHero',
+          category: LogCategory.ui,
         ),
       ),
     );

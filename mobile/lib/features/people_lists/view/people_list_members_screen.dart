@@ -16,6 +16,7 @@ import 'package:openvine/features/people_lists/view/people_list_member_tile.dart
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 /// Every member of a people list, best-ranked first.
 ///
@@ -139,10 +140,13 @@ class _RosterView extends StatelessWidget {
               icon: SvgIconSource(DivineIconName.userPlus.assetPath),
               tooltip: l10n.peopleListsAddPeopleTooltip,
               semanticLabel: l10n.peopleListsAddPeopleSemanticLabel,
-              onPressed: () => unawaited(
-                context.push(
+              onPressed: () => runDetached(
+                context.push<void>(
                   '/people-lists/${Uri.encodeComponent(list.id)}/add-people',
                 ),
+                'open add-people picker',
+                logName: 'PeopleListMembersScreen',
+                category: LogCategory.ui,
               ),
             ),
         ],

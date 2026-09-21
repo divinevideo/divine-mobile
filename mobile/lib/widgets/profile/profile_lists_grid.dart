@@ -16,6 +16,7 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -209,9 +210,14 @@ class _VideoListsColumn extends StatelessWidget {
             key: ValueKey(list.authorScopedId),
             curatedList: list,
             thumbnailsPending: thumbnailsPending,
-            onTap: () => context.push(
-              CuratedListFeedScreen.pathForId(list.id),
-              extra: CuratedListRouteExtra(listName: list.name),
+            onTap: () => runDetached(
+              context.push<void>(
+                CuratedListFeedScreen.pathForId(list.id),
+                extra: CuratedListRouteExtra(listName: list.name),
+              ),
+              'open owned list',
+              logName: 'ProfileListsGrid',
+              category: LogCategory.ui,
             ),
           ),
       ],
@@ -234,7 +240,12 @@ class _PeopleListsColumn extends StatelessWidget {
           DivineListThumbnail.people(
             key: ValueKey(list.id),
             userList: list,
-            onTap: () => context.push(RoutePaths.peopleListForId(list.id)),
+            onTap: () => runDetached(
+              context.push<void>(RoutePaths.peopleListForId(list.id)),
+              'open owned people list',
+              logName: 'ProfileListsGrid',
+              category: LogCategory.ui,
+            ),
           ),
       ],
     );

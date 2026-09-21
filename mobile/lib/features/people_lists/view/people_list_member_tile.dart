@@ -13,6 +13,7 @@ import 'package:openvine/features/people_lists/view/people_list_member_avatar.da
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
@@ -84,7 +85,12 @@ class PeopleListMemberTile extends ConsumerWidget {
           : l10n.peopleListsViewProfileHint(displayName),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => context.push(OtherProfileScreen.pathForNpub(npub)),
+        onTap: () => runDetached(
+          context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+          'open people list member profile',
+          logName: 'PeopleListMemberTile',
+          category: LogCategory.ui,
+        ),
         onLongPress: canRemove
             ? () => _confirmRemove(context, displayName)
             : null,

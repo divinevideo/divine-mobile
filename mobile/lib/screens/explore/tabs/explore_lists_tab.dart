@@ -16,10 +16,10 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart'
     show PeopleListSearchResult;
-import 'package:skeletonizer/skeletonizer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The Lists tab shown inside `ExploreScreen`: the discovery gallery.
@@ -68,7 +68,12 @@ class ExploreListsTab extends ConsumerWidget {
             videoLists: screenshotDiscoverListsFixtures(),
           );
         } else {
-          cubit.load();
+          runDetached(
+            cubit.load(),
+            'load list discovery',
+            logName: 'ExploreListsTab',
+            category: LogCategory.ui,
+          );
         }
         return cubit;
       },
@@ -166,13 +171,18 @@ class _VideoListsColumn extends StatelessWidget {
                 'Opening discovered video list: ${list.id}',
                 category: LogCategory.ui,
               );
-              context.push(
-                CuratedListFeedScreen.pathForId(list.id),
-                extra: CuratedListRouteExtra(
-                  listName: list.name,
-                  videoIds: list.videoEventIds,
-                  authorPubkey: list.pubkey,
+              runDetached(
+                context.push<void>(
+                  CuratedListFeedScreen.pathForId(list.id),
+                  extra: CuratedListRouteExtra(
+                    listName: list.name,
+                    videoIds: list.videoEventIds,
+                    authorPubkey: list.pubkey,
+                  ),
                 ),
+                'open discovered list',
+                logName: 'VideoListsColumn',
+                category: LogCategory.ui,
               );
             },
           ),
@@ -204,11 +214,16 @@ class _PeopleListsColumn extends StatelessWidget {
                 'Opening discovered people list: ${result.list.id}',
                 category: LogCategory.ui,
               );
-              context.push(
-                RoutePaths.peopleListForId(
-                  result.list.id,
-                  ownerPubkey: result.ownerPubkey,
+              runDetached(
+                context.push<void>(
+                  RoutePaths.peopleListForId(
+                    result.list.id,
+                    ownerPubkey: result.ownerPubkey,
+                  ),
                 ),
+                'open discovered people list',
+                logName: 'PeopleListsColumn',
+                category: LogCategory.ui,
               );
             },
           ),
@@ -281,13 +296,7 @@ class _LoadingColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       label: context.l10n.listsDiscoveryLoadingLabel,
-      child: Skeletonizer(
-        effect: listSkeletonEffectOf(context),
-        // Only the leaves the silhouettes mark are bones; the seams and
-        // outlines between them keep painting so the structure shows.
-        ignoreContainers: true,
-        child: _SkeletonCards(card: card),
-      ),
+      child: ListSkeletonizer(child: _SkeletonCards(card: card)),
     );
   }
 }
@@ -303,10 +312,8 @@ class _LoadingGallery extends StatelessWidget {
       color: context.vineColors.surfaceContainerHigh,
       child: Semantics(
         label: context.l10n.listsDiscoveryLoadingLabel,
-        child: Skeletonizer(
-          effect: listSkeletonEffectOf(context),
-          ignoreContainers: true,
-          child: const Padding(
+        child: const ListSkeletonizer(
+          child: Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
