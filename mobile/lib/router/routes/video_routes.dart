@@ -1,6 +1,7 @@
 // ABOUTME: Video routes (recorder, detail, sounds, editor, metadata, subtitle, fullscreen, engagement)
 // ABOUTME: Split from app_router.dart (#4508)
 
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
@@ -22,6 +23,7 @@ import 'package:openvine/screens/video_engagement/video_engagement_list_screen.d
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 List<RouteBase> videoRoutes() {
   return [
@@ -197,34 +199,44 @@ List<RouteBase> videoRoutes() {
     GoRoute(
       path: '/video/:eventId/likers',
       name: VideoEngagementListScreen.likersRouteName,
-      builder: (ctx, st) {
-        final eventId = st.pathParameters['eventId'];
-        if (eventId == null || eventId.isEmpty) {
-          return RouteErrorScreen(message: ctx.l10n.routeNoVideosToDisplay);
-        }
-        final addressableId = st.uri.queryParameters['a'];
-        return VideoEngagementListScreen(
-          eventId: eventId,
-          type: VideoEngagementType.likers,
-          addressableId: addressableId,
-        );
-      },
+      builder: (ctx, st) =>
+          buildVideoEngagementList(ctx, st, VideoEngagementType.likers),
     ),
     GoRoute(
       path: '/video/:eventId/reposters',
       name: VideoEngagementListScreen.repostersRouteName,
-      builder: (ctx, st) {
-        final eventId = st.pathParameters['eventId'];
-        if (eventId == null || eventId.isEmpty) {
-          return RouteErrorScreen(message: ctx.l10n.routeNoVideosToDisplay);
-        }
-        final addressableId = st.uri.queryParameters['a'];
-        return VideoEngagementListScreen(
-          eventId: eventId,
-          type: VideoEngagementType.reposters,
-          addressableId: addressableId,
-        );
-      },
+      builder: (ctx, st) =>
+          buildVideoEngagementList(ctx, st, VideoEngagementType.reposters),
     ),
   ];
+}
+
+/// Builds an engagement list for whichever `/video/:eventId` form the link
+/// carried.
+///
+/// The path segment shares the detail route's identifier space, so a shared
+/// link can arrive as a hex event id, a NIP-19 `note1` / `nevent1` / `naddr1`,
+/// or a raw coordinate. The first-party API resolves a hex id or a d tag and
+/// 404s on bech32, so an undecoded reference silently renders an empty list
+/// instead of the video's likers (#9359 follow-up). Decoding here keeps the
+/// sub-routes consistent with the detail route, which already resolves
+/// through the same [VideoRouteRef].
+@visibleForTesting
+Widget buildVideoEngagementList(
+  BuildContext ctx,
+  GoRouterState st,
+  VideoEngagementType type,
+) {
+  final raw = st.pathParameters['eventId'];
+  if (raw == null || raw.isEmpty) {
+    return RouteErrorScreen(message: ctx.l10n.routeNoVideosToDisplay);
+  }
+  final ref = VideoRouteRef.parse(raw);
+  return VideoEngagementListScreen(
+    eventId: ref?.lookupId ?? raw,
+    type: type,
+    // An naddr carries the coordinate the liker query wants; an explicit
+    // `?a=` from an in-app push still wins.
+    addressableId: st.uri.queryParameters['a'] ?? ref?.addressableId,
+  );
 }

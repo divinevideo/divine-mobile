@@ -43,7 +43,11 @@ class VideoEngagementListScreen extends ConsumerWidget {
   /// Route name used for the reposters list.
   static const repostersRouteName = 'videoReposters';
 
-  /// Hex id of the target video event.
+  /// Identifier the engagement query addresses the video by.
+  ///
+  /// Usually the hex event id. For an addressable reference that names no
+  /// single version — an `naddr1` or a raw coordinate — this is the `d` tag,
+  /// which the first-party API resolves the same way.
   final String eventId;
 
   /// Whether to render the likers list or the reposters list.

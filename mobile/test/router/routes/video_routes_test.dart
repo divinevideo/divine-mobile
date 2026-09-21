@@ -4,10 +4,29 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 
 class _FakeBuildContext extends Fake implements BuildContext {}
+
+/// Minimal state for the engagement builder: it reads only the `eventId`
+/// path parameter and the query.
+class _EngagementState extends Fake implements GoRouterState {
+  _EngagementState(this._eventId, [String query = ''])
+    : uri = Uri.parse(
+        '/video/$_eventId/likers${query.isEmpty ? '' : '?$query'}',
+      );
+
+  final String _eventId;
+
+  @override
+  final Uri uri;
+
+  @override
+  Map<String, String> get pathParameters => {'eventId': _eventId};
+}
 
 class _FakeGoRouterState extends Fake implements GoRouterState {
   _FakeGoRouterState(this.uri);
@@ -106,5 +125,74 @@ void main() {
         );
       });
     }
+  });
+
+  group('buildVideoEngagementList', () {
+    const hexId =
+        'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+    const authorHex =
+        '81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95';
+    const dTag = 'ip1dd9tAlmw';
+    const coordinate = '34236:$authorHex:$dTag';
+    const nevent =
+        'nevent1qqsvyx8dnn5emv7zzm98cu8h52y68kjklc9ehg2f9vchnkmnernr5ngvsmkn3';
+    const naddr =
+        'naddr1qq9kjup3v3jrjazpd3khwq3qsxktkuz8tw9hzhpc6pevaymknj3827parpu'
+        'eqyt7crqpa2zfh72sxpqqqzzmcqtynsu';
+
+    VideoEngagementListScreen build(String id, [String query = '']) =>
+        buildVideoEngagementList(
+          _FakeBuildContext(),
+          _EngagementState(id, query),
+          VideoEngagementType.likers,
+        ) as VideoEngagementListScreen;
+
+    test('passes a hex event id straight through', () {
+      final screen = build(hexId);
+
+      expect(screen.eventId, equals(hexId));
+      expect(screen.addressableId, isNull);
+      expect(screen.type, equals(VideoEngagementType.likers));
+    });
+
+    test('decodes an nevent1 link to its hex event id', () {
+      // Undecoded, this reached the API as bech32, which 404s — so the list
+      // rendered empty for a video that has likers.
+      expect(build(nevent).eventId, equals(hexId));
+    });
+
+    test('resolves an naddr1 link to its d tag and coordinate', () {
+      final screen = build(naddr);
+
+      expect(screen.eventId, equals(dTag));
+      expect(screen.addressableId, equals(coordinate));
+    });
+
+    test('resolves a raw coordinate the same way', () {
+      final screen = build(coordinate);
+
+      expect(screen.eventId, equals(dTag));
+      expect(screen.addressableId, equals(coordinate));
+    });
+
+    test('keeps an explicit ?a= over the decoded coordinate', () {
+      final screen = build(naddr, 'a=34236:$authorHex:other');
+
+      expect(screen.addressableId, equals('34236:$authorHex:other'));
+    });
+
+    test('forwards ?a= for a plain hex link', () {
+      expect(build(hexId, 'a=$coordinate').addressableId, equals(coordinate));
+    });
+
+    test('builds the reposters list for that type', () {
+      final screen = buildVideoEngagementList(
+        _FakeBuildContext(),
+        _EngagementState(hexId),
+        VideoEngagementType.reposters,
+      ) as VideoEngagementListScreen;
+
+      expect(screen.type, equals(VideoEngagementType.reposters));
+    });
   });
 }
