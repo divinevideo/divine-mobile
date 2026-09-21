@@ -165,42 +165,52 @@ class TransitionSeamRenderService {
         aspectRatio: clipA.targetAspectRatio,
       );
       if (outputPath == null) return null;
-      // Publish atomically: outputPath is on the temp filesystem, so it can't
-      // be renamed straight to the documents dir (cross-device rename fails).
-      // Copy it next to the target, then rename within the documents dir —
-      // a same-filesystem rename is atomic, so a crash mid-copy can't leave a
-      // truncated file at the deterministic path (only a stray `.tmp`).
-      final tempPath = '$persistentPath.tmp';
-      await File(outputPath).copy(tempPath);
-      await File(tempPath).rename(persistentPath);
+      try {
+        // Publish atomically: outputPath is on the temp filesystem, so it
+        // can't be renamed straight to the documents dir (cross-device rename
+        // fails). Copy it next to the target, then rename within the
+        // documents dir — a same-filesystem rename is atomic, so a crash
+        // mid-copy can't leave a truncated file at the deterministic path
+        // (only a stray `.tmp`).
+        final tempPath = '$persistentPath.tmp';
+        await File(outputPath).copy(tempPath);
+        await File(tempPath).rename(persistentPath);
 
-      final metadata = await ProVideoEditor.instance.getMetadata(
-        EditorVideo.file(persistentPath),
-      );
-      if (metadata.duration <= Duration.zero) {
-        await _deleteQuietly(persistentPath);
-        return null;
+        final metadata = await ProVideoEditor.instance.getMetadata(
+          EditorVideo.file(persistentPath),
+        );
+        if (metadata.duration <= Duration.zero) {
+          await _deleteQuietly(persistentPath);
+          return null;
+        }
+        // A blended overlap seam is shorter than a hard-cut concatenation
+        // (consumed×2). If output ≈ consumed×2 the overlap fell back to a cut.
+        Log.info(
+          '🎬 Seam rendered: ${transition.type.name} '
+          'overlap=${_isOverlap(transition.type)} '
+          'consumed=${consumed.inMilliseconds}ms '
+          'blend=${blend.inMilliseconds}ms '
+          '→ output=${metadata.duration.inMilliseconds}ms '
+          '(hard-cut would be ${(consumed * 2).inMilliseconds}ms)',
+          name: 'TransitionSeamRenderService',
+          category: .video,
+        );
+        final seam = TransitionSeam(
+          path: persistentPath,
+          duration: metadata.duration,
+          tailConsumed: tailConsumed,
+          headConsumed: headConsumed,
+        );
+        _cache[key] = seam;
+        _version++;
+        return seam;
+      } finally {
+        // The seam now lives at persistentPath (or was rejected), so the
+        // render's cache original is dead weight. Nothing else reaps it:
+        // `renderVideo` names it `divine_<µs>.mp4` and TempRenderJanitor has
+        // no pattern for that prefix, so each seam would leave ~2 MB behind.
+        await _deleteQuietly(outputPath);
       }
-      // A blended overlap seam is shorter than a hard-cut concatenation
-      // (consumed×2). If output ≈ consumed×2 the overlap fell back to a cut.
-      Log.info(
-        '🎬 Seam rendered: ${transition.type.name} '
-        'overlap=${_isOverlap(transition.type)} '
-        'consumed=${consumed.inMilliseconds}ms blend=${blend.inMilliseconds}ms '
-        '→ output=${metadata.duration.inMilliseconds}ms '
-        '(hard-cut would be ${(consumed * 2).inMilliseconds}ms)',
-        name: 'TransitionSeamRenderService',
-        category: .video,
-      );
-      final seam = TransitionSeam(
-        path: persistentPath,
-        duration: metadata.duration,
-        tailConsumed: tailConsumed,
-        headConsumed: headConsumed,
-      );
-      _cache[key] = seam;
-      _version++;
-      return seam;
     } catch (e, stackTrace) {
       Log.error(
         'Transition seam render failed',

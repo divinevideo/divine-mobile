@@ -480,6 +480,9 @@ void main() {
     late Directory tempRoot;
     late editor.ProVideoEditor originalProVideoEditor;
     var renderCount = 0;
+    // Every path the stubbed render wrote, standing in for the `divine_*.mp4`
+    // the real render leaves in the temporary cache directory.
+    final renderedPaths = <String>[];
 
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
@@ -487,6 +490,7 @@ void main() {
       editor.ProVideoEditor.instance = _FakeProVideoEditor();
       tempRoot = Directory.systemTemp.createTempSync('seam_persist_test_');
       renderCount = 0;
+      renderedPaths.clear();
       VideoEditorRenderService.renderVideoOverride =
           ({
             required clips,
@@ -499,6 +503,7 @@ void main() {
             renderCount++;
             final rendered = File('${tempRoot.path}/render_$renderCount.mp4')
               ..writeAsStringSync('seam body');
+            renderedPaths.add(rendered.path);
             return rendered.path;
           };
     });
@@ -571,6 +576,24 @@ void main() {
       expect(second, isNotNull);
       expect(second!.path, isNot(first!.path));
       expect(File(first.path).existsSync(), isTrue);
+    });
+
+    test("deletes the render's cache output once the seam is "
+        'persisted', () async {
+      final seam = await service().render(
+        clipA: clip('a', transition: dissolve),
+        clipB: clip('b'),
+        transition: dissolve,
+      );
+
+      expect(seam, isNotNull);
+      expect(renderedPaths, hasLength(1));
+      // The seam is the copy under `transition_seams/`; the render's own
+      // output is a `divine_*.mp4` in the cache dir that no janitor pattern
+      // reaps, so the service must remove it itself once the copy landed.
+      expect(seam!.path, isNot(renderedPaths.single));
+      expect(File(seam.path).existsSync(), isTrue);
+      expect(File(renderedPaths.single).existsSync(), isFalse);
     });
   });
 
