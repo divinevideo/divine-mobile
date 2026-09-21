@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'package:collection/collection.dart';
+import 'package:db_client/src/database/connection/database_backup_retention.dart';
 import 'package:db_client/src/database/connection/database_integrity.dart';
 import 'package:db_client/src/database/connection/database_sidecars.dart';
 import 'package:db_client/src/database/connection/hot_journal_recovery.dart';
@@ -29,7 +30,14 @@ QueryExecutor openConnection() {
     final dbFile = prepareDatabaseFile(dbPath);
     // Background isolate keeps all SQLite work off the UI isolate; see the
     // encrypted variant below for the perf rationale.
-    return NativeDatabase.createInBackground(dbFile);
+    return NativeDatabase.createInBackground(
+      dbFile,
+      // A device whose cipher migration keeps deferring never reaches the
+      // encrypted open, and it is exactly the device a legacy-migration
+      // backup sits beside. The plaintext migration backup is deliberately
+      // not swept here: only a keyed open proves it is safe to drop.
+      setup: (_) => sweepPreservedDatabaseCopies(dbPath),
+    );
   });
 }
 
@@ -80,6 +88,7 @@ QueryExecutor openEncryptedConnection({
       setup: (rawDb) {
         applyCipherKey(rawDb, rawKeyHex);
         cleanUpPreCipherMigrationBackups(dbPath);
+        sweepPreservedDatabaseCopies(dbPath);
       },
     );
   });
@@ -166,11 +175,6 @@ Future<bool> encryptedDatabaseKeyDecrypts({
 /// [salvageCorruptEncryptedDatabase].
 const _salvageSuffix = '.corruption_salvage';
 
-/// Suffix for the corrupt original preserved by
-/// [salvageCorruptEncryptedDatabase]. Kept (not deleted) under the same cipher
-/// key, so it stays readable for any later recovery.
-const _corruptionBackupSuffix = '.pre_corruption_recovery_backup';
-
 /// Tables whose rows are local-only and cannot be re-fetched from relays, so
 /// they are copied during salvage.
 ///
@@ -253,12 +257,10 @@ Future<bool> salvageCorruptEncryptedDatabase({
     return false;
   }
 
-  final backupPath = _nextDatabaseBackupPath(
-    dbPath,
-    suffix: _corruptionBackupSuffix,
+  _preserveDatabaseCopy(
+    fromPath: dbPath,
+    suffix: corruptionRecoveryBackupSuffix,
   );
-  File(dbPath).renameSync(backupPath);
-  _moveSidecars(fromPath: dbPath, toPath: backupPath);
   promoteEncryptedMigrationArtifact(encryptedPath: salvagePath, dbPath: dbPath);
   return true;
 }
@@ -815,12 +817,10 @@ CipherMigrationOutcome _rekeyPlaintextInPlace({
 
   // Keep the plaintext original as a backup until the next successful launch,
   // then move the verified encrypted copy into place.
-  final backupPath = _nextDatabaseBackupPath(
-    dbPath,
-    suffix: '.pre_cipher_migration_backup',
+  _preserveDatabaseCopy(
+    fromPath: dbPath,
+    suffix: preCipherMigrationBackupSuffix,
   );
-  File(dbPath).renameSync(backupPath);
-  _moveSidecars(fromPath: dbPath, toPath: backupPath);
   promoteEncryptedMigrationArtifact(
     encryptedPath: encryptedPath,
     dbPath: dbPath,
@@ -917,15 +917,14 @@ int _userVersion(Database db) =>
 /// never catastrophic. A fresh encrypted database is created under the new
 /// key on first open; DMs resync from relays. See
 /// `mobile/docs/sqlcipher_at_rest_plan.md`.
+///
+/// The copy is superseded by the next one of its kind and expires after
+/// [preservedDatabaseCopyRetention]; it is a window in which the bytes are
+/// still there, not a permanent second database.
 Future<void> backUpAndRemoveSharedDatabase() async {
   final dbPath = await getSharedDatabasePath();
   if (!File(dbPath).existsSync()) return;
-  final backupPath = _nextDatabaseBackupPath(
-    dbPath,
-    suffix: '.pre_key_loss_wipe_backup',
-  );
-  File(dbPath).renameSync(backupPath);
-  _moveSidecars(fromPath: dbPath, toPath: backupPath);
+  _preserveDatabaseCopy(fromPath: dbPath, suffix: keyLossWipeBackupSuffix);
 }
 
 /// Deletes the shared database and sidecars without preserving a backup.
@@ -944,42 +943,15 @@ Future<void> deleteSharedDatabase() async {
 /// The migration keeps the plaintext source as
 /// `.pre_cipher_migration_backup*` until a later keyed open proves the
 /// encrypted database is usable. At that point the backup would otherwise
-/// leave the old plaintext database readable at rest, defeating #570 C2.
-/// Key-loss and legacy-migration backups use different suffixes and are
-/// intentionally preserved.
+/// leave the old plaintext database readable at rest, defeating #570 C2 — so
+/// this one gets no retention window at all, unlike the encrypted copies
+/// [sweepPreservedDatabaseCopies] ages out.
 @visibleForTesting
-void cleanUpPreCipherMigrationBackups(String dbPath) {
-  final dbFile = File(dbPath);
-  final directory = dbFile.parent;
-  if (!directory.existsSync()) return;
-
-  final backupPrefix = '${p.basename(dbPath)}.pre_cipher_migration_backup';
-  for (final entity in directory.listSync()) {
-    if (entity is! File) continue;
-    final name = p.basename(entity.path);
-    if (_isPreCipherMigrationBackupName(name, backupPrefix)) {
-      entity.deleteSync();
-    }
-  }
-}
-
-bool _isPreCipherMigrationBackupName(String name, String backupPrefix) {
-  final indexedBackupPattern = RegExp(
-    '^${RegExp.escape(backupPrefix)}\\.\\d+\$',
-  );
-  if (name == backupPrefix || indexedBackupPattern.hasMatch(name)) {
-    return true;
-  }
-
-  for (final suffix in databaseSidecarSuffixes) {
-    if (!name.endsWith(suffix) || name.length <= suffix.length) continue;
-    final baseName = name.substring(0, name.length - suffix.length);
-    if (baseName == backupPrefix || indexedBackupPattern.hasMatch(baseName)) {
-      return true;
-    }
-  }
-  return false;
-}
+void cleanUpPreCipherMigrationBackups(String dbPath) =>
+    deletePreservedDatabaseCopies(
+      dbPath,
+      suffix: preCipherMigrationBackupSuffix,
+    );
 
 Map<String, int> _userTableRowCounts(Database db) {
   final counts = <String, int>{};
@@ -1131,13 +1103,7 @@ Future<void> migrateLegacyDatabase({
 }
 
 void _backupDestinationDatabase(String dbPath) {
-  final backupPath = _nextDatabaseBackupPath(
-    dbPath,
-    suffix: '.pre_legacy_migration_backup',
-  );
-
-  File(dbPath).renameSync(backupPath);
-  _moveSidecars(fromPath: dbPath, toPath: backupPath);
+  _preserveDatabaseCopy(fromPath: dbPath, suffix: legacyMigrationBackupSuffix);
 }
 
 void _backupLegacyConflictDatabase({
@@ -1145,16 +1111,11 @@ void _backupLegacyConflictDatabase({
   required String newPath,
   required Map<String, List<int>> sidecars,
 }) {
-  final backupPath = _nextDatabaseBackupPath(
-    newPath,
-    suffix: '.legacy_conflict_backup',
-  );
-
   Directory(p.dirname(newPath)).createSync(recursive: true);
-  File(legacyPath).renameSync(backupPath);
-  _moveSidecars(
+  _preserveDatabaseCopy(
     fromPath: legacyPath,
-    toPath: backupPath,
+    anchorPath: newPath,
+    suffix: legacyConflictBackupSuffix,
     preservedSidecars: sidecars,
   );
 }
@@ -1193,17 +1154,34 @@ void deleteDatabaseAndSidecars(String dbPath) {
   }
 }
 
-String _nextDatabaseBackupPath(String dbPath, {required String suffix}) {
-  var candidate = '$dbPath$suffix';
-  var index = 1;
-  while (File(candidate).existsSync() ||
-      databaseSidecarSuffixes.any(
-        (sidecarSuffix) => File('$candidate$sidecarSuffix').existsSync(),
-      )) {
-    candidate = '$dbPath$suffix.$index';
-    index += 1;
-  }
-  return candidate;
+/// Renames [fromPath] and its sidecars to a stamped preserved copy, then
+/// applies [sweepPreservedDatabaseCopies] so the copies this one supersedes go
+/// with it.
+///
+/// [anchorPath] is the database the copy is named after. That is [fromPath]
+/// everywhere except the legacy conflict, where the *legacy* database is set
+/// aside beside the destination it could not replace, so the name has to
+/// follow the destination.
+///
+/// Sweeping here as well as on the next keyed open is what bounds a device
+/// that takes a recovery path on every launch — an Android keystore reading
+/// back empty each time, say. Left to the open alone, every one of those
+/// launches would add a whole database and none would take one away.
+void _preserveDatabaseCopy({
+  required String fromPath,
+  required String suffix,
+  String? anchorPath,
+  Map<String, List<int>>? preservedSidecars,
+}) {
+  final anchor = anchorPath ?? fromPath;
+  final backupPath = nextPreservedDatabaseCopyPath(anchor, suffix: suffix);
+  File(fromPath).renameSync(backupPath);
+  _moveSidecars(
+    fromPath: fromPath,
+    toPath: backupPath,
+    preservedSidecars: preservedSidecars,
+  );
+  sweepPreservedDatabaseCopies(anchor);
 }
 
 bool _databaseHasActionableLocalOnlyData(String dbPath) {

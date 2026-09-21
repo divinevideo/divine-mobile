@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:db_client/db_client.dart' show AppDatabase;
 import 'package:db_client/src/database/connection/connection_native.dart';
+import 'package:db_client/src/database/connection/database_backup_retention.dart';
 import 'package:db_client/src/database/connection/database_integrity.dart';
 import 'package:db_client/src/database/connection/hot_journal_recovery.dart';
 import 'package:db_client/src/database/connection/hot_journal_recovery_models.dart';
@@ -307,19 +308,19 @@ void main() {
       },
     );
 
-    test('does not reuse a backup name owned by a rollback journal', () async {
+    test('stamps the displaced destination so its age is readable', () async {
       _createSqliteDatabase(legacyPath, draftCount: 1);
       _createSqliteDatabase(newPath);
-      final occupiedBackupPath = _destinationBackupPath(newPath);
-      File('$occupiedBackupPath-journal').writeAsBytesSync(const [9]);
 
       await migrateLegacyDatabase(legacyPath: legacyPath, newPath: newPath);
 
-      expect(
-        File('$occupiedBackupPath-journal').readAsBytesSync(),
-        equals([9]),
-      );
-      expect(File('$occupiedBackupPath.1').existsSync(), isTrue);
+      final backupPath = _destinationBackupPath(newPath);
+      final stamp = p
+          .basename(backupPath)
+          .substring(
+            '${p.basename(newPath)}$legacyMigrationBackupSuffix.'.length,
+          );
+      expect(parseDatabaseBackupStamp(stamp), isNotNull);
     });
 
     test(
@@ -339,7 +340,7 @@ void main() {
         expect(_draftCount(legacyBackupPath), equals(1));
         expect(_pendingUploadCount(newPath), equals(1));
         expect(_pendingActionCount(newPath), equals(1));
-        expect(File(_destinationBackupPath(newPath)).existsSync(), isFalse);
+        expect(_preservedCopy(newPath, legacyMigrationBackupSuffix), isNull);
       },
     );
 
@@ -364,7 +365,7 @@ void main() {
         expect(File(legacyPath).existsSync(), isFalse);
         expect(File('$legacyPath-wal').existsSync(), isFalse);
         expect(File('$legacyPath-shm').existsSync(), isFalse);
-        expect(File(_destinationBackupPath(newPath)).existsSync(), isFalse);
+        expect(_preservedCopy(newPath, legacyMigrationBackupSuffix), isNull);
 
         final legacyBackupPath = _legacyConflictBackupPath(newPath);
         expect(File(legacyBackupPath).existsSync(), isTrue);
@@ -392,6 +393,33 @@ void main() {
         expect(File('$legacyPath-shm').existsSync(), isFalse);
       },
     );
+
+    test('a second displaced destination supersedes the first', () async {
+      // Both rounds must take the displaced-destination branch, so the
+      // destination carries only re-fetchable cache rows each time.
+      _createSqliteDatabase(legacyPath, draftCount: 1);
+      _createSqliteDatabase(newPath, eventCount: 1);
+      await migrateLegacyDatabase(legacyPath: legacyPath, newPath: newPath);
+      final first = _destinationBackupPath(newPath);
+
+      _createSqliteDatabase(legacyPath, draftCount: 1);
+      File(newPath).deleteSync();
+      _createSqliteDatabase(newPath, eventCount: 2);
+      await migrateLegacyDatabase(legacyPath: legacyPath, newPath: newPath);
+
+      expect(
+        findPreservedDatabaseCopies(
+          newPath,
+          suffix: legacyMigrationBackupSuffix,
+        ),
+        hasLength(1),
+        reason:
+            'a recovery on every launch must not add a database on every '
+            'launch',
+      );
+      expect(_eventCount(_destinationBackupPath(newPath)), equals(2));
+      expect(File(first).existsSync(), isFalse);
+    });
 
     test('no-op when no legacy database exists (fresh install)', () async {
       expect(File(legacyPath).existsSync(), isFalse);
@@ -960,9 +988,9 @@ void main() {
 
         // The corrupt original is kept as a backup, still readable under the
         // same key (no key rotation).
-        final backup = '$dbPath.pre_corruption_recovery_backup';
-        expect(File(backup).existsSync(), isTrue);
-        final backupDb = sqlite3.open(backup);
+        final backup = _preservedCopy(dbPath, corruptionRecoveryBackupSuffix);
+        expect(backup, isNotNull);
+        final backupDb = sqlite3.open(backup!);
         addTearDown(backupDb.close);
         applyCipherKey(backupDb, validKey);
         expect(
@@ -1232,6 +1260,38 @@ void main() {
         throwsA(isA<SqliteException>()),
       );
     });
+
+    test(
+      'expires a preserved copy the retention window has outlived',
+      () async {
+        final tempRoot = Directory.systemTemp.createTempSync(
+          'db_client_cib_retention_test_',
+        );
+        addTearDown(() {
+          if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+        });
+        final dbPath = p.join(tempRoot.path, 'divine_db.db');
+        final expiredStamp = formatDatabaseBackupStamp(
+          DateTime.now().toUtc().subtract(
+            preservedDatabaseCopyRetention + const Duration(days: 1),
+          ),
+        );
+        final expired = '$dbPath$keyLossWipeBackupSuffix.$expiredStamp';
+        File(expired).writeAsBytesSync(const [1]);
+        File('$expired-wal').writeAsBytesSync(const [2]);
+
+        final db = AppDatabase(
+          openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+        );
+        addTearDown(db.close);
+        // Forces the lazy open, which runs the retention sweep in `setup:`.
+        await db.customSelect('SELECT 1;').get();
+
+        expect(File(expired).existsSync(), isFalse);
+        expect(File('$expired-wal').existsSync(), isFalse);
+        expect(File(dbPath).existsSync(), isTrue);
+      },
+    );
   });
 
   group('migratePlaintextToEncrypted', () {
@@ -2192,7 +2252,16 @@ int _tableCount(String path, String table) {
   }
 }
 
-String _destinationBackupPath(String path) =>
-    '$path.pre_legacy_migration_backup';
+/// The one preserved copy of [path] under [suffix], or `null` when none
+/// exists. Preserved copies carry a UTC stamp, so a test resolves the copy
+/// instead of reconstructing its name.
+String? _preservedCopy(String path, String suffix) {
+  final copies = findPreservedDatabaseCopies(path, suffix: suffix);
+  return copies.isEmpty ? null : copies.single.path;
+}
 
-String _legacyConflictBackupPath(String path) => '$path.legacy_conflict_backup';
+String _destinationBackupPath(String path) =>
+    _preservedCopy(path, legacyMigrationBackupSuffix)!;
+
+String _legacyConflictBackupPath(String path) =>
+    _preservedCopy(path, legacyConflictBackupSuffix)!;
