@@ -10547,6 +10547,85 @@ void main() {
         ).called(20);
       });
 
+      test(
+        'keeps the pages that answered when Funnelcake does not know a member',
+        () async {
+          final mockFunnelcakeClient = MockFunnelcakeApiClient();
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(Exception('relay down'));
+          when(
+            () => mockFunnelcakeClient.getVideosByAuthor(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((invocation) {
+            if (invocation.namedArguments[#pubkey] == 'member-1') {
+              throw FunnelcakeNotFoundException(resource: 'Author');
+            }
+            return pageFor(invocation);
+          });
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.getVideosByAuthors(
+            authorPubkeys: const ['member-0', 'member-1', 'member-2'],
+          );
+
+          expect(
+            result.map((video) => video.id),
+            equals(['video-2', 'video-0']),
+          );
+        },
+      );
+
+      test(
+        'fails the feed when a member page fails for another reason',
+        () async {
+          final mockFunnelcakeClient = MockFunnelcakeApiClient();
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(Exception('relay down'));
+          when(
+            () => mockFunnelcakeClient.getVideosByAuthor(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((invocation) {
+            if (invocation.namedArguments[#pubkey] == 'member-1') {
+              throw const FunnelcakeApiException(
+                message: 'Server error',
+                statusCode: 500,
+              );
+            }
+            return pageFor(invocation);
+          });
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          await expectLater(
+            repo.getVideosByAuthors(
+              authorPubkeys: const ['member-0', 'member-1', 'member-2'],
+            ),
+            throwsA(isA<FunnelcakeApiException>()),
+          );
+        },
+      );
+
       test('rethrows the relay error without a Funnelcake client', () async {
         when(
           () => mockNostrClient.queryEventsDetailed(

@@ -2504,7 +2504,8 @@ class VideosRepository {
   /// when the API is up. Funnelcake has no multi-author endpoint, so it is
   /// the fallback rather than the first source: when the relay read fails
   /// and the API is available, the first [_membersFeedApiAuthorCap] members
-  /// are paged one videos-by-author call each and merged.
+  /// are paged one videos-by-author call each and merged. A member the API
+  /// does not know contributes nothing; the other members' pages still show.
   ///
   /// A read that reached no relay, ran out of time, or settled before every
   /// relay answered counts as a failure even though the relay layer reports
@@ -2525,7 +2526,8 @@ class VideosRepository {
   ///   videos" for what is a network failure.
   /// * [RelayReadUnavailableException] when the read answered with nothing
   ///   because it could not be completed and there is no API to fall back to.
-  /// * [FunnelcakeException] when the fallback fails as well.
+  /// * [FunnelcakeException] when the fallback fails as well, for any reason
+  ///   other than a member the API does not know.
   Future<List<VideoEvent>> getVideosByAuthors({
     required List<String> authorPubkeys,
     int limit = _defaultLimit,
@@ -2579,20 +2581,39 @@ class VideosRepository {
     required int limit,
   }) async {
     final pages = await Future.wait([
-      for (final author in authors)
-        api.getVideosByAuthor(pubkey: author, limit: limit),
+      for (final author in authors) _authorPageOrEmpty(api, author, limit),
     ]);
     final videos = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     for (final page in pages) {
       _appendUniqueVideos(
         videos,
-        _transformVideoStats(page.videos),
+        _transformVideoStats(page),
         seenVideoKeys: seenVideoKeys,
       );
     }
     videos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return videos.take(limit).toList();
+  }
+
+  /// One member's page of the API fallback.
+  ///
+  /// A member Funnelcake has never indexed answers 404. That is a member with
+  /// no videos here, not a failed feed: left to propagate it fails the whole
+  /// [Future.wait] and throws away every page that did answer. Any other
+  /// failure still propagates, since a feed missing a member who does post
+  /// would pass for the complete one.
+  Future<List<VideoStats>> _authorPageOrEmpty(
+    FunnelcakeApiClient api,
+    String author,
+    int limit,
+  ) async {
+    try {
+      final page = await api.getVideosByAuthor(pubkey: author, limit: limit);
+      return page.videos;
+    } on FunnelcakeNotFoundException {
+      return const [];
+    }
   }
 
   /// Composes a single author's video feed page (profile feed).
