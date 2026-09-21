@@ -1,6 +1,8 @@
 import XCTest
 import WebKit
+import background_uploader
 import divine_camera
+import Flutter
 import LibProofMode
 import ObjectivePGP
 @testable import Runner
@@ -334,5 +336,141 @@ final class LibProofModeNetworkFieldsTests: XCTestCase {
         "\(field) must not enter the signed proof"
       )
     }
+  }
+}
+
+private final class FakeTextureRegistry: NSObject, FlutterTextureRegistry {
+  func register(_ texture: FlutterTexture) -> Int64 { 0 }
+
+  func textureFrameAvailable(_ textureId: Int64) {}
+
+  func unregisterTexture(_ textureId: Int64) {}
+}
+
+/// Records every send, so a test can prove a teardown path never talks to
+/// the engine.
+private final class FakeBinaryMessenger: NSObject, FlutterBinaryMessenger {
+  private var nextConnection: FlutterBinaryMessengerConnection = 1
+  private(set) var sentChannels: [String] = []
+
+  func send(onChannel channel: String, message: Data?) {
+    sentChannels.append(channel)
+  }
+
+  func send(
+    onChannel channel: String,
+    message: Data?,
+    binaryReply callback: FlutterBinaryReply?
+  ) {
+    sentChannels.append(channel)
+  }
+
+  func setMessageHandlerOnChannel(
+    _ channel: String,
+    binaryMessageHandler handler: FlutterBinaryMessageHandler?
+  ) -> FlutterBinaryMessengerConnection {
+    defer { nextConnection += 1 }
+    return nextConnection
+  }
+
+  func cleanUpConnection(_ connection: FlutterBinaryMessengerConnection) {}
+}
+
+/// One fake engine: its own messenger, a record of what registration hooked,
+/// and a count of how often the plugin came back for the messenger.
+private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
+  let fakeMessenger = FakeBinaryMessenger()
+  private let fakeTextures = FakeTextureRegistry()
+  private(set) var published: NSObject?
+  private(set) var methodCallDelegates: [AnyObject] = []
+  private(set) var applicationDelegates: [AnyObject] = []
+  private(set) var messengerResolutions = 0
+
+  var viewController: UIViewController? { nil }
+
+  func messenger() -> FlutterBinaryMessenger {
+    messengerResolutions += 1
+    return fakeMessenger
+  }
+
+  func textures() -> FlutterTextureRegistry { fakeTextures }
+
+  func register(_ factory: FlutterPlatformViewFactory, withId factoryId: String) {}
+
+  func register(
+    _ factory: FlutterPlatformViewFactory,
+    withId factoryId: String,
+    gestureRecognizersBlockingPolicy: FlutterPlatformViewGestureRecognizersBlockingPolicy
+  ) {}
+
+  func publish(_ value: NSObject) { published = value }
+
+  func addMethodCallDelegate(_ delegate: FlutterPlugin, channel: FlutterMethodChannel) {
+    methodCallDelegates.append(delegate)
+  }
+
+  func addApplicationDelegate(_ delegate: FlutterPlugin) {
+    applicationDelegates.append(delegate)
+  }
+
+  func addSceneDelegate(_ delegate: FlutterSceneLifeCycleDelegate) {}
+
+  func lookupKey(forAsset asset: String) -> String { asset }
+
+  func lookupKey(forAsset asset: String, fromPackage package: String) -> String { asset }
+
+  func valuePublished(byPlugin pluginKey: String) -> NSObject? { published }
+}
+
+/// `BackgroundUploadCoordinator` is process-wide and outlives every
+/// `FlutterEngine`; each engine's `register` hands it a method channel that
+/// only `detachFromEngine(for:)` takes back. Flutter delivers that hook solely
+/// to a plugin that published itself (FlutterPlugin.h), and it runs inside
+/// `-[FlutterEngine dealloc]`, where `registrar.messenger()` resolves through
+/// a weak engine reference that already reads nil and a send on the channel
+/// dereferences the destroyed shell (#9342).
+final class BackgroundUploaderEngineTeardownTests: XCTestCase {
+  private var registrar: FakePluginRegistrar!
+
+  override func setUp() {
+    super.setUp()
+    registrar = FakePluginRegistrar()
+    BackgroundUploaderPlugin.register(with: registrar)
+  }
+
+  override func tearDown() {
+    // Takes the fake engine's channel back out of the process-wide
+    // coordinator; idempotent, so a failing test leaves nothing behind.
+    (registrar.published as? BackgroundUploaderPlugin)?.detachFromEngine(for: registrar)
+    registrar = nil
+    super.tearDown()
+  }
+
+  func testRegisterPublishesTheInstanceServingTheChannel() throws {
+    let plugin = try XCTUnwrap(
+      registrar.published as? BackgroundUploaderPlugin,
+      "register must publish the plugin: Flutter delivers detachFromEngine to published plugins only"
+    )
+    XCTAssertTrue(
+      registrar.methodCallDelegates.contains { $0 === plugin },
+      "the published object must be the instance holding this engine's channel"
+    )
+  }
+
+  func testDetachFromEngineNeverReachesTheEngine() throws {
+    let plugin = try XCTUnwrap(registrar.published as? BackgroundUploaderPlugin)
+    XCTAssertEqual(registrar.messengerResolutions, 1, "register resolves the messenger once")
+    XCTAssertEqual(registrar.fakeMessenger.sentChannels, [])
+
+    plugin.detachFromEngine(for: registrar)
+
+    XCTAssertEqual(
+      registrar.messengerResolutions, 1,
+      "registrar.messenger() reads nil inside the engine's dealloc; detach must not resolve it"
+    )
+    XCTAssertEqual(
+      registrar.fakeMessenger.sentChannels, [],
+      "a send on the channel dereferences the destroyed shell; detach must not send"
+    )
   }
 }

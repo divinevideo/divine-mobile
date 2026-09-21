@@ -91,6 +91,8 @@ private final class BackgroundUploadCoordinator: NSObject {
     _ = session
   }
 
+  /// Drops one engine's channel so upload events stop fanning out to it.
+  /// Runs inside that engine's `dealloc`, so it must not touch the channel.
   func detach(_ channel: FlutterMethodChannel) {
     channels.removeAll { $0 === channel }
   }
@@ -303,12 +305,26 @@ public class BackgroundUploaderPlugin: NSObject, FlutterPlugin {
       binaryMessenger: messenger
     )
     let instance = BackgroundUploaderPlugin(channel: channel)
+    // Flutter delivers `detachFromEngine(for:)` only to a plugin that
+    // published itself (FlutterPlugin.h). Without this line the hook below
+    // never ran, and the coordinator kept every torn-down engine's channel
+    // for the life of the process. See #9342.
+    registrar.publish(instance)
     registrar.addMethodCallDelegate(instance, channel: channel)
     #if os(iOS)
     registrar.addApplicationDelegate(instance)
     #endif
   }
 
+  /// Runs inside `-[FlutterEngine dealloc]`. The coordinator outlives every
+  /// engine, so without this its channel list grows by one entry per engine
+  /// and each upload event keeps fanning out to the dead ones — a
+  /// "Communicating on a dead channel" warning per progress tick, forever.
+  ///
+  /// Nothing here may reach the engine: `registrar.messenger()` resolves
+  /// through a weak engine reference that already reads nil during dealloc,
+  /// and a send on the channel dereferences the destroyed shell. Only the
+  /// channel captured at init is dropped from the coordinator's list.
   public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
     BackgroundUploadCoordinator.shared.detach(channel)
   }
