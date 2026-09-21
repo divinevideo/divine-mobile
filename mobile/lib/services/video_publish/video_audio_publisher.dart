@@ -264,7 +264,13 @@ class VideoAudioPublisher {
       }
     }
 
-    final tags = <List<String>>[];
+    // This is the creator's own preference for the video's rendered audio.
+    // It is independent of whether extraction produces a separate Kind 1063:
+    // Funnelcake uses it to decide ordinary-video reuse, and edits already
+    // preserve this symmetric true/false form.
+    final tags = <List<String>>[
+      ['allow_audio_reuse', allowAudioReuse.toString()],
+    ];
 
     // Reference an existing Kind 1063 audio event (e.g., when recording with
     // a selected sound from another video).
@@ -334,16 +340,8 @@ class VideoAudioPublisher {
         );
 
         if (audioEventId != null) {
-          // Both tags are added together once the Kind 1063 exists, so this
-          // publisher never emits `allow_audio_reuse` without the matching
-          // `e` tag. That is a property of this path only — the edit flow
-          // (`video_metadata_update_service.dart`) rebuilds
-          // `allow_audio_reuse` straight from the toggle and publishes no
-          // Kind 1063, so the tag-without-`e` shape is reachable there.
-          tags
-            ..add(['allow_audio_reuse', 'true'])
-            // Format: ["e", <audio-event-id>, <relay-hint>, "audio"]
-            ..add(['e', audioEventId, relayHint, 'audio']);
+          // Format: ["e", <audio-event-id>, <relay-hint>, "audio"]
+          tags.add(['e', audioEventId, relayHint, 'audio']);
           Log.info(
             'Added audio reference e tag: $audioEventId',
             name: _logName,
@@ -391,9 +389,8 @@ class VideoAudioPublisher {
   ///
   /// Bundled and local sounds do not represent another creator's Nostr
   /// event. A creator may also reuse their own sound. Every other sound must
-  /// have explicit consent or pass the legacy source-video resolver; anything
-  /// short of a granted answer blocks the publish so a private sound cannot be
-  /// remixed by accident.
+  /// pass the fresh server policy check, including ordinary sounds with a
+  /// signed grant, so a later creator suppression takes effect immediately.
   ///
   /// This answer is fail-closed, not a verdict: it is `false` for a refusal,
   /// for missing evidence, and for a lookup that never completed. Only
@@ -402,8 +399,7 @@ class VideoAudioPublisher {
   Future<bool> canReuseSelectedAudio(AudioEvent sound) async {
     if (sound.isBundled ||
         sound.isLocalImport ||
-        sound.isExternalProviderSound ||
-        sound.allowsReuse) {
+        sound.isExternalProviderSound) {
       return true;
     }
 
@@ -771,9 +767,7 @@ class VideoAudioPublisher {
 
       final savedSoundsService = _savedSoundsService;
       if (savedSoundsService != null) {
-        final publishedAudioEvent = AudioEvent.fromNostrEvent(
-          signedAudioEvent,
-        );
+        final publishedAudioEvent = AudioEvent.fromNostrEvent(signedAudioEvent);
         try {
           await savedSoundsService.saveSound(publishedAudioEvent);
           await _mirrorSavedSound(publishedAudioEvent);

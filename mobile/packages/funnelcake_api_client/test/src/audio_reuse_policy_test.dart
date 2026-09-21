@@ -31,7 +31,7 @@ void main() {
   tearDown(() => client.dispose());
 
   group('refreshAudioReusePolicy', () {
-    test('parses an unknown video as an explicit denial', () {
+    test('validates an unknown-video response and returns its denial', () {
       final policy = AudioReusePolicy.fromRefreshJson(const {
         'policies': [
           {
@@ -46,29 +46,29 @@ void main() {
         'valid_until': '2026-09-10T00:01:00Z',
       }, elapsed: Duration.zero);
 
-      expect(policy.videoFound, isFalse);
       expect(policy.allowAudioReuse, isFalse);
     });
 
-    test('parses a disabled archive rollout as an explicit denial', () {
-      final policy = AudioReusePolicy.fromRefreshJson(const {
-        'policies': [
-          {
-            'video_found': true,
-            'verified_archive': true,
-            'archive_audio_reuse_enabled': false,
-            'audio_reuse_suppressed': false,
-            'allow_audio_reuse': false,
-          },
-        ],
-        'evaluated_at': '2026-09-10T00:00:00Z',
-        'valid_until': '2026-09-10T00:01:00Z',
-      }, elapsed: Duration.zero);
+    test(
+      'validates a disabled archive rollout response and returns denial',
+      () {
+        final policy = AudioReusePolicy.fromRefreshJson(const {
+          'policies': [
+            {
+              'video_found': true,
+              'verified_archive': true,
+              'archive_audio_reuse_enabled': false,
+              'audio_reuse_suppressed': false,
+              'allow_audio_reuse': false,
+            },
+          ],
+          'evaluated_at': '2026-09-10T00:00:00Z',
+          'valid_until': '2026-09-10T00:01:00Z',
+        }, elapsed: Duration.zero);
 
-      expect(policy.verifiedArchive, isTrue);
-      expect(policy.archiveAudioReuseEnabled, isFalse);
-      expect(policy.allowAudioReuse, isFalse);
-    });
+        expect(policy.allowAudioReuse, isFalse);
+      },
+    );
 
     test(
       'posts the selected coordinate and parses a fresh suppression',
@@ -99,12 +99,7 @@ void main() {
           dTag: 'Classic-ID',
         );
 
-        expect(policy.audioReuseSuppressed, isTrue);
-        expect(policy.videoFound, isTrue);
-        expect(policy.verifiedArchive, isTrue);
-        expect(policy.archiveAudioReuseEnabled, isTrue);
         expect(policy.allowAudioReuse, isFalse);
-        expect(policy.validFor, greaterThan(Duration.zero));
         final captured = verify(
           () => httpClient.post(
             captureAny(),

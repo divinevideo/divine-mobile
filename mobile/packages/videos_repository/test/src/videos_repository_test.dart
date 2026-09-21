@@ -165,14 +165,7 @@ void main() {
         timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
         addressableDTag: 'classic-id',
       );
-      const policy = AudioReusePolicy(
-        videoFound: true,
-        verifiedArchive: true,
-        archiveAudioReuseEnabled: true,
-        audioReuseSuppressed: false,
-        allowAudioReuse: true,
-        validFor: Duration(seconds: 60),
-      );
+      const policy = AudioReusePolicy(allowAudioReuse: true);
 
       test('delegates to an available Funnelcake client', () async {
         final client = MockFunnelcakeApiClient();

@@ -367,7 +367,7 @@ void main() {
 
     group('Original sound reuse gating', () {
       testWidgets(
-        'is display-only (no chevron) when audio reuse is unspecified',
+        'uses the current policy when audio reuse is unspecified',
         (tester) async {
           final video = createVideoWithoutAudio();
 
@@ -375,7 +375,7 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text('Original sound'), findsOneWidget);
-          expect(_divineIcon(DivineIconName.caretRight), findsNothing);
+          expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
         },
       );
 

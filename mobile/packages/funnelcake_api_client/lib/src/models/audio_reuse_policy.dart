@@ -7,14 +7,7 @@ import 'package:meta/meta.dart';
 /// The server's fresh reuse decision for one selected video.
 class AudioReusePolicy {
   /// Creates an audio reuse policy response.
-  const AudioReusePolicy({
-    required this.videoFound,
-    required this.verifiedArchive,
-    required this.archiveAudioReuseEnabled,
-    required this.audioReuseSuppressed,
-    required this.allowAudioReuse,
-    required this.validFor,
-  });
+  const AudioReusePolicy({required this.allowAudioReuse});
 
   /// Parses the Funnelcake response, rejecting missing or non-boolean fields.
   factory AudioReusePolicy.fromRefreshJson(
@@ -50,31 +43,9 @@ class AudioReusePolicy {
     if (validFor <= Duration.zero) {
       throw const FormatException('Expired audio reuse policy response');
     }
-    return AudioReusePolicy(
-      videoFound: videoFound,
-      verifiedArchive: verifiedArchive,
-      archiveAudioReuseEnabled: archiveAudioReuseEnabled,
-      audioReuseSuppressed: audioReuseSuppressed,
-      allowAudioReuse: allowAudioReuse,
-      validFor: validFor,
-    );
+    return AudioReusePolicy(allowAudioReuse: allowAudioReuse);
   }
-
-  /// Whether the logical video coordinate currently resolves.
-  final bool videoFound;
-
-  /// Whether Funnelcake authoritatively verified this as an archive video.
-  final bool verifiedArchive;
-
-  /// Whether server-side archive audio reuse rollout is enabled.
-  final bool archiveAudioReuseEnabled;
-
-  /// Whether an explicit creator takedown blocks new reuse.
-  final bool audioReuseSuppressed;
 
   /// Final server-authoritative permission for non-owner reuse.
   final bool allowAudioReuse;
-
-  /// Remaining server-issued lease after request time is subtracted.
-  final Duration validFor;
 }

@@ -142,7 +142,7 @@ class _OriginalSoundSection extends ConsumerWidget {
     ref.watch(currentAuthStateProvider);
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
     if (viewerPubkey != null && viewerPubkey == video.pubkey) return true;
-    if (knownTerms != true) return false;
+    if (knownTerms == false) return false;
     final sound = AudioEvent.fromVideoOriginalSound(video);
     return ref.watch(audioReuseConsentProvider(sound)).value ?? false;
   }

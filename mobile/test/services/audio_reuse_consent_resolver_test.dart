@@ -80,16 +80,9 @@ void main() {
   setUp(() {
     videosRepository = _MockVideosRepository();
     resolver = AudioReuseConsentResolver(videosRepository: videosRepository);
-    when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
-      (_) async => const AudioReusePolicy(
-        videoFound: true,
-        verifiedArchive: true,
-        archiveAudioReuseEnabled: true,
-        audioReuseSuppressed: false,
-        allowAudioReuse: true,
-        validFor: Duration(seconds: 60),
-      ),
-    );
+    when(
+      () => videosRepository.refreshAudioReusePolicy(any()),
+    ).thenAnswer((_) async => const AudioReusePolicy(allowAudioReuse: true));
   });
 
   void stubSource(List<VideoEvent> videos) {
@@ -100,14 +93,7 @@ void main() {
 
   void stubPolicy({required bool allowAudioReuse}) {
     when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
-      (_) async => AudioReusePolicy(
-        videoFound: true,
-        verifiedArchive: false,
-        archiveAudioReuseEnabled: false,
-        audioReuseSuppressed: !allowAudioReuse,
-        allowAudioReuse: allowAudioReuse,
-        validFor: const Duration(seconds: 60),
-      ),
+      (_) async => AudioReusePolicy(allowAudioReuse: allowAudioReuse),
     );
   }
 
@@ -131,16 +117,9 @@ void main() {
 
     test('suppression overrides explicit true', () async {
       stubSource([_video()]);
-      when(() => videosRepository.refreshAudioReusePolicy(any())).thenAnswer(
-        (_) async => const AudioReusePolicy(
-          videoFound: true,
-          verifiedArchive: true,
-          archiveAudioReuseEnabled: true,
-          audioReuseSuppressed: true,
-          allowAudioReuse: false,
-          validFor: Duration(seconds: 60),
-        ),
-      );
+      when(
+        () => videosRepository.refreshAudioReusePolicy(any()),
+      ).thenAnswer((_) async => const AudioReusePolicy(allowAudioReuse: false));
 
       expect(
         await resolver.verify(_sound(allowsReuse: true, sha256: _audioSha256)),
@@ -148,13 +127,10 @@ void main() {
       );
     });
 
-    test('honors explicit false on the current ordinary source', () async {
-      stubSource([_video(reuseMarker: 'false')]);
+    test('honors the current server denial for an ordinary source', () async {
+      stubSource([_video(reuseMarker: null)]);
       stubPolicy(allowAudioReuse: false);
-      expect(
-        await resolver.verify(_sound(hasExplicitReuseConsent: true)),
-        isFalse,
-      );
+      expect(await resolver.verify(_sound(allowsReuse: true)), isFalse);
       verify(() => videosRepository.refreshAudioReusePolicy(any())).called(1);
     });
 
@@ -168,15 +144,18 @@ void main() {
       expect(await resolver.verify(_sound()), isTrue);
     });
 
-    test('honours a revocation on the current revision', () async {
-      stubSource([_video(createdAt: 120, reuseMarker: 'false')]);
-      stubPolicy(allowAudioReuse: false);
+    test(
+      'honours a current server revocation after a source revision',
+      () async {
+        stubSource([_video(createdAt: 120, reuseMarker: null)]);
+        stubPolicy(allowAudioReuse: false);
 
-      expect(await resolver.verify(_sound()), isFalse);
-    });
+        expect(await resolver.verify(_sound()), isFalse);
+      },
+    );
 
-    test('allows an enabled verified classic without an event grant', () async {
-      stubSource([_video(reuseMarker: null, isVerifiedArchive: true)]);
+    test('allows a legacy source when the current policy allows it', () async {
+      stubSource([_video(reuseMarker: null)]);
 
       expect(await resolver.verify(_sound()), isTrue);
     });
@@ -214,9 +193,7 @@ void main() {
         when(() => funnelcakeClient.isAvailable).thenReturn(true);
         when(
           () => funnelcakeClient.getBulkVideoStats(any()),
-        ).thenAnswer(
-          (_) async => const BulkVideoStatsResponse(stats: {}),
-        );
+        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
         when(
           () => funnelcakeClient.refreshAudioReusePolicy(
             kind: EventKind.videoVertical,
@@ -224,14 +201,7 @@ void main() {
             dTag: 'source-video',
           ),
         ).thenAnswer(
-          (_) async => const AudioReusePolicy(
-            videoFound: true,
-            verifiedArchive: true,
-            archiveAudioReuseEnabled: true,
-            audioReuseSuppressed: false,
-            allowAudioReuse: true,
-            validFor: Duration(seconds: 60),
-          ),
+          (_) async => const AudioReusePolicy(allowAudioReuse: true),
         );
         final realRepository = VideosRepository(
           nostrClient: nostrClient,
@@ -252,18 +222,15 @@ void main() {
       },
     );
 
-    test('fails closed for an unmarked ordinary source', () async {
-      stubSource([_video(reuseMarker: null)]);
-      stubPolicy(allowAudioReuse: false);
+    test(
+      'fails closed when the current policy denies an ordinary source',
+      () async {
+        stubSource([_video(reuseMarker: null)]);
+        stubPolicy(allowAudioReuse: false);
 
-      expect(await resolver.verify(_sound()), isFalse);
-    });
-
-    test('does not treat an imported classic marker as a takedown', () async {
-      stubSource([_video(reuseMarker: 'false', isVerifiedArchive: true)]);
-
-      expect(await resolver.verify(_sound()), isTrue);
-    });
+        expect(await resolver.verify(_sound()), isFalse);
+      },
+    );
 
     test('ignores a video at a different address', () async {
       stubSource([_video(vineId: 'other-video')]);

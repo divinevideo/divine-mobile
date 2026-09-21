@@ -15,7 +15,6 @@ import 'package:models/models.dart'
         AudioLicenseMetadata,
         UserProfile,
         VideoEvent,
-        VideoUrlResolver,
         audioEventKind;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
@@ -632,7 +631,7 @@ void main() {
           expect(result, isTrue);
           expect(
             _containsTag(capturedTags, const ['allow_audio_reuse', 'true']),
-            isFalse,
+            isTrue,
           );
         },
       );
@@ -778,36 +777,41 @@ void main() {
       // audioExtractionService, so the audio step returns at its first guard —
       // nothing is extracted or uploaded here. The real extraction-failure
       // path is covered in video_event_publisher_audio_degrade_test.dart.
-      test('an unavailable audio pipeline still publishes the video, without '
-          'claiming reuse', () async {
-        stubSignAndPublish();
+      test(
+        'an unavailable audio pipeline preserves the reuse preference',
+        () async {
+          stubSignAndPublish();
 
-        final result = await publisher.publishVideoEvent(
-          upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
-          allowAudioReuse: true,
-        );
+          final result = await publisher.publishVideoEvent(
+            upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
+            allowAudioReuse: true,
+          );
 
-        // A video-only publish beats discarding an already-uploaded video.
-        expect(result, isTrue);
+          // A video-only publish beats discarding an already-uploaded video.
+          expect(result, isTrue);
 
-        final tags =
-            verify(
-                  () => authService.createAndSignEvent(
-                    kind: NIP71VideoKinds.getPreferredAddressableKind(),
-                    content: any(named: 'content'),
-                    tags: captureAny(named: 'tags'),
-                  ),
-                ).captured.single
-                as List<List<String>>;
+          final tags =
+              verify(
+                    () => authService.createAndSignEvent(
+                      kind: NIP71VideoKinds.getPreferredAddressableKind(),
+                      content: any(named: 'content'),
+                      tags: captureAny(named: 'tags'),
+                    ),
+                  ).captured.single
+                  as List<List<String>>;
 
-        // The event must never advertise reusable audio that was never
-        // published — no allow_audio_reuse, and no audio `e` reference.
-        expect(tags.where((tag) => tag.first == 'allow_audio_reuse'), isEmpty);
-        expect(
-          tags.where((tag) => tag.first == 'e' && tag.last == 'audio'),
-          isEmpty,
-        );
-      });
+          // The preference applies to the video's own audio even if extraction
+          // could not publish a separate Kind 1063 event.
+          expect(
+            _containsTag(tags, const ['allow_audio_reuse', 'true']),
+            isTrue,
+          );
+          expect(
+            tags.where((tag) => tag.first == 'e' && tag.last == 'audio'),
+            isEmpty,
+          );
+        },
+      );
 
       test(
         'publishes durable provider credit without claiming ownership',
