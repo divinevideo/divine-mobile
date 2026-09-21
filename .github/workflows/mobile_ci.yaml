@@ -659,7 +659,7 @@ jobs:
             .devices | to_entries
             | map(select(.key | contains("SimRuntime.iOS-")))
             | sort_by(.key | ltrimstr("com.apple.CoreSimulator.SimRuntime.iOS-")
-                             | split("-") | map(tonumber))
+                             | split("-") | map(tonumber? // 0))
             | reverse
             | map(.value[] | select(.isAvailable and (.name | startswith("iPhone"))))
             | first | .udid // empty')"
