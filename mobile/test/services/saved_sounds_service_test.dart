@@ -126,32 +126,35 @@ void main() {
       ]);
     });
 
-    test('returns empty list when persisted JSON is corrupt', () {
+    test('returns empty list when persisted JSON is corrupt', () async {
       final service = SavedSoundsService(sharedPreferences);
-      sharedPreferences.setString(service.storageKey, 'not json');
+      await sharedPreferences.setString(service.storageKey, 'not json');
 
       expect(service.loadSounds(), isEmpty);
     });
 
-    test('skips invalid persisted entries without dropping valid sounds', () {
-      final service = SavedSoundsService(sharedPreferences);
-      final validSound = _sound(id: 'sound1', title: 'Valid Sound');
-      sharedPreferences.setString(
-        service.storageKey,
-        jsonEncode([
-          validSound.toJson(),
-          {'id': 123},
-        ]),
-      );
+    test(
+      'skips invalid persisted entries without dropping valid sounds',
+      () async {
+        final service = SavedSoundsService(sharedPreferences);
+        final validSound = _sound(id: 'sound1', title: 'Valid Sound');
+        await sharedPreferences.setString(
+          service.storageKey,
+          jsonEncode([
+            validSound.toJson(),
+            {'id': 123},
+          ]),
+        );
 
-      expect(service.loadSounds(), [validSound]);
-    });
+        expect(service.loadSounds(), [validSound]);
+      },
+    );
 
     group('versioned metadata records', () {
-      test('reads a legacy bare list without rewriting it', () {
+      test('reads a legacy bare list without rewriting it', () async {
         final service = SavedSoundsService(sharedPreferences);
         final legacy = jsonEncode([_sound(id: 'legacy').toJson()]);
-        sharedPreferences.setString(service.storageKey, legacy);
+        await sharedPreferences.setString(service.storageKey, legacy);
 
         final records = service.loadSavedSounds();
 
@@ -204,27 +207,30 @@ void main() {
         ]);
       });
 
-      test('skips a corrupt versioned entry without dropping valid ones', () {
-        final service = SavedSoundsService(sharedPreferences);
-        final valid = SavedSound.fromLegacy(_sound(id: 'valid'));
-        sharedPreferences.setString(
-          service.storageKey,
-          jsonEncode({
-            'schemaVersion': 1,
-            'sounds': [
-              valid.toJson(),
-              {'audio': 'not a map'},
-            ],
-          }),
-        );
+      test(
+        'skips a corrupt versioned entry without dropping valid ones',
+        () async {
+          final service = SavedSoundsService(sharedPreferences);
+          final valid = SavedSound.fromLegacy(_sound(id: 'valid'));
+          await sharedPreferences.setString(
+            service.storageKey,
+            jsonEncode({
+              'schemaVersion': 1,
+              'sounds': [
+                valid.toJson(),
+                {'audio': 'not a map'},
+              ],
+            }),
+          );
 
-        expect(service.loadSavedSounds(), [valid]);
-      });
+          expect(service.loadSavedSounds(), [valid]);
+        },
+      );
 
-      test('reads a payload written by an older schema version', () {
+      test('reads a payload written by an older schema version', () async {
         final service = SavedSoundsService(sharedPreferences);
         final saved = SavedSound.fromLegacy(_sound(id: 'sound1'));
-        sharedPreferences.setString(
+        await sharedPreferences.setString(
           service.storageKey,
           jsonEncode({
             'schemaVersion': SavedSoundLibraryPayload.currentSchemaVersion - 1,
@@ -312,7 +318,7 @@ void main() {
       test(
         'migrates the legacy device-wide list into the first account',
         () async {
-          sharedPreferences.setString(
+          await sharedPreferences.setString(
             'saved_reusable_sounds',
             jsonEncode([_sound(id: 'legacy').toJson()]),
           );
@@ -331,10 +337,10 @@ void main() {
         },
       );
 
-      test('drops legacy video_* original sounds during migration', () {
+      test('drops legacy video_* original sounds during migration', () async {
         // A pre-fix save of another creator's original sound (reuse consent
         // unknown) must not become reusable after the upgrade.
-        sharedPreferences.setString(
+        await sharedPreferences.setString(
           'saved_reusable_sounds',
           jsonEncode([
             _sound(id: 'shared').toJson(),
@@ -352,7 +358,7 @@ void main() {
       test(
         'a second account does not inherit the migrated legacy list',
         () async {
-          sharedPreferences.setString(
+          await sharedPreferences.setString(
             'saved_reusable_sounds',
             jsonEncode([_sound(id: 'legacy').toJson()]),
           );
@@ -441,17 +447,23 @@ void main() {
         },
       );
 
-      test('does not migrate the legacy list into the signed-out bucket', () {
-        sharedPreferences.setString(
-          'saved_reusable_sounds',
-          jsonEncode([_sound(id: 'legacy').toJson()]),
-        );
+      test(
+        'does not migrate the legacy list into the signed-out bucket',
+        () async {
+          await sharedPreferences.setString(
+            'saved_reusable_sounds',
+            jsonEncode([_sound(id: 'legacy').toJson()]),
+          );
 
-        final anon = SavedSoundsService(sharedPreferences);
-        expect(anon.loadSounds(), isEmpty);
-        // Legacy stays untouched for a real account to adopt later.
-        expect(sharedPreferences.getString('saved_reusable_sounds'), isNotNull);
-      });
+          final anon = SavedSoundsService(sharedPreferences);
+          expect(anon.loadSounds(), isEmpty);
+          // Legacy stays untouched for a real account to adopt later.
+          expect(
+            sharedPreferences.getString('saved_reusable_sounds'),
+            isNotNull,
+          );
+        },
+      );
 
       test(
         'does not migrate when the account already has saved sounds',
@@ -461,7 +473,7 @@ void main() {
             pubkeyHex: pubkeyA,
           );
           await accountA.saveSound(_sound(id: 'own'));
-          sharedPreferences.setString(
+          await sharedPreferences.setString(
             'saved_reusable_sounds',
             jsonEncode([_sound(id: 'legacy').toJson()]),
           );
@@ -536,7 +548,7 @@ void main() {
 
       test('heals a sound saved before paths were stored portably', () async {
         // Written by a build that persisted the absolute path verbatim.
-        sharedPreferences.setString(
+        await sharedPreferences.setString(
           'saved_reusable_sounds_anon',
           jsonEncode([
             _importedSound(
@@ -693,8 +705,8 @@ void main() {
         },
       );
 
-      test('reads the pre-namespacing legacy bucket too', () {
-        sharedPreferences.setString(
+      test('reads the pre-namespacing legacy bucket too', () async {
+        await sharedPreferences.setString(
           'saved_reusable_sounds',
           jsonEncode([
             _importedSound(
@@ -722,8 +734,11 @@ void main() {
         );
       });
 
-      test('skips a bucket this build cannot decode', () {
-        sharedPreferences.setString('saved_reusable_sounds_anon', 'not json');
+      test('skips a bucket this build cannot decode', () async {
+        await sharedPreferences.setString(
+          'saved_reusable_sounds_anon',
+          'not json',
+        );
 
         expect(
           SavedSoundsService.referencedLocalAudioFilenames(sharedPreferences),
