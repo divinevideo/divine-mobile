@@ -262,11 +262,8 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
                 return
             }
             // Dispose any existing player with the same ID before
-            // creating the new one to avoid leaking zombie players. Scoped
-            // to this engine: ids come from a per-isolate counter, so a
-            // collision across engines would otherwise let this `create`
-            // destroy another engine's live player.
-            PlayerRegistry.shared.remove(id, ownedBy: engineId)?.dispose()
+            // creating the new one to avoid leaking zombie players.
+            PlayerRegistry.shared.remove(id)?.dispose()
 
             let messenger = Self.messenger(for: registrar)
             let debugLabel = args["debugLabel"] as? String
@@ -312,7 +309,7 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
             }
 
         case "dispose":
-            guard let id = args["id"] as? Int, let engineId else {
+            guard let id = args["id"] as? Int else {
                 result(nil)
                 return
             }
@@ -320,7 +317,7 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
                 "Player \(id) disposed",
                 name: "DivineVideoPlayer.Lifecycle"
             )
-            PlayerRegistry.shared.remove(id, ownedBy: engineId)?.dispose()
+            PlayerRegistry.shared.remove(id)?.dispose()
             result(nil)
 
         case "preload":
@@ -428,24 +425,6 @@ final class PlayerRegistry {
         engines[id] = nil
         let instance = players.removeValue(forKey: id)
         return instance
-    }
-
-    /// Removes `id` only when `engineId` owns it.
-    ///
-    /// `create` and Dart's single-player `dispose` are keyed on the Dart
-    /// player id alone, and those ids come from a per-isolate counter
-    /// seeded off the wall clock, so two engines' ranges are not disjoint
-    /// by construction. Unscoped, a collision lets one engine's `create`
-    /// destroy another engine's live player and dispose it with
-    /// `engineTearingDown: false` — calling `unregisterTexture` into the
-    /// other engine's registry, the cross-engine teardown of #5397.
-    @discardableResult
-    func remove(
-        _ id: Int,
-        ownedBy engineId: ObjectIdentifier
-    ) -> DivineVideoPlayerInstance? {
-        guard engines[id] == engineId else { return nil }
-        return remove(id)
     }
 
     /// Disposes only the players created by the engine identified by
