@@ -348,6 +348,10 @@ private final class FakeTextureRegistry: NSObject, FlutterTextureRegistry {
   private var nextId: Int64 = 1
   private(set) var registered: [Int64] = []
   private(set) var unregistered: [Int64] = []
+  /// Frames pushed at the engine. This is the exact call the teardown
+  /// work exists to prevent after the shell is gone, so it is recorded
+  /// rather than dropped.
+  private(set) var frames: [Int64] = []
 
   func register(_ texture: FlutterTexture) -> Int64 {
     let id = nextId
@@ -356,7 +360,9 @@ private final class FakeTextureRegistry: NSObject, FlutterTextureRegistry {
     return id
   }
 
-  func textureFrameAvailable(_ textureId: Int64) {}
+  func textureFrameAvailable(_ textureId: Int64) {
+    frames.append(textureId)
+  }
 
   func unregisterTexture(_ textureId: Int64) {
     unregistered.append(textureId)
@@ -649,6 +655,27 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
     XCTAssertTrue(
       registrar.applicationDelegates.contains { $0 === plugin },
       "app termination destroys the shell; the plugin must hear it first"
+    )
+  }
+
+  /// Flutter delivers both teardown hooks through `respondsToSelector:`
+  /// — `FlutterPluginAppLifeCycleDelegate` for the app hook and
+  /// `FlutterSceneLifeCycle` for the scene one — because each is an
+  /// `@optional` protocol requirement. The tests below call them as
+  /// direct Swift methods, which passes whether or not the Objective-C
+  /// selector exists. Moving either into an extension that does not
+  /// restate the conformance would drop the selector, both hooks would
+  /// silently never fire, and #9342 would return with every other test
+  /// still green. Looked up by name so a lost selector fails here
+  /// instead of failing to compile.
+  func testTeardownHooksAreReachableThroughObjectiveCDispatch() {
+    XCTAssertTrue(
+      plugin.responds(to: NSSelectorFromString("applicationWillTerminate:")),
+      "the engine dispatches applicationWillTerminate: via respondsToSelector:"
+    )
+    XCTAssertTrue(
+      plugin.responds(to: NSSelectorFromString("sceneDidDisconnect:")),
+      "the engine dispatches sceneDidDisconnect: via respondsToSelector:"
     )
   }
 
