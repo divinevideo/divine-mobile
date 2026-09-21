@@ -403,7 +403,6 @@ dependencies:
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
   pro_image_editor: ^14.2.0
-  file_picker: ^10.3.7
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0
