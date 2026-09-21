@@ -76,6 +76,13 @@ class _LiveDeps {
       _torndown ? null : _ref.read(nostrServiceProvider);
 }
 
+/// Riverpod's default retries a failed provider ten times with backoff, and
+/// every attempt here is a relay query with its own timeout — the viewer
+/// would sit on a spinner for minutes. While it retries the state is loading
+/// that carries the error, so a screen never reaches its retry view. A failed
+/// read surfaces at once instead, with a retry the viewer drives.
+Duration? _noAutomaticRetry(int retryCount, Object error) => null;
+
 /// Provider for the videos published by the members of a user list.
 ///
 /// The members' newest videos come from
@@ -84,13 +91,15 @@ class _LiveDeps {
 /// holds from those members shows first, so a list of followed people paints
 /// before the round trip returns; the fetched set is then merged in. A fetch
 /// that fails after that first paint keeps the pooled videos; one that fails
-/// with nothing to show surfaces the error, so a network failure never reads
-/// as "no videos yet".
+/// with nothing to show surfaces the error at once, with no automatic retry,
+/// so a network failure never reads as "no videos yet" or as endless loading.
+/// Only an [Exception] is absorbed that way: an [Error] is a bug and
+/// surfaces whatever is pooled.
 ///
 /// The body is a plain function so every `Ref` read happens synchronously
 /// during `build` — see [_LiveDeps] for why an `async*` body cannot
 /// touch `Ref`.
-@riverpod
+@Riverpod(retry: _noAutomaticRetry)
 Stream<List<VideoEvent>> userListMemberVideos(Ref ref, List<String> pubkeys) {
   final pooled = ref.read(videoEventsProvider).value ?? const <VideoEvent>[];
   final repository = ref.read(videosRepositoryProvider);
@@ -112,7 +121,7 @@ Stream<List<VideoEvent>> _userListMemberVideos(
   final List<VideoEvent> fetched;
   try {
     fetched = await repository.getVideosByAuthors(authorPubkeys: pubkeys);
-  } on Object catch (error, stackTrace) {
+  } on Exception catch (error, stackTrace) {
     if (seeded.isEmpty) rethrow;
     Log.warning(
       'Member videos fetch failed; keeping ${seeded.length} pooled videos',
@@ -220,12 +229,6 @@ Future<List<CuratedList>> myListsWithThumbnails(Ref ref) async {
   final repository = ref.watch(curatedListRepositoryProvider);
   return repository.resolveListThumbnails(lists);
 }
-
-/// Riverpod's default retries a failed provider ten times with backoff, and
-/// every attempt here is a relay query with its own timeout — the viewer
-/// would sit on a spinner for minutes. A failed read surfaces at once
-/// instead, with a retry the viewer drives.
-Duration? _noAutomaticRetry(int retryCount, Object error) => null;
 
 /// Resolves a discovered public people list by author + d-tag from relays.
 ///
