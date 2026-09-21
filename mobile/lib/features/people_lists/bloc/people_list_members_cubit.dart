@@ -21,7 +21,7 @@ const kPeopleListStatsMemberCap = 300;
 /// Pubkeys per bulk profile call.
 const kPeopleListStatsPageSize = 100;
 
-typedef _MemberStats = ({int videoCount, double totalLoops});
+typedef _MemberStats = ({int videoCount, double? totalLoops});
 
 /// Drives a people list's roster: the members preview on the list screen
 /// and the full roster behind "View all".
@@ -29,6 +29,11 @@ typedef _MemberStats = ({int videoCount, double totalLoops});
 /// Stats are ranking, not content. Without them (no Funnelcake, a failed
 /// page, a member the API does not know) the roster still renders, in the
 /// list's own order, so the screen never depends on the fetch.
+///
+/// Ranking can use whatever arrived; the totals cannot. A sum over the
+/// members that happened to answer is a number, but it is not the list's
+/// total, so the totals stay `null` unless every member was asked about and
+/// every page answered.
 class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     with CloseGuardedEmit<PeopleListMembersState> {
   PeopleListMembersCubit({
@@ -51,13 +56,21 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
   Future<void> load() async {
     final repository = _profileRepository;
     if (repository == null || _pubkeys.isEmpty) {
-      emitIfOpen(_ranked(const {}, status: PeopleListMembersStatus.success));
+      emitIfOpen(
+        _ranked(
+          const {},
+          status: PeopleListMembersStatus.success,
+          complete: false,
+        ),
+      );
       return;
     }
     emitIfOpen(state.copyWith(status: PeopleListMembersStatus.loading));
 
     final stats = <String, _MemberStats>{};
     final sample = _pubkeys.take(kPeopleListStatsMemberCap).toList();
+    // Members past the cap are never asked about, so their list has no total.
+    var complete = sample.length == _pubkeys.length;
     try {
       for (
         var start = 0;
@@ -70,7 +83,10 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
         );
         final response = await repository.getBulkProfilesFromApi(page);
         // Null means Funnelcake is not configured; no page will answer.
-        if (response == null) break;
+        if (response == null) {
+          complete = false;
+          break;
+        }
         for (final entry in response.profiles.entries) {
           // Vertical videos only: the grid under this line renders nothing
           // else, so counting an author's horizontal videos here would
@@ -79,21 +95,35 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
           if (videoCount == null) continue;
           stats[entry.key.toLowerCase()] = (
             videoCount: videoCount,
-            totalLoops: entry.value.engagement?.totalLoops ?? 0,
+            // Missing engagement is unknown, not zero loops.
+            totalLoops: entry.value.engagement?.totalLoops,
           );
         }
       }
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(_ranked(stats, status: PeopleListMembersStatus.failure));
+      emitIfOpen(
+        _ranked(
+          stats,
+          status: PeopleListMembersStatus.failure,
+          complete: false,
+        ),
+      );
       return;
     }
-    emitIfOpen(_ranked(stats, status: PeopleListMembersStatus.success));
+    emitIfOpen(
+      _ranked(
+        stats,
+        status: PeopleListMembersStatus.success,
+        complete: complete,
+      ),
+    );
   }
 
   PeopleListMembersState _ranked(
     Map<String, _MemberStats> stats, {
     required PeopleListMembersStatus status,
+    required bool complete,
   }) {
     final members = [
       for (final pubkey in _pubkeys)
@@ -113,20 +143,22 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
         return byVideos != 0 ? byVideos : a.$1.compareTo(b.$1);
       });
     final ranked = indexed.map((entry) => entry.$2).toList();
-    final withStats = ranked.where((member) => member.hasStats);
+    final withStats = ranked.where((member) => member.hasStats).toList();
+    final hasTotals = complete && withStats.isNotEmpty;
+    final loopsKnown = withStats.every((member) => member.totalLoops != null);
 
     return PeopleListMembersState(
       status: status,
       members: List.unmodifiable(ranked),
-      totalVideos: withStats.isEmpty
-          ? null
-          : withStats.fold<int>(0, (sum, member) => sum + member.videoCount!),
-      totalLoops: withStats.isEmpty
-          ? null
-          : withStats.fold<double>(
+      totalVideos: hasTotals
+          ? withStats.fold<int>(0, (sum, member) => sum + member.videoCount!)
+          : null,
+      totalLoops: hasTotals && loopsKnown
+          ? withStats.fold<double>(
               0,
               (sum, member) => sum + member.totalLoops!,
-            ),
+            )
+          : null,
     );
   }
 }

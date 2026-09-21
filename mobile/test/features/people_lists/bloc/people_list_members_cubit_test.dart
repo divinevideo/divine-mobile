@@ -204,7 +204,7 @@ void main() {
         expect(cubit.state.members.single.videoCount, equals(2));
       });
 
-      test('keeps the ranking it has when a page fails', () async {
+      test('keeps the ranking but shows no totals when a page fails', () async {
         var calls = 0;
         when(
           () => profileRepository.getBulkProfilesFromApi(any()),
@@ -232,7 +232,107 @@ void main() {
 
         expect(cubit.state.status, equals(PeopleListMembersStatus.failure));
         expect(cubit.state.members.first.pubkey, equals(_busy));
-        expect(cubit.state.totalVideos, equals(3));
+        expect(cubit.state.members.first.videoCount, equals(3));
+        // The first page's sum is not the list's total.
+        expect(cubit.state.totalVideos, isNull);
+        expect(cubit.state.totalLoops, isNull);
+      });
+
+      test('shows no totals for a list past the member cap', () async {
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer((invocation) async {
+          final page = invocation.positionalArguments.single as List<String>;
+          return BulkProfilesResponse(
+            profiles: {
+              for (final pubkey in page)
+                pubkey: _found(pubkey, videos: 1, loops: 5),
+            },
+          );
+        });
+        final cubit = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [
+            for (var i = 0; i < kPeopleListStatsMemberCap + 1; i++)
+              i.toRadixString(16).padLeft(64, '0'),
+          ],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.status, equals(PeopleListMembersStatus.success));
+        // The sampled members are still ranked; only the totals are withheld.
+        expect(cubit.state.members.first.videoCount, equals(1));
+        expect(cubit.state.members.last.hasStats, isFalse);
+        expect(cubit.state.totalVideos, isNull);
+        expect(cubit.state.totalLoops, isNull);
+      });
+
+      test('totals a list of exactly the member cap', () async {
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer((invocation) async {
+          final page = invocation.positionalArguments.single as List<String>;
+          return BulkProfilesResponse(
+            profiles: {
+              for (final pubkey in page)
+                pubkey: _found(pubkey, videos: 1, loops: 5),
+            },
+          );
+        });
+        final cubit = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [
+            for (var i = 0; i < kPeopleListStatsMemberCap; i++)
+              i.toRadixString(16).padLeft(64, '0'),
+          ],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        expect(cubit.state.totalVideos, equals(kPeopleListStatsMemberCap));
+        expect(
+          cubit.state.totalLoops,
+          equals(kPeopleListStatsMemberCap * 5),
+        );
+      });
+
+      test('leaves loops unknown for a member without engagement', () async {
+        when(
+          () => profileRepository.getBulkProfilesFromApi(any()),
+        ).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {
+              _quiet: _found(_quiet, videos: 2, loops: 10),
+              _busy: UserProfileFound(
+                profile: UserProfileData(pubkey: _busy),
+                stats: const ProfileStatsData(
+                  videoCount: 4,
+                  reactionCount: 0,
+                  verticalVideos: 4,
+                ),
+              ),
+            },
+          ),
+        );
+        final cubit = PeopleListMembersCubit(
+          profileRepository: profileRepository,
+          pubkeys: [_quiet, _busy],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.load();
+
+        final busy = cubit.state.members.first;
+        expect(busy.pubkey, equals(_busy));
+        expect(busy.videoCount, equals(4));
+        expect(busy.totalLoops, isNull);
+        // Videos are all known, so that total stands; ten loops plus an
+        // unknown is not a loop total.
+        expect(cubit.state.totalVideos, equals(6));
+        expect(cubit.state.totalLoops, isNull);
       });
     });
   });
