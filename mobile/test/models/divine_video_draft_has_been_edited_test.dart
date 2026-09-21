@@ -332,6 +332,7 @@ void main() {
           'publishError', // transient error
           'sourceDraftId', // publish-copy bookkeeping, not user content
           'proofManifestJson', // auto-generated, not a user edit
+          'finalRenderVersion', // stamp on the cached render, not an edit
           'editorEditingParameters', // editor internals, not user-facing edit
           'allowAudioReuse', // publishing option, not edit indicator
           // Implied by 'description': a mention only exists because the

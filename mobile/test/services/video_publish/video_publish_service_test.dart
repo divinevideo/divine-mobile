@@ -171,8 +171,194 @@ void main() {
     );
   });
 
+  VideoPublishService retryService(
+    Future<DivineVideoDraft> Function(DivineVideoDraft) render,
+  ) => VideoPublishService(
+    draftMaterializer: mockDraftMaterializer,
+    uploadManager: mockUploadManager,
+    authService: mockAuthService,
+    videoEventPublisher: mockVideoEventPublisher,
+    blossomService: mockBlossomService,
+    draftService: mockDraftService,
+    rerenderDraft: render,
+    onProgressChanged: ({required draftId, required progress}) {},
+  );
+
   group('VideoPublishService', () {
     group('publishVideo', () {
+      test('never uploads source media after a legacy render is invalidated', () async {
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+        // getDraftsByPublishStatuses clears the old render before the startup
+        // retry reaches this service, retaining its version and authored edits.
+        final resumed = _createTestDraft(
+          editorEditingParameters: {'blur': 2.0},
+        ).copyWith(finalRenderVersion: 0, clearFinalRenderedClip: true);
+
+        final result = await service.publishVideo(draft: resumed);
+
+        expect(result, isA<PublishError>());
+        verifyNever(() => mockUploadManager.findReusableUpload(any()));
+        verifyNever(
+          () => mockDraftMaterializer.materialize(
+            draft: any(named: 'draft'),
+            pendingUploads: any(named: 'pendingUploads'),
+            videoDuration: any(named: 'videoDuration'),
+          ),
+        );
+      });
+
+      test('re-renders resumed drafts before reusing uploaded bytes', () async {
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+        final oldUpload = _createPendingUpload(
+          status: UploadStatus.readyToPublish,
+        );
+        when(() => mockUploadManager.findReusableUpload('/test/video.mp4'))
+            .thenReturn(oldUpload);
+        final tempDir = Directory.systemTemp.createTempSync('retry_render_');
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final freshFile = File('${tempDir.path}/fresh.mp4')
+          ..writeAsBytesSync([0]);
+        final freshClip = _createTestClip().copyWith(
+          video: EditorVideo.file(freshFile.path),
+        );
+        final resumed = _createTestDraft().copyWith(finalRenderVersion: 0);
+        var renders = 0;
+        final retry = retryService((draft) async {
+          renders++;
+          expect(draft, same(resumed));
+          return draft.copyWith(finalRenderedClip: freshClip);
+        });
+
+        // Seed the same service with a completed upload. Invalidating the
+        // next draft must discard both this in-memory ID and the old path.
+        expect(
+          await retry.publishVideo(draft: _createTestDraft()),
+          isA<PublishSuccess>(),
+        );
+        clearInteractions(mockUploadManager);
+        clearInteractions(mockDraftService);
+
+        final result = await retry.publishVideo(draft: resumed);
+
+        expect(result, isA<PublishSuccess>());
+        expect(renders, 1);
+        verifyNever(
+          () => mockUploadManager.findReusableUpload('/test/video.mp4'),
+        );
+        verify(() => mockUploadManager.findReusableUpload(freshFile.path))
+            .called(1);
+        final materialized =
+            verify(
+                  () => mockDraftMaterializer.materialize(
+                    draft: captureAny(named: 'draft'),
+                    pendingUploads: any(named: 'pendingUploads'),
+                    videoDuration: any(named: 'videoDuration'),
+                  ),
+                ).captured.single
+                as DivineVideoDraft;
+        expect(materialized.finalRenderedClip, same(freshClip));
+        expect(
+          materialized.finalRenderVersion,
+          DivineVideoDraft.currentFinalRenderVersion,
+        );
+        final saved =
+            verify(() => mockDraftService.saveDraft(captureAny()))
+                    .captured
+                    .first
+                as DivineVideoDraft;
+        expect(saved.finalRenderedClip, same(freshClip));
+      });
+
+      test(
+        'a failed retry render never reaches upload reuse or materialization',
+        () async {
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          );
+          final retry = retryService((draft) async {
+            throw StateError('render failed');
+          });
+
+          final result = await retry.publishVideo(
+            draft: _createTestDraft().copyWith(finalRenderVersion: 0),
+          );
+
+          expect(result, isA<PublishError>());
+          verifyNever(() => mockUploadManager.findReusableUpload(any()));
+          verifyNever(
+            () => mockDraftMaterializer.materialize(
+              draft: any(named: 'draft'),
+              pendingUploads: any(named: 'pendingUploads'),
+              videoDuration: any(named: 'videoDuration'),
+            ),
+          );
+          final saved =
+              verify(() => mockDraftService.saveDraft(captureAny()))
+                      .captured
+                      .single
+                  as DivineVideoDraft;
+          expect(saved.publishStatus, PublishStatus.failed);
+          expect(saved.finalRenderVersion, 0);
+        },
+      );
+
+      for (final renderFails in [false, true]) {
+        test(
+          'rejects an account switch during retry render (fails: $renderFails)',
+          () async {
+            _setupSuccessfulPublish(
+              mockAuthService: mockAuthService,
+              mockUploadManager: mockUploadManager,
+              mockDraftService: mockDraftService,
+              mockVideoEventPublisher: mockVideoEventPublisher,
+            );
+            var currentPubkey =
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+            when(() => mockAuthService.currentPublicKeyHex)
+                .thenAnswer((_) => currentPubkey);
+            final renderStarted = Completer<void>();
+            final renderCompleted = Completer<DivineVideoDraft>();
+            final retry = retryService((draft) {
+              renderStarted.complete();
+              return renderCompleted.future;
+            });
+            final legacyDraft = _createTestDraft().copyWith(
+              finalRenderVersion: 0,
+            );
+
+            final publishing = retry.publishVideo(draft: legacyDraft);
+            await renderStarted.future;
+            currentPubkey = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+            if (renderFails) {
+              renderCompleted.completeError(StateError('render failed'));
+            } else {
+              renderCompleted.complete(
+                legacyDraft.copyWith(finalRenderedClip: _createTestClip()),
+              );
+            }
+            final result = await publishing;
+
+            expect(result, const PublishError(PublishErrorKind.accountChanged));
+            verifyNever(() => mockDraftService.saveDraft(any()));
+            verifyZeroInteractions(mockUploadManager);
+            verifyZeroInteractions(mockVideoEventPublisher);
+          },
+        );
+      }
+
       test('returns error when user is not authenticated', () async {
         // Arrange
         when(() => mockAuthService.isAuthenticated).thenReturn(false);

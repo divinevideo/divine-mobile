@@ -37,6 +37,35 @@ void main() {
       file.writeAsBytesSync([0]);
     }
 
+    /// A draft whose cached final render is `rendered.mp4` in the documents
+    /// directory (created here), stamped with [finalRenderVersion].
+    DivineVideoDraft renderedDraft({required int finalRenderVersion}) {
+      createDocumentFile('rendered.mp4');
+      final savedAt = DateTime(2026, 5, 4, 3, 2, 1);
+      DivineVideoClip clip(String id, String path) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file(path),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime(2025),
+        targetAspectRatio: AspectRatio.square,
+        originalAspectRatio: 9 / 16,
+      );
+      return DivineVideoDraft(
+        id: 'draft_rendered',
+        clips: [clip('clip_1', '/path/to/video.mp4')],
+        title: 'Rendered Draft',
+        description: '',
+        hashtags: {},
+        selectedApproach: 'video',
+        createdAt: savedAt,
+        lastModified: savedAt,
+        publishStatus: PublishStatus.draft,
+        publishAttempts: 0,
+        finalRenderedClip: clip('rendered_clip', '/path/to/rendered.mp4'),
+        finalRenderVersion: finalRenderVersion,
+      );
+    }
+
     setUp(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -472,6 +501,47 @@ void main() {
         // ...and it is not an edit either, so the timestamp stays put.
         expect(drafts.single.lastModified, savedAt);
       });
+
+      test('keeps a current final render whose file exists', () async {
+        await service.saveDraft(
+          renderedDraft(
+            finalRenderVersion: DivineVideoDraft.currentFinalRenderVersion,
+          ),
+        );
+
+        final drafts = await service.getAllDrafts();
+
+        expect(drafts.single.finalRenderedClip?.id, 'rendered_clip');
+      });
+
+      test('drops a final render cached by an older renderer', () async {
+        await service.saveDraft(renderedDraft(finalRenderVersion: 0));
+
+        final drafts = await service.getAllDrafts();
+
+        expect(drafts, hasLength(1));
+        expect(drafts.single.finalRenderedClip, isNull);
+        // Publishing renders it again from its clips and editor state.
+        expect(drafts.single.canPost, isTrue);
+        expect(drafts.single.lastModified, DateTime(2026, 5, 4, 3, 2, 1));
+      });
+
+      test(
+        'deletes a stale final render once the draft is saved without it',
+        () async {
+          await service.saveDraft(renderedDraft(finalRenderVersion: 0));
+          final loaded = (await service.getAllDrafts()).single;
+
+          await service.saveDraft(loaded);
+
+          expect(
+            File(p.join(documentsPath, 'rendered.mp4')).existsSync(),
+            isFalse,
+            reason: 'a render dropped on load must not outlive its reference',
+          );
+          expect(File(p.join(documentsPath, 'video.mp4')).existsSync(), isTrue);
+        },
+      );
     });
 
     group('getDraftById', () {
@@ -679,6 +749,17 @@ void main() {
     });
 
     group('deleteDraft', () {
+      test('deletes a stale final render along with its draft', () async {
+        await service.saveDraft(renderedDraft(finalRenderVersion: 0));
+
+        await service.deleteDraft('draft_rendered');
+
+        expect(
+          File(p.join(documentsPath, 'rendered.mp4')).existsSync(),
+          isFalse,
+        );
+      });
+
       test('should delete draft by ID', () async {
         final now = DateTime.now();
         final draft1 = DivineVideoDraft(

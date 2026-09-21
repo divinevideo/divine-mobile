@@ -607,6 +607,45 @@ void main() {
         );
       });
 
+      testWidgets('renders again instead of publishing a stale final render', (
+        tester,
+      ) async {
+        final container = await pumpHarness(tester);
+        var renderCalls = 0;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              parameters,
+              taskId,
+            }) async {
+              renderCalls++;
+              // Stop the publish here; the render call is the assertion.
+              throw const VideoRenderFailedException(
+                VideoRenderFailureReason.nativeRender,
+              );
+            };
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(
+              context,
+              draft().copyWith(
+                finalRenderedClip: clip(),
+                finalRenderVersion: 0,
+              ),
+            );
+
+        expect(
+          renderCalls,
+          equals(1),
+          reason:
+              'a render cached before pro_video_editor 2.13.2 can carry '
+              "another render's crop or filters, so it must not be published",
+        );
+      });
+
       testWidgets('surfaces a snackbar when the render fails', (tester) async {
         final container = await pumpHarness(tester);
         VideoEditorRenderService.renderVideoToClipOverride =

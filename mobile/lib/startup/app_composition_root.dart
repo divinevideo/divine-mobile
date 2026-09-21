@@ -26,12 +26,14 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
+import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart';
 import 'package:openvine/widgets/app_lifecycle_handler.dart';
@@ -63,6 +65,9 @@ class AppCompositionRoot extends ConsumerWidget {
     }) async {
       final profileRepository = ref.read(profileRepositoryProvider);
       return VideoPublishService(
+        rerenderDraft: DraftRenderParametersService(
+          rasterizer: ref.read(layerRasterizerProvider),
+        ).renderDraft,
         uploadManager: ref.read(uploadManagerProvider),
         authService: ref.read(authServiceProvider),
         videoEventPublisher: ref.read(videoEventPublisherProvider),
