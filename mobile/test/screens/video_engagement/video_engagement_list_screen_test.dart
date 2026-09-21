@@ -330,7 +330,7 @@ void main() {
       (tester) async {
         when(
           () => likesRepository.fetchEventLikers(eventId: testEventId),
-        ).thenAnswer((_) async => const [testPubkey1]);
+        ).thenAnswer((_) async => const LikersPage(pubkeys: [testPubkey1]));
 
         // `/video/:eventId/likers` is registered flat and top-level, so a
         // deep link into it leaves a one-entry stack: popping it removes the
