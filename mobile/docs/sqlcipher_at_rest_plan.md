@@ -34,8 +34,27 @@ workspace pubspec define is read and the host build loads `libsqlite3mc.dylib`.
 ## Key and open sequence
 
 The app stores a 32-byte CSPRNG key in `flutter_secure_storage` under
-`db.cipher.key.v1`, represented as 64 lower-case hex characters. db_client never
+`db.cipher.key.v2`, represented as 64 lower-case hex characters. db_client never
 reads secure storage; the app bootstrap resolves the key and injects it.
+
+On iOS the item carries `first_unlock_this_device`: readable from the first
+unlock after boot until the next reboot, locked screen included, and never
+restored onto another device. Until #9343 it sat under the package default,
+`unlocked`, under the name `db.cipher.key.v1`, and every launch while the
+device was locked — a silent push, a background refresh, a prewarmed launch —
+failed with `errSecInteractionNotAllowed` (-25308). The bootstrap moves such a
+key into the `.v2` slot on its first unlocked launch and deletes the old item
+through a storage instance that still names the old accessibility, since the
+iOS plugin puts the accessibility into its delete query. macOS keeps `unlocked`
+(#5563).
+
+`flutter_secure_storage`'s iOS `read` reports an item the current device state
+cannot decrypt as absent rather than failing: it drops the -25308 status and
+retries the query as synchronizable, which finds nothing. So before generating
+a key, the bootstrap asks `UIApplication.isProtectedDataAvailable`; while
+protected data is unavailable an empty read is not evidence of a fresh install,
+and the launch fails closed with `DatabaseCipherStorageUnavailableException`
+instead of writing a replacement key that would strand the existing database.
 
 Every keyed native open runs these statements before any database use:
 
@@ -87,7 +106,7 @@ are deleted so plaintext does not remain at rest.
 
 ## Key-loss recovery
 
-If secure storage loses `db.cipher.key.v1` while an encrypted DB remains, the old
+If secure storage loses `db.cipher.key.v2` while an encrypted DB remains, the old
 DB is cryptographically unrecoverable. The bootstrap backs up the unreadable DB
 and creates a fresh encrypted DB under the new key. This is data-preserving in
 the only possible way: the old bytes are retained for forensic/manual recovery,

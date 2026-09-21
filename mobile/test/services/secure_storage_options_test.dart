@@ -48,4 +48,35 @@ void main() {
       expect(usesDataProtectionKeyChain(isDebug: true), isTrue);
     });
   });
+
+  group('appDbCipherKeyIosSecureStorageOptions', () {
+    test('stores the database key readable after first unlock, on this '
+        'device only', () {
+      // `unlocked` is what made every locked-screen launch fail with -25308
+      // and land on the database-failure screen (#9343); the full map pins
+      // the rest of the item's identity so the one-time migration keeps
+      // finding what earlier installs wrote.
+      expect(appDbCipherKeyIosSecureStorageOptions().toMap(), <String, String>{
+        'accessibility': 'first_unlock_this_device',
+        'accountName': 'flutter_secure_storage_service',
+        'synchronizable': 'false',
+      });
+    });
+  });
+
+  group('legacyDbCipherKeyIosSecureStorageOptions', () {
+    test('names the pre-#9343 accessibility explicitly', () {
+      // The iOS plugin puts the accessibility into its delete query, so the
+      // old item is only reachable through options that spell out `unlocked`
+      // — regardless of what the package default becomes.
+      expect(
+        legacyDbCipherKeyIosSecureStorageOptions().toMap(),
+        <String, String>{
+          'accessibility': 'unlocked',
+          'accountName': 'flutter_secure_storage_service',
+          'synchronizable': 'false',
+        },
+      );
+    });
+  });
 }

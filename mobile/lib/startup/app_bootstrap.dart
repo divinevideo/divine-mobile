@@ -480,6 +480,18 @@ Future<void> startOpenVineApp({
   // must happen before any Drift database open. (#570, finding C2)
   final dbCipherSecureStorage = FlutterSecureStorage(
     aOptions: const AndroidOptions(encryptedSharedPreferences: true),
+    // Readable while the device is locked once it has been unlocked since
+    // boot, so a silent push or a prewarmed launch can open the database. The
+    // package default refused every such launch (#9343).
+    iOptions: appDbCipherKeyIosSecureStorageOptions(),
+    mOptions: appMacOsSecureStorageOptions(),
+  );
+  // Same store, pre-#9343 iOS accessibility: the only instance whose delete
+  // query matches the item existing installs still hold. The bootstrap reads
+  // that item once, moves it under the options above and deletes it here.
+  final legacyDbCipherSecureStorage = FlutterSecureStorage(
+    aOptions: const AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: legacyDbCipherKeyIosSecureStorageOptions(),
     mOptions: appMacOsSecureStorageOptions(),
   );
   var didRecordDatabaseBootstrapFailure = false;
@@ -528,6 +540,7 @@ Future<void> startOpenVineApp({
   Future<void> resetLocalDatabaseCache({required bool deleteCipherKey}) =>
       resetEncryptedDatabaseCache(
         secureStorage: dbCipherSecureStorage,
+        legacySecureStorage: legacyDbCipherSecureStorage,
         deleteCipherKey: deleteCipherKey,
         // On the recreate the Drift DB is wiped but SharedPreferences survives;
         // clear the DM sync state so the next inbox open runs a full re-drain
@@ -554,6 +567,7 @@ Future<void> startOpenVineApp({
       // triggering the §6 key-loss recovery. (#570 C2)
       resolveCipherKey: () => DatabaseEncryptionBootstrap(
         secureStorage: dbCipherSecureStorage,
+        legacySecureStorage: legacyDbCipherSecureStorage,
         // On the key-loss recreate the Drift DB is wiped but SharedPreferences
         // survives; clear the DM sync state so the next inbox open runs a full
         // re-drain instead of skipping it as "already complete" (which had
@@ -600,6 +614,7 @@ Future<void> startOpenVineApp({
         if (diagnosis == DatabaseBootstrapDiagnosis.databaseUnreadable) {
           await resetUnreadablePlaintextDatabaseCache(
             secureStorage: dbCipherSecureStorage,
+            legacySecureStorage: legacyDbCipherSecureStorage,
             onDatabaseReset: () => DmSyncState(sharedPreferences).clearAll(),
             persistRecoveryOutcome: databaseRecoveryStore.record,
           );
