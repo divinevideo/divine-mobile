@@ -5,8 +5,8 @@ import 'package:material_ui/material_ui.dart';
 
 void main() {
   group(DivineStickerName, () {
-    test('has 71 variants', () {
-      expect(DivineStickerName.values.length, equals(71));
+    test('has 66 variants', () {
+      expect(DivineStickerName.values.length, equals(66));
     });
 
     test('assetPath returns correct path', () {
@@ -18,14 +18,60 @@ void main() {
 
     test('assetPath returns correct path for multi-word name', () {
       expect(
-        DivineStickerName.forgotPasswordAlt.assetPath,
-        equals('assets/stickers/forgot_password_alt.svg'),
+        DivineStickerName.forgotPassword.assetPath,
+        equals('assets/stickers/forgot_password.svg'),
       );
     });
 
     test('all variants have unique file names', () {
       final fileNames = DivineStickerName.values.map((s) => s.fileName).toSet();
       expect(fileNames.length, equals(DivineStickerName.values.length));
+    });
+
+    test('alert is the siren, not the older warning triangle', () {
+      expect(
+        DivineStickerName.alert.assetPath,
+        equals('assets/stickers/police_siren.svg'),
+      );
+    });
+
+    test('blocked is the stop hand, not the older prohibition sign', () {
+      expect(
+        DivineStickerName.blocked.assetPath,
+        equals('assets/stickers/raised_hand.svg'),
+      );
+    });
+
+    test('hangLoose uses its dedicated shaka artwork', () {
+      expect(
+        DivineStickerName.hangLoose.assetPath,
+        equals('assets/stickers/hang_loose.svg'),
+      );
+    });
+
+    test('variants renamed to follow Figma keep their original artwork', () {
+      const renamed = {
+        DivineStickerName.balloonDog: 'ballon_dog',
+        DivineStickerName.banana: 'peeled_banana',
+        DivineStickerName.cat: 'angry_cat',
+        DivineStickerName.cellPhone: 'nokia_3310',
+        DivineStickerName.earthGlobe: 'world_map',
+        DivineStickerName.gameController: 'videogame',
+        DivineStickerName.padlock: 'password',
+        DivineStickerName.pinkDumbbells: 'adjustable_dumbbell',
+        DivineStickerName.unicornFloat: 'inflatable_flamingo_pool_float',
+      };
+
+      for (final MapEntry(key: sticker, value: fileName) in renamed.entries) {
+        expect(sticker.fileName, equals(fileName), reason: sticker.name);
+      }
+    });
+
+    test('grandfather stays available while it is pending in Figma', () {
+      expect(
+        DivineStickerName.grandfather.assetPath,
+        equals('assets/stickers/grandfather.svg'),
+      );
     });
 
     test('all file names use snake_case', () {
