@@ -3701,6 +3701,32 @@ void main() {
         expect(uri.path, equals('/api/videos/$testVideoId'));
       });
 
+      test('keeps a punctuated d tag in one path segment', () async {
+        // The route lookup passes `stableId ?? eventId`, so a d tag decoded
+        // from an untrusted naddr1 arrives here as arbitrary UTF-8.
+        // Interpolated raw, 'a?b/c#d' asked for /api/videos/a with the rest
+        // as a query and fragment, so a different video answered.
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('Not found', 404));
+
+        await client.getVideoEvent('a?b/c#d');
+
+        final uri =
+            verify(
+                  () => mockHttpClient.get(
+                    captureAny(),
+                    headers: any(named: 'headers'),
+                  ),
+                ).captured.first
+                as Uri;
+
+        expect(uri.pathSegments, equals(['api', 'videos', 'a?b/c#d']));
+        expect(uri.path, equals('/api/videos/a%3Fb%2Fc%23d'));
+        expect(uri.query, isEmpty);
+        expect(uri.fragment, isEmpty);
+      });
+
       test('returns null on 404', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
