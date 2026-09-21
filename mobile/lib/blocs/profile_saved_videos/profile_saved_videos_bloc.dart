@@ -53,6 +53,10 @@ class ProfileSavedVideosBloc
       transformer: sequential(),
     );
     on<ProfileSavedVideosLoadMoreRequested>(_onLoadMoreRequested);
+    on<ProfileSavedVideosReconcileRequested>(
+      _onReconcileRequested,
+      transformer: sequential(),
+    );
     on<ProfileSavedVideosVideoRemoved>(
       _onVideoRemoved,
       transformer: sequential(),
@@ -61,17 +65,43 @@ class ProfileSavedVideosBloc
       if (isClosed) return;
       add(ProfileSavedVideosVideoRemoved(videoId));
     });
+    // The share sheet saves through the same repository instance, so this is
+    // how a grid that is already mounted learns about it.
+    _bookmarksSubscription = bookmarksRepository.watchGlobalBookmarks().listen((
+      items,
+    ) {
+      if (isClosed) return;
+      add(ProfileSavedVideosReconcileRequested(_savedVideoIds(items)));
+    });
   }
 
   final BookmarksRepository _bookmarksRepository;
   final VideosRepository _videosRepository;
   final String _currentUserPubkey;
   late final StreamSubscription<String> _removedVideoIdsSubscription;
+  late final StreamSubscription<List<BookmarkItem>> _bookmarksSubscription;
   final bool Function(VideoEvent video) _deletedVideoFilter;
 
   /// Cache key for the saved-videos snapshot (bookmarks are private, so the
   /// key is scoped to the signed-in user for sign-out invalidation).
-  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos';
+  ///
+  /// `_v2` because the snapshot's ID order flipped to newest-first. Reconciling
+  /// an oldest-first snapshot against a newest-first list finds the old top ID
+  /// at the far end, which reads as "everything above it is new" and widens
+  /// the window to the whole list — one relay query for every bookmark the
+  /// viewer has. Starting cold loads one page instead.
+  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v2';
+
+  /// The video bookmarks in [items], most recently saved first.
+  ///
+  /// NIP-51 appends, so the list arrives oldest-first. Reversed here because
+  /// the grid loads one page from the front: left as-is, a save made a moment
+  /// ago sits past the loaded window for anyone with more than a page of
+  /// bookmarks, and at the very bottom for everyone else.
+  static List<String> _savedVideoIds(List<BookmarkItem> items) => [
+    for (final item in items.reversed)
+      if (item.type == 'e') item.id,
+  ];
 
   /// Handle sync request using stale-while-revalidate backed by [CacheSync].
   ///
@@ -165,10 +195,7 @@ class ProfileSavedVideosBloc
   /// as fatal, because republishing an unreconciled list destroys bookmarks.)
   Future<List<String>> _resolveSavedIds() async {
     await _bookmarksRepository.syncGlobalBookmarks();
-    return _bookmarksRepository.globalBookmarks
-        .where((item) => item.type == 'e')
-        .map((item) => item.id)
-        .toList();
+    return _savedVideoIds(_bookmarksRepository.globalBookmarks);
   }
 
   /// Cold path: nothing cached. Fetch the first page for [savedEventIds].
@@ -257,6 +284,52 @@ class ProfileSavedVideosBloc
         hasMoreContent: reconciled.hasMoreContent,
       ),
     );
+  }
+
+  /// Lands a bookmark change made while the grid is already showing — a save
+  /// or an unsave from the share sheet — without waiting for the next sync.
+  Future<void> _onReconcileRequested(
+    ProfileSavedVideosReconcileRequested event,
+    Emitter<ProfileSavedVideosState> emit,
+  ) async {
+    // Nothing has settled yet, so there is no list to reconcile against. The
+    // sync that is about to settle reads the same repository.
+    if (state.status == ProfileSavedVideosStatus.initial || state.isLoading) {
+      return;
+    }
+    final freshIds = event.savedEventIds;
+    if (listEquals(freshIds, state.savedEventIds)) return;
+
+    try {
+      final reconciled = await _reconcile(freshIds);
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          status: ProfileSavedVideosStatus.success,
+          videos: reconciled.videos,
+          savedEventIds: freshIds,
+          nextPageOffset: reconciled.nextPageOffset,
+          hasMoreContent: reconciled.hasMoreContent,
+          lastFetchResolvedVideoCount: reconciled.resolvedVideoCount,
+          clearError: true,
+        ),
+      );
+      await _persistSnapshot(
+        ProfileVideoListSnapshot(
+          videos: reconciled.videos,
+          itemIds: freshIds,
+          nextPageOffset: reconciled.nextPageOffset,
+          hasMoreContent: reconciled.hasMoreContent,
+        ),
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        'ProfileSavedVideosBloc: Failed to reconcile saved videos - $e',
+        name: 'ProfileSavedVideosBloc',
+        category: LogCategory.video,
+      );
+      addError(e, stackTrace);
+    }
   }
 
   /// Reconciles displayed videos against a fresh [freshIds] list: keeps saved
@@ -577,7 +650,9 @@ class ProfileSavedVideosBloc
   @override
   Future<void> close() async {
     final removedVideoIdsCancelled = _removedVideoIdsSubscription.cancel();
+    final bookmarksCancelled = _bookmarksSubscription.cancel();
     await super.close();
     await removedVideoIdsCancelled;
+    await bookmarksCancelled;
   }
 }

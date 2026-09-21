@@ -28,6 +28,17 @@ final class ProfileSavedVideosLoadMoreRequested
   const ProfileSavedVideosLoadMoreRequested();
 }
 
+/// Internal: the bookmark list changed while the grid was showing.
+///
+/// Dispatched from the bloc's own subscription to the bookmarks repository;
+/// [savedEventIds] is the new list, most recently saved first.
+final class ProfileSavedVideosReconcileRequested
+    extends ProfileSavedVideosEvent {
+  const ProfileSavedVideosReconcileRequested(this.savedEventIds);
+
+  final List<String> savedEventIds;
+}
+
 /// Internal: drop a video after the deletion bus reports it removed.
 final class ProfileSavedVideosVideoRemoved extends ProfileSavedVideosEvent {
   const ProfileSavedVideosVideoRemoved(this.videoId);
