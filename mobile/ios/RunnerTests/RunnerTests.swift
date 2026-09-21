@@ -426,39 +426,108 @@ private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
 /// `FlutterEngine`; each engine's `register` hands it a method channel that
 /// only `detachFromEngine(for:)` takes back. Flutter delivers that hook solely
 /// to a plugin that published itself (FlutterPlugin.h), and it runs inside
-/// `-[FlutterEngine dealloc]`, where `registrar.messenger()` resolves through
-/// a weak engine reference that already reads nil and a send on the channel
-/// dereferences the destroyed shell (#9342).
+/// `-[FlutterEngine dealloc]`, where every weak reference to the engine —
+/// the registrar's and the messenger relay's — already reads nil (#9342).
+///
+/// The host app has registered the real plugin too, so the coordinator's
+/// counters include its channel: tests compare deltas, never absolutes.
 final class BackgroundUploaderEngineTeardownTests: XCTestCase {
   private var registrar: FakePluginRegistrar!
+  private var plugin: BackgroundUploaderPlugin!
 
-  override func setUp() {
-    super.setUp()
+  override func setUpWithError() throws {
+    try super.setUpWithError()
     registrar = FakePluginRegistrar()
     BackgroundUploaderPlugin.register(with: registrar)
+    // Resolved through the method-call delegate rather than the publication,
+    // so teardown still finds the instance when publishing regresses.
+    plugin = try XCTUnwrap(
+      registrar.methodCallDelegates.first as? BackgroundUploaderPlugin,
+      "register must install the plugin as the channel's method-call delegate"
+    )
   }
 
-  override func tearDown() {
+  override func tearDownWithError() throws {
     // Takes the fake engine's channel back out of the process-wide
     // coordinator; idempotent, so a failing test leaves nothing behind.
-    (registrar.published as? BackgroundUploaderPlugin)?.detachFromEngine(for: registrar)
+    try XCTUnwrap(plugin).detachFromEngine(for: registrar)
+    plugin = nil
     registrar = nil
-    super.tearDown()
+    try super.tearDownWithError()
+  }
+
+  private func diagnostic(_ key: String) throws -> Int {
+    var value: Int?
+    plugin.handle(FlutterMethodCall(methodName: "diagnostics", arguments: nil)) { result in
+      value = (result as? [String: Any])?[key] as? Int
+    }
+    return try XCTUnwrap(value, "diagnostics must answer synchronously with \(key)")
+  }
+
+  private func beginForegroundSession(_ sessionId: String) {
+    plugin.handle(
+      FlutterMethodCall(
+        methodName: "beginForegroundSession",
+        arguments: ["sessionId": sessionId]
+      )
+    ) { _ in }
   }
 
   func testRegisterPublishesTheInstanceServingTheChannel() throws {
-    let plugin = try XCTUnwrap(
+    let published = try XCTUnwrap(
       registrar.published as? BackgroundUploaderPlugin,
       "register must publish the plugin: Flutter delivers detachFromEngine to published plugins only"
     )
     XCTAssertTrue(
-      registrar.methodCallDelegates.contains { $0 === plugin },
+      published === plugin,
       "the published object must be the instance holding this engine's channel"
+    )
+    XCTAssertTrue(
+      registrar.applicationDelegates.contains { $0 === plugin },
+      "handleEventsForBackgroundURLSession reaches the plugin only as an application delegate"
+    )
+    XCTAssertTrue(
+      plugin.responds(to: NSSelectorFromString("detachFromEngineForRegistrar:")),
+      "dealloc dispatches the hook through respondsToSelector, not Swift"
     )
   }
 
-  func testDetachFromEngineNeverReachesTheEngine() throws {
-    let plugin = try XCTUnwrap(registrar.published as? BackgroundUploaderPlugin)
+  func testDetachFromEngineReleasesThisEnginesChannel() throws {
+    let attached = try diagnostic("attachedChannels")
+
+    plugin.detachFromEngine(for: registrar)
+
+    XCTAssertEqual(try diagnostic("attachedChannels"), attached - 1)
+  }
+
+  func testDetachFromEngineClosesTheSessionsItsDartCanNoLongerEnd() throws {
+    let open = try diagnostic("activeForegroundSessions")
+    beginForegroundSession("runner-tests-\(UUID().uuidString)")
+    XCTAssertEqual(try diagnostic("activeForegroundSessions"), open + 1)
+
+    plugin.detachFromEngine(for: registrar)
+
+    XCTAssertEqual(
+      try diagnostic("activeForegroundSessions"), open,
+      "an open session holds every later background wake until the watchdog fires"
+    )
+  }
+
+  func testDetachFromEngineOffTheMainThreadStillReleasesTheChannel() throws {
+    let attached = try diagnostic("attachedChannels")
+    let detached = expectation(description: "detach hopped to the main queue")
+
+    DispatchQueue.global().async {
+      self.plugin.detachFromEngine(for: self.registrar)
+      // Queued behind the hop detach itself enqueued, so the fulfil observes it.
+      DispatchQueue.main.async { detached.fulfill() }
+    }
+
+    wait(for: [detached], timeout: 5)
+    XCTAssertEqual(try diagnostic("attachedChannels"), attached - 1)
+  }
+
+  func testDetachFromEngineNeverGoesThroughTheRegistrar() throws {
     XCTAssertEqual(registrar.messengerResolutions, 1, "register resolves the messenger once")
     XCTAssertEqual(registrar.fakeMessenger.sentChannels, [])
 
@@ -466,11 +535,11 @@ final class BackgroundUploaderEngineTeardownTests: XCTestCase {
 
     XCTAssertEqual(
       registrar.messengerResolutions, 1,
-      "registrar.messenger() reads nil inside the engine's dealloc; detach must not resolve it"
+      "inside dealloc the registrar's weak engine reads nil; detach must not resolve the messenger"
     )
     XCTAssertEqual(
       registrar.fakeMessenger.sentChannels, [],
-      "a send on the channel dereferences the destroyed shell; detach must not send"
+      "detach has nothing to tell the engine; a send would only log a dead channel"
     )
   }
 }
