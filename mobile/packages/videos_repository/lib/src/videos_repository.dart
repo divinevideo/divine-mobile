@@ -2898,7 +2898,14 @@ class VideosRepository {
     missed.add('localCache');
 
     FunnelcakeException? apiFailure;
-    final funnelcakeRouteId = candidate.stableId ?? candidate.eventId;
+    // Event id first: the hex branch of `parse` lowercases it and keeps the
+    // caller's original case in `stableId`, and the REST route is case
+    // sensitive — an upper-case hex id 404s there. Preferring `stableId`
+    // therefore skipped this fast path for any link that was not already
+    // lowercase. An addressable reference has no event id, so it still
+    // resolves by d tag. Matches the order `_fetchRouteVideoFromLocalCache`
+    // already uses.
+    final funnelcakeRouteId = candidate.eventId ?? candidate.stableId;
     if (funnelcakeRouteId != null) {
       try {
         final byFunnelcake = await _fetchVideoFromRouteApi(
@@ -3403,7 +3410,7 @@ class VideosRepository {
   ///
   /// Funnelcake fallback for missing addressable ids is intentionally not
   /// duplicated here. The orchestrator already tries Funnelcake REST as
-  /// step 2 with `funnelcakeRouteId = candidate.stableId ?? candidate.eventId`,
+  /// step 2 with `funnelcakeRouteId = candidate.eventId ?? candidate.stableId`,
   /// and `VideoRouteRef.parse` populates `stableId` from
   /// `decoded.id` / `aid.dTag` for both naddr and raw `kind:pubkey:d-tag`
   /// inputs — so REST has already been attempted by the time we get here.
