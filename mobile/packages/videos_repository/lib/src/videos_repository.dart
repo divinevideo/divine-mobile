@@ -10,7 +10,6 @@ import 'dart:math';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/author_feed_result.dart';
@@ -24,6 +23,7 @@ import 'package:videos_repository/src/video_content_filter.dart';
 import 'package:videos_repository/src/video_event_filter.dart';
 import 'package:videos_repository/src/video_local_storage.dart';
 import 'package:videos_repository/src/video_route_lookup_result.dart';
+import 'package:videos_repository/src/video_route_ref.dart';
 import 'package:videos_repository/src/video_search_sort.dart';
 
 export 'package:models/src/nip71_video_kinds.dart' show NIP71VideoKinds;
@@ -2864,7 +2864,7 @@ class VideosRepository {
     String routeId, {
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
-    final candidate = _VideoRouteCandidate.parse(routeId);
+    final candidate = VideoRouteRef.parse(routeId);
     if (candidate == null) {
       Log.warning(
         'Route lookup could not parse route id: $routeId',
@@ -3317,7 +3317,7 @@ class VideosRepository {
   /// a same-d-tag cache hit from another creator must fall through to the
   /// author-filtered relay lookup instead of satisfying the route.
   Future<VideoEvent?> _fetchRouteVideoFromLocalCache(
-    _VideoRouteCandidate candidate, {
+    VideoRouteRef candidate, {
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
     if (_localStorage == null) return null;
@@ -3404,7 +3404,7 @@ class VideosRepository {
   /// Funnelcake fallback for missing addressable ids is intentionally not
   /// duplicated here. The orchestrator already tries Funnelcake REST as
   /// step 2 with `funnelcakeRouteId = candidate.stableId ?? candidate.eventId`,
-  /// and `_VideoRouteCandidate.parse` populates `stableId` from
+  /// and `VideoRouteRef.parse` populates `stableId` from
   /// `decoded.id` / `aid.dTag` for both naddr and raw `kind:pubkey:d-tag`
   /// inputs — so REST has already been attempted by the time we get here.
   ///
@@ -3492,73 +3492,5 @@ class VideosRepository {
       videos,
     ).timeout(_statsFetchTimeout, onTimeout: () => videos);
     return hydrated.firstOrNull;
-  }
-}
-
-class _VideoRouteCandidate {
-  const _VideoRouteCandidate({
-    this.eventId,
-    this.addressableId,
-    this.addressablePubkey,
-    this.stableId,
-  });
-
-  final String? eventId;
-  final String? addressableId;
-  final String? addressablePubkey;
-  final String? stableId;
-
-  static _VideoRouteCandidate? parse(String routeId) {
-    final trimmed = routeId.trim();
-    if (trimmed.isEmpty) return null;
-
-    if (trimmed.length == 64 &&
-        RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(trimmed)) {
-      return _VideoRouteCandidate(
-        eventId: trimmed.toLowerCase(),
-        stableId: trimmed,
-      );
-    }
-
-    if (Nip19.isNoteId(trimmed)) {
-      final eventId = Nip19.decode(trimmed);
-      return eventId.isEmpty ? null : _VideoRouteCandidate(eventId: eventId);
-    }
-
-    if (NIP19Tlv.isNevent(trimmed)) {
-      final decoded = NIP19Tlv.decodeNevent(trimmed);
-      return decoded == null ? null : _VideoRouteCandidate(eventId: decoded.id);
-    }
-
-    if (NIP19Tlv.isNaddr(trimmed)) {
-      final decoded = NIP19Tlv.decodeNaddr(trimmed);
-      if (decoded == null) return null;
-      return _VideoRouteCandidate(
-        addressableId: AId(
-          kind: decoded.kind,
-          pubkey: decoded.author,
-          dTag: decoded.id,
-        ).toAString(),
-        addressablePubkey: decoded.author,
-        stableId: decoded.id,
-      );
-    }
-
-    // Raw NIP-33 addressable coordinate: "kind:pubkey:d-tag"
-    // Produced by VideoNotification.videoAddressableId for stable notification
-    // navigation and by DM share-card fallbacks, which can reference any
-    // acceptable NIP-71 kind (e.g. 34235). Accepts the same kinds as the
-    // naddr branch above; the 34236-only isVideoKind check would let a
-    // 34235 coordinate fall through to an unmatched d-tag lookup.
-    final aid = AId.fromString(trimmed);
-    if (aid != null && NIP71VideoKinds.isAcceptableVideoKind(aid.kind)) {
-      return _VideoRouteCandidate(
-        addressableId: trimmed,
-        addressablePubkey: aid.pubkey,
-        stableId: aid.dTag,
-      );
-    }
-
-    return _VideoRouteCandidate(stableId: trimmed);
   }
 }
