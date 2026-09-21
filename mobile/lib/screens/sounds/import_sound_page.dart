@@ -145,14 +145,41 @@ class _ImportSoundViewState extends ConsumerState<ImportSoundView> {
         builder: (context, state) => SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: _buildBody(context, state),
+            child: _ImportBody(
+              state: state,
+              nameController: _nameController,
+              isPlaying: _playing,
+              onPreview: _togglePreview,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, SoundImportState state) {
+  String _savedMessage(BuildContext context, bool alreadySaved) {
+    return alreadySaved
+        ? context.l10n.soundsAlreadySavedToLibrary
+        : context.l10n.soundsSavedToLibrary;
+  }
+}
+
+/// Renders whichever stage of the import the cubit is in.
+class _ImportBody extends StatelessWidget {
+  const _ImportBody({
+    required this.state,
+    required this.nameController,
+    required this.isPlaying,
+    required this.onPreview,
+  });
+
+  final SoundImportState state;
+  final TextEditingController nameController;
+  final bool isPlaying;
+  final void Function(AudioEvent audio) onPreview;
+
+  @override
+  Widget build(BuildContext context) {
     if (state.status == SoundImportStatus.copying) {
       return const SizedBox(
         height: 240,
@@ -183,14 +210,14 @@ class _ImportSoundViewState extends ConsumerState<ImportSoundView> {
       children: [
         _ImportedFileCard(
           audio: audio,
-          isPlaying: _playing,
+          isPlaying: isPlaying,
           enabled: !state.isBusy,
-          onPreview: () => _togglePreview(audio),
+          onPreview: () => onPreview(audio),
         ),
         const SizedBox(height: 16),
         DivineTextField(
           key: const Key('import_sound_name_field'),
-          controller: _nameController,
+          controller: nameController,
           enabled: !state.isBusy,
           filled: true,
           labelText: context.l10n.savedSoundYourLabel,
@@ -208,18 +235,12 @@ class _ImportSoundViewState extends ConsumerState<ImportSoundView> {
           label: context.l10n.savedSoundSaveAction,
           onPressed: state.canSave
               ? () => context.read<SoundImportCubit>().save(
-                  personalLabel: _nameController.text,
+                  personalLabel: nameController.text,
                 )
               : null,
         ),
       ],
     );
-  }
-
-  String _savedMessage(BuildContext context, bool alreadySaved) {
-    return alreadySaved
-        ? context.l10n.soundsAlreadySavedToLibrary
-        : context.l10n.soundsSavedToLibrary;
   }
 
   String _failureMessage(

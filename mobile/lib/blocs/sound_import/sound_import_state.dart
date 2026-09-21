@@ -58,9 +58,6 @@ class SoundImportState extends Equatable {
   /// Whether the save found the sound already present in the library.
   bool get alreadyInLibrary => savedResult == SavedSoundSaveResult.alreadySaved;
 
-  /// Whether a copied file exists that the library does not yet own.
-  bool get hasUnsavedCopy => audio != null && status != SoundImportStatus.saved;
-
   /// Whether [save] can run: a copy exists and no operation is in flight.
   bool get canSave =>
       audio != null &&
