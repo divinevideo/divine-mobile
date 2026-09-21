@@ -14,12 +14,14 @@ void main() {
       fakeAsync((fake) {
         final received = <int>[];
         final source = StreamController<int>.broadcast();
+        addTearDown(source.close);
 
         final sub = throttledListen<int>(
           source.stream,
           maxPerSecond: 3,
           onData: received.add,
         );
+        addTearDown(sub.cancel);
 
         // Burst of 7 within the same second.
         for (var i = 1; i <= 7; i++) {
@@ -28,10 +30,6 @@ void main() {
         fake.flushMicrotasks();
 
         expect(received, [1, 2, 3]);
-
-        sub.cancel();
-        source.close();
-        fake.flushMicrotasks();
       });
     });
 
@@ -39,12 +37,14 @@ void main() {
       fakeAsync((fake) {
         final received = <int>[];
         final source = StreamController<int>.broadcast();
+        addTearDown(source.close);
 
         final sub = throttledListen<int>(
           source.stream,
           maxPerSecond: 2,
           onData: received.add,
         );
+        addTearDown(sub.cancel);
 
         source.add(1);
         source.add(2);
@@ -57,16 +57,13 @@ void main() {
         source.add(5);
         fake.flushMicrotasks();
         expect(received, [1, 2, 4, 5]);
-
-        sub.cancel();
-        source.close();
-        fake.flushMicrotasks();
       });
     });
 
     test('cancel() also cancels the refill periodic timer (no leak)', () {
       fakeAsync((fake) {
         final source = StreamController<int>.broadcast();
+        addTearDown(source.close);
         final sub = throttledListen<int>(
           source.stream,
           maxPerSecond: 5,
@@ -76,12 +73,12 @@ void main() {
         // periodic refill timer is active.
         expect(fake.periodicTimerCount, 1);
 
-        sub.cancel();
+        final cancellation = sub.cancel();
+        addTearDown(() => cancellation);
         fake.flushMicrotasks();
 
         // After cancel, no Timer leak.
         expect(fake.periodicTimerCount, 0);
-        source.close();
       });
     });
 
@@ -91,13 +88,15 @@ void main() {
         fakeAsync((fake) {
           final received = <Object>[];
           final source = StreamController<int>.broadcast();
+          addTearDown(source.close);
 
-          throttledListen<int>(
+          final sub = throttledListen<int>(
             source.stream,
             maxPerSecond: 5,
             onData: (_) {},
             onError: received.add,
           );
+          addTearDown(sub.cancel);
 
           expect(fake.periodicTimerCount, 1);
 
@@ -108,24 +107,20 @@ void main() {
           expect(received, hasLength(1));
           // refill timer torn down on error path
           expect(fake.periodicTimerCount, 0);
-
-          source.close();
         });
       },
     );
 
     test('onDone also cancels the refill timer', () {
       fakeAsync((fake) {
-        final source = StreamController<int>.broadcast();
         throttledListen<int>(
-          source.stream,
+          Stream<int>.fromIterable(const []),
           maxPerSecond: 5,
           onData: (_) {},
         );
 
         expect(fake.periodicTimerCount, 1);
 
-        source.close();
         fake.flushMicrotasks();
 
         expect(fake.periodicTimerCount, 0);

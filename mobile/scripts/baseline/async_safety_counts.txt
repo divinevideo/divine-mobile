@@ -111,7 +111,6 @@ discarded_futures|test/blocs/clips_library/clips_library_bloc_test.dart	4
 discarded_futures|test/blocs/comments/comment_composer/comment_composer_bloc_test.dart	1
 discarded_futures|test/blocs/comments/comment_reactions/comment_reactions_bloc_test.dart	1
 discarded_futures|test/blocs/comments/comments_list/comments_list_bloc_test.dart	2
-discarded_futures|test/blocs/comments/comments_list/throttled_subscription_test.dart	8
 discarded_futures|test/blocs/community_suggest/community_suggest_cubit_test.dart	2
 discarded_futures|test/blocs/creator_sync/sound_sync_cubit_test.dart	1
 discarded_futures|test/blocs/divine_auth/divine_auth_cubit_test.dart	1
