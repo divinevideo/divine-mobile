@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "サウンドをアップロード",
   "soundUploadIntro": "ビート、ジングル、セリフの録音を共有すると、Divine の誰でもそれを使って動画を作れます。",
   "soundUploadChooseFile": "音声ファイルを選ぶ",
-  "soundUploadSupportedFormats": "AAC、M4A、MP3、WAV、WebM",
+  "soundUploadSupportedFormats": "AAC、M4A、MP3、WAV",
   "soundUploadChangeFile": "変更",
   "soundUploadReuseNotice": "Divine の誰でもこのサウンドを動画に使えます。使われるたびにあなたの名前が表示されます。",
   "soundUploadShareAction": "サウンドを共有",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "サウンドを削除しました",
   "savedSoundDeleteFailed": "そのサウンドを削除できませんでした。もう一度お試しください。",
   "savedSoundDeleteFailedNotOwner": "削除できるのは自分が共有したサウンドだけです。",
-  "audioPickerTypeGroup": "音声"
+  "audioPickerTypeGroup": "音声",
+  "soundUploadRetrySaveAction": "サウンドへの保存を再試行"
 }

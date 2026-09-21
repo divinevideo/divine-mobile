@@ -4205,7 +4205,7 @@
   "soundUploadTitle": "사운드 업로드",
   "soundUploadIntro": "비트, 징글, 녹음한 대사를 공유하면 Divine의 누구나 그걸로 영상을 만들 수 있어요.",
   "soundUploadChooseFile": "오디오 파일 선택",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV 또는 WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 또는 WAV",
   "soundUploadChangeFile": "변경",
   "soundUploadReuseNotice": "Divine의 누구나 이 사운드를 자기 영상에 쓸 수 있어요. 쓰일 때마다 내 이름이 표시돼요.",
   "soundUploadShareAction": "사운드 공유",
@@ -4220,5 +4220,6 @@
   "savedSoundDeleted": "사운드를 삭제했어요",
   "savedSoundDeleteFailed": "해당 사운드를 삭제하지 못했어요. 다시 시도해 주세요.",
   "savedSoundDeleteFailedNotOwner": "내가 공유한 사운드만 삭제할 수 있어요.",
-  "audioPickerTypeGroup": "오디오"
+  "audioPickerTypeGroup": "오디오",
+  "soundUploadRetrySaveAction": "사운드에 다시 저장"
 }

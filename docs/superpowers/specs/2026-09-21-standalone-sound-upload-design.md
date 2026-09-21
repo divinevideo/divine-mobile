@@ -45,7 +45,8 @@ to the tab. The page has three parts:
 
 1. **Pick a file** — through `file_selector` with one shared audio type group
    (`audio/*`, `public.audio` on iOS, `aac`/`m4a`/`mp3`/`wav` for desktop
-   pickers), copied into library-owned storage by the existing
+   pickers; the hint under the button lists the same four), copied into
+   library-owned storage by the existing
    `LocalAudioImportService`, with a play/pause preview. On Android the
    picker opens on the device's audio library (`EXTRA_INITIAL_URI` to the
    MediaStore audio root) rather than "Recent", which under an audio filter is
@@ -146,9 +147,11 @@ to the unresolved-sound credit once the event is gone.
   the user's input so they can retry.
 - Account restriction from the relay: surfaced as its own message, since
   retrying cannot help.
-- A save-to-library failure after a successful publish is reported as the
-  existing "Couldn't save that sound" message; the sound is already on the
-  relay and stays discoverable.
+- A save-to-library failure after a successful publish keeps the page open
+  with "Couldn't save that sound" and a retry; the sound is already on the
+  relay, and deletion resolves the record from the library, so leaving
+  without a row would strand a sound its creator could not take back. The
+  retry only repeats the library write, never the publish.
 
 ## Testing
 
@@ -159,7 +162,8 @@ to the unresolved-sound credit once the event is gone.
 - `PublicAudioCreditEditor`: edits reach `onChanged`; the source field shows
   only when ownership is off.
 - `SoundUploadScreen`: picker → credit → share → saved to My Sounds and popped;
-  failures stay on the page.
+  publish failures stay on the page; a failed library save stays on the page
+  and the retry saves without republishing.
 - `SoundsTab`: the upload row navigates to `/sounds/upload`; an own published
   sound offers delete-for-everyone, remove-only, or cancel, and a rejected
   deletion keeps the card.

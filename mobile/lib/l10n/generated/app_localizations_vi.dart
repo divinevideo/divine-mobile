@@ -12132,7 +12132,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundUploadChooseFile => 'Chọn tệp âm thanh';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV hoặc WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 hoặc WAV';
 
   @override
   String get soundUploadChangeFile => 'Đổi';
@@ -12185,4 +12185,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Âm thanh';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Thử lưu lại vào Âm thanh';
 }

@@ -6422,7 +6422,7 @@
   "soundUploadTitle": "Muat naik bunyi",
   "soundUploadIntro": "Kongsi beat, jingle atau rakaman suara supaya sesiapa sahaja di Divine boleh membina video dengannya.",
   "soundUploadChooseFile": "Pilih fail audio",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV atau WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 atau WAV",
   "soundUploadChangeFile": "Tukar",
   "soundUploadReuseNotice": "Sesiapa sahaja di Divine boleh menggunakan bunyi ini dalam video mereka. Nama anda sentiasa dikreditkan.",
   "soundUploadShareAction": "Kongsi bunyi",
@@ -6437,5 +6437,6 @@
   "savedSoundDeleted": "Bunyi dipadam",
   "savedSoundDeleteFailed": "Bunyi itu tidak dapat dipadam. Cuba lagi.",
   "savedSoundDeleteFailedNotOwner": "Anda hanya boleh memadam bunyi yang anda kongsi sendiri.",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Cuba simpan ke Bunyi sekali lagi"
 }

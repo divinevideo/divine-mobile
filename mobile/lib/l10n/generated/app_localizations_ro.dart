@@ -12435,7 +12435,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundUploadChooseFile => 'Alege un fișier audio';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV sau WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 sau WAV';
 
   @override
   String get soundUploadChangeFile => 'Schimbă';
@@ -12488,4 +12488,8 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Audio';
+
+  @override
+  String get soundUploadRetrySaveAction =>
+      'Încearcă din nou să salvezi în Sunete';
 }

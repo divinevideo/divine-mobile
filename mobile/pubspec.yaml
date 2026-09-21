@@ -191,7 +191,7 @@ dependencies:
   iap_repository:
     path: packages/iap_repository
   gal: ^2.3.2 # Save videos to device photo gallery
-  file_selector: ^1.0.4 # For desktop file selection (macOS, Windows, Linux)
+  file_selector: ^1.0.4 # File picking on every platform: audio import/upload on mobile, images on desktop
 
   # Cloud services (removed cloudinary_public - using Blossom instead)
 

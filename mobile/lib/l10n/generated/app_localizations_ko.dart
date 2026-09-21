@@ -11598,7 +11598,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundUploadChooseFile => '오디오 파일 선택';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV 또는 WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 또는 WAV';
 
   @override
   String get soundUploadChangeFile => '변경';
@@ -11646,4 +11646,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => '오디오';
+
+  @override
+  String get soundUploadRetrySaveAction => '사운드에 다시 저장';
 }

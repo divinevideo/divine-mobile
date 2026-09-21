@@ -12110,7 +12110,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundUploadChooseFile => 'Bir ses dosyası seç';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV veya WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 veya WAV';
 
   @override
   String get soundUploadChangeFile => 'Değiştir';
@@ -12160,4 +12160,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Ses';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Seslere kaydetmeyi tekrar dene';
 }

@@ -4783,7 +4783,7 @@
   "soundUploadTitle": "Качи звук",
   "soundUploadIntro": "Сподели бийт, джингъл или записана реплика, за да може всеки в Divine да направи видео около него.",
   "soundUploadChooseFile": "Избери аудиофайл",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV или WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 или WAV",
   "soundUploadChangeFile": "Смени",
   "soundUploadReuseNotice": "Всеки в Divine може да използва този звук във видеата си. Всеки път те посочваме като автор.",
   "soundUploadShareAction": "Сподели звука",
@@ -4798,5 +4798,6 @@
   "savedSoundDeleted": "Звукът е изтрит",
   "savedSoundDeleteFailed": "Този звук не можа да се изтрие. Опитай пак.",
   "savedSoundDeleteFailedNotOwner": "Можеш да изтриваш само звуци, които си споделил.",
-  "audioPickerTypeGroup": "Аудио"
+  "audioPickerTypeGroup": "Аудио",
+  "soundUploadRetrySaveAction": "Опитай пак да запазиш в Звуци"
 }

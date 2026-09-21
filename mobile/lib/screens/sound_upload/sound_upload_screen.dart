@@ -96,6 +96,14 @@ class _SoundUploadViewState extends State<SoundUploadView> {
   /// Which picked file the player currently holds, so re-picking reloads.
   String? _loadedSoundId;
 
+  /// Set when the sound is on the relay but the My Sounds write failed.
+  ///
+  /// The page then stays put with a retry instead of popping: a published
+  /// sound with no library row is one its creator could not delete, since
+  /// deletion resolves the record from the library and nothing else lists a
+  /// standalone sound.
+  bool _librarySaveFailed = false;
+
   @override
   void dispose() {
     runDetached(
@@ -159,24 +167,47 @@ class _SoundUploadViewState extends State<SoundUploadView> {
     }
   }
 
-  Future<void> _onPublished(BuildContext context, AudioEvent sound) async {
+  Future<void> _onPublished(AudioEvent sound) async {
     await _stopPreview();
-    if (!context.mounted) return;
+    if (!mounted) return;
     SavedSoundSaveResult? result;
     try {
       result = await context.read<SavedSoundsBloc>().saveSound(sound);
     } catch (_) {
       result = null;
     }
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      DivineSnackbarContainer.snackBar(switch (result) {
-        SavedSoundSaveResult.saved ||
-        SavedSoundSaveResult.alreadySaved => context.l10n.soundUploadShared,
-        null => context.l10n.soundsSaveFailed,
-      }, error: result == null),
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (result == null) {
+      setState(() => _librarySaveFailed = true);
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.soundsSaveFailed,
+          error: true,
+          actionLabel: context.l10n.commonRetry,
+          onActionPressed: () => _retryLibrarySave(sound),
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(context.l10n.soundUploadShared),
     );
     context.pop();
+  }
+
+  void _retryLibrarySave(AudioEvent sound) {
+    if (!mounted) return;
+    // The failure snackbar would otherwise hold the outcome of the retry in
+    // the messenger's queue until it times out.
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    setState(() => _librarySaveFailed = false);
+    runDetached(
+      _onPublished(sound),
+      'retry saving shared sound to library',
+      logName: _logName,
+      category: LogCategory.ui,
+    );
   }
 
   void _onFailure(BuildContext context, SoundUploadFailure failure) {
@@ -202,7 +233,7 @@ class _SoundUploadViewState extends State<SoundUploadView> {
         final published = state.publishedSound;
         if (state.status == SoundUploadStatus.published && published != null) {
           runDetached(
-            _onPublished(context, published),
+            _onPublished(published),
             'save shared sound to library',
             logName: _logName,
             category: LogCategory.ui,
@@ -264,7 +295,16 @@ class _SoundUploadViewState extends State<SoundUploadView> {
             ),
             bottomNavigationBar: sound == null
                 ? null
+                : _librarySaveFailed && state.publishedSound != null
+                ? _ShareBar(
+                    buttonKey: const Key('sound_upload_retry_save'),
+                    label: context.l10n.soundUploadRetrySaveAction,
+                    isPublishing: false,
+                    onShare: () => _retryLibrarySave(state.publishedSound!),
+                  )
                 : _ShareBar(
+                    buttonKey: const Key('sound_upload_share'),
+                    label: context.l10n.soundUploadShareAction,
                     isPublishing: state.status == SoundUploadStatus.publishing,
                     onShare: state.canPublish
                         ? context.read<SoundUploadCubit>().publish
@@ -439,8 +479,16 @@ class _ReuseNotice extends StatelessWidget {
 }
 
 class _ShareBar extends StatelessWidget {
-  const _ShareBar({required this.isPublishing, required this.onShare});
+  const _ShareBar({
+    required this.buttonKey,
+    required this.label,
+    required this.isPublishing,
+    required this.onShare,
+  });
 
+  /// Test anchor on the button itself, so a finder can read its state.
+  final Key buttonKey;
+  final String label;
   final bool isPublishing;
   final VoidCallback? onShare;
 
@@ -451,8 +499,8 @@ class _ShareBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: DivineButton(
-          key: const Key('sound_upload_share'),
-          label: context.l10n.soundUploadShareAction,
+          key: buttonKey,
+          label: label,
           expanded: true,
           isLoading: isPublishing,
           onPressed: onShare,

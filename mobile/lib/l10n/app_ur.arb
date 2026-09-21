@@ -6422,7 +6422,7 @@
   "soundUploadTitle": "ساؤنڈ اپ لوڈ کریں",
   "soundUploadIntro": "کوئی بیٹ، جِنگل یا ریکارڈ کی ہوئی آواز شیئر کریں تاکہ Divine پر کوئی بھی اس پر ویڈیو بنا سکے۔",
   "soundUploadChooseFile": "آڈیو فائل منتخب کریں",
-  "soundUploadSupportedFormats": "AAC، M4A، MP3، WAV یا WebM",
+  "soundUploadSupportedFormats": "AAC، M4A، MP3 یا WAV",
   "soundUploadChangeFile": "تبدیل کریں",
   "soundUploadReuseNotice": "Divine پر کوئی بھی یہ ساؤنڈ اپنی ویڈیوز میں استعمال کر سکتا ہے۔ ہر بار آپ کا نام دیا جائے گا۔",
   "soundUploadShareAction": "ساؤنڈ شیئر کریں",
@@ -6437,5 +6437,6 @@
   "savedSoundDeleted": "ساؤنڈ حذف ہو گیا",
   "savedSoundDeleteFailed": "وہ ساؤنڈ حذف نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
   "savedSoundDeleteFailedNotOwner": "آپ صرف وہی ساؤنڈز حذف کر سکتے ہیں جو آپ نے خود شیئر کیے ہوں۔",
-  "audioPickerTypeGroup": "آڈیو"
+  "audioPickerTypeGroup": "آڈیو",
+  "soundUploadRetrySaveAction": "آوازوں میں دوبارہ محفوظ کریں"
 }

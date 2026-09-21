@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Încarcă un sunet",
   "soundUploadIntro": "Împărtășește un beat, un jingle sau o replică înregistrată, ca oricine de pe Divine să poată construi un video în jurul lui.",
   "soundUploadChooseFile": "Alege un fișier audio",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV sau WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 sau WAV",
   "soundUploadChangeFile": "Schimbă",
   "soundUploadReuseNotice": "Oricine de pe Divine poate folosi acest sunet în videoclipurile sale. Ești creditat de fiecare dată.",
   "soundUploadShareAction": "Împărtășește sunetul",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Sunet șters",
   "savedSoundDeleteFailed": "Nu am putut șterge acel sunet. Încearcă din nou.",
   "savedSoundDeleteFailedNotOwner": "Poți șterge doar sunetele pe care le-ai împărtășit tu.",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Încearcă din nou să salvezi în Sunete"
 }

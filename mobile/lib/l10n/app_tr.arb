@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Ses yükle",
   "soundUploadIntro": "Bir beat, bir jingle ya da bir ses kaydı paylaş; Divine'daki herkes onunla video yapabilsin.",
   "soundUploadChooseFile": "Bir ses dosyası seç",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV veya WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 veya WAV",
   "soundUploadChangeFile": "Değiştir",
   "soundUploadReuseNotice": "Divine'daki herkes bu sesi videolarında kullanabilir. Her seferinde senin adın geçer.",
   "soundUploadShareAction": "Sesi paylaş",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Ses silindi",
   "savedSoundDeleteFailed": "O ses silinemedi. Tekrar dene.",
   "savedSoundDeleteFailedNotOwner": "Sadece kendi paylaştığın sesleri silebilirsin.",
-  "audioPickerTypeGroup": "Ses"
+  "audioPickerTypeGroup": "Ses",
+  "soundUploadRetrySaveAction": "Seslere kaydetmeyi tekrar dene"
 }

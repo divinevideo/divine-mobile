@@ -12302,7 +12302,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundUploadChooseFile => 'Избери аудиофайл';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV или WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 или WAV';
 
   @override
   String get soundUploadChangeFile => 'Смени';
@@ -12355,4 +12355,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Аудио';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Опитай пак да запазиш в Звуци';
 }

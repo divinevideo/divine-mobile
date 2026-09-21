@@ -20475,7 +20475,7 @@ abstract class AppLocalizations {
   /// Hint under the file picker listing the accepted audio formats. The format names stay as written.
   ///
   /// In en, this message translates to:
-  /// **'AAC, M4A, MP3, WAV, or WebM'**
+  /// **'AAC, M4A, MP3, or WAV'**
   String get soundUploadSupportedFormats;
 
   /// Small button next to the picked audio file that opens the file picker again.
@@ -20567,6 +20567,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Audio'**
   String get audioPickerTypeGroup;
+
+  /// Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry saving to Sounds'**
+  String get soundUploadRetrySaveAction;
 }
 
 class _AppLocalizationsDelegate

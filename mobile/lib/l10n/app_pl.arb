@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Prześlij dźwięk",
   "soundUploadIntro": "Udostępnij bit, dżingiel albo nagraną kwestię, żeby każdy na Divine mógł zbudować wokół tego wideo.",
   "soundUploadChooseFile": "Wybierz plik audio",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV lub WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 lub WAV",
   "soundUploadChangeFile": "Zmień",
   "soundUploadReuseNotice": "Każdy na Divine może użyć tego dźwięku w swoich wideo. Za każdym razem widać, że jest twój.",
   "soundUploadShareAction": "Udostępnij dźwięk",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Dźwięk usunięty",
   "savedSoundDeleteFailed": "Nie udało się usunąć tego dźwięku. Spróbuj ponownie.",
   "savedSoundDeleteFailedNotOwner": "Możesz usuwać tylko dźwięki, które sam(a) udostępniłeś(-aś).",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Spróbuj ponownie zapisać w Dźwiękach"
 }

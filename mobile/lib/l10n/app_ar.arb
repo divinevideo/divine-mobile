@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "رفع صوت",
   "soundUploadIntro": "مشاركة إيقاع أو لحن قصير أو جملة مسجّلة ليتمكن أي شخص على Divine من صنع فيديو حوله.",
   "soundUploadChooseFile": "اختيار ملف صوتي",
-  "soundUploadSupportedFormats": "AAC أو M4A أو MP3 أو WAV أو WebM",
+  "soundUploadSupportedFormats": "AAC أو M4A أو MP3 أو WAV",
   "soundUploadChangeFile": "تغيير",
   "soundUploadReuseNotice": "يمكن لأي شخص على Divine استخدام هذا الصوت في فيديوهاته. يُنسب إليك في كل مرة.",
   "soundUploadShareAction": "مشاركة الصوت",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "تم حذف الصوت",
   "savedSoundDeleteFailed": "تعذّر حذف هذا الصوت. حاول مرة أخرى.",
   "savedSoundDeleteFailedNotOwner": "لا يمكن حذف سوى الأصوات التي شاركتها بنفسك.",
-  "audioPickerTypeGroup": "صوت"
+  "audioPickerTypeGroup": "صوت",
+  "soundUploadRetrySaveAction": "إعادة محاولة الحفظ في الأصوات"
 }

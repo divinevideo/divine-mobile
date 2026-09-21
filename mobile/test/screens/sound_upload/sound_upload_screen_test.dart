@@ -17,6 +17,7 @@ import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/blocs/sound_upload/sound_upload_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
+import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
 import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
@@ -152,6 +153,7 @@ void main() {
   Future<GoRouter> pumpUpload(
     WidgetTester tester, {
     Future<XFile?> Function()? pickAudioFile,
+    SavedSoundsService? savedSoundsService,
   }) async {
     final router = GoRouter(
       initialLocation: SoundUploadScreen.path,
@@ -184,7 +186,7 @@ void main() {
     addTearDown(router.dispose);
     await tester.pumpWidget(
       SavedSoundsScope(
-        service: SavedSoundsService(sharedPreferences),
+        service: savedSoundsService ?? SavedSoundsService(sharedPreferences),
         mediaProbe: const _NoopSavedSoundMediaProbe(),
         localFileExists: (_) => true,
         child: MaterialApp.router(
@@ -383,6 +385,55 @@ void main() {
         );
       });
 
+      testWidgets('stays put with a retry when saving to Sounds fails', (
+        tester,
+      ) async {
+        final service = _FlakySavedSoundsService(sharedPreferences);
+        final router = await pumpUpload(tester, savedSoundsService: service);
+        await pickFile(tester);
+
+        await tester.tap(find.byKey(const Key('sound_upload_share')));
+        await tester.pumpAndSettle();
+
+        // Published, but the library write threw: no pop, say so, offer a
+        // retry — a published sound with no library row could never be
+        // deleted from anywhere else.
+        expect(router.state.uri.path, SoundUploadScreen.path);
+        expect(find.text(l10n.soundsSaveFailed), findsOneWidget);
+        expect(find.byKey(const Key('sound_upload_share')), findsNothing);
+        expect(
+          find.byKey(const Key('sound_upload_retry_save')),
+          findsOneWidget,
+        );
+        expect(service.loadSavedSounds(), isEmpty);
+        verify(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+          ),
+        ).called(1);
+
+        service.heal();
+        await tester.tap(find.byKey(const Key('sound_upload_retry_save')));
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, '/');
+        expect(find.text(l10n.soundUploadShared), findsOneWidget);
+        expect(
+          service.loadSavedSounds().map((sound) => sound.audio.id),
+          [_soundEventId],
+        );
+        // Retrying the save must not publish a second Kind 1063.
+        verifyNever(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+          ),
+        );
+      });
+
       testWidgets('reports an unreadable file and keeps the picker', (
         tester,
       ) async {
@@ -439,4 +490,20 @@ void main() {
       });
     });
   });
+}
+
+/// Fails every library write until [heal] is called, standing in for a
+/// `SharedPreferences` write that returns false.
+class _FlakySavedSoundsService extends SavedSoundsService {
+  _FlakySavedSoundsService(super._preferences);
+
+  bool _failing = true;
+
+  void heal() => _failing = false;
+
+  @override
+  Future<SavedSoundSaveResult> saveSavedSound(SavedSound sound) {
+    if (_failing) throw StateError('Failed to persist saved sounds');
+    return super.saveSavedSound(sound);
+  }
 }

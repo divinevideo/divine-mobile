@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Ladda upp ett ljud",
   "soundUploadIntro": "Dela en beat, en jingel eller en inspelad replik så att vem som helst på Divine kan bygga en video runt den.",
   "soundUploadChooseFile": "Välj en ljudfil",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV eller WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 eller WAV",
   "soundUploadChangeFile": "Byt",
   "soundUploadReuseNotice": "Vem som helst på Divine kan använda det här ljudet i sina videor. Du krediteras varje gång.",
   "soundUploadShareAction": "Dela ljud",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Ljudet är borttaget",
   "savedSoundDeleteFailed": "Kunde inte ta bort det ljudet. Försök igen.",
   "savedSoundDeleteFailedNotOwner": "Du kan bara ta bort ljud som du själv har delat.",
-  "audioPickerTypeGroup": "Ljud"
+  "audioPickerTypeGroup": "Ljud",
+  "soundUploadRetrySaveAction": "Försök spara i Ljud igen"
 }

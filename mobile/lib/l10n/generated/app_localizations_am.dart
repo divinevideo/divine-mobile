@@ -11869,7 +11869,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundUploadChooseFile => 'የኦዲዮ ፋይል ይምረጡ';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC፣ M4A፣ MP3፣ WAV ወይም WebM';
+  String get soundUploadSupportedFormats => 'AAC፣ M4A፣ MP3 ወይም WAV';
 
   @override
   String get soundUploadChangeFile => 'ይቀይሩ';
@@ -11918,4 +11918,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'ኦዲዮ';
+
+  @override
+  String get soundUploadRetrySaveAction => 'ወደ ድምፆች እንደገና ያስቀምጡ';
 }

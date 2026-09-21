@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Importer un son",
   "soundUploadIntro": "Partage un beat, un jingle ou une phrase enregistrée pour que n'importe qui sur Divine en fasse une vidéo.",
   "soundUploadChooseFile": "Choisir un fichier audio",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV ou WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 ou WAV",
   "soundUploadChangeFile": "Changer",
   "soundUploadReuseNotice": "N'importe qui sur Divine peut utiliser ce son dans ses vidéos. Tu es crédité à chaque fois.",
   "soundUploadShareAction": "Partager le son",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Son supprimé",
   "savedSoundDeleteFailed": "Impossible de supprimer ce son. Réessaie.",
   "savedSoundDeleteFailedNotOwner": "Tu ne peux supprimer que les sons que tu as partagés.",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Réessayer d'enregistrer dans Sons"
 }

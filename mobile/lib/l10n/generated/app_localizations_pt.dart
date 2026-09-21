@@ -12275,7 +12275,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get soundUploadChooseFile => 'Escolher um arquivo de áudio';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV ou WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 ou WAV';
 
   @override
   String get soundUploadChangeFile => 'Trocar';
@@ -12328,4 +12328,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Áudio';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Tentar salvar em Sons de novo';
 }

@@ -12363,7 +12363,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get soundUploadChooseFile => 'Choisir un fichier audio';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV ou WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 ou WAV';
 
   @override
   String get soundUploadChangeFile => 'Changer';
@@ -12415,4 +12415,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Audio';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Réessayer d\'enregistrer dans Sons';
 }

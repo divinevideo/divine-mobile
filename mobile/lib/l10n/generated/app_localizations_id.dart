@@ -12095,7 +12095,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundUploadChooseFile => 'Pilih file audio';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV, atau WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, atau WAV';
 
   @override
   String get soundUploadChangeFile => 'Ganti';
@@ -12146,4 +12146,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Audio';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Coba simpan lagi ke Suara';
 }

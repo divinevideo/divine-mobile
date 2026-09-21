@@ -3651,7 +3651,7 @@
   "soundUploadTitle": "Mag-upload ng sound",
   "soundUploadIntro": "I-share ang isang beat, jingle, o voice line para kahit sino sa Divine ay makagawa ng video gamit ito.",
   "soundUploadChooseFile": "Pumili ng audio file",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV, o WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3, o WAV",
   "soundUploadChangeFile": "Palitan",
   "soundUploadReuseNotice": "Kahit sino sa Divine ay puwedeng gumamit ng sound na ito sa mga video nila. Lagi kang naka-credit.",
   "soundUploadShareAction": "I-share ang sound",
@@ -3666,5 +3666,6 @@
   "savedSoundDeleted": "Na-delete ang sound",
   "savedSoundDeleteFailed": "Hindi na-delete ang sound na iyon. Subukan ulit.",
   "savedSoundDeleteFailedNotOwner": "Mga sound lang na ikaw ang nag-share ang puwede mong i-delete.",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Subukan ulit i-save sa Sounds"
 }

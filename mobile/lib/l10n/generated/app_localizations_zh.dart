@@ -11454,7 +11454,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundUploadChooseFile => '选择音频文件';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC、M4A、MP3、WAV 或 WebM';
+  String get soundUploadSupportedFormats => 'AAC、M4A、MP3 或 WAV';
 
   @override
   String get soundUploadChangeFile => '更换';
@@ -11501,4 +11501,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => '音频';
+
+  @override
+  String get soundUploadRetrySaveAction => '重新保存到声音库';
 }

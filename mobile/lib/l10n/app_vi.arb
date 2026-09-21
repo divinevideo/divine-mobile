@@ -6422,7 +6422,7 @@
   "soundUploadTitle": "Tải lên âm thanh",
   "soundUploadIntro": "Chia sẻ một đoạn beat, một đoạn nhạc hiệu hay một câu thoại để bất kỳ ai trên Divine cũng có thể dựng video từ đó.",
   "soundUploadChooseFile": "Chọn tệp âm thanh",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV hoặc WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 hoặc WAV",
   "soundUploadChangeFile": "Đổi",
   "soundUploadReuseNotice": "Bất kỳ ai trên Divine cũng có thể dùng âm thanh này trong video của họ. Bạn luôn được ghi tên.",
   "soundUploadShareAction": "Chia sẻ âm thanh",
@@ -6437,5 +6437,6 @@
   "savedSoundDeleted": "Đã xóa âm thanh",
   "savedSoundDeleteFailed": "Không xóa được âm thanh đó. Thử lại nhé.",
   "savedSoundDeleteFailedNotOwner": "Bạn chỉ có thể xóa những âm thanh do chính bạn chia sẻ.",
-  "audioPickerTypeGroup": "Âm thanh"
+  "audioPickerTypeGroup": "Âm thanh",
+  "soundUploadRetrySaveAction": "Thử lưu lại vào Âm thanh"
 }

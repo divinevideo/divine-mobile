@@ -4777,7 +4777,7 @@
   "soundUploadTitle": "ድምፅ ይስቀሉ",
   "soundUploadIntro": "ቢት፣ ጂንግል ወይም የተቀዳ ንግግር ያጋሩ፤ በ Divine ላይ ማንኛውም ሰው በዚያ ቪዲዮ መሥራት ይችላል።",
   "soundUploadChooseFile": "የኦዲዮ ፋይል ይምረጡ",
-  "soundUploadSupportedFormats": "AAC፣ M4A፣ MP3፣ WAV ወይም WebM",
+  "soundUploadSupportedFormats": "AAC፣ M4A፣ MP3 ወይም WAV",
   "soundUploadChangeFile": "ይቀይሩ",
   "soundUploadReuseNotice": "በ Divine ላይ ማንኛውም ሰው ይህን ድምፅ በቪዲዮዎቹ ውስጥ መጠቀም ይችላል። በእያንዳንዱ ጊዜ ስምዎ ይጠቀሳል።",
   "soundUploadShareAction": "ድምፅ ያጋሩ",
@@ -4792,5 +4792,6 @@
   "savedSoundDeleted": "ድምፁ ተሰርዟል",
   "savedSoundDeleteFailed": "ያን ድምፅ መሰረዝ አልተቻለም። እንደገና ይሞክሩ።",
   "savedSoundDeleteFailedNotOwner": "እርስዎ ያጋሯቸውን ድምፆች ብቻ መሰረዝ ይችላሉ።",
-  "audioPickerTypeGroup": "ኦዲዮ"
+  "audioPickerTypeGroup": "ኦዲዮ",
+  "soundUploadRetrySaveAction": "ወደ ድምፆች እንደገና ያስቀምጡ"
 }

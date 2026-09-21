@@ -12518,7 +12518,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundUploadChooseFile => 'ఆడియో ఫైల్‌ను ఎంచుకోండి';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV లేదా WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 లేదా WAV';
 
   @override
   String get soundUploadChangeFile => 'మార్చండి';
@@ -12571,4 +12571,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'ఆడియో';
+
+  @override
+  String get soundUploadRetrySaveAction => 'సౌండ్‌లకు మళ్లీ సేవ్ చేయండి';
 }

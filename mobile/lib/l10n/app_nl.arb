@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Sound uploaden",
   "soundUploadIntro": "Deel een beat, een jingle of een ingesproken zin, zodat iedereen op Divine er een video omheen kan bouwen.",
   "soundUploadChooseFile": "Audiobestand kiezen",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV of WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 of WAV",
   "soundUploadChangeFile": "Wijzigen",
   "soundUploadReuseNotice": "Iedereen op Divine kan dit geluid in z'n video's gebruiken. Jij krijgt elke keer de credits.",
   "soundUploadShareAction": "Sound delen",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Sound verwijderd",
   "savedSoundDeleteFailed": "Dat geluid kon niet worden verwijderd. Probeer het opnieuw.",
   "savedSoundDeleteFailedNotOwner": "Je kunt alleen sounds verwijderen die je zelf hebt gedeeld.",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Opnieuw in Sounds opslaan"
 }

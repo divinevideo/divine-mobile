@@ -8209,7 +8209,7 @@
   "soundUploadTitle": "సౌండ్ అప్‌లోడ్ చేయండి",
   "soundUploadIntro": "ఒక బీట్, జింగిల్ లేదా రికార్డ్ చేసిన మాటను పంచుకోండి; Divine లో ఎవరైనా దానితో వీడియో చేయవచ్చు.",
   "soundUploadChooseFile": "ఆడియో ఫైల్‌ను ఎంచుకోండి",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV లేదా WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3 లేదా WAV",
   "soundUploadChangeFile": "మార్చండి",
   "soundUploadReuseNotice": "Divine లో ఎవరైనా ఈ సౌండ్‌ను వారి వీడియోల్లో వాడవచ్చు. ప్రతిసారీ మీ పేరు కనిపిస్తుంది.",
   "soundUploadShareAction": "సౌండ్ పంచుకోండి",
@@ -8224,5 +8224,6 @@
   "savedSoundDeleted": "సౌండ్ తొలగించబడింది",
   "savedSoundDeleteFailed": "ఆ సౌండ్‌ను తొలగించడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "savedSoundDeleteFailedNotOwner": "మీరు పంచుకున్న సౌండ్‌లను మాత్రమే తొలగించగలరు.",
-  "audioPickerTypeGroup": "ఆడియో"
+  "audioPickerTypeGroup": "ఆడియో",
+  "soundUploadRetrySaveAction": "సౌండ్‌లకు మళ్లీ సేవ్ చేయండి"
 }

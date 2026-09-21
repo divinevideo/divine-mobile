@@ -6422,7 +6422,7 @@
   "soundUploadTitle": "上传声音",
   "soundUploadIntro": "分享一段节拍、一段旋律或一句配音，Divine 上的任何人都能用它做视频。",
   "soundUploadChooseFile": "选择音频文件",
-  "soundUploadSupportedFormats": "AAC、M4A、MP3、WAV 或 WebM",
+  "soundUploadSupportedFormats": "AAC、M4A、MP3 或 WAV",
   "soundUploadChangeFile": "更换",
   "soundUploadReuseNotice": "Divine 上的任何人都可以在视频里使用这个声音，每次都会署上你的名字。",
   "soundUploadShareAction": "分享声音",
@@ -6437,5 +6437,6 @@
   "savedSoundDeleted": "声音已删除",
   "savedSoundDeleteFailed": "无法删除该声音。请重试。",
   "savedSoundDeleteFailedNotOwner": "你只能删除自己分享的声音。",
-  "audioPickerTypeGroup": "音频"
+  "audioPickerTypeGroup": "音频",
+  "soundUploadRetrySaveAction": "重新保存到声音库"
 }

@@ -4659,7 +4659,7 @@
   "soundUploadTitle": "Unggah suara",
   "soundUploadIntro": "Bagikan beat, jingle, atau rekaman suara supaya siapa pun di Divine bisa membuat video dengannya.",
   "soundUploadChooseFile": "Pilih file audio",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV, atau WebM",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3, atau WAV",
   "soundUploadChangeFile": "Ganti",
   "soundUploadReuseNotice": "Siapa pun di Divine bisa memakai suara ini di video mereka. Namamu selalu ikut tercantum.",
   "soundUploadShareAction": "Bagikan suara",
@@ -4674,5 +4674,6 @@
   "savedSoundDeleted": "Suara dihapus",
   "savedSoundDeleteFailed": "Suara itu gagal dihapus. Coba lagi.",
   "savedSoundDeleteFailedNotOwner": "Kamu hanya bisa menghapus suara yang kamu bagikan sendiri.",
-  "audioPickerTypeGroup": "Audio"
+  "audioPickerTypeGroup": "Audio",
+  "soundUploadRetrySaveAction": "Coba simpan lagi ke Suara"
 }

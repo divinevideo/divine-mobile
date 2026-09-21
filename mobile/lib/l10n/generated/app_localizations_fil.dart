@@ -12291,7 +12291,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundUploadChooseFile => 'Pumili ng audio file';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV, o WebM';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, o WAV';
 
   @override
   String get soundUploadChangeFile => 'Palitan';
@@ -12344,4 +12344,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get audioPickerTypeGroup => 'Audio';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Subukan ulit i-save sa Sounds';
 }
