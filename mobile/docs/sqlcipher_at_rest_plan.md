@@ -34,19 +34,52 @@ workspace pubspec define is read and the host build loads `libsqlite3mc.dylib`.
 ## Key and open sequence
 
 The app stores a 32-byte CSPRNG key in `flutter_secure_storage` under
-`db.cipher.key.v2`, represented as 64 lower-case hex characters. db_client never
+`db.cipher.key.v1`, represented as 64 lower-case hex characters. db_client never
 reads secure storage; the app bootstrap resolves the key and injects it.
 
-On iOS the item carries `first_unlock_this_device`: readable from the first
-unlock after boot until the next reboot, locked screen included, and never
-restored onto another device. Until #9343 it sat under the package default,
-`unlocked`, under the name `db.cipher.key.v1`, and every launch while the
-device was locked — a silent push, a background refresh, a prewarmed launch —
-failed with `errSecInteractionNotAllowed` (-25308). The bootstrap moves such a
-key into the `.v2` slot on its first unlocked launch and deletes the old item
-through a storage instance that still names the old accessibility, since the
-iOS plugin puts the accessibility into its delete query. macOS keeps `unlocked`
-(#5563).
+**That slot name never changes.** Every build looks in it, old and new, so
+moving the key to a second slot leaves an older build reading an empty one,
+generating a replacement and wiping the database through key-loss recovery. An
+App Store or TestFlight rollback, a downgraded macOS build, a sideloaded older
+APK, and a Shorebird patch rolled back to its release baseline all reach that
+path, and the slot name is platform-independent so none of them is iOS-only.
+When the accessibility changed (#9343) the item was therefore rewritten in
+place rather than moved (#9385).
+
+On iOS the item carries `first_unlock`: readable from the first unlock after
+boot until the next reboot, locked screen included. Until #9343 it sat under
+the package default, `unlocked`, and every launch while the device was locked —
+a silent push, a background refresh, a prewarmed launch — failed with
+`errSecInteractionNotAllowed` (-25308). On each unlocked launch the bootstrap
+rewrites the key into the same slot under the current options; the plugin's iOS
+write puts the accessibility into its `SecItemUpdate` query, so an item already
+under the current class updates in place and only a mismatched one takes the
+delete-and-re-add path. The rewrite is best-effort and skipped while protected
+data is unavailable, because the caller already holds a key that opens the
+database. Its one cost: on the launch that does move an item between classes
+the plugin deletes before it re-adds, so a process kill inside those two
+consecutive Keychain calls loses the key. That is the price of not having a
+second slot, and a second slot costs an unconditional wipe on every rollback.
+macOS keeps `unlocked` (#5563), so nothing is rewritten there.
+
+`first_unlock_this_device` is deliberately **not** used. It is readable at
+exactly the same times, so it fixes #9343 just as well, but `SecItem.h` says
+its items "will never migrate to a new device, so after a backup is restored to
+a new device these items will be missing" — while `divine_db.db` lives under
+Application Support and nothing excludes it from backup. The key would then
+travel less far than the data it opens, and a restore onto a new iPhone would
+find the database, find no key, wipe it through key-loss recovery and leave a
+permanently unreadable backup behind. What that costs is the local-only data
+nothing can re-fetch: drafts, pending uploads and actions, outgoing DMs,
+pending gift wraps, saved caption and title styles.
+
+Keeping an at-rest key out of backups is a defensible threat model, but it is
+not this one. The scope above is the device's filesystem, not its backups, and
+the same backup already carries the Nostr identity key under `first_unlock`
+(`nostr_key_manager`'s `PlatformSecureStorage`) plus `cache_sync.db`, the Hive
+boxes and SharedPreferences in the clear. Withholding only the database cipher
+key protects strictly less valuable data from an attacker who, by that point,
+already holds the identity key.
 
 `flutter_secure_storage`'s iOS `read` reports an item the current device state
 cannot decrypt as absent rather than failing: it drops the -25308 status and
@@ -106,7 +139,7 @@ are deleted so plaintext does not remain at rest.
 
 ## Key-loss recovery
 
-If secure storage loses `db.cipher.key.v2` while an encrypted DB remains, the old
+If secure storage loses `db.cipher.key.v1` while an encrypted DB remains, the old
 DB is cryptographically unrecoverable. The bootstrap backs up the unreadable DB
 and creates a fresh encrypted DB under the new key. This is data-preserving in
 the only possible way: the old bytes are retained for forensic/manual recovery,

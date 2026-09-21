@@ -482,13 +482,16 @@ Future<void> startOpenVineApp({
     aOptions: const AndroidOptions(encryptedSharedPreferences: true),
     // Readable while the device is locked once it has been unlocked since
     // boot, so a silent push or a prewarmed launch can open the database. The
-    // package default refused every such launch (#9343).
+    // package default refused every such launch (#9343). Not the `this_device`
+    // variant: the database file is in the backup, so a device-bound key would
+    // make a restore onto a new iPhone wipe it (#9385).
     iOptions: appDbCipherKeyIosSecureStorageOptions(),
     mOptions: appMacOsSecureStorageOptions(),
   );
-  // Same store, pre-#9343 iOS accessibility: the only instance whose delete
-  // query matches the item existing installs still hold. The bootstrap reads
-  // that item once, moves it under the options above and deletes it here.
+  // Same store and same slot, pre-#9343 iOS accessibility. Only the resets need
+  // it: the iOS plugin puts the accessibility into its delete query but not its
+  // read query, so reading and rewriting the key go through the instance above
+  // while deleting an item that has not been rewritten yet needs this one.
   final legacyDbCipherSecureStorage = FlutterSecureStorage(
     aOptions: const AndroidOptions(encryptedSharedPreferences: true),
     iOptions: legacyDbCipherKeyIosSecureStorageOptions(),
@@ -567,7 +570,6 @@ Future<void> startOpenVineApp({
       // triggering the §6 key-loss recovery. (#570 C2)
       resolveCipherKey: () => DatabaseEncryptionBootstrap(
         secureStorage: dbCipherSecureStorage,
-        legacySecureStorage: legacyDbCipherSecureStorage,
         // On the key-loss recreate the Drift DB is wiped but SharedPreferences
         // survives; clear the DM sync state so the next inbox open runs a full
         // re-drain instead of skipping it as "already complete" (which had

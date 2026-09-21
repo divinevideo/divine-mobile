@@ -10,24 +10,20 @@ import 'package:openvine/database/sqlcipher_runtime.dart';
 import 'package:openvine/services/database_recovery_store.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Secure-storage key for the at-rest DB cipher key. Versioned so a future
-/// rotation can introduce `.v3` without colliding.
+/// Secure-storage key for the at-rest DB cipher key.
 ///
-/// `.v2` holds the same key material as `.v1` did; it is a new slot because
-/// the iOS Keychain accessibility changed (#9343) and the plugin cannot report
-/// which accessibility an existing item carries. A key found here has been
-/// stored under the current options and needs no migration.
+/// **This name is a wire format and must never change.** It is what every
+/// shipped install has written, and the only slot any build looks in — older or
+/// newer. Move the key to a second slot and the older build finds nothing,
+/// generates a replacement and wipes the existing database through key-loss
+/// recovery; an App Store or TestFlight rollback, a downgraded macOS build, a
+/// sideloaded older APK and a Shorebird patch rolled back to its release
+/// baseline all reach that path. The iOS Keychain accessibility changed in
+/// #9343 and the slot deliberately did not: the item is rewritten in place
+/// instead, by [DatabaseEncryptionBootstrap._upgradeKeyAccessibility]. See
+/// #9385.
 @visibleForTesting
-const dbCipherKeyStorageKey = 'db.cipher.key.v2';
-
-/// The slot the cipher key lived in before #9343. On iOS that item carries the
-/// package-default `unlocked` accessibility, which the Keychain refuses
-/// whenever the device is locked. It is only ever read once and moved to
-/// [dbCipherKeyStorageKey], then deleted — through the storage instance that
-/// still names its accessibility, because the iOS plugin puts the accessibility
-/// into its delete query.
-@visibleForTesting
-const legacyDbCipherKeyStorageKey = 'db.cipher.key.v1';
+const dbCipherKeyStorageKey = 'db.cipher.key.v1';
 
 /// Resolves the SQLite3MultipleCiphers key for the local database before the first
 /// `AppDatabase` open and performs the one-time plaintext→encrypted migration.
@@ -40,7 +36,6 @@ const legacyDbCipherKeyStorageKey = 'db.cipher.key.v1';
 class DatabaseEncryptionBootstrap {
   DatabaseEncryptionBootstrap({
     required FlutterSecureStorage secureStorage,
-    required FlutterSecureStorage legacySecureStorage,
     Future<bool?> Function()? isProtectedDataAvailable,
     Future<void> Function()? ensureRuntime,
     bool Function()? isCipherAvailable,
@@ -56,7 +51,6 @@ class DatabaseEncryptionBootstrap {
     Future<bool> Function()? hasPendingCorruptionRecovery,
     Future<void> Function()? clearPendingCorruptionRecovery,
   }) : _secureStorage = secureStorage,
-       _legacySecureStorage = legacySecureStorage,
        _isProtectedDataAvailable =
            isProtectedDataAvailable ??
            (() => _iosProtectedDataAvailable(secureStorage)),
@@ -85,18 +79,22 @@ class DatabaseEncryptionBootstrap {
            ((rawKeyHex) => encryptedDatabaseKeyDecrypts(rawKeyHex: rawKeyHex));
 
   /// Reads and writes [dbCipherKeyStorageKey] under the current options — on
-  /// iOS `first_unlock_this_device`, see `appDbCipherKeyIosSecureStorageOptions`.
+  /// iOS `first_unlock`, see `appDbCipherKeyIosSecureStorageOptions`.
+  ///
+  /// One instance is enough to reach an item written before #9343 under the old
+  /// accessibility: the iOS plugin leaves the accessibility out of its read
+  /// query, and its write deletes the entry under every accessibility value
+  /// before re-adding it. Only `delete` filters on the class, which is why
+  /// [resetEncryptedDatabaseCache] still takes a second, legacy-options
+  /// instance.
   final FlutterSecureStorage _secureStorage;
-
-  /// Reaches [legacyDbCipherKeyStorageKey] under the pre-#9343 options. Read
-  /// and delete only; nothing is ever written through it.
-  final FlutterSecureStorage _legacySecureStorage;
 
   /// Whether the platform can currently decrypt `unlocked`-class data — iOS's
   /// `UIApplication.isProtectedDataAvailable`. `null` where the bootstrap has
   /// no such signal to consult (Android, web, and macOS — see
-  /// [_iosProtectedDataAvailable]). Consulted before generating a key: see
-  /// [_requireReadableKeystore].
+  /// [_iosProtectedDataAvailable]). Consulted before generating a key (see
+  /// [_requireReadableKeystore]) and before rewriting an existing one (see
+  /// [_upgradeKeyAccessibility]).
   final Future<bool?> Function() _isProtectedDataAvailable;
 
   final Future<void> Function() _ensureRuntime;
@@ -299,21 +297,17 @@ class DatabaseEncryptionBootstrap {
       dbCipherKeyStorageKey,
     );
     if (existing != null) {
-      if (_isValidCipherKey(existing)) return (existing, false);
+      if (_isValidCipherKey(existing)) {
+        await _upgradeKeyAccessibility(existing);
+        return (existing, false);
+      }
+      // A value that read back but is not a key proves the keystore answered,
+      // so this is a corrupt item rather than one it refused to hand over.
       return (await _createKey(), true);
     }
-
-    final legacy = await _readCipherKey(
-      _legacySecureStorage,
-      legacyDbCipherKeyStorageKey,
-    );
-    if (legacy != null && _isValidCipherKey(legacy)) {
-      await _migrateLegacyCipherKey(legacy);
-      return (legacy, false);
-    }
-    // Both slots read back empty. Only a keystore that could have answered
-    // makes that a fresh install rather than a key it refused to hand over.
-    if (legacy == null) await _requireReadableKeystore();
+    // The slot read back empty. Only a keystore that could have answered makes
+    // that a fresh install rather than a key it refused to hand over.
+    await _requireReadableKeystore();
     return (await _createKey(), true);
   }
 
@@ -323,21 +317,48 @@ class DatabaseEncryptionBootstrap {
     return key;
   }
 
-  /// Moves a key stored before #9343 into [dbCipherKeyStorageKey] under the
-  /// current options — on iOS from `unlocked` to `first_unlock_this_device`.
+  /// Rewrites [key] into the slot it already occupies so the stored item
+  /// carries the current iOS accessibility class.
   ///
-  /// Write first, delete second: a launch that dies in between finds the
-  /// migrated key next time and only leaves the stale copy behind. The delete
-  /// is best-effort for the same reason — the key is already in its new slot,
-  /// so a leftover copy under the old accessibility cannot fail a launch.
-  Future<void> _migrateLegacyCipherKey(String key) async {
-    await _writeCipherKey(key);
+  /// A key written before #9343 sits under `unlocked`, which the Keychain
+  /// refuses whenever the device is locked (#9343). The plugin cannot report
+  /// which class an existing item carries and its `read` does not filter on
+  /// one, so there is nothing to test — the rewrite is simply repeated. It is
+  /// idempotent: the plugin's iOS write puts the accessibility into its
+  /// `SecItemUpdate` query, so an item already under the current class updates
+  /// in place, and only a mismatched one takes the delete-and-re-add path.
+  ///
+  /// Rewriting in place, rather than moving the key to a new slot, is what
+  /// keeps a rollback non-destructive — see [dbCipherKeyStorageKey].
+  ///
+  /// Two deliberate properties:
+  ///
+  /// * **Gated on protected data.** While the device cannot decrypt
+  ///   `unlocked`-class data, deleting the old item fails with
+  ///   `errSecInteractionNotAllowed` and the re-add collides with the item that
+  ///   survived. Skipping keeps those launches quiet; the next unlocked one
+  ///   does the rewrite. `null` (Android, web, macOS) skips too, because the
+  ///   accessibility never changed there.
+  /// * **Best-effort.** The caller already holds a key that opens the database.
+  ///   Letting a failed rewrite throw would convert a launch that works into
+  ///   the database-failure screen, and the only thing lost by skipping is the
+  ///   locked-launch fix, until the next attempt.
+  ///
+  /// The one cost: on the launch that does move an item between classes, the
+  /// plugin deletes it before re-adding it, so a process kill inside that
+  /// window loses the key and the next launch wipes the database through
+  /// key-loss recovery. It is two consecutive Keychain calls, once per device,
+  /// and the alternative — a second slot — trades it for a rollback that wipes
+  /// unconditionally.
+  Future<void> _upgradeKeyAccessibility(String key) async {
+    if (await _isProtectedDataAvailable() != true) return;
     try {
-      await _legacySecureStorage.delete(key: legacyDbCipherKeyStorageKey);
+      await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
     } on Object catch (error) {
       Log.warning(
-        'Migrated the DB cipher key to its new keystore slot but could not '
-        'remove the old copy (non-fatal): $error',
+        'Could not rewrite the DB cipher key under the current Keychain '
+        'accessibility (non-fatal; a launch while the device is locked may '
+        'still fail until this succeeds): $error',
         name: _logName,
       );
     }
@@ -350,10 +371,11 @@ class DatabaseEncryptionBootstrap {
   /// reads back as `null`, not as a throw: `flutter_secure_storage`'s iOS
   /// `read` drops the `errSecInteractionNotAllowed` (-25308) status when it
   /// retries the query as synchronizable, and that retry reports "not found".
-  /// So before the device's first unlock — or, for a key not yet migrated off
-  /// the `unlocked` class, whenever the device is locked — an absent key is
-  /// indistinguishable from one that is merely locked away. Generating a
-  /// replacement then would strand the database the real key opens (#9343).
+  /// So before the device's first unlock — or, for a key still under the
+  /// `unlocked` class because [_upgradeKeyAccessibility] has not run yet,
+  /// whenever the device is locked — an absent key is indistinguishable from
+  /// one that is merely locked away. Generating a replacement then would
+  /// strand the database the real key opens (#9343).
   ///
   /// Throws [DatabaseCipherStorageUnavailableException] in that state; the
   /// launch fails closed and the next unlocked launch reads the key as usual.
@@ -634,9 +656,12 @@ bool shouldRepairLocalDatabaseCacheAfterBootstrapError(Object error) {
 /// fresh one.
 ///
 /// [deleteCipherKey] additionally removes the DB cipher key (and nothing else
-/// from the keystore) from both of its slots — the current one through
-/// [secureStorage] and the pre-#9343 one through [legacySecureStorage], which
-/// on iOS is the only instance whose delete query matches that item. Pass
+/// from the keystore). The key lives in one slot, but on iOS the plugin puts
+/// the accessibility into its delete query, so the delete is issued twice: once
+/// through [secureStorage] for the current class and once through
+/// [legacySecureStorage] for the pre-#9343 one, which an item still carries
+/// until [DatabaseEncryptionBootstrap] has rewritten it. Deleting a key that is
+/// already gone is a no-op, so the second call is free. Pass
 /// `false` when the caller cannot prove the stored key is stale: the backup
 /// this call leaves behind is encrypted under that key, so deleting it makes
 /// the backup permanently unreadable — while a retained key opens a fresh
@@ -658,7 +683,7 @@ Future<void> resetEncryptedDatabaseCache({
   await (deleteDatabase ?? backUpAndRemoveSharedDatabase)();
   if (deleteCipherKey) {
     await secureStorage.delete(key: dbCipherKeyStorageKey);
-    await legacySecureStorage.delete(key: legacyDbCipherKeyStorageKey);
+    await legacySecureStorage.delete(key: dbCipherKeyStorageKey);
   }
   if (recoveryOutcome != null) {
     try {
