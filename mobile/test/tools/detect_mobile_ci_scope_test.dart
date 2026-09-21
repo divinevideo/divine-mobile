@@ -494,6 +494,7 @@ esac
     const allScopes = {
       'app',
       'native',
+      'ios_native',
       'android',
       'ios',
       'service',
@@ -541,7 +542,32 @@ esac
         'android',
         'smoke',
       },
-      'mobile/ios/Runner/Info.plist': {'app', 'native', 'ios', 'smoke'},
+      'mobile/ios/Runner/Info.plist': {
+        'app',
+        'native',
+        'ios_native',
+        'ios',
+        'smoke',
+      },
+      // A plugin's own pubspec decides iOS plugin registration, and a pub
+      // workspace member never appears in mobile/pubspec.lock.
+      'mobile/packages/divine_camera/pubspec.yaml': {
+        'app',
+        'ios_native',
+        'service',
+      },
+      // Runs inside the iOS Native Tests job, so a change to it must still
+      // schedule that job.
+      'mobile/scripts/ensure_ios_swift_package_floor.rb': {
+        'app',
+        'ios_native',
+      },
+      // `*` spans `/` in a case glob; nothing compiles a package's example
+      // app, so it must not reach the macOS runner.
+      'mobile/packages/divine_camera/example/ios/Runner/Info.plist': {
+        'app',
+        'service',
+      },
       '.github/workflows/badge_repository.yaml': {'app', 'ci_config'},
       // `app` is what keeps mobile/test/tools/ running — the contract test
       // that pins this very workflow lives there, so without it the test
@@ -584,6 +610,7 @@ esac
         native: true,
         also: const {
           'docs_only': false,
+          'ios_native': true,
           'android': true,
           'ios': true,
           'service': true,
