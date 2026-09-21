@@ -90,6 +90,22 @@ class VideoEditorConstants {
   /// "slow" and below "forever" (#8488).
   static const Duration renderWatchdogTimeout = Duration(minutes: 5);
 
+  /// How long a preview render — a transition seam or a speed body — may run
+  /// before it is treated as never returning (#9347).
+  ///
+  /// Also a liveness bound, and one that has to clear a whole fan-out rather
+  /// than one render: the preview asks for every seam and every retimed clip
+  /// at once on each timeline change, `pro_video_editor` encodes them one at
+  /// a time through its single native slot, and each render's HDR
+  /// pre-transcodes run ungated next to every other's — the plugin measured
+  /// a 4K re-encode at ~43 s under three-way contention against ~19 s alone.
+  /// The last render of a six-clip HDR timeline on a throttled phone can
+  /// therefore legitimately wait well over a minute, and cancelling it there
+  /// would only re-queue the same work. A stalled preview render costs an
+  /// overlay and a retry rather than the user's export, so this sits below
+  /// [renderWatchdogTimeout] but not by an order of magnitude.
+  static const Duration previewRenderWatchdogTimeout = Duration(minutes: 2);
+
   /// Frame grid the editor presents to the user.
   ///
   /// The timeline ruler labels sub-second positions in frames at this rate, so

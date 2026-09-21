@@ -478,6 +478,13 @@ class VideoEditorRenderService {
   /// final-export path ([renderVideoToClip]) instead surfaces a
   /// [VideoRenderFailedException] naming the reason, and reports every
   /// failure.
+  ///
+  /// A [taskId] is cancellable through [cancelTask] for the whole call, not
+  /// only once the concatenation registers its own generation: the clips are
+  /// normalized first, and a cancel landing during that pass — the preview
+  /// watchdog giving up on a seam (#9347) — was dropped, so the render ran on
+  /// and encoded a file nobody was waiting for. [renderVideoToClip] registers
+  /// the export's generation the same way.
   static Future<String?> renderVideo({
     required List<DivineVideoClip> clips,
     bool usePersistentStorage = false,
@@ -486,6 +493,9 @@ class VideoEditorRenderService {
     String? taskId,
     Duration? maxOutputDuration = VideoEditorConstants.maxDuration,
   }) async {
+    final renderToken = taskId == null
+        ? null
+        : RenderCancellationRegistry.start(taskId);
     try {
       return await _renderVideoOrThrow(
         clips: clips,
@@ -497,6 +507,10 @@ class VideoEditorRenderService {
       );
     } on VideoRenderFailedException {
       return null;
+    } finally {
+      if (taskId != null && renderToken != null) {
+        RenderCancellationRegistry.finish(taskId, renderToken);
+      }
     }
   }
 

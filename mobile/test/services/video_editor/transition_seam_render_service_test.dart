@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
+import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/transition_seam_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 /// Reports a fixed 1500ms duration for any file, so a persisted seam reads back
@@ -19,9 +25,15 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
   /// service discards the seam it just wrote.
   final Duration duration;
 
+  /// Task ids the service asked to cancel, in order.
+  final cancelledTaskIds = <String>[];
+
   // The base constructor calls this, and the platform interface throws.
   @override
   void initializeStream() {}
+
+  @override
+  Future<void> cancel(String taskId) async => cancelledTaskIds.add(taskId);
 
   @override
   Future<editor.VideoMetadata> getMetadata(
@@ -36,6 +48,26 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
     rotation: 0,
     bitrate: 1000000,
   );
+}
+
+/// Records every non-fatal so a test can assert the reason it was filed under.
+class _RecordingCrashReporter implements CrashReporter {
+  final reports = <({Object error, String? reason})>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    reports.add((error: error, reason: reason));
+  }
 }
 
 void main() {
@@ -619,6 +651,147 @@ void main() {
       expect(seam, isNull);
       expect(renderedPaths, hasLength(1));
       expect(File(renderedPaths.single).existsSync(), isFalse);
+    });
+  });
+
+  group('render bound', () {
+    late Directory tempRoot;
+    late editor.ProVideoEditor originalProVideoEditor;
+    late _FakeProVideoEditor native;
+    late CrashReporter originalCrashReporter;
+    late _RecordingCrashReporter crashReporter;
+    late List<String?> requestedTaskIds;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      originalProVideoEditor = editor.ProVideoEditor.instance;
+      native = _FakeProVideoEditor();
+      editor.ProVideoEditor.instance = native;
+      originalCrashReporter = VideoRenderWatchdog.crashReporter;
+      crashReporter = _RecordingCrashReporter();
+      VideoRenderWatchdog.crashReporter = crashReporter;
+      tempRoot = Directory.systemTemp.createTempSync('seam_bound_test_');
+      requestedTaskIds = [];
+      // Every native render stalls in its setup stage and never settles —
+      // the hm21/pro_video_editor#201 shape.
+      VideoEditorRenderService.renderVideoOverride =
+          ({
+            required clips,
+            required usePersistentStorage,
+            aspectRatio,
+            parameters,
+            taskId,
+            maxOutputDuration,
+          }) {
+            requestedTaskIds.add(taskId);
+            return Completer<String?>().future;
+          };
+    });
+
+    tearDown(() {
+      VideoEditorRenderService.renderVideoOverride = null;
+      VideoRenderWatchdog.crashReporter = originalCrashReporter;
+      editor.ProVideoEditor.instance = originalProVideoEditor;
+      // A stalled render never retires its generation; drop it here so the
+      // next test starts from an empty registry.
+      RenderCancellationRegistry.reset();
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    TransitionSeamRenderService service() => TransitionSeamRenderService(
+      documentsDirectoryProvider: () async => tempRoot,
+    );
+
+    test('a render that never settles fails at the preview bound, frees the '
+        'boundary for a retry and cancels its own native task', () {
+      fakeAsync((async) {
+        final seams = service();
+        final clipA = clip('a', transition: dissolve);
+        final clipB = clip('b');
+        var settled = false;
+        TransitionSeam? result;
+
+        unawaited(
+          seams.render(clipA: clipA, clipB: clipB, transition: dissolve).then((
+            seam,
+          ) {
+            settled = true;
+            result = seam;
+          }),
+        );
+        async.flushMicrotasks();
+
+        expect(requestedTaskIds, hasLength(1));
+        expect(seams.isRendering(clipA, clipB, dissolve), isTrue);
+
+        // Just short of the bound the render is still in flight: nothing has
+        // given up on it, and the overlay it drives is still owed a result.
+        async.elapse(
+          VideoEditorConstants.previewRenderWatchdogTimeout -
+              const Duration(seconds: 1),
+        );
+        async.flushMicrotasks();
+        expect(settled, isFalse);
+        expect(native.cancelledTaskIds, isEmpty);
+
+        async.elapse(const Duration(seconds: 1));
+        async.flushMicrotasks();
+
+        expect(settled, isTrue);
+        expect(result, isNull);
+        expect(
+          seams.isRendering(clipA, clipB, dissolve),
+          isFalse,
+          reason: 'a timed-out boundary must be free to render again',
+        );
+        expect(seams.cached(clipA, clipB, dissolve), isNull);
+        // The cancel targets the id this render was started under, not the
+        // clip id the export path would have defaulted to — natively, and in
+        // the registry the render's own normalization pass consults, so a
+        // stall in that pass is stopped too rather than running on.
+        expect(requestedTaskIds.single, startsWith('seam_'));
+        expect(native.cancelledTaskIds, [requestedTaskIds.single]);
+        expect(
+          VideoEditorRenderService.isTaskCancellationRequestedForTesting(
+            requestedTaskIds.single!,
+          ),
+          isTrue,
+        );
+        expect(crashReporter.reports, hasLength(1));
+        expect(
+          crashReporter.reports.single.reason,
+          'transition seam render timed out',
+        );
+      });
+    });
+
+    test('retries a timed-out boundary under a fresh native task id', () {
+      fakeAsync((async) {
+        final seams = service();
+        final clipA = clip('a', transition: dissolve);
+        final clipB = clip('b');
+
+        unawaited(
+          seams.render(clipA: clipA, clipB: clipB, transition: dissolve),
+        );
+        async.elapse(VideoEditorConstants.previewRenderWatchdogTimeout);
+        async.flushMicrotasks();
+        expect(requestedTaskIds, hasLength(1));
+
+        // The next timeline change asks for the same boundary again. It has to
+        // reach the renderer (not the stale in-flight future) and under an id
+        // of its own: the plugin holds a restart of a cancelled id until the
+        // cancelled pipeline reports back, which a stalled one never does.
+        unawaited(
+          seams.render(clipA: clipA, clipB: clipB, transition: dissolve),
+        );
+        async.flushMicrotasks();
+
+        expect(requestedTaskIds, hasLength(2));
+        expect(requestedTaskIds[1], startsWith('seam_'));
+        expect(requestedTaskIds[1], isNot(requestedTaskIds[0]));
+        expect(seams.isRendering(clipA, clipB, dissolve), isTrue);
+      });
     });
   });
 

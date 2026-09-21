@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
 import 'package:path/path.dart' as p;
@@ -38,6 +40,12 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
   final allowRenderToFinish = <Completer<void>>[];
   int renderCount = 0;
 
+  /// The task id of every render started, in order.
+  final renderedTaskIds = <String>[];
+
+  /// Task ids the service asked to cancel, in order.
+  final cancelledTaskIds = <String>[];
+
   Completer<void> renderStartedAt(int index) {
     while (renderStarted.length <= index) {
       renderStarted.add(Completer<void>());
@@ -56,7 +64,7 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
   void initializeStream() {}
 
   @override
-  Future<void> cancel(String taskId) async {}
+  Future<void> cancel(String taskId) async => cancelledTaskIds.add(taskId);
 
   @override
   Future<String> renderVideoToFile(
@@ -65,9 +73,12 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
     editor.NativeLogLevel? nativeLogLevel,
   }) async {
     final renderIndex = renderCount++;
+    renderedTaskIds.add(value.id);
     renderStartedAt(renderIndex).complete();
     await allowRenderToFinishAt(renderIndex).future;
-    await File(filePath).writeAsString('rendered speed body');
+    // Synchronous so a render released under `fakeAsync` settles on the
+    // microtask queue alone; real disk I/O never completes inside it.
+    File(filePath).writeAsStringSync('rendered speed body');
     return filePath;
   }
 
@@ -260,9 +271,8 @@ void main() {
                 'the third clip must queue instead of opening a 3rd session',
           );
 
-          // Freeing one slot lets exactly one queued clip through — but the
-          // slot is only released after the fake's real writeAsString lands,
-          // and pumpEventQueue does not wait for disk I/O.
+          // Freeing one slot lets exactly one queued clip through; wait on
+          // the fake's own start signal rather than a pumpEventQueue race.
           native.allowRenderToFinishAt(0).complete();
           await native.renderStartedAt(2).future;
           expect(native.renderCount, 3);
@@ -300,6 +310,89 @@ void main() {
           2,
           reason: 'the queued third clip must be abandoned, not encoded',
         );
+      });
+    });
+
+    group('render bound', () {
+      test('a render that never settles fails at the preview bound, gives its '
+          'slot back and cancels its own native task', () {
+        fakeAsync((async) {
+          final native = _FakeProVideoEditor();
+          editor.ProVideoEditor.instance = native;
+          final service = ClipSpeedRenderService();
+          final stalled = clip('a', playbackSpeed: 2);
+          var settled = false;
+          RenderedSpeedClip? result;
+
+          // The stalled render and a healthy one take both slots; the healthy
+          // one finishes its encode well inside the bound.
+          unawaited(
+            service.render(stalled).then((rendered) {
+              settled = true;
+              result = rendered;
+            }),
+          );
+          unawaited(service.render(clip('b', playbackSpeed: 2)));
+          async.flushMicrotasks();
+          expect(native.renderCount, 2);
+          expect(service.isRendering(stalled), isTrue);
+          native.allowRenderToFinishAt(1).complete();
+          async.flushMicrotasks();
+
+          async.elapse(VideoEditorConstants.previewRenderWatchdogTimeout);
+          async.flushMicrotasks();
+
+          expect(settled, isTrue);
+          expect(result, isNull);
+          expect(
+            service.isRendering(stalled),
+            isFalse,
+            reason: 'a timed-out clip must be free to render again',
+          );
+          expect(native.renderedTaskIds.first, startsWith('speed_'));
+          expect(
+            native.cancelledTaskIds,
+            [native.renderedTaskIds.first],
+            reason: 'only the stalled render is cancelled, not the healthy one',
+          );
+
+          // Both slots are free again: a leaked slot would let only one of
+          // the next two clips start.
+          unawaited(service.render(clip('c', playbackSpeed: 2)));
+          unawaited(service.render(clip('d', playbackSpeed: 2)));
+          async.flushMicrotasks();
+          expect(
+            native.renderCount,
+            4,
+            reason: 'the slot the stalled render held must be given back',
+          );
+        });
+      });
+
+      test('retries a timed-out clip under a fresh native task id', () {
+        fakeAsync((async) {
+          final native = _FakeProVideoEditor();
+          editor.ProVideoEditor.instance = native;
+          final service = ClipSpeedRenderService();
+          final stalled = clip('a', playbackSpeed: 2);
+
+          unawaited(service.render(stalled));
+          async.elapse(VideoEditorConstants.previewRenderWatchdogTimeout);
+          async.flushMicrotasks();
+          expect(native.renderedTaskIds, hasLength(1));
+
+          // The next timeline change asks for the same body again. It has to
+          // reach the encoder (not the stale in-flight future) and under an id
+          // of its own: the plugin holds a restart of a cancelled id until the
+          // cancelled pipeline reports back, which a stalled one never does.
+          unawaited(service.render(stalled));
+          async.flushMicrotasks();
+
+          expect(native.renderedTaskIds, hasLength(2));
+          expect(native.renderedTaskIds[1], startsWith('speed_'));
+          expect(native.renderedTaskIds[1], isNot(native.renderedTaskIds[0]));
+          expect(service.isRendering(stalled), isTrue);
+        });
       });
     });
 

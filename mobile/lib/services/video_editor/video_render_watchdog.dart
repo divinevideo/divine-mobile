@@ -1,5 +1,5 @@
-// ABOUTME: Bounds final video exports and cancels work that stops responding
-// ABOUTME: Reports terminal export failures without coupling callers to Firebase
+// ABOUTME: Bounds video renders and cancels work that stops responding
+// ABOUTME: Reports terminal render failures without coupling callers to Firebase
 
 import 'dart:async';
 
@@ -9,7 +9,13 @@ import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Owns the liveness bound and failure reporting for final video exports.
+/// Owns the liveness bound and failure reporting for video renders.
+///
+/// The final export runs under [VideoEditorConstants.renderWatchdogTimeout];
+/// the preview's seam and speed renders under the shorter
+/// [VideoEditorConstants.previewRenderWatchdogTimeout] (#9347). Either way a
+/// render that never settles fails with [VideoRenderFailureReason.timedOut],
+/// its native task is cancelled, and the caller gets its bookkeeping back.
 class VideoRenderWatchdog {
   VideoRenderWatchdog._();
 
@@ -24,19 +30,34 @@ class VideoRenderWatchdog {
   static void Function(Object error, StackTrace stackTrace)?
   crashReporterOverride;
 
-  /// Returns [render]'s result, or a classified failure when it stops settling.
+  /// Returns [render]'s result, or a classified failure when it stops settling
+  /// within [timeout].
+  ///
+  /// A timeout is reported to Crashlytics under [reason] whoever the caller
+  /// is. Other preview failures stay unreported because their retries would
+  /// flood the dashboard (#7125); a timeout fires at most once per bound, and
+  /// a stall the field never reports can never be bounded at its source.
+  /// Callers other than the final export pass their own reason so the
+  /// dashboard keeps them apart.
   static Future<T> run<T>({
     required Future<T> render,
     required String? taskId,
     required Future<void> Function(String taskId) cancelTask,
+    Duration timeout = VideoEditorConstants.renderWatchdogTimeout,
+    String reason = 'renderVideo failed',
   }) {
     return render.timeout(
-      VideoEditorConstants.renderWatchdogTimeout,
+      timeout,
       onTimeout: () {
         const failure = VideoRenderFailedException(
           VideoRenderFailureReason.timedOut,
         );
-        reportFailure(failure, StackTrace.current, reportEveryFailure: true);
+        reportFailure(
+          failure,
+          StackTrace.current,
+          reportEveryFailure: true,
+          reason: reason,
+        );
         if (taskId != null) {
           unawaited(_cancelAndObserve(render, taskId, cancelTask));
         }

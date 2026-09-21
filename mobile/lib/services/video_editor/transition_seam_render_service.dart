@@ -9,11 +9,13 @@ import 'package:crypto/crypto.dart';
 import 'package:divine_video_player/divine_video_player.dart' as player;
 import 'package:flutter/foundation.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ClipTransition, ClipTransitionType, EditorVideo, ProVideoEditor;
@@ -77,6 +79,10 @@ class TransitionSeamRenderService {
   final _cache = <String, TransitionSeam>{};
   final _inFlight = <String, Future<TransitionSeam?>>{};
 
+  /// Process-wide count of native seam renders started, so every attempt
+  /// gets a task id of its own — see [_nativeTaskId].
+  static int _renderAttempts = 0;
+
   /// Monotonic counter bumped on every cache mutation. Lets consumers (e.g. the
   /// editor canvas) cheaply detect when a [SeamTimeline] needs rebuilding
   /// without diffing the cache contents.
@@ -138,7 +144,8 @@ class TransitionSeamRenderService {
       // A file truncated by a kill mid-write (see the temp-then-rename publish
       // below) is detected and deleted here so the boundary re-renders instead
       // of resolving to the same corrupt file — a stuck hard cut — forever.
-      final persistentPath = await _persistentSeamPath(key);
+      final hash = _hash(key);
+      final persistentPath = await _persistentSeamPath(hash);
       if (File(persistentPath).existsSync()) {
         final seam = await _seamFromPersistedFile(
           persistentPath,
@@ -160,9 +167,25 @@ class TransitionSeamRenderService {
       // clips sum to ≤ the 6.3s timeline cap (clip_manager trims to the
       // remaining budget), so the shorter clip is ≤ ~3.15s. Even a hard-cut
       // fallback seam (consumed×2) therefore stays ≤ 6.3s.
-      final outputPath = await VideoEditorRenderService.renderVideo(
-        clips: [tailClip, headClip],
-        aspectRatio: clipA.targetAspectRatio,
+      //
+      // Bounded because a render that stalls inside `pro_video_editor`'s
+      // setup stage never settles on its own (hm21/pro_video_editor#201):
+      // without the watchdog this key stayed in `_inFlight` for the session,
+      // the "rendering transition" overlay never cleared, and the boundary
+      // was never retried (#9347). On timeout the failure lands in the catch
+      // below like any other, so `finally` frees the key and the next timeline
+      // change re-renders it.
+      final taskId = _nativeTaskId(hash);
+      final outputPath = await VideoRenderWatchdog.run(
+        render: VideoEditorRenderService.renderVideo(
+          clips: [tailClip, headClip],
+          aspectRatio: clipA.targetAspectRatio,
+          taskId: taskId,
+        ),
+        taskId: taskId,
+        cancelTask: VideoEditorRenderService.cancelTask,
+        timeout: VideoEditorConstants.previewRenderWatchdogTimeout,
+        reason: 'transition seam render timed out',
       );
       if (outputPath == null) return null;
       try {
@@ -392,13 +415,24 @@ class TransitionSeamRenderService {
 
   Duration _min(Duration a, Duration b) => a < b ? a : b;
 
-  /// Deterministic on-disk path for a seam, keyed by [key] so the same clip
-  /// pair + trims + transition reuse the rendered file across editor sessions
-  /// (like thumbnails). Files persist for reuse, bounded on [clear] by
-  /// [enforceSeamCacheLimit].
-  Future<String> _persistentSeamPath(String key) async {
+  String _hash(String key) => sha256.convert(utf8.encode(key)).toString();
+
+  /// The native task id for one render attempt of the seam hashed as [hash].
+  ///
+  /// Distinct per attempt on purpose. A retry that restarts a cancelled id
+  /// waits in `pro_video_editor`'s job registry until the cancelled pipeline
+  /// reports back — and the stalled setup stage the watchdog cancels never
+  /// does, so a retry under the same id would hang behind it for good. The
+  /// hash stays in the id so a log line still names the seam file it was
+  /// rendering.
+  String _nativeTaskId(String hash) => 'seam_${hash}_${++_renderAttempts}';
+
+  /// Deterministic on-disk path for a seam, keyed by [hash] (of the cache
+  /// key) so the same clip pair + trims + transition reuse the rendered file
+  /// across editor sessions (like thumbnails). Files persist for reuse,
+  /// bounded on [clear] by [enforceSeamCacheLimit].
+  Future<String> _persistentSeamPath(String hash) async {
     final seamDir = await _seamDirectory();
-    final hash = sha256.convert(utf8.encode(key)).toString();
     return '${seamDir.path}/$hash.mp4';
   }
 
