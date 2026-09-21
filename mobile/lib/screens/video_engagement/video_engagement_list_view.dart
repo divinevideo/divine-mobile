@@ -56,6 +56,8 @@ class VideoEngagementListView extends StatelessWidget {
               _EngagementEmptyState(type: state.type),
             VideoEngagementStatus.success => _EngagementListBody(
               pubkeys: state.pubkeys,
+              hasMore: state.hasMore,
+              loadMoreStatus: state.loadMoreStatus,
             ),
             VideoEngagementStatus.failure => const _EngagementErrorBody(),
           };
@@ -66,9 +68,19 @@ class VideoEngagementListView extends StatelessWidget {
 }
 
 class _EngagementListBody extends StatelessWidget {
-  const _EngagementListBody({required this.pubkeys});
+  const _EngagementListBody({
+    required this.pubkeys,
+    required this.hasMore,
+    required this.loadMoreStatus,
+  });
+
+  /// How far from the end to ask for the next page, so it is already in
+  /// flight by the time the user reaches the bottom.
+  static const _loadMoreThreshold = 3;
 
   final List<String> pubkeys;
+  final bool hasMore;
+  final VideoEngagementLoadMoreStatus loadMoreStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -81,8 +93,20 @@ class _EngagementListBody extends StatelessWidget {
         );
       },
       child: ListView.builder(
-        itemCount: pubkeys.length,
+        itemCount: pubkeys.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index >= pubkeys.length) {
+            return _LoadMoreTrailer(status: loadMoreStatus);
+          }
+
+          if (hasMore &&
+              loadMoreStatus == VideoEngagementLoadMoreStatus.idle &&
+              index >= pubkeys.length - _loadMoreThreshold) {
+            context.read<VideoEngagementBloc>().add(
+              const VideoEngagementLoadMoreRequested(),
+            );
+          }
+
           final pubkey = pubkeys[index];
           return UserProfileTile(
             pubkey: pubkey,
@@ -92,6 +116,40 @@ class _EngagementListBody extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Row shown below the last liker while more pages remain.
+class _LoadMoreTrailer extends StatelessWidget {
+  const _LoadMoreTrailer({required this.status});
+
+  final VideoEngagementLoadMoreStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    // The list only auto-triggers from idle, so a failed page needs an
+    // explicit way back — otherwise the remaining people are unreachable
+    // short of pulling to refresh the whole list.
+    if (status == VideoEngagementLoadMoreStatus.failure) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: DivineButton(
+            label: context.l10n.commonRetry,
+            type: DivineButtonType.link,
+            size: DivineButtonSize.small,
+            onPressed: () => context.read<VideoEngagementBloc>().add(
+              const VideoEngagementLoadMoreRequested(retry: true),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(child: DivineCircularProgressIndicator()),
     );
   }
 }

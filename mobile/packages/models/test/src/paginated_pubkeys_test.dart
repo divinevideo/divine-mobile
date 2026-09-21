@@ -104,6 +104,7 @@ void main() {
         expect(result.pubkeys, equals(['pub1', 'pub2']));
         expect(result.hasMore, isTrue);
         expect(result.total, equals(2));
+        expect(result.nextCursor, equals('50'));
       });
 
       test('data key takes precedence over following in envelope', () {
@@ -180,6 +181,69 @@ void main() {
       });
     });
 
+    group('nextCursor', () {
+      // hasMore without a cursor is a dead end: the caller knows more exists
+      // and has no way to ask for it. #9358 truncated the Liked-by list at
+      // 500 for exactly this reason.
+      test('is retained from the pagination envelope', () {
+        final result = PaginatedPubkeys.fromJson(const {
+          'data': ['pub1'],
+          'pagination': {
+            'has_more': true,
+            'next_cursor': 'eyJvZmZzZXQiOjUwMH0',
+          },
+        });
+
+        expect(result.hasMore, isTrue);
+        expect(result.nextCursor, equals('eyJvZmZzZXQiOjUwMH0'));
+      });
+
+      test('is null on the last page', () {
+        final result = PaginatedPubkeys.fromJson(const {
+          'data': ['pub1'],
+          'pagination': {'has_more': false},
+        });
+
+        expect(result.hasMore, isFalse);
+        expect(result.nextCursor, isNull);
+      });
+
+      test('is null on the legacy shape, which carries no cursor', () {
+        final result = PaginatedPubkeys.fromJson(const {
+          'following': ['pub1'],
+          'has_more': true,
+        });
+
+        expect(result.hasMore, isTrue);
+        expect(result.nextCursor, isNull);
+      });
+
+      test('normalises an empty cursor to null so paging cannot loop', () {
+        final result = PaginatedPubkeys.fromJson(const {
+          'data': ['pub1'],
+          'pagination': {'has_more': true, 'next_cursor': ''},
+        });
+
+        expect(result.nextCursor, isNull);
+      });
+
+      test('distinguishes two otherwise identical pages', () {
+        const a = PaginatedPubkeys(
+          pubkeys: ['abc'],
+          hasMore: true,
+          nextCursor: 'c1',
+        );
+        const b = PaginatedPubkeys(
+          pubkeys: ['abc'],
+          hasMore: true,
+          nextCursor: 'c2',
+        );
+
+        expect(a, isNot(equals(b)));
+        expect(a.hashCode, isNot(equals(b.hashCode)));
+      });
+    });
+
     group('appliedQuery', () {
       test('reads the echoed filter from the response', () {
         final result = PaginatedPubkeys.fromJson(const {
@@ -209,13 +273,14 @@ void main() {
           pubkeys: ['abc', 'def'],
           total: 50,
           hasMore: true,
+          nextCursor: 'c1',
         );
 
         expect(
           result.toString(),
           equals(
             'PaginatedPubkeys(count: 2, '
-            'total: 50, hasMore: true, appliedQuery: null)',
+            'total: 50, hasMore: true, nextCursor: c1, appliedQuery: null)',
           ),
         );
       });

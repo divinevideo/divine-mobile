@@ -3397,6 +3397,71 @@ void main() {
         expect(uri.queryParameters.containsKey('a'), isFalse);
       });
 
+      test('sends the cursor when continuing a page', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(likersResponse, 200));
+
+        await client.getVideoLikers(testEventId, cursor: 'eyJvZmZzZXQiOjUwMH0');
+
+        final captured = verify(
+          () =>
+              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
+        ).captured;
+
+        final uri = captured.first as Uri;
+        expect(uri.queryParameters['cursor'], equals('eyJvZmZzZXQiOjUwMH0'));
+      });
+
+      test('omits the cursor on the first page', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(likersResponse, 200));
+
+        await client.getVideoLikers(testEventId);
+
+        final captured = verify(
+          () =>
+              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
+        ).captured;
+
+        final uri = captured.first as Uri;
+        expect(uri.queryParameters.containsKey('cursor'), isFalse);
+      });
+
+      test('omits the cursor when it is blank', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(likersResponse, 200));
+
+        await client.getVideoLikers(testEventId, cursor: '');
+
+        final captured = verify(
+          () =>
+              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
+        ).captured;
+
+        final uri = captured.first as Uri;
+        expect(uri.queryParameters.containsKey('cursor'), isFalse);
+      });
+
+      test('surfaces the cursor for the next page', () async {
+        const pagedResponse = '''
+{
+  "data": [{"pubkey": "liker1", "created_at": 1700000100, "event_id": "r1"}],
+  "pagination": {"next_cursor": "eyJvZmZzZXQiOjUwMH0", "has_more": true}
+}
+''';
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(pagedResponse, 200));
+
+        final likers = await client.getVideoLikers(testEventId);
+
+        expect(likers.hasMore, isTrue);
+        expect(likers.nextCursor, equals('eyJvZmZzZXQiOjUwMH0'));
+      });
+
       test('throws FunnelcakeNotFoundException on 404', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),

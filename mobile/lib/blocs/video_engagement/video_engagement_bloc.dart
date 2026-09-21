@@ -42,6 +42,10 @@ class VideoEngagementBloc
       _onLoadRequested,
       transformer: droppable(),
     );
+    on<VideoEngagementLoadMoreRequested>(
+      _onLoadMoreRequested,
+      transformer: droppable(),
+    );
   }
 
   /// Hex id of the target video event.
@@ -75,22 +79,16 @@ class VideoEngagementBloc
         name: 'VideoEngagementBloc',
         category: LogCategory.video,
       );
-      final pubkeys = await _fetch();
-
-      // Pre-warm the profile cache so UserProfileTile widgets render real
-      // names on first paint. This awaits the batch fetch (bounded to
-      // _profilePrefetchTimeout = 2 s), so the loading state is held for up
-      // to that duration. On timeout or error the list still appears — the
-      // per-tile userProfileReactiveProvider fetch acts as fallback.
-      if (pubkeys.isNotEmpty) {
-        await _profileRepository
-            ?.fetchBatchProfiles(pubkeys: pubkeys)
-            .timeout(_profilePrefetchTimeout)
-            .catchError((_) => <String, UserProfile>{});
-      }
+      final page = await _fetchPage();
+      await _prewarmProfiles(page.pubkeys);
 
       emit(
-        state.copyWith(status: VideoEngagementStatus.success, pubkeys: pubkeys),
+        state.copyWith(
+          status: VideoEngagementStatus.success,
+          pubkeys: page.pubkeys,
+          loadMoreStatus: VideoEngagementLoadMoreStatus.idle,
+          nextCursor: page.nextCursor,
+        ),
       );
     } catch (e, stackTrace) {
       addError(e, stackTrace);
@@ -98,14 +96,95 @@ class VideoEngagementBloc
     }
   }
 
-  Future<List<String>> _fetch() => switch (type) {
-    VideoEngagementType.likers => _likesRepository.fetchEventLikers(
-      eventId: eventId,
-      addressableId: addressableId,
-    ),
-    VideoEngagementType.reposters => _repostsRepository.fetchEventReposters(
-      eventId: eventId,
-      addressableId: addressableId,
-    ),
-  };
+  /// Appends the next page to the list already on screen.
+  ///
+  /// The list is capped at [FunnelcakeApiClient.maxVideoLikersLimit] per
+  /// request, so a video with thousands of likers needs this to reach past
+  /// the first page (#9358).
+  Future<void> _onLoadMoreRequested(
+    VideoEngagementLoadMoreRequested event,
+    Emitter<VideoEngagementState> emit,
+  ) async {
+    final cursor = state.nextCursor;
+    if (cursor == null) return;
+    // Only an explicit retry restarts after a failure: the view dispatches
+    // freely from its item builder, so auto-resuming would re-fire on the
+    // rebuild the failure itself causes. Concurrency needs no guard —
+    // this handler is droppable and the view dispatches only from idle.
+    if (state.loadMoreStatus == VideoEngagementLoadMoreStatus.failure &&
+        !event.retry) {
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        loadMoreStatus: VideoEngagementLoadMoreStatus.inProgress,
+      ),
+    );
+    try {
+      final page = await _fetchPage(cursor: cursor);
+
+      // `seen.add` answers false for a pubkey already shown, so this dedupes
+      // both against earlier pages and within this one. The survivors are
+      // also the only profiles still worth warming.
+      final seen = state.pubkeys.toSet();
+      final added = page.pubkeys.where(seen.add).toList();
+      await _prewarmProfiles(added);
+
+      emit(
+        state.copyWith(
+          pubkeys: [...state.pubkeys, ...added],
+          loadMoreStatus: VideoEngagementLoadMoreStatus.idle,
+          nextCursor: page.nextCursor,
+        ),
+      );
+    } catch (e, stackTrace) {
+      addError(e, stackTrace);
+      // Keep the loaded pubkeys and the cursor so a retry can continue.
+      emit(
+        state.copyWith(
+          loadMoreStatus: VideoEngagementLoadMoreStatus.failure,
+        ),
+      );
+    }
+  }
+
+  /// Pre-warms the profile cache so [UserProfileTile] widgets render real
+  /// names on first paint.
+  ///
+  /// Awaits the batch fetch bounded to [_profilePrefetchTimeout], so the
+  /// caller's loading state is held for up to that duration. On timeout or
+  /// error the list still appears — the per-tile
+  /// `userProfileReactiveProvider` fetch acts as fallback.
+  Future<void> _prewarmProfiles(List<String> pubkeys) async {
+    if (pubkeys.isEmpty) return;
+    await _profileRepository
+        ?.fetchBatchProfiles(pubkeys: pubkeys)
+        .timeout(_profilePrefetchTimeout)
+        .catchError((_) => <String, UserProfile>{});
+  }
+
+  /// One page of the engagement list.
+  ///
+  /// Reposters carry no cursor: they are served from relays in a single
+  /// page, so [VideoEngagementState.hasMore] stays false for that type.
+  Future<({List<String> pubkeys, String? nextCursor})> _fetchPage({
+    String? cursor,
+  }) async {
+    switch (type) {
+      case VideoEngagementType.likers:
+        final page = await _likesRepository.fetchEventLikers(
+          eventId: eventId,
+          addressableId: addressableId,
+          cursor: cursor,
+        );
+        return (pubkeys: page.pubkeys, nextCursor: page.nextCursor);
+      case VideoEngagementType.reposters:
+        final pubkeys = await _repostsRepository.fetchEventReposters(
+          eventId: eventId,
+          addressableId: addressableId,
+        );
+        return (pubkeys: pubkeys, nextCursor: null);
+    }
+  }
 }
