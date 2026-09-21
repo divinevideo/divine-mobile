@@ -55,6 +55,19 @@ void main() {
       expect(ref!.eventId, equals(hexId));
     });
 
+    test('returns null for an nevent1 with a malformed TLV payload', () {
+      // Both carry a valid bech32 checksum over a TLV payload that is not:
+      // a 1-byte kind entry reaches getInt32, which needs four, and invalid
+      // UTF-8 in a relay entry reaches utf8.decode. decodeNevent runs its
+      // loop outside any try/catch, so it throws on each — and this parse
+      // runs inside a go_router builder, where a throw escapes as Flutter's
+      // ErrorWidget instead of the route error screen.
+      // Crafted by bech32-encoding the raw TLV bytes [3, 1, 0x00] and
+      // [1, 2, 0xff, 0xfe] under the `nevent` HRP.
+      expect(VideoRouteRef.parse('nevent1qvqsqxvr2tz'), isNull);
+      expect(VideoRouteRef.parse('nevent1qyp0llsk8aj5m'), isNull);
+    });
+
     test('decodes an naddr1 reference to its coordinate and d tag', () {
       final ref = VideoRouteRef.parse(naddr);
 
