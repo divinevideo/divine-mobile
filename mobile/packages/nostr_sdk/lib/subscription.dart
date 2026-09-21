@@ -88,7 +88,7 @@ class Subscription {
          '1 to $nip01MaxSubscriptionIdLength, and a relay enforcing that '
          'refuses the REQ',
        ),
-       _id = id ?? StringUtil.rndNameStr(16),
+       _id = id ?? StringUtil.rndSecureNameStr(16),
        _parsedFilters = [for (final filter in filters) Filter.fromJson(filter)];
 
   /// Whether [event] satisfies at least one filter in this subscription.

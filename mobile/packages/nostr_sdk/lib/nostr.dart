@@ -650,7 +650,7 @@ class Nostr {
     // every relay having swallowed the request (#7301). Nothing is asked of
     // the relays, so the outcome is the deadline's with no relay in it — the
     // same answer the timer below would have given.
-    final subscriptionId = id ?? StringUtil.rndNameStr(16);
+    final subscriptionId = id ?? StringUtil.rndSecureNameStr(16);
     final now = DateTime.now();
     if (!deadline.isAfter(now)) {
       // The pool files a completion line for every read it sees; this one
