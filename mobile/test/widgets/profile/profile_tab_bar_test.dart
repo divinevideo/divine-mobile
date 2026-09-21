@@ -44,6 +44,11 @@ void main() {
         icon: DivineIconName.repeat,
       ),
       (
+        semanticId: SemanticIds.profileBookmarksTab,
+        label: l.shareMenuBookmarks,
+        icon: DivineIconName.bookmarkSimple,
+      ),
+      (
         semanticId: SemanticIds.profileListsTab,
         label: l.profileListsLabel,
         icon: DivineIconName.playlist,
@@ -113,7 +118,7 @@ void main() {
       await pumpBar(tester);
 
       // `contains`, not equality: Material prepends "Tab N of M", and N/M
-      // differ between the own profile (6 tabs) and another profile (5).
+      // differ between the own profile (7 tabs) and another profile (5).
       expect(mergedLabel(tester, 1), contains(l10n.profileLikedLabel));
       expect(mergedLabel(tester, 1), isNot(contains('liked_tab')));
 
@@ -137,11 +142,11 @@ void main() {
     });
 
     // 360dp is the narrowest common phone and 320dp the narrowest supported
-    // one. Both are measured at all 6 own-profile tabs, the tightest per-tab
+    // one. Both are measured at all 7 own-profile tabs, the tightest per-tab
     // slot the bar ships in: a wider surface or fewer tabs leaves so much
     // slack that these assertions pass even when the layout clamps the icon
-    // flat. 320dp is also where the headroom is thinnest -- 320/6 - 16 =
-    // 37.3dp against the 36.4dp a capped icon needs.
+    // flat. 320dp is also where the headroom is thinnest -- 320/7 - 8 =
+    // 37.7dp against the 36.4dp a capped icon needs.
     for (final width in [320.0, 360.0]) {
       testWidgets('scales its icons with the system text scale at ${width}dp', (
         tester,
@@ -177,9 +182,9 @@ void main() {
         await pumpBar(tester, ownProfile: true);
 
         // At the default text scale the icon must render at its nominal 28dp.
-        // With Material's default labelPadding of 16 this is 21.3dp at 320dp
-        // and exactly 28dp at 360dp, so the 320dp case is the one that pins
-        // the padding at ordinary text sizes rather than only at 2.0x.
+        // With Material's default labelPadding of 16 this is 13.7dp at 320dp
+        // and 19.4dp at 360dp, so both widths pin the padding at ordinary
+        // text sizes rather than only at 2.0x.
         expect(tester.getSize(find.byType(DivineIcon).first).width, 28.0);
       });
     }

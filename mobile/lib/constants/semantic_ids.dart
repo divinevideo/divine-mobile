@@ -200,13 +200,14 @@ abstract class SemanticIds {
       'feature_flag_account_switching';
 
   /// Profile content tabs. The bar is icon-only and its tab count varies by
-  /// profile (6 on the own profile, 5 on another user's), so tests address a
+  /// profile (7 on the own profile, 5 on another user's), so tests address a
   /// tab by identifier rather than by position or by the compound
   /// "Tab N of M" label Material generates.
   static const String profileVideosTab = 'videos_tab';
   static const String profileCollabsTab = 'collabs_tab';
   static const String profileLikedTab = 'liked_tab';
   static const String profileRepostsTab = 'reposted_tab';
+  static const String profileBookmarksTab = 'bookmarks_tab';
   static const String profileListsTab = 'lists_tab';
   static const String profileCommentsTab = 'comments_tab';
 

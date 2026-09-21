@@ -3,7 +3,7 @@ import 'package:openvine/widgets/profile/profile_tab_kind.dart';
 
 void main() {
   group('profileTabKinds', () {
-    test('own profile shows Collabs between Videos and Liked, plus Lists', () {
+    test('own profile orders Bookmarks between Reposts and Lists', () {
       expect(
         profileTabKinds(isOwnProfile: true),
         equals(const [
@@ -11,6 +11,7 @@ void main() {
           ProfileTabKind.collabs,
           ProfileTabKind.liked,
           ProfileTabKind.reposts,
+          ProfileTabKind.bookmarks,
           ProfileTabKind.lists,
           ProfileTabKind.comments,
         ]),
@@ -23,10 +24,10 @@ void main() {
       expect(kinds.indexOf(ProfileTabKind.collabs), equals(1));
     });
 
-    test('own profile exposes Lists instead of unreachable bookmarks', () {
+    test('own profile exposes both owned tabs, Bookmarks and Lists', () {
       expect(
         profileTabKinds(isOwnProfile: true),
-        contains(ProfileTabKind.lists),
+        containsAll(const [ProfileTabKind.bookmarks, ProfileTabKind.lists]),
       );
     });
 
@@ -43,14 +44,16 @@ void main() {
       );
     });
 
-    test('other profile keeps Collabs at index 3 and has no Lists tab', () {
+    test('other profile keeps Collabs at index 3 and has no owned tab', () {
       final kinds = profileTabKinds(isOwnProfile: false);
       expect(kinds.indexOf(ProfileTabKind.collabs), equals(3));
       expect(kinds, isNot(contains(ProfileTabKind.lists)));
+      // Bookmarks are private: someone else's are not ours to browse.
+      expect(kinds, isNot(contains(ProfileTabKind.bookmarks)));
     });
 
-    test('own profile has 6 tabs, other profile has 5', () {
-      expect(profileTabKinds(isOwnProfile: true), hasLength(6));
+    test('own profile has 7 tabs, other profile has 5', () {
+      expect(profileTabKinds(isOwnProfile: true), hasLength(7));
       expect(profileTabKinds(isOwnProfile: false), hasLength(5));
     });
   });

@@ -28,13 +28,26 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Requires [ProfileSavedVideosBloc] to be provided in the widget tree.
 /// Only ever shows the viewer's own bookmarks — they are private, so there
-/// is no "other user's saved" variant. Hosted by `SavedVideosScreen`, which
-/// the profile's Lists tab links to.
+/// is no "other user's saved" variant. Hosted by the own profile's Bookmarks
+/// tab and by `SavedVideosScreen`, the deep-link target for the same list.
 class ProfileSavedGrid extends StatefulWidget {
-  const ProfileSavedGrid({required this.userIdHex, super.key});
+  const ProfileSavedGrid({
+    required this.userIdHex,
+    this.physics = const ClampingScrollPhysics(),
+    super.key,
+  });
 
   /// The hex public key of the profile being viewed (always the viewer's own).
   final String userIdHex;
+
+  /// Scroll physics for every state the grid renders.
+  ///
+  /// Clamping suits the profile tab: the enclosing `NestedScrollView` owns the
+  /// overscroll there, and its `RefreshIndicator` listens at any depth. A host
+  /// whose pull-to-refresh sits directly on this grid needs
+  /// [AlwaysScrollableScrollPhysics] instead, or a short or empty list cannot
+  /// be pulled at all.
+  final ScrollPhysics physics;
 
   @override
   State<ProfileSavedGrid> createState() => _ProfileSavedGridState();
@@ -89,11 +102,6 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
           return const ProfileTabLoadingState();
         }
 
-        // The settled states opt into overscroll for the host's
-        // RefreshIndicator: with the tab's default clamping physics a pull
-        // would stop working exactly when it is most wanted — after
-        // unbookmarking the last video, or when a sync failed.
-        //
         // A settled-empty tab is two different outcomes, and the state carries
         // both. Bookmarks that failed to resolve are a load failure, not an
         // empty list: telling that viewer to go bookmark something is telling
@@ -102,7 +110,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
             state.hasUnresolvedSaves) {
           return ProfileTabErrorState(
             message: context.l10n.profileErrorLoadingSaved,
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: widget.physics,
           );
         }
 
@@ -112,12 +120,12 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
           return ProfileTabEmptyState(
             title: context.l10n.profileNoSavedVideosTitle,
             subtitle: context.l10n.profileSavedOwnEmpty,
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: widget.physics,
           );
         }
 
         return CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: widget.physics,
           slivers: [
             SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

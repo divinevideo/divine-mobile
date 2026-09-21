@@ -1,5 +1,5 @@
 // ABOUTME: Full-screen grid of the viewer's NIP-51 kind 10003 bookmarked videos
-// ABOUTME: Reached from the Bookmarks entry at the top of the profile Lists tab
+// ABOUTME: Standalone host for the list the own profile's Bookmarks tab shows inline
 
 import 'dart:async';
 
@@ -16,11 +16,11 @@ import 'package:openvine/widgets/profile/profile_saved_grid.dart';
 
 /// The viewer's bookmarked videos.
 ///
-/// Bookmarks are a NIP-51 kind 10003 list, so this is the reading surface for
-/// the same collection the share sheet's Save action writes to. It lives
-/// behind an entry in the profile's Lists tab rather than a tab of its own —
-/// a bookmark list is one of the viewer's lists, it just isn't a kind 30005
-/// one.
+/// Bookmarks are a NIP-51 kind 10003 list, so this reads the same collection
+/// the share sheet's Save action writes to. The own profile shows that list
+/// inline in its Bookmarks tab (#8972); this screen is the standalone host,
+/// which is what a `divine://saved-videos` link needs — it has to land
+/// somewhere that works without the profile's shell around it.
 class SavedVideosScreen extends ConsumerWidget {
   const SavedVideosScreen({super.key});
 
@@ -135,7 +135,12 @@ class _SavedVideosViewState extends State<SavedVideosView> {
         color: VineTheme.onPrimary,
         backgroundColor: VineTheme.vineGreen,
         onRefresh: _onRefresh,
-        child: ProfileSavedGrid(userIdHex: widget.userIdHex),
+        // The pull-to-refresh sits directly on the grid here, so a short or
+        // empty list still has to be overscrollable.
+        child: ProfileSavedGrid(
+          userIdHex: widget.userIdHex,
+          physics: const AlwaysScrollableScrollPhysics(),
+        ),
       ),
     );
   }
