@@ -13,6 +13,12 @@ import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 /// Reports a fixed 1500ms duration for any file, so a persisted seam reads back
 /// as valid and [TransitionSeamRenderService] takes its reuse branch.
 class _FakeProVideoEditor extends editor.ProVideoEditor {
+  _FakeProVideoEditor({this.duration = const Duration(milliseconds: 1500)});
+
+  /// What [getMetadata] reports. Zero drives the rejection branch, where the
+  /// service discards the seam it just wrote.
+  final Duration duration;
+
   // The base constructor calls this, and the platform interface throws.
   @override
   void initializeStream() {}
@@ -23,7 +29,7 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
     bool checkStreamingOptimization = false,
     editor.NativeLogLevel? nativeLogLevel,
   }) async => editor.VideoMetadata(
-    duration: const Duration(milliseconds: 1500),
+    duration: duration,
     extension: 'mp4',
     fileSize: 1024,
     resolution: const Size(1080, 1920),
@@ -593,6 +599,25 @@ void main() {
       // reaps, so the service must remove it itself once the copy landed.
       expect(seam!.path, isNot(renderedPaths.single));
       expect(File(seam.path).existsSync(), isTrue);
+      expect(File(renderedPaths.single).existsSync(), isFalse);
+    });
+
+    test('deletes the cache output when the seam is rejected', () async {
+      editor.ProVideoEditor.instance = _FakeProVideoEditor(
+        duration: Duration.zero,
+      );
+
+      final seam = await service().render(
+        clipA: clip('a', transition: dissolve),
+        clipB: clip('b'),
+        transition: dissolve,
+      );
+
+      // A zero-duration result discards the seam. The render's cache output
+      // has to go the same way, or a rejected seam leaks the ~2 MB a
+      // successful one no longer does.
+      expect(seam, isNull);
+      expect(renderedPaths, hasLength(1));
       expect(File(renderedPaths.single).existsSync(), isFalse);
     });
   });
