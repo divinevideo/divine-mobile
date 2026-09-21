@@ -149,7 +149,18 @@ while IFS= read -r path; do
     # Dart jobs stay green (#9381). `mobile/lib` is deliberately absent: the
     # XCTests never run Dart, and a macOS runner costs ten Linux minutes per
     # minute.
-    mobile/ios/*|mobile/packages/*/ios/*|mobile/packages/*/darwin/*|mobile/pubspec.lock)
+    mobile/ios/*|mobile/packages/*/ios/*|mobile/packages/*/darwin/*)
+      ios_native=true ;;
+    # Plugin registration and the generated Swift package are decided by the
+    # pubspecs, and a pub workspace member never appears in pubspec.lock, so
+    # each plugin's own pubspec has to be named here.
+    mobile/pubspec.lock|mobile/pubspec.yaml|mobile/packages/*/pubspec.yaml)
+      ios_native=true ;;
+    # Both of these run inside the job itself: the ruby script as its own
+    # step, and pre_build_ios.sh as the shared Runner scheme's BuildAction
+    # pre-action. Same rule as check_gradle_wrapper_checksum.sh in the native
+    # arm (#7201) — a change to the script must still schedule the job.
+    mobile/scripts/ensure_ios_swift_package_floor.rb|mobile/pre_build_ios.sh)
       ios_native=true ;;
   esac
 
