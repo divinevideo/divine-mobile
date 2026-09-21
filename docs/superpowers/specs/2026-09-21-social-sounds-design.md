@@ -227,4 +227,3 @@ Sibling service checkouts were read-only; local source is not proof of deploymen
 10. Private collections/nicknames stay private and are searchable in the picker.
 11. Light/dark, screen reader, large text, offline/retry, and account-switch behavior
     are verified in the touched surfaces.
-
