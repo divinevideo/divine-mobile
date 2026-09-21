@@ -379,6 +379,10 @@ private final class FakeBinaryMessenger: NSObject, FlutterBinaryMessenger {
 /// One fake engine: its own messenger, a record of what registration hooked,
 /// and a count of how often the plugin came back for the messenger.
 private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
+  /// The one key this registrar publishes under, mirroring
+  /// `-[FlutterEngine registrarForPlugin:]`.
+  static let pluginKey = "BackgroundUploaderPlugin"
+
   let fakeMessenger = FakeBinaryMessenger()
   private let fakeTextures = FakeTextureRegistry()
   private(set) var published: NSObject?
@@ -419,7 +423,13 @@ private final class FakePluginRegistrar: NSObject, FlutterPluginRegistrar {
 
   func lookupKey(forAsset asset: String, fromPackage package: String) -> String { asset }
 
-  func valuePublished(byPlugin pluginKey: String) -> NSObject? { published }
+  /// `-[FlutterEngineBaseRegistrar valuePublishedByPlugin:]` is a lookup in the
+  /// engine-wide publication dictionary, so it answers nil for a key nothing
+  /// published. Returning `published` for every key would let a test assert a
+  /// publication that Flutter would not have made.
+  func valuePublished(byPlugin pluginKey: String) -> NSObject? {
+    pluginKey == Self.pluginKey ? published : nil
+  }
 }
 
 /// `BackgroundUploadCoordinator` is process-wide and outlives every
@@ -485,6 +495,10 @@ final class BackgroundUploaderEngineTeardownTests: XCTestCase {
     XCTAssertTrue(
       registrar.applicationDelegates.contains { $0 === plugin },
       "handleEventsForBackgroundURLSession reaches the plugin only as an application delegate"
+    )
+    XCTAssertNil(
+      registrar.valuePublished(byPlugin: "APluginThatPublishedNothing"),
+      "valuePublishedByPlugin: is a keyed lookup, not a single-slot accessor"
     )
     XCTAssertTrue(
       plugin.responds(to: NSSelectorFromString("detachFromEngineForRegistrar:")),
