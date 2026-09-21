@@ -71,11 +71,9 @@ void main() {
       ).thenAnswer((_) async => false);
     });
 
-    tearDown(() {
-      likedIdsController.close();
-      likedAddressableIdsController.close();
-      repostedIdsController.close();
-    });
+    tearDown(() => likedIdsController.close());
+    tearDown(() => likedAddressableIdsController.close());
+    tearDown(() => repostedIdsController.close());
 
     VideoInteractionsBloc createBloc({
       String? addressableId,
@@ -98,13 +96,13 @@ void main() {
 
     test('initial state is initial with default values', () {
       final bloc = createBloc();
+      addTearDown(bloc.close);
       expect(bloc.state.status, VideoInteractionsStatus.initial);
       expect(bloc.state.isLiked, isFalse);
       expect(bloc.state.likeCount, isNull);
       expect(bloc.state.isReposted, isFalse);
       expect(bloc.state.repostCount, isNull);
       expect(bloc.state.commentCount, isNull);
-      bloc.close();
     });
 
     test('initial state seeds engagement counts from initial counts', () {
@@ -113,10 +111,10 @@ void main() {
         initialCommentCount: 3,
         initialRepostCount: 7,
       );
+      addTearDown(bloc.close);
       expect(bloc.state.likeCount, equals(42));
       expect(bloc.state.commentCount, equals(3));
       expect(bloc.state.repostCount, equals(7));
-      bloc.close();
     });
 
     group('VideoInteractionsFetchRequested', () {

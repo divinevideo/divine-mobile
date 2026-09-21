@@ -113,10 +113,8 @@ void main() {
       ).thenAnswer((_) async => {});
     });
 
-    tearDown(() {
-      followingController.close();
-      curatedListsController.close();
-    });
+    tearDown(() => followingController.close());
+    tearDown(() => curatedListsController.close());
 
     VideoFeedBloc createBloc({
       FeedTuningRepository? feedTuningRepository,
@@ -188,13 +186,13 @@ void main() {
 
     test('initial state is correct', () {
       final bloc = createBloc();
+      addTearDown(bloc.close);
       expect(bloc.state.status, VideoFeedStatus.loading);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.mode, FeedMode.forYou);
       expect(bloc.state.hasMore, isTrue);
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.error, isNull);
-      bloc.close();
     });
 
     group('feed tuning', () {
@@ -3872,10 +3870,8 @@ void main() {
         ).thenAnswer((_) async {});
       });
 
-      tearDown(() {
-        cacheFollowingController.close();
-        cacheCuratedListsController.close();
-      });
+      tearDown(() => cacheFollowingController.close());
+      tearDown(() => cacheCuratedListsController.close());
 
       VideoFeedBloc createBlocWithCache() => VideoFeedBloc(
         videosRepository: mockVideosRepository,

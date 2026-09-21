@@ -1,5 +1,8 @@
 // ABOUTME: Tests for FeedLoadingModerationCubit.
-// ABOUTME: Covers deferred moderation check, timer cancellation, and error handling.
+// ABOUTME: Covers deferred moderation check, the post-await close guard,
+// ABOUTME: and error handling.
+
+import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:fake_async/fake_async.dart';
@@ -62,9 +65,9 @@ void main() {
     group('initial state', () {
       test('is loading and not restricted', () {
         final cubit = buildCubit();
+        addTearDown(cubit.close);
         expect(cubit.state, const FeedLoadingModerationState());
         expect(cubit.state.isRestricted, isFalse);
-        cubit.close();
       });
     });
 
@@ -72,26 +75,24 @@ void main() {
       test('is a no-op when videoUrl is null', () {
         fakeAsync((fake) {
           final cubit = buildCubit();
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 5));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          cubit.close();
-          fake.flushMicrotasks();
         });
       });
 
       test('is a no-op when videoUrl host is not a divine host', () {
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: 'https://example.com/video.mp4');
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 5));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
           verifyNever(() => mockService.fetchStatus(any()));
-          cubit.close();
-          fake.flushMicrotasks();
         });
       });
 
@@ -104,12 +105,11 @@ void main() {
 
           fakeAsync((fake) {
             final cubit = buildCubit(videoUrl: divineUrl);
+            addTearDown(cubit.close);
             cubit.start();
             fake.flushMicrotasks();
             expect(cubit.state.isRestricted, isTrue);
             verify(() => mockService.fetchStatus(sha256)).called(1);
-            cubit.close();
-            fake.flushMicrotasks();
           });
         },
       );
@@ -131,6 +131,7 @@ void main() {
 
           fakeAsync((fake) {
             final cubit = buildCubit(videoUrl: divineUrl);
+            addTearDown(cubit.close);
             cubit.start();
             fake.elapse(const Duration(seconds: 2));
             fake.flushMicrotasks();
@@ -140,8 +141,6 @@ void main() {
               cubit.state.status,
               FeedLoadingModerationStatus.ageRestricted,
             );
-            cubit.close();
-            fake.flushMicrotasks();
           });
         },
       );
@@ -161,13 +160,12 @@ void main() {
 
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
           cubit.start();
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isTrue);
           expect(cubit.state.isAgeRestricted, isFalse);
           expect(cubit.state.status, FeedLoadingModerationStatus.restricted);
-          cubit.close();
-          fake.flushMicrotasks();
         });
       });
 
@@ -178,12 +176,11 @@ void main() {
 
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          cubit.close();
-          fake.flushMicrotasks();
         });
       });
 
@@ -194,12 +191,11 @@ void main() {
 
         fakeAsync((fake) {
           final cubit = buildCubit(videoUrl: divineUrl);
+          addTearDown(cubit.close);
           cubit.start();
           fake.elapse(const Duration(seconds: 3));
           fake.flushMicrotasks();
           expect(cubit.state.isRestricted, isFalse);
-          cubit.close();
-          fake.flushMicrotasks();
         });
       });
 
@@ -217,13 +213,12 @@ void main() {
               explicitSha256: explicitSha256,
               videoUrl: divineUrl,
             );
+            addTearDown(cubit.close);
             cubit.start();
             fake.elapse(const Duration(seconds: 3));
             fake.flushMicrotasks();
             verify(() => mockService.fetchStatus(explicitSha256)).called(1);
             verifyNever(() => mockService.fetchStatus(sha256));
-            cubit.close();
-            fake.flushMicrotasks();
           });
         },
       );
@@ -246,6 +241,44 @@ void main() {
         wait: const Duration(milliseconds: 50),
         errors: () => [isA<Exception>()],
         expect: () => const <FeedLoadingModerationState>[],
+      );
+    });
+
+    group('close', () {
+      late Completer<VideoModerationStatus?> pendingStatus;
+
+      setUp(() {
+        pendingStatus = Completer<VideoModerationStatus?>();
+      });
+
+      // Pins the post-await isClosed guard in _checkModeration. Without it the
+      // resumed emit throws onto a closed cubit and that StateError reaches
+      // the observer, so an empty `errors` is what makes this test bite.
+      blocTest<FeedLoadingModerationCubit, FeedLoadingModerationState>(
+        'drops an in-flight result instead of reporting after close',
+        build: () {
+          when(
+            () => mockService.fetchStatus(sha256),
+          ).thenAnswer((_) => pendingStatus.future);
+          return FeedLoadingModerationCubit(
+            service: mockService,
+            explicitSha256: sha256,
+            videoUrl: divineUrl,
+          );
+        },
+        act: (cubit) async {
+          cubit.start();
+          await pumpEventQueue();
+          await cubit.close();
+          pendingStatus.complete(blockedStatus);
+          await pumpEventQueue();
+        },
+        errors: () => const <Object>[],
+        expect: () => const <FeedLoadingModerationState>[],
+        verify: (_) {
+          // Positive control: the fetch really was in flight across close().
+          verify(() => mockService.fetchStatus(sha256)).called(1);
+        },
       );
     });
   });

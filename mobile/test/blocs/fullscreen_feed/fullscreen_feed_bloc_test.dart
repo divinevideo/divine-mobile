@@ -56,10 +56,8 @@ void main() {
       when(() => mockMediaCache.getCachedFileSync(any())).thenReturn(null);
     });
 
-    tearDown(() {
-      videosController.close();
-      hasMoreController.close();
-    });
+    tearDown(() => videosController.close());
+    tearDown(() => hasMoreController.close());
 
     VideoEvent createTestVideo(
       String id, {
@@ -134,22 +132,22 @@ void main() {
 
     test('initial state has correct values', () {
       final bloc = createBloc(initialIndex: 2);
+      addTearDown(bloc.close);
       expect(bloc.state.status, FullscreenFeedStatus.initial);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.currentIndex, 2);
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.canLoadMore, isFalse);
-      bloc.close();
     });
 
-    test('load more stays unavailable until hasMoreStream emits true', () {
+    test('canLoadMore defaults to false before FullscreenFeedStarted', () {
       final bloc = createBloc(
         onLoadMore: () {},
         hasMoreStream: hasMoreController.stream,
       );
+      addTearDown(bloc.close);
 
       expect(bloc.state.canLoadMore, isFalse);
-      bloc.close();
     });
 
     group('FullscreenFeedState', () {
@@ -743,11 +741,10 @@ void main() {
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
           await pumpEventQueue();
-          videosController
-            ..add(const [])
-            ..close();
+          videosController.add(const []);
+          await videosController.close();
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 200),
         verify: (bloc) {
           expect(bloc.state.status, FullscreenFeedStatus.empty);
           expect(bloc.state.videos, isEmpty);
@@ -762,11 +759,10 @@ void main() {
         act: (bloc) async {
           bloc.add(const FullscreenFeedStarted());
           await pumpEventQueue();
-          videosController
-            ..add([createTestVideo('video1')])
-            ..close();
+          videosController.add([createTestVideo('video1')]);
+          await videosController.close();
+          await pumpEventQueue();
         },
-        wait: const Duration(milliseconds: 200),
         verify: (bloc) {
           expect(bloc.state.status, FullscreenFeedStatus.ready);
           expect(bloc.state.videos.single.id, 'video1');
