@@ -1157,6 +1157,34 @@ void main() {
     );
 
     test(
+      'keeps both slots when the legacy delete fails, so the next launch '
+      'cannot migrate the stale copy back',
+      () async {
+        when(
+          () => legacyStorage.delete(key: any(named: 'key')),
+        ).thenThrow(PlatformException(code: 'Unexpected security result code'));
+
+        await expectLater(
+          resetEncryptedDatabaseCache(
+            secureStorage: storage,
+            legacySecureStorage: legacyStorage,
+            deleteDatabase: () async {},
+          ),
+          throwsA(isA<PlatformException>()),
+        );
+
+        // Legacy slot first, so a throw leaves BOTH copies in place and the
+        // reported failure is the whole truth. Deleting the current slot
+        // first would leave the pre-#9343 copy as the only one, and the next
+        // launch migrates that straight back into the current slot: the reset
+        // rotates nothing while the caller is told it failed.
+        expect(store[dbCipherKeyStorageKey], isNotNull);
+        expect(legacyStore[legacyDbCipherKeyStorageKey], isNotNull);
+        verifyNever(() => storage.delete(key: any(named: 'key')));
+      },
+    );
+
+    test(
       'keeps the cipher key when the caller opts out of deleting it',
       () async {
         var deleted = false;
