@@ -20441,6 +20441,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update available'**
   String get settingsUpdateAvailable;
+
+  /// Button on the Library Sounds tab that opens the standalone sound upload flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a sound'**
+  String get soundUploadAction;
+
+  /// App bar title of the standalone sound upload screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a sound'**
+  String get soundUploadTitle;
+
+  /// No description provided for @soundUploadIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a beat, a jingle, or a voice line so anyone on Divine can build a video around it.'**
+  String get soundUploadIntro;
+
+  /// No description provided for @soundUploadChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an audio file'**
+  String get soundUploadChooseFile;
+
+  /// Hint under the file picker listing the accepted audio formats. The format names stay as written.
+  ///
+  /// In en, this message translates to:
+  /// **'AAC, M4A, MP3, or WAV'**
+  String get soundUploadSupportedFormats;
+
+  /// Small button next to the picked audio file that opens the file picker again.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get soundUploadChangeFile;
+
+  /// No description provided for @soundUploadReuseNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone on Divine can use this sound in their videos. You\'re credited every time.'**
+  String get soundUploadReuseNotice;
+
+  /// No description provided for @soundUploadShareAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Share sound'**
+  String get soundUploadShareAction;
+
+  /// Snackbar after a standalone sound was published and added to the Library Sounds tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sound is live and saved to Sounds.'**
+  String get soundUploadShared;
+
+  /// No description provided for @soundUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t share that sound. Try again.'**
+  String get soundUploadFailed;
+
+  /// No description provided for @soundUploadSignInFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to share a sound.'**
+  String get soundUploadSignInFirst;
+
+  /// No description provided for @soundUploadAccountRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is restricted, so this sound couldn\'t be shared.'**
+  String get soundUploadAccountRestricted;
+
+  /// No description provided for @savedSoundDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this sound?'**
+  String get savedSoundDeleteConfirmTitle;
+
+  /// No description provided for @savedSoundDeleteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s yours, so it comes off Divine\'s sound lists and credits for everyone. The audio file itself stays at its link for now, and videos that already use it keep their audio.'**
+  String get savedSoundDeleteConfirmMessage;
+
+  /// No description provided for @savedSoundDeleteForEveryone.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for everyone'**
+  String get savedSoundDeleteForEveryone;
+
+  /// Secondary choice when removing one of the user's own published sounds: keep it public on Divine, drop it from the device library only.
+  ///
+  /// In en, this message translates to:
+  /// **'Just remove it from Sounds'**
+  String get savedSoundRemoveLocallyOnly;
+
+  /// No description provided for @savedSoundDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound deleted'**
+  String get savedSoundDeleted;
+
+  /// No description provided for @savedSoundDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete that sound. Try again.'**
+  String get savedSoundDeleteFailed;
+
+  /// No description provided for @savedSoundDeleteFailedNotOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'You can only delete sounds you shared.'**
+  String get savedSoundDeleteFailedNotOwner;
+
+  /// Name of the audio file-type filter in the system file picker (desktop pickers show it as the filter label).
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get audioPickerTypeGroup;
+
+  /// Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry saving to Sounds'**
+  String get soundUploadRetrySaveAction;
 }
 
 class _AppLocalizationsDelegate

@@ -12283,4 +12283,75 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Налична е актуализация';
+
+  @override
+  String get soundUploadAction => 'Качи звук';
+
+  @override
+  String get soundUploadTitle => 'Качи звук';
+
+  @override
+  String get soundUploadIntro =>
+      'Сподели бийт, джингъл или записана реплика, за да може всеки в Divine да направи видео около него.';
+
+  @override
+  String get soundUploadChooseFile => 'Избери аудиофайл';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 или WAV';
+
+  @override
+  String get soundUploadChangeFile => 'Смени';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Всеки в Divine може да използва този звук във видеата си. Всеки път те посочваме като автор.';
+
+  @override
+  String get soundUploadShareAction => 'Сподели звука';
+
+  @override
+  String get soundUploadShared => 'Звукът ти е публикуван и запазен в Звуци.';
+
+  @override
+  String get soundUploadFailed =>
+      'Този звук не можа да се сподели. Опитай пак.';
+
+  @override
+  String get soundUploadSignInFirst =>
+      'Влез в профила си, за да споделиш звук.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Профилът ти е ограничен, затова този звук не можа да се сподели.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Да изтрием ли този звук?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Твой е, така че изчезва от списъците със звуци и от авторските бележки в Divine за всички. Самият аудиофайл засега остава на линка си, а видеата, които вече го използват, запазват аудиото си.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Изтрий за всички';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Само го премахни от Звуци';
+
+  @override
+  String get savedSoundDeleted => 'Звукът е изтрит';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Този звук не можа да се изтрие. Опитай пак.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Можеш да изтриваш само звуци, които си споделил.';
+
+  @override
+  String get audioPickerTypeGroup => 'Аудио';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Опитай пак да запазиш в Звуци';
 }

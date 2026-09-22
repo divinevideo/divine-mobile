@@ -191,7 +191,7 @@ dependencies:
   iap_repository:
     path: packages/iap_repository
   gal: ^2.3.2 # Save videos to device photo gallery
-  file_selector: ^1.0.4 # For desktop file selection (macOS, Windows, Linux)
+  file_selector: ^1.0.4 # File picking on every platform: audio import/upload on mobile, images on desktop
 
   # Cloud services (removed cloudinary_public - using Blossom instead)
 
@@ -403,7 +403,6 @@ dependencies:
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
   pro_image_editor: ^14.2.0
-  file_picker: ^10.3.7
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0

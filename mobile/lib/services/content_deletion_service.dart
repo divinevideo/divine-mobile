@@ -227,30 +227,90 @@ class ContentDeletionService {
     required String reason,
     String? additionalContext,
   }) async {
+    if (!_isInitialized) {
+      return DeleteResult.failure(
+        'Deletion service not initialized',
+        DeleteFailureKind.notInitialized,
+      );
+    }
+
+    // Verify this is the user's own content
+    if (!_isUserOwnContent(video)) {
+      return DeleteResult.failure(
+        'Can only delete your own content',
+        DeleteFailureKind.notOwner,
+      );
+    }
+
+    // OpenVine only uses kind 34236 (addressable short videos)
+    return _publishDeletion(
+      originalEventId: video.id,
+      addressableId: _addressableDeletionTarget(video),
+      originalEventKind: NIP71VideoKinds.getPreferredKind(),
+      reason: reason,
+      additionalContext: additionalContext,
+      // A video leaving the profile changes its counts; a sound does not.
+      invalidatesProfileStats: true,
+    );
+  }
+
+  /// Delete the user's own published sound (Kind 1063) using NIP-09.
+  ///
+  /// Same relay contract as [deleteContent]: one accepting relay is success,
+  /// partial acceptance is reported on [DeleteResult.acceptance], and a
+  /// deletion no relay took is not recorded so the user can retry.
+  ///
+  /// Videos that reference the sound keep their audio — it is rendered into
+  /// them — so only the sound's own listing and attribution go away. The
+  /// audio file stays on the media host too: moderation-service's creator
+  /// delete resolves its Blossom targets from `imeta` tags, which a Kind
+  /// 1063 does not carry (it uses NIP-94 `x`/`url`), so the enforcement call
+  /// the video path makes would only report `failed:permanent:no_sha256`.
+  /// Wire `CreatorDeleteEnforcementRepository.enforce` here once the service
+  /// reads those tags; until then the confirmation copy promises only this.
+  Future<DeleteResult> deleteSound({
+    required AudioEvent sound,
+    required String reason,
+  }) async {
+    if (!_isInitialized) {
+      return DeleteResult.failure(
+        'Deletion service not initialized',
+        DeleteFailureKind.notInitialized,
+      );
+    }
+
+    if (sound.pubkey != _authService.currentPublicKeyHex ||
+        !NostrHexUtils.isValidEventId(sound.id)) {
+      return DeleteResult.failure(
+        'Can only delete your own published sounds',
+        DeleteFailureKind.notOwner,
+      );
+    }
+
+    return _publishDeletion(
+      originalEventId: sound.id,
+      originalEventKind: audioEventKind,
+      reason: reason,
+      invalidatesProfileStats: false,
+    );
+  }
+
+  /// Signs and broadcasts the kind 5 for one event, then records it locally
+  /// once a relay has taken it.
+  Future<DeleteResult> _publishDeletion({
+    required String originalEventId,
+    required int originalEventKind,
+    required String reason,
+    required bool invalidatesProfileStats,
+    String? addressableId,
+    String? additionalContext,
+  }) async {
     try {
-      if (!_isInitialized) {
-        return DeleteResult.failure(
-          'Deletion service not initialized',
-          DeleteFailureKind.notInitialized,
-        );
-      }
-
-      // Verify this is the user's own content
-      if (!_isUserOwnContent(video)) {
-        return DeleteResult.failure(
-          'Can only delete your own content',
-          DeleteFailureKind.notOwner,
-        );
-      }
-
-      final addressableId = _addressableDeletionTarget(video);
-
       // Create NIP-09 delete event (kind 5)
-      // OpenVine only uses kind 34236 (addressable short videos)
       final deleteOutcome = await _createDeleteEvent(
-        originalEventId: video.id,
+        originalEventId: originalEventId,
         addressableId: addressableId,
-        originalEventKind: NIP71VideoKinds.getPreferredKind(),
+        originalEventKind: originalEventKind,
         reason: reason,
         additionalContext: additionalContext,
       );
@@ -321,7 +381,7 @@ class ContentDeletionService {
       // A relay took the tombstone — now it is safe to persist the deletion.
       final deletion = ContentDeletion(
         deleteEventId: deleteEvent.id,
-        originalEventId: video.id,
+        originalEventId: originalEventId,
         addressableId: addressableId,
         reason: reason,
         deletedAt: DateTime.now(),
@@ -330,7 +390,9 @@ class ContentDeletionService {
 
       _deletionHistory.add(deletion);
       await _saveDeletionHistory();
-      await _invalidateProfileStatsAfterConfirmedDelete();
+      if (invalidatesProfileStats) {
+        await _invalidateProfileStatsAfterConfirmedDelete();
+      }
 
       Log.debug(
         '📱️ Content deletion confirmed: ${deleteEvent.id}',

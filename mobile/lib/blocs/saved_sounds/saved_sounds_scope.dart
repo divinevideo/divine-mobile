@@ -17,12 +17,21 @@ class SavedSoundsScope extends StatelessWidget {
     this.mediaProbe,
     this.syncRepositoryStream = const Stream.empty(),
     this.localFileExists,
+    this.contentDeletionService,
+    this.onPublishedSoundDeleted,
     super.key,
   });
 
   final SavedSoundsService service;
   final SavedSoundMediaProbe? mediaProbe;
   final FutureOr<bool> Function(String path)? localFileExists;
+
+  /// Resolves the NIP-09 publisher for deleting the user's own sounds; null
+  /// leaves deletion unavailable (tests that don't exercise it).
+  final ContentDeletionServiceGetter? contentDeletionService;
+
+  /// Called after a relay took a sound's deletion.
+  final void Function(String soundId)? onPublishedSoundDeleted;
 
   /// Successive sync repository instances, including null while
   /// unavailable.
@@ -47,6 +56,8 @@ class SavedSoundsScope extends StatelessWidget {
         mediaProbe: mediaProbe ?? ProVideoEditorSavedSoundMediaProbe(),
         syncRepositoryStream: syncRepositoryStream,
         localFileExists: localFileExists,
+        contentDeletionService: contentDeletionService,
+        onPublishedSoundDeleted: onPublishedSoundDeleted,
       )..add(const SavedSoundsLoadRequested()),
       child: child,
     );

@@ -12499,4 +12499,75 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'అప్‌డేట్ అందుబాటులో ఉంది';
+
+  @override
+  String get soundUploadAction => 'సౌండ్ అప్‌లోడ్ చేయండి';
+
+  @override
+  String get soundUploadTitle => 'సౌండ్ అప్‌లోడ్ చేయండి';
+
+  @override
+  String get soundUploadIntro =>
+      'ఒక బీట్, జింగిల్ లేదా రికార్డ్ చేసిన మాటను పంచుకోండి; Divine లో ఎవరైనా దానితో వీడియో చేయవచ్చు.';
+
+  @override
+  String get soundUploadChooseFile => 'ఆడియో ఫైల్‌ను ఎంచుకోండి';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 లేదా WAV';
+
+  @override
+  String get soundUploadChangeFile => 'మార్చండి';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Divine లో ఎవరైనా ఈ సౌండ్‌ను వారి వీడియోల్లో వాడవచ్చు. ప్రతిసారీ మీ పేరు కనిపిస్తుంది.';
+
+  @override
+  String get soundUploadShareAction => 'సౌండ్ పంచుకోండి';
+
+  @override
+  String get soundUploadShared =>
+      'మీ సౌండ్ ప్రచురించబడింది మరియు సౌండ్‌లకు సేవ్ చేయబడింది.';
+
+  @override
+  String get soundUploadFailed =>
+      'ఆ సౌండ్‌ను పంచుకోవడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get soundUploadSignInFirst => 'సౌండ్ పంచుకోవడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'మీ ఖాతా పరిమితం చేయబడింది, కాబట్టి ఈ సౌండ్‌ను పంచుకోలేకపోయాం.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'ఈ సౌండ్‌ను తొలగించాలా?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'ఇది మీది కాబట్టి అందరికీ Divine సౌండ్ జాబితాలు మరియు క్రెడిట్‌ల నుంచి తొలగిపోతుంది. ఆడియో ఫైల్ మాత్రం ప్రస్తుతానికి దాని లింక్‌లోనే ఉంటుంది, ఇప్పటికే దీన్ని వాడిన వీడియోల ఆడియో అలాగే ఉంటుంది.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'అందరికీ తొలగించండి';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'సౌండ్‌ల నుంచి మాత్రమే తీసివేయండి';
+
+  @override
+  String get savedSoundDeleted => 'సౌండ్ తొలగించబడింది';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'ఆ సౌండ్‌ను తొలగించడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'మీరు పంచుకున్న సౌండ్‌లను మాత్రమే తొలగించగలరు.';
+
+  @override
+  String get audioPickerTypeGroup => 'ఆడియో';
+
+  @override
+  String get soundUploadRetrySaveAction => 'సౌండ్‌లకు మళ్లీ సేవ్ చేయండి';
 }

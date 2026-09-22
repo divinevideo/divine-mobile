@@ -9,14 +9,21 @@ import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockSoundSyncRepository extends Mock implements SoundSyncRepository {}
+
+class _MockContentDeletionService extends Mock
+    implements ContentDeletionService {}
+
+class _FakeAudioEvent extends Fake implements AudioEvent {}
 
 class _CapturingObserver extends BlocObserver {
   final errors = <Object>[];
@@ -651,6 +658,182 @@ void main() {
         publishing.complete();
       },
     );
+  });
+
+  group('deletePublishedSound', () {
+    late _MockContentDeletionService deletionService;
+    late List<String> evicted;
+
+    /// A Kind 1063 the signed-in user published: a real event id, no
+    /// provider source.
+    AudioEvent ownSound() => AudioEvent(
+      id: 'd' * 64,
+      pubkey: 'creator',
+      createdAt: 1,
+      title: 'My beat',
+      url: 'https://cdn.example/beat.m4a',
+    );
+
+    DeleteResult accepted() => DeleteResult.createSuccess(
+      'e' * 64,
+      acceptance: DeleteAcceptance.everyRelay,
+      deleteEvent: Event.fromJson({
+        'id': 'e' * 64,
+        'pubkey': 'creator',
+        'created_at': 0,
+        'kind': 5,
+        'tags': <List<String>>[],
+        'content': '',
+        'sig': 'sig',
+      }),
+    );
+
+    setUpAll(() => registerFallbackValue(_FakeAudioEvent()));
+
+    setUp(() {
+      deletionService = _MockContentDeletionService();
+      evicted = [];
+    });
+
+    SavedSoundsBloc deletingBloc({SoundSyncRepository? syncRepository}) =>
+        SavedSoundsBloc(
+          service: service,
+          mediaProbe: probe,
+          syncRepositoryStream: syncRepository == null
+              ? const Stream.empty()
+              : Stream.value(syncRepository),
+          now: () => DateTime.utc(2026, 9, 21),
+          localFileExists: (_) => true,
+          contentDeletionService: () async => deletionService,
+          onPublishedSoundDeleted: evicted.add,
+        );
+
+    test('publishes the tombstone, then drops the record', () async {
+      when(
+        () => deletionService.deleteSound(
+          sound: any(named: 'sound'),
+          reason: any(named: 'reason'),
+        ),
+      ).thenAnswer((_) async => accepted());
+      final deleting = deletingBloc();
+      addTearDown(deleting.close);
+      await deleting.saveSound(ownSound());
+      expect(deleting.state.sounds, hasLength(1));
+
+      final result = await deleting.deletePublishedSound('d' * 64);
+      await _settle();
+
+      expect(result.success, isTrue);
+      expect(deleting.state.sounds, isEmpty);
+      expect(service.loadSavedSounds(), isEmpty);
+      expect(evicted, ['d' * 64]);
+      final captured =
+          verify(
+                () => deletionService.deleteSound(
+                  sound: captureAny(named: 'sound'),
+                  reason: any(named: 'reason'),
+                ),
+              ).captured.single
+              as AudioEvent;
+      expect(captured.id, 'd' * 64);
+    });
+
+    test('keeps the record when no relay took the deletion', () async {
+      when(
+        () => deletionService.deleteSound(
+          sound: any(named: 'sound'),
+          reason: any(named: 'reason'),
+        ),
+      ).thenAnswer(
+        (_) async => DeleteResult.failure(
+          'silent',
+          DeleteFailureKind.relayNoResponse,
+        ),
+      );
+      final deleting = deletingBloc();
+      addTearDown(deleting.close);
+      await deleting.saveSound(ownSound());
+
+      await expectLater(
+        deleting.deletePublishedSound('d' * 64),
+        throwsA(
+          isA<SavedSoundDeleteException>().having(
+            (e) => e.result.failureKind,
+            'failureKind',
+            DeleteFailureKind.relayNoResponse,
+          ),
+        ),
+      );
+      await _settle();
+
+      expect(deleting.state.sounds, hasLength(1));
+      expect(evicted, isEmpty);
+    });
+
+    test('mirrors the removal to other devices after the tombstone', () async {
+      final syncRepository = _MockSoundSyncRepository();
+      when(
+        () => syncRepository.publishLocalChange(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => syncRepository.publishLocalDeletion(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => deletionService.deleteSound(
+          sound: any(named: 'sound'),
+          reason: any(named: 'reason'),
+        ),
+      ).thenAnswer((_) async => accepted());
+      final deleting = deletingBloc(syncRepository: syncRepository);
+      addTearDown(deleting.close);
+      await _settle();
+      await deleting.saveSound(ownSound());
+
+      await deleting.deletePublishedSound('d' * 64);
+      await _settle();
+
+      verify(() => syncRepository.publishLocalDeletion('d' * 64)).called(1);
+    });
+
+    test('reports deletion as unavailable when nothing is wired', () async {
+      await bloc.saveSound(ownSound());
+
+      await expectLater(
+        bloc.deletePublishedSound('d' * 64),
+        throwsA(
+          isA<SavedSoundDeleteException>().having(
+            (e) => e.result.failureKind,
+            'failureKind',
+            DeleteFailureKind.notInitialized,
+          ),
+        ),
+      );
+      expect(bloc.state.sounds, hasLength(1));
+    });
+
+    test('reports an unknown failure when the service throws', () async {
+      when(
+        () => deletionService.deleteSound(
+          sound: any(named: 'sound'),
+          reason: any(named: 'reason'),
+        ),
+      ).thenThrow(StateError('relay pool gone'));
+      final deleting = deletingBloc();
+      addTearDown(deleting.close);
+      await deleting.saveSound(ownSound());
+
+      await expectLater(
+        deleting.deletePublishedSound('d' * 64),
+        throwsA(
+          isA<SavedSoundDeleteException>().having(
+            (e) => e.result.failureKind,
+            'failureKind',
+            DeleteFailureKind.unknown,
+          ),
+        ),
+      );
+      expect(deleting.state.sounds, hasLength(1));
+    });
   });
 }
 

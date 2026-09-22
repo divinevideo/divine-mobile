@@ -12092,4 +12092,72 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Güncelleme mevcut';
+
+  @override
+  String get soundUploadAction => 'Ses yükle';
+
+  @override
+  String get soundUploadTitle => 'Ses yükle';
+
+  @override
+  String get soundUploadIntro =>
+      'Bir beat, bir jingle ya da bir ses kaydı paylaş; Divine\'daki herkes onunla video yapabilsin.';
+
+  @override
+  String get soundUploadChooseFile => 'Bir ses dosyası seç';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 veya WAV';
+
+  @override
+  String get soundUploadChangeFile => 'Değiştir';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Divine\'daki herkes bu sesi videolarında kullanabilir. Her seferinde senin adın geçer.';
+
+  @override
+  String get soundUploadShareAction => 'Sesi paylaş';
+
+  @override
+  String get soundUploadShared => 'Sesin yayında ve Seslere kaydedildi.';
+
+  @override
+  String get soundUploadFailed => 'O ses paylaşılamadı. Tekrar dene.';
+
+  @override
+  String get soundUploadSignInFirst => 'Ses paylaşmak için giriş yap.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Hesabın kısıtlı olduğu için bu ses paylaşılamadı.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Bu ses silinsin mi?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Senin sesin, o yüzden herkes için Divine\'daki ses listelerinden ve kaynak bilgilerinden kalkar. Ses dosyasının kendisi şimdilik bağlantısında kalır ve onu zaten kullanan videoların sesi olduğu gibi kalır.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Herkes için sil';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Sadece Seslerden kaldır';
+
+  @override
+  String get savedSoundDeleted => 'Ses silindi';
+
+  @override
+  String get savedSoundDeleteFailed => 'O ses silinemedi. Tekrar dene.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Sadece kendi paylaştığın sesleri silebilirsin.';
+
+  @override
+  String get audioPickerTypeGroup => 'Ses';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Seslere kaydetmeyi tekrar dene';
 }

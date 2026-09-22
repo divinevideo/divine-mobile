@@ -794,6 +794,51 @@ void main() {
       });
     });
 
+    group('removeCachedSound', () {
+      test('drops the sound and emits the remaining list', () async {
+        final kept = createAudioEvent(
+          id: testEventId1,
+          pubkey: testPubkey1,
+          title: 'Kept',
+        );
+        final deleted = createAudioEvent(
+          id: testEventId2,
+          pubkey: testPubkey1,
+          title: 'Deleted',
+        );
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [kept, deleted]);
+        await repository.fetchTrendingSounds();
+        expect(repository.cachedSoundCount, 2);
+        final emittedLists = <List<AudioEvent>>[];
+        final subscription = repository.soundsStream.listen(emittedLists.add);
+
+        repository.removeCachedSound(testEventId2);
+        await pumpEventQueue();
+
+        expect(repository.cachedSoundCount, 1);
+        expect(repository.getSoundFromCache(testEventId2), isNull);
+        expect(emittedLists.last.map((sound) => sound.id), [testEventId1]);
+        await subscription.cancel();
+      });
+
+      test('emits nothing for an id that is not cached', () async {
+        final emittedLists = <List<AudioEvent>>[];
+        final subscription = repository.soundsStream.listen(emittedLists.add);
+        await pumpEventQueue();
+        // The seeded subject replays its current value on subscribe, so the
+        // count starts at one; a spurious emit would make it two.
+        expect(emittedLists, hasLength(1));
+
+        repository.removeCachedSound(testEventId1);
+        await pumpEventQueue();
+
+        expect(emittedLists, hasLength(1));
+        await subscription.cancel();
+      });
+    });
+
     group('refresh', () {
       test('clears cache and fetches fresh data', () async {
         final event1 = createAudioEvent(

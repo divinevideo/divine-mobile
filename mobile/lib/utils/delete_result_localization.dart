@@ -33,6 +33,33 @@ String localizedDeleteFailureMessage(
   }
 }
 
+/// User-facing message for a failed [DeleteResult] on one of the user's own
+/// published sounds.
+///
+/// Shares the relay and sign-in copy with the video path; only the
+/// ownership and generic lines name the sound instead of a video.
+String localizedSoundDeleteFailureMessage(
+  BuildContext context,
+  DeleteResult result,
+) {
+  if (result.success) {
+    return '';
+  }
+  return switch (result.failureKind ?? DeleteFailureKind.unknown) {
+    DeleteFailureKind.notOwner => context.l10n.savedSoundDeleteFailedNotOwner,
+    DeleteFailureKind.unknown => context.l10n.savedSoundDeleteFailed,
+    DeleteFailureKind.notInitialized ||
+    DeleteFailureKind.notAuthenticated ||
+    DeleteFailureKind.couldNotSign ||
+    DeleteFailureKind.relayRejected ||
+    DeleteFailureKind.accountRestricted ||
+    DeleteFailureKind.relayNoResponse => localizedDeleteFailureMessage(
+      context,
+      result,
+    ),
+  };
+}
+
 /// Message for a delete that succeeded but that only part of the relay set
 /// accepted, or `null` when every targeted relay confirmed.
 ///

@@ -1,13 +1,14 @@
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VineSound;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
+import 'package:openvine/constants/audio_picker_extensions.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -46,7 +47,7 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
 
   final ScrollController scrollController;
   final LocalAudioImportService? localAudioImportService;
-  final Future<FilePickerResult?> Function()? pickAudioFile;
+  final Future<XFile?> Function()? pickAudioFile;
   final AudioPlaybackService? audioService;
 
   static Future<AudioEvent?> show(BuildContext context) {
@@ -294,28 +295,18 @@ class _AudioSelectionBottomSheetState
   Future<void> _importAudio() async {
     final picker =
         widget.pickAudioFile ??
-        () {
-          return FilePicker.platform.pickFiles(
-            type: FileType.custom,
-            allowedExtensions: const [
-              'aac',
-              'm4a',
-              'mp3',
-              'wav',
-              'weba',
-              'webm',
-            ],
-          );
-        };
+        () => openFile(
+          acceptedTypeGroups: [
+            audioPickerTypeGroup(label: context.l10n.audioPickerTypeGroup),
+          ],
+          initialDirectory: audioPickerInitialDirectory(),
+        );
 
     try {
-      final result = await picker();
-      final files = result?.files;
-      if (files == null || files.isEmpty) return;
-
-      final file = files.first;
+      final file = await picker();
+      if (file == null) return;
       final filePath = file.path;
-      if (filePath == null || filePath.isEmpty) return;
+      if (filePath.isEmpty) return;
 
       final imported =
           await (widget.localAudioImportService ?? LocalAudioImportService())

@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/models/saved_sound.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 
 sealed class SavedSoundsEvent extends Equatable {
@@ -59,6 +60,21 @@ final class SavedSoundRemoveRequested extends SavedSoundsEvent {
   /// Completed once the removal has been persisted, or completed with an error
   /// when it could not be, so the caller can tell the user which happened.
   final Completer<void>? completer;
+
+  @override
+  List<Object?> get props => [soundId, completer];
+}
+
+/// Retracts the user's own published sound from relays, then removes it.
+final class SavedSoundDeleteRequested extends SavedSoundsEvent {
+  const SavedSoundDeleteRequested(this.soundId, {required this.completer});
+
+  final String soundId;
+
+  /// Completed with the relay's answer once a relay took the deletion and the
+  /// record is gone locally; completed with a [SavedSoundDeleteException]
+  /// when no relay did, so the record stays and the caller can say why.
+  final Completer<DeleteResult> completer;
 
   @override
   List<Object?> get props => [soundId, completer];

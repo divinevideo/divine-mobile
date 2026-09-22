@@ -12304,4 +12304,74 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Aggiornamento disponibile';
+
+  @override
+  String get soundUploadAction => 'Carica un suono';
+
+  @override
+  String get soundUploadTitle => 'Carica un suono';
+
+  @override
+  String get soundUploadIntro =>
+      'Condividi un beat, un jingle o una frase registrata: chiunque su Divine potrà costruirci sopra un video.';
+
+  @override
+  String get soundUploadChooseFile => 'Scegli un file audio';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 o WAV';
+
+  @override
+  String get soundUploadChangeFile => 'Cambia';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Chiunque su Divine può usare questo suono nei propri video. Vieni sempre accreditato.';
+
+  @override
+  String get soundUploadShareAction => 'Condividi suono';
+
+  @override
+  String get soundUploadShared => 'Il tuo suono è online e salvato in Suoni.';
+
+  @override
+  String get soundUploadFailed =>
+      'Non è stato possibile condividere quel suono. Riprova.';
+
+  @override
+  String get soundUploadSignInFirst => 'Accedi per condividere un suono.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Il tuo account è limitato, quindi questo suono non è stato condiviso.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Vuoi eliminare questo suono?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'È tuo, quindi sparisce dalle liste dei suoni e dai crediti di Divine per tutti. Il file audio in sé resta per ora raggiungibile al suo link, e i video che già lo usano mantengono il loro audio.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Elimina per tutti';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Rimuovilo solo da Suoni';
+
+  @override
+  String get savedSoundDeleted => 'Suono eliminato';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Non è stato possibile eliminare quel suono. Riprova.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Puoi eliminare solo i suoni che hai condiviso.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Riprova a salvare in Suoni';
 }

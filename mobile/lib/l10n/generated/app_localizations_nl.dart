@@ -12233,4 +12233,75 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'Update beschikbaar';
+
+  @override
+  String get soundUploadAction => 'Sound uploaden';
+
+  @override
+  String get soundUploadTitle => 'Sound uploaden';
+
+  @override
+  String get soundUploadIntro =>
+      'Deel een beat, een jingle of een ingesproken zin, zodat iedereen op Divine er een video omheen kan bouwen.';
+
+  @override
+  String get soundUploadChooseFile => 'Audiobestand kiezen';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 of WAV';
+
+  @override
+  String get soundUploadChangeFile => 'Wijzigen';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'Iedereen op Divine kan dit geluid in z\'n video\'s gebruiken. Jij krijgt elke keer de credits.';
+
+  @override
+  String get soundUploadShareAction => 'Sound delen';
+
+  @override
+  String get soundUploadShared =>
+      'Je sound staat online en is opgeslagen in Sounds.';
+
+  @override
+  String get soundUploadFailed =>
+      'Dat geluid kon niet worden gedeeld. Probeer het opnieuw.';
+
+  @override
+  String get soundUploadSignInFirst => 'Log in om een sound te delen.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'Je account is beperkt, dus dit geluid kon niet worden gedeeld.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'Dit geluid verwijderen?';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'Het is van jou, dus het verdwijnt voor iedereen uit de soundlijsten en credits op Divine. Het audiobestand zelf blijft voorlopig op zijn link staan, en video\'s die het al gebruiken houden hun audio.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'Voor iedereen verwijderen';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'Alleen uit Sounds halen';
+
+  @override
+  String get savedSoundDeleted => 'Sound verwijderd';
+
+  @override
+  String get savedSoundDeleteFailed =>
+      'Dat geluid kon niet worden verwijderd. Probeer het opnieuw.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'Je kunt alleen sounds verwijderen die je zelf hebt gedeeld.';
+
+  @override
+  String get audioPickerTypeGroup => 'Audio';
+
+  @override
+  String get soundUploadRetrySaveAction => 'Opnieuw in Sounds opslaan';
 }

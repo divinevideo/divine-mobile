@@ -63,7 +63,7 @@ class LibraryScreen extends ConsumerWidget {
   static const soundsRouteName = 'sounds';
 
   /// Path for sounds route.
-  static const soundsPath = '/sounds';
+  static const String soundsPath = RoutePaths.librarySounds;
 
   const LibraryScreen({
     super.key,

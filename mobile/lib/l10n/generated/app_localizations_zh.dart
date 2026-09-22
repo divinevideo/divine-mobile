@@ -11437,4 +11437,68 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => '有可用更新';
+
+  @override
+  String get soundUploadAction => '上传声音';
+
+  @override
+  String get soundUploadTitle => '上传声音';
+
+  @override
+  String get soundUploadIntro => '分享一段节拍、一段旋律或一句配音，Divine 上的任何人都能用它做视频。';
+
+  @override
+  String get soundUploadChooseFile => '选择音频文件';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC、M4A、MP3 或 WAV';
+
+  @override
+  String get soundUploadChangeFile => '更换';
+
+  @override
+  String get soundUploadReuseNotice => 'Divine 上的任何人都可以在视频里使用这个声音，每次都会署上你的名字。';
+
+  @override
+  String get soundUploadShareAction => '分享声音';
+
+  @override
+  String get soundUploadShared => '你的声音已发布，并已存入声音库。';
+
+  @override
+  String get soundUploadFailed => '无法分享该声音。请重试。';
+
+  @override
+  String get soundUploadSignInFirst => '登录后才能分享声音。';
+
+  @override
+  String get soundUploadAccountRestricted => '你的账号受到限制，所以无法分享这个声音。';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => '要删除这个声音吗？';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      '这是你的声音，它会从 Divine 的声音列表和署名中对所有人消失。音频文件本身暂时仍保留在原链接，已经使用它的视频会保留原有音频。';
+
+  @override
+  String get savedSoundDeleteForEveryone => '对所有人删除';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => '仅从声音库移除';
+
+  @override
+  String get savedSoundDeleted => '声音已删除';
+
+  @override
+  String get savedSoundDeleteFailed => '无法删除该声音。请重试。';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner => '你只能删除自己分享的声音。';
+
+  @override
+  String get audioPickerTypeGroup => '音频';
+
+  @override
+  String get soundUploadRetrySaveAction => '重新保存到声音库';
 }

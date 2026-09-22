@@ -12092,4 +12092,72 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsUpdateAvailable => 'يتوفر تحديث';
+
+  @override
+  String get soundUploadAction => 'رفع صوت';
+
+  @override
+  String get soundUploadTitle => 'رفع صوت';
+
+  @override
+  String get soundUploadIntro =>
+      'مشاركة إيقاع أو لحن قصير أو جملة مسجّلة ليتمكن أي شخص على Divine من صنع فيديو حوله.';
+
+  @override
+  String get soundUploadChooseFile => 'اختيار ملف صوتي';
+
+  @override
+  String get soundUploadSupportedFormats => 'AAC أو M4A أو MP3 أو WAV';
+
+  @override
+  String get soundUploadChangeFile => 'تغيير';
+
+  @override
+  String get soundUploadReuseNotice =>
+      'يمكن لأي شخص على Divine استخدام هذا الصوت في فيديوهاته. يُنسب إليك في كل مرة.';
+
+  @override
+  String get soundUploadShareAction => 'مشاركة الصوت';
+
+  @override
+  String get soundUploadShared => 'صوتك منشور الآن ومحفوظ في الأصوات.';
+
+  @override
+  String get soundUploadFailed => 'تعذّرت مشاركة هذا الصوت. حاول مرة أخرى.';
+
+  @override
+  String get soundUploadSignInFirst => 'يلزم تسجيل الدخول لمشاركة صوت.';
+
+  @override
+  String get soundUploadAccountRestricted =>
+      'حسابك مقيّد، لذا تعذّرت مشاركة هذا الصوت.';
+
+  @override
+  String get savedSoundDeleteConfirmTitle => 'هل تريد حذف هذا الصوت؟';
+
+  @override
+  String get savedSoundDeleteConfirmMessage =>
+      'هذا الصوت لك، لذا يختفي من قوائم الأصوات ومن الإسناد على Divine للجميع. يبقى الملف الصوتي نفسه على رابطه في الوقت الحالي، والفيديوهات التي تستخدمه بالفعل تحتفظ بصوتها.';
+
+  @override
+  String get savedSoundDeleteForEveryone => 'حذف للجميع';
+
+  @override
+  String get savedSoundRemoveLocallyOnly => 'إزالته من الأصوات فقط';
+
+  @override
+  String get savedSoundDeleted => 'تم حذف الصوت';
+
+  @override
+  String get savedSoundDeleteFailed => 'تعذّر حذف هذا الصوت. حاول مرة أخرى.';
+
+  @override
+  String get savedSoundDeleteFailedNotOwner =>
+      'لا يمكن حذف سوى الأصوات التي شاركتها بنفسك.';
+
+  @override
+  String get audioPickerTypeGroup => 'صوت';
+
+  @override
+  String get soundUploadRetrySaveAction => 'إعادة محاولة الحفظ في الأصوات';
 }

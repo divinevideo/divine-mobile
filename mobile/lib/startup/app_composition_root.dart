@@ -30,6 +30,7 @@ import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
@@ -102,6 +103,13 @@ class AppCompositionRoot extends ConsumerWidget {
       // repository would re-inflate the whole app shell every time it
       // resolves (#6477/#6480). The bloc subscribes and re-points itself.
       syncRepositoryStream: ref.read(soundSyncRepositoryStreamProvider),
+      // Resolved at call time for the same reason: the deletion service is
+      // rebuilt with the relay client and auth service, and the bloc outlives
+      // both.
+      contentDeletionService: () =>
+          ref.read(contentDeletionServiceProvider.future),
+      onPublishedSoundDeleted: (soundId) =>
+          ref.read(soundsRepositoryProvider).removeCachedSound(soundId),
       child: AppShellBadgeScope(
         child: MultiBlocProvider(
           providers: [
