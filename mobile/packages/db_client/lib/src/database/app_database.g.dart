@@ -20404,6 +20404,815 @@ class SavedTitleStylesCompanion extends UpdateCompanion<SavedTitleStyleRow> {
   }
 }
 
+class $ScheduledPostsTable extends ScheduledPosts
+    with TableInfo<$ScheduledPostsTable, ScheduledPostRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduledPostsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _eventIdMeta = const VerificationMeta(
+    'eventId',
+  );
+  @override
+  late final GeneratedColumn<String> eventId = GeneratedColumn<String>(
+    'event_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _draftIdMeta = const VerificationMeta(
+    'draftId',
+  );
+  @override
+  late final GeneratedColumn<String> draftId = GeneratedColumn<String>(
+    'draft_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _uploadIdMeta = const VerificationMeta(
+    'uploadId',
+  );
+  @override
+  late final GeneratedColumn<String> uploadId = GeneratedColumn<String>(
+    'upload_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<int> kind = GeneratedColumn<int>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _signedEventJsonMeta = const VerificationMeta(
+    'signedEventJson',
+  );
+  @override
+  late final GeneratedColumn<String> signedEventJson = GeneratedColumn<String>(
+    'signed_event_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _publishAtMeta = const VerificationMeta(
+    'publishAt',
+  );
+  @override
+  late final GeneratedColumn<int> publishAt = GeneratedColumn<int>(
+    'publish_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expireAfterSecsMeta = const VerificationMeta(
+    'expireAfterSecs',
+  );
+  @override
+  late final GeneratedColumn<int> expireAfterSecs = GeneratedColumn<int>(
+    'expire_after_secs',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _failureReasonMeta = const VerificationMeta(
+    'failureReason',
+  );
+  @override
+  late final GeneratedColumn<String> failureReason = GeneratedColumn<String>(
+    'failure_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastAttemptAtMeta = const VerificationMeta(
+    'lastAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastAttemptAt =
+      GeneratedColumn<DateTime>(
+        'last_attempt_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    eventId,
+    ownerPubkey,
+    draftId,
+    uploadId,
+    kind,
+    signedEventJson,
+    publishAt,
+    expireAfterSecs,
+    status,
+    failureReason,
+    attempts,
+    lastAttemptAt,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scheduled_posts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScheduledPostRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('event_id')) {
+      context.handle(
+        _eventIdMeta,
+        eventId.isAcceptableOrUnknown(data['event_id']!, _eventIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventIdMeta);
+    }
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('draft_id')) {
+      context.handle(
+        _draftIdMeta,
+        draftId.isAcceptableOrUnknown(data['draft_id']!, _draftIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_draftIdMeta);
+    }
+    if (data.containsKey('upload_id')) {
+      context.handle(
+        _uploadIdMeta,
+        uploadId.isAcceptableOrUnknown(data['upload_id']!, _uploadIdMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('signed_event_json')) {
+      context.handle(
+        _signedEventJsonMeta,
+        signedEventJson.isAcceptableOrUnknown(
+          data['signed_event_json']!,
+          _signedEventJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_signedEventJsonMeta);
+    }
+    if (data.containsKey('publish_at')) {
+      context.handle(
+        _publishAtMeta,
+        publishAt.isAcceptableOrUnknown(data['publish_at']!, _publishAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_publishAtMeta);
+    }
+    if (data.containsKey('expire_after_secs')) {
+      context.handle(
+        _expireAfterSecsMeta,
+        expireAfterSecs.isAcceptableOrUnknown(
+          data['expire_after_secs']!,
+          _expireAfterSecsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('failure_reason')) {
+      context.handle(
+        _failureReasonMeta,
+        failureReason.isAcceptableOrUnknown(
+          data['failure_reason']!,
+          _failureReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('last_attempt_at')) {
+      context.handle(
+        _lastAttemptAtMeta,
+        lastAttemptAt.isAcceptableOrUnknown(
+          data['last_attempt_at']!,
+          _lastAttemptAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {eventId};
+  @override
+  ScheduledPostRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduledPostRow(
+      eventId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_id'],
+      )!,
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      draftId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}draft_id'],
+      )!,
+      uploadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}upload_id'],
+      ),
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}kind'],
+      )!,
+      signedEventJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signed_event_json'],
+      )!,
+      publishAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}publish_at'],
+      )!,
+      expireAfterSecs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expire_after_secs'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      failureReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}failure_reason'],
+      ),
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      lastAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_attempt_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ScheduledPostsTable createAlias(String alias) {
+    return $ScheduledPostsTable(attachedDatabase, alias);
+  }
+}
+
+class ScheduledPostRow extends DataClass
+    implements Insertable<ScheduledPostRow> {
+  /// Signed event id. A reschedule signs a new event, so it is a new row.
+  final String eventId;
+
+  /// Hex public key of the account that scheduled the post.
+  final String ownerPubkey;
+
+  /// The publish-copy draft holding the video until the post is live.
+  final String draftId;
+
+  /// The `PendingUpload` whose media the event references, when still known.
+  final String? uploadId;
+  final int kind;
+
+  /// Full signed event (`Event.toJson`).
+  final String signedEventJson;
+
+  /// Unix seconds; always equal to the signed event's `created_at`.
+  final int publishAt;
+
+  /// NIP-40 expiration relative to the publish time, so a reschedule can
+  /// recompute the absolute `expiration` tag. Null when the post never expires.
+  final int? expireAfterSecs;
+
+  /// `pendingSubmit` | `scheduled` | `published` | `failed` | `cancelled`
+  /// (parsed throw-on-unknown).
+  final String status;
+
+  /// Why the post failed, from the relay or the app.
+  final String? failureReason;
+
+  /// Submission attempts made so far; drives the retry backoff.
+  final int attempts;
+  final DateTime? lastAttemptAt;
+  final DateTime createdAt;
+  const ScheduledPostRow({
+    required this.eventId,
+    required this.ownerPubkey,
+    required this.draftId,
+    this.uploadId,
+    required this.kind,
+    required this.signedEventJson,
+    required this.publishAt,
+    this.expireAfterSecs,
+    required this.status,
+    this.failureReason,
+    required this.attempts,
+    this.lastAttemptAt,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['event_id'] = Variable<String>(eventId);
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['draft_id'] = Variable<String>(draftId);
+    if (!nullToAbsent || uploadId != null) {
+      map['upload_id'] = Variable<String>(uploadId);
+    }
+    map['kind'] = Variable<int>(kind);
+    map['signed_event_json'] = Variable<String>(signedEventJson);
+    map['publish_at'] = Variable<int>(publishAt);
+    if (!nullToAbsent || expireAfterSecs != null) {
+      map['expire_after_secs'] = Variable<int>(expireAfterSecs);
+    }
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || failureReason != null) {
+      map['failure_reason'] = Variable<String>(failureReason);
+    }
+    map['attempts'] = Variable<int>(attempts);
+    if (!nullToAbsent || lastAttemptAt != null) {
+      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ScheduledPostsCompanion toCompanion(bool nullToAbsent) {
+    return ScheduledPostsCompanion(
+      eventId: Value(eventId),
+      ownerPubkey: Value(ownerPubkey),
+      draftId: Value(draftId),
+      uploadId: uploadId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploadId),
+      kind: Value(kind),
+      signedEventJson: Value(signedEventJson),
+      publishAt: Value(publishAt),
+      expireAfterSecs: expireAfterSecs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expireAfterSecs),
+      status: Value(status),
+      failureReason: failureReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(failureReason),
+      attempts: Value(attempts),
+      lastAttemptAt: lastAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAttemptAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ScheduledPostRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduledPostRow(
+      eventId: serializer.fromJson<String>(json['eventId']),
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      draftId: serializer.fromJson<String>(json['draftId']),
+      uploadId: serializer.fromJson<String?>(json['uploadId']),
+      kind: serializer.fromJson<int>(json['kind']),
+      signedEventJson: serializer.fromJson<String>(json['signedEventJson']),
+      publishAt: serializer.fromJson<int>(json['publishAt']),
+      expireAfterSecs: serializer.fromJson<int?>(json['expireAfterSecs']),
+      status: serializer.fromJson<String>(json['status']),
+      failureReason: serializer.fromJson<String?>(json['failureReason']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      lastAttemptAt: serializer.fromJson<DateTime?>(json['lastAttemptAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'eventId': serializer.toJson<String>(eventId),
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'draftId': serializer.toJson<String>(draftId),
+      'uploadId': serializer.toJson<String?>(uploadId),
+      'kind': serializer.toJson<int>(kind),
+      'signedEventJson': serializer.toJson<String>(signedEventJson),
+      'publishAt': serializer.toJson<int>(publishAt),
+      'expireAfterSecs': serializer.toJson<int?>(expireAfterSecs),
+      'status': serializer.toJson<String>(status),
+      'failureReason': serializer.toJson<String?>(failureReason),
+      'attempts': serializer.toJson<int>(attempts),
+      'lastAttemptAt': serializer.toJson<DateTime?>(lastAttemptAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ScheduledPostRow copyWith({
+    String? eventId,
+    String? ownerPubkey,
+    String? draftId,
+    Value<String?> uploadId = const Value.absent(),
+    int? kind,
+    String? signedEventJson,
+    int? publishAt,
+    Value<int?> expireAfterSecs = const Value.absent(),
+    String? status,
+    Value<String?> failureReason = const Value.absent(),
+    int? attempts,
+    Value<DateTime?> lastAttemptAt = const Value.absent(),
+    DateTime? createdAt,
+  }) => ScheduledPostRow(
+    eventId: eventId ?? this.eventId,
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    draftId: draftId ?? this.draftId,
+    uploadId: uploadId.present ? uploadId.value : this.uploadId,
+    kind: kind ?? this.kind,
+    signedEventJson: signedEventJson ?? this.signedEventJson,
+    publishAt: publishAt ?? this.publishAt,
+    expireAfterSecs: expireAfterSecs.present
+        ? expireAfterSecs.value
+        : this.expireAfterSecs,
+    status: status ?? this.status,
+    failureReason: failureReason.present
+        ? failureReason.value
+        : this.failureReason,
+    attempts: attempts ?? this.attempts,
+    lastAttemptAt: lastAttemptAt.present
+        ? lastAttemptAt.value
+        : this.lastAttemptAt,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ScheduledPostRow copyWithCompanion(ScheduledPostsCompanion data) {
+    return ScheduledPostRow(
+      eventId: data.eventId.present ? data.eventId.value : this.eventId,
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      draftId: data.draftId.present ? data.draftId.value : this.draftId,
+      uploadId: data.uploadId.present ? data.uploadId.value : this.uploadId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      signedEventJson: data.signedEventJson.present
+          ? data.signedEventJson.value
+          : this.signedEventJson,
+      publishAt: data.publishAt.present ? data.publishAt.value : this.publishAt,
+      expireAfterSecs: data.expireAfterSecs.present
+          ? data.expireAfterSecs.value
+          : this.expireAfterSecs,
+      status: data.status.present ? data.status.value : this.status,
+      failureReason: data.failureReason.present
+          ? data.failureReason.value
+          : this.failureReason,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      lastAttemptAt: data.lastAttemptAt.present
+          ? data.lastAttemptAt.value
+          : this.lastAttemptAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledPostRow(')
+          ..write('eventId: $eventId, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('draftId: $draftId, ')
+          ..write('uploadId: $uploadId, ')
+          ..write('kind: $kind, ')
+          ..write('signedEventJson: $signedEventJson, ')
+          ..write('publishAt: $publishAt, ')
+          ..write('expireAfterSecs: $expireAfterSecs, ')
+          ..write('status: $status, ')
+          ..write('failureReason: $failureReason, ')
+          ..write('attempts: $attempts, ')
+          ..write('lastAttemptAt: $lastAttemptAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    eventId,
+    ownerPubkey,
+    draftId,
+    uploadId,
+    kind,
+    signedEventJson,
+    publishAt,
+    expireAfterSecs,
+    status,
+    failureReason,
+    attempts,
+    lastAttemptAt,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduledPostRow &&
+          other.eventId == this.eventId &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.draftId == this.draftId &&
+          other.uploadId == this.uploadId &&
+          other.kind == this.kind &&
+          other.signedEventJson == this.signedEventJson &&
+          other.publishAt == this.publishAt &&
+          other.expireAfterSecs == this.expireAfterSecs &&
+          other.status == this.status &&
+          other.failureReason == this.failureReason &&
+          other.attempts == this.attempts &&
+          other.lastAttemptAt == this.lastAttemptAt &&
+          other.createdAt == this.createdAt);
+}
+
+class ScheduledPostsCompanion extends UpdateCompanion<ScheduledPostRow> {
+  final Value<String> eventId;
+  final Value<String> ownerPubkey;
+  final Value<String> draftId;
+  final Value<String?> uploadId;
+  final Value<int> kind;
+  final Value<String> signedEventJson;
+  final Value<int> publishAt;
+  final Value<int?> expireAfterSecs;
+  final Value<String> status;
+  final Value<String?> failureReason;
+  final Value<int> attempts;
+  final Value<DateTime?> lastAttemptAt;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ScheduledPostsCompanion({
+    this.eventId = const Value.absent(),
+    this.ownerPubkey = const Value.absent(),
+    this.draftId = const Value.absent(),
+    this.uploadId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.signedEventJson = const Value.absent(),
+    this.publishAt = const Value.absent(),
+    this.expireAfterSecs = const Value.absent(),
+    this.status = const Value.absent(),
+    this.failureReason = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.lastAttemptAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScheduledPostsCompanion.insert({
+    required String eventId,
+    required String ownerPubkey,
+    required String draftId,
+    this.uploadId = const Value.absent(),
+    required int kind,
+    required String signedEventJson,
+    required int publishAt,
+    this.expireAfterSecs = const Value.absent(),
+    required String status,
+    this.failureReason = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.lastAttemptAt = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : eventId = Value(eventId),
+       ownerPubkey = Value(ownerPubkey),
+       draftId = Value(draftId),
+       kind = Value(kind),
+       signedEventJson = Value(signedEventJson),
+       publishAt = Value(publishAt),
+       status = Value(status),
+       createdAt = Value(createdAt);
+  static Insertable<ScheduledPostRow> custom({
+    Expression<String>? eventId,
+    Expression<String>? ownerPubkey,
+    Expression<String>? draftId,
+    Expression<String>? uploadId,
+    Expression<int>? kind,
+    Expression<String>? signedEventJson,
+    Expression<int>? publishAt,
+    Expression<int>? expireAfterSecs,
+    Expression<String>? status,
+    Expression<String>? failureReason,
+    Expression<int>? attempts,
+    Expression<DateTime>? lastAttemptAt,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (eventId != null) 'event_id': eventId,
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (draftId != null) 'draft_id': draftId,
+      if (uploadId != null) 'upload_id': uploadId,
+      if (kind != null) 'kind': kind,
+      if (signedEventJson != null) 'signed_event_json': signedEventJson,
+      if (publishAt != null) 'publish_at': publishAt,
+      if (expireAfterSecs != null) 'expire_after_secs': expireAfterSecs,
+      if (status != null) 'status': status,
+      if (failureReason != null) 'failure_reason': failureReason,
+      if (attempts != null) 'attempts': attempts,
+      if (lastAttemptAt != null) 'last_attempt_at': lastAttemptAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScheduledPostsCompanion copyWith({
+    Value<String>? eventId,
+    Value<String>? ownerPubkey,
+    Value<String>? draftId,
+    Value<String?>? uploadId,
+    Value<int>? kind,
+    Value<String>? signedEventJson,
+    Value<int>? publishAt,
+    Value<int?>? expireAfterSecs,
+    Value<String>? status,
+    Value<String?>? failureReason,
+    Value<int>? attempts,
+    Value<DateTime?>? lastAttemptAt,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ScheduledPostsCompanion(
+      eventId: eventId ?? this.eventId,
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      draftId: draftId ?? this.draftId,
+      uploadId: uploadId ?? this.uploadId,
+      kind: kind ?? this.kind,
+      signedEventJson: signedEventJson ?? this.signedEventJson,
+      publishAt: publishAt ?? this.publishAt,
+      expireAfterSecs: expireAfterSecs ?? this.expireAfterSecs,
+      status: status ?? this.status,
+      failureReason: failureReason ?? this.failureReason,
+      attempts: attempts ?? this.attempts,
+      lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (eventId.present) {
+      map['event_id'] = Variable<String>(eventId.value);
+    }
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (draftId.present) {
+      map['draft_id'] = Variable<String>(draftId.value);
+    }
+    if (uploadId.present) {
+      map['upload_id'] = Variable<String>(uploadId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<int>(kind.value);
+    }
+    if (signedEventJson.present) {
+      map['signed_event_json'] = Variable<String>(signedEventJson.value);
+    }
+    if (publishAt.present) {
+      map['publish_at'] = Variable<int>(publishAt.value);
+    }
+    if (expireAfterSecs.present) {
+      map['expire_after_secs'] = Variable<int>(expireAfterSecs.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (failureReason.present) {
+      map['failure_reason'] = Variable<String>(failureReason.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (lastAttemptAt.present) {
+      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduledPostsCompanion(')
+          ..write('eventId: $eventId, ')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('draftId: $draftId, ')
+          ..write('uploadId: $uploadId, ')
+          ..write('kind: $kind, ')
+          ..write('signedEventJson: $signedEventJson, ')
+          ..write('publishAt: $publishAt, ')
+          ..write('expireAfterSecs: $expireAfterSecs, ')
+          ..write('status: $status, ')
+          ..write('failureReason: $failureReason, ')
+          ..write('attempts: $attempts, ')
+          ..write('lastAttemptAt: $lastAttemptAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -20457,6 +21266,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SavedTitleStylesTable savedTitleStyles = $SavedTitleStylesTable(
     this,
   );
+  late final $ScheduledPostsTable scheduledPosts = $ScheduledPostsTable(this);
   late final Index idxMetricsLoopCount = Index(
     'idx_metrics_loop_count',
     'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
@@ -20532,6 +21342,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxSavedTitleStyleOwnerPubkey = Index(
     'idx_saved_title_style_owner_pubkey',
     'CREATE INDEX IF NOT EXISTS idx_saved_title_style_owner_pubkey ON saved_title_styles (owner_pubkey)',
+  );
+  late final Index idxScheduledPostsOwnerStatus = Index(
+    'idx_scheduled_posts_owner_status',
+    'CREATE INDEX IF NOT EXISTS idx_scheduled_posts_owner_status ON scheduled_posts (owner_pubkey, status)',
   );
   late final UserProfilesDao userProfilesDao = UserProfilesDao(
     this as AppDatabase,
@@ -20616,6 +21430,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final SavedTitleStylesDao savedTitleStylesDao = SavedTitleStylesDao(
     this as AppDatabase,
   );
+  late final ScheduledPostsDao scheduledPostsDao = ScheduledPostsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -20653,6 +21470,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     vanishedProfiles,
     savedCaptionStyles,
     savedTitleStyles,
+    scheduledPosts,
     idxMetricsLoopCount,
     idxMetricsLikes,
     idxMetricsViews,
@@ -20672,6 +21490,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxPersonalEventsPubkeyCreatedAt,
     idxSavedCaptionStyleOwnerPubkey,
     idxSavedTitleStyleOwnerPubkey,
+    idxScheduledPostsOwnerStatus,
   ];
 }
 
@@ -30412,6 +31231,374 @@ typedef $$SavedTitleStylesTableProcessedTableManager =
       SavedTitleStyleRow,
       PrefetchHooks Function()
     >;
+typedef $$ScheduledPostsTableCreateCompanionBuilder =
+    ScheduledPostsCompanion Function({
+      required String eventId,
+      required String ownerPubkey,
+      required String draftId,
+      Value<String?> uploadId,
+      required int kind,
+      required String signedEventJson,
+      required int publishAt,
+      Value<int?> expireAfterSecs,
+      required String status,
+      Value<String?> failureReason,
+      Value<int> attempts,
+      Value<DateTime?> lastAttemptAt,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ScheduledPostsTableUpdateCompanionBuilder =
+    ScheduledPostsCompanion Function({
+      Value<String> eventId,
+      Value<String> ownerPubkey,
+      Value<String> draftId,
+      Value<String?> uploadId,
+      Value<int> kind,
+      Value<String> signedEventJson,
+      Value<int> publishAt,
+      Value<int?> expireAfterSecs,
+      Value<String> status,
+      Value<String?> failureReason,
+      Value<int> attempts,
+      Value<DateTime?> lastAttemptAt,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ScheduledPostsTableFilterComposer
+    extends Composer<_$AppDatabase, $ScheduledPostsTable> {
+  $$ScheduledPostsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get draftId => $composableBuilder(
+    column: $table.draftId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uploadId => $composableBuilder(
+    column: $table.uploadId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signedEventJson => $composableBuilder(
+    column: $table.signedEventJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get publishAt => $composableBuilder(
+    column: $table.publishAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expireAfterSecs => $composableBuilder(
+    column: $table.expireAfterSecs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get failureReason => $composableBuilder(
+    column: $table.failureReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastAttemptAt => $composableBuilder(
+    column: $table.lastAttemptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScheduledPostsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScheduledPostsTable> {
+  $$ScheduledPostsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get eventId => $composableBuilder(
+    column: $table.eventId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get draftId => $composableBuilder(
+    column: $table.draftId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uploadId => $composableBuilder(
+    column: $table.uploadId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signedEventJson => $composableBuilder(
+    column: $table.signedEventJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get publishAt => $composableBuilder(
+    column: $table.publishAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expireAfterSecs => $composableBuilder(
+    column: $table.expireAfterSecs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get failureReason => $composableBuilder(
+    column: $table.failureReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastAttemptAt => $composableBuilder(
+    column: $table.lastAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScheduledPostsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScheduledPostsTable> {
+  $$ScheduledPostsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get eventId =>
+      $composableBuilder(column: $table.eventId, builder: (column) => column);
+
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get draftId =>
+      $composableBuilder(column: $table.draftId, builder: (column) => column);
+
+  GeneratedColumn<String> get uploadId =>
+      $composableBuilder(column: $table.uploadId, builder: (column) => column);
+
+  GeneratedColumn<int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get signedEventJson => $composableBuilder(
+    column: $table.signedEventJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get publishAt =>
+      $composableBuilder(column: $table.publishAt, builder: (column) => column);
+
+  GeneratedColumn<int> get expireAfterSecs => $composableBuilder(
+    column: $table.expireAfterSecs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get failureReason => $composableBuilder(
+    column: $table.failureReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastAttemptAt => $composableBuilder(
+    column: $table.lastAttemptAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ScheduledPostsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScheduledPostsTable,
+          ScheduledPostRow,
+          $$ScheduledPostsTableFilterComposer,
+          $$ScheduledPostsTableOrderingComposer,
+          $$ScheduledPostsTableAnnotationComposer,
+          $$ScheduledPostsTableCreateCompanionBuilder,
+          $$ScheduledPostsTableUpdateCompanionBuilder,
+          (
+            ScheduledPostRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ScheduledPostsTable,
+              ScheduledPostRow
+            >,
+          ),
+          ScheduledPostRow,
+          PrefetchHooks Function()
+        > {
+  $$ScheduledPostsTableTableManager(
+    _$AppDatabase db,
+    $ScheduledPostsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScheduledPostsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScheduledPostsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScheduledPostsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> eventId = const Value.absent(),
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> draftId = const Value.absent(),
+                Value<String?> uploadId = const Value.absent(),
+                Value<int> kind = const Value.absent(),
+                Value<String> signedEventJson = const Value.absent(),
+                Value<int> publishAt = const Value.absent(),
+                Value<int?> expireAfterSecs = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> failureReason = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<DateTime?> lastAttemptAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduledPostsCompanion(
+                eventId: eventId,
+                ownerPubkey: ownerPubkey,
+                draftId: draftId,
+                uploadId: uploadId,
+                kind: kind,
+                signedEventJson: signedEventJson,
+                publishAt: publishAt,
+                expireAfterSecs: expireAfterSecs,
+                status: status,
+                failureReason: failureReason,
+                attempts: attempts,
+                lastAttemptAt: lastAttemptAt,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String eventId,
+                required String ownerPubkey,
+                required String draftId,
+                Value<String?> uploadId = const Value.absent(),
+                required int kind,
+                required String signedEventJson,
+                required int publishAt,
+                Value<int?> expireAfterSecs = const Value.absent(),
+                required String status,
+                Value<String?> failureReason = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<DateTime?> lastAttemptAt = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduledPostsCompanion.insert(
+                eventId: eventId,
+                ownerPubkey: ownerPubkey,
+                draftId: draftId,
+                uploadId: uploadId,
+                kind: kind,
+                signedEventJson: signedEventJson,
+                publishAt: publishAt,
+                expireAfterSecs: expireAfterSecs,
+                status: status,
+                failureReason: failureReason,
+                attempts: attempts,
+                lastAttemptAt: lastAttemptAt,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScheduledPostsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScheduledPostsTable,
+      ScheduledPostRow,
+      $$ScheduledPostsTableFilterComposer,
+      $$ScheduledPostsTableOrderingComposer,
+      $$ScheduledPostsTableAnnotationComposer,
+      $$ScheduledPostsTableCreateCompanionBuilder,
+      $$ScheduledPostsTableUpdateCompanionBuilder,
+      (
+        ScheduledPostRow,
+        BaseReferences<_$AppDatabase, $ScheduledPostsTable, ScheduledPostRow>,
+      ),
+      ScheduledPostRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -30480,4 +31667,6 @@ class $AppDatabaseManager {
       $$SavedCaptionStylesTableTableManager(_db, _db.savedCaptionStyles);
   $$SavedTitleStylesTableTableManager get savedTitleStyles =>
       $$SavedTitleStylesTableTableManager(_db, _db.savedTitleStyles);
+  $$ScheduledPostsTableTableManager get scheduledPosts =>
+      $$ScheduledPostsTableTableManager(_db, _db.scheduledPosts);
 }
