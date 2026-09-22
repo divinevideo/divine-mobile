@@ -4,6 +4,13 @@
 **Status:** Snapshot — read-only measurement, no code change
 **Companion to:** [View and loop metrics design](2026-08-13-view-and-loop-metrics-design.md)
 
+> **Superseded in part, 2026-09-23 (#9431):** every reference below to
+> `mobile/lib/widgets/video_feed_item/video_card_meta.dart` and
+> `publicLoopCountFloor` describes the pre-#9431 feed card. The card now shows
+> the author's lifetime total with no floor; the file and the constant are gone.
+> The measurements themselves are unchanged and still stand as the pre-change
+> baseline for the metrics redefinition.
+
 ## Why this exists
 
 The design's open risk section: the redefinition and the #7210 outage recovery

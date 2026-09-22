@@ -4,6 +4,15 @@
 **Status:** Implemented
 **Target:** Release before the ~2026-08-13 freeze
 
+> **Superseded in part, 2026-09-23 (#9431):** the feed card no longer renders a
+> per-video loop count gated by `publicLoopCountFloor`, and
+> `mobile/lib/widgets/video_feed_item/video_card_meta.dart` no longer exists.
+> The card now prints the author's lifetime total beside their name, with no
+> floor. The profile header and the message-request preview still apply
+> `profileLoopsVisibilityFloor`. The measurements and rationale below remain the
+> record of why the per-video floor existed; they are superseded for the feed
+> card only.
+
 ## Problem
 
 A video card's secondary line renders an unconditional loop count. A freshly
