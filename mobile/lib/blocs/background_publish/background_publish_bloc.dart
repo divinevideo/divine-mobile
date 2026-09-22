@@ -105,18 +105,23 @@ class BackgroundPublishBloc
         await _deletePublishedDrafts(event.draft);
       } else if (result is PublishScheduled) {
         // The media is up and the signed event waits for its time (#3538).
-        // The publish copy stays as the scheduled draft the Scheduled tab
-        // shows and a cancel parks; only the source it was copied from is
-        // reclaimed, as it would be after an immediate publish.
-        final updatedUploads = state.uploads
-            .where((upload) => upload.draft.id != event.draft.id)
-            .toList();
-        emit(state.copyWith(uploads: updatedUploads));
+        // The publish copy stays as the scheduled draft the section above the
+        // drafts shows and a cancel parks; only the source it was copied from
+        // is reclaimed, as it would be after an immediate publish.
+        //
+        // Both writes run *before* the emit, unlike the success branch above:
+        // scheduling leaves the creator on the drafts list, so the emit is the
+        // signal that list reloads on. Emitting first would race the writes
+        // and redraw the reclaimed draft next to the post it became.
         await _persistPublishStatus(
           draftId: event.draft.id,
           status: PublishStatus.scheduled,
         );
         await _deleteSourceDraft(event.draft);
+        final updatedUploads = state.uploads
+            .where((upload) => upload.draft.id != event.draft.id)
+            .toList();
+        emit(state.copyWith(uploads: updatedUploads));
       } else {
         // Update the upload with the result
         final updatedUploads = state.uploads.map((upload) {
