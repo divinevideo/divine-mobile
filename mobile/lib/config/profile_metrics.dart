@@ -12,16 +12,13 @@
 /// A product call, not a technical one — the single value to change if the
 /// bar sits wrong.
 ///
-/// Deliberately higher than `publicLoopCountFloor` in
-/// `widgets/video_feed_item/video_card_meta.dart`, which hides small counts on
-/// feed cards. A profile headline is a summary of a whole creator and carries
-/// more weight than a number beside one video, so it earns a higher bar. The
-/// two are independent product calls, not a value that drifted — do not
-/// collapse them into one constant without deciding that both surfaces want
-/// the same number.
-///
 /// Lives here rather than beside one consumer because it now has two: the
 /// profile header's Loops column, and the message-request preview's stats
 /// line. On the preview the sender is never the viewer, so there is no
 /// owner exemption there — the floor always applies.
+///
+/// The video feed card's lifetime-loops line is deliberately different: it
+/// shows the author's total whenever it is known, with no floor, because the
+/// line sits beside the author's name and reads as part of their identity
+/// rather than as a headline figure about them.
 const int profileLoopsVisibilityFloor = 10000;
