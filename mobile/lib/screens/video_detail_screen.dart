@@ -23,6 +23,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
@@ -107,7 +108,7 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
       ref.read(screenAnalyticsServiceProvider).markDataLoaded('video_detail');
       return;
     }
-    _loadVideo();
+    _loadVideoDetached();
   }
 
   @override
@@ -121,8 +122,7 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
 
     // Deep links can retarget an already-mounted video screen. Reset the
     // previous request state so the second shared link triggers a fresh load.
-    _relayReadySubscription?.cancel();
-    _relayReadySubscription = null;
+    _cancelRelayReadySubscription();
     _retryScheduled = false;
     _hasRetriedAfterRelayReady = false;
 
@@ -137,13 +137,34 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
       return;
     }
 
-    unawaited(_loadVideo());
+    _loadVideoDetached();
   }
 
   @override
   void dispose() {
-    _relayReadySubscription?.cancel();
+    _cancelRelayReadySubscription();
     super.dispose();
+  }
+
+  void _loadVideoDetached({bool allowRelayReadyRetry = true}) {
+    runDetached(
+      _loadVideo(allowRelayReadyRetry: allowRelayReadyRetry),
+      'load video',
+      logName: 'VideoDetailScreen',
+      category: LogCategory.video,
+    );
+  }
+
+  void _cancelRelayReadySubscription() {
+    final relayReadySubscription = _relayReadySubscription;
+    _relayReadySubscription = null;
+    if (relayReadySubscription == null) return;
+    runDetached(
+      relayReadySubscription.cancel(),
+      'cancel relay-ready subscription',
+      logName: 'VideoDetailScreen',
+      category: LogCategory.video,
+    );
   }
 
   Future<void> _loadVideo({bool allowRelayReadyRetry = true}) async {
@@ -306,11 +327,16 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
     }
 
     _retryScheduled = true;
-    _relayReadySubscription?.cancel();
+    runDetached(
+      _relayReadySubscription?.cancel() ?? Future<void>.value(),
+      'cancel relay-ready subscription',
+      logName: 'VideoDetailScreen',
+      category: LogCategory.video,
+    );
+    _relayReadySubscription = null;
 
     void retry() {
-      _relayReadySubscription?.cancel();
-      _relayReadySubscription = null;
+      _cancelRelayReadySubscription();
       _retryScheduled = false;
       _hasRetriedAfterRelayReady = true;
       if (!mounted) return;
@@ -318,7 +344,7 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
         _isLoading = true;
         _error = null;
       });
-      unawaited(_loadVideo(allowRelayReadyRetry: false));
+      _loadVideoDetached(allowRelayReadyRetry: false);
     }
 
     if (nostrClient.isInitialized && nostrClient.connectedRelayCount > 0) {
@@ -399,15 +425,14 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
     // relay-ready listener would swallow the failure and park the screen on an
     // unbounded spinner with the Retry button gone; the user can always tap
     // again once they are back online.
-    unawaited(_loadVideo(allowRelayReadyRetry: false));
+    _loadVideoDetached(allowRelayReadyRetry: false);
   }
 
   void _handleExit(BuildContext context) {
     // The loading state can now be dismissed mid-fetch. Without this, a relay
     // connecting during the pop transition would restart the lookup for a
     // screen the user has already left.
-    _relayReadySubscription?.cancel();
-    _relayReadySubscription = null;
+    _cancelRelayReadySubscription();
     _retryScheduled = false;
 
     // safePop, not a hand-rolled canPop/go pair: `/video/:id` is a flat
