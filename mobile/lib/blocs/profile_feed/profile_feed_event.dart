@@ -84,14 +84,16 @@ final class ProfileFeedPinsChanged extends ProfileFeedEvent {
   List<Object?> get props => [coordinates];
 }
 
-/// A pin-list mutation for one of the viewer's own videos. Both variants share
-/// one `sequential` bucket: a request that lands while another is in flight
-/// waits for it rather than being dropped, so the quiet cleanup a delete
-/// sends cannot be lost to a pin the viewer tapped a moment earlier. The
-/// repository serializes its own read-modify-write, the cap check reads the
-/// state the previous mutation left, and both operations are idempotent, so
-/// a queued duplicate is a no-op rather than a hazard.
-sealed class ProfileFeedPinMutationRequested extends ProfileFeedEvent {
+/// Pin mutations use one serialized bucket so coordinate recovery cannot race
+/// a video-based pin or unpin operation.
+sealed class ProfileFeedPinMutation extends ProfileFeedEvent {
+  const ProfileFeedPinMutation();
+}
+
+/// A pin-list mutation for one of the viewer's own videos. The repository
+/// serializes read-modify-write operations; this event bucket also keeps the
+/// cubit's state updates and cap checks in the same order.
+sealed class ProfileFeedPinMutationRequested extends ProfileFeedPinMutation {
   const ProfileFeedPinMutationRequested(this.video, {this.quiet = false});
 
   final VideoEvent video;
@@ -119,4 +121,15 @@ final class ProfileFeedPinRequested extends ProfileFeedPinMutationRequested {
 /// every pinned coordinate the relays report deleted.
 final class ProfileFeedUnpinRequested extends ProfileFeedPinMutationRequested {
   const ProfileFeedUnpinRequested(super.video, {super.quiet});
+}
+
+/// Removes a stored pin by coordinate when the video itself cannot resolve.
+final class ProfileFeedPinnedCoordinateRemoveRequested
+    extends ProfileFeedPinMutation {
+  const ProfileFeedPinnedCoordinateRemoveRequested(this.coordinate);
+
+  final String coordinate;
+
+  @override
+  List<Object?> get props => [coordinate];
 }

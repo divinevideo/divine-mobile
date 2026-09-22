@@ -98,8 +98,8 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       transformer: sequential(),
     );
     on<ProfileFeedPinsChanged>(_onPinsChanged, transformer: sequential());
-    on<ProfileFeedPinMutationRequested>(
-      _onPinMutationRequested,
+    on<ProfileFeedPinMutation>(
+      _onPinMutation,
       transformer: sequential(),
     );
 
@@ -802,6 +802,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       return video == null ||
           _videoEventService.isVideoEventKnownDeleted(video);
     }).toList();
+    emit(state.copyWith(unavailablePinnedCoordinates: unavailable));
     if (unavailable.isEmpty) return;
 
     try {
@@ -815,11 +816,88 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
         state.copyWith(
           videos: _applyFeedFilters(_unfilteredVideos),
           pinnedCoordinates: released,
+          unavailablePinnedCoordinates: unavailable
+              .where(released.contains)
+              .toList(),
         ),
       );
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
+    }
+  }
+
+  Future<void> _onPinnedCoordinateRemoveRequested(
+    ProfileFeedPinnedCoordinateRemoveRequested event,
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    final coordinate = event.coordinate;
+    if (!state.unavailablePinnedCoordinates.contains(coordinate) ||
+        !ProfilePinsRepository.isEligibleCoordinate(
+          coordinate,
+          owner: _authorPubkey,
+        )) {
+      return;
+    }
+    emit(
+      state.copyWith(
+        isPinMutationInFlight: true,
+        unavailablePinFeedback: ProfileFeedUnavailablePinFeedback.none,
+      ),
+    );
+
+    ProfilePinMutation result;
+    try {
+      result = await _pinsRepository.unpin(coordinate);
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      result = const ProfilePinMutation.failed(
+        ProfilePinFailure.publishDidNotComplete,
+      );
+    }
+    if (isClosed) return;
+
+    final coordinates = result.coordinates;
+    if (coordinates == null) {
+      final isConnectionFailure =
+          result.failure == ProfilePinFailure.couldNotReachRelays ||
+          result.failure == ProfilePinFailure.timedOut;
+      emit(
+        state.copyWith(
+          isPinMutationInFlight: false,
+          unavailablePinFeedback: isConnectionFailure
+              ? ProfileFeedUnavailablePinFeedback.connectionFailed
+              : ProfileFeedUnavailablePinFeedback.failed,
+        ),
+      );
+      return;
+    }
+
+    _pinnedCoordinates = coordinates;
+    _resolvedPinnedVideos.remove(coordinate);
+    emit(
+      state.copyWith(
+        videos: _applyFeedFilters(_unfilteredVideos),
+        pinnedCoordinates: coordinates,
+        unavailablePinnedCoordinates: state.unavailablePinnedCoordinates
+            .where((candidate) => candidate != coordinate)
+            .toList(),
+        isPinMutationInFlight: false,
+        unavailablePinFeedback: ProfileFeedUnavailablePinFeedback.removed,
+      ),
+    );
+  }
+
+  Future<void> _onPinMutation(
+    ProfileFeedPinMutation event,
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    switch (event) {
+      case ProfileFeedPinMutationRequested():
+        await _onPinMutationRequested(event, emit);
+      case ProfileFeedPinnedCoordinateRemoveRequested():
+        await _onPinnedCoordinateRemoveRequested(event, emit);
     }
   }
 
@@ -840,9 +918,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       // The sheet offers Pin at the cap so the tap can explain the limit;
       // the relay would only confirm what the local list already says.
       emit(state.copyWith(pinFeedback: ProfileFeedPinFeedback.none));
-      emit(
-        state.copyWith(pinFeedback: ProfileFeedPinFeedback.pinLimitReached),
-      );
+      emit(state.copyWith(pinFeedback: ProfileFeedPinFeedback.pinLimitReached));
       return;
     }
     // A quiet request never touches pinFeedback: no reset, no outcome.

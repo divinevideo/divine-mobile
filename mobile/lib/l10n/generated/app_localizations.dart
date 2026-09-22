@@ -1376,6 +1376,72 @@ abstract class AppLocalizations {
   /// **'Couldn\'t unpin that video. Try again.'**
   String get profileUnpinFailed;
 
+  /// Owner-only action shown above the profile video grid when stored pins do not resolve to visible videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Review unavailable pins'**
+  String get profilePinReviewUnavailable;
+
+  /// Title of the full-screen owner-only unavailable pinned-video recovery page.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable pinned videos'**
+  String get profilePinRecoveryTitle;
+
+  /// No description provided for @profilePinRecoveryOwnerOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the profile owner can manage pinned videos.'**
+  String get profilePinRecoveryOwnerOnly;
+
+  /// No description provided for @profilePinRecoveryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check your pinned videos. Try again.'**
+  String get profilePinRecoveryLoadFailed;
+
+  /// No description provided for @profilePinRecoveryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No unavailable pinned videos.'**
+  String get profilePinRecoveryEmpty;
+
+  /// No description provided for @profilePinUnavailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get profilePinUnavailableLabel;
+
+  /// No description provided for @profilePinUnavailableCoordinate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned video coordinate'**
+  String get profilePinUnavailableCoordinate;
+
+  /// No description provided for @profilePinRemoveUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove pin'**
+  String get profilePinRemoveUnavailable;
+
+  /// No description provided for @profilePinUnavailableRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable pin removed.'**
+  String get profilePinUnavailableRemoved;
+
+  /// No description provided for @profilePinUnavailableConnectionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the network. Check your connection and try again.'**
+  String get profilePinUnavailableConnectionFailed;
+
+  /// No description provided for @profilePinUnavailableRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t remove that pin. Try again.'**
+  String get profilePinUnavailableRemoveFailed;
+
   /// No description provided for @profileShowMore.
   ///
   /// In en, this message translates to:

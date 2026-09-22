@@ -805,6 +805,43 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileUnpinFailed => 'ያንን ቪዲዮ ማንሳት አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
+  String get profilePinReviewUnavailable => 'Review unavailable pins';
+
+  @override
+  String get profilePinRecoveryTitle => 'Unavailable pinned videos';
+
+  @override
+  String get profilePinRecoveryOwnerOnly =>
+      'Only the profile owner can manage pinned videos.';
+
+  @override
+  String get profilePinRecoveryLoadFailed =>
+      'Couldn\'t check your pinned videos. Try again.';
+
+  @override
+  String get profilePinRecoveryEmpty => 'No unavailable pinned videos.';
+
+  @override
+  String get profilePinUnavailableLabel => 'Unavailable';
+
+  @override
+  String get profilePinUnavailableCoordinate => 'Pinned video coordinate';
+
+  @override
+  String get profilePinRemoveUnavailable => 'Remove pin';
+
+  @override
+  String get profilePinUnavailableRemoved => 'Unavailable pin removed.';
+
+  @override
+  String get profilePinUnavailableConnectionFailed =>
+      'Couldn\'t reach the network. Check your connection and try again.';
+
+  @override
+  String get profilePinUnavailableRemoveFailed =>
+      'Couldn\'t remove that pin. Try again.';
+
+  @override
   String get profileShowMore => 'ተጨማሪ አሳይ';
 
   @override

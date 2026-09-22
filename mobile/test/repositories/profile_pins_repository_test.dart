@@ -491,26 +491,33 @@ void main() {
     });
 
     group('unpin', () {
-      test('removes every copy of the coordinate and nothing else', () async {
+      test('removes every copy from an imported list longer than six and '
+          'preserves unrelated tags and content', () async {
+        final imported = [
+          for (var i = 0; i < ProfilePinsRepository.maxPins + 2; i++)
+            _coordinate('keep-$i'),
+        ];
         stubRelayAnswer([
           _pinList([
-            ['a', _coordinate('keep')],
             ['a', _coordinate('drop')],
             ['e', 'f' * 64],
+            for (final coordinate in imported) ['a', coordinate],
             ['a', _coordinate('drop')],
             ['a', _coordinate('drop', pubkey: _other)],
-          ], content: 'private'),
+            ['t', 'unrelated'],
+          ], content: 'private content'),
         ]);
 
         final result = await repository.unpin(_coordinate('drop'));
 
-        expect(result.coordinates, [_coordinate('keep')]);
+        expect(result.coordinates, imported);
         expect(signedTags, [
-          ['a', _coordinate('keep')],
           ['e', 'f' * 64],
+          for (final coordinate in imported) ['a', coordinate],
           ['a', _coordinate('drop', pubkey: _other)],
+          ['t', 'unrelated'],
         ]);
-        expect(signedContent, 'private');
+        expect(signedContent, 'private content');
       });
 
       test(
@@ -528,6 +535,67 @@ void main() {
           verifyNever(() => nostrClient.publishEventAwaitOk(any()));
         },
       );
+
+      test('does not write when the authoritative read is unreachable or '
+          'times out', () async {
+        for (final readResult in [
+          (noRelays: true, timedOut: true),
+          (noRelays: false, timedOut: true),
+        ]) {
+          stubRelayAnswer(
+            const [],
+            noRelays: readResult.noRelays,
+            timedOut: readResult.timedOut,
+          );
+
+          final result = await repository.unpin(_coordinate('stale'));
+
+          expect(
+            result.failure,
+            readResult.noRelays
+                ? ProfilePinFailure.couldNotReachRelays
+                : ProfilePinFailure.timedOut,
+          );
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        }
+      });
+
+      test('accepts a partial write and builds the next mutation on the '
+          'accepted copy when relay readback is stale', () async {
+        final original = _pinList([
+          ['a', _coordinate('drop')],
+          ['a', _coordinate('keep')],
+        ]);
+        var publishCount = 0;
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          final firstWrite = publishCount++ == 0;
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const ['wss://relay-one.example'],
+            rejectedBy: firstWrite
+                ? const {'wss://relay-two.example': 'rejected'}
+                : const {},
+            noResponseFrom: const [],
+          );
+        });
+        stubRelayAnswer([original]);
+
+        final first = await repository.unpin(_coordinate('drop'));
+
+        expect(first.coordinates, [_coordinate('keep')]);
+        expect(await repository.readCached(_owner), [_coordinate('keep')]);
+
+        // A relay still serves the old revision. The repository must prefer
+        // the locally accepted event when reconciling this next write.
+        stubRelayAnswer([original]);
+        final second = await repository.unpin(_coordinate('keep'));
+
+        expect(second.coordinates, isEmpty);
+        expect(signedTags, isEmpty);
+      });
     });
 
     group('releaseDeleted', () {

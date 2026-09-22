@@ -575,6 +575,23 @@
   "@profileUnpinFailed": {
     "description": "Snackbar when unpinning a video failed after reaching the relays, such as a rejection or signing failure."
   },
+  "profilePinReviewUnavailable": "Review unavailable pins",
+  "@profilePinReviewUnavailable": {
+    "description": "Owner-only action shown above the profile video grid when stored pins do not resolve to visible videos."
+  },
+  "profilePinRecoveryTitle": "Unavailable pinned videos",
+  "@profilePinRecoveryTitle": {
+    "description": "Title of the full-screen owner-only unavailable pinned-video recovery page."
+  },
+  "profilePinRecoveryOwnerOnly": "Only the profile owner can manage pinned videos.",
+  "profilePinRecoveryLoadFailed": "Couldn't check your pinned videos. Try again.",
+  "profilePinRecoveryEmpty": "No unavailable pinned videos.",
+  "profilePinUnavailableLabel": "Unavailable",
+  "profilePinUnavailableCoordinate": "Pinned video coordinate",
+  "profilePinRemoveUnavailable": "Remove pin",
+  "profilePinUnavailableRemoved": "Unavailable pin removed.",
+  "profilePinUnavailableConnectionFailed": "Couldn't reach the network. Check your connection and try again.",
+  "profilePinUnavailableRemoveFailed": "Couldn't remove that pin. Try again.",
   "profileShowMore": "Show more",
   "profileShowLess": "Show less",
   "dmMessageDisplayLimitReached": "The rest of this message isn't displayed.",

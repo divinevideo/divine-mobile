@@ -92,6 +92,17 @@ void main() {
         isTrue,
       );
     });
+
+    test('keeps unavailable-pin recovery in the owner profile context', () {
+      final path = RoutePaths.profileUnavailablePinsForNpub(_npub);
+      final route = parseRoute(path);
+
+      expect(route.type, RouteType.profile);
+      expect(route.isUnavailablePins, isTrue);
+      expect(route.videoIndex, isNull);
+      expect(buildRoute(route), path);
+      expect(isOwnProfileLocation(path, _ownHex), isTrue);
+    });
   });
 
   group('isOwnProfileGridRoute', () {

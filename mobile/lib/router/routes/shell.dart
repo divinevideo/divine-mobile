@@ -18,6 +18,7 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/liked_videos_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
+import 'package:openvine/screens/profile_unavailable_pins_screen.dart';
 import 'package:openvine/startup/app_side_effects.dart';
 
 List<RouteBase> shellRoutes() {
@@ -162,6 +163,15 @@ List<RouteBase> shellRoutes() {
           navigatorKey: NavigatorKeys.profile,
           initialLocation: ProfileScreenRouter.path,
           routes: [
+            GoRoute(
+              path: RoutePaths.profileUnavailablePins,
+              pageBuilder: (ctx, st) => branchPage(
+                st,
+                ProfileUnavailablePinsPage(
+                  npub: st.pathParameters['npub'] ?? '',
+                ),
+              ),
+            ),
             GoRoute(
               path: ProfileScreenRouter.path,
               name: ProfileScreenRouter.routeName,

@@ -466,3 +466,21 @@ The profile grid (`ProfileFeedCubit`) leads with the pinned videos in stored
 order — resolving a pin outside the loaded feed window by coordinate — and
 follows with the rest of the feed in its usual order. The fullscreen feed
 launched from the grid derives the same sequence.
+
+### Recovering unavailable pins (#9443)
+
+When the signed-in creator's profile contains pinned coordinates that do not
+resolve to visible videos, the Videos tab shows **Review unavailable pins**
+above the grid. The owner-only, URL-addressable **Unavailable pinned videos**
+page lists each coordinate as **Unavailable** and offers **Remove pin**. It
+removes only the selected coordinate through the same authoritative
+read-modify-write path as normal unpinning, including every duplicate while
+preserving imported entries and unrelated list content. The six-pin limit is
+unchanged, and imported lists are never truncated.
+
+The screen-reader announcements are **Unavailable pin removed.** after a
+successful accepted write, **Couldn't reach the network. Check your connection
+and try again.** when relays cannot be reached or time out, and **Couldn't
+remove that pin. Try again.** for other failures. Success copy reports the
+reconciled list outcome and does not promise durable storage after partial
+relay acknowledgement.

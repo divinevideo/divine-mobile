@@ -66,6 +66,7 @@ abstract final class RoutePaths {
   static const pooledFullscreenVideoFeed = '/pooled-video-feed';
   static const privacySettings = '/settings/privacy';
   static const profile = '/profile';
+  static const profileUnavailablePins = '/profile/:npub/unavailable-pins';
   static const profileSetupEdit = '/edit-profile';
   static const relayDiagnostic = '/relay-diagnostic';
   static const relaySettings = '/relay-settings';
@@ -129,6 +130,9 @@ abstract final class RoutePaths {
   static String profileForIndex(String npub, int index) =>
       '$profile/$npub/$index';
   static String profileForNpub(String npub) => '$profile/$npub';
+
+  static String profileUnavailablePinsForNpub(String npub) =>
+      '$profile/$npub/unavailable-pins';
   static String soundDetailForId(String id) => '$soundDetailBase/$id';
   static String subtitleEditorFor(String videoId) =>
       '$subtitleEditor/${Uri.encodeComponent(videoId)}';
