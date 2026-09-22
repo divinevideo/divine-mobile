@@ -40,6 +40,12 @@ class ProfileStats {
   final int? following;
 
   /// Total views across all videos.
+  ///
+  /// This is the author's aggregate engagement figure, not an archival-only
+  /// count: `ProfileRepository` fills it from funnelcake's `engagement` total,
+  /// falling back to the loop total, so a classic Vine's archived loops and a
+  /// live Divine video's loops land in the same number. A surface that needs
+  /// the archival-only per-video figure must read the event tags instead.
   final int totalViews;
 
   /// When these stats were last cached.
