@@ -11,6 +11,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -38,7 +40,7 @@ enum LibraryTabsMode {
 }
 
 /// A tab the library can show, in bar order.
-enum _LibraryTab { drafts, clips, sounds }
+enum _LibraryTab { drafts, clips, sounds, scheduled }
 
 class LibraryScreen extends ConsumerWidget {
   /// Route name for drafts path.
@@ -64,6 +66,15 @@ class LibraryScreen extends ConsumerWidget {
 
   /// Path for sounds route.
   static const String soundsPath = RoutePaths.librarySounds;
+
+  /// Route name for the scheduled-posts tab (#3538).
+  static const scheduledRouteName = 'scheduled';
+
+  /// Path for the scheduled-posts tab.
+  static const String scheduledPath = RoutePaths.libraryScheduled;
+
+  /// Tab index of the scheduled-posts tab in [LibraryTabsMode.allTabs].
+  static const int scheduledTabIndex = 3;
 
   const LibraryScreen({
     super.key,
@@ -168,6 +179,9 @@ class LibraryScreen extends ConsumerWidget {
         tabsMode: tabsMode,
         editorClips: editorClips,
         scrollController: scrollController,
+        showScheduledTab: ref.watch(
+          isFeatureEnabledProvider(FeatureFlag.scheduledPosts),
+        ),
       ),
     );
   }
@@ -180,11 +194,17 @@ class _LibraryView extends ConsumerStatefulWidget {
     required this.tabsMode,
     required this.editorClips,
     required this.scrollController,
+    required this.showScheduledTab,
   });
 
   final int initialTabIndex;
   final bool selectionMode;
   final LibraryTabsMode tabsMode;
+
+  /// Whether the Scheduled tab is offered (#3538). Feature-flagged, and only
+  /// in the standalone library: the recorder's library is for picking up
+  /// clips, and a scheduled post is not something that session can use.
+  final bool showScheduledTab;
   final List<DivineVideoClip> editorClips;
   final ScrollController? scrollController;
 
@@ -203,10 +223,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
   List<_LibraryTab> get _tabs {
     if (widget.selectionMode) return const [_LibraryTab.clips];
     return switch (widget.tabsMode) {
-      LibraryTabsMode.allTabs => const [
+      LibraryTabsMode.allTabs => [
         _LibraryTab.drafts,
         _LibraryTab.clips,
         _LibraryTab.sounds,
+        if (widget.showScheduledTab) _LibraryTab.scheduled,
       ],
       LibraryTabsMode.withoutSounds => const [
         _LibraryTab.drafts,
@@ -870,6 +891,7 @@ class _LibraryContent extends StatelessWidget {
                     _LibraryTab.drafts => context.l10n.libraryTabDrafts,
                     _LibraryTab.clips => context.l10n.libraryTabClips,
                     _LibraryTab.sounds => context.l10n.soundsTitle,
+                    _LibraryTab.scheduled => context.l10n.libraryTabScheduled,
                   },
                 ),
             ],
@@ -1121,6 +1143,7 @@ class _TabBodyState extends State<_TabBody> {
                 showCategoryManagement: true,
               ),
               _LibraryTab.sounds => const SoundsTab(),
+              _LibraryTab.scheduled => const ScheduledTab(),
             },
         ],
       ),

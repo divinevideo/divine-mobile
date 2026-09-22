@@ -17,6 +17,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
+import 'package:openvine/widgets/library/draft_status_badge.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -412,7 +413,7 @@ class DraftListTile extends StatelessWidget {
           ),
           if (isAutosaveDraft) ...[
             const SizedBox(width: 8),
-            _DraftStatusBadge(label: context.l10n.libraryDraftInProgressBadge),
+            DraftStatusBadge(label: context.l10n.libraryDraftInProgressBadge),
           ],
         ],
       ),
@@ -430,36 +431,6 @@ class DraftListTile extends StatelessWidget {
                 size: 28,
               ),
             ),
-    );
-  }
-}
-
-class _DraftStatusBadge extends StatelessWidget {
-  const _DraftStatusBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: VineTheme.vineGreen.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: context.vineColors.accentPositive.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Text(
-          label,
-          style: VineTheme.labelSmallFont(
-            color: context.vineColors.accentPositive,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
     );
   }
 }

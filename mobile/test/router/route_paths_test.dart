@@ -37,6 +37,7 @@ void main() {
       expect(RoutePaths.libraryClips, equals('/clips'));
       expect(RoutePaths.libraryClipsOnly, equals('/clips-only'));
       expect(RoutePaths.libraryDrafts, equals('/drafts'));
+      expect(RoutePaths.libraryScheduled, equals('/scheduled'));
       expect(RoutePaths.likedVideos, equals('/liked-videos'));
       expect(RoutePaths.messageRequests, equals('/inbox/message-requests'));
       expect(RoutePaths.minorAccountReview, equals('/account-review'));

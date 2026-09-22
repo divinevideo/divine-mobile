@@ -1,4 +1,5 @@
-// ABOUTME: Library routes (drafts / clips / clips-only / sounds tabs, sound upload)
+// ABOUTME: Library routes (drafts / clips / clips-only / sounds / scheduled
+// ABOUTME: tabs, sound upload)
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:go_router/go_router.dart';
@@ -58,6 +59,16 @@ List<RouteBase> libraryRoutes() {
           builder: (_, _) => const SoundUploadScreen(),
         ),
       ],
+    ),
+    GoRoute(
+      path: LibraryScreen.scheduledPath,
+      name: LibraryScreen.scheduledRouteName,
+      pageBuilder: (_, state) => fadeUpwardsPage(
+        state: state,
+        child: const LibraryScreen(
+          initialTabIndex: LibraryScreen.scheduledTabIndex,
+        ),
+      ),
     ),
   ];
 }
