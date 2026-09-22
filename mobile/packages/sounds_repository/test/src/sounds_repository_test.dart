@@ -84,11 +84,13 @@ void main() {
       required String pubkey,
       int? createdAt,
       String? url = 'https://example.com/audio.mp3',
+      String? mimeType = 'audio/mpeg',
       String? title,
       double? duration,
     }) {
       final tags = <List<dynamic>>[];
       if (url != null) tags.add(['url', url]);
+      if (mimeType != null) tags.add(['m', mimeType]);
       if (title != null) tags.add(['title', title]);
       if (duration != null) tags.add(['duration', duration.toString()]);
 
@@ -208,6 +210,55 @@ void main() {
         expect(filters.first.kinds, contains(audioEventKind));
       });
 
+      test('asks the relay for audio MIME types only', () async {
+        // Kind 1063 is generic file metadata, so without `#m` the relay
+        // spends the limit on whatever files other clients published last.
+        await repository.fetchTrendingSounds();
+
+        final captured = verify(
+          () => mockNostrClient.queryEvents(captureAny()),
+        ).captured;
+
+        final filters = captured.first as List<Filter>;
+        expect(filters.first.m, equals(SoundsRepository.audioMimeTypes));
+        expect(
+          SoundsRepository.audioMimeTypes,
+          containsAll(['audio/wav', 'audio/mpeg', 'audio/mp4']),
+        );
+      });
+
+      test('skips Kind 1063 files that are not audio', () async {
+        final sound = createAudioEvent(
+          id: testEventId1,
+          pubkey: testPubkey1,
+          title: 'Sound',
+          mimeType: 'audio/wav',
+        );
+        final pdf = createAudioEvent(
+          id: testEventId2,
+          pubkey: testPubkey2,
+          title: 'Flyer',
+          url: 'https://example.com/flyer.pdf',
+          mimeType: 'application/pdf',
+        );
+        final untyped = createAudioEvent(
+          id: testVideoEventId,
+          pubkey: testPubkey2,
+          title: 'No m tag',
+          mimeType: null,
+        );
+
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [sound, pdf, untyped]);
+
+        final sounds = await repository.fetchTrendingSounds();
+
+        expect(sounds.map((s) => s.id), equals([testEventId1]));
+        expect(repository.getSoundFromCache(testEventId2), isNull);
+        expect(repository.getSoundFromCache(testVideoEventId), isNull);
+      });
+
       test('skips events with wrong kind', () async {
         final audioEvent = createAudioEvent(
           id: testEventId1,
@@ -258,6 +309,7 @@ void main() {
         final filters = captured.first as List<Filter>;
         expect(filters.first.authors, contains(testPubkey1));
         expect(filters.first.kinds, contains(audioEventKind));
+        expect(filters.first.m, equals(SoundsRepository.audioMimeTypes));
       });
 
       test('returns sounds by specific creator', () async {
@@ -873,6 +925,43 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
 
         expect(repository.getSoundFromCache(testEventId1), isNotNull);
+      });
+
+      test('subscribes to audio MIME types only', () async {
+        await repository.initialize();
+
+        final captured = verify(
+          () => mockNostrClient.subscribe(
+            captureAny(),
+            subscriptionId: any(named: 'subscriptionId'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            sendAfterAuth: any(named: 'sendAfterAuth'),
+            onEose: any(named: 'onEose'),
+          ),
+        ).captured;
+
+        final filters = captured.single as List<Filter>;
+        expect(filters.single.kinds, equals([audioEventKind]));
+        expect(filters.single.m, equals(SoundsRepository.audioMimeTypes));
+      });
+
+      test('ignores Kind 1063 files that are not audio', () async {
+        await repository.initialize();
+
+        streamController.add(
+          createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Flyer',
+            url: 'https://example.com/flyer.pdf',
+            mimeType: 'application/pdf',
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(repository.getSoundFromCache(testEventId1), isNull);
       });
 
       test('ignores non-audio events from subscription', () async {

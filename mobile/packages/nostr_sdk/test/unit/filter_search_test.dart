@@ -64,6 +64,52 @@ void main() {
       expect(filter.checkEvent(lowercaseEvent), isTrue);
       expect(filter.checkEvent(mixedCaseEvent), isFalse);
     });
+
+    test('matches #m tags exactly', () {
+      final audioEvent = Event(
+        pubkey,
+        1063,
+        const [
+          ['m', 'audio/wav'],
+        ],
+        '',
+        createdAt: 1,
+      );
+      final pdfEvent = Event(
+        pubkey,
+        1063,
+        const [
+          ['m', 'application/pdf'],
+        ],
+        '',
+        createdAt: 1,
+      );
+      final untypedEvent = Event(pubkey, 1063, const [], '', createdAt: 1);
+
+      final filter = Filter(m: const ['audio/wav', 'audio/mpeg']);
+
+      expect(filter.checkEvent(audioEvent), isTrue);
+      expect(filter.checkEvent(pdfEvent), isFalse);
+      expect(filter.checkEvent(untypedEvent), isFalse);
+    });
+  });
+
+  group('Filter #m serialization', () {
+    test('round trips the m tag filter through JSON as #m', () {
+      final filter = Filter(kinds: [1063], m: const ['audio/wav']);
+
+      final json = filter.toJson();
+      expect(json['#m'], equals(['audio/wav']));
+
+      expect(Filter.fromJson(json).m, equals(['audio/wav']));
+    });
+
+    test('omits #m when no m tag filter is set', () {
+      final json = Filter(kinds: [1063]).toJson();
+
+      expect(json.containsKey('#m'), isFalse);
+      expect(Filter.fromJson(json).m, isNull);
+    });
   });
 
   group('Filter Search Tests', () {

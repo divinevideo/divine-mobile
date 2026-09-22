@@ -41,6 +41,9 @@ class Filter {
   /// a list of kind values that are referenced in an uppercase "K" tag (NIP-22 root kind)
   List<String>? uppercaseK;
 
+  /// a list of MIME types that are referenced in an "m" tag (NIP-94 file metadata)
+  List<String>? m;
+
   /// a timestamp, events must be newer than this to pass
   int? since;
 
@@ -67,6 +70,7 @@ class Filter {
     this.uppercaseE,
     this.uppercaseA,
     this.uppercaseK,
+    this.m,
     this.since,
     this.until,
     this.limit,
@@ -89,6 +93,7 @@ class Filter {
     uppercaseE = json['#E'] == null ? null : List<String>.from(json['#E']);
     uppercaseA = json['#A'] == null ? null : List<String>.from(json['#A']);
     uppercaseK = json['#K'] == null ? null : List<String>.from(json['#K']);
+    m = json['#m'] == null ? null : List<String>.from(json['#m']);
     since = json['since'];
     until = json['until'];
     limit = json['limit'];
@@ -133,6 +138,9 @@ class Filter {
     }
     if (uppercaseK != null) {
       data['#K'] = uppercaseK;
+    }
+    if (m != null) {
+      data['#m'] = m;
     }
     if (since != null) {
       data['since'] = since;
@@ -179,6 +187,7 @@ class Filter {
     List<String> uppercaseEs = [];
     List<String> uppercaseAs = [];
     List<String> uppercaseKs = [];
+    List<String> ms = [];
     for (var tag in event.tags) {
       if (tag.length > 1) {
         var k = tag[0];
@@ -202,6 +211,8 @@ class Filter {
           uppercaseAs.add(v);
         } else if (k == "K") {
           uppercaseKs.add(v);
+        } else if (k == "m") {
+          ms.add(v);
         }
       }
     }
@@ -266,6 +277,13 @@ class Filter {
           return uppercaseK!.contains(v);
         })))) {
       // filter query K but Ks don't contains K.
+      return false;
+    }
+    if (m != null &&
+        (!(ms.any((v) {
+          return m!.contains(v);
+        })))) {
+      // filter query m but ms don't contains m.
       return false;
     }
 

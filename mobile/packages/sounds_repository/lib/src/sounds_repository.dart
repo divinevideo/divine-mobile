@@ -42,6 +42,43 @@ class SoundsRepository {
   /// [fetchVideosUsingSoundCounts].
   static const int maxBatchedUsageCountScan = 500;
 
+  /// The `m` tag values every audio query asks the relay for.
+  ///
+  /// Kind 1063 is NIP-94 *file* metadata, not audio metadata: other clients
+  /// publish PDFs, images, videos and app bundles under the same kind, and
+  /// the relays federate them. A plain `kinds: [1063]` query spends its
+  /// `limit` on the newest files of any type, so on a relay where those
+  /// outnumber sounds the list came back holding one non-audio file and
+  /// none of the sounds. NIP-01 tag filters are exact matches, so this
+  /// enumerates the spellings rather than a prefix; it must stay a superset
+  /// of what the app mints (`audio/wav`, `audio/mpeg`, `audio/mp4`,
+  /// `audio/aac`, `audio/webm`). The same list gates events client-side in
+  /// [isAudioFile], so a relay that ignores `#m` still cannot list a file.
+  static const List<String> audioMimeTypes = [
+    'audio/aac',
+    'audio/aacp',
+    'audio/flac',
+    'audio/m4a',
+    'audio/mp3',
+    'audio/mp4',
+    'audio/mpeg',
+    'audio/ogg',
+    'audio/wav',
+    'audio/wave',
+    'audio/webm',
+    'audio/x-flac',
+    'audio/x-m4a',
+    'audio/x-wav',
+  ];
+
+  /// Whether [sound] carries an `m` tag naming one of [audioMimeTypes].
+  ///
+  /// This is the client-side half of the `#m` relay filter, applied to every
+  /// event before it can be listed or cached from a subscription. A Kind 1063
+  /// without a recognised audio MIME type is a file, not a sound.
+  static bool isAudioFile(AudioEvent sound) =>
+      audioMimeTypes.contains(sound.mimeType);
+
   final NostrClient _nostrClient;
   final SoundLibraryApiClient? _soundLibraryApiClient;
 
@@ -142,7 +179,7 @@ class SoundsRepository {
 
     try {
       final events = await _nostrClient.queryEvents([
-        Filter(kinds: const [audioEventKind], limit: limit),
+        Filter(kinds: const [audioEventKind], m: audioMimeTypes, limit: limit),
       ]);
 
       final audioEvents = _processAndCacheEvents(events);
@@ -189,7 +226,12 @@ class SoundsRepository {
 
     try {
       final events = await _nostrClient.queryEvents([
-        Filter(authors: [pubkey], kinds: const [audioEventKind], limit: limit),
+        Filter(
+          authors: [pubkey],
+          kinds: const [audioEventKind],
+          m: audioMimeTypes,
+          limit: limit,
+        ),
       ]);
 
       final audioEvents = _processAndCacheEvents(events);
@@ -313,11 +355,7 @@ class SoundsRepository {
 
   void _logUnresolvedSoundOnce(String eventId, String message) {
     if (!_loggedUnresolvedSoundIds.add(eventId)) return;
-    Log.warning(
-      message,
-      name: 'SoundsRepository',
-      category: LogCategory.api,
-    );
+    Log.warning(message, name: 'SoundsRepository', category: LogCategory.api);
   }
 
   /// Fetch the count of videos using a specific sound, via NIP-45 COUNT.
@@ -520,7 +558,7 @@ class SoundsRepository {
     _subscriptionId = 'sounds_repo_audio_events';
 
     final eventStream = _nostrClient.subscribe([
-      Filter(kinds: const [audioEventKind], limit: 100),
+      Filter(kinds: const [audioEventKind], m: audioMimeTypes, limit: 100),
     ], subscriptionId: _subscriptionId);
 
     _subscription = eventStream.listen(
@@ -540,9 +578,13 @@ class SoundsRepository {
   }
 
   /// Process and cache a single Nostr event as an AudioEvent.
+  ///
+  /// A non-audio file is dropped here as well as at the relay, so a relay
+  /// that ignores `#m` cannot feed one into [soundsStream].
   void _processAndCacheEvent(Event event) {
     try {
       final audioEvent = AudioEvent.fromNostrEvent(event);
+      if (!isAudioFile(audioEvent)) return;
       _cacheSound(audioEvent);
       // coverage:ignore-start
     } on Exception catch (e) {
@@ -568,7 +610,9 @@ class SoundsRepository {
       try {
         final audioEvent = AudioEvent.fromNostrEvent(event);
 
-        // Skip events without a title or playable URL
+        // Skip files that are not audio, and sounds without a title or
+        // playable URL
+        if (!isAudioFile(audioEvent)) continue;
         if (audioEvent.title == null || audioEvent.title!.isEmpty) continue;
         if (audioEvent.url == null || audioEvent.url!.isEmpty) continue;
 
