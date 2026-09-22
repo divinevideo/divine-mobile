@@ -16,6 +16,7 @@ import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
@@ -107,6 +108,7 @@ void main() {
     viewEventRetryServiceProvider.overrideWithValue(null),
     productEventQueueProvider.overrideWithValue(_MockProductEventQueue()),
     profileSaveRetryServiceProvider.overrideWithValue(null),
+    scheduledPostCoordinatorProvider.overrideWithValue(null),
     zendeskIdentitySyncProvider.overrideWithValue(null),
     supporterRecoveryProvider.overrideWithValue(null),
     // Shell tier. The three that construct real services record instead.
@@ -333,6 +335,7 @@ void main() {
       'viewEventRetryServiceProvider',
       'productEventQueueProvider',
       'profileSaveRetryServiceProvider',
+      'scheduledPostCoordinatorProvider',
       'zendeskIdentitySyncProvider',
       'analyticsIdentitySyncProvider',
       'supporterRecoveryProvider',

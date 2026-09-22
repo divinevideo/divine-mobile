@@ -1,0 +1,583 @@
+// ABOUTME: Drives the scheduled-post outbox for one account (#3538): hands
+// ABOUTME: posts to the relay, mirrors its verdicts, publishes what the relay
+// ABOUTME: did not, and runs the confirmed-publish side effects.
+
+import 'dart:async';
+
+import 'package:db_client/db_client.dart';
+import 'package:meta/meta.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:openvine/exceptions/video_exceptions.dart';
+import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/repositories/scheduled_posts_repository.dart';
+import 'package:openvine/services/collaborator_invite_service.dart';
+import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/schedule_api_client.dart';
+import 'package:openvine/services/video_publish/scheduled_event_restamper.dart';
+import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
+import 'package:openvine/utils/async_utils.dart';
+import 'package:openvine/utils/collaborator_tags.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+/// Signs an unsigned event body. Bound to `AuthService.createAndSignEvent`.
+typedef ScheduledEventSigner = Future<Event?> Function({
+  required int kind,
+  required String content,
+  List<List<String>>? tags,
+  int? createdAt,
+});
+
+/// Broadcasts an already-signed event. Bound to
+/// `SignedEventRelayPublisher.publish`, whose retry-mode presence check keeps
+/// a post the relay already published from being sent twice.
+typedef ScheduledEventBroadcaster = Future<EventPublishOutcome> Function(
+  Event event, {
+  bool isRetry,
+});
+
+/// Side effects of a confirmed publish. Bound to
+/// `VideoEventPublisher.recordScheduledPublish`.
+typedef ScheduledPublishRecorder = Future<void> Function(
+  Event event, {
+  String? uploadId,
+});
+
+/// Outcome of a user action on a scheduled post.
+enum ScheduledPostActionOutcome {
+  /// The action took effect.
+  done,
+
+  /// The relay had already published the post; it is live now.
+  alreadyPublished,
+
+  /// The relay could not be reached; nothing changed.
+  unavailable,
+
+  /// Signing failed, or the account is not the owner; nothing changed.
+  failed,
+}
+
+/// One account's scheduled posts, from hand-off to publish.
+///
+/// Lifecycle mirrors `ReportRetryService`: a sweep runs on foreground, on
+/// reconnect, after every outbox write, and from one held timer armed to the
+/// next moment a row needs attention. A sweep (1) hands pending rows to the
+/// relay — or publishes them directly when their time is too close for the
+/// relay to accept — (2) mirrors the relay's queue state, (3) publishes held
+/// posts the relay is late on, and (4) runs the confirmed-publish side
+/// effects for anything that went live.
+///
+/// Owner-scoped: every step re-checks that the signed-in account still owns
+/// the outbox, so an account switch mid-sweep publishes nothing for the
+/// previous account.
+class ScheduledPostCoordinator {
+  ScheduledPostCoordinator({
+    required ScheduledPostsRepository repository,
+    required ScheduledEventBroadcaster broadcast,
+    required ScheduledPublishRecorder recordPublish,
+    required ScheduledEventSigner sign,
+    required DraftStorageService draftService,
+    required Stream<bool> appForegroundStream,
+    required String Function() currentPubkey,
+    CollaboratorInviteService? collaboratorInviteService,
+    Stream<void>? retryTriggerStream,
+    Stream<void>? outboxChangedStream,
+    Duration syncInterval = const Duration(minutes: 5),
+    Duration minTimerDelay = const Duration(seconds: 5),
+    Duration maxTimerDelay = const Duration(hours: 1),
+    DateTime Function() now = DateTime.now,
+  }) : _repository = repository,
+       _broadcast = broadcast,
+       _recordPublish = recordPublish,
+       _sign = sign,
+       _draftService = draftService,
+       _appForegroundStream = appForegroundStream,
+       _currentPubkey = currentPubkey,
+       _inviteService = collaboratorInviteService,
+       _retryTriggerStream = retryTriggerStream,
+       _outboxChangedStream = outboxChangedStream,
+       _syncInterval = syncInterval,
+       _minTimerDelay = minTimerDelay,
+       _maxTimerDelay = maxTimerDelay,
+       _now = now;
+
+  final ScheduledPostsRepository _repository;
+  final ScheduledEventBroadcaster _broadcast;
+  final ScheduledPublishRecorder _recordPublish;
+  final ScheduledEventSigner _sign;
+  final DraftStorageService _draftService;
+  final Stream<bool> _appForegroundStream;
+  final String Function() _currentPubkey;
+  final CollaboratorInviteService? _inviteService;
+  final Stream<void>? _retryTriggerStream;
+  final Stream<void>? _outboxChangedStream;
+  final Duration _syncInterval;
+  final Duration _minTimerDelay;
+
+  /// Web's `setTimeout` overflows past ~24.8 days and fires at once; a post
+  /// 90 days out is re-armed from a shorter timer instead.
+  final Duration _maxTimerDelay;
+  final DateTime Function() _now;
+
+  StreamSubscription<bool>? _foregroundSubscription;
+  StreamSubscription<void>? _retrySubscription;
+  StreamSubscription<void>? _outboxSubscription;
+  Timer? _timer;
+  bool _isInitialized = false;
+  bool _isSweeping = false;
+  bool _foreground = true;
+  bool _disposed = false;
+  bool _sweepAgain = false;
+  bool _forceNext = false;
+  DateTime? _lastSyncAt;
+  List<ScheduledPostServerEntry> _serverOnly = const [];
+  final _serverOnlyChanges = StreamController<void>.broadcast();
+
+  static const _logName = 'ScheduledPostCoordinator';
+
+  bool get isInitialized => _isInitialized;
+
+  @visibleForTesting
+  bool get isSweeping => _isSweeping;
+
+  @visibleForTesting
+  bool get hasTimer => _timer != null;
+
+  String get ownerPubkey => _repository.ownerPubkey;
+
+  /// Posts the relay holds for this account that were scheduled from another
+  /// device, as of the last sync. They can only be withdrawn from here.
+  List<ScheduledPostServerEntry> get serverOnlyPosts => _serverOnly;
+
+  /// Fires when [serverOnlyPosts] changes.
+  Stream<void> get serverOnlyChanges => _serverOnlyChanges.stream;
+
+  bool get _ownsOutbox => _currentPubkey() == ownerPubkey;
+
+  Future<void> initialize() async {
+    if (_isInitialized || _disposed) return;
+    _isInitialized = true;
+    _foregroundSubscription = _appForegroundStream.listen((foreground) {
+      _foreground = foreground;
+      if (foreground) {
+        unawaited(sweep(force: true));
+      } else {
+        _timer?.cancel();
+        _timer = null;
+      }
+    });
+    _retrySubscription = _retryTriggerStream?.listen((_) {
+      if (_foreground) unawaited(sweep(force: true));
+    });
+    _outboxSubscription = _outboxChangedStream?.listen(
+      (_) => unawaited(sweep()),
+    );
+    unawaited(sweep(force: true));
+  }
+
+  Future<void> dispose() async {
+    _disposed = true;
+    _isInitialized = false;
+    _timer?.cancel();
+    _timer = null;
+    await _foregroundSubscription?.cancel();
+    await _retrySubscription?.cancel();
+    await _outboxSubscription?.cancel();
+    await _serverOnlyChanges.close();
+  }
+
+  /// Runs one pass over the outbox. [force] also refreshes the relay's view
+  /// regardless of how recently it was synced.
+  Future<void> sweep({bool force = false}) async {
+    if (_disposed || !_foreground) return;
+    if (_isSweeping) {
+      _sweepAgain = true;
+      _forceNext |= force;
+      return;
+    }
+    _isSweeping = true;
+    _timer?.cancel();
+    _timer = null;
+    try {
+      if (_ownsOutbox) await _sweepOnce(force: force);
+    } on AsyncCancelledException {
+      // Disposed mid-publish: teardown, not a failed sweep.
+    } catch (e, stackTrace) {
+      Log.warning(
+        'Scheduled-post sweep failed; rows are retained: $e',
+        name: _logName,
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _isSweeping = false;
+      if (_sweepAgain && !_disposed && _foreground) {
+        final forceNext = _forceNext;
+        _sweepAgain = false;
+        _forceNext = false;
+        unawaited(sweep(force: forceNext));
+      } else {
+        await _scheduleNext();
+      }
+    }
+  }
+
+  Future<void> _sweepOnce({required bool force}) async {
+    final now = _now();
+    var pending = await _repository.pending();
+    // A forced sweep syncs even with nothing local, so posts scheduled from
+    // another device show up.
+    if (pending.isEmpty && !force) return;
+
+    for (final post in pending) {
+      if (_stop) return;
+      if (post.status != ScheduledPostStatus.pendingSubmit) continue;
+      if (_repository.shouldPublishDirectly(post, now)) {
+        await _publishHeldPost(post);
+      } else if (_repository.isSubmitDue(post, now)) {
+        await _repository.submit(post.eventId);
+      }
+    }
+    if (_stop) return;
+
+    pending = await _repository.pending();
+    final anyHeld = pending.any(
+      (p) => p.status == ScheduledPostStatus.scheduled,
+    );
+    final syncDue =
+        _lastSyncAt == null ||
+        !now.isBefore(_lastSyncAt!.add(_syncInterval)) ||
+        _repository.dueForClientPublish(pending, now).isNotEmpty;
+    if (force || (anyHeld && syncDue)) {
+      final sync = await _repository.syncFromServer();
+      if (sync.succeeded) {
+        _lastSyncAt = now;
+        _publishServerOnly(sync.serverOnly);
+      }
+      if (_stop) return;
+      for (final post in sync.published) {
+        await _finalizePublished(post);
+      }
+      for (final post in sync.cancelled) {
+        await _finalizeCancelled(post);
+      }
+      pending = await _repository.pending();
+    }
+    if (_stop) return;
+
+    for (final post in _repository.dueForClientPublish(pending, _now())) {
+      if (_stop) return;
+      await _publishHeldPost(post);
+    }
+  }
+
+  bool get _stop => _disposed || !_foreground || !_ownsOutbox;
+
+  void _publishServerOnly(List<ScheduledPostServerEntry> entries) {
+    final ids = {for (final e in entries) e.eventId};
+    final previous = {for (final e in _serverOnly) e.eventId};
+    _serverOnly = entries;
+    if (ids.length != previous.length || !ids.containsAll(previous)) {
+      if (!_serverOnlyChanges.isClosed) _serverOnlyChanges.add(null);
+    }
+  }
+
+  /// Withdraws a post scheduled from another device.
+  Future<ScheduledPostActionOutcome> cancelRemote(String eventId) async {
+    if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
+    final outcome = await _repository.cancelRemote(eventId);
+    if (outcome == ScheduledPostCancelOutcome.cancelled ||
+        outcome == ScheduledPostCancelOutcome.alreadyPublished) {
+      _publishServerOnly([
+        for (final entry in _serverOnly)
+          if (entry.eventId != eventId) entry,
+      ]);
+    }
+    return switch (outcome) {
+      ScheduledPostCancelOutcome.cancelled => ScheduledPostActionOutcome.done,
+      ScheduledPostCancelOutcome.alreadyPublished =>
+        ScheduledPostActionOutcome.alreadyPublished,
+      ScheduledPostCancelOutcome.unavailable =>
+        ScheduledPostActionOutcome.unavailable,
+      ScheduledPostCancelOutcome.failure => ScheduledPostActionOutcome.failed,
+    };
+  }
+
+  /// Broadcasts a held [post] from this device. A transient failure leaves
+  /// the row for the next sweep; the relay may still publish it meanwhile.
+  Future<bool> _publishHeldPost(ScheduledPost post) async {
+    final event = ScheduledPostsRepository.decodeEvent(post);
+    final EventPublishOutcome outcome;
+    try {
+      outcome = await _broadcast(event, isRetry: true);
+    } on AccountRestrictedPublishException catch (e) {
+      await _repository.markFailed(post.eventId, e.reason);
+      return false;
+    }
+    if (outcome != EventPublishOutcome.published) {
+      Log.info(
+        'Scheduled event ${post.eventId} not published yet; will retry',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return false;
+    }
+    if (_disposed) return true;
+    await _repository.markPublished(post.eventId);
+    await _finalizePublished(post);
+    return true;
+  }
+
+  /// The post is live: echo it locally, send the collaborator invites that
+  /// waited for it, and retire the draft copy and the outbox row.
+  Future<void> _finalizePublished(ScheduledPost post) async {
+    final event = ScheduledPostsRepository.decodeEvent(post);
+    try {
+      await _recordPublish(event, uploadId: post.uploadId);
+    } catch (e, stackTrace) {
+      Log.warning(
+        'Local echo of scheduled event ${post.eventId} failed: $e',
+        name: _logName,
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    await _sendCollaboratorInvites(event);
+    await _deleteDraft(post.draftId);
+    await _repository.delete(post.eventId);
+    Log.info(
+      'Scheduled event ${post.eventId} is live',
+      name: _logName,
+      category: LogCategory.video,
+    );
+  }
+
+  /// The relay dropped the post (cancelled elsewhere): the draft copy
+  /// becomes an ordinary draft again.
+  Future<void> _finalizeCancelled(ScheduledPost post) async {
+    await _draftService.updatePublishStatus(
+      draftId: post.draftId,
+      status: PublishStatus.draft,
+    );
+    await _repository.delete(post.eventId);
+  }
+
+  Future<void> _sendCollaboratorInvites(Event event) async {
+    final inviteService = _inviteService;
+    if (inviteService == null) return;
+    final collaborators = <String>{};
+    String? dTag;
+    String? title;
+    String? thumbnailUrl;
+    for (final tag in event.tags) {
+      if (tag.length < 2) continue;
+      switch (tag[0]) {
+        case 'p' when tag.length >= 4 && tag[3] == 'collaborator':
+          collaborators.add(tag[1]);
+        case 'd':
+          dTag = tag[1];
+        case 'title':
+          title = tag[1];
+        case 'image':
+          thumbnailUrl = tag[1];
+      }
+    }
+    if (collaborators.isEmpty || dTag == null || dTag.isEmpty) return;
+    try {
+      await inviteService.sendInvites(
+        collaboratorPubkeys: collaborators,
+        creatorPubkey: event.pubkey,
+        videoAddress: '${event.kind}:${event.pubkey}:$dTag',
+        title: title,
+        thumbnailUrl: thumbnailUrl,
+        relayHint: collaboratorInviteRelayHint,
+      );
+    } catch (e, stackTrace) {
+      Log.warning(
+        'Collaborator invites for scheduled event ${event.id} failed: $e',
+        name: _logName,
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _deleteDraft(String draftId) async {
+    try {
+      await _draftService.deleteDraft(draftId);
+    } catch (e, stackTrace) {
+      Log.warning(
+        'Failed to delete draft $draftId of a published scheduled post: $e',
+        name: _logName,
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Withdraws [eventId] and returns its draft to the Drafts list.
+  Future<ScheduledPostActionOutcome> cancel(String eventId) async {
+    if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
+    final post = await _repository.getById(eventId);
+    if (post == null) return ScheduledPostActionOutcome.done;
+
+    switch (await _repository.cancelOnServer(eventId)) {
+      case ScheduledPostCancelOutcome.cancelled:
+        await _finalizeCancelled(post);
+        return ScheduledPostActionOutcome.done;
+      case ScheduledPostCancelOutcome.alreadyPublished:
+        await _finalizePublished(post);
+        return ScheduledPostActionOutcome.alreadyPublished;
+      case ScheduledPostCancelOutcome.unavailable:
+        return ScheduledPostActionOutcome.unavailable;
+      case ScheduledPostCancelOutcome.failure:
+        return ScheduledPostActionOutcome.failed;
+    }
+  }
+
+  /// Moves [eventId] to [newPublishAt]: a newly signed event replaces the
+  /// held one, which is withdrawn from the relay.
+  Future<ScheduledPostActionOutcome> reschedule(
+    String eventId,
+    DateTime newPublishAt,
+  ) async {
+    if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
+    final post = await _repository.getById(eventId);
+    if (post == null) return ScheduledPostActionOutcome.failed;
+
+    final signed = await _resign(
+      post,
+      createdAt: newPublishAt.toUtc().millisecondsSinceEpoch ~/ 1000,
+    );
+    if (signed == null) return ScheduledPostActionOutcome.failed;
+
+    final withdrawn = await _withdrawBeforeReplacing(post);
+    if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
+
+    await _repository.enqueue(
+      event: signed,
+      draftId: post.draftId,
+      uploadId: post.uploadId,
+      expireAfterSecs: post.expireAfterSecs,
+    );
+    await _repository.delete(post.eventId);
+    await _repository.submit(signed.id);
+    return ScheduledPostActionOutcome.done;
+  }
+
+  /// Publishes [eventId] right away, as a newly signed event dated now.
+  Future<ScheduledPostActionOutcome> publishNow(String eventId) async {
+    if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
+    final post = await _repository.getById(eventId);
+    if (post == null) return ScheduledPostActionOutcome.failed;
+
+    final signed = await _resign(
+      post,
+      createdAt: _now().toUtc().millisecondsSinceEpoch ~/ 1000,
+    );
+    if (signed == null) return ScheduledPostActionOutcome.failed;
+
+    final withdrawn = await _withdrawBeforeReplacing(post);
+    if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
+
+    final replacement = await _repository.enqueue(
+      event: signed,
+      draftId: post.draftId,
+      uploadId: post.uploadId,
+      expireAfterSecs: post.expireAfterSecs,
+    );
+    await _repository.delete(post.eventId);
+    final published = await _publishHeldPost(replacement);
+    return published
+        ? ScheduledPostActionOutcome.done
+        : ScheduledPostActionOutcome.unavailable;
+  }
+
+  /// Gives a failed post another go: back to the relay when its time is
+  /// still ahead, otherwise published now.
+  Future<ScheduledPostActionOutcome> retry(String eventId) async {
+    if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
+    final post = await _repository.getById(eventId);
+    if (post == null) return ScheduledPostActionOutcome.failed;
+    if (post.status != ScheduledPostStatus.failed) {
+      return ScheduledPostActionOutcome.done;
+    }
+
+    final now = _now();
+    if (post.publishAtUtc.isAfter(
+      now.add(_repository.config.directPublishLead),
+    )) {
+      await _repository.requeue(eventId);
+      await _repository.submit(eventId);
+      return ScheduledPostActionOutcome.done;
+    }
+    return publishNow(eventId);
+  }
+
+  Future<Event?> _resign(ScheduledPost post, {required int createdAt}) async {
+    final source = ScheduledPostsRepository.decodeEvent(post);
+    final body = restampScheduledEvent(
+      source,
+      createdAt: createdAt,
+      expireAfterSecs: post.expireAfterSecs,
+    );
+    final signed = await _sign(
+      kind: source.kind,
+      content: body.content,
+      tags: body.tags,
+      createdAt: createdAt,
+    );
+    if (signed == null || signed.createdAt != createdAt) {
+      Log.error(
+        'Could not re-sign scheduled event ${post.eventId} for $createdAt',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return null;
+    }
+    return signed;
+  }
+
+  /// Withdraws the held event so the relay never publishes both versions.
+  Future<ScheduledPostActionOutcome> _withdrawBeforeReplacing(
+    ScheduledPost post,
+  ) async {
+    switch (await _repository.cancelOnServer(post.eventId)) {
+      case ScheduledPostCancelOutcome.cancelled:
+        return ScheduledPostActionOutcome.done;
+      case ScheduledPostCancelOutcome.alreadyPublished:
+        await _finalizePublished(post);
+        return ScheduledPostActionOutcome.alreadyPublished;
+      case ScheduledPostCancelOutcome.unavailable:
+        return ScheduledPostActionOutcome.unavailable;
+      case ScheduledPostCancelOutcome.failure:
+        return ScheduledPostActionOutcome.failed;
+    }
+  }
+
+  Future<void> _scheduleNext() async {
+    if (!_isInitialized || _disposed || !_foreground || _isSweeping) return;
+    Duration? delay;
+    try {
+      final pending = await _repository.pending();
+      delay = _repository.nextWakeIn(pending, _now());
+    } catch (e) {
+      Log.warning(
+        'Could not schedule the next scheduled-post sweep: $e',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      delay = _maxTimerDelay;
+    }
+    if (!_isInitialized || _disposed || !_foreground || _isSweeping) return;
+    if (delay == null) return;
+    if (delay < _minTimerDelay) delay = _minTimerDelay;
+    if (delay > _maxTimerDelay) delay = _maxTimerDelay;
+    _timer?.cancel();
+    _timer = Timer(delay, () => unawaited(sweep()));
+  }
+}
