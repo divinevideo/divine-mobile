@@ -786,13 +786,12 @@ void main() {
       addTearDown(sub.close);
       addTearDown(updates.close);
 
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verifyNever(() => profileRepository.fetchFreshProfile(pubkey: pubkey));
 
       updates.add(_stats(pubkey));
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(emitted.last.value, _stats(pubkey));
     });
@@ -814,8 +813,7 @@ void main() {
       addTearDown(sub.close);
       addTearDown(updates.close);
 
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       verify(
         () => profileRepository.fetchFreshProfile(pubkey: pubkey),
@@ -840,13 +838,11 @@ void main() {
         fireImmediately: true,
       );
 
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
       expect(container.exists(videoCardAuthorStatsProvider(pubkey)), isTrue);
 
       sub.close();
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await pumpEventQueue();
 
       expect(cancelled, isTrue);
       expect(container.exists(videoCardAuthorStatsProvider(pubkey)), isFalse);
