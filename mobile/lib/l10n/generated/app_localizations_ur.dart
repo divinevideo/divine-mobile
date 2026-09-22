@@ -6202,6 +6202,91 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryTabClips => 'کلپس';
 
   @override
+  String get libraryTabScheduled => 'شیڈول شدہ';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'ابھی کچھ شیڈول نہیں ہے';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'اگلی ویڈیو پر وقت منتخب کریں، وہ یہاں رہے گی جب تک شائع نہ ہو جائے۔';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$time کو شائع ہوگی';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'شیڈول شدہ';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'سرور کا انتظار';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'شائع نہیں ہوئی';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'اپلوڈ ہو رہی ہے';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'کسی اور ڈیوائس پر شیڈول کی گئی';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return '$title کے لیے مزید اختیارات';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'وقت تبدیل کریں';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'ابھی پوسٹ کریں';
+
+  @override
+  String get libraryScheduledActionRetry => 'دوبارہ کوشش کریں';
+
+  @override
+  String get libraryScheduledActionCancel => 'پوسٹ منسوخ کریں';
+
+  @override
+  String get libraryScheduledCancelTitle => 'یہ پوسٹ منسوخ کریں؟';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'یہ آپ کے مسودوں میں واپس چلی جائے گی۔ کچھ شائع نہیں ہوگا۔';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'ہاں، منسوخ کریں';
+
+  @override
+  String get libraryScheduledCancelKeep => 'رہنے دیں';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'منسوخ ہو گئی۔ آپ کے مسودوں میں واپس آ گئی ہے۔';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'نئے وقت پر منتقل ہو گئی۔';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'پوسٹ ہو گئی۔';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'دوبارہ کوشش ہو رہی ہے۔';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'دیر ہو گئی — وہ پہلے ہی شائع ہو چکی ہے۔';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'ریلے تک رسائی نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'یہ کام نہیں ہوا۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'منتخب کلپس حذف کریں';
 
   @override
@@ -7257,6 +7342,10 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'یہ ویڈیو کسی اور اکاؤنٹ کی ہے۔ اسے پوسٹ کرنے کے لیے اُسی اکاؤنٹ پر واپس جائیں۔';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'ریلے اس پوسٹ کو بعد کے لیے محفوظ نہیں رکھ سکا۔ کوئی اور وقت منتخب کریں یا ابھی پوسٹ کریں۔';
 
   @override
   String get publishErrorGeneric =>
@@ -9589,6 +9678,62 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoMetadataSelectExpirationSemanticLabel =>
       'میعاد کا وقت منتخب کریں';
+
+  @override
+  String get videoMetadataScheduleLabel => 'پوسٹ کا وقت';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel =>
+      'پوسٹ کا وقت منتخب کریں';
+
+  @override
+  String get videoMetadataScheduleNow => 'ابھی';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'آج رات $time بجے';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'کل $time بجے';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'تاریخ اور وقت منتخب کریں';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'یہ کب شائع ہو؟';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'کم از کم $minutes منٹ کا وقفہ رکھیں۔',
+      one: 'کم از کم $minutes منٹ کا وقفہ رکھیں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'یہ $days دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔',
+      one: 'یہ $days دن سے زیادہ دور ہے۔ کوئی قریبی وقت منتخب کریں۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'شیڈول کریں';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'یہ ویڈیو $time کے لیے شیڈول کرتا ہے';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'عنوان';

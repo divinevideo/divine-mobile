@@ -6355,6 +6355,91 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryTabClips => 'Clipuri';
 
   @override
+  String get libraryTabScheduled => 'Programate';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'Nimic programat încă';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'Alege o oră la următorul videoclip și stă aici până iese.';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Iese $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'Programat';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Așteaptă serverul';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Nu a ieșit';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Se încarcă';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Programat pe alt dispozitiv';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Mai multe acțiuni pentru $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Schimbă ora';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Publică acum';
+
+  @override
+  String get libraryScheduledActionRetry => 'Încearcă din nou';
+
+  @override
+  String get libraryScheduledActionCancel => 'Anulează postarea';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Anulezi postarea asta?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Se întoarce în ciorne. Nu se publică nimic.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Da, anuleaz-o';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Păstreaz-o';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Anulată. E înapoi în ciorne.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Mutată la noua oră.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Publicată.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Încercăm din nou.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Prea târziu — aia a ieșit deja.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Nu am ajuns la releu. Încearcă din nou în scurt timp.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Nu a mers. Încearcă din nou.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Șterge clipurile selectate';
 
   @override
@@ -7428,6 +7513,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Acest videoclip aparține altui cont. Comută înapoi la acel cont ca să îl postezi.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Releul nu a putut păstra postarea pentru mai târziu. Alege altă oră sau publică acum.';
 
   @override
   String get publishErrorGeneric => 'Ceva nu a mers bine. Încearcă din nou.';
@@ -9802,6 +9891,63 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoMetadataSelectExpirationSemanticLabel =>
       'Selectează timpul de expirare';
+
+  @override
+  String get videoMetadataScheduleLabel => 'Ora postării';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Alege ora postării';
+
+  @override
+  String get videoMetadataScheduleNow => 'Acum';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Diseară la $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Mâine la $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Alege data și ora';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Când să iasă?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Lasă cel puțin $minutes de minute.',
+      few: 'Lasă cel puțin $minutes minute.',
+      one: 'Lasă cel puțin $minutes minut.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'E la mai mult de $days de zile. Alege ceva mai apropiat.',
+      few: 'E la mai mult de $days zile. Alege ceva mai apropiat.',
+      one: 'E la mai mult de $days zi. Alege ceva mai apropiat.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Programează';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Programează videoclipul pentru $time';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'Titlu';

@@ -6258,6 +6258,92 @@ class AppLocalizationsIt extends AppLocalizations {
   String get libraryTabClips => 'Clip';
 
   @override
+  String get libraryTabScheduled => 'Programmati';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'Niente in programma';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'Scegli un orario per il prossimo video e resta qui finché non esce.';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Esce $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'Programmato';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'In attesa del server';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Non è uscito';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Caricamento';
+
+  @override
+  String get libraryScheduledRemoteTitle =>
+      'Programmato su un altro dispositivo';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Altre azioni per $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Cambia orario';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Pubblica ora';
+
+  @override
+  String get libraryScheduledActionRetry => 'Riprova';
+
+  @override
+  String get libraryScheduledActionCancel => 'Annulla la pubblicazione';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Annullare questa pubblicazione?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Torna nelle tue bozze. Non viene pubblicato niente.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Sì, annulla';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Tienila';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Annullata. È di nuovo nelle tue bozze.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Spostata al nuovo orario.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Pubblicata.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Nuovo tentativo in corso.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Troppo tardi: quella è già uscita.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Relay irraggiungibile. Riprova tra poco.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Non ha funzionato. Riprova.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Elimina clip selezionate';
 
   @override
@@ -7328,6 +7414,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Questo video appartiene a un altro account. Torna su quell\'account per pubblicarlo.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Il relay non è riuscito a tenere questo post per dopo. Scegli un altro orario o pubblicalo ora.';
 
   @override
   String get publishErrorGeneric => 'Qualcosa è andato storto. Riprova.';
@@ -9699,6 +9789,62 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoMetadataSelectExpirationSemanticLabel =>
       'Seleziona tempo di scadenza';
+
+  @override
+  String get videoMetadataScheduleLabel => 'Orario di pubblicazione';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel =>
+      'Scegli l’orario di pubblicazione';
+
+  @override
+  String get videoMetadataScheduleNow => 'Ora';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Stasera alle $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Domani alle $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Scegli data e ora';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Quando deve uscire?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Lascia almeno $minutes minuti.',
+      one: 'Lascia almeno $minutes minuto.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'È a più di $days giorni. Scegli qualcosa di più vicino.',
+      one: 'È a più di $days giorno. Scegli qualcosa di più vicino.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Programma';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Programma questo video per $time';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'Titolo';

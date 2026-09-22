@@ -6251,6 +6251,91 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryTabClips => 'Клипове';
 
   @override
+  String get libraryTabScheduled => 'Насрочени';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'Още нищо насрочено';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'Избери час за следващото си видео и то стои тук, докато излезе.';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Излиза $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'Насрочена';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Чака сървъра';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Не излезе';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Качва се';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Насрочена на друго устройство';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Още действия за $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Смени часа';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Публикувай сега';
+
+  @override
+  String get libraryScheduledActionRetry => 'Опитай пак';
+
+  @override
+  String get libraryScheduledActionCancel => 'Откажи публикацията';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Да откажем ли тази публикация?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Връща се в черновите ти. Нищо не се публикува.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Да, откажи я';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Остави я';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Отказана. Пак е в черновите ти.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Преместена в новия час.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Публикувана.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Опитваме пак.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Късно е — тази вече излезе.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Няма връзка с релето. Опитай пак след малко.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Не се получи. Опитай пак.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Изтрийте избраните клипове';
 
   @override
@@ -7325,6 +7410,10 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Това видео е от друг профил. Върни се към него, за да го публикуваш.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Релето не можа да задържи тази публикация за по-късно. Избери друг час или я публикувай сега.';
 
   @override
   String get publishErrorGeneric => 'Нещо се обърка. Опитай пак.';
@@ -9682,6 +9771,62 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoMetadataSelectExpirationSemanticLabel =>
       'Избери време на изтичане';
+
+  @override
+  String get videoMetadataScheduleLabel => 'Час на публикуване';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel =>
+      'Избери час на публикуване';
+
+  @override
+  String get videoMetadataScheduleNow => 'Сега';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Довечера в $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Утре в $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Избери дата и час';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Кога да излезе?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Остави поне $minutes минути.',
+      one: 'Остави поне $minutes минута.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Това е след повече от $days дни. Избери по-близък момент.',
+      one: 'Това е след повече от $days ден. Избери по-близък момент.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Насрочи';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Насрочва това видео за $time';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'Заглавие';

@@ -6187,6 +6187,92 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryTabClips => 'Klipp';
 
   @override
+  String get libraryTabScheduled => 'Schemalagda';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'Inget schemalagt än';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'Välj en tid för nästa video, så ligger den här tills den går ut.';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Går ut $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'Schemalagd';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Väntar på servern';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Gick inte ut';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Laddar upp';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Schemalagd på en annan enhet';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Fler åtgärder för $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Ändra tid';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Publicera nu';
+
+  @override
+  String get libraryScheduledActionRetry => 'Försök igen';
+
+  @override
+  String get libraryScheduledActionCancel => 'Avbryt inlägget';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Avbryta det här inlägget?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Det går tillbaka till dina utkast. Inget publiceras.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Ja, avbryt';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Behåll';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Avbrutet. Det ligger i dina utkast igen.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar =>
+      'Flyttat till den nya tiden.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Publicerat.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Försöker igen.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'För sent – det där gick redan ut.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Kunde inte nå relayn. Försök igen om en stund.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Det gick inte. Försök igen.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Ta bort valda klipp';
 
   @override
@@ -7245,6 +7331,10 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Den här videon hör till ett annat konto. Byt tillbaka till det kontot för att posta den.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Relayn kunde inte spara inlägget till senare. Välj en annan tid eller publicera det nu.';
 
   @override
   String get publishErrorGeneric => 'Något gick fel. Försök igen.';
@@ -9588,6 +9678,61 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoMetadataSelectExpirationSemanticLabel => 'Välj utgångstid';
+
+  @override
+  String get videoMetadataScheduleLabel => 'Publiceringstid';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Välj publiceringstid';
+
+  @override
+  String get videoMetadataScheduleNow => 'Nu';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'I kväll kl. $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'I morgon kl. $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Välj datum och tid';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'När ska det gå ut?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Lämna minst $minutes minuter.',
+      one: 'Lämna minst $minutes minut.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Det är mer än $days dagar bort. Välj något tidigare.',
+      one: 'Det är mer än $days dag bort. Välj något tidigare.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Schemalägg';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Schemalägger videon till $time';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'Titel';

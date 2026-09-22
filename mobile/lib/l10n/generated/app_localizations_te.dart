@@ -6393,6 +6393,92 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryTabClips => 'క్లిప్‌లు';
 
   @override
+  String get libraryTabScheduled => 'షెడ్యూల్ చేసినవి';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'ఇంకా ఏదీ షెడ్యూల్ చేయలేదు';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'మీ తదుపరి వీడియోకు పోస్ట్ సమయాన్ని ఎంచుకోండి, అది వెళ్లే వరకు ఇక్కడే ఉంటుంది.';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$timeకి వెళ్తుంది';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'షెడ్యూల్ చేయబడింది';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'సర్వర్ కోసం వేచి ఉంది';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'వెళ్లలేదు';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'అప్‌లోడ్ అవుతోంది';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'మరో పరికరంలో షెడ్యూల్ చేయబడింది';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return '$title కోసం మరిన్ని చర్యలు';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'సమయం మార్చండి';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'ఇప్పుడే పోస్ట్ చేయండి';
+
+  @override
+  String get libraryScheduledActionRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get libraryScheduledActionCancel => 'పోస్ట్‌ను రద్దు చేయండి';
+
+  @override
+  String get libraryScheduledCancelTitle => 'ఈ పోస్ట్‌ను రద్దు చేయాలా?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'ఇది మీ డ్రాఫ్ట్‌లకు తిరిగి వెళ్తుంది. ఏదీ ప్రచురించబడదు.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'అవును, రద్దు చేయండి';
+
+  @override
+  String get libraryScheduledCancelKeep => 'ఉంచండి';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'రద్దు చేయబడింది. ఇది మీ డ్రాఫ్ట్‌లలో తిరిగి ఉంది.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar =>
+      'కొత్త సమయానికి మార్చబడింది.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'పోస్ట్ చేయబడింది.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'మళ్లీ ప్రయత్నిస్తోంది.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'ఆలస్యమైంది — అది ఇప్పటికే వెళ్లిపోయింది.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'రిలేను చేరుకోలేకపోయాం. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'అది పని చేయలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip =>
       'ఎంచుకున్న క్లిప్‌లను తొలగించండి';
 
@@ -7483,6 +7569,10 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'ఈ వీడియో వేరే ఖాతాకు చెందినది. దాన్ని పోస్ట్ చేయడానికి ఆ ఖాతాకు తిరిగి మారండి.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'రిలే ఈ పోస్ట్‌ను తర్వాతి కోసం ఉంచలేకపోయింది. మరో సమయాన్ని ఎంచుకోండి లేదా ఇప్పుడే పోస్ట్ చేయండి.';
 
   @override
   String get publishErrorGeneric =>
@@ -9871,6 +9961,64 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoMetadataSelectExpirationSemanticLabel =>
       'గడువు ముగింపు సమయాన్ని ఎంచుకోండి';
+
+  @override
+  String get videoMetadataScheduleLabel => 'పోస్ట్ సమయం';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel =>
+      'పోస్ట్ సమయాన్ని ఎంచుకోండి';
+
+  @override
+  String get videoMetadataScheduleNow => 'ఇప్పుడు';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'ఈ రాత్రి $timeకి';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'రేపు $timeకి';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime =>
+      'తేదీ మరియు సమయాన్ని ఎంచుకోండి';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'ఇది ఎప్పుడు వెళ్లాలి?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'కనీసం $minutes నిమిషాలు ఇవ్వండి.',
+      one: 'కనీసం $minutes నిమిషం ఇవ్వండి.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other:
+          'అది $days రోజుల కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.',
+      one: 'అది $days రోజు కంటే ఎక్కువ దూరంలో ఉంది. దగ్గరి సమయాన్ని ఎంచుకోండి.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'షెడ్యూల్ చేయండి';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'ఈ వీడియోను $timeకి షెడ్యూల్ చేస్తుంది';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'శీర్షిక';

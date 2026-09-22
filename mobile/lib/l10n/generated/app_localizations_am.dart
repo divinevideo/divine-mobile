@@ -6055,6 +6055,88 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryTabClips => 'ክሊፖች';
 
   @override
+  String get libraryTabScheduled => 'የታቀዱ';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'እስካሁን የታቀደ የለም';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'በሚቀጥለው ቪዲዮዎ ላይ የመለጠፊያ ሰዓት ይምረጡ፤ እስኪወጣ ድረስ እዚህ ይቆያል።';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$time ይወጣል';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'የታቀደ';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'አገልጋይ በመጠበቅ ላይ';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'አልወጣም';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'በመስቀል ላይ';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'በሌላ መሣሪያ ላይ የታቀደ';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'ለ$title ተጨማሪ እርምጃዎች';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'ሰዓቱን ይቀይሩ';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'አሁን ይለጥፉ';
+
+  @override
+  String get libraryScheduledActionRetry => 'እንደገና ይሞክሩ';
+
+  @override
+  String get libraryScheduledActionCancel => 'ልጥፉን ይሰርዙ';
+
+  @override
+  String get libraryScheduledCancelTitle => 'ይህን ልጥፍ ይሰርዙ?';
+
+  @override
+  String get libraryScheduledCancelMessage => 'ወደ ረቂቆችዎ ይመለሳል። ምንም አይታተምም።';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'አዎ፣ ይሰረዝ';
+
+  @override
+  String get libraryScheduledCancelKeep => 'ይቆይ';
+
+  @override
+  String get libraryScheduledCancelledSnackbar => 'ተሰርዟል። ወደ ረቂቆችዎ ተመልሷል።';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'ወደ አዲሱ ሰዓት ተዛውሯል።';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'ተለጥፏል።';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'እንደገና በመሞከር ላይ።';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'ዘግይቷል — ያ አስቀድሞ ወጥቷል።';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'ቅብብሎሹ ላይ መድረስ አልተቻለም። ከጥቂት ቆይታ በኋላ እንደገና ይሞክሩ።';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar => 'አልሰራም። እንደገና ይሞክሩ።';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'የተመረጡ ቅንጥቦችን ሰርዝ';
 
   @override
@@ -7089,6 +7171,10 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'ይህ ቪዲዮ የሌላ መለያ ነው። ለመለጠፍ ወደዚያ መለያ ተመለስ።';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'ቅብብሎሹ ይህን ልጥፍ ለቆይታ ማቆየት አልቻለም። ሌላ ሰዓት ይምረጡ ወይም አሁን ይለጥፉት።';
 
   @override
   String get publishErrorGeneric => 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።';
@@ -9357,6 +9443,61 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoMetadataSelectExpirationSemanticLabel => 'የማለቂያ ጊዜን ይምረጡ';
+
+  @override
+  String get videoMetadataScheduleLabel => 'የመለጠፊያ ሰዓት';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'የመለጠፊያ ሰዓት ይምረጡ';
+
+  @override
+  String get videoMetadataScheduleNow => 'አሁን';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'ዛሬ ማታ $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'ነገ $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'ቀን እና ሰዓት ይምረጡ';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'መቼ ይውጣ?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'ቢያንስ $minutes ደቂቃ ይተዉ።',
+      one: 'ቢያንስ $minutes ደቂቃ ይተዉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'ይህ ከ$days ቀናት በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።',
+      one: 'ይህ ከ$days ቀን በላይ ነው። ቅርብ የሆነ ጊዜ ይምረጡ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'ያቅዱ';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'ይህን ቪዲዮ ለ$time ያቅዳል';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'ርዕስ';

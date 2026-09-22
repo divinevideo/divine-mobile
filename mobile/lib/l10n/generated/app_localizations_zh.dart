@@ -5844,6 +5844,85 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryTabClips => '片段';
 
   @override
+  String get libraryTabScheduled => '定时';
+
+  @override
+  String get libraryScheduledEmptyTitle => '还没有定时的帖子';
+
+  @override
+  String get libraryScheduledEmptySubtitle => '下次发视频时选个时间，它会留在这里，到点自动发出。';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$time 发布';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => '已定时';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => '等待服务器';
+
+  @override
+  String get libraryScheduledBadgeFailed => '没发出去';
+
+  @override
+  String get libraryScheduledBadgeUploading => '上传中';
+
+  @override
+  String get libraryScheduledRemoteTitle => '在其他设备上定时';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return '$title 的更多操作';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => '改时间';
+
+  @override
+  String get libraryScheduledActionPublishNow => '立即发布';
+
+  @override
+  String get libraryScheduledActionRetry => '再试一次';
+
+  @override
+  String get libraryScheduledActionCancel => '取消发布';
+
+  @override
+  String get libraryScheduledCancelTitle => '要取消这条帖子吗？';
+
+  @override
+  String get libraryScheduledCancelMessage => '它会回到你的草稿，什么都不会发布。';
+
+  @override
+  String get libraryScheduledCancelConfirm => '好，取消';
+
+  @override
+  String get libraryScheduledCancelKeep => '先留着';
+
+  @override
+  String get libraryScheduledCancelledSnackbar => '已取消，帖子回到你的草稿了。';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => '已改到新时间。';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => '已发布。';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => '正在重试。';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar => '来不及了，那条已经发出去了。';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar => '连不上中继。过一会儿再试。';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar => '没成功，再试一次。';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => '删除选中片段';
 
   @override
@@ -6829,6 +6908,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get publishErrorAccountChanged => '这个视频属于另一个账号。切回那个账号才能发布。';
+
+  @override
+  String get publishErrorScheduleRejected => '中继没能把这条帖子留到稍后发布。换个时间，或者现在就发。';
 
   @override
   String get publishErrorGeneric => '出了点问题，请重试。';
@@ -9023,6 +9105,59 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoMetadataSelectExpirationSemanticLabel => '选择有效期';
+
+  @override
+  String get videoMetadataScheduleLabel => '发布时间';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => '选择发布时间';
+
+  @override
+  String get videoMetadataScheduleNow => '立即';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return '今晚 $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return '明天 $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => '选择日期和时间';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => '什么时候发出？';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '至少留 $minutes 分钟。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '这超过 $days 天了，选个近一点的时间。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => '定时发布';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return '把这条视频定时到 $time';
+  }
 
   @override
   String get videoMetadataTitleLabel => '标题';

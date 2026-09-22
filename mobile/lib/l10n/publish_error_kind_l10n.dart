@@ -58,6 +58,8 @@ extension PublishErrorKindL10n on AppLocalizations {
         return publishErrorAudioReuseNotPermitted;
       case PublishErrorKind.interrupted:
         return publishErrorInterrupted;
+      case PublishErrorKind.scheduleRejected:
+        return publishErrorScheduleRejected;
       case PublishErrorKind.accountChanged:
         return publishErrorAccountChanged;
       case PublishErrorKind.generic:

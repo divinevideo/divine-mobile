@@ -5873,6 +5873,86 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryTabClips => 'クリップ';
 
   @override
+  String get libraryTabScheduled => '予約投稿';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'まだ予約はありません';
+
+  @override
+  String get libraryScheduledEmptySubtitle => '次の動画で投稿時間を選ぶと、公開されるまでここに並びます。';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$timeに公開';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => '予約済み';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'サーバー待ち';
+
+  @override
+  String get libraryScheduledBadgeFailed => '公開できませんでした';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'アップロード中';
+
+  @override
+  String get libraryScheduledRemoteTitle => '別の端末で予約';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return '$titleのその他の操作';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => '時間を変更';
+
+  @override
+  String get libraryScheduledActionPublishNow => '今すぐ投稿';
+
+  @override
+  String get libraryScheduledActionRetry => 'もう一度試す';
+
+  @override
+  String get libraryScheduledActionCancel => '投稿を取り消す';
+
+  @override
+  String get libraryScheduledCancelTitle => 'この投稿を取り消しますか？';
+
+  @override
+  String get libraryScheduledCancelMessage => '下書きに戻ります。公開はされません。';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'はい、取り消します';
+
+  @override
+  String get libraryScheduledCancelKeep => 'そのままにする';
+
+  @override
+  String get libraryScheduledCancelledSnackbar => '取り消しました。下書きに戻っています。';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => '新しい時間に変更しました。';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => '投稿しました。';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'もう一度試しています。';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar => 'もう公開されたあとでした。';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'リレーに接続できませんでした。少ししてからもう一度お試しください。';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar => 'うまくいきませんでした。もう一度お試しください。';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => '選択したクリップを削除';
 
   @override
@@ -6886,6 +6966,10 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'この動画は別のアカウントのものだよ。投稿するにはそのアカウントに戻ってね。';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'リレーがこの投稿を後まで保持できませんでした。別の時間を選ぶか、今すぐ投稿してください。';
 
   @override
   String get publishErrorGeneric => '問題が発生したよ。もう一回試してみて。';
@@ -9114,6 +9198,59 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoMetadataSelectExpirationSemanticLabel => '有効期限を選択';
+
+  @override
+  String get videoMetadataScheduleLabel => '投稿時間';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => '投稿時間を選ぶ';
+
+  @override
+  String get videoMetadataScheduleNow => '今すぐ';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return '今夜$time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return '明日$time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => '日付と時間を選ぶ';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'いつ公開しますか？';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes分以上あけてください。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days日より先です。もっと近い時間を選んでください。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => '予約する';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'この動画を$timeに予約します';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'タイトル';

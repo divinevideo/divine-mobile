@@ -10678,6 +10678,156 @@ abstract class AppLocalizations {
   /// **'Clips'**
   String get libraryTabClips;
 
+  /// Library tab listing posts scheduled for a later time (#3538).
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled'**
+  String get libraryTabScheduled;
+
+  /// No description provided for @libraryScheduledEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing scheduled yet'**
+  String get libraryScheduledEmptyTitle;
+
+  /// No description provided for @libraryScheduledEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a post time on your next video and it lands here until it goes out.'**
+  String get libraryScheduledEmptySubtitle;
+
+  /// Subtitle of a scheduled post row; {time} is the localized date and time.
+  ///
+  /// In en, this message translates to:
+  /// **'Goes out {time}'**
+  String libraryScheduledGoesOutAt(String time);
+
+  /// No description provided for @libraryScheduledBadgeScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled'**
+  String get libraryScheduledBadgeScheduled;
+
+  /// Badge on a scheduled post the relay has not accepted yet; the app keeps retrying and posts it itself if it is open at the time.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for server'**
+  String get libraryScheduledBadgeWaitingForServer;
+
+  /// No description provided for @libraryScheduledBadgeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Didn\'t go out'**
+  String get libraryScheduledBadgeFailed;
+
+  /// No description provided for @libraryScheduledBadgeUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading'**
+  String get libraryScheduledBadgeUploading;
+
+  /// Row title for a post the relay holds that was scheduled from a different device; only cancelling is possible from here.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled on another device'**
+  String get libraryScheduledRemoteTitle;
+
+  /// No description provided for @libraryScheduledMoreActionsSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions for {title}'**
+  String libraryScheduledMoreActionsSemanticLabel(String title);
+
+  /// No description provided for @libraryScheduledActionReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Change time'**
+  String get libraryScheduledActionReschedule;
+
+  /// No description provided for @libraryScheduledActionPublishNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Post now'**
+  String get libraryScheduledActionPublishNow;
+
+  /// No description provided for @libraryScheduledActionRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get libraryScheduledActionRetry;
+
+  /// No description provided for @libraryScheduledActionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel post'**
+  String get libraryScheduledActionCancel;
+
+  /// No description provided for @libraryScheduledCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel this post?'**
+  String get libraryScheduledCancelTitle;
+
+  /// No description provided for @libraryScheduledCancelMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'It goes back to your drafts. Nothing gets published.'**
+  String get libraryScheduledCancelMessage;
+
+  /// No description provided for @libraryScheduledCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, cancel it'**
+  String get libraryScheduledCancelConfirm;
+
+  /// No description provided for @libraryScheduledCancelKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it'**
+  String get libraryScheduledCancelKeep;
+
+  /// No description provided for @libraryScheduledCancelledSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled. It\'s back in your drafts.'**
+  String get libraryScheduledCancelledSnackbar;
+
+  /// No description provided for @libraryScheduledRescheduledSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to the new time.'**
+  String get libraryScheduledRescheduledSnackbar;
+
+  /// No description provided for @libraryScheduledPublishedNowSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted.'**
+  String get libraryScheduledPublishedNowSnackbar;
+
+  /// No description provided for @libraryScheduledRetryQueuedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Trying again.'**
+  String get libraryScheduledRetryQueuedSnackbar;
+
+  /// No description provided for @libraryScheduledAlreadyPublishedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Too late — that one already went out.'**
+  String get libraryScheduledAlreadyPublishedSnackbar;
+
+  /// No description provided for @libraryScheduledUnavailableSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the relay. Try again in a bit.'**
+  String get libraryScheduledUnavailableSnackbar;
+
+  /// No description provided for @libraryScheduledActionFailedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work. Try again.'**
+  String get libraryScheduledActionFailedSnackbar;
+
   /// No description provided for @libraryDeleteSelectedClipsTooltip.
   ///
   /// In en, this message translates to:
@@ -12396,6 +12546,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This video belongs to a different account. Switch back to that account to post it.'**
   String get publishErrorAccountChanged;
+
+  /// No description provided for @publishErrorScheduleRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'The relay couldn\'t hold this post for later. Pick another time or post it now.'**
+  String get publishErrorScheduleRejected;
 
   /// No description provided for @publishErrorGeneric.
   ///
@@ -16325,6 +16481,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select expiration time'**
   String get videoMetadataSelectExpirationSemanticLabel;
+
+  /// Label of the metadata tile that picks when a video goes out: now, or a scheduled date and time (#3538).
+  ///
+  /// In en, this message translates to:
+  /// **'Post time'**
+  String get videoMetadataScheduleLabel;
+
+  /// No description provided for @videoMetadataSelectScheduleSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select post time'**
+  String get videoMetadataSelectScheduleSemanticLabel;
+
+  /// Post-time option: publish as soon as the upload finishes.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get videoMetadataScheduleNow;
+
+  /// Post-time preset for 8 PM today; {time} is the localized clock time.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonight at {time}'**
+  String videoMetadataScheduleTonight(String time);
+
+  /// Post-time preset for 9 AM tomorrow; {time} is the localized clock time.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow at {time}'**
+  String videoMetadataScheduleTomorrowMorning(String time);
+
+  /// No description provided for @videoMetadataSchedulePickDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date and time'**
+  String get videoMetadataSchedulePickDateTime;
+
+  /// Title of the date-and-time picker sheet for a scheduled post.
+  ///
+  /// In en, this message translates to:
+  /// **'When should it go out?'**
+  String get videoMetadataSchedulePickerTitle;
+
+  /// Shown when the picked post time is closer than the minimum lead.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =1{Give it at least {minutes} minute.} other{Give it at least {minutes} minutes.}}'**
+  String videoMetadataScheduleTooSoon(int minutes);
+
+  /// Shown when the picked post time is beyond the scheduling horizon.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{That\'s more than {days} day out. Pick something sooner.} other{That\'s more than {days} days out. Pick something sooner.}}'**
+  String videoMetadataScheduleTooFar(int days);
+
+  /// Primary button label replacing Post when a post time is set.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get videoMetadataScheduleButton;
+
+  /// Accessibility hint of the Schedule button; {time} is the localized date and time.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedules this video for {time}'**
+  String videoMetadataScheduleVideoHint(String time);
 
   /// No description provided for @videoMetadataTitleLabel.
   ///

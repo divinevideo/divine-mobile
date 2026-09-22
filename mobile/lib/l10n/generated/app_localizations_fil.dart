@@ -6234,6 +6234,91 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryTabClips => 'Mga Clip';
 
   @override
+  String get libraryTabScheduled => 'Naka-schedule';
+
+  @override
+  String get libraryScheduledEmptyTitle => 'Wala pang naka-schedule';
+
+  @override
+  String get libraryScheduledEmptySubtitle =>
+      'Pumili ng oras sa susunod mong video at dito muna ito hanggang lumabas.';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Lalabas $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeScheduled => 'Naka-schedule';
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Hinihintay ang server';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Hindi lumabas';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Ina-upload';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Naka-schedule sa ibang device';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Iba pang aksyon para sa $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Palitan ang oras';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'I-post ngayon';
+
+  @override
+  String get libraryScheduledActionRetry => 'Subukan ulit';
+
+  @override
+  String get libraryScheduledActionCancel => 'I-cancel ang post';
+
+  @override
+  String get libraryScheduledCancelTitle => 'I-cancel ang post na ito?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Babalik ito sa mga draft mo. Walang mapo-post.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Oo, i-cancel';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Huwag muna';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Na-cancel. Nasa mga draft mo na ulit.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Inilipat sa bagong oras.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Na-post.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Sinusubukan ulit.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Huli na — lumabas na ‘yon.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Hindi maabot ang relay. Subukan ulit mamaya.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Hindi gumana. Subukan ulit.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip =>
       'Burahin ang mga napiling clip';
 
@@ -7302,6 +7387,10 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Sa ibang account ang video na ito. Bumalik sa account na iyon para i-post.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Hindi na-hold ng relay ang post na ito para mamaya. Pumili ng ibang oras o i-post na ngayon.';
 
   @override
   String get publishErrorGeneric =>
@@ -9667,6 +9756,62 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoMetadataSelectExpirationSemanticLabel =>
       'Piliin ang oras ng pag-expire';
+
+  @override
+  String get videoMetadataScheduleLabel => 'Oras ng post';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel =>
+      'Piliin ang oras ng post';
+
+  @override
+  String get videoMetadataScheduleNow => 'Ngayon';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Mamayang gabi ng $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Bukas ng $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Pumili ng petsa at oras';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Kailan ito lalabas?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Mag-iwan ng kahit $minutes minuto.',
+      one: 'Mag-iwan ng kahit $minutes minuto.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Mahigit $days araw pa ‘yan. Pumili ng mas malapit.',
+      one: 'Mahigit $days araw pa ‘yan. Pumili ng mas malapit.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'I-schedule';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Ise-schedule ang video na ito sa $time';
+  }
 
   @override
   String get videoMetadataTitleLabel => 'Pamagat';
