@@ -30,8 +30,8 @@ part 'profile_saved_videos_state.dart';
 /// - [VideosRepository]: Fetches video data with cache-first lookups via
 ///   SQLite local storage. Automatically checks cache before relay queries.
 ///
-/// Bookmarks are a private user artifact, so this BLoC is only wired for the
-/// current user's own profile.
+/// Bookmarks are the current viewer's own list, so this BLoC is only wired for
+/// the current user's own profile.
 class ProfileSavedVideosBloc
     extends Bloc<ProfileSavedVideosEvent, ProfileSavedVideosState> {
   ProfileSavedVideosBloc({
@@ -89,8 +89,9 @@ class ProfileSavedVideosBloc
     }
   }
 
-  /// Cache key for the saved-videos snapshot (bookmarks are private, so the
-  /// key is scoped to the signed-in user for sign-out invalidation).
+  /// Cache key for the saved-videos snapshot. The key is scoped to the signed-
+  /// in user because this is the viewer's own list and must be cleared on
+  /// sign-out.
   ///
   /// `_v2` because the snapshot now reverses the repository order. Reusing
   /// the previous order would widen reconciliation to the entire list when

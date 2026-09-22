@@ -112,8 +112,10 @@ void main() {
         .identifier;
 
     testWidgets('seven tab touch targets remain at least 48dp', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(320, 700));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await pumpBar(tester, ownProfile: true);
       final targets = find.descendant(
         of: find.byType(TabBar),
@@ -135,9 +137,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(bar.controller!.index, 6);
     });
+
     testWidgets('keeps equal-width tabs when all targets fit', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(360, 700));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view.physicalSize = const Size(360, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await pumpBar(tester, ownProfile: true);
       expect(tester.widget<TabBar>(find.byType(TabBar)).isScrollable, isFalse);
     });

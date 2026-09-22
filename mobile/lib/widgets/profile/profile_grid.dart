@@ -157,8 +157,8 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   ProfileCollabVideosBloc? _collabVideosBloc;
   ProfileCommentsBloc? _commentsBloc;
 
-  /// Own profile only: bookmarks are private, so another user's profile has
-  /// neither the tab nor the bloc behind it.
+  /// Own profile only: this is the viewer's own bookmark list, so another
+  /// user's profile has neither the tab nor the bloc behind it.
   ProfileSavedVideosBloc? _savedVideosBloc;
 
   /// Mirrors each cached tab's `isRefreshing` so the pinned tab bar can show a

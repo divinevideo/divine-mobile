@@ -849,8 +849,7 @@ void main() {
         findsNothing,
       );
       expect(find.byType(Tab), findsNWidgets(5));
-      // Bookmarks are private: the viewer's own list is not even opened
-      // while looking at someone else.
+      // The viewer's own list is not opened while looking at someone else.
       verifyNever(bookmarksRepository.watchGlobalBookmarks);
     });
   });

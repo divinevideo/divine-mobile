@@ -113,45 +113,44 @@ class _ProfileTabBarState extends State<ProfileTabBar> {
 
   @override
   Widget build(BuildContext context) {
-    return SliverLayoutBuilder(
-      builder: (context, constraints) {
-        final scrollable =
-            constraints.crossAxisExtent <
-            widget.tabs.length * kMinInteractiveDimension;
-        return SliverPersistentHeader(
-          pinned: true,
-          delegate: _SliverAppBarDelegate(
-            topInset: _tabBarTopInset,
-            isRefreshing: widget.isRefreshing,
-            TabBar(
-              controller: widget.controller,
-              isScrollable: scrollable,
-              tabAlignment: scrollable ? TabAlignment.start : TabAlignment.fill,
-              indicatorColor: VineTheme.tabIndicatorGreen,
-              indicatorWeight: 4,
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: VineTheme.transparent,
-              // Scroll only when equal-width targets would be smaller than 48dp.
-              // Elsewhere, 4dp padding leaves room for scaled icons in seven tabs.
-              labelPadding: scrollable
-                  ? EdgeInsets.zero
-                  : const EdgeInsets.symmetric(horizontal: 4),
-              tabs: [
-                for (var i = 0; i < widget.tabs.length; i++)
-                  SizedBox(
-                    width: scrollable ? kMinInteractiveDimension : null,
-                    child: _ProfileTab(
-                      semanticId: widget.tabs[i].semanticId,
-                      label: widget.tabs[i].label,
-                      icon: widget.tabs[i].icon,
-                      isSelected: widget.controller.index == i,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+    // This sliver is full-bleed in the NestedScrollView. MediaQuery changes
+    // when the viewport is resized or rotated, while the sliver's scroll
+    // constraints also change on every header scroll frame.
+    final scrollable =
+        MediaQuery.sizeOf(context).width <
+        widget.tabs.length * kMinInteractiveDimension;
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _SliverAppBarDelegate(
+        topInset: _tabBarTopInset,
+        isRefreshing: widget.isRefreshing,
+        TabBar(
+          controller: widget.controller,
+          isScrollable: scrollable,
+          tabAlignment: scrollable ? TabAlignment.start : TabAlignment.fill,
+          indicatorColor: VineTheme.tabIndicatorGreen,
+          indicatorWeight: 4,
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: VineTheme.transparent,
+          // Scroll only when equal-width targets would be smaller than 48dp.
+          // Elsewhere, 4dp padding leaves room for scaled icons in seven tabs.
+          labelPadding: scrollable
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 4),
+          tabs: [
+            for (var i = 0; i < widget.tabs.length; i++)
+              SizedBox(
+                width: scrollable ? kMinInteractiveDimension : null,
+                child: _ProfileTab(
+                  semanticId: widget.tabs[i].semanticId,
+                  label: widget.tabs[i].label,
+                  icon: widget.tabs[i].icon,
+                  isSelected: widget.controller.index == i,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

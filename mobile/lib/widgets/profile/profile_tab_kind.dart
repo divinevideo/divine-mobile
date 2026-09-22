@@ -19,8 +19,8 @@ enum ProfileTabKind {
 /// tabs. Bookmarks sits between Reposts and Lists, as the design draws it
 /// (#8972).
 /// Other profiles keep their existing order — Collabs in the 4th slot and
-/// neither owned tab — so their layout is unchanged. Bookmarks are private,
-/// so there is no other-profile variant to show.
+/// neither owned tab — so their layout is unchanged. Bookmarks are the
+/// viewer's own list, so there is no other-profile variant to show.
 List<ProfileTabKind> profileTabKinds({required bool isOwnProfile}) {
   if (isOwnProfile) {
     return const [

@@ -1,5 +1,5 @@
 // ABOUTME: Grid widget displaying user's saved (bookmarked) videos on profile page
-// ABOUTME: Shows 3-column grid with thumbnails. Own profile only — bookmarks are private.
+// ABOUTME: Shows 3-column grid with thumbnails. Own profile only — this is the viewer's list.
 
 import 'dart:async';
 
@@ -27,8 +27,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// Grid widget displaying the current user's saved (bookmarked) videos.
 ///
 /// Requires [ProfileSavedVideosBloc] to be provided in the widget tree.
-/// Only ever shows the viewer's own bookmarks — they are private, so there
-/// is no "other user's saved" variant. Hosted by the own profile's Bookmarks
+/// Only ever shows the viewer's own bookmarks, so there is no "other user's
+/// saved" variant. Hosted by the own profile's Bookmarks
 /// tab and by `SavedVideosScreen`, the deep-link target for the same list.
 class ProfileSavedGrid extends StatefulWidget {
   const ProfileSavedGrid({

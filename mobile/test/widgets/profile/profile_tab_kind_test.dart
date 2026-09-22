@@ -48,7 +48,7 @@ void main() {
       final kinds = profileTabKinds(isOwnProfile: false);
       expect(kinds.indexOf(ProfileTabKind.collabs), equals(3));
       expect(kinds, isNot(contains(ProfileTabKind.lists)));
-      // Bookmarks are private: someone else's are not ours to browse.
+      // Bookmarks are the viewer's own list, not another profile's content.
       expect(kinds, isNot(contains(ProfileTabKind.bookmarks)));
     });
 
