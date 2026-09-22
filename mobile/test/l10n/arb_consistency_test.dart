@@ -543,6 +543,7 @@ const _knownUntranslatedDebt = <String>{
   'listsDiscoveryEmpty',
   'listsDiscoveryLoadingLabel',
   'listMemberNamesSeparator',
+  'listCardSemanticLabel',
   'listLoopsCount',
   'listStatsSeparator',
   'peopleListsViewAllMembers',

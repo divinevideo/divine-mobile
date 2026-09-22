@@ -421,7 +421,14 @@ void main() {
         final card = tester
             .getSemantics(find.byType(DivineListThumbnail))
             .getSemanticsData();
-        expect(card.label, 'My Playlist, ${l10n.listVideoCount(3)}');
+        expect(
+          card.label,
+          l10n.listCardSemanticLabel(
+            'My Playlist',
+            'public',
+            l10n.listVideoCount(3),
+          ),
+        );
       });
 
       testWidgets('marks a private list with a lock and says so', (
@@ -446,9 +453,13 @@ void main() {
             .getSemanticsData();
         expect(
           card.label,
-          'Just Mine, ${l10n.listVisibilityPrivate}, '
-          '${l10n.listVideoCount(0)}',
+          l10n.listCardSemanticLabel(
+            'Just Mine',
+            'private',
+            l10n.listVideoCount(0),
+          ),
         );
+        expect(card.label, contains(l10n.listVisibilityPrivate));
       });
 
       testWidgets('shows no lock on a public list', (tester) async {
@@ -590,7 +601,14 @@ void main() {
         final card = tester
             .getSemantics(find.byType(DivineListThumbnail))
             .getSemanticsData();
-        expect(card.label, 'Divine Team, ${l10n.listMemberCount(4)}');
+        expect(
+          card.label,
+          l10n.listCardSemanticLabel(
+            'Divine Team',
+            'public',
+            l10n.listMemberCount(4),
+          ),
+        );
         expect(
           find.byWidgetPredicate(
             (widget) =>

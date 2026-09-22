@@ -3047,6 +3047,24 @@
   "@listMemberNamesSeparator": {
     "description": "Joins the member names shown under a people list card that has no description, e.g. 'Alice, Bob, Carol'. Translate the separator: locales that do not list with a Latin comma should use their own (for example '、' or '، ')."
   },
+  "listCardSemanticLabel": "{visibility, select, private{{name}, Private, {count}} other{{name}, {count}}}",
+  "@listCardSemanticLabel": {
+    "description": "Screen-reader label for a list card, read as one sentence: the list's name, 'Private' when it is a device-only list, and its count as already localized by listVideoCount or listMemberCount. The order and the punctuation between them are the locale's to choose.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Weekend loops"
+      },
+      "visibility": {
+        "type": "String",
+        "example": "private"
+      },
+      "count": {
+        "type": "String",
+        "example": "3 videos"
+      }
+    }
+  },
   "listsDiscoveryLoadingLabel": "Loading lists",
   "@listsDiscoveryLoadingLabel": {
     "description": "Screen-reader label for the shimmering placeholder cards shown while the Explore Lists gallery loads."
