@@ -267,13 +267,19 @@ class DivineVideoPlayerController {
   /// controller holds a native player and its buffers.
   static int get liveControllerCount => _liveControllers.length;
 
-  /// Disposes all native player instances that may still be alive.
+  /// Disposes native player instances that may still be alive.
   ///
   /// Call at app startup to clean up zombie players from a previous
   /// Dart VM (e.g. after hot restart). The native plugin keeps its
   /// process-level state across hot restarts, so old ExoPlayer /
   /// AVPlayer instances and their timers survive unless explicitly
   /// released.
+  ///
+  /// Scope differs by platform. On iOS and macOS this releases only the
+  /// players belonging to the engine that made the call, so a second live
+  /// FlutterEngine (the notification isolate) keeps its own. On Android
+  /// the sweep is still process-wide. Either is correct for the startup
+  /// caller, whose zombies belong to its own engine.
   ///
   /// No-op on web and Linux where no native channel is registered.
   static Future<void> disposeAll() {
