@@ -154,6 +154,20 @@ void main() {
     });
   });
 
+  group('parseIntOrNull', () {
+    test('reads int, num and numeric String values', () {
+      expect(parseIntOrNull(3), equals(3));
+      expect(parseIntOrNull(3.7), equals(3));
+      expect(parseIntOrNull('4'), equals(4));
+    });
+
+    test('leaves absent and unreadable values null', () {
+      expect(parseIntOrNull(null), isNull);
+      expect(parseIntOrNull('many'), isNull);
+      expect(parseIntOrNull(const <String>[]), isNull);
+    });
+  });
+
   group('ProfileStatsData', () {
     test('fromJson parses counts', () {
       final data = ProfileStatsData.fromJson(const {
@@ -167,10 +181,19 @@ void main() {
       expect(data.verticalVideos, equals(3));
     });
 
-    test('fromJson reads vertical videos as zero when absent', () {
+    test('fromJson leaves vertical videos unknown when absent', () {
       final data = ProfileStatsData.fromJson(const {'video_count': 5});
 
       expect(data.videoCount, equals(5));
+      expect(data.verticalVideos, isNull);
+    });
+
+    test('fromJson reads a vertical video count of zero as zero', () {
+      final data = ProfileStatsData.fromJson(const {
+        'video_count': 5,
+        'vertical_videos': 0,
+      });
+
       expect(data.verticalVideos, isZero);
     });
 
