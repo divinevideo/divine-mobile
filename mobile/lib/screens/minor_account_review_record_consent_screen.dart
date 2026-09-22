@@ -214,7 +214,7 @@ class _CapturePane extends StatelessWidget {
           label: context.l10n.minorAccountReviewRecordConsentRecordCta,
           leadingIcon: DivineIconName.videoCamera,
           expanded: true,
-          onPressed: onRecord,
+          onPressed: cameraReady ? onRecord : null,
         ),
       ],
     );
