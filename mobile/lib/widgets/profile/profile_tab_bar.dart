@@ -113,37 +113,45 @@ class _ProfileTabBarState extends State<ProfileTabBar> {
 
   @override
   Widget build(BuildContext context) {
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: _SliverAppBarDelegate(
-        topInset: _tabBarTopInset,
-        isRefreshing: widget.isRefreshing,
-        TabBar(
-          controller: widget.controller,
-          indicatorColor: VineTheme.tabIndicatorGreen,
-          indicatorWeight: 4,
-          indicatorSize: TabBarIndicatorSize.tab,
-          dividerColor: VineTheme.transparent,
-          // Material's default 16 leaves each icon only `width / tabs - 32`
-          // to grow into. On the own profile (7 tabs) that is 19.4dp at 360dp
-          // wide — under the unscaled 28dp, so the glyph is squashed before
-          // text scaling is even involved. 4 fits the 1.3x cap (36.4dp) down
-          // to a 320dp screen: 320 / 7 - 8 = 37.7dp.
-          //
-          // Tabs are equal-width and the icon is centred, so neither icon
-          // position nor indicator extent moves with the padding.
-          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-          tabs: [
-            for (var i = 0; i < widget.tabs.length; i++)
-              _ProfileTab(
-                semanticId: widget.tabs[i].semanticId,
-                label: widget.tabs[i].label,
-                icon: widget.tabs[i].icon,
-                isSelected: widget.controller.index == i,
-              ),
-          ],
-        ),
-      ),
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final scrollable =
+            constraints.crossAxisExtent <
+            widget.tabs.length * kMinInteractiveDimension;
+        return SliverPersistentHeader(
+          pinned: true,
+          delegate: _SliverAppBarDelegate(
+            topInset: _tabBarTopInset,
+            isRefreshing: widget.isRefreshing,
+            TabBar(
+              controller: widget.controller,
+              isScrollable: scrollable,
+              tabAlignment: scrollable ? TabAlignment.start : TabAlignment.fill,
+              indicatorColor: VineTheme.tabIndicatorGreen,
+              indicatorWeight: 4,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: VineTheme.transparent,
+              // Scroll only when equal-width targets would be smaller than 48dp.
+              // Elsewhere, 4dp padding leaves room for scaled icons in seven tabs.
+              labelPadding: scrollable
+                  ? EdgeInsets.zero
+                  : const EdgeInsets.symmetric(horizontal: 4),
+              tabs: [
+                for (var i = 0; i < widget.tabs.length; i++)
+                  SizedBox(
+                    width: scrollable ? kMinInteractiveDimension : null,
+                    child: _ProfileTab(
+                      semanticId: widget.tabs[i].semanticId,
+                      label: widget.tabs[i].label,
+                      icon: widget.tabs[i].icon,
+                      isSelected: widget.controller.index == i,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -111,6 +111,37 @@ void main() {
         .getSemanticsData()
         .identifier;
 
+    testWidgets('seven tab touch targets remain at least 48dp', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await pumpBar(tester, ownProfile: true);
+      final targets = find.descendant(
+        of: find.byType(TabBar),
+        matching: find.byType(InkWell),
+      );
+      expect(targets, findsNWidgets(7));
+      for (final target in targets.evaluate()) {
+        final size = tester.getSize(
+          find.byElementPredicate((e) => e == target),
+        );
+        expect(size.width, greaterThanOrEqualTo(48));
+        expect(size.height, greaterThanOrEqualTo(48));
+      }
+      final bar = tester.widget<TabBar>(find.byType(TabBar));
+      expect(bar.isScrollable, isTrue);
+      await tester.drag(find.byType(TabBar), const Offset(-100, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Tab).last);
+      await tester.pumpAndSettle();
+      expect(bar.controller!.index, 6);
+    });
+    testWidgets('keeps equal-width tabs when all targets fit', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 700));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await pumpBar(tester, ownProfile: true);
+      expect(tester.widget<TabBar>(find.byType(TabBar)).isScrollable, isFalse);
+    });
+
     testWidgets('announces the localized tab name, not the test anchor', (
       tester,
     ) async {
