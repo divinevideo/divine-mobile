@@ -10543,31 +10543,93 @@ void main() {
         ).called(1);
       });
 
-      test('reads at most 100 members in the relay filter', () async {
-        when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
-        );
-        final members = [for (var i = 0; i < 150; i++) 'member-$i'];
+      test(
+        'reads a list past a hundred members as one filter per hundred, '
+        'merged newest first',
+        () async {
+          final members = [for (var i = 0; i < 150; i++) 'member-$i'];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filter =
+                (invocation.positionalArguments.first as List<Filter>).single;
+            // The second filter's member posted later than the first's, so
+            // the merge has to order across filters, not just within one.
+            final index = filter.authors!.first == 'member-0' ? 0 : 1;
+            return (
+              events: [
+                _createVideoEvent(
+                  id: 'video-$index',
+                  pubkey: filter.authors!.first,
+                  videoUrl: 'https://example.com/$index.mp4',
+                  createdAt: 1704067200 + index,
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
 
-        await repository.getVideosByAuthors(authorPubkeys: members);
+          final result = await repository.getVideosByAuthors(
+            authorPubkeys: members,
+          );
 
-        final filters =
-            verify(
-                  () => mockNostrClient.queryEventsDetailed(
-                    captureAny(),
-                    requireAllRelaysSettled: any(
-                      named: 'requireAllRelaysSettled',
-                    ),
+          expect(
+            result.map((video) => video.id),
+            equals(['video-1', 'video-0']),
+          );
+          final filters = verify(
+            () => mockNostrClient.queryEventsDetailed(
+              captureAny(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).captured.cast<List<Filter>>();
+          expect(filters, hasLength(2));
+          expect(filters.first.single.authors, equals(members.sublist(0, 100)));
+          expect(filters.last.single.authors, equals(members.sublist(100)));
+        },
+      );
+
+      test(
+        'treats one filter that timed out with nothing as a failed read',
+        () async {
+          // A feed missing the members of the filter that never settled
+          // would pass for the complete one.
+          final members = [for (var i = 0; i < 150; i++) 'member-$i'];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filter =
+                (invocation.positionalArguments.first as List<Filter>).single;
+            if (filter.authors!.first == 'member-0') {
+              return (
+                events: [
+                  _createVideoEvent(
+                    id: 'video-0',
+                    pubkey: 'member-0',
+                    videoUrl: 'https://example.com/0.mp4',
+                    createdAt: 1704067200,
                   ),
-                ).captured.single
-                as List<Filter>;
-        expect(filters.single.authors, equals(members.take(100).toList()));
-      });
+                ],
+                timedOut: false,
+                noRelays: false,
+              );
+            }
+            return (events: <Event>[], timedOut: true, noRelays: false);
+          });
+
+          await expectLater(
+            repository.getVideosByAuthors(authorPubkeys: members),
+            throwsA(isA<RelayReadUnavailableException>()),
+          );
+        },
+      );
 
       test('pages Funnelcake per member when the relay read fails', () async {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
@@ -10596,10 +10658,10 @@ void main() {
           limit: 40,
         );
 
-        // Only the first 20 members are paged, and the pages merge newest
-        // first across members.
-        expect(result, hasLength(20));
-        expect(result.first.id, equals('video-19'));
+        // Every member is paged, and the pages merge newest first across
+        // members.
+        expect(result, hasLength(25));
+        expect(result.first.id, equals('video-24'));
         expect(result.last.id, equals('video-0'));
         verify(
           () => mockFunnelcakeClient.getVideosByAuthor(
@@ -10607,8 +10669,88 @@ void main() {
             limit: 40,
             before: any(named: 'before'),
           ),
-        ).called(20);
+        ).called(25);
       });
+
+      test('keeps twenty fallback calls in flight at once', () async {
+        final mockFunnelcakeClient = MockFunnelcakeApiClient();
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenThrow(Exception('relay down'));
+        final gates = <Completer<VideosByAuthorResponse>>[];
+        when(
+          () => mockFunnelcakeClient.getVideosByAuthor(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) {
+          final gate = Completer<VideosByAuthorResponse>();
+          gates.add(gate);
+          return gate.future;
+        });
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
+        final members = [for (var i = 0; i < 45; i++) 'member-$i'];
+
+        final feed = repo.getVideosByAuthors(authorPubkeys: members);
+        await pumpEventQueue();
+        expect(gates, hasLength(20));
+
+        for (final gate in gates.toList()) {
+          gate.complete(const VideosByAuthorResponse(videos: []));
+        }
+        await pumpEventQueue();
+        expect(gates, hasLength(40));
+
+        for (final gate in gates.skip(20).toList()) {
+          gate.complete(const VideosByAuthorResponse(videos: []));
+        }
+        await pumpEventQueue();
+        expect(gates, hasLength(45));
+
+        for (final gate in gates.skip(40).toList()) {
+          gate.complete(const VideosByAuthorResponse(videos: []));
+        }
+        expect(await feed, isEmpty);
+      });
+
+      test(
+        'surfaces the relay failure for a list the fallback cannot cover',
+        () async {
+          final mockFunnelcakeClient = MockFunnelcakeApiClient();
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(Exception('relay down'));
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+          final members = [for (var i = 0; i < 101; i++) 'member-$i'];
+
+          await expectLater(
+            repo.getVideosByAuthors(authorPubkeys: members),
+            throwsA(isA<Exception>()),
+          );
+          verifyNever(
+            () => mockFunnelcakeClient.getVideosByAuthor(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          );
+        },
+      );
 
       test(
         'keeps the pages that answered when Funnelcake does not know a member',

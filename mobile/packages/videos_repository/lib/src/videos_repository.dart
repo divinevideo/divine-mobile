@@ -53,12 +53,19 @@ const int _authorFeedPaginationBatchSize = 50;
 /// unavailable). Mirrors `AppConstants.hasMoreContentThreshold` (10).
 const int _authorFeedHasMoreThreshold = 10;
 
-/// How many authors a members feed reads from relays in one filter.
-const int _membersFeedRelayAuthorCap = 100;
+/// How many members one relay filter of a members feed names. A larger list
+/// is read as one filter per hundred members, in parallel, so every member
+/// is covered: the cap bounds the filter, not the feed.
+const int _membersFeedRelayFilterAuthors = 100;
 
-/// How many authors the Funnelcake fallback of a members feed pages, one
-/// videos-by-author call each, when the relay read fails.
-const int _membersFeedApiAuthorCap = 20;
+/// How many members the Funnelcake fallback of a members feed can cover, one
+/// videos-by-author call each. A larger list is not answered by the fallback
+/// at all: a feed missing most of its members would pass for the complete
+/// one.
+const int _membersFeedApiAuthorCap = 100;
+
+/// How many of the fallback's per-member calls are in flight at once.
+const int _membersFeedApiConcurrency = 20;
 
 /// In-memory cache key prefix for a single author's feed.
 const String _authorFeedCacheKeyPrefix = 'author:';
@@ -2498,14 +2505,17 @@ class VideosRepository {
   /// Fetches the newest videos published by any of [authorPubkeys], newest
   /// first, at most [limit].
   ///
-  /// This is the feed behind a people list. One relay filter over the first
-  /// [_membersFeedRelayAuthorCap] members answers "what did these people
-  /// post lately" in a single round trip, hydrated with Funnelcake counts
-  /// when the API is up. Funnelcake has no multi-author endpoint, so it is
-  /// the fallback rather than the first source: when the relay read fails
-  /// and the API is available, the first [_membersFeedApiAuthorCap] members
-  /// are paged one videos-by-author call each and merged. A member the API
-  /// does not know contributes nothing; the other members' pages still show.
+  /// This is the feed behind a people list. A relay filter over every member
+  /// — one per [_membersFeedRelayFilterAuthors] members, read in parallel —
+  /// answers "what did these people post lately" in one round trip, hydrated
+  /// with Funnelcake counts when the API is up. No member is left out for
+  /// being past the filter size. Funnelcake has no multi-author endpoint, so
+  /// it is the fallback rather than the first source: when the relay read
+  /// fails and the API is available, a list of up to
+  /// [_membersFeedApiAuthorCap] members is paged one videos-by-author call
+  /// each and merged. A member the API does not know contributes nothing;
+  /// the other members' pages still show. A larger list gets the relay
+  /// failure instead of a fallback feed missing most of its members.
   ///
   /// A read that reached no relay, ran out of time, or settled before every
   /// relay answered counts as a failure even though the relay layer reports
@@ -2527,10 +2537,11 @@ class VideosRepository {
   /// Throws:
   ///
   /// * the relay error, unchanged, when there is no Funnelcake client to
-  ///   fall back to — an empty result would read as "these people have no
-  ///   videos" for what is a network failure.
+  ///   fall back to, or the list has more members than the fallback covers —
+  ///   an empty result would read as "these people have no videos" for what
+  ///   is a network failure.
   /// * [RelayReadUnavailableException] when the read answered with nothing
-  ///   because it could not be completed and there is no API to fall back to.
+  ///   because it could not be completed and the fallback does not run.
   /// * [FunnelcakeException] when the fallback fails as well, for any reason
   ///   other than a member the API does not know.
   Future<List<VideoEvent>> getVideosByAuthors({
@@ -2539,40 +2550,24 @@ class VideosRepository {
     int? until,
   }) async {
     if (authorPubkeys.isEmpty) return const [];
-    final authors = authorPubkeys.take(_membersFeedRelayAuthorCap).toList();
 
     final List<Event> events;
     try {
-      // Full settlement matters here: the public relays answer this filter
-      // quickly with nothing, and the Divine relay that actually holds the
-      // videos can still be busy when the pool settles. Without it an empty
-      // partial answer reads as "these people have no videos".
-      final read = await _nostrClient.queryEventsDetailed(
-        [
-          Filter(
-            kinds: [_videoKind],
-            authors: authors,
-            limit: limit,
-            until: until,
-          ),
-        ],
-        requireAllRelaysSettled: true,
+      events = await _videosByAuthorsFromRelays(
+        authorPubkeys,
+        limit: limit,
+        until: until,
       );
-      // A read nothing answered, or that not every relay answered, comes
-      // back as an empty list, the same value a genuinely empty answer has.
-      // Raise it so the fallback below runs.
-      if (read.events.isEmpty && (read.noRelays || read.timedOut)) {
-        throw RelayReadUnavailableException(
-          read.noRelays ? 'no relay took the read' : 'the read timed out',
-        );
-      }
-      events = read.events;
     } on Object {
       final api = _funnelcakeApiClient;
       if (api == null || !api.isAvailable) rethrow;
+      // A list the fallback cannot cover in full surfaces the relay failure
+      // instead: a feed missing most of its members would pass for the
+      // complete one.
+      if (authorPubkeys.length > _membersFeedApiAuthorCap) rethrow;
       return _videosByAuthorsFromApi(
         api,
-        authors.take(_membersFeedApiAuthorCap).toList(),
+        authorPubkeys,
         limit: limit,
         until: until,
       );
@@ -2587,16 +2582,78 @@ class VideosRepository {
     return videos.take(limit).toList();
   }
 
+  /// Every member's videos from relays: one filter per
+  /// [_membersFeedRelayFilterAuthors] members, read in parallel, so a list
+  /// past that size is still read whole.
+  ///
+  /// Full settlement matters here: the public relays answer this filter
+  /// quickly with nothing, and the Divine relay that actually holds the
+  /// videos can still be busy when the pool settles. Without it an empty
+  /// partial answer reads as "these people have no videos".
+  ///
+  /// Throws [RelayReadUnavailableException] when any filter came back empty
+  /// without a settled answer — no relay took it, or it timed out. The relay
+  /// layer reports those as an empty list, the same value a genuinely empty
+  /// answer has, and a feed missing those members' videos would pass for the
+  /// complete one; raising it runs the caller's fallback instead.
+  Future<List<Event>> _videosByAuthorsFromRelays(
+    List<String> authors, {
+    required int limit,
+    int? until,
+  }) async {
+    final reads = await Future.wait([
+      for (
+        var start = 0;
+        start < authors.length;
+        start += _membersFeedRelayFilterAuthors
+      )
+        _nostrClient.queryEventsDetailed(
+          [
+            Filter(
+              kinds: [_videoKind],
+              authors: authors
+                  .skip(start)
+                  .take(_membersFeedRelayFilterAuthors)
+                  .toList(),
+              limit: limit,
+              until: until,
+            ),
+          ],
+          requireAllRelaysSettled: true,
+        ),
+    ]);
+    final events = <Event>[];
+    for (final read in reads) {
+      if (read.events.isEmpty && (read.noRelays || read.timedOut)) {
+        throw RelayReadUnavailableException(
+          read.noRelays ? 'no relay took the read' : 'the read timed out',
+        );
+      }
+      events.addAll(read.events);
+    }
+    return events;
+  }
+
   Future<List<VideoEvent>> _videosByAuthorsFromApi(
     FunnelcakeApiClient api,
     List<String> authors, {
     required int limit,
     int? until,
   }) async {
-    final pages = await Future.wait([
-      for (final author in authors)
-        _authorPageOrEmpty(api, author, limit, until),
-    ]);
+    final pages = <List<VideoStats>>[];
+    for (
+      var start = 0;
+      start < authors.length;
+      start += _membersFeedApiConcurrency
+    ) {
+      pages.addAll(
+        await Future.wait([
+          for (final author
+              in authors.skip(start).take(_membersFeedApiConcurrency))
+            _authorPageOrEmpty(api, author, limit, until),
+        ]),
+      );
+    }
     final videos = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     for (final page in pages) {
