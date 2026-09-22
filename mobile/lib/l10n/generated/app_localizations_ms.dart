@@ -6203,22 +6203,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get libraryTabClips => 'Klip';
 
   @override
-  String get libraryTabScheduled => 'Dijadualkan';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Belum ada yang dijadualkan';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Pilih masa untuk video anda yang seterusnya dan ia menunggu di sini sehingga disiarkan.';
+  String get libraryScheduledSectionTitle => 'Dijadualkan';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Disiarkan $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Dijadualkan';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Menunggu pelayan';
@@ -9834,6 +9824,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Terbitkan video ke suapan';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Menyediakan video anda';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Juga kongsi ke suapan saya';

@@ -6234,22 +6234,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryTabClips => 'Mga Clip';
 
   @override
-  String get libraryTabScheduled => 'Naka-schedule';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Wala pang naka-schedule';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Pumili ng oras sa susunod mong video at dito muna ito hanggang lumabas.';
+  String get libraryScheduledSectionTitle => 'Naka-schedule';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Lalabas $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Naka-schedule';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Hinihintay ang server';
@@ -9904,6 +9894,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'I-publish ang video sa feed';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Inihahanda ang video mo';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Ibahagi rin sa feed ko';

@@ -6055,22 +6055,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryTabClips => 'ክሊፖች';
 
   @override
-  String get libraryTabScheduled => 'የታቀዱ';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'እስካሁን የታቀደ የለም';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'በሚቀጥለው ቪዲዮዎ ላይ የመለጠፊያ ሰዓት ይምረጡ፤ እስኪወጣ ድረስ እዚህ ይቆያል።';
+  String get libraryScheduledSectionTitle => 'የታቀዱ';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$time ይወጣል';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'የታቀደ';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'አገልጋይ በመጠበቅ ላይ';
@@ -9587,6 +9577,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'ለመመገብ ቪዲዮ ያትሙ';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'ቪዲዮህ እየተዘጋጀ ነው';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'በፊዴ ላይም አጋራ';

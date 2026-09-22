@@ -5893,22 +5893,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryTabClips => '클립';
 
   @override
-  String get libraryTabScheduled => '예약';
-
-  @override
-  String get libraryScheduledEmptyTitle => '아직 예약한 게 없어요';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      '다음 영상에서 올릴 시간을 고르면 나갈 때까지 여기에 있어요.';
+  String get libraryScheduledSectionTitle => '예약';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$time에 나가요';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => '예약됨';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => '서버 기다리는 중';
@@ -9356,6 +9346,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => '피드에 동영상 게시';
+
+  @override
+  String get videoMetadataPostingVideoHint => '영상을 준비하고 있어요';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => '내 피드에도 공유';

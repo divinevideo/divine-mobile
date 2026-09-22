@@ -5288,6 +5288,7 @@
   "videoMetadataSaveForLaterButton": "Lưu để làm sau",
   "videoMetadataPostSemanticLabel": "Nút đăng",
   "videoMetadataPublishVideoHint": "Đăng video lên bảng tin",
+  "videoMetadataPostingVideoHint": "Đang chuẩn bị video của bạn",
   "videoMetadataShareReplyToFeedTitle": "Cũng chia sẻ lên bảng tin của tôi",
   "@videoMetadataShareReplyToFeedTitle": {
     "description": "Label for the toggle that also surfaces a video reply in normal feeds."
@@ -6444,11 +6445,8 @@
   "savedSoundDeleteFailedNotOwner": "Bạn chỉ có thể xóa những âm thanh do chính bạn chia sẻ.",
   "audioPickerTypeGroup": "Âm thanh",
   "soundUploadRetrySaveAction": "Thử lưu lại vào Âm thanh",
-    "libraryTabScheduled": "Đã lên lịch",
-    "libraryScheduledEmptyTitle": "Chưa có gì được lên lịch",
-    "libraryScheduledEmptySubtitle": "Chọn giờ cho video tiếp theo, nó sẽ nằm ở đây đến khi lên sóng.",
+    "libraryScheduledSectionTitle": "Đã lên lịch",
     "libraryScheduledGoesOutAt": "Lên sóng {time}",
-    "libraryScheduledBadgeScheduled": "Đã lên lịch",
     "libraryScheduledBadgeWaitingForServer": "Đang chờ máy chủ",
     "libraryScheduledBadgeFailed": "Chưa lên sóng",
     "libraryScheduledBadgeUploading": "Đang tải lên",

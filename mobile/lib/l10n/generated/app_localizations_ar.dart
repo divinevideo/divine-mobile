@@ -6159,22 +6159,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryTabClips => 'مقاطع';
 
   @override
-  String get libraryTabScheduled => 'المجدولة';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'لا يوجد شيء مجدول بعد';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'اختيار وقت النشر في الفيديو التالي يبقيه هنا حتى موعده.';
+  String get libraryScheduledSectionTitle => 'المجدولة';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'النشر $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'مجدول';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'في انتظار الخادم';
@@ -9774,6 +9764,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'نشر الفيديو في الخلاصة';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'جارٍ تجهيز الفيديو الخاص بك';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'شارك أيضًا في موجزي';

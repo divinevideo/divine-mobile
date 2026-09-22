@@ -6202,22 +6202,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryTabClips => 'کلپس';
 
   @override
-  String get libraryTabScheduled => 'شیڈول شدہ';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'ابھی کچھ شیڈول نہیں ہے';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'اگلی ویڈیو پر وقت منتخب کریں، وہ یہاں رہے گی جب تک شائع نہ ہو جائے۔';
+  String get libraryScheduledSectionTitle => 'شیڈول شدہ';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$time کو شائع ہوگی';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'شیڈول شدہ';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'سرور کا انتظار';
@@ -9825,6 +9815,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'ویڈیو فیڈ پر شائع کریں';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'آپ کی ویڈیو تیار کی جا رہی ہے';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'اپنے فیڈ پر بھی شیئر کریں';

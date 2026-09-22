@@ -5844,21 +5844,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryTabClips => '片段';
 
   @override
-  String get libraryTabScheduled => '定时';
-
-  @override
-  String get libraryScheduledEmptyTitle => '还没有定时的帖子';
-
-  @override
-  String get libraryScheduledEmptySubtitle => '下次发视频时选个时间，它会留在这里，到点自动发出。';
+  String get libraryScheduledSectionTitle => '定时';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$time 发布';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => '已定时';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => '等待服务器';
@@ -9242,6 +9233,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => '发布视频到信息流';
+
+  @override
+  String get videoMetadataPostingVideoHint => '正在准备你的视频';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => '同时分享到我的信息流';

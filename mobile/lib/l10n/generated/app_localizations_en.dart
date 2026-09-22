@@ -6287,22 +6287,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryTabClips => 'Clips';
 
   @override
-  String get libraryTabScheduled => 'Scheduled';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Nothing scheduled yet';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Pick a post time on your next video and it lands here until it goes out.';
+  String get libraryScheduledSectionTitle => 'Scheduled';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Goes out $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Scheduled';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Waiting for server';
@@ -9921,6 +9911,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Publish video to feed';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Getting your video ready';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Also share to my feed';

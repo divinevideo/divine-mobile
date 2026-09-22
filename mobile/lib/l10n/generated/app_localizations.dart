@@ -10678,35 +10678,17 @@ abstract class AppLocalizations {
   /// **'Clips'**
   String get libraryTabClips;
 
-  /// Library tab listing posts scheduled for a later time (#3538).
+  /// Header of the section above the drafts list that shows posts scheduled for a later time (#3538).
   ///
   /// In en, this message translates to:
   /// **'Scheduled'**
-  String get libraryTabScheduled;
-
-  /// No description provided for @libraryScheduledEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing scheduled yet'**
-  String get libraryScheduledEmptyTitle;
-
-  /// No description provided for @libraryScheduledEmptySubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Pick a post time on your next video and it lands here until it goes out.'**
-  String get libraryScheduledEmptySubtitle;
+  String get libraryScheduledSectionTitle;
 
   /// Subtitle of a scheduled post row; {time} is the localized date and time.
   ///
   /// In en, this message translates to:
   /// **'Goes out {time}'**
   String libraryScheduledGoesOutAt(String time);
-
-  /// No description provided for @libraryScheduledBadgeScheduled.
-  ///
-  /// In en, this message translates to:
-  /// **'Scheduled'**
-  String get libraryScheduledBadgeScheduled;
 
   /// Badge on a scheduled post the relay has not accepted yet; the app keeps retrying and posts it itself if it is open at the time.
   ///
@@ -16703,6 +16685,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Publish video to feed'**
   String get videoMetadataPublishVideoHint;
+
+  /// Accessibility hint on the post/schedule button while the handoff runs — the gallery copy and the upload starting (#3538).
+  ///
+  /// In en, this message translates to:
+  /// **'Getting your video ready'**
+  String get videoMetadataPostingVideoHint;
 
   /// Label for the toggle that also surfaces a video reply in normal feeds.
   ///

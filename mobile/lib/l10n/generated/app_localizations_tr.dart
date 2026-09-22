@@ -6129,22 +6129,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryTabClips => 'Klipler';
 
   @override
-  String get libraryTabScheduled => 'Zamanlanmış';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Henüz zamanlanmış bir şey yok';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Bir sonraki videonda saat seç, çıkana kadar burada bekler.';
+  String get libraryScheduledSectionTitle => 'Zamanlanmış';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$time çıkıyor';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Zamanlandı';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Sunucu bekleniyor';
@@ -9740,6 +9730,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Videoyu akışa yayınla';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Videon hazırlanıyor';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Akışımda da paylaş';

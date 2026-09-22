@@ -6355,22 +6355,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryTabClips => 'Clipuri';
 
   @override
-  String get libraryTabScheduled => 'Programate';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Nimic programat încă';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Alege o oră la următorul videoclip și stă aici până iese.';
+  String get libraryScheduledSectionTitle => 'Programate';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Iese $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Programat';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Așteaptă serverul';
@@ -10038,6 +10028,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Publică videoclipul în feed';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Îți pregătim videoclipul';
 
   @override
   String get videoMetadataShareReplyToFeedTitle =>

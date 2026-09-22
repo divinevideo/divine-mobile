@@ -6158,6 +6158,7 @@
   "videoMetadataSaveForLaterButton": "తర్వాత కోసం సేవ్ చేయండి",
   "videoMetadataPostSemanticLabel": "పోస్ట్ బటన్",
   "videoMetadataPublishVideoHint": "ఫీడ్ కోసం వీడియోను ప్రచురించండి",
+  "videoMetadataPostingVideoHint": "మీ వీడియోను సిద్ధం చేస్తున్నాం",
   "videoMetadataShareReplyToFeedTitle": "నా ఫీడ్‌కి కూడా భాగస్వామ్యం చేయండి",
   "@videoMetadataShareReplyToFeedTitle": {
     "description": "Label for the toggle that also surfaces a video reply in normal feeds."
@@ -8228,11 +8229,8 @@
   "savedSoundDeleteFailedNotOwner": "మీరు పంచుకున్న సౌండ్‌లను మాత్రమే తొలగించగలరు.",
   "audioPickerTypeGroup": "ఆడియో",
   "soundUploadRetrySaveAction": "సౌండ్‌లకు మళ్లీ సేవ్ చేయండి",
-    "libraryTabScheduled": "షెడ్యూల్ చేసినవి",
-    "libraryScheduledEmptyTitle": "ఇంకా ఏదీ షెడ్యూల్ చేయలేదు",
-    "libraryScheduledEmptySubtitle": "మీ తదుపరి వీడియోకు పోస్ట్ సమయాన్ని ఎంచుకోండి, అది వెళ్లే వరకు ఇక్కడే ఉంటుంది.",
+    "libraryScheduledSectionTitle": "షెడ్యూల్ చేసినవి",
     "libraryScheduledGoesOutAt": "{time}కి వెళ్తుంది",
-    "libraryScheduledBadgeScheduled": "షెడ్యూల్ చేయబడింది",
     "libraryScheduledBadgeWaitingForServer": "సర్వర్ కోసం వేచి ఉంది",
     "libraryScheduledBadgeFailed": "వెళ్లలేదు",
     "libraryScheduledBadgeUploading": "అప్‌లోడ్ అవుతోంది",

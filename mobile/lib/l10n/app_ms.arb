@@ -5288,6 +5288,7 @@
   "videoMetadataSaveForLaterButton": "Simpan untuk Kemudian",
   "videoMetadataPostSemanticLabel": "Butang siarkan",
   "videoMetadataPublishVideoHint": "Terbitkan video ke suapan",
+  "videoMetadataPostingVideoHint": "Menyediakan video anda",
   "videoMetadataShareReplyToFeedTitle": "Juga kongsi ke suapan saya",
   "@videoMetadataShareReplyToFeedTitle": {
     "description": "Label for the toggle that also surfaces a video reply in normal feeds."
@@ -6444,11 +6445,8 @@
   "savedSoundDeleteFailedNotOwner": "Anda hanya boleh memadam bunyi yang anda kongsi sendiri.",
   "audioPickerTypeGroup": "Audio",
   "soundUploadRetrySaveAction": "Cuba simpan ke Bunyi sekali lagi",
-    "libraryTabScheduled": "Dijadualkan",
-    "libraryScheduledEmptyTitle": "Belum ada yang dijadualkan",
-    "libraryScheduledEmptySubtitle": "Pilih masa untuk video anda yang seterusnya dan ia menunggu di sini sehingga disiarkan.",
+    "libraryScheduledSectionTitle": "Dijadualkan",
     "libraryScheduledGoesOutAt": "Disiarkan {time}",
-    "libraryScheduledBadgeScheduled": "Dijadualkan",
     "libraryScheduledBadgeWaitingForServer": "Menunggu pelayan",
     "libraryScheduledBadgeFailed": "Tidak disiarkan",
     "libraryScheduledBadgeUploading": "Memuat naik",

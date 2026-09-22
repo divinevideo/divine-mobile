@@ -6393,22 +6393,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryTabClips => 'క్లిప్‌లు';
 
   @override
-  String get libraryTabScheduled => 'షెడ్యూల్ చేసినవి';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'ఇంకా ఏదీ షెడ్యూల్ చేయలేదు';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'మీ తదుపరి వీడియోకు పోస్ట్ సమయాన్ని ఎంచుకోండి, అది వెళ్లే వరకు ఇక్కడే ఉంటుంది.';
+  String get libraryScheduledSectionTitle => 'షెడ్యూల్ చేసినవి';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$timeకి వెళ్తుంది';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'షెడ్యూల్ చేయబడింది';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'సర్వర్ కోసం వేచి ఉంది';
@@ -10111,6 +10101,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'ఫీడ్ కోసం వీడియోను ప్రచురించండి';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'మీ వీడియోను సిద్ధం చేస్తున్నాం';
 
   @override
   String get videoMetadataShareReplyToFeedTitle =>

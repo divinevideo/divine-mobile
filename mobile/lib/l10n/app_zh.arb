@@ -5288,6 +5288,7 @@
   "videoMetadataSaveForLaterButton": "稍后发布",
   "videoMetadataPostSemanticLabel": "发布按钮",
   "videoMetadataPublishVideoHint": "发布视频到信息流",
+  "videoMetadataPostingVideoHint": "正在准备你的视频",
   "videoMetadataShareReplyToFeedTitle": "同时分享到我的信息流",
   "@videoMetadataShareReplyToFeedTitle": {
     "description": "Label for the toggle that also surfaces a video reply in normal feeds."
@@ -6444,11 +6445,8 @@
   "savedSoundDeleteFailedNotOwner": "你只能删除自己分享的声音。",
   "audioPickerTypeGroup": "音频",
   "soundUploadRetrySaveAction": "重新保存到声音库",
-    "libraryTabScheduled": "定时",
-    "libraryScheduledEmptyTitle": "还没有定时的帖子",
-    "libraryScheduledEmptySubtitle": "下次发视频时选个时间，它会留在这里，到点自动发出。",
+    "libraryScheduledSectionTitle": "定时",
     "libraryScheduledGoesOutAt": "{time} 发布",
-    "libraryScheduledBadgeScheduled": "已定时",
     "libraryScheduledBadgeWaitingForServer": "等待服务器",
     "libraryScheduledBadgeFailed": "没发出去",
     "libraryScheduledBadgeUploading": "上传中",

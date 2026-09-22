@@ -5288,6 +5288,7 @@
   "videoMetadataSaveForLaterButton": "بعد کے لیے محفوظ کریں",
   "videoMetadataPostSemanticLabel": "پوسٹ بٹن",
   "videoMetadataPublishVideoHint": "ویڈیو فیڈ پر شائع کریں",
+  "videoMetadataPostingVideoHint": "آپ کی ویڈیو تیار کی جا رہی ہے",
   "videoMetadataShareReplyToFeedTitle": "اپنے فیڈ پر بھی شیئر کریں",
   "@videoMetadataShareReplyToFeedTitle": {
     "description": "Label for the toggle that also surfaces a video reply in normal feeds."
@@ -6444,11 +6445,8 @@
   "savedSoundDeleteFailedNotOwner": "آپ صرف وہی ساؤنڈز حذف کر سکتے ہیں جو آپ نے خود شیئر کیے ہوں۔",
   "audioPickerTypeGroup": "آڈیو",
   "soundUploadRetrySaveAction": "آوازوں میں دوبارہ محفوظ کریں",
-    "libraryTabScheduled": "شیڈول شدہ",
-    "libraryScheduledEmptyTitle": "ابھی کچھ شیڈول نہیں ہے",
-    "libraryScheduledEmptySubtitle": "اگلی ویڈیو پر وقت منتخب کریں، وہ یہاں رہے گی جب تک شائع نہ ہو جائے۔",
+    "libraryScheduledSectionTitle": "شیڈول شدہ",
     "libraryScheduledGoesOutAt": "{time} کو شائع ہوگی",
-    "libraryScheduledBadgeScheduled": "شیڈول شدہ",
     "libraryScheduledBadgeWaitingForServer": "سرور کا انتظار",
     "libraryScheduledBadgeFailed": "شائع نہیں ہوئی",
     "libraryScheduledBadgeUploading": "اپلوڈ ہو رہی ہے",

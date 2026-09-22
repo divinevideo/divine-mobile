@@ -6166,22 +6166,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryTabClips => 'Clip';
 
   @override
-  String get libraryTabScheduled => 'Đã lên lịch';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Chưa có gì được lên lịch';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Chọn giờ cho video tiếp theo, nó sẽ nằm ở đây đến khi lên sóng.';
+  String get libraryScheduledSectionTitle => 'Đã lên lịch';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Lên sóng $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Đã lên lịch';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Đang chờ máy chủ';
@@ -9781,6 +9771,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Đăng video lên bảng tin';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Đang chuẩn bị video của bạn';
 
   @override
   String get videoMetadataShareReplyToFeedTitle =>

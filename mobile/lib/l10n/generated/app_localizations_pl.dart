@@ -6344,22 +6344,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryTabClips => 'Klify';
 
   @override
-  String get libraryTabScheduled => 'Zaplanowane';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Nic jeszcze nie zaplanowano';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Wybierz godzinę przy następnym filmie, a poczeka tutaj, aż wyjdzie.';
+  String get libraryScheduledSectionTitle => 'Zaplanowane';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Wyjdzie $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Zaplanowany';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Czeka na serwer';
@@ -10018,6 +10008,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Opublikuj wideo w feedzie';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Przygotowujemy Twój film';
 
   @override
   String get videoMetadataShareReplyToFeedTitle =>

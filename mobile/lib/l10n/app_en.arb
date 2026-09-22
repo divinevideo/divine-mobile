@@ -4009,12 +4009,10 @@
   "libraryWebUnavailableDescription": "Drafts and clips are saved on your device, so open Divine on your phone to manage them.",
   "libraryTabDrafts": "Drafts",
   "libraryTabClips": "Clips",
-  "libraryTabScheduled": "Scheduled",
-  "@libraryTabScheduled": {
-    "description": "Library tab listing posts scheduled for a later time (#3538)."
+  "libraryScheduledSectionTitle": "Scheduled",
+  "@libraryScheduledSectionTitle": {
+    "description": "Header of the section above the drafts list that shows posts scheduled for a later time (#3538)."
   },
-  "libraryScheduledEmptyTitle": "Nothing scheduled yet",
-  "libraryScheduledEmptySubtitle": "Pick a post time on your next video and it lands here until it goes out.",
   "libraryScheduledGoesOutAt": "Goes out {time}",
   "@libraryScheduledGoesOutAt": {
     "description": "Subtitle of a scheduled post row; {time} is the localized date and time.",
@@ -4025,7 +4023,6 @@
       }
     }
   },
-  "libraryScheduledBadgeScheduled": "Scheduled",
   "libraryScheduledBadgeWaitingForServer": "Waiting for server",
   "@libraryScheduledBadgeWaitingForServer": {
     "description": "Badge on a scheduled post the relay has not accepted yet; the app keeps retrying and posts it itself if it is open at the time."
@@ -6567,6 +6564,10 @@
   "videoMetadataSaveForLaterButton": "Save for Later",
   "videoMetadataPostSemanticLabel": "Post button",
   "videoMetadataPublishVideoHint": "Publish video to feed",
+  "videoMetadataPostingVideoHint": "Getting your video ready",
+  "@videoMetadataPostingVideoHint": {
+    "description": "Accessibility hint on the post/schedule button while the handoff runs \u2014 the gallery copy and the upload starting (#3538)."
+  },
   "videoMetadataShareReplyToFeedTitle": "Also share to my feed",
   "@videoMetadataShareReplyToFeedTitle": {
     "description": "Label for the toggle that also surfaces a video reply in normal feeds."

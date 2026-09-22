@@ -6251,22 +6251,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get libraryTabClips => 'Клипове';
 
   @override
-  String get libraryTabScheduled => 'Насрочени';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Още нищо насрочено';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Избери час за следващото си видео и то стои тук, докато излезе.';
+  String get libraryScheduledSectionTitle => 'Насрочени';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Излиза $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Насрочена';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Чака сървъра';
@@ -9918,6 +9908,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Публикувай видео във фийда';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Подготвяме видеото ти';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Сподели и в моя поток';

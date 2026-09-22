@@ -6187,22 +6187,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryTabClips => 'Klipp';
 
   @override
-  String get libraryTabScheduled => 'Schemalagda';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'Inget schemalagt än';
-
-  @override
-  String get libraryScheduledEmptySubtitle =>
-      'Välj en tid för nästa video, så ligger den här tills den går ut.';
+  String get libraryScheduledSectionTitle => 'Schemalagda';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return 'Går ut $time';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => 'Schemalagd';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'Väntar på servern';
@@ -9824,6 +9814,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Publicera video i flödet';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Din video görs i ordning';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Dela också i mitt flöde';

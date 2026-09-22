@@ -5873,21 +5873,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryTabClips => 'クリップ';
 
   @override
-  String get libraryTabScheduled => '予約投稿';
-
-  @override
-  String get libraryScheduledEmptyTitle => 'まだ予約はありません';
-
-  @override
-  String get libraryScheduledEmptySubtitle => '次の動画で投稿時間を選ぶと、公開されるまでここに並びます。';
+  String get libraryScheduledSectionTitle => '予約投稿';
 
   @override
   String libraryScheduledGoesOutAt(String time) {
     return '$timeに公開';
   }
-
-  @override
-  String get libraryScheduledBadgeScheduled => '予約済み';
 
   @override
   String get libraryScheduledBadgeWaitingForServer => 'サーバー待ち';
@@ -9339,6 +9330,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'フィードに動画を公開';
+
+  @override
+  String get videoMetadataPostingVideoHint => '動画を準備しています';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => '自分のフィードにも共有';
