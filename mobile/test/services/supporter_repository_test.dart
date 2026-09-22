@@ -286,6 +286,47 @@ void main() {
       expect(validator.purchaseCallCount, 1);
     });
 
+    test('concurrent server refreshes share one request', () async {
+      // The Supporter screen, purchase recovery and a purchase can each ask
+      // for a refresh at once; sharing the in-flight read means one signed
+      // request, and one prompt for an external signer, instead of several.
+      final prefs = await SharedPreferences.getInstance();
+      var calls = 0;
+      final response = Completer<http.Response>();
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+        httpClient: MockClient((_) {
+          calls++;
+          return response.future;
+        }),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+
+      final first = repo.refreshFromServer();
+      final second = repo.refreshFromServer();
+      response.complete(
+        http.Response(
+          jsonEncode({
+            'status': 'active',
+            'entitlement': {'source': 'server', 'isActive': true},
+            'recognition': {'haloVisible': false},
+          }),
+          200,
+        ),
+      );
+      await Future.wait([first, second]);
+      expect(calls, 1);
+    });
+
     test(
       'passive refresh finds existing membership once without store restore',
       () async {
