@@ -104,6 +104,13 @@ class _SoundUploadViewState extends State<SoundUploadView> {
   /// standalone sound.
   bool _librarySaveFailed = false;
 
+  /// True while a retry of the library save is in flight.
+  ///
+  /// [_librarySaveFailed] stays set for the whole retry so the guard on
+  /// "Change" is continuous; this drives the retry button's own busy state so
+  /// the same save cannot be started twice.
+  bool _librarySaveInFlight = false;
+
   @override
   void dispose() {
     runDetached(
@@ -179,7 +186,10 @@ class _SoundUploadViewState extends State<SoundUploadView> {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     if (result == null) {
-      setState(() => _librarySaveFailed = true);
+      setState(() {
+        _librarySaveFailed = true;
+        _librarySaveInFlight = false;
+      });
       messenger.showSnackBar(
         DivineSnackbarContainer.snackBar(
           context.l10n.soundsSaveFailed,
@@ -190,6 +200,10 @@ class _SoundUploadViewState extends State<SoundUploadView> {
       );
       return;
     }
+    setState(() {
+      _librarySaveFailed = false;
+      _librarySaveInFlight = false;
+    });
     messenger.showSnackBar(
       DivineSnackbarContainer.snackBar(context.l10n.soundUploadShared),
     );
@@ -201,7 +215,7 @@ class _SoundUploadViewState extends State<SoundUploadView> {
     // The failure snackbar would otherwise hold the outcome of the retry in
     // the messenger's queue until it times out.
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    setState(() => _librarySaveFailed = false);
+    setState(() => _librarySaveInFlight = true);
     runDetached(
       _onPublished(sound),
       'retry saving shared sound to library',
@@ -303,8 +317,10 @@ class _SoundUploadViewState extends State<SoundUploadView> {
                 ? _ShareBar(
                     buttonKey: const Key('sound_upload_retry_save'),
                     label: context.l10n.soundUploadRetrySaveAction,
-                    isPublishing: false,
-                    onShare: () => _retryLibrarySave(state.publishedSound!),
+                    isPublishing: _librarySaveInFlight,
+                    onShare: _librarySaveInFlight
+                        ? null
+                        : () => _retryLibrarySave(state.publishedSound!),
                   )
                 : _ShareBar(
                     buttonKey: const Key('sound_upload_share'),

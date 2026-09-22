@@ -446,7 +446,8 @@ void main() {
 
         // The bar is bound to the sound already on the relay. Picking another
         // file here would leave that bar in place with no way to publish the
-        // new pick, so Change stays disabled until the retry settles.
+        // new pick, so Change is disabled while the failure stands. The retry
+        // window itself is covered by the next test.
         expect(
           find.byKey(const Key('sound_upload_retry_save')),
           findsOneWidget,
@@ -455,6 +456,49 @@ void main() {
           find.byKey(const Key('sound_upload_change_file')),
         );
         expect(change.onPressed, isNull);
+      });
+
+      testWidgets('keeps the swap guard while the retry is in flight', (
+        tester,
+      ) async {
+        final service = _ParkedSavedSoundsService(sharedPreferences);
+        await pumpUpload(tester, savedSoundsService: service);
+        await pickFile(tester);
+
+        await tester.tap(find.byKey(const Key('sound_upload_share')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('sound_upload_retry_save')),
+          findsOneWidget,
+        );
+
+        // Hold the retry open. Clearing the failure flag here would hand the
+        // user back the same dead end the guard exists to close, bounded by
+        // however long the persist takes.
+        await tester.tap(find.byKey(const Key('sound_upload_retry_save')));
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<DivineButton>(
+                find.byKey(const Key('sound_upload_change_file')),
+              )
+              .onPressed,
+          isNull,
+          reason: 'Change must stay guarded for the whole retry',
+        );
+        expect(
+          tester
+              .widget<DivineButton>(
+                find.byKey(const Key('sound_upload_retry_save')),
+              )
+              .onPressed,
+          isNull,
+          reason: 'the same save must not be startable twice',
+        );
+
+        service.release();
+        await tester.pumpAndSettle();
       });
 
       testWidgets('reports an unreadable file and keeps the picker', (
@@ -517,6 +561,25 @@ void main() {
 
 /// Fails every library write until [heal] is called, standing in for a
 /// `SharedPreferences` write that returns false.
+/// Fails the first save, then parks the retry until [release] is called.
+class _ParkedSavedSoundsService extends SavedSoundsService {
+  _ParkedSavedSoundsService(super._preferences);
+
+  bool _failed = false;
+  final _parked = Completer<SavedSoundSaveResult>();
+
+  void release() => _parked.complete(SavedSoundSaveResult.saved);
+
+  @override
+  Future<SavedSoundSaveResult> saveSavedSound(SavedSound sound) {
+    if (!_failed) {
+      _failed = true;
+      throw StateError('Failed to persist saved sounds');
+    }
+    return _parked.future;
+  }
+}
+
 class _FlakySavedSoundsService extends SavedSoundsService {
   _FlakySavedSoundsService(super._preferences);
 
