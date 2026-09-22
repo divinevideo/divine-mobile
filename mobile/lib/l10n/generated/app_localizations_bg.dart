@@ -9544,6 +9544,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Клипът не можа да се превърне в кадри. Времевата ти линия остава непроменена.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Кадрите не можаха да бъдат намерени. Времевата ти линия остава непроменена.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Натисни дълго, за да плъзнеш';
 

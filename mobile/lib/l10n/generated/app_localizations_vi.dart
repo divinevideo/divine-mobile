@@ -9415,6 +9415,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không tách được clip đó thành các ảnh. Timeline của bạn vẫn nguyên.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Không tìm thấy các ảnh đó. Timeline của bạn vẫn nguyên.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Nhấn giữ để kéo';
 
   @override

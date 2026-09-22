@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "静止画をクリップに変換できませんでした。タイムラインは変更されていません。",
     "videoEditorLibraryImportStillsProgressLabel": "少々お待ちください。クリップを静止画に変換しています",
     "videoEditorLibraryImportStillsFailed": "クリップを静止画に変換できませんでした。タイムラインは変更されていません。",
+    "videoEditorLibraryImportStillsMissing": "静止画が見つかりませんでした。タイムラインは変更されていません。",
     "deleteAccountLocalDataDeletionFailed": "削除リクエストを送信してサインアウトしたよ。でも、一部のローカルデータはこのデバイスから削除できなかったよ。",
     "imageCropEditorRotateLabel": "回転",
     "imageCropEditorFlipLabel": "反転",

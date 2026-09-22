@@ -118,9 +118,8 @@ void main() {
     setUp(() {
       audioExtractionService = _MockAudioExtractionService();
       cleanedSampledPaths = [];
-      when(
-        () => audioExtractionService.cleanupAudioFile(any()),
-      ).thenAnswer((_) async {});
+      when(() => audioExtractionService.cleanupAudioFile(any()))
+          .thenAnswer((_) async {});
     });
 
     ClipEditorBloc buildBloc({
@@ -253,16 +252,14 @@ void main() {
             dir: tempDir,
             framesPerImage: 3,
           );
-          final bloc = await seeded(
-            [session],
-            sampleStopMotionFrames: recordingSampler(requests),
-          );
+          final bloc = await seeded([
+            session,
+          ], sampleStopMotionFrames: recordingSampler(requests));
 
           bloc.add(
-            ClipEditorLibraryClipsImportRequested(
-              [_videoClip('footage')],
-              audioTitle: 'Clip Audio',
-            ),
+            ClipEditorLibraryClipsImportRequested([
+              _videoClip('footage'),
+            ], audioTitle: 'Clip Audio'),
           );
           final states = await bloc.stream.take(2).toList();
 
@@ -287,10 +284,9 @@ void main() {
             session.stopMotionFrames!.map((f) => f.path),
           );
           expect(frames[2].path, '/documents/footage-0.jpg');
-          expect(
-            frames.skip(2).map((f) => f.duration).toSet(),
-            {StopMotionFrameOps.framesPerImageToDuration(3)},
-          );
+          expect(frames.skip(2).map((f) => f.duration).toSet(), {
+            StopMotionFrameOps.framesPerImageToDuration(3),
+          });
 
           // The footage's sound rides over exactly its stills: it starts
           // where the session's two stills end and runs for the twenty.
@@ -341,10 +337,9 @@ void main() {
             speed: any(named: 'speed'),
           ),
         ).thenThrow(const AudioExtractionException('no audio track'));
-        final bloc = await seeded(
-          [_stopMotionSet('session', dir: tempDir)],
-          sampleStopMotionFrames: recordingSampler([]),
-        );
+        final bloc = await seeded([
+          _stopMotionSet('session', dir: tempDir),
+        ], sampleStopMotionFrames: recordingSampler([]));
 
         bloc.add(ClipEditorLibraryClipsImportRequested([_videoClip('mute')]));
         final states = await bloc.stream.take(2).toList();
@@ -373,10 +368,9 @@ void main() {
           framesPerImage: 1,
           frameCount: 3,
         );
-        final bloc = await seeded(
-          [session],
-          sampleStopMotionFrames: recordingSampler(requests),
-        );
+        final bloc = await seeded([
+          session,
+        ], sampleStopMotionFrames: recordingSampler(requests));
 
         bloc.add(
           ClipEditorLibraryClipsImportRequested([
@@ -407,10 +401,7 @@ void main() {
             states.last.lastLibraryImportResult! as ClipLibraryImportSuccess;
         expect(result.audioTracks, hasLength(2));
         expect(result.audioTracks.first.startTime, hold * 2);
-        expect(
-          result.audioTracks.last.startTime,
-          hold * (2 + perClip + 3),
-        );
+        expect(result.audioTracks.last.startTime, hold * (2 + perClip + 3));
       });
 
       test(
@@ -554,10 +545,7 @@ void main() {
           // so the overlay tracked the render actually running.
           expect(taskIds, hasLength(2));
           expect(taskIds.toSet(), hasLength(2));
-          expect(
-            states.take(2).map((s) => s.libraryImportRenderId),
-            taskIds,
-          );
+          expect(states.take(2).map((s) => s.libraryImportRenderId), taskIds);
         },
       );
 
@@ -587,9 +575,23 @@ void main() {
         bloc.add(ClipEditorLibraryClipsImportRequested([missing]));
         await pumpEventQueue();
 
-        // Nothing readable was picked, so there is no import to report and
-        // no assembly to fail on a missing file.
+        // Nothing readable was picked, so there is no assembly to fail on a
+        // missing file, but the user still hears why nothing was added.
         expect(rendered, isFalse);
+        expect(bloc.state.clips.map((c) => c.id), ['a']);
+        expect(
+          bloc.state.lastLibraryImportResult,
+          isA<ClipLibraryImportStillsMissing>(),
+        );
+        expect(bloc.state.isImportingLibraryClips, isFalse);
+      });
+
+      test('reports nothing for an empty pick', () async {
+        final bloc = await seeded([_videoClip('a')]);
+
+        bloc.add(const ClipEditorLibraryClipsImportRequested([]));
+        await pumpEventQueue();
+
         expect(bloc.state.clips.map((c) => c.id), ['a']);
         expect(bloc.state.lastLibraryImportResult, isNull);
       });

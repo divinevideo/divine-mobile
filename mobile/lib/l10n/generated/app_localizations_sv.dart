@@ -9454,6 +9454,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att göra bilder av klippet. Din tidslinje är oförändrad.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Det gick inte att hitta bilderna. Din tidslinje är oförändrad.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Håll ned för att dra';
 
   @override

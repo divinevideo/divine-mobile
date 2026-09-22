@@ -689,6 +689,10 @@ final class ClipLibraryImportSuccess extends ClipLibraryImportResult {
 /// Rendering a stop-motion set into a clip failed; the timeline is unchanged.
 final class ClipLibraryImportFailure extends ClipLibraryImportResult {}
 
+/// Every picked clip was a stop-motion set whose stills are gone from the
+/// device, so there was nothing to add; the timeline is unchanged.
+final class ClipLibraryImportStillsMissing extends ClipLibraryImportResult {}
+
 /// The render was cancelled from outside (editor teardown), so nothing was
 /// added and nothing needs reporting.
 final class ClipLibraryImportDiscarded extends ClipLibraryImportResult {}

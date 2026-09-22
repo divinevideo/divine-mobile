@@ -676,6 +676,12 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
                 : context.l10n.videoEditorLibraryImportFailed,
           ),
         );
+      case ClipLibraryImportStillsMissing():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorLibraryImportStillsMissing,
+          ),
+        );
       case ClipLibraryImportDiscarded():
         // The render was cancelled by the editor's own teardown — there is no
         // timeline left to add to and no user action that warrants a snackbar.

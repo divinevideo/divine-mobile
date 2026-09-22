@@ -5186,6 +5186,7 @@
   "videoEditorLibraryImportFailed": "ان تصاویر سے کلپ نہیں بن سکی۔ آپ کی ٹائم لائن ویسی ہی ہے۔",
   "videoEditorLibraryImportStillsProgressLabel": "ایک لمحہ، ہم آپ کی کلپ کو تصاویر بنا رہے ہیں",
   "videoEditorLibraryImportStillsFailed": "اس کلپ سے تصاویر نہیں بن سکیں۔ آپ کی ٹائم لائن ویسی ہی ہے۔",
+  "videoEditorLibraryImportStillsMissing": "وہ تصاویر نہیں مل سکیں۔ آپ کی ٹائم لائن ویسی ہی ہے۔",
   "videoEditorTimelineLongPressToDragHint": "کھینچنے کے لیے دیر تک دبائیں",
   "videoEditorVideoTimelineSemanticLabel": "ویڈیو ٹائم لائن",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

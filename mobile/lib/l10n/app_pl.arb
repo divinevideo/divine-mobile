@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "Nie udało się zamienić tych zdjęć w klip. Twoja oś czasu pozostaje bez zmian.",
     "videoEditorLibraryImportStillsProgressLabel": "Chwila, zamieniamy Twój klip w zdjęcia",
     "videoEditorLibraryImportStillsFailed": "Nie udało się zamienić tego klipu w zdjęcia. Twoja oś czasu pozostaje bez zmian.",
+    "videoEditorLibraryImportStillsMissing": "Nie udało się znaleźć tych zdjęć. Twoja oś czasu pozostaje bez zmian.",
     "deleteAccountLocalDataDeletionFailed": "Żądania usunięcia wysłane i wylogowano cię, ale niektórych danych lokalnych nie udało się usunąć z tego urządzenia.",
     "imageCropEditorRotateLabel": "Obróć",
     "imageCropEditorFlipLabel": "Odbij",

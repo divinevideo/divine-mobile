@@ -8986,6 +8986,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'クリップを静止画に変換できませんでした。タイムラインは変更されていません。';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      '静止画が見つかりませんでした。タイムラインは変更されていません。';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => '長押しでドラッグ';
 
   @override

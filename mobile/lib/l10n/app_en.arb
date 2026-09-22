@@ -6318,6 +6318,10 @@
   "@videoEditorLibraryImportStillsFailed": {
     "description": "Snackbar message shown when sampling a video clip picked from the library into stop-motion stills fails. Nothing was added to the timeline."
   },
+  "videoEditorLibraryImportStillsMissing": "Couldn't find those stills. Your timeline is unchanged.",
+  "@videoEditorLibraryImportStillsMissing": {
+    "description": "Snackbar message shown when every clip picked from the library is a stop-motion set whose still images are no longer on the device, so nothing could be added. Nothing was added to the timeline."
+  },
   "videoEditorTimelineLongPressToDragHint": "Long press to drag",
   "videoEditorVideoTimelineSemanticLabel": "Video timeline",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

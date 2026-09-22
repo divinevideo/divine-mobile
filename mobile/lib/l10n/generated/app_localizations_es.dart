@@ -9549,6 +9549,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo convertir ese clip en fotos. Tu línea de tiempo queda igual.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'No se encontraron esas fotos. Tu línea de tiempo queda igual.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Mantén presionado para arrastrar';
 

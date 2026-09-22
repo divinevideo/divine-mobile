@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "Não foi possível transformar essas fotos em um clipe. Sua linha do tempo fica igual.",
     "videoEditorLibraryImportStillsProgressLabel": "Um momento, estamos transformando seu clipe em fotos",
     "videoEditorLibraryImportStillsFailed": "Não foi possível transformar esse clipe em fotos. Sua linha do tempo fica igual.",
+    "videoEditorLibraryImportStillsMissing": "Não foi possível encontrar essas fotos. Sua linha do tempo fica igual.",
     "deleteAccountLocalDataDeletionFailed": "Solicitações de exclusão enviadas e você foi desconectado, mas alguns dados locais não puderam ser removidos deste dispositivo.",
     "imageCropEditorRotateLabel": "Girar",
     "imageCropEditorFlipLabel": "Inverter",

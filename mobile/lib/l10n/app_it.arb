@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "Non è stato possibile trasformare quegli scatti in una clip. La timeline resta invariata.",
     "videoEditorLibraryImportStillsProgressLabel": "Un momento, stiamo trasformando la tua clip in scatti",
     "videoEditorLibraryImportStillsFailed": "Non è stato possibile trasformare quella clip in scatti. La timeline resta invariata.",
+    "videoEditorLibraryImportStillsMissing": "Non è stato possibile trovare quegli scatti. La timeline resta invariata.",
     "deleteAccountLocalDataDeletionFailed": "Richieste di eliminazione inviate e sei disconnesso, ma non è stato possibile rimuovere alcuni dati locali da questo dispositivo.",
     "imageCropEditorRotateLabel": "Ruota",
     "imageCropEditorFlipLabel": "Capovolgi",

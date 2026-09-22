@@ -9402,6 +9402,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تحويل هذا المقطع إلى صور. الجدول الزمني كما هو دون تغيير.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'تعذّر العثور على هذه الصور. الجدول الزمني كما هو دون تغيير.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'اضغط مطولاً للسحب';
 
   @override

@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "Impossible de transformer ces images en clip. Ta timeline est inchangée.",
     "videoEditorLibraryImportStillsProgressLabel": "Un instant, on transforme ton clip en images",
     "videoEditorLibraryImportStillsFailed": "Impossible de transformer ce clip en images. Ta timeline est inchangée.",
+    "videoEditorLibraryImportStillsMissing": "Impossible de retrouver ces images. Ta timeline est inchangée.",
     "deleteAccountLocalDataDeletionFailed": "Demandes de suppression envoyées et tu es déconnecté, mais certaines données locales n'ont pas pu être retirées de cet appareil.",
     "imageCropEditorRotateLabel": "Pivoter",
     "imageCropEditorFlipLabel": "Retourner",

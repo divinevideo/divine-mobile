@@ -9525,6 +9525,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível transformar esse clipe em fotos. Sua linha do tempo fica igual.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Não foi possível encontrar essas fotos. Sua linha do tempo fica igual.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Pressione e segure para arrastar';
 

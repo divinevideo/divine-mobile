@@ -9372,6 +9372,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu klip karelere dönüştürülemedi. Zaman çizelgen değişmedi.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Bu kareler bulunamadı. Zaman çizelgen değişmedi.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Sürüklemek için uzun basın';
 

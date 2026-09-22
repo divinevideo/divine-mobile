@@ -9529,6 +9529,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi nagawang mga still ang clip na iyon. Hindi nagbago ang timeline mo.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Hindi mahanap ang mga still na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Pindutin nang matagal para i-drag';
 

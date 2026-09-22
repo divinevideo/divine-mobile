@@ -9561,6 +9561,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non è stato possibile trasformare quella clip in scatti. La timeline resta invariata.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Non è stato possibile trovare quegli scatti. La timeline resta invariata.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tieni premuto per trascinare';
 

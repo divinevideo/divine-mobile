@@ -9553,6 +9553,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t turn that clip into stills. Your timeline is unchanged.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Couldn\'t find those stills. Your timeline is unchanged.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Long press to drag';
 
   @override

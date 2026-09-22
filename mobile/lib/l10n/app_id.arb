@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "Foto-foto itu tidak bisa diubah menjadi klip. Timeline-mu tidak berubah.",
     "videoEditorLibraryImportStillsProgressLabel": "Sebentar, kami sedang mengubah klipmu menjadi foto-foto",
     "videoEditorLibraryImportStillsFailed": "Klip itu tidak bisa diubah menjadi foto-foto. Timeline-mu tidak berubah.",
+    "videoEditorLibraryImportStillsMissing": "Foto-foto itu tidak ditemukan. Timeline-mu tidak berubah.",
     "deleteAccountLocalDataDeletionFailed": "Permintaan penghapusan terkirim dan kamu keluar dari akun, tapi sebagian data lokal tidak bisa dihapus dari perangkat ini.",
     "imageCropEditorRotateLabel": "Putar",
     "imageCropEditorFlipLabel": "Balik",

@@ -1296,7 +1296,18 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     final picked = [
       for (final clip in event.clips) ?StopMotionFrameOps.sanitizedClip(clip),
     ];
-    if (picked.isEmpty) return;
+    if (picked.isEmpty) {
+      // The picker has already closed, so an empty result still owes the
+      // user an answer when they did pick something.
+      if (event.clips.isNotEmpty) {
+        emit(
+          state.copyWith(
+            lastLibraryImportResult: ClipLibraryImportStillsMissing(),
+          ),
+        );
+      }
+      return;
+    }
 
     final previousClips = state.clips;
 

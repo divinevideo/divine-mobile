@@ -9227,6 +9227,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ያንን ቅንጥብ ወደ ፎቶዎች መቀየር አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'እነዚያን ፎቶዎች ማግኘት አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'ለመጎተት በረጅሙ ተጫን';
 
   @override

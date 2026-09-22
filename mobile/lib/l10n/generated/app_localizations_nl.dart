@@ -9501,6 +9501,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon van die clip geen foto\'s maken. Je tijdlijn blijft ongewijzigd.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Kon die foto\'s niet vinden. Je tijdlijn blijft ongewijzigd.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Lang indrukken om te slepen';
 

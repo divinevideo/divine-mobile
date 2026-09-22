@@ -9453,6 +9453,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس کلپ سے تصاویر نہیں بن سکیں۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'وہ تصاویر نہیں مل سکیں۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'کھینچنے کے لیے دیر تک دبائیں';
 

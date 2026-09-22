@@ -3943,6 +3943,7 @@
     "videoEditorLibraryImportFailed": "Aus den Bildern konnte kein Clip werden. Deine Timeline bleibt unverändert.",
     "videoEditorLibraryImportStillsProgressLabel": "Einen Moment, wir machen aus deinem Clip Einzelbilder",
     "videoEditorLibraryImportStillsFailed": "Aus dem Clip konnten keine Einzelbilder werden. Deine Timeline bleibt unverändert.",
+    "videoEditorLibraryImportStillsMissing": "Die Einzelbilder waren nicht mehr da. Deine Timeline bleibt unverändert.",
     "deleteAccountLocalDataDeletionFailed": "Löschanfragen gesendet und du bist abgemeldet, aber einige lokale Daten konnten nicht von diesem Gerät entfernt werden.",
     "imageCropEditorRotateLabel": "Drehen",
     "imageCropEditorFlipLabel": "Spiegeln",

@@ -9464,6 +9464,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Klip itu tidak dapat ditukar menjadi gambar. Garis masa anda tidak berubah.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Gambar itu tidak dapat ditemui. Garis masa anda tidak berubah.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tekan lama untuk menyeret';
 

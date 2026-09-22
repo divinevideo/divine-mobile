@@ -9733,6 +9733,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఆ క్లిప్‌ను ఫోటోలుగా మార్చడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'ఆ ఫోటోలు కనిపించలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'లాగడానికి ఎక్కువసేపు నొక్కండి';
 

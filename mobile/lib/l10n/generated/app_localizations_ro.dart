@@ -9664,6 +9664,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Clipul nu a putut fi transformat în cadre. Cronologia ta rămâne neschimbată.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Cadrele nu au putut fi găsite. Cronologia ta rămâne neschimbată.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Apasă lung pentru a trage';
 

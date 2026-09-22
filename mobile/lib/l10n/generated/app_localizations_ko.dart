@@ -9002,6 +9002,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '클립을 사진으로 만들지 못했어요. 타임라인은 그대로예요.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      '사진을 찾지 못했어요. 타임라인은 그대로예요.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => '길게 눌러 드래그';
 
   @override

@@ -9640,6 +9640,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się zamienić tego klipu w zdjęcia. Twoja oś czasu pozostaje bez zmian.';
 
   @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Nie udało się znaleźć tych zdjęć. Twoja oś czasu pozostaje bez zmian.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Przytrzymaj, aby przeciągnąć';
 

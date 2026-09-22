@@ -16092,6 +16092,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t turn that clip into stills. Your timeline is unchanged.'**
   String get videoEditorLibraryImportStillsFailed;
 
+  /// Snackbar message shown when every clip picked from the library is a stop-motion set whose still images are no longer on the device, so nothing could be added. Nothing was added to the timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find those stills. Your timeline is unchanged.'**
+  String get videoEditorLibraryImportStillsMissing;
+
   /// No description provided for @videoEditorTimelineLongPressToDragHint.
   ///
   /// In en, this message translates to:
