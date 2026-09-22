@@ -2,8 +2,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/platform_io.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -126,6 +128,71 @@ class ApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Network error during parent contact submission: $e');
+    }
+  }
+
+  /// Submit a recorded parental consent video plus parent email for an open
+  /// minor-account review case. The video is uploaded as multipart/form-data,
+  /// and the NIP-98 auth token carries the SHA-256 of the file bytes as its
+  /// payload tag so the backend can verify the exact content that was signed.
+  Future<void> submitMinorAccountReviewParentConsent({
+    required String caseId,
+    required String email,
+    required String videoPath,
+  }) async {
+    Log.debug(
+      'Submitting parent consent video for case $caseId',
+      name: 'ApiService',
+      category: LogCategory.api,
+    );
+
+    try {
+      final uri = Uri.parse(
+        '$_relayManagerBaseUrl/v1/minor-review-cases/$caseId/parent-consent',
+      );
+      final file = File(videoPath);
+      final bytes = await file.readAsBytes();
+      final payload = sha256.convert(bytes).toString();
+
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['email'] = email
+        ..files.add(await http.MultipartFile.fromPath('video', videoPath));
+
+      final token = await _authService?.createAuthToken(
+        url: uri.toString(),
+        method: HttpMethod.post,
+        payload: payload,
+      );
+      request.headers.addAll({
+        'Accept': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+        if (token != null) 'Authorization': token.authorizationHeader,
+      });
+
+      final response = await _request(
+        () async => _client.send(request).then(http.Response.fromStream),
+      );
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        return;
+      }
+
+      throw ApiException(
+        'Failed to submit parent consent video',
+        statusCode: response.statusCode,
+        responseBody: response.body,
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        'Request timeout for parent consent video submission',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(
+        'Network error during parent consent video submission: $e',
+      );
     }
   }
 

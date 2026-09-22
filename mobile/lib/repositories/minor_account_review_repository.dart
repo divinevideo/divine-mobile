@@ -38,4 +38,16 @@ class MinorAccountReviewRepository {
       email: email,
     );
   }
+
+  Future<void> submitParentConsent({
+    required String caseId,
+    required String email,
+    required String videoPath,
+  }) async {
+    await _apiService.submitMinorAccountReviewParentConsent(
+      caseId: caseId,
+      email: email,
+      videoPath: videoPath,
+    );
+  }
 }

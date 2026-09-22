@@ -100,5 +100,31 @@ void main() {
         ),
       ).called(1);
     });
+
+    group('submitParentConsent', () {
+      test('forwards caseId, email and videoPath to ApiService', () async {
+        when(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: any(named: 'caseId'),
+            email: any(named: 'email'),
+            videoPath: any(named: 'videoPath'),
+          ),
+        ).thenAnswer((_) async {});
+
+        await repository.submitParentConsent(
+          caseId: 'case-1',
+          email: 'parent@example.com',
+          videoPath: '/tmp/consent.mp4',
+        );
+
+        verify(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: 'case-1',
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+          ),
+        ).called(1);
+      });
+    });
   });
 }
