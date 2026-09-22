@@ -11237,6 +11237,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ Divine سپورٹر ہیں۔ اسے چلتے رکھنے کے لیے شکریہ۔';
 
   @override
+  String get supporterPreparingCheckout => 'ادائیگی کی تیاری ہو رہی ہے…';
+
+  @override
   String get supporterPurchasePending => 'آپ کی خریداری منظوری کے منتظر ہے۔';
 
   @override

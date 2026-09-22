@@ -10707,6 +10707,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supporterActiveBadge => 'Divine 서포터예요. 계속 이어가 주셔서 고마워요.';
 
   @override
+  String get supporterPreparingCheckout => '결제를 준비하고 있어요…';
+
+  @override
   String get supporterPurchasePending => '구매가 승인 대기 중이에요.';
 
   @override

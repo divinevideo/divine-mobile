@@ -3090,6 +3090,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "أنت داعم لـ Divine. شكرًا لإبقائك هذا مستمرًا.",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "جارٍ تجهيز الدفع…",
     "supporterPurchasePending": "عملية شرائك في انتظار الموافقة.",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "جارٍ تأكيد دعمك…",

@@ -6151,6 +6151,7 @@
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
   },
+  "supporterPreparingCheckout": "Đang chuẩn bị thanh toán…",
   "supporterPurchasePending": "Giao dịch mua của bạn đang chờ phê duyệt.",
   "@supporterPurchasePending": {
     "description": "Status note shown while a supporter purchase awaits store approval."

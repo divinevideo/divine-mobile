@@ -11382,6 +11382,9 @@ class AppLocalizationsIt extends AppLocalizations {
       'Sei un Sostenitore Divine. Grazie per mantenere vivo tutto questo.';
 
   @override
+  String get supporterPreparingCheckout => 'Preparazione del pagamento…';
+
+  @override
   String get supporterPurchasePending =>
       'Il tuo acquisto è in attesa di approvazione.';
 

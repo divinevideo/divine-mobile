@@ -24,16 +24,26 @@ class _FakeRepository extends Fake implements SupporterRepository {
   SupporterEntitlement get current => SupporterEntitlement.inactive;
 
   @override
-  bool get hasServerClient => false;
+  bool get hasServerClient => refreshCompleter != null;
 
   Object? purchaseError;
   Completer<SupporterEntitlement>? purchaseCompleter;
+  Completer<SupporterAccountSnapshot>? refreshCompleter;
+  int purchaseCalls = 0;
+
+  @override
+  Future<SupporterAccountSnapshot> refreshFromServer() async {
+    final snapshot = await refreshCompleter!.future;
+    _controller.add(snapshot.entitlement);
+    return snapshot;
+  }
 
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
 
   @override
   Future<SupporterEntitlement> purchase(String productId) async {
+    purchaseCalls++;
     if (purchaseError != null) throw purchaseError!;
     return purchaseCompleter?.future ?? validator.purchase(productId);
   }
@@ -316,6 +326,56 @@ void main() {
   });
 
   group('purchase lifecycle', () {
+    for (final refreshFails in [false, true]) {
+      test(
+        'late account refresh ${refreshFails ? 'failure' : 'success'} '
+        'does not interrupt checkout or allow a duplicate purchase',
+        () async {
+          final refresh = Completer<SupporterAccountSnapshot>();
+          final purchase = Completer<SupporterEntitlement>();
+          final repo = _FakeRepository(controller)
+            ..refreshCompleter = refresh
+            ..purchaseCompleter = purchase;
+          final cubit = SupporterCubit(repository: repo);
+          addTearDown(cubit.close);
+          cubit.start();
+          await pumpEventQueue();
+          expect(cubit.state.status, SupporterStatus.idle);
+
+          final pending = cubit.subscribe('divine.supporter.monthly');
+          expect(cubit.state.status, SupporterStatus.purchasing);
+          expect(repo.purchaseCalls, 1);
+
+          if (refreshFails) {
+            refresh.completeError(
+              const SupporterApiException(
+                SupporterApiFailureKind.unavailable,
+                'Account refresh unavailable',
+              ),
+            );
+          } else {
+            refresh.complete(
+              const SupporterAccountSnapshot(
+                entitlement: SupporterEntitlement.inactive,
+                status: SupporterServerStatus.expired,
+              ),
+            );
+          }
+          await pumpEventQueue();
+
+          expect(cubit.state.status, SupporterStatus.purchasing);
+          expect(cubit.state.failure, isNull);
+          expect(cubit.state.awaitingPurchaseConfirmation, isTrue);
+          await cubit.subscribe('divine.supporter.annual');
+          expect(repo.purchaseCalls, 1);
+
+          purchase.complete(SupporterEntitlement.inactive);
+          await pending;
+          expect(cubit.state.status, SupporterStatus.confirming);
+        },
+      );
+    }
+
     test('late store completion does not overwrite verified status', () async {
       final events = <String>[];
       final repo = _FakeRepository(controller)

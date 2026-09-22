@@ -11570,6 +11570,9 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీరు Divine మద్దతుదారు. దీన్ని కొనసాగించినందుకు ధన్యవాదాలు.';
 
   @override
+  String get supporterPreparingCheckout => 'చెల్లింపును సిద్ధం చేస్తున్నాం…';
+
+  @override
   String get supporterPurchasePending => 'మీ కొనుగోలు ఆమోదం పెండింగ్‌లో ఉంది.';
 
   @override

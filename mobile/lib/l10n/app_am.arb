@@ -1057,6 +1057,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "የDivine ደጋፊ ነዎት። ይህንን ስላስቀጠሉ እናመሰግናለን።",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "ክፍያ እየተዘጋጀ ነው…",
     "supporterPurchasePending": "ግዢዎ ፈቃድ በመጠባበቅ ላይ ነው።",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "ድጋፍዎን በማረጋገጥ ላይ…",

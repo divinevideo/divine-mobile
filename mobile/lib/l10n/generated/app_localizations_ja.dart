@@ -10688,6 +10688,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterActiveBadge => 'あなたは Divine サポーターだよ。続けてくれてありがとう。';
 
   @override
+  String get supporterPreparingCheckout => '購入手続きを準備しています…';
+
+  @override
   String get supporterPurchasePending => '購入は承認待ちだよ。';
 
   @override

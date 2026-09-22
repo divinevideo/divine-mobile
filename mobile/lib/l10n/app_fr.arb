@@ -3097,6 +3097,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "Tu es supporter Divine. Merci de faire tourner tout ça.",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "Préparation du paiement…",
     "supporterPurchasePending": "Ton achat est en attente d'approbation.",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "Confirmation de ton soutien…",

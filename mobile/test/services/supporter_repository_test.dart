@@ -159,6 +159,132 @@ void main() {
       controller.close();
     });
 
+    test('an older account refresh cannot undo a verified purchase', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final initialResponse = Completer<http.Response>();
+      final initialRequested = Completer<void>();
+      var reads = 0;
+      http.Response response({required bool active}) => http.Response(
+        jsonEncode({
+          'status': active ? 'active' : 'expired',
+          'entitlement': {
+            if (active) 'productId': 'divine.supporter.monthly',
+            'source': 'server',
+            'isActive': active,
+          },
+          'recognition': <String, dynamic>{},
+        }),
+        200,
+      );
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            if (reads++ == 0) {
+              initialRequested.complete();
+              return initialResponse.future;
+            }
+            return response(active: false);
+          }
+          return response(active: true);
+        }),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      final changes = <SupporterEntitlement>[];
+      final subscription = repo.changes.listen(changes.add);
+      addTearDown(subscription.cancel);
+      final refresh = repo.refreshFromServer();
+      await initialRequested.future;
+      validator.completionObserved = Completer<void>();
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'checkout-refresh-race',
+          store: 'google',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+      await validator.completionObserved!.future;
+      expect(repo.isSupporter, isTrue);
+
+      initialResponse.complete(response(active: false));
+      final snapshot = await refresh;
+      await pumpEventQueue();
+
+      expect(snapshot.entitlement.isSupporter, isTrue);
+      expect(repo.isSupporter, isTrue);
+      expect(changes.map((entitlement) => entitlement.isSupporter), [true]);
+      final cached = jsonDecode(
+        prefs.getString('divine_supporter_entitlement:$pubkeyA')!,
+      ) as Map<String, dynamic>;
+      expect(SupporterEntitlement.fromJson(cached).isSupporter, isTrue);
+
+      // A new refresh after the claim still applies a genuine expiry.
+      await repo.refreshFromServer();
+      await pumpEventQueue();
+      expect(repo.isSupporter, isFalse);
+      expect(changes.map((entitlement) => entitlement.isSupporter), [
+        true,
+        false,
+      ]);
+    });
+
+    test('checkout shares an account refresh already in flight', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final response = Completer<http.Response>();
+      final requested = Completer<void>();
+      var reads = 0;
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        httpClient: MockClient((request) async {
+          reads++;
+          if (!requested.isCompleted) requested.complete();
+          return response.future;
+        }),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      final refresh = repo.refreshFromServer();
+      await requested.future;
+      final purchase = repo.purchase('divine.supporter.monthly');
+      await pumpEventQueue();
+      expect(reads, 1);
+      expect(validator.purchaseCallCount, 0);
+
+      response.complete(
+        http.Response(
+          jsonEncode({
+            'status': 'expired',
+            'entitlement': {'source': 'server', 'isActive': false},
+            'recognition': <String, dynamic>{},
+          }),
+          200,
+        ),
+      );
+      await refresh;
+      await purchase;
+      expect(validator.purchaseCallCount, 1);
+    });
+
     for (final error in <Object>[
       const StoreUnavailableException(),
       const PurchaseFailedException('not_started', 'Store did not start.'),

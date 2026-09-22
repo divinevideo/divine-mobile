@@ -10960,6 +10960,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterActiveBadge => 'የDivine ደጋፊ ነዎት። ይህንን ስላስቀጠሉ እናመሰግናለን።';
 
   @override
+  String get supporterPreparingCheckout => 'ክፍያ እየተዘጋጀ ነው…';
+
+  @override
   String get supporterPurchasePending => 'ግዢዎ ፈቃድ በመጠባበቅ ላይ ነው።';
 
   @override

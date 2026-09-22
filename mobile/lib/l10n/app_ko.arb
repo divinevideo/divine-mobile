@@ -2636,6 +2636,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "Divine 서포터예요. 계속 이어가 주셔서 고마워요.",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "결제를 준비하고 있어요…",
     "supporterPurchasePending": "구매가 승인 대기 중이에요.",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "후원 확인 중…",

@@ -2319,6 +2319,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "Isa kang Divine Supporter. Salamat sa pagpapanatili nito.",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "Inihahanda ang checkout…",
     "supporterPurchasePending": "Naghihintay ng approval ang purchase mo.",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "Kinukumpirma ang suporta mo…",

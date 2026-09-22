@@ -58,6 +58,10 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
   Widget build(BuildContext context) {
     return BlocBuilder<SupporterCubit, SupporterState>(
       builder: (context, state) {
+        final showPurchaseStatus =
+            state.status == SupporterStatus.purchasing ||
+            state.status == SupporterStatus.pending ||
+            state.status == SupporterStatus.confirming;
         return Scaffold(
           appBar: DiVineAppBar(
             title: context.l10n.supporterTitle,
@@ -76,17 +80,13 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                 children: [
                   _Hero(state: state),
                   const SizedBox(height: 24),
-                  if (state.status == SupporterStatus.pending ||
-                      state.status == SupporterStatus.confirming)
+                  if (showPurchaseStatus)
                     _PurchaseStatusNote(status: state.status),
                   if (state.isSupporter)
                     const _ActiveBadge()
-                  else if (state.status != SupporterStatus.pending &&
-                      state.status != SupporterStatus.confirming &&
-                      state.hasTiers)
+                  else if (!showPurchaseStatus && state.hasTiers)
                     _TierList(state: state)
-                  else if (state.status != SupporterStatus.pending &&
-                      state.status != SupporterStatus.confirming)
+                  else if (!showPurchaseStatus)
                     _UnavailableNote(loading: state.isBusy),
                   const SizedBox(height: 16),
                   if (!state.isSupporter) _RestoreButton(state: state),
@@ -179,12 +179,26 @@ class _PurchaseStatusNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      status == SupporterStatus.pending
-          ? context.l10n.supporterPurchasePending
-          : context.l10n.supporterPurchaseConfirming,
-      style: Theme.of(context).textTheme.bodyLarge,
-      textAlign: TextAlign.center,
+    final message = switch (status) {
+      SupporterStatus.purchasing => context.l10n.supporterPreparingCheckout,
+      SupporterStatus.pending => context.l10n.supporterPurchasePending,
+      _ => context.l10n.supporterPurchaseConfirming,
+    };
+    return Semantics(
+      liveRegion: true,
+      child: Column(
+        children: [
+          if (status == SupporterStatus.purchasing) ...[
+            const DivineCircularProgressIndicator(),
+            const SizedBox(height: 12),
+          ],
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

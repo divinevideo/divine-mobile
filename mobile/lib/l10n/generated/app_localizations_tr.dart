@@ -11181,6 +11181,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Divine Destekçisisin. Bunu sürdürdüğün için teşekkürler.';
 
   @override
+  String get supporterPreparingCheckout => 'Ödeme hazırlanıyor…';
+
+  @override
   String get supporterPurchasePending => 'Satın alımın onay bekliyor.';
 
   @override

@@ -3097,6 +3097,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "Kamu Pendukung Divine. Terima kasih sudah menjaga ini tetap berjalan.",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "Menyiapkan pembayaran…",
     "supporterPurchasePending": "Pembelianmu menunggu persetujuan.",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "Mengonfirmasi dukunganmu…",

@@ -10571,6 +10571,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterActiveBadge => '你是 Divine 支持者。谢谢你让这一切继续。';
 
   @override
+  String get supporterPreparingCheckout => '正在准备结账…';
+
+  @override
   String get supporterPurchasePending => '你的购买正在等待批准。';
 
   @override

@@ -11496,6 +11496,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'Ești Susținător Divine. Mulțumim că ții asta în mișcare.';
 
   @override
+  String get supporterPreparingCheckout => 'Se pregătește plata…';
+
+  @override
   String get supporterPurchasePending => 'Cumpărătura ta așteaptă aprobare.';
 
   @override
