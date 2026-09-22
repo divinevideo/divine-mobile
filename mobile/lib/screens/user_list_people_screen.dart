@@ -146,25 +146,40 @@ class _UserListPeopleScreenState extends State<UserListPeopleScreen> {
           context.pop();
         }
       },
-      child: BlocSelector<PeopleListsBloc, PeopleListsState, UserList?>(
-        selector: (state) {
-          for (final list in state.lists) {
-            if (list.id == widget.listId) return list;
-          }
-          return null;
-        },
-        builder: (context, userList) {
-          if (userList == null) {
-            return const _ListNotFoundView();
-          }
-          return _UserListPeopleView(
-            userList: userList,
-            onDeleteConfirmed: _deleteList,
-          );
-        },
-      ),
+      child:
+          BlocSelector<
+            PeopleListsBloc,
+            PeopleListsState,
+            ({bool listsKnown, UserList? list})
+          >(
+            selector: (state) => (
+              listsKnown: state.listsKnown,
+              list: _ownListById(state, widget.listId),
+            ),
+            builder: (context, selected) {
+              final userList = selected.list;
+              if (userList != null) {
+                return _UserListPeopleView(
+                  userList: userList,
+                  onDeleteConfirmed: _deleteList,
+                );
+              }
+              // "Not found" is only known once the viewer's lists have arrived;
+              // before that a cold deep link would flash it over a list that is
+              // still on its way.
+              if (!selected.listsKnown) return const _ListLoadingView();
+              return const _ListNotFoundView();
+            },
+          ),
     );
   }
+}
+
+UserList? _ownListById(PeopleListsState state, String listId) {
+  for (final list in state.lists) {
+    if (list.id == listId) return list;
+  }
+  return null;
 }
 
 /// Resolves a discovered (someone else's) list from relays and renders the
@@ -196,17 +211,7 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
           ownerPubkey: ownerPubkey,
         );
       },
-      loading: () => Scaffold(
-        backgroundColor: context.vineColors.background,
-        appBar: DiVineAppBar(
-          title: context.l10n.peopleListsRouteTitle,
-          showBackButton: true,
-          // safePop: a cold deep link here is the only route on the stack,
-          // and a raw pop would throw GoError (#6112).
-          onBackPressed: context.safePop,
-        ),
-        body: const Center(child: BrandedLoadingIndicator(size: 60)),
-      ),
+      loading: () => const _ListLoadingView(),
       // A relay failure is not "this list does not exist": keep the two
       // apart and let the viewer try again without leaving the screen.
       error: (error, stackTrace) => _ListLoadFailedView(
@@ -214,6 +219,27 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
           publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
         ),
       ),
+    );
+  }
+}
+
+/// Shown while the list is still on its way: someone else's from relays,
+/// or the viewer's own before the bloc has delivered them.
+class _ListLoadingView extends StatelessWidget {
+  const _ListLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.vineColors.background,
+      appBar: DiVineAppBar(
+        title: context.l10n.peopleListsRouteTitle,
+        showBackButton: true,
+        // safePop: a cold deep link here is the only route on the stack,
+        // and a raw pop would throw GoError (#6112).
+        onBackPressed: context.safePop,
+      ),
+      body: const Center(child: BrandedLoadingIndicator(size: 60)),
     );
   }
 }
@@ -394,6 +420,54 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
   Widget build(BuildContext context) {
     final userList = widget.userList;
     final profileRepository = ref.watch(profileRepositoryProvider);
+    // Fullscreen playback draws its own chrome over the whole screen.
+    final PreferredSizeWidget? appBar;
+    final Widget body;
+    if (_activeVideoIndex == null) {
+      appBar = DiVineAppBar(
+        // The list title lives in the hero header below; the empty widget
+        // satisfies the bar's title-or-titleWidget contract without drawing
+        // anything.
+        titleWidget: const SizedBox.shrink(),
+        showBackButton: true,
+        onBackPressed: context.pop,
+        actions: [
+          if (userList.isEditable)
+            DiVineAppBarAction(
+              icon: SvgIconSource(DivineIconName.userPlus.assetPath),
+              tooltip: context.l10n.peopleListsAddPeopleTooltip,
+              semanticLabel: context.l10n.peopleListsAddPeopleSemanticLabel,
+              onPressed: () => _navigateToAddPeople(userList.id),
+            ),
+        ],
+        customActions: [
+          if (widget.ownerPubkey case final owner? when !userList.isEditable)
+            _FollowPeopleListAction(ownerPubkey: owner, userList: userList),
+          if (userList.isEditable)
+            _PeopleListActionsMenu(
+              onSelected: (action) {
+                switch (action) {
+                  case _PeopleListAction.delete:
+                    runDetached(
+                      _confirmDeleteList(userList),
+                      'confirm people list deletion',
+                      logName: 'UserListPeopleScreen',
+                      category: LogCategory.ui,
+                    );
+                }
+              },
+            ),
+        ],
+      );
+      body = _MemberVideos(
+        userList: userList,
+        ownerPubkey: widget.ownerPubkey,
+        onVideoTap: (index) => setState(() => _activeVideoIndex = index),
+      );
+    } else {
+      appBar = null;
+      body = _buildVideoPlayer(userList);
+    }
     return BlocProvider<PeopleListMembersCubit>(
       key: ValueKey((profileRepository, Object.hashAll(userList.pubkeys))),
       create: (_) {
@@ -407,56 +481,8 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       child: Scaffold(
         // One surface for app bar, hero and grid, like the video list screen.
         backgroundColor: context.vineColors.nav,
-        appBar: _activeVideoIndex == null
-            ? DiVineAppBar(
-                // The list title lives in the hero header below; the empty
-                // widget satisfies the bar's title-or-titleWidget contract
-                // without drawing anything.
-                titleWidget: const SizedBox.shrink(),
-                showBackButton: true,
-                onBackPressed: context.pop,
-                actions: [
-                  if (userList.isEditable)
-                    DiVineAppBarAction(
-                      icon: SvgIconSource(DivineIconName.userPlus.assetPath),
-                      tooltip: context.l10n.peopleListsAddPeopleTooltip,
-                      semanticLabel:
-                          context.l10n.peopleListsAddPeopleSemanticLabel,
-                      onPressed: () => _navigateToAddPeople(userList.id),
-                    ),
-                ],
-                customActions: [
-                  if (widget.ownerPubkey case final owner?
-                      when !userList.isEditable)
-                    _FollowPeopleListAction(
-                      ownerPubkey: owner,
-                      userList: userList,
-                    ),
-                  if (userList.isEditable)
-                    _PeopleListActionsMenu(
-                      onSelected: (action) {
-                        switch (action) {
-                          case _PeopleListAction.delete:
-                            runDetached(
-                              _confirmDeleteList(userList),
-                              'confirm people list deletion',
-                              logName: 'UserListPeopleScreen',
-                              category: LogCategory.ui,
-                            );
-                        }
-                      },
-                    ),
-                ],
-              )
-            : null,
-        body: _activeVideoIndex != null
-            ? _buildVideoPlayer(userList)
-            : _MemberVideos(
-                userList: userList,
-                ownerPubkey: widget.ownerPubkey,
-                onVideoTap: (index) =>
-                    setState(() => _activeVideoIndex = index),
-              ),
+        appBar: appBar,
+        body: body,
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -250,6 +251,23 @@ void main() {
         );
 
         expect(find.text(l10n.peopleListsListNotFoundTitle), findsOneWidget);
+      });
+
+      testWidgets("shows loading until the viewer's lists have arrived", (
+        tester,
+      ) async {
+        // A cold deep link reaches the roster before the bloc has delivered
+        // the viewer's lists; that is not "not found" yet.
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.loading,
+            ownerPubkey: _ownerPubkey,
+          ),
+        );
+
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
       });
     });
 
