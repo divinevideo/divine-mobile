@@ -69,6 +69,23 @@ abstract final class ScheduleTimePolicy {
   static DateTime tomorrowMorning(DateTime now) =>
       DateTime(now.year, now.month, now.day + 1, _morningHour);
 
+  /// The option [current] came from, so reopening the menu ticks back what
+  /// the last visit chose rather than always landing on
+  /// [ScheduleTimeOption.custom].
+  ///
+  /// Compares instants, so a stored UTC time still matches a local preset.
+  static ScheduleTimeOption optionFor(DateTime? current, DateTime now) {
+    if (current == null) return ScheduleTimeOption.now;
+    final tonightAt = tonight(now);
+    if (tonightAt != null && current.isAtSameMomentAs(tonightAt)) {
+      return ScheduleTimeOption.tonight;
+    }
+    if (current.isAtSameMomentAs(tomorrowMorning(now))) {
+      return ScheduleTimeOption.tomorrowMorning;
+    }
+    return ScheduleTimeOption.custom;
+  }
+
   /// The time a preset stands for at [now]; null for [ScheduleTimeOption.now]
   /// and for a preset that is not available any more.
   static DateTime? resolve(ScheduleTimeOption option, DateTime now) =>

@@ -113,5 +113,56 @@ void main() {
         );
       });
     });
+
+    group('optionFor', () {
+      final now = DateTime(2026, 9, 22, 12);
+
+      test('no time is "now"', () {
+        expect(
+          ScheduleTimePolicy.optionFor(null, now),
+          ScheduleTimeOption.now,
+        );
+      });
+
+      test('a preset time is that preset, not custom', () {
+        expect(
+          ScheduleTimePolicy.optionFor(ScheduleTimePolicy.tonight(now), now),
+          ScheduleTimeOption.tonight,
+        );
+        expect(
+          ScheduleTimePolicy.optionFor(
+            ScheduleTimePolicy.tomorrowMorning(now),
+            now,
+          ),
+          ScheduleTimeOption.tomorrowMorning,
+        );
+      });
+
+      test('a preset stored as UTC still matches its local preset', () {
+        expect(
+          ScheduleTimePolicy.optionFor(
+            ScheduleTimePolicy.tonight(now)!.toUtc(),
+            now,
+          ),
+          ScheduleTimeOption.tonight,
+        );
+      });
+
+      test('any other time is custom', () {
+        expect(
+          ScheduleTimePolicy.optionFor(DateTime(2026, 9, 22, 18, 35), now),
+          ScheduleTimeOption.custom,
+        );
+      });
+
+      test('tonight past its cut-off falls back to custom', () {
+        final late = DateTime(2026, 9, 22, 19, 55);
+        expect(ScheduleTimePolicy.tonight(late), isNull);
+        expect(
+          ScheduleTimePolicy.optionFor(DateTime(2026, 9, 22, 20), late),
+          ScheduleTimeOption.custom,
+        );
+      });
+    });
   });
 }

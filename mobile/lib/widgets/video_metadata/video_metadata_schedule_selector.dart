@@ -36,9 +36,7 @@ class VideoMetadataScheduleSelector extends ConsumerWidget {
 
     final choice = await VineBottomSheetSelectionMenu.show(
       context: context,
-      selectedValue: current == null
-          ? ScheduleTimeOption.now.name
-          : ScheduleTimeOption.custom.name,
+      selectedValue: ScheduleTimePolicy.optionFor(current, now).name,
       headerLeadingAction: DivineIconButton(
         icon: .x,
         onPressed: context.pop,
