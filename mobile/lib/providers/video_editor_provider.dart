@@ -1678,6 +1678,17 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   ///
   /// Requires [finalRenderedClip] to be available. Throws [StateError] if
   /// no rendered clip exists.
+  /// Marks a post handoff as in flight so the button can show it.
+  ///
+  /// Set around the whole handoff by the caller, because the slow part — the
+  /// gallery copy — runs before [postVideo]. Guarded the way
+  /// [saveDraftForLater] guards its own flag: the handoff navigates away and
+  /// can outlive this notifier.
+  void setPosting({required bool value}) {
+    if (!ref.mounted) return;
+    state = state.copyWith(isPosting: value);
+  }
+
   Future<void> postVideo(BuildContext context) async {
     if (state.finalRenderedClip == null) {
       Log.error(

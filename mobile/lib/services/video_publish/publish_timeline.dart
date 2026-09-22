@@ -46,6 +46,11 @@ abstract class PublishPhases {
   static const String nostrPublish = 'nostr.publish';
   static const String invites = 'invites';
 
+  /// Enqueueing a pre-signed event in the outbox and offering it to the
+  /// relay's hold queue. Takes the place of [invites] on a scheduled post,
+  /// whose invites go out from the coordinator when the post does.
+  static const String schedule = 'schedule';
+
   /// Detail marker for a leg that short-circuited on work a previous attempt
   /// already finished — a thumbnail already on the CDN, or an event the
   /// signer already signed.
@@ -90,6 +95,7 @@ const Map<String, String> _metricByPhase = {
   PublishPhases.nostrSign: 'sign_ms',
   PublishPhases.nostrPublish: 'nostr_publish_ms',
   PublishPhases.invites: 'invites_ms',
+  PublishPhases.schedule: 'schedule_ms',
 };
 
 /// Wall-clock metric for the whole publish.

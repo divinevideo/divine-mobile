@@ -100,10 +100,17 @@ class VideoMetadataCaptureBottomBar extends ConsumerWidget {
   }
 
   Future<void> _onPost(BuildContext context, WidgetRef ref) async {
-    await saveToGallery(context, ref);
-    if (!context.mounted) return;
+    final notifier = ref.read(videoEditorProvider.notifier);
+    if (ref.read(videoEditorProvider).isPosting) return;
+    notifier.setPosting(value: true);
+    try {
+      await saveToGallery(context, ref);
+      if (!context.mounted) return;
 
-    await ref.read(videoEditorProvider.notifier).postVideo(context);
+      await notifier.postVideo(context);
+    } finally {
+      notifier.setPosting(value: false);
+    }
   }
 
   @override
@@ -206,9 +213,14 @@ class _PostButton extends ConsumerWidget {
     final scheduledAt = ref.watch(
       videoEditorProvider.select((s) => s.scheduledAt),
     );
+    final isPosting = ref.watch(
+      videoEditorProvider.select((s) => s.isPosting),
+    );
     final l10n = context.l10n;
     final String hint;
-    if (!isValidToPost) {
+    if (isPosting) {
+      hint = l10n.videoMetadataPostingVideoHint;
+    } else if (!isValidToPost) {
       hint = l10n.videoMetadataFormNotReadyHint;
     } else if (scheduledAt != null) {
       hint = l10n.videoMetadataScheduleVideoHint(
@@ -219,6 +231,7 @@ class _PostButton extends ConsumerWidget {
     }
 
     // Fade buttons when form is invalid
+    final enabled = isValidToPost && !isPosting;
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
       opacity: isValidToPost ? 1 : 0.32,
@@ -227,12 +240,13 @@ class _PostButton extends ConsumerWidget {
         label: l10n.videoMetadataPostSemanticLabel,
         hint: hint,
         button: true,
-        enabled: isValidToPost,
+        enabled: enabled,
         excludeSemantics: true,
-        onTap: isValidToPost ? onTap : null,
+        onTap: enabled ? onTap : null,
         child: DivineButton(
-          onPressed: isValidToPost ? onTap : null,
+          onPressed: enabled ? onTap : null,
           expanded: true,
+          isLoading: isPosting,
           label: scheduledAt == null
               ? l10n.videoMetadataPostButton
               : l10n.videoMetadataScheduleButton,

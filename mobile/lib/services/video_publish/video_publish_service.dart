@@ -546,7 +546,7 @@ class VideoPublishService {
         // Collaborator invites link to the live video, so they go out when
         // the post does, from the scheduled-post coordinator.
         final result = await timeline.measure(
-          PublishPhases.invites,
+          PublishPhases.schedule,
           () => _scheduleSignedEvent(
             draft: draft,
             upload: pendingUpload,

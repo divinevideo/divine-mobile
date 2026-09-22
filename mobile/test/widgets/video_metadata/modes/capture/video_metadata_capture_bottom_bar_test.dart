@@ -624,11 +624,15 @@ void main() {
       );
 
       await tester.tap(find.text('Post'));
-      await tester.pumpAndSettle();
+      // Bounded pumps, not pumpAndSettle: the button spins for the whole
+      // handoff, so the tree never goes quiet while the sheet is up.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // Permission sheet appears — dismiss via "Not Now"
       await tester.tap(find.text('Not Now'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(postVideoCalled, isTrue);
     });

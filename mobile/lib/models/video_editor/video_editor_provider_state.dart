@@ -27,6 +27,7 @@ class VideoEditorProviderState {
     this.renderFailureReason,
     this.c2paSigningFailed = false,
     this.isSavingDraft = false,
+    this.isPosting = false,
     this.isAutosavedDraft = true,
     this.allowAudioReuse = false,
     this.audioShareAttribution,
@@ -93,6 +94,13 @@ class VideoEditorProviderState {
 
   /// Whether a draft save operation is currently in progress.
   final bool isSavingDraft;
+
+  /// Whether a post is being handed off, from the gallery copy through to the
+  /// upload starting in the background.
+  ///
+  /// Covers the gallery copy deliberately: materializing a stop-motion render
+  /// takes seconds, and without this the button sits there looking untapped.
+  final bool isPosting;
 
   /// Whether this session is an autosaved draft (vs. a user-saved draft).
   final bool isAutosavedDraft;
@@ -261,6 +269,7 @@ class VideoEditorProviderState {
     VideoRenderFailureReason? renderFailureReason,
     bool? c2paSigningFailed,
     bool? isSavingDraft,
+    bool? isPosting,
     bool? isAutosavedDraft,
     bool? allowAudioReuse,
     AudioShareAttribution? audioShareAttribution,
@@ -320,6 +329,7 @@ class VideoEditorProviderState {
           !clearFinalRenderedClip &&
           (c2paSigningFailed ?? this.c2paSigningFailed),
       isSavingDraft: isSavingDraft ?? this.isSavingDraft,
+      isPosting: isPosting ?? this.isPosting,
       isAutosavedDraft: isAutosavedDraft ?? this.isAutosavedDraft,
       allowAudioReuse: allowAudioReuse ?? this.allowAudioReuse,
       audioShareAttribution: clearAudioShareAttribution
