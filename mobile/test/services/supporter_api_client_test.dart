@@ -77,9 +77,33 @@ void main() {
         when(() => httpClient.get(any(), headers: any(named: 'headers')))
             .thenAnswer((_) async => http.Response('{"supporters":[]}', 503));
         expect(await buildClient().fetchPublicRecognition(pubkey), isFalse);
+
+        // A 200 that names some other account must not badge this one.
+        final other = 'b' * 64;
+        when(
+          () => httpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"supporters":[{"pubkey":"$other","haloVisible":true}]}',
+            200,
+          ),
+        );
+        expect(await buildClient().fetchPublicRecognition(pubkey), isFalse);
         expect(authCalls, isEmpty);
       },
     );
+
+    test('hides recognition the account has not made visible', () async {
+      when(
+        () => httpClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          '{"supporters":[{"pubkey":"$pubkey","haloVisible":false}]}',
+          200,
+        ),
+      );
+      expect(await buildClient().fetchPublicRecognition(pubkey), isFalse);
+    });
   });
 
   group('SupporterApiClient methods', () {
