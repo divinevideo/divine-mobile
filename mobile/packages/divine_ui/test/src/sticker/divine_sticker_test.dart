@@ -55,8 +55,8 @@ String _snakeCase(String identifier) => identifier.replaceAllMapped(
 
 void main() {
   group(DivineStickerName, () {
-    test('has 133 variants', () {
-      expect(DivineStickerName.values.length, equals(133));
+    test('has 137 variants', () {
+      expect(DivineStickerName.values.length, equals(137));
     });
 
     test('assetPath points Figma artwork at the PNG directory', () {
@@ -115,9 +115,30 @@ void main() {
             .map((sticker) => sticker.figmaName)
             .toList();
 
-        expect(figmaNames, hasLength(132));
+        expect(figmaNames, hasLength(136));
         expect(figmaNames.toSet(), hasLength(figmaNames.length));
       });
+    });
+
+    test('stickers that look alike are dedicated variants with own files', () {
+      const dedicated = {
+        DivineStickerName.alert: 'alert',
+        DivineStickerName.policeSiren: 'police_siren',
+        DivineStickerName.hazardSign: 'hazard_sign',
+        DivineStickerName.blocked: 'blocked',
+        DivineStickerName.raisedHand: 'raised_hand',
+        DivineStickerName.stopSign: 'stop_sign',
+        DivineStickerName.hangLoose: 'hang_loose',
+        DivineStickerName.ceramicHands: 'ceramic_hands',
+        DivineStickerName.unicornFloat: 'unicorn_float',
+        DivineStickerName.inflatableFlamingo: 'inflatable_flamingo',
+        DivineStickerName.floatingLilo: 'floating_lilo',
+      };
+
+      for (final MapEntry(key: sticker, value: fileName) in dedicated.entries) {
+        expect(sticker.fileName, equals(fileName), reason: sticker.name);
+        expect(sticker.figmaName, equals(sticker.name), reason: sticker.name);
+      }
     });
 
     group('grandfather', () {

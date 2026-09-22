@@ -1208,7 +1208,7 @@ class _ErrorContent extends StatelessWidget {
         const Spacer(),
 
         // Siren sticker
-        const DivineSticker(sticker: DivineStickerName.alert, size: 120),
+        const DivineSticker(sticker: DivineStickerName.policeSiren, size: 120),
         const SizedBox(height: 32),
 
         Text(

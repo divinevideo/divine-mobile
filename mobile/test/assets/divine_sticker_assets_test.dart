@@ -90,9 +90,13 @@ void main() {
 
     group('stickers that must stay separate do not share artwork', () {
       const pairs = [
-        (DivineStickerName.hangLoose, DivineStickerName.ceramicHands),
+        (DivineStickerName.alert, DivineStickerName.policeSiren),
         (DivineStickerName.alert, DivineStickerName.hazardSign),
+        (DivineStickerName.blocked, DivineStickerName.raisedHand),
         (DivineStickerName.blocked, DivineStickerName.stopSign),
+        (DivineStickerName.hangLoose, DivineStickerName.ceramicHands),
+        (DivineStickerName.unicornFloat, DivineStickerName.inflatableFlamingo),
+        (DivineStickerName.unicornFloat, DivineStickerName.floatingLilo),
       ];
 
       for (final (first, second) in pairs) {
