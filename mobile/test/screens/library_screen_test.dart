@@ -13,8 +13,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_category.dart';
@@ -32,7 +30,6 @@ import 'package:openvine/widgets/library/clips_tab.dart';
 import 'package:openvine/widgets/library/drafts_tab.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
-import 'package:openvine/widgets/library/scheduled_tab.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -139,13 +136,9 @@ void main() {
       LibraryTabsMode tabsMode = LibraryTabsMode.allTabs,
       List<DivineVideoClip> editorClips = const [],
       List<DivineVideoClip> sessionClips = const [],
-      bool scheduledPostsFlag = true,
     }) {
       return ProviderScope(
         overrides: [
-          isFeatureEnabledProvider(
-            FeatureFlag.scheduledPosts,
-          ).overrideWithValue(scheduledPostsFlag),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
           gallerySaveServiceProvider.overrideWithValue(mockGallerySaveService),
           clipLibraryServiceProvider.overrideWithValue(mockClipLibraryService),
@@ -173,34 +166,35 @@ void main() {
       );
     }
 
-    group('scheduled tab (#3538)', () {
-      testWidgets('is hidden while the feature flag is off', (tester) async {
-        await tester.pumpWidget(buildWidget(scheduledPostsFlag: false));
-        await tester.pump();
-
-        expect(find.text(en.libraryTabScheduled), findsNothing);
-        expect(find.text(en.libraryTabDrafts), findsOneWidget);
-      });
-
-      testWidgets('opens directly at its index', (tester) async {
-        await tester.pumpWidget(
-          buildWidget(initialTabIndex: LibraryScreen.scheduledTabIndex),
-        );
-        await tester.pump();
-
-        expect(find.byType(ScheduledTab), findsOneWidget);
-        // Without a signed-in outbox it shows the empty state rather than
-        // reaching for a repository that is not there.
-        expect(find.text(en.libraryScheduledEmptyTitle), findsOneWidget);
-      });
-
-      testWidgets('is absent from the recorder library', (tester) async {
+    group('scheduled section (#3538)', () {
+      testWidgets('is off in the recorder library', (tester) async {
         await tester.pumpWidget(
           buildWidget(tabsMode: LibraryTabsMode.withoutSounds),
         );
         await tester.pump();
 
-        expect(find.text(en.libraryTabScheduled), findsNothing);
+        expect(
+          tester.widget<DraftsTab>(find.byType(DraftsTab)).showScheduledSection,
+          isFalse,
+        );
+      });
+
+      testWidgets('is on in the standalone $DraftsTab', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(
+          tester.widget<DraftsTab>(find.byType(DraftsTab)).showScheduledSection,
+          isTrue,
+        );
+      });
+
+      testWidgets('never adds a fourth tab', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(find.text(en.libraryScheduledSectionTitle), findsNothing);
+        expect(find.byType(Tab), findsNWidgets(3));
       });
     });
 
@@ -212,7 +206,6 @@ void main() {
         // Should find tab bar with Drafts and Clips
         expect(find.text(en.libraryTabDrafts), findsOneWidget);
         expect(find.text(en.libraryTabClips), findsOneWidget);
-        expect(find.text(en.libraryTabScheduled), findsOneWidget);
       });
 
       testWidgets('$DraftsTab initially (first tab)', (tester) async {

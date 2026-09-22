@@ -19,6 +19,7 @@ import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
 import 'package:openvine/widgets/library/draft_status_badge.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
+import 'package:openvine/widgets/library/scheduled_section.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -28,12 +29,33 @@ import 'package:unified_logger/unified_logger.dart';
 /// (post, edit, delete) internally.
 class DraftsTab extends ConsumerWidget {
   /// Creates a drafts tab.
-  const DraftsTab({required this.showRecordButton, super.key});
+  const DraftsTab({
+    required this.showRecordButton,
+    this.showScheduledSection = false,
+    super.key,
+  });
 
   final bool showRecordButton;
 
+  /// Whether upcoming scheduled posts are listed above the drafts (#3538).
+  ///
+  /// Off in the recorder's library: that session is for picking up clips, and
+  /// a scheduled post is not something it can use.
+  final bool showScheduledSection;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (!showScheduledSection) return _buildList(context, ref, null);
+    return ScheduledPostsScope(
+      builder: (context, {required available}) => _buildList(
+        context,
+        ref,
+        available ? const ScheduledSectionSliver() : null,
+      ),
+    );
+  }
+
+  Widget _buildList(BuildContext context, WidgetRef ref, Widget? scheduled) {
     return BlocConsumer<DraftsLibraryBloc, DraftsLibraryState>(
       listenWhen: (previous, current) =>
           current is DraftsLibraryDraftDeleted ||
@@ -106,27 +128,35 @@ class DraftsTab extends ConsumerWidget {
           DraftsLibraryDraftDuplicated(:final drafts) ||
           DraftsLibraryDuplicateFailed(:final drafts) ||
           DraftsLibraryDraftDeleted(:final drafts) ||
-          DraftsLibraryDeleteFailed(:final drafts) => () {
-            if (drafts.isEmpty) {
-              return EmptyLibraryState(
-                showRecordButton: showRecordButton,
-                icon: DivineIconName.pencilSimple,
-                title: context.l10n.libraryNoDraftsYetTitle,
-                subtitle: context.l10n.libraryNoDraftsYetSubtitle,
-              );
-            }
-            return ListView.builder(
-              itemCount: drafts.length,
-              itemBuilder: (context, index) {
-                final draft = drafts[index];
-                return DraftListTile(
-                  draft: draft,
-                  onTap: () => _openDraft(context, ref, draft),
-                  onOpenMore: () => _openDraftOptions(context, ref, draft),
-                );
-              },
-            );
-          }(),
+          DraftsLibraryDeleteFailed(:final drafts) => CustomScrollView(
+            slivers: [
+              ?scheduled,
+              if (drafts.isEmpty)
+                // Keeps the scroll body: EmptyLibraryState carries a
+                // LayoutBuilder, which cannot answer the intrinsic height
+                // `hasScrollBody: false` would ask it for.
+                SliverFillRemaining(
+                  child: EmptyLibraryState(
+                    showRecordButton: showRecordButton,
+                    icon: DivineIconName.pencilSimple,
+                    title: context.l10n.libraryNoDraftsYetTitle,
+                    subtitle: context.l10n.libraryNoDraftsYetSubtitle,
+                  ),
+                )
+              else
+                SliverList.builder(
+                  itemCount: drafts.length,
+                  itemBuilder: (context, index) {
+                    final draft = drafts[index];
+                    return DraftListTile(
+                      draft: draft,
+                      onTap: () => _openDraft(context, ref, draft),
+                      onOpenMore: () => _openDraftOptions(context, ref, draft),
+                    );
+                  },
+                ),
+            ],
+          ),
         };
       },
     );

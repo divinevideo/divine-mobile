@@ -9,6 +9,6 @@ export 'drafts_tab.dart';
 export 'empty_library_state.dart';
 export 'library_toolbar.dart';
 export 'pinch_zoom_grid.dart';
-export 'scheduled_tab.dart';
+export 'scheduled_section.dart';
 export 'sounds_tab.dart';
 export 'trashed_clips_list.dart';

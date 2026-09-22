@@ -1,5 +1,5 @@
-// ABOUTME: Library tab listing the account's scheduled posts (#3538), with
-// ABOUTME: cancel, change time, post now and retry per row.
+// ABOUTME: "Scheduled" section at the top of the Drafts tab (#3538),
+// ABOUTME: with cancel, change time, post now and retry per row.
 
 import 'package:db_client/db_client.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -8,22 +8,30 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/blocs/scheduled_posts/scheduled_posts_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/widgets/library/draft_status_badge.dart';
-import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_metadata/schedule_date_time_sheet.dart';
 import 'package:openvine/widgets/video_metadata/scheduled_time_format.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
-/// The Scheduled tab: a page that wires [ScheduledPostsBloc] to the
-/// account's outbox and coordinator, re-keyed when either changes identity.
-class ScheduledTab extends ConsumerWidget {
-  const ScheduledTab({super.key});
+/// Provides [ScheduledPostsBloc] to its subtree when the account has an
+/// outbox, and tells [builder] whether it did.
+///
+/// The readiness gate hands over a repository only once the session can sign,
+/// so `available` is false on a cold start and while signed out. A caller must
+/// not build [ScheduledSectionSliver] then — it looks the bloc up and would
+/// throw.
+class ScheduledPostsScope extends ConsumerWidget {
+  const ScheduledPostsScope({required this.builder, super.key});
+
+  final Widget Function(BuildContext context, {required bool available})
+  builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +39,7 @@ class ScheduledTab extends ConsumerWidget {
     final coordinator = ref.watch(scheduledPostCoordinatorProvider);
     final draftService = ref.watch(draftStorageServiceProvider);
     if (repository == null || coordinator == null) {
-      return const _ScheduledEmptyState();
+      return builder(context, available: false);
     }
     return BlocProvider(
       key: ValueKey((repository, coordinator)),
@@ -40,17 +48,54 @@ class ScheduledTab extends ConsumerWidget {
         coordinator: coordinator,
         draftService: draftService,
       )..add(const ScheduledPostsStarted()),
-      child: const ScheduledTabView(),
+      child: ScheduledPostsDraftsRefresher(
+        child: Builder(
+          builder: (context) => builder(context, available: true),
+        ),
+      ),
     );
   }
 }
 
-/// The list itself, given a [ScheduledPostsBloc] and a
-/// [BackgroundPublishBloc]. Public so a widget test can pump it without a
-/// signed-in outbox behind [ScheduledTab].
+/// Reloads the drafts list once a publish stops being in flight.
+///
+/// A finished publish reclaims the draft it was copied from, after the list
+/// has already loaded — `DraftsTab._openDraft` reloads on the way back from
+/// the editor and admits it can lose that race. Scheduling makes the stale
+/// row visible, because the creator lands on this list and stays there, so
+/// the draft sits next to the scheduled post it became.
 @visibleForTesting
-class ScheduledTabView extends StatelessWidget {
-  const ScheduledTabView({super.key});
+class ScheduledPostsDraftsRefresher extends StatelessWidget {
+  const ScheduledPostsDraftsRefresher({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<BackgroundPublishBloc, BackgroundPublishState>(
+      listenWhen: (previous, current) =>
+          previous.uploads.length > current.uploads.length,
+      listener: (context, _) => context.read<DraftsLibraryBloc>().add(
+        const DraftsLibraryLoadRequested(),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// The section itself, as a sliver so it scrolls with the drafts under it.
+///
+/// Renders nothing at all until there is something to show: no header, no
+/// spinner and no empty state. A creator who never schedules anything never
+/// sees that the feature exists from here.
+///
+/// Requires a [ScheduledPostsBloc] above it — [ScheduledPostsScope] only
+/// provides one when the account can schedule, so callers pass
+/// [SliverToBoxAdapter] with nothing in it instead of this widget when it
+/// cannot.
+@visibleForTesting
+class ScheduledSectionSliver extends StatelessWidget {
+  const ScheduledSectionSliver({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +122,11 @@ class ScheduledTabView extends StatelessWidget {
             l10n.libraryScheduledActionFailedSnackbar,
         };
         if (label == null) return;
+        // A cancelled post is parked back as a draft, and a published one is
+        // reclaimed — neither reaches the drafts list on its own.
+        context.read<DraftsLibraryBloc>().add(
+          const DraftsLibraryLoadRequested(),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: VineTheme.transparent,
@@ -93,41 +143,78 @@ class ScheduledTabView extends StatelessWidget {
             )
             .drafts;
 
-        if (state.status != ScheduledPostsStatus.loaded && uploads.isEmpty) {
-          return Center(
-            child: DivineCircularProgressIndicator(
-              color: context.vineColors.accentPositive,
+        // The outbox row is written as soon as the event is signed, while the
+        // upload is still listed as in flight until the publish bloc settles.
+        // Both describe the same post, so the durable row wins and the
+        // in-flight tile only covers what has not reached the outbox yet.
+        final enqueued = {for (final item in state.items) item.draftId};
+        final rows = <Widget>[
+          for (final draft in uploads)
+            if (!enqueued.contains(draft.id)) _UploadingTile(draft: draft),
+          for (final item in state.items)
+            _ScheduledPostTile(
+              item: item,
+              busy: state.busyEventId == item.eventId,
             ),
-          );
-        }
-        if (state.isEmpty && uploads.isEmpty) {
-          return const _ScheduledEmptyState();
+          for (final entry in state.remotePosts)
+            _RemotePostTile(
+              entry: entry,
+              busy: state.busyEventId == entry.eventId,
+            ),
+        ];
+        if (rows.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
         }
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            context.read<ScheduledPostsBloc>().add(
-              const ScheduledPostsRefreshRequested(),
-            );
-          },
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            children: [
-              for (final draft in uploads) _UploadingTile(draft: draft),
-              for (final item in state.items)
-                _ScheduledPostTile(
-                  item: item,
-                  busy: state.busyEventId == item.eventId,
-                ),
-              for (final entry in state.remotePosts)
-                _RemotePostTile(
-                  entry: entry,
-                  busy: state.busyEventId == entry.eventId,
-                ),
-            ],
-          ),
+        // The closing "Drafts" label belongs to the list below, but it is
+        // rendered from here because it exists only while this section does:
+        // without upcoming posts there is one list and it needs no label.
+        return SliverList.list(
+          children: [
+            const _SectionHeader(_SectionHeaderKind.scheduled),
+            ...rows,
+            const _SectionHeader(_SectionHeaderKind.drafts),
+          ],
         );
       },
+    );
+  }
+}
+
+enum _SectionHeaderKind { scheduled, drafts }
+
+/// The small label that names a run of rows, with a rule under the last
+/// scheduled row so the two groups do not read as one list.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.kind);
+
+  final _SectionHeaderKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (kind) {
+      _SectionHeaderKind.scheduled => context.l10n.libraryScheduledSectionTitle,
+      _SectionHeaderKind.drafts => context.l10n.libraryTabDrafts,
+    };
+    final title = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        label,
+        style: VineTheme.labelMediumFont(
+          color: context.vineColors.secondaryText,
+        ),
+      ),
+    );
+    if (kind == _SectionHeaderKind.scheduled) return title;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Divider(height: 1, color: context.vineColors.disabled),
+        ),
+        title,
+      ],
     );
   }
 }
@@ -148,20 +235,6 @@ class _ScheduledUploads extends Equatable {
 
   @override
   List<Object?> get props => [drafts];
-}
-
-class _ScheduledEmptyState extends StatelessWidget {
-  const _ScheduledEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyLibraryState(
-      icon: DivineIconName.clockCountdown,
-      title: context.l10n.libraryScheduledEmptyTitle,
-      subtitle: context.l10n.libraryScheduledEmptySubtitle,
-      showRecordButton: false,
-    );
-  }
 }
 
 /// A row for a post whose media is still uploading.
@@ -206,11 +279,9 @@ class _ScheduledPostTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Inside a section headed "Scheduled", a "Scheduled" badge on every row
+    // says nothing — only the states that deviate from it earn one.
     final (badgeLabel, tone) = switch (item.status) {
-      ScheduledPostStatus.scheduled => (
-        l10n.libraryScheduledBadgeScheduled,
-        DraftStatusBadgeTone.positive,
-      ),
       ScheduledPostStatus.pendingSubmit => (
         l10n.libraryScheduledBadgeWaitingForServer,
         DraftStatusBadgeTone.muted,
@@ -219,10 +290,9 @@ class _ScheduledPostTile extends StatelessWidget {
         l10n.libraryScheduledBadgeFailed,
         DraftStatusBadgeTone.warning,
       ),
-      ScheduledPostStatus.published || ScheduledPostStatus.cancelled => (
-        l10n.libraryScheduledBadgeScheduled,
-        DraftStatusBadgeTone.positive,
-      ),
+      ScheduledPostStatus.scheduled ||
+      ScheduledPostStatus.published ||
+      ScheduledPostStatus.cancelled => (null, DraftStatusBadgeTone.positive),
     };
     final title = item.title.isEmpty ? l10n.draftUntitled : item.title;
     return _ScheduledRow(
@@ -234,7 +304,9 @@ class _ScheduledPostTile extends StatelessWidget {
       subtitle: l10n.libraryScheduledGoesOutAt(
         formatScheduledDateTime(context, item.publishAt),
       ),
-      badge: DraftStatusBadge(label: badgeLabel, tone: tone),
+      badge: badgeLabel == null
+          ? null
+          : DraftStatusBadge(label: badgeLabel, tone: tone),
       trailing: busy
           ? SizedBox.square(
               dimension: 24,
@@ -245,7 +317,7 @@ class _ScheduledPostTile extends StatelessWidget {
             )
           : DivineIconButton(
               icon: DivineIconName.dotsThreeVertical,
-              type: DivineIconButtonType.tertiary,
+              type: DivineIconButtonType.ghostSecondary,
               size: DivineIconButtonSize.small,
               semanticLabel: l10n.libraryScheduledMoreActionsSemanticLabel(
                 title,
@@ -344,7 +416,6 @@ class _RemotePostTile extends StatelessWidget {
       subtitle: l10n.libraryScheduledGoesOutAt(
         formatScheduledDateTime(context, entry.publishAt),
       ),
-      badge: DraftStatusBadge(label: l10n.libraryScheduledBadgeScheduled),
       trailing: busy
           ? SizedBox.square(
               dimension: 24,
@@ -355,7 +426,7 @@ class _RemotePostTile extends StatelessWidget {
             )
           : DivineIconButton(
               icon: DivineIconName.dotsThreeVertical,
-              type: DivineIconButtonType.tertiary,
+              type: DivineIconButtonType.ghostSecondary,
               size: DivineIconButtonSize.small,
               semanticLabel: l10n.libraryScheduledMoreActionsSemanticLabel(
                 title,
@@ -392,14 +463,16 @@ class _ScheduledRow extends StatelessWidget {
     required this.thumbnail,
     required this.title,
     required this.subtitle,
-    required this.badge,
     required this.trailing,
+    this.badge,
   });
 
   final Widget thumbnail;
   final String title;
   final String? subtitle;
-  final Widget badge;
+
+  /// Shown after the title when the row deviates from plain "scheduled".
+  final Widget? badge;
   final Widget trailing;
 
   @override
@@ -420,8 +493,7 @@ class _ScheduledRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
-          badge,
+          if (badge != null) ...[const SizedBox(width: 8), badge!],
         ],
       ),
       subtitle: subtitle == null

@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VineSound;
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -22,7 +20,6 @@ void main() {
       bool enableCollaborators = true,
       bool enableInspiredBy = true,
       bool enableSchedule = true,
-      bool scheduledPostsFlag = true,
       VideoReplyContext? replyContext,
     }) {
       return ProviderScope(
@@ -33,9 +30,6 @@ void main() {
           videoReplyContextProvider.overrideWith(
             () => _TestVideoReplyContextNotifier(replyContext),
           ),
-          isFeatureEnabledProvider(
-            FeatureFlag.scheduledPosts,
-          ).overrideWithValue(scheduledPostsFlag),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -96,9 +90,6 @@ void main() {
         ProviderScope(
           overrides: [
             videoEditorProvider.overrideWith(() => mockNotifier),
-            isFeatureEnabledProvider(
-              FeatureFlag.scheduledPosts,
-            ).overrideWithValue(false),
           ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -131,9 +122,6 @@ void main() {
         ProviderScope(
           overrides: [
             videoEditorProvider.overrideWith(() => mockNotifier),
-            isFeatureEnabledProvider(
-              FeatureFlag.scheduledPosts,
-            ).overrideWithValue(false),
           ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -167,13 +155,6 @@ void main() {
 
       testWidgets('hides when enableSchedule is false', (tester) async {
         await tester.pumpWidget(buildWidget(enableSchedule: false));
-        await tester.pumpAndSettle();
-
-        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
-      });
-
-      testWidgets('hides when the feature flag is off', (tester) async {
-        await tester.pumpWidget(buildWidget(scheduledPostsFlag: false));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
@@ -239,9 +220,6 @@ void main() {
         ProviderScope(
           overrides: [
             videoEditorProvider.overrideWith(() => mockNotifier),
-            isFeatureEnabledProvider(
-              FeatureFlag.scheduledPosts,
-            ).overrideWithValue(false),
             videoReplyContextProvider.overrideWith(
               () => _TestVideoReplyContextNotifier(
                 const VideoReplyContext(

@@ -11,8 +11,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -40,7 +38,7 @@ enum LibraryTabsMode {
 }
 
 /// A tab the library can show, in bar order.
-enum _LibraryTab { drafts, clips, sounds, scheduled }
+enum _LibraryTab { drafts, clips, sounds }
 
 class LibraryScreen extends ConsumerWidget {
   /// Route name for drafts path.
@@ -66,15 +64,6 @@ class LibraryScreen extends ConsumerWidget {
 
   /// Path for sounds route.
   static const String soundsPath = RoutePaths.librarySounds;
-
-  /// Route name for the scheduled-posts tab (#3538).
-  static const scheduledRouteName = 'scheduled';
-
-  /// Path for the scheduled-posts tab.
-  static const String scheduledPath = RoutePaths.libraryScheduled;
-
-  /// Tab index of the scheduled-posts tab in [LibraryTabsMode.allTabs].
-  static const int scheduledTabIndex = 3;
 
   const LibraryScreen({
     super.key,
@@ -179,9 +168,6 @@ class LibraryScreen extends ConsumerWidget {
         tabsMode: tabsMode,
         editorClips: editorClips,
         scrollController: scrollController,
-        showScheduledTab: ref.watch(
-          isFeatureEnabledProvider(FeatureFlag.scheduledPosts),
-        ),
       ),
     );
   }
@@ -194,17 +180,12 @@ class _LibraryView extends ConsumerStatefulWidget {
     required this.tabsMode,
     required this.editorClips,
     required this.scrollController,
-    required this.showScheduledTab,
   });
 
   final int initialTabIndex;
   final bool selectionMode;
   final LibraryTabsMode tabsMode;
 
-  /// Whether the Scheduled tab is offered (#3538). Feature-flagged, and only
-  /// in the standalone library: the recorder's library is for picking up
-  /// clips, and a scheduled post is not something that session can use.
-  final bool showScheduledTab;
   final List<DivineVideoClip> editorClips;
   final ScrollController? scrollController;
 
@@ -227,7 +208,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
         _LibraryTab.drafts,
         _LibraryTab.clips,
         _LibraryTab.sounds,
-        if (widget.showScheduledTab) _LibraryTab.scheduled,
       ],
       LibraryTabsMode.withoutSounds => const [
         _LibraryTab.drafts,
@@ -764,6 +744,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             targetAspectRatio: targetAspectRatio,
                             sortedClips: sortedClips,
                             selectionEnabled: selectionEnabled,
+                            // Standalone library only: the recorder's library
+                            // is for picking up clips, and a scheduled post is
+                            // not something that session can use (#3538).
+                            showScheduledSection:
+                                widget.tabsMode == LibraryTabsMode.allTabs,
                             onCreateVideo: () => _createVideoFromSelected(
                               context,
                               selectedClips: clipsState.selectedClips,
@@ -839,6 +824,7 @@ double? libraryTargetAspectRatioForSelection({
 
 class _LibraryContent extends StatelessWidget {
   const _LibraryContent({
+    required this.showScheduledSection,
     required this.tabs,
     required this.tabController,
     required this.selectionMode,
@@ -849,6 +835,8 @@ class _LibraryContent extends StatelessWidget {
     this.targetAspectRatio,
   });
 
+  /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
+  final bool showScheduledSection;
   final List<_LibraryTab> tabs;
   final TabController tabController;
   final bool selectionMode;
@@ -891,7 +879,6 @@ class _LibraryContent extends StatelessWidget {
                     _LibraryTab.drafts => context.l10n.libraryTabDrafts,
                     _LibraryTab.clips => context.l10n.libraryTabClips,
                     _LibraryTab.sounds => context.l10n.soundsTitle,
-                    _LibraryTab.scheduled => context.l10n.libraryTabScheduled,
                   },
                 ),
             ],
@@ -911,6 +898,7 @@ class _LibraryContent extends StatelessWidget {
                   tabController: tabController,
                   targetAspectRatio: targetAspectRatio,
                   backgroundColor: tabBackgroundColor,
+                  showScheduledSection: showScheduledSection,
                 ),
         ),
       ],
@@ -1074,6 +1062,7 @@ class _SelectionBody extends StatelessWidget {
 
 class _TabBody extends StatefulWidget {
   const _TabBody({
+    required this.showScheduledSection,
     required this.tabController,
     required this.tabs,
     required this.clips,
@@ -1087,6 +1076,9 @@ class _TabBody extends StatefulWidget {
   final List<DivineVideoClip> clips;
   final bool selectionEnabled;
   final Color backgroundColor;
+
+  /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
+  final bool showScheduledSection;
   final double? targetAspectRatio;
 
   @override
@@ -1133,7 +1125,10 @@ class _TabBodyState extends State<_TabBody> {
         children: [
           for (final tab in widget.tabs)
             switch (tab) {
-              _LibraryTab.drafts => const DraftsTab(showRecordButton: false),
+              _LibraryTab.drafts => DraftsTab(
+                showRecordButton: false,
+                showScheduledSection: widget.showScheduledSection,
+              ),
               _LibraryTab.clips => ClipsTab(
                 clips: widget.clips,
                 selectionEnabled: widget.selectionEnabled,
@@ -1143,7 +1138,6 @@ class _TabBodyState extends State<_TabBody> {
                 showCategoryManagement: true,
               ),
               _LibraryTab.sounds => const SoundsTab(),
-              _LibraryTab.scheduled => const ScheduledTab(),
             },
         ],
       ),

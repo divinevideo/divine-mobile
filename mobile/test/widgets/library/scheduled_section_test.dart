@@ -1,6 +1,7 @@
 // ABOUTME: Widget tests for the Scheduled tab: row rendering per queue state
 // ABOUTME: and the events its row menu dispatches.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -12,11 +13,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/blocs/scheduled_posts/scheduled_posts_bloc.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/widgets/library/empty_library_state.dart';
-import 'package:openvine/widgets/library/scheduled_tab.dart';
+import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/widgets/library/draft_status_badge.dart';
+import 'package:openvine/widgets/library/scheduled_section.dart';
 import 'package:openvine/widgets/video_metadata/schedule_date_time_sheet.dart';
 
 class _MockScheduledPostsBloc
@@ -27,6 +30,12 @@ class _MockBackgroundPublishBloc
     extends MockBloc<BackgroundPublishEvent, BackgroundPublishState>
     implements BackgroundPublishBloc {}
 
+class _MockDraftsLibraryBloc
+    extends MockBloc<DraftsLibraryEvent, DraftsLibraryState>
+    implements DraftsLibraryBloc {}
+
+class _MockDraft extends Mock implements DivineVideoDraft {}
+
 void main() {
   final en = AppLocalizationsEn();
   const owner =
@@ -35,6 +44,7 @@ void main() {
 
   late _MockScheduledPostsBloc bloc;
   late _MockBackgroundPublishBloc publishBloc;
+  late _MockDraftsLibraryBloc draftsBloc;
 
   Event buildEvent({String d = 'video-1'}) => Event(
     owner,
@@ -76,6 +86,10 @@ void main() {
     bloc = _MockScheduledPostsBloc();
     publishBloc = _MockBackgroundPublishBloc();
     when(() => publishBloc.state).thenReturn(const BackgroundPublishState());
+    draftsBloc = _MockDraftsLibraryBloc();
+    when(
+      () => draftsBloc.state,
+    ).thenReturn(const DraftsLibraryLoaded(drafts: []));
   });
 
   Widget buildWidget() {
@@ -88,38 +102,122 @@ void main() {
           providers: [
             BlocProvider<BackgroundPublishBloc>.value(value: publishBloc),
             BlocProvider<ScheduledPostsBloc>.value(value: bloc),
+            BlocProvider<DraftsLibraryBloc>.value(value: draftsBloc),
           ],
-          // The page above resolves the repository; the view is what renders.
-          child: const ScheduledTabView(),
+          // The scope above resolves the repository; the sliver is what
+          // renders, so the test supplies the scroll view it lives in.
+          child: const ScheduledPostsDraftsRefresher(
+            child: CustomScrollView(slivers: [ScheduledSectionSliver()]),
+          ),
         ),
       ),
     );
   }
 
-  group(ScheduledTab, () {
+  group(ScheduledPostsDraftsRefresher, () {
+    testWidgets('reloads the drafts list when a publish stops being in '
+        'flight', (tester) async {
+      final uploads = StreamController<BackgroundPublishState>();
+      addTearDown(uploads.close);
+      final draft = _MockDraft();
+      when(() => draft.id).thenReturn('draft-1');
+      when(() => draft.scheduledAt).thenReturn(publishAt);
+      when(() => draft.title).thenReturn('Plants');
+      when(() => draft.coverThumbnailPath).thenReturn(null);
+      whenListen(
+        publishBloc,
+        uploads.stream,
+        initialState: BackgroundPublishState(
+          uploads: [BackgroundUpload(draft: draft, result: null, progress: .5)],
+        ),
+      );
+      when(() => bloc.state).thenReturn(
+        const ScheduledPostsState(status: ScheduledPostsStatus.loaded),
+      );
+
+      await tester.pumpWidget(buildWidget());
+      verifyNever(() => draftsBloc.add(const DraftsLibraryLoadRequested()));
+
+      uploads.add(const BackgroundPublishState());
+      await tester.pump();
+
+      verify(
+        () => draftsBloc.add(const DraftsLibraryLoadRequested()),
+      ).called(1);
+    });
+  });
+
+  group(ScheduledSectionSliver, () {
     group('renders', () {
-      testWidgets('a spinner while loading', (tester) async {
+      testWidgets('nothing at all while loading', (tester) async {
         when(() => bloc.state).thenReturn(
           const ScheduledPostsState(status: ScheduledPostsStatus.loading),
         );
 
         await tester.pumpWidget(buildWidget());
 
-        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        expect(find.text(en.libraryScheduledSectionTitle), findsNothing);
+        expect(find.byType(ListTile), findsNothing);
       });
 
-      testWidgets('the empty state with nothing scheduled', (tester) async {
+      testWidgets('nothing at all with nothing scheduled', (tester) async {
         when(() => bloc.state).thenReturn(
           const ScheduledPostsState(status: ScheduledPostsStatus.loaded),
         );
 
         await tester.pumpWidget(buildWidget());
 
-        expect(find.byType(EmptyLibraryState), findsOneWidget);
-        expect(find.text(en.libraryScheduledEmptyTitle), findsOneWidget);
+        expect(find.text(en.libraryScheduledSectionTitle), findsNothing);
+        expect(find.byType(ListTile), findsNothing);
       });
 
-      testWidgets('a scheduled row with its time and badge', (tester) async {
+      testWidgets('one row, not two, while a post is both uploading and '
+          'enqueued', (tester) async {
+        final draft = _MockDraft();
+        when(() => draft.id).thenReturn('draft-1');
+        when(() => draft.scheduledAt).thenReturn(publishAt);
+        when(() => draft.title).thenReturn('Plants');
+        when(() => draft.coverThumbnailPath).thenReturn(null);
+        when(() => publishBloc.state).thenReturn(
+          BackgroundPublishState(
+            uploads: [
+              BackgroundUpload(draft: draft, result: null, progress: .5),
+            ],
+          ),
+        );
+        when(() => bloc.state).thenReturn(
+          ScheduledPostsState(
+            status: ScheduledPostsStatus.loaded,
+            // Same draft the upload above carries.
+            items: [item()],
+          ),
+        );
+
+        await tester.pumpWidget(buildWidget());
+
+        expect(find.byType(ListTile), findsOneWidget);
+        expect(find.text(en.libraryScheduledBadgeUploading), findsNothing);
+      });
+
+      testWidgets('both headers once there is a row to show', (tester) async {
+        when(() => bloc.state).thenReturn(
+          ScheduledPostsState(
+            status: ScheduledPostsStatus.loaded,
+            items: [item()],
+          ),
+        );
+
+        await tester.pumpWidget(buildWidget());
+
+        expect(find.text(en.libraryScheduledSectionTitle), findsOneWidget);
+        // The closing label separates the drafts under it from this run.
+        expect(find.text(en.libraryTabDrafts), findsOneWidget);
+        expect(find.byType(Divider), findsOneWidget);
+      });
+
+      testWidgets('a scheduled row with its time and no badge', (
+        tester,
+      ) async {
         when(() => bloc.state).thenReturn(
           ScheduledPostsState(
             status: ScheduledPostsStatus.loaded,
@@ -130,8 +228,9 @@ void main() {
         await tester.pumpWidget(buildWidget());
 
         expect(find.text('Plants'), findsOneWidget);
-        expect(find.text(en.libraryScheduledBadgeScheduled), findsOneWidget);
         expect(find.textContaining('Oct 1'), findsOneWidget);
+        // The header already says "Scheduled"; the row repeats nothing.
+        expect(find.byType(DraftStatusBadge), findsNothing);
       });
 
       testWidgets('the waiting badge before the relay accepts it', (

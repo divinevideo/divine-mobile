@@ -49,7 +49,6 @@ abstract final class RoutePaths {
   static const libraryClips = '/clips';
   static const libraryClipsOnly = '/clips-only';
   static const libraryDrafts = '/drafts';
-  static const libraryScheduled = '/scheduled';
   static const librarySounds = '/sounds';
   static const likedVideos = '/liked-videos';
   static const messageRequests = '/inbox/message-requests';

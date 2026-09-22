@@ -56,6 +56,7 @@ class ScheduledPostItem extends Equatable {
   final DivineVideoDraft? draft;
 
   String get eventId => post.eventId;
+  String get draftId => post.draftId;
   DateTime get publishAt => post.publishAtUtc;
   ScheduledPostStatus get status => post.status;
   String? get failureReason => post.failureReason;

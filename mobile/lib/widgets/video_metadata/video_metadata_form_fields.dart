@@ -1,8 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
@@ -161,11 +159,8 @@ class _ScheduleSelectorGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.scheduledPosts),
-    );
     final replyContext = ref.watch(videoReplyContextProvider);
-    if (!enabled || replyContext != null) return const SizedBox.shrink();
+    if (replyContext != null) return const SizedBox.shrink();
     return const VideoMetadataScheduleSelector();
   }
 }
