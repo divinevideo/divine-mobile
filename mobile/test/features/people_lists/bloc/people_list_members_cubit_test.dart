@@ -13,9 +13,11 @@ final String _busy = 'b' * 64;
 final String _unknown = 'c' * 64;
 final String _busiest = 'd' * 64;
 
+/// A member's profile as Funnelcake answers it. A null [videos] is a stats
+/// object the API sent without its vertical count.
 UserProfileFound _found(
   String pubkey, {
-  required int videos,
+  required int? videos,
   double loops = 0,
 }) {
   return UserProfileFound(
@@ -23,7 +25,7 @@ UserProfileFound _found(
     // videoCount deliberately exceeds the vertical count: the extra are
     // horizontal videos the grid cannot render, so nothing should count them.
     stats: ProfileStatsData(
-      videoCount: videos + 10,
+      videoCount: (videos ?? 0) + 10,
       reactionCount: 0,
       verticalVideos: videos,
     ),
@@ -94,6 +96,39 @@ void main() {
           expect(
             cubit.state.members.map((member) => member.pubkey),
             equals([_busy, _unknown, _quiet]),
+          );
+          expect(cubit.state.members.last.hasStats, isFalse);
+          expect(cubit.state.totalVideos, equals(7));
+        },
+      );
+
+      test(
+        'leaves a member whose stats omit the vertical count unranked',
+        () async {
+          // The API answered for the member, but not the one count the
+          // roster ranks on: unknown, not zero, so the member is neither
+          // ranked last nor counted as posting nothing.
+          when(
+            () => profileRepository.getBulkProfilesFromApi(any()),
+          ).thenAnswer(
+            (_) async => BulkProfilesResponse(
+              profiles: {
+                _unknown: _found(_unknown, videos: null),
+                _busy: _found(_busy, videos: 7),
+              },
+            ),
+          );
+          final cubit = PeopleListMembersCubit(
+            profileRepository: profileRepository,
+            pubkeys: [_unknown, _busy],
+          );
+          addTearDown(cubit.close);
+
+          await cubit.load();
+
+          expect(
+            cubit.state.members.map((member) => member.pubkey),
+            equals([_busy, _unknown]),
           );
           expect(cubit.state.members.last.hasStats, isFalse);
           expect(cubit.state.totalVideos, equals(7));
