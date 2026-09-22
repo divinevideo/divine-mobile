@@ -37,7 +37,9 @@ class ImportSoundPage extends ConsumerWidget {
     return BlocProvider<SoundImportCubit>(
       create: (_) => SoundImportCubit(
         importService: ref.read(localAudioImportServiceProvider),
-        pickFile: ref.read(audioImportFilePickerProvider),
+        pickFile: ref.read(audioImportFilePickerProvider)(
+          context.l10n.audioPickerTypeGroup,
+        ),
         saveSound: savedSoundsBloc.saveSound,
         reclaimAudio: ref.read(audioImportReclaimerProvider),
         viewerAccountId: () => ref.read(currentAccountIdProvider),

@@ -141,7 +141,8 @@ void main() {
               _FakeImportService(storageDir),
             ),
             audioImportFilePickerProvider.overrideWithValue(
-              () async => nextPick,
+              (_) =>
+                  () async => nextPick,
             ),
             audioImportReclaimerProvider.overrideWithValue(
               (path) async => reclaimed.add(path),

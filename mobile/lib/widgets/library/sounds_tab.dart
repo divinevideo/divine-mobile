@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

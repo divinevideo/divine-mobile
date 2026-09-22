@@ -1,9 +1,10 @@
 // ABOUTME: Riverpod providers for user-saved reusable sounds.
 // ABOUTME: Exposes the account-scoped saved sounds persistence service.
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/blocs/sound_import/sound_import_cubit.dart';
+import 'package:openvine/constants/audio_picker_extensions.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
@@ -26,21 +27,23 @@ final localAudioImportServiceProvider = Provider<LocalAudioImportService>(
   (ref) => LocalAudioImportService(),
 );
 
-/// Opens the platform audio picker for the supported import formats.
-final audioImportFilePickerProvider = Provider<AudioImportFilePicker>((ref) {
-  return () async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['aac', 'm4a', 'mp3', 'wav', 'weba', 'webm'],
-    );
-    final files = result?.files;
-    if (files == null || files.isEmpty) return null;
-    final file = files.first;
-    final path = file.path;
-    if (path == null || path.isEmpty) return null;
-    return AudioImportPickedFile(path: path, name: file.name);
-  };
-});
+/// Builds the platform audio picker for the supported import formats.
+///
+/// `file_selector`, not `file_picker`: the shared [audioPickerTypeGroup]
+/// carries the Android MIME-type workaround every audio picker in the app
+/// depends on. The caller passes the localized type-group label, since the
+/// provider has no `BuildContext`.
+final audioImportFilePickerProvider =
+    Provider<AudioImportFilePicker Function(String label)>((ref) {
+      return (label) => () async {
+        final file = await openFile(
+          acceptedTypeGroups: [audioPickerTypeGroup(label: label)],
+          initialDirectory: audioPickerInitialDirectory(),
+        );
+        if (file == null || file.path.isEmpty) return null;
+        return AudioImportPickedFile(path: file.path, name: file.name);
+      };
+    });
 
 /// Reclaims a library audio file once nothing on the device references it.
 ///
