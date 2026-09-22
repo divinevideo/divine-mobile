@@ -333,6 +333,73 @@ void main() {
 
         expect(spans.tappableSpans, isEmpty);
       });
+
+      // TLV references have no fixed length, so they take the other branch:
+      // a bounded trim from the end rather than a cut at a known offset.
+      test('links an nprofile a trailing character ran into', () {
+        final nprofile = NIP19Tlv.encodeNprofile(
+          Nprofile(pubkey: profileHex, relays: ['wss://relay.example.com']),
+        );
+        String? tappedProfile;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'nostr:${nprofile}s',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          profileLabelForHex: (_) => 'casey',
+          onProfileTap: (hexPubkey) => tappedProfile = hexPubkey,
+        ).build();
+
+        expect(spans.map((span) => span.text).join(), equals('@caseys'));
+
+        final profileSpan = spans.tappableSpans.single;
+        expect(profileSpan.text, equals('@casey'));
+        profileSpan.tap();
+        expect(tappedProfile, equals(profileHex));
+      });
+
+      test('links an nevent followed by a word and keeps the word', () {
+        const eventId =
+            '5555555555555555555555555555555555555555555555555555555555555555';
+        final nevent = NIP19Tlv.encodeNevent(Nevent(id: eventId));
+        String? tappedVideo;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'watch nostr:${nevent}and more',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          videoLabel: 'View video',
+          onVideoTap: (routeReference) => tappedVideo = routeReference,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('watch View videoand more'),
+        );
+
+        final videoSpan = spans.tappableSpans.single;
+        videoSpan.tap();
+        expect(tappedVideo, equals(eventId));
+      });
+
+      test('still leaves an over-long invalid nprofile plain', () {
+        final nprofile = NIP19Tlv.encodeNprofile(Nprofile(pubkey: profileHex));
+        // Overwrite part of the payload so no trimmed candidate passes its
+        // checksum; the reference keeps its full length.
+        final corrupted = nprofile.replaceRange(20, 24, 'zzzz');
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'nostr:${corrupted}s',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          profileLabelForHex: (_) => 'casey',
+        ).build();
+
+        expect(spans.tappableSpans, isEmpty);
+        expect(spans.map((span) => span.text).join(), equals('${corrupted}s'));
+      });
     });
 
     test('routes profile-like hex references to profile taps', () {
