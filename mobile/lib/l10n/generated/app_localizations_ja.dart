@@ -8970,6 +8970,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorMergeFailed => 'クリップを結合できませんでした。もう一度お試しください。';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      '少々お待ちください。静止画をクリップに変換しています';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      '静止画をクリップに変換できませんでした。タイムラインは変更されていません。';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => '長押しでドラッグ';
 
   @override

@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "يجب أن يكون الفيديو {seconds} ثانية على الأقل — التقط بضعة إطارات إضافية.",
     "videoEditorMergeProgressLabel": "لحظة من فضلك، نقوم بدمج مقاطعك",
     "videoEditorMergeFailed": "تعذّر دمج المقاطع. يُرجى المحاولة مرة أخرى.",
+    "videoEditorLibraryImportProgressLabel": "لحظة من فضلك، نحوّل صورك إلى مقطع",
+    "videoEditorLibraryImportFailed": "تعذّر تحويل هذه الصور إلى مقطع. الجدول الزمني كما هو دون تغيير.",
     "deleteAccountLocalDataDeletionFailed": "تم إرسال طلبات الحذف وتم تسجيل خروجك، لكن تعذّر إزالة بعض البيانات المحلية من هذا الجهاز.",
     "imageCropEditorRotateLabel": "تدوير",
     "imageCropEditorFlipLabel": "قلب",

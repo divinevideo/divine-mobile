@@ -9533,6 +9533,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudieron combinar los clips. Inténtalo de nuevo.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Un momento, estamos convirtiendo tus fotos en un clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'No se pudieron convertir esas fotos en un clip. Tu línea de tiempo queda igual.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Mantén presionado para arrastrar';
 

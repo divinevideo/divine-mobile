@@ -1,5 +1,6 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, transform, detach, merge) that block the editor.
+// ABOUTME: (reverse, transform, detach, merge, library import) that block the
+// ABOUTME: editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +29,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
         _TransformProgressOverlay(),
         _DetachProgressOverlay(),
         _MergeProgressOverlay(),
+        _LibraryImportProgressOverlay(),
       ],
     );
   }
@@ -231,6 +233,37 @@ class _MergeProgressOverlay extends StatelessWidget {
               : _RenderProgressContent(
                   renderId: renderId,
                   label: context.l10n.videoEditorMergeProgressLabel,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while a stop-motion set picked in the
+/// library is assembled into the clip that joins a video composition. Absorbs
+/// input for the duration so the timeline controls underneath can't start a
+/// competing edit mid-render, and fades in/out via [AnimatedSwitcher].
+///
+/// The render id moves on to each set in turn when several were picked, and
+/// the progress stream follows it, so the ring fills once per set rather than
+/// once over the whole pick.
+class _LibraryImportProgressOverlay extends StatelessWidget {
+  const _LibraryImportProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) =>
+          state.isImportingLibraryClips ? state.libraryImportRenderId : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorLibraryImportProgressLabel,
                 ),
         );
       },

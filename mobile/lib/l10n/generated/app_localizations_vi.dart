@@ -9399,6 +9399,14 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không ghép được các clip. Vui lòng thử lại.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Một chút thôi, bọn mình đang ghép các ảnh của bạn thành clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Không ghép được các ảnh đó thành clip. Timeline của bạn vẫn nguyên.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Nhấn giữ để kéo';
 
   @override

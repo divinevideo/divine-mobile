@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Videoclipul tău trebuie să dureze cel puțin {seconds}s — capturează încă câteva cadre.",
     "videoEditorMergeProgressLabel": "Un moment, îți îmbinăm clipurile",
     "videoEditorMergeFailed": "Clipurile nu au putut fi îmbinate. Încearcă din nou.",
+    "videoEditorLibraryImportProgressLabel": "Un moment, îți transformăm cadrele într-un clip",
+    "videoEditorLibraryImportFailed": "Cadrele nu au putut fi transformate într-un clip. Cronologia ta rămâne neschimbată.",
     "deleteAccountLocalDataDeletionFailed": "Cereri de ștergere trimise și ai fost deconectat, dar unele date locale nu au putut fi eliminate de pe acest dispozitiv.",
     "imageCropEditorRotateLabel": "Rotește",
     "imageCropEditorFlipLabel": "Întoarce",

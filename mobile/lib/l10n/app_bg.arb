@@ -4063,6 +4063,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Видеото трябва да е поне {seconds}с — заснеми още няколко кадъра.",
     "videoEditorMergeProgressLabel": "Един момент, обединяваме клиповете ти",
     "videoEditorMergeFailed": "Клиповете не могат да бъдат обединени. Опитай отново.",
+    "videoEditorLibraryImportProgressLabel": "Един момент, превръщаме кадрите ти в клип",
+    "videoEditorLibraryImportFailed": "Кадрите не можаха да се превърнат в клип. Времевата ти линия остава непроменена.",
     "deleteAccountLocalDataDeletionFailed": "Заявките за изтриване са изпратени и си отписан, но някои локални данни не можаха да бъдат премахнати от това устройство.",
     "imageCropEditorRotateLabel": "Завъртане",
     "imageCropEditorFlipLabel": "Обръщане",

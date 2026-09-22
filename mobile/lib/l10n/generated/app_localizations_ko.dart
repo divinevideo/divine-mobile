@@ -8987,6 +8987,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorMergeFailed => '클립을 병합할 수 없습니다. 다시 시도해 주세요.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel => '잠시만요, 사진을 클립으로 만들고 있어요';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      '사진을 클립으로 만들지 못했어요. 타임라인은 그대로예요.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => '길게 눌러 드래그';
 
   @override

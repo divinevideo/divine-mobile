@@ -3485,6 +3485,8 @@
     "videoEditorStopMotionTooShortSnackbar": "영상은 최소 {seconds}초여야 해요. 프레임을 몇 장 더 찍어 주세요.",
     "videoEditorMergeProgressLabel": "잠시만요, 클립을 병합하고 있어요",
     "videoEditorMergeFailed": "클립을 병합할 수 없습니다. 다시 시도해 주세요.",
+    "videoEditorLibraryImportProgressLabel": "잠시만요, 사진을 클립으로 만들고 있어요",
+    "videoEditorLibraryImportFailed": "사진을 클립으로 만들지 못했어요. 타임라인은 그대로예요.",
     "deleteAccountLocalDataDeletionFailed": "삭제 요청을 보내고 로그아웃됐지만, 일부 로컬 데이터는 이 기기에서 제거하지 못했어요.",
     "imageCropEditorRotateLabel": "회전",
     "imageCropEditorFlipLabel": "뒤집기",

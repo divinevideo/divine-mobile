@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Seu vídeo precisa de pelo menos {seconds}s — capture mais alguns quadros.",
     "videoEditorMergeProgressLabel": "Um momento, estamos mesclando seus clipes",
     "videoEditorMergeFailed": "Não foi possível mesclar os clipes. Tente novamente.",
+    "videoEditorLibraryImportProgressLabel": "Um momento, estamos transformando suas fotos em um clipe",
+    "videoEditorLibraryImportFailed": "Não foi possível transformar essas fotos em um clipe. Sua linha do tempo fica igual.",
     "deleteAccountLocalDataDeletionFailed": "Solicitações de exclusão enviadas e você foi desconectado, mas alguns dados locais não puderam ser removidos deste dispositivo.",
     "imageCropEditorRotateLabel": "Girar",
     "imageCropEditorFlipLabel": "Inverter",

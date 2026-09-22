@@ -2931,6 +2931,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Kailangang hindi bababa sa {seconds} segundo ang video mo — kumuha pa ng ilang frame.",
     "videoEditorMergeProgressLabel": "Sandali lang, pinagsasama namin ang iyong mga clip",
     "videoEditorMergeFailed": "Hindi mapagsama ang mga clip. Pakisubukang muli.",
+    "videoEditorLibraryImportProgressLabel": "Sandali lang, ginagawa naming clip ang mga still mo",
+    "videoEditorLibraryImportFailed": "Hindi nagawang clip ang mga still na iyon. Hindi nagbago ang timeline mo.",
     "deleteAccountLocalDataDeletionFailed": "Naipadala na ang mga deletion request at naka-log out ka na, pero may ilang local data na hindi maalis sa device na ito.",
     "imageCropEditorRotateLabel": "Iikot",
     "imageCropEditorFlipLabel": "Baligtarin",

@@ -9537,6 +9537,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not merge clips. Please try again.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'One moment, we\'re turning your stills into a clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Couldn\'t turn those stills into a clip. Your timeline is unchanged.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Long press to drag';
 
   @override

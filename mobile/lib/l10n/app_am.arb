@@ -4057,6 +4057,8 @@
     "videoEditorStopMotionTooShortSnackbar": "ቪዲዮው ቢያንስ {seconds} ሰከንድ መሆን አለበት — ጥቂት ተጨማሪ ፍሬሞችን ያንሱ።",
     "videoEditorMergeProgressLabel": "ትንሽ ይቆዩ፣ ቅንጥቦችዎን እያዋሃድን ነው",
     "videoEditorMergeFailed": "ቅንጥቦችን ማዋሃድ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "videoEditorLibraryImportProgressLabel": "ትንሽ ይቆዩ፣ ፎቶዎችዎን ወደ ቅንጥብ እየቀየርን ነው",
+    "videoEditorLibraryImportFailed": "እነዚያን ፎቶዎች ወደ ቅንጥብ መቀየር አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።",
     "deleteAccountLocalDataDeletionFailed": "የመሰረዝ ጥያቄዎች ተልከዋል እና ወጥተዋል፣ ግን አንዳንድ የአካባቢ ውሂብ ከዚህ መሣሪያ ማስወገድ አልተቻለም።",
     "imageCropEditorRotateLabel": "አሽከርክር",
     "imageCropEditorFlipLabel": "ግልብጥ",

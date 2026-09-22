@@ -30,6 +30,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     required GallerySaveService gallerySaveService,
     required SharedPreferences sharedPreferences,
     this.clipTypeFilter = LibraryClipTypeFilter.all,
+    bool allowsMixedClipTypes = false,
   }) : _clipLibraryService = clipLibraryService,
        _gallerySaveService = gallerySaveService,
        _sharedPreferences = sharedPreferences,
@@ -37,6 +38,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
          ClipsLibraryState(
            clipSort: _readPersistedSort(sharedPreferences),
            gridColumnCount: _readPersistedGridColumns(sharedPreferences),
+           allowsMixedClipTypes: allowsMixedClipTypes,
          ),
        ) {
     on<ClipsLibraryLoadRequested>(_onLoadRequested, transformer: droppable());
@@ -253,9 +255,9 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       selectedDuration -= clip.duration;
     } else {
       // No mixing: a clip of a different type than the current selection
-      // (stop-motion vs normal video) cannot be added — the two can't share
-      // one editor timeline. The grid also disables such clips; this guards
-      // the event path.
+      // (stop-motion vs normal video) cannot be added unless the state allows
+      // it (see ClipsLibraryState.allowsMixedClipTypes). The grid also
+      // disables such clips; this guards the event path.
       final selectedType = state.selectedIsStopMotion;
       if (selectedType != null && clip.isStopMotion != selectedType) return;
       selectedIds.add(clip.id);
@@ -335,8 +337,12 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
 
     final selectedIds = Set<String>.from(drag.baseSelectedClipIds);
     // Both constraints tighten as the range grows: with nothing selected yet,
-    // the first clip the drag picks up is what the rest has to match.
-    var isStopMotion = state.stopMotionTypeOf(drag.baseSelectedClipIds);
+    // the first clip the drag picks up is what the rest has to match. The
+    // type constraint is off entirely where mixing is allowed.
+    final mixTypes = state.allowsMixedClipTypes;
+    var isStopMotion = mixTypes
+        ? null
+        : state.stopMotionTypeOf(drag.baseSelectedClipIds);
     var aspectRatio = drag.targetAspectRatio;
     final step = focusIndex >= anchorIndex ? 1 : -1;
 
@@ -350,7 +356,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
             (aspectRatio == null ||
                 aspectRatio == clip.targetAspectRatio.value)) {
           selectedIds.add(clip.id);
-          isStopMotion ??= clip.isStopMotion;
+          if (!mixTypes) isStopMotion ??= clip.isStopMotion;
           aspectRatio ??= clip.targetAspectRatio.value;
         }
       }

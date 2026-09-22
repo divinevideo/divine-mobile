@@ -5182,6 +5182,8 @@
   "@videoEditorMergeFailed": {
     "description": "Snackbar message shown when merging the selected clips fails during rendering."
   },
+  "videoEditorLibraryImportProgressLabel": "ایک لمحہ، ہم آپ کی تصاویر کو کلپ بنا رہے ہیں",
+  "videoEditorLibraryImportFailed": "ان تصاویر سے کلپ نہیں بن سکی۔ آپ کی ٹائم لائن ویسی ہی ہے۔",
   "videoEditorTimelineLongPressToDragHint": "کھینچنے کے لیے دیر تک دبائیں",
   "videoEditorVideoTimelineSemanticLabel": "ویڈیو ٹائم لائن",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

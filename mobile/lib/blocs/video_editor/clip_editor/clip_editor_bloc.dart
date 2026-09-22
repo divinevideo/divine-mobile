@@ -16,13 +16,14 @@ import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_transform_service.dart';
+import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_reverse_service.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:openvine/services/video_editor/video_editor_transform_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, ExportTransform;
+    show EditorVideo, ExportTransform, RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
 
 part 'clip_editor_event.dart';
@@ -117,6 +118,15 @@ typedef RenderClipPlaceholderFn = Future<DivineVideoClip?> Function({
   String? taskId,
 });
 
+/// Function signature matching [StopMotionRenderService.materialize], the
+/// injectable seam that renders a stop-motion set's stills into an mp4 so the
+/// set can join a video composition, so tests can hand back a rendered clip
+/// without the native encoder.
+typedef MaterializeStopMotionClipFn = Future<DivineVideoClip?> Function(
+  DivineVideoClip clip, {
+  String? taskId,
+});
+
 /// Persists an already-flattened clip to the device's clip library, returning
 /// whether it was stored.
 ///
@@ -156,6 +166,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     CleanupFlattenedClipFn? cleanupFlattenedClip,
     DeferFileCleanupFn? deferFileCleanup,
     RenderClipPlaceholderFn? renderClipPlaceholder,
+    MaterializeStopMotionClipFn? materializeStopMotionClip,
   }) : _audioExtractionService =
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
@@ -178,6 +189,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
        _deferFileCleanup = deferFileCleanup ?? _noopDeferFileCleanup,
        _renderClipPlaceholder =
            renderClipPlaceholder ?? ClipPlaceholderRenderService.render,
+       _materializeStopMotionClip =
+           materializeStopMotionClip ?? StopMotionRenderService.materialize,
        _saveClipToLibrary = saveClipToLibrary,
        super(const ClipEditorState()) {
     // Clip data
@@ -270,6 +283,14 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       transformer: droppable(),
     );
 
+    // Add picked library clips to the composition. The picker is modal, so a
+    // second request can only arrive once the first has landed; droppable
+    // keeps a stray duplicate from rendering the same sets twice.
+    on<ClipEditorLibraryClipsImportRequested>(
+      _onLibraryClipsImportRequested,
+      transformer: droppable(),
+    );
+
     // Volume
     on<ClipEditorClipVolumeChanged>(
       _onClipVolumeChanged,
@@ -295,6 +316,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final DeferFileCleanupFn _deferFileCleanup;
   final SaveClipToLibraryFn _saveClipToLibrary;
   final RenderClipPlaceholderFn _renderClipPlaceholder;
+  final MaterializeStopMotionClipFn _materializeStopMotionClip;
 
   // === CLIP DATA ===
 
@@ -1233,6 +1255,148 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         ),
       );
     }
+  }
+
+  // === IMPORT FROM CLIP LIBRARY ===
+
+  Future<void> _onLibraryClipsImportRequested(
+    ClipEditorLibraryClipsImportRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    // Unreadable stills (deleted or zero-byte captures) are dropped before
+    // anything else looks at the set: an assembly over a missing file fails
+    // the whole import, and a merge would carry the ghost into the clip.
+    final picked = [
+      for (final clip in event.clips) ?StopMotionFrameOps.sanitizedClip(clip),
+    ];
+    if (picked.isEmpty) return;
+
+    final previousClips = state.clips;
+
+    // Stop-motion sets picked into a stop-motion composition collapse into
+    // its single frames clip — the frame-first editor edits exactly one
+    // frames list (see StopMotionFrameOps.mergeClips). A composition that
+    // holds any video clip never merges: it takes each set as a clip below.
+    final merged = StopMotionFrameOps.mergeClips([...previousClips, ...picked]);
+    if (merged != null) {
+      Log.info(
+        '📚 Merged ${picked.length} library set(s) into the frames clip',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(
+        state.copyWith(
+          clips: List.unmodifiable([merged]),
+          lastLibraryImportResult: ClipLibraryImportSuccess(
+            previousClips: previousClips,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final renderId = 'library_import_${DateTime.now().microsecondsSinceEpoch}';
+    // A frames-only set has no file the video timeline could play, so it is
+    // assembled into an mp4 here, once, and enters as a plain video clip. The
+    // editor session stays a video session; only the set changes shape.
+    final imported = <DivineVideoClip>[];
+    final renderedPaths = <String?>[];
+    var setIndex = 0;
+    try {
+      for (final clip in picked) {
+        if (!clip.isStopMotion) {
+          imported.add(clip);
+          continue;
+        }
+        final taskId = '$renderId-${setIndex++}';
+        emit(
+          state.copyWith(
+            isImportingLibraryClips: true,
+            libraryImportRenderId: taskId,
+          ),
+        );
+        final materialized = await _materializeStopMotionClip(
+          clip,
+          taskId: taskId,
+        );
+        if (materialized == null) {
+          // Matrix-NO: a failed assembly surfaces as a null output (IO).
+          Log.warning(
+            '⚠️ Library import: assembling set ${clip.id} failed',
+            name: 'ClipEditorBloc',
+            category: LogCategory.video,
+          );
+          _abandonLibraryImport(
+            emit,
+            renderedPaths,
+            ClipLibraryImportFailure(),
+          );
+          return;
+        }
+        renderedPaths.add(materialized.video?.file?.path);
+        imported.add(materialized);
+      }
+    } on RenderCanceledException {
+      // Teardown cancels the native task under it; nothing to report.
+      _abandonLibraryImport(emit, renderedPaths, ClipLibraryImportDiscarded());
+      return;
+    } catch (e, stackTrace) {
+      final error = switch (e) {
+        StateError() || TypeError() || RangeError() => Reportable(
+          e,
+          context: '_onLibraryClipsImportRequested',
+        ),
+        _ => e,
+      };
+      addError(error, stackTrace);
+      Log.error(
+        '❌ Failed to import library clips: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _abandonLibraryImport(emit, renderedPaths, ClipLibraryImportFailure());
+      return;
+    }
+
+    Log.info(
+      '📚 Added ${imported.length} library clip(s), '
+      '$setIndex of them assembled from stills',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
+    // Appended to the list as it stands now, not to the snapshot: the
+    // progress overlay blocks edits while a set assembles, but a queued
+    // volume change or thumbnail refresh can still have landed meanwhile.
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable([...state.clips, ...imported]),
+        isImportingLibraryClips: false,
+        clearLibraryImportRenderId: true,
+        lastLibraryImportResult: ClipLibraryImportSuccess(
+          previousClips: previousClips,
+        ),
+      ),
+    );
+  }
+
+  /// Ends a library import that adds nothing: the timeline is left as it
+  /// was, and the mp4s already assembled for sets earlier in the same pick
+  /// are queued for reclamation, since no clip will ever reference them.
+  void _abandonLibraryImport(
+    Emitter<ClipEditorState> emit,
+    List<String?> renderedPaths,
+    ClipLibraryImportResult result,
+  ) {
+    _deferFileCleanup(renderedPaths);
+    emit(
+      state.copyWith(
+        isImportingLibraryClips: false,
+        clearLibraryImportRenderId: true,
+        lastLibraryImportResult: result,
+      ),
+    );
   }
 
   // === REVERSE ===

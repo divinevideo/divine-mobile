@@ -6302,6 +6302,14 @@
   "@videoEditorMergeFailed": {
     "description": "Snackbar message shown when merging the selected clips fails during rendering."
   },
+  "videoEditorLibraryImportProgressLabel": "One moment, we're turning your stills into a clip",
+  "@videoEditorLibraryImportProgressLabel": {
+    "description": "Status text shown while a stop-motion set picked from the library is rendered into a video clip so it can join a regular video timeline."
+  },
+  "videoEditorLibraryImportFailed": "Couldn't turn those stills into a clip. Your timeline is unchanged.",
+  "@videoEditorLibraryImportFailed": {
+    "description": "Snackbar message shown when rendering a stop-motion set picked from the library into a video clip fails. Nothing was added to the timeline."
+  },
   "videoEditorTimelineLongPressToDragHint": "Long press to drag",
   "videoEditorVideoTimelineSemanticLabel": "Video timeline",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

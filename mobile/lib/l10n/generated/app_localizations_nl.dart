@@ -9485,6 +9485,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kan clips niet samenvoegen. Probeer het opnieuw.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Een moment, we maken van je foto\'s een clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Kon van die foto\'s geen clip maken. Je tijdlijn blijft ongewijzigd.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Lang indrukken om te slepen';
 

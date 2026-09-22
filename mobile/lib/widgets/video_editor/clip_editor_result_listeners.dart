@@ -25,8 +25,9 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
-/// detach, detached-clip transform, remove, audio extraction, library save —
-/// reports its outcome through a `last*Result` field on [ClipEditorState].
+/// detach, detached-clip transform, remove, audio extraction, library save,
+/// library import — reports its outcome through a `last*Result` field on
+/// [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
 ///
@@ -47,7 +48,9 @@ class ClipEditorResultListeners extends StatelessWidget {
               child: _DetachedClipTransformResultListener(
                 child: _ClipsRemovedResultListener(
                   child: _AudioExtractionResultListener(
-                    child: _ClipLibrarySaveResultListener(child: child),
+                    child: _ClipLibrarySaveResultListener(
+                      child: _ClipLibraryImportResultListener(child: child),
+                    ),
                   ),
                 ),
               ),
@@ -614,6 +617,61 @@ class _ClipLibrarySaveResultListener extends StatelessWidget {
             context.l10n.videoEditorClipSaveFailed,
           ),
         );
+    }
+  }
+}
+
+/// Listens to [ClipEditorBloc.state.lastLibraryImportResult] and commits a
+/// successful import — clips picked in the library, now on the timeline — to
+/// editor history, or surfaces a snackbar when a stop-motion set could not be
+/// rendered into a clip.
+///
+/// The bloc has already grown its clip list by the time this fires. The
+/// history entry is what carries the change to the clip manager (and so to
+/// autosave), and it is written with
+/// [VideoEditorExtensions.setLengthenedClipState] because an import only ever
+/// makes the composition longer: a sound window that ran to the old end is
+/// carried onto the new one (#6401), while one the user trimmed short stays
+/// put.
+class _ClipLibraryImportResultListener extends StatelessWidget {
+  const _ClipLibraryImportResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastLibraryImportResult,
+            curr.lastLibraryImportResult,
+          ) &&
+          curr.lastLibraryImportResult != null,
+      listener: _onLibraryImportResult,
+      child: child,
+    );
+  }
+
+  void _onLibraryImportResult(BuildContext context, ClipEditorState state) {
+    final result = state.lastLibraryImportResult;
+    if (result == null) return;
+
+    switch (result) {
+      case ClipLibraryImportSuccess(:final previousClips):
+        VideoEditorScope.of(context).requireEditor.setLengthenedClipState(
+          previousClips: previousClips,
+          clips: state.clips,
+        );
+      case ClipLibraryImportFailure():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorLibraryImportFailed,
+          ),
+        );
+      case ClipLibraryImportDiscarded():
+        // The render was cancelled by the editor's own teardown — there is no
+        // timeline left to add to and no user action that warrants a snackbar.
+        break;
     }
   }
 }

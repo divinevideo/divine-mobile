@@ -51,6 +51,9 @@ class ClipEditorState extends Equatable {
     this.detachingRenderId,
     this.lastDetachResult,
     this.lastDetachedClipTransformResult,
+    this.isImportingLibraryClips = false,
+    this.libraryImportRenderId,
+    this.lastLibraryImportResult,
   });
 
   /// Local copy of clips managed by this editor session.
@@ -251,6 +254,24 @@ class ClipEditorState extends Equatable {
   /// list plus that layer to editor history as one undoable entry.
   final ClipDetachResult? lastDetachResult;
 
+  /// Whether library clips are being rendered so they can join the timeline.
+  ///
+  /// Only true while a stop-motion set picked into a video composition is
+  /// assembled into an mp4; sets merging into a stop-motion composition, and
+  /// plain video clips, complete within the handler.
+  final bool isImportingLibraryClips;
+
+  /// Render id keying the progress stream of the set being assembled, or
+  /// `null`. Moves on to each set in turn when several were picked, so the
+  /// overlay follows whichever render is actually running.
+  final String? libraryImportRenderId;
+
+  /// Last completed library import.
+  ///
+  /// Consumed by the widget layer to commit the grown clip list to editor
+  /// history (on success) or surface a failure snackbar.
+  final ClipLibraryImportResult? lastLibraryImportResult;
+
   /// Last completed transform render of a clip that already left the timeline.
   ///
   /// Separate from [lastTransformResult] because the two land in different
@@ -329,6 +350,10 @@ class ClipEditorState extends Equatable {
     int? selectedFrameIndex,
     bool clearSelectedFrameIndex = false,
     Set<int>? selectedFrameIndexes,
+    bool? isImportingLibraryClips,
+    String? libraryImportRenderId,
+    bool clearLibraryImportRenderId = false,
+    ClipLibraryImportResult? lastLibraryImportResult,
   }) {
     return ClipEditorState(
       clips: clips ?? this.clips,
@@ -404,6 +429,13 @@ class ClipEditorState extends Equatable {
       lastDetachedClipTransformResult:
           lastDetachedClipTransformResult ??
           this.lastDetachedClipTransformResult,
+      isImportingLibraryClips:
+          isImportingLibraryClips ?? this.isImportingLibraryClips,
+      libraryImportRenderId: clearLibraryImportRenderId
+          ? null
+          : (libraryImportRenderId ?? this.libraryImportRenderId),
+      lastLibraryImportResult:
+          lastLibraryImportResult ?? this.lastLibraryImportResult,
     );
   }
 
@@ -459,6 +491,10 @@ class ClipEditorState extends Equatable {
     identityHashCode(lastDetachResult),
     // Identity-only, for the same reason.
     identityHashCode(lastDetachedClipTransformResult),
+    isImportingLibraryClips,
+    libraryImportRenderId,
+    // Identity-only: each ClipLibraryImportResult is a fresh instance.
+    identityHashCode(lastLibraryImportResult),
   ];
 }
 
@@ -609,6 +645,33 @@ final class ClipMergeFailure extends ClipMergeResult {}
 /// Merge completed but one or more selected clips were removed from the
 /// timeline while the async render was in flight, so the result was discarded.
 final class ClipMergeDiscarded extends ClipMergeResult {}
+
+// === LIBRARY IMPORT RESULT ===
+
+/// One-shot signal describing the outcome of a library import.
+///
+/// Emitted into [ClipEditorState.lastLibraryImportResult] after each
+/// [ClipEditorLibraryClipsImportRequested]. Identity-compared so the scaffold
+/// [BlocListener] fires exactly once per import even when the same outcome
+/// repeats.
+sealed class ClipLibraryImportResult {}
+
+/// The picked clips are on the timeline; [ClipEditorState.clips] already
+/// holds them. [previousClips] is the clip list as it was before the import,
+/// so the widget layer can carry audio windows that ran to the old end onto
+/// the new one.
+final class ClipLibraryImportSuccess extends ClipLibraryImportResult {
+  ClipLibraryImportSuccess({required this.previousClips});
+
+  final List<DivineVideoClip> previousClips;
+}
+
+/// Rendering a stop-motion set into a clip failed; the timeline is unchanged.
+final class ClipLibraryImportFailure extends ClipLibraryImportResult {}
+
+/// The render was cancelled from outside (editor teardown), so nothing was
+/// added and nothing needs reporting.
+final class ClipLibraryImportDiscarded extends ClipLibraryImportResult {}
 
 // === CLIPS-REMOVED RESULT ===
 

@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Videon en az {seconds}sn olmalı — birkaç kare daha çek.",
     "videoEditorMergeProgressLabel": "Bir saniye, kliplerini birleştiriyoruz",
     "videoEditorMergeFailed": "Klipler birleştirilemedi. Lütfen tekrar dene.",
+    "videoEditorLibraryImportProgressLabel": "Bir saniye, karelerini klibe dönüştürüyoruz",
+    "videoEditorLibraryImportFailed": "Bu kareler klibe dönüştürülemedi. Zaman çizelgen değişmedi.",
     "deleteAccountLocalDataDeletionFailed": "Silme istekleri gönderildi ve oturumun kapatıldı ama bazı yerel veriler bu cihazdan kaldırılamadı.",
     "imageCropEditorRotateLabel": "Döndür",
     "imageCropEditorFlipLabel": "Çevir",

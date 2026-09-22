@@ -9545,6 +9545,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorMergeFailed => 'Impossibile unire le clip. Riprova.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Un momento, stiamo trasformando i tuoi scatti in una clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Non è stato possibile trasformare quegli scatti in una clip. La timeline resta invariata.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tieni premuto per trascinare';
 

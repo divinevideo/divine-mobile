@@ -9528,6 +9528,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Клиповете не могат да бъдат обединени. Опитай отново.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Един момент, превръщаме кадрите ти в клип';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Кадрите не можаха да се превърнат в клип. Времевата ти линия остава непроменена.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Натисни дълго, за да плъзнеш';
 

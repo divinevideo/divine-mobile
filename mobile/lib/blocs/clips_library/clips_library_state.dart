@@ -61,10 +61,12 @@ abstract class ClipGridColumns {
 /// Which clip types the library shows.
 ///
 /// Opened from the recorder, the library is scoped to the type that matches
-/// the current recorder mode — stop-motion stills and normal video clips
-/// cannot share one editor timeline. Opened standalone it shows [all] types
-/// (mixing is instead blocked at selection time, see
-/// [ClipsLibraryState.selectedIsStopMotion]).
+/// the current recorder mode: a recording session is one mode from start to
+/// finish, so it only takes clips of its own kind. Opened standalone it shows
+/// [all] types but blocks mixing them in one selection (see
+/// [ClipsLibraryState.selectedIsStopMotion]), so the editor always opens on a
+/// single-typed composition. The editor's own picker is the one place both
+/// types may be picked together — see [ClipsLibraryState.allowsMixedClipTypes].
 enum LibraryClipTypeFilter {
   all,
   stopMotion,
@@ -327,6 +329,7 @@ final class ClipsLibraryState extends Equatable {
     this.filter = const ClipLibraryAllFilter(),
     this.lastOrganizeResult,
     this.dragSelection,
+    this.allowsMixedClipTypes = false,
   });
 
   /// Current operation status.
@@ -400,6 +403,17 @@ final class ClipsLibraryState extends Equatable {
   /// user is not dragging across the grid.
   final ClipsLibraryDragSelection? dragSelection;
 
+  /// Whether one selection may hold both stop-motion sets and normal video
+  /// clips.
+  ///
+  /// On only for the editor's picker over a video composition, which renders
+  /// each stop-motion set into a clip as it lands on the timeline (see
+  /// `ClipEditorLibraryClipsImportRequested`). Everywhere else the two stay
+  /// apart: a frames-only set cannot sit on a video timeline, and a video
+  /// clip cannot enter the frame-first stop-motion editor, so a mixed
+  /// selection would have nowhere to go. Fixed for the bloc's lifetime.
+  final bool allowsMixedClipTypes;
+
   /// The category the [filter] is showing, or `null` for the built-in
   /// filters and for a category that no longer exists.
   ClipCategory? get activeCategory {
@@ -442,12 +456,13 @@ final class ClipsLibraryState extends Equatable {
     return [for (final id in selectedClipIds) ?clipsById[id]];
   }
 
-  /// Type of the current selection: `true` when stop-motion clips are
-  /// selected, `false` for normal video clips, `null` when nothing is
-  /// selected. Drives the no-mixing rule — stop-motion stills and normal
-  /// clips cannot coexist in one editor timeline, so once one type is
-  /// selected the other becomes non-selectable.
-  bool? get selectedIsStopMotion => stopMotionTypeOf(selectedClipIds);
+  /// Type the rest of the selection has to match: `true` when stop-motion
+  /// clips are selected, `false` for normal video clips, `null` when nothing
+  /// is selected. Drives the no-mixing rule — once one type is selected the
+  /// other becomes non-selectable. Always `null` when
+  /// [allowsMixedClipTypes], since then there is nothing to match.
+  bool? get selectedIsStopMotion =>
+      allowsMixedClipTypes ? null : stopMotionTypeOf(selectedClipIds);
 
   /// Type of the clips [clipIds] names — `true` when they are stop-motion,
   /// `false` for normal video clips, `null` when the set names none of the
@@ -528,6 +543,7 @@ final class ClipsLibraryState extends Equatable {
       dragSelection: clearDragSelection
           ? null
           : (dragSelection ?? this.dragSelection),
+      allowsMixedClipTypes: allowsMixedClipTypes,
     );
   }
 
@@ -552,5 +568,6 @@ final class ClipsLibraryState extends Equatable {
     filter,
     lastOrganizeResult,
     dragSelection,
+    allowsMixedClipTypes,
   ];
 }

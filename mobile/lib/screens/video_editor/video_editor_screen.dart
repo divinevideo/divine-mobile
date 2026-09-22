@@ -494,11 +494,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       ..add(const VideoEditorExternalPauseRequested(isPaused: true));
     final currentClips = ref.read(clipManagerProvider).clips;
 
-    // Clip types can't be mixed in one composition, so the picker only
-    // offers the type the session already edits.
-    final clipTypeFilter = isStopMotionComposition(currentClips)
+    // The session's kind is fixed when it starts — by the recorder mode, or
+    // by the library selection that opened it — and this picker never changes
+    // it. A stop-motion session keeps its frame-first editor, so it only sees
+    // stop-motion sets. A video session sees everything: a set picked here is
+    // rendered into a clip on import (ClipEditorLibraryClipsImportRequested),
+    // which is how stop-motion and camera footage end up in one loop.
+    final isStopMotionSession = isStopMotionComposition(currentClips);
+    final clipTypeFilter = isStopMotionSession
         ? LibraryClipTypeFilter.stopMotion
-        : LibraryClipTypeFilter.video;
+        : LibraryClipTypeFilter.all;
 
     final newClips = await VineBottomSheet.show<List<DivineVideoClip>>(
       context: context,
@@ -509,6 +514,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         initialTabIndex: 1,
         selectionMode: true,
         clipTypeFilter: clipTypeFilter,
+        allowsMixedClipTypes: !isStopMotionSession,
         editorClips: currentClips,
         scrollController: scrollController,
       ),
@@ -522,38 +528,24 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         name: 'VideoEditorScreen',
         category: LogCategory.video,
       );
-
-      final clipManager = ref.read(clipManagerProvider.notifier);
-      // Drop unreadable stills, then collapse stop-motion sets added to a
-      // stop-motion session into the session's single frames clip — the
-      // frame-first editor edits exactly one frames list (see
-      // StopMotionFrameOps.mergeClips).
-      final usableClips = [
-        for (final clip in newClips) ?StopMotionFrameOps.sanitizedClip(clip),
-      ];
-      final merged = StopMotionFrameOps.mergeClips([
-        ...ref.read(clipManagerProvider).clips,
-        ...usableClips,
-      ]);
-      if (merged != null) {
-        clipManager.replaceClips([merged]);
-      } else {
-        clipManager.addMultipleClips(usableClips);
-      }
-
-      _syncClipsToEditor(clipEditorBloc: clipEditorBloc);
+      // The bloc grows its clip list and reports back through
+      // lastLibraryImportResult; the scaffold's result listener then writes
+      // the new list into editor history, which mirrors it to the clip
+      // manager the same way every other timeline edit reaches it.
+      clipEditorBloc.add(ClipEditorLibraryClipsImportRequested(newClips));
     }
   }
 
   /// Syncs the current clip list from [clipManagerProvider] into the
   /// [ClipEditorBloc] and appends a history entry to the pro_image_editor.
   ///
-  /// Both callers add content — stills shot from the editor's camera, a
-  /// stop-motion set merged in from the clips picker — so the composition can
-  /// end up longer than the one a sound was clamped to when it was added.
-  /// [VideoEditorExtensions.setLengthenedClipState] carries a window that ran
-  /// to the old end onto the new one (#6401); a window the user trimmed short
-  /// is left alone.
+  /// The camera adds content — clips or stills shot from the editor — so the
+  /// composition can end up longer than the one a sound was clamped to when
+  /// it was added. [VideoEditorExtensions.setLengthenedClipState] carries a
+  /// window that ran to the old end onto the new one (#6401); a window the
+  /// user trimmed short is left alone. The clips picker takes the other
+  /// route: its import lands in the bloc first, and the scaffold's result
+  /// listener commits the same lengthened history entry from there.
   void _syncClipsToEditor({required ClipEditorBloc clipEditorBloc}) {
     // Read before the dispatch: this is the composition the audio windows were
     // last clamped against.

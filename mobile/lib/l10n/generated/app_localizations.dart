@@ -16068,6 +16068,18 @@ abstract class AppLocalizations {
   /// **'Could not merge clips. Please try again.'**
   String get videoEditorMergeFailed;
 
+  /// Status text shown while a stop-motion set picked from the library is rendered into a video clip so it can join a regular video timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'One moment, we\'re turning your stills into a clip'**
+  String get videoEditorLibraryImportProgressLabel;
+
+  /// Snackbar message shown when rendering a stop-motion set picked from the library into a video clip fails. Nothing was added to the timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t turn those stills into a clip. Your timeline is unchanged.'**
+  String get videoEditorLibraryImportFailed;
+
   /// No description provided for @videoEditorTimelineLongPressToDragHint.
   ///
   /// In en, this message translates to:

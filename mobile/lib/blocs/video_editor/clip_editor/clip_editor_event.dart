@@ -502,6 +502,27 @@ class ClipEditorAllClipsVolumeChanged extends ClipEditorEvent {
 /// the whole composition; the handler windows it down to this clip's slice. The
 /// widget layer captures it because only it can reach the editor — see
 /// `ProImageEditorState.captureOverlaySnapshot`. `null` renders the bare video.
+/// Adds clips the user picked in the library to the composition.
+///
+/// [clips] arrive in selection order, exactly as the library handed them
+/// over; the handler drops unreadable stills and decides how each clip joins
+/// the timeline. A stop-motion set added to a stop-motion composition merges
+/// into its single frames clip; one added to a video composition is rendered
+/// into a clip first, so both types can share the same loop.
+///
+/// A stop-motion composition is only ever handed stop-motion sets: a video
+/// clip cannot enter the frame-first editor, so the editor's picker offers
+/// nothing else over one (see `VideoEditorScreen`). The handler does not
+/// re-check that.
+class ClipEditorLibraryClipsImportRequested extends ClipEditorEvent {
+  const ClipEditorLibraryClipsImportRequested(this.clips);
+
+  final List<DivineVideoClip> clips;
+
+  @override
+  List<Object?> get props => [clips];
+}
+
 class ClipEditorSaveClipToLibraryRequested extends ClipEditorEvent {
   const ClipEditorSaveClipToLibraryRequested({
     required this.clipId,

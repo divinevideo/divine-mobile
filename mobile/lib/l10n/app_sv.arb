@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Din video måste vara minst {seconds}s – ta några bildrutor till.",
     "videoEditorMergeProgressLabel": "Ett ögonblick, vi slår samman dina klipp",
     "videoEditorMergeFailed": "Det gick inte att slå samman klippen. Försök igen.",
+    "videoEditorLibraryImportProgressLabel": "Ett ögonblick, vi gör ett klipp av dina bilder",
+    "videoEditorLibraryImportFailed": "Det gick inte att göra ett klipp av bilderna. Din tidslinje är oförändrad.",
     "deleteAccountLocalDataDeletionFailed": "Raderingsförfrågningar skickade och du är utloggad, men vissa lokala data kunde inte tas bort från den här enheten.",
     "imageCropEditorRotateLabel": "Rotera",
     "imageCropEditorFlipLabel": "Vänd",

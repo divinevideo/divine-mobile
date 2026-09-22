@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Tu video necesita al menos {seconds}s: captura algunos fotogramas más.",
     "videoEditorMergeProgressLabel": "Un momento, estamos combinando tus clips",
     "videoEditorMergeFailed": "No se pudieron combinar los clips. Inténtalo de nuevo.",
+    "videoEditorLibraryImportProgressLabel": "Un momento, estamos convirtiendo tus fotos en un clip",
+    "videoEditorLibraryImportFailed": "No se pudieron convertir esas fotos en un clip. Tu línea de tiempo queda igual.",
     "deleteAccountLocalDataDeletionFailed": "Solicitudes de eliminación enviadas y se cerró tu sesión, pero no se pudieron quitar algunos datos locales de este dispositivo.",
     "imageCropEditorRotateLabel": "Girar",
     "imageCropEditorFlipLabel": "Voltear",

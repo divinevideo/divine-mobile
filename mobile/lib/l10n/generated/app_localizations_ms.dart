@@ -9448,6 +9448,14 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat menggabungkan klip. Sila cuba lagi.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Sebentar, kami sedang menukar gambar anda menjadi klip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Gambar itu tidak dapat ditukar menjadi klip. Garis masa anda tidak berubah.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tekan lama untuk menyeret';
 

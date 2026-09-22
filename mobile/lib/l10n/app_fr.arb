@@ -3939,6 +3939,8 @@
     "videoEditorStopMotionTooShortSnackbar": "Ta vidéo doit durer au moins {seconds}s — capture encore quelques images.",
     "videoEditorMergeProgressLabel": "Un instant, nous fusionnons vos clips",
     "videoEditorMergeFailed": "Impossible de fusionner les clips. Veuillez réessayer.",
+    "videoEditorLibraryImportProgressLabel": "Un instant, on transforme tes images en clip",
+    "videoEditorLibraryImportFailed": "Impossible de transformer ces images en clip. Ta timeline est inchangée.",
     "deleteAccountLocalDataDeletionFailed": "Demandes de suppression envoyées et tu es déconnecté, mais certaines données locales n'ont pas pu être retirées de cet appareil.",
     "imageCropEditorRotateLabel": "Pivoter",
     "imageCropEditorFlipLabel": "Retourner",
