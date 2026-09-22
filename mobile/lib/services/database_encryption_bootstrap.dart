@@ -13,8 +13,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// Secure-storage key for the at-rest DB cipher key.
 ///
 /// **This name is a wire format and must never change.** It is what every
-/// shipped install has written, and the only slot any build looks in — older or
-/// newer. Move the key to a second slot and the older build finds nothing,
+/// shipped install has written, and the primary slot older builds look in.
+/// Move the key to a second slot and the older build finds nothing,
 /// generates a replacement and wipes the existing database through key-loss
 /// recovery; an App Store or TestFlight rollback, a downgraded macOS build, a
 /// sideloaded older APK and a Shorebird patch rolled back to its release
@@ -24,6 +24,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// #9385.
 @visibleForTesting
 const dbCipherKeyStorageKey = 'db.cipher.key.v1';
+
+/// Temporary recovery copy for the plugin's delete-then-add accessibility write.
+/// Never replaces the primary slot that older builds require.
+@visibleForTesting
+const dbCipherKeyAccessibilityBackupStorageKey =
+    'db.cipher.key.v1.accessibility_backup';
 
 /// Resolves the SQLite3MultipleCiphers key for the local database before the first
 /// `AppDatabase` open and performs the one-time plaintext→encrypted migration.
@@ -311,6 +317,17 @@ class DatabaseEncryptionBootstrap {
       // so this is a corrupt item rather than one it refused to hand over.
       return (await _createKey(), true);
     }
+    // An interrupted accessibility rewrite may have removed the primary.
+    // Recover it before treating an empty primary as key loss. A failed read
+    // or restore fails closed and leaves the recovery copy for the next launch.
+    final backup = await _readCipherKey(
+      _secureStorage,
+      dbCipherKeyAccessibilityBackupStorageKey,
+    );
+    if (backup != null && _isValidCipherKey(backup)) {
+      await _restorePrimaryKey(backup);
+      return (backup, false);
+    }
     // The slot read back empty. Only a keystore that could have answered makes
     // that a fresh install rather than a key it refused to hand over.
     await _requireReadableKeystore();
@@ -337,38 +354,58 @@ class DatabaseEncryptionBootstrap {
   /// Rewriting in place, rather than moving the key to a new slot, is what
   /// keeps a rollback non-destructive — see [dbCipherKeyStorageKey].
   ///
-  /// Two deliberate properties:
-  ///
-  /// * **Gated on protected data.** While the device cannot decrypt
-  ///   `unlocked`-class data, deleting the old item fails with
-  ///   `errSecInteractionNotAllowed` and the re-add collides with the item that
-  ///   survived. Skipping keeps those launches quiet; the next unlocked one
-  ///   does the rewrite. `null` (Android, web, macOS) skips too, because the
-  ///   accessibility never changed there.
-  /// * **Best-effort.** The caller already holds a key that opens the database.
-  ///   Letting a failed rewrite throw would convert a launch that works into
-  ///   the database-failure screen, and the only thing lost by skipping is the
-  ///   locked-launch fix, until the next attempt.
-  ///
-  /// The one cost: whenever `SecItemUpdate` fails to match, the plugin deletes
-  /// the item before re-adding it, so a process kill between those two Keychain
-  /// calls loses the key and the next launch wipes the database through
-  /// key-loss recovery. The launch that upgrades the class is the expected
-  /// occurrence — a matching update succeeds, so a device that has been
-  /// rewritten does not re-enter the path — but any other `SecItemUpdate`
-  /// failure re-enters it too, so the window is not bounded to one launch per
-  /// device. The alternative, a second slot, trades a window of two consecutive
-  /// calls for a rollback that wipes unconditionally.
+  /// Skip while protected data is unavailable. Before touching the primary,
+  /// persist and read back a recovery copy under the current options. The
+  /// plugin can delete the primary before an add fails or the process exits.
+  /// Restore the primary after a caught failure; an interrupted launch restores
+  /// it from the recovery copy on next startup. Startup fails closed if that
+  /// restoration cannot complete. Older builds still read only the primary,
+  /// so a rollback during an interrupted rewrite remains unsupported until a
+  /// successful launch of this build restores it.
   Future<void> _upgradeKeyAccessibility(String key) async {
     if (await _isProtectedDataAvailable() != true) return;
     try {
-      await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
-    } on Object catch (error) {
-      Log.warning(
-        'Could not rewrite the DB cipher key under the current Keychain '
-        'accessibility (non-fatal; a launch while the device is locked may '
-        'still fail until this succeeds): $error',
-        name: _logName,
+      await _secureStorage.write(
+        key: dbCipherKeyAccessibilityBackupStorageKey,
+        value: key,
+      );
+      if (await _readCipherKey(
+            _secureStorage,
+            dbCipherKeyAccessibilityBackupStorageKey,
+          ) !=
+          key) {
+        return;
+      }
+    } on Object {
+      // The primary has not been touched: defer the accessibility upgrade.
+      return;
+    }
+    await _restorePrimaryKey(key);
+  }
+
+  /// Leaves the recovery copy intact until the primary has been verified.
+  Future<void> _restorePrimaryKey(String key) async {
+    try {
+      try {
+        await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+      } on Object {
+        // An error need not mean the old item survived. Retry if it did not,
+        // retaining the durable recovery copy through both attempts.
+        if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) !=
+            key) {
+          await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
+        }
+      }
+      if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) != key) {
+        throw StateError('DB cipher key restoration did not persist');
+      }
+      await _secureStorage.delete(
+        key: dbCipherKeyAccessibilityBackupStorageKey,
+      );
+    } on Object catch (error, stack) {
+      Error.throwWithStackTrace(
+        DatabaseCipherStorageUnavailableException(error),
+        stack,
       );
     }
   }
@@ -434,6 +471,11 @@ class DatabaseEncryptionBootstrap {
 
   Future<void> _writeCipherKey(String key) async {
     try {
+      // Do not let an obsolete recovery copy resurrect a previous key after
+      // a later interrupted replacement.
+      await _secureStorage.delete(
+        key: dbCipherKeyAccessibilityBackupStorageKey,
+      );
       await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
@@ -691,8 +733,11 @@ Future<void> resetEncryptedDatabaseCache({
 }) async {
   await (deleteDatabase ?? backUpAndRemoveSharedDatabase)();
   if (deleteCipherKey) {
-    await secureStorage.delete(key: dbCipherKeyStorageKey);
+    // Delete auxiliary/legacy copies before the primary. A failed cleanup
+    // must not leave a stale fallback as the only surviving key (#9389).
+    await secureStorage.delete(key: dbCipherKeyAccessibilityBackupStorageKey);
     await legacySecureStorage.delete(key: dbCipherKeyStorageKey);
+    await secureStorage.delete(key: dbCipherKeyStorageKey);
   }
   if (recoveryOutcome != null) {
     try {

@@ -54,14 +54,16 @@ a silent push, a background refresh, a prewarmed launch — failed with
 rewrites the key into the same slot under the current options; the plugin's iOS
 write puts the accessibility into its `SecItemUpdate` query, so an item already
 under the current class updates in place and only a mismatched one takes the
-delete-and-re-add path. The rewrite is best-effort and skipped while protected
-data is unavailable, because the caller already holds a key that opens the
-database. Its one cost: whenever `SecItemUpdate` fails to match, the plugin
-deletes before it re-adds, so a process kill between those two Keychain calls
-loses the key. The launch that upgrades the class is the expected occurrence,
-since a matching update succeeds, but any other update failure re-enters the
-same path. That is the price of not having a second slot, and a second slot
-costs an unconditional wipe on every rollback.
+delete-and-re-add path. Before rewriting, bootstrap writes and verifies a
+recovery copy at `db.cipher.key.v1.accessibility_backup`. A failed backup write
+leaves the primary untouched. A failed primary rewrite attempts to restore it;
+if restoration also fails, startup fails closed with the recovery copy intact.
+The next launch restores a missing primary from that copy before any key-loss
+recovery. The copy is removed only after the primary reads back correctly.
+The primary slot remains the rollback contract; older builds cannot recover
+an interrupted rewrite themselves, so a successful launch of this build is
+required before rolling back after such an interruption. The rewrite is skipped
+while protected data is unavailable.
 macOS keeps `unlocked` (#5563), so nothing is rewritten there.
 
 `first_unlock_this_device` is deliberately **not** used. It is readable at

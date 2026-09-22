@@ -24,7 +24,7 @@ void main() {
   group('DatabaseEncryptionBootstrap.resolveCipherKey', () {
     late _MockSecureStorage storage;
     late Map<String, String> store;
-    // There is one slot. The second instance differs only in the iOS
+    // The primary slot is shared. The second instance differs only in the iOS
     // accessibility it names, and exists because `delete` is the one operation
     // that filters on the class. It gets its own backing map so a test can tell
     // which instance issued a delete.
@@ -84,9 +84,8 @@ void main() {
         migrate: (_) async => outcome,
         deleteDatabase: () async => onDelete(),
         onDatabaseReset: onReset == null ? null : () async => onReset(),
-        canOpenEncryptedDatabase: canOpenEncryptedDatabase == null
-            ? null
-            : (rawKeyHex) async => canOpenEncryptedDatabase(rawKeyHex),
+        canOpenEncryptedDatabase: (rawKeyHex) async =>
+            canOpenEncryptedDatabase?.call(rawKeyHex) ?? true,
         // Default to "nothing to salvage" so the corruption branch falls
         // through to the wipe unless a test opts in.
         salvageDatabase: (rawKeyHex) async =>
@@ -360,10 +359,158 @@ void main() {
           () => storage.write(key: dbCipherKeyStorageKey, value: existing),
         ).called(1);
         expect(store[dbCipherKeyStorageKey], equals(existing));
-        // Nothing is ever deleted: that is what keeps a rollback readable.
-        verifyNever(() => storage.delete(key: any(named: 'key')));
+        // Only the temporary recovery copy is removed; rollback reads primary.
+        expect(store, {dbCipherKeyStorageKey: existing});
+        verifyNever(() => storage.delete(key: dbCipherKeyStorageKey));
         verifyNever(() => legacyStorage.read(key: any(named: 'key')));
         verifyNever(() => legacyStorage.delete(key: any(named: 'key')));
+      });
+
+      test(
+        'restores the primary after a delete-then-add rewrite failure',
+        () async {
+          store[dbCipherKeyStorageKey] = existing;
+          var writes = 0;
+          var resets = 0;
+          when(() => storage.write(key: dbCipherKeyStorageKey, value: existing))
+              .thenAnswer((_) async {
+                if (++writes == 1) {
+                  store.remove(dbCipherKeyStorageKey);
+                  throw PlatformException(code: 'SecItemAdd failed');
+                }
+                store[dbCipherKeyStorageKey] = existing;
+              });
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => resets++,
+            isProtectedDataAvailable: () async => true,
+            canOpenEncryptedDatabase: (_) => true,
+          );
+
+          expect(await launch().resolveCipherKey(), existing);
+          expect(
+            store[dbCipherKeyStorageKey],
+            existing,
+            reason: 'a rollback must still find its original primary key',
+          );
+          expect(await launch().resolveCipherKey(), existing);
+          expect(resets, 0);
+        },
+      );
+
+      test(
+        'failed restoration keeps a recovery copy for the next launch',
+        () async {
+          store[dbCipherKeyStorageKey] = existing;
+          var failWrites = true;
+          var resets = 0;
+          when(
+            () => storage.write(key: dbCipherKeyStorageKey, value: existing),
+          ).thenAnswer((_) async {
+            store.remove(dbCipherKeyStorageKey);
+            if (failWrites) throw PlatformException(code: 'SecItemAdd failed');
+            store[dbCipherKeyStorageKey] = existing;
+          });
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => resets++,
+            isProtectedDataAvailable: () async => true,
+          );
+
+          await expectLater(
+            launch().resolveCipherKey(),
+            throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+          );
+          expect(store[dbCipherKeyStorageKey], isNull);
+          expect(store[dbCipherKeyAccessibilityBackupStorageKey], existing);
+          failWrites = false;
+          expect(await launch().resolveCipherKey(), existing);
+          expect(store, {dbCipherKeyStorageKey: existing});
+          expect(resets, 0);
+        },
+      );
+
+      test(
+        'never rewrites the primary without a verified recovery copy',
+        () async {
+          store[dbCipherKeyStorageKey] = existing;
+          when(
+            () => storage.write(
+              key: dbCipherKeyAccessibilityBackupStorageKey,
+              value: existing,
+            ),
+          ).thenAnswer((_) async {});
+          final bootstrap = buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () {},
+            isProtectedDataAvailable: () async => true,
+          );
+          expect(await bootstrap.resolveCipherKey(), existing);
+          expect(store, {dbCipherKeyStorageKey: existing});
+          verifyNever(
+            () => storage.write(key: dbCipherKeyStorageKey, value: existing),
+          );
+        },
+      );
+
+      test(
+        'recovers an interrupted rewrite before generating a new key',
+        () async {
+          store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
+          var resets = 0;
+          final bootstrap = buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => resets++,
+            isProtectedDataAvailable: () async => true,
+          );
+          expect(await bootstrap.resolveCipherKey(), existing);
+          expect(store, {dbCipherKeyStorageKey: existing});
+          expect(resets, 0);
+        },
+      );
+
+      test('fails closed when the recovery copy cannot be read', () async {
+        store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
+        when(() => storage.read(key: dbCipherKeyAccessibilityBackupStorageKey))
+            .thenThrow(PlatformException(code: 'Keychain unavailable'));
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+        await expectLater(
+          bootstrap.resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        expect(store, {dbCipherKeyAccessibilityBackupStorageKey: existing});
+      });
+
+      test('keeps the recovery copy when primary read-back fails', () async {
+        store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
+        when(() => storage.write(key: dbCipherKeyStorageKey, value: existing))
+            .thenAnswer((_) async {});
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+        await expectLater(
+          bootstrap.resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        expect(store, {dbCipherKeyAccessibilityBackupStorageKey: existing});
+      });
+
+      test('prefers the primary to an obsolete recovery copy', () async {
+        store[dbCipherKeyStorageKey] = existing;
+        store[dbCipherKeyAccessibilityBackupStorageKey] = 'ab' * 32;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+        expect(await bootstrap.resolveCipherKey(), existing);
+        expect(store, {dbCipherKeyStorageKey: existing});
       });
 
       test('does not report an existing key as generated', () async {
@@ -447,7 +594,7 @@ void main() {
           equals(existing),
           reason:
               'the caller already holds a key that opens the database; a '
-              'failed rewrite only defers the locked-launch fix',
+              'failed backup write leaves the primary intact',
         );
       });
 
@@ -1139,6 +1286,54 @@ void main() {
         expect(reset, isTrue);
       },
     );
+
+    test(
+      'removes the temporary recovery copy on an explicit key reset',
+      () async {
+        store[dbCipherKeyAccessibilityBackupStorageKey] = 'ab' * 32;
+        await resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        );
+        expect(store, {'auth_key': 'must-stay'});
+        expect(legacyStore, isEmpty);
+      },
+    );
+
+    test('failed recovery-copy cleanup leaves the primary intact', () async {
+      final primary = store[dbCipherKeyStorageKey];
+      expect(primary, isNotNull);
+      store[dbCipherKeyAccessibilityBackupStorageKey] = primary!;
+      when(() => storage.delete(key: dbCipherKeyAccessibilityBackupStorageKey))
+          .thenThrow(PlatformException(code: 'Keychain unavailable'));
+      await expectLater(
+        resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+      expect(store[dbCipherKeyStorageKey], primary);
+      expect(store[dbCipherKeyAccessibilityBackupStorageKey], primary);
+    });
+
+    test('failed legacy cleanup leaves the primary intact', () async {
+      final primary = store[dbCipherKeyStorageKey];
+      expect(primary, isNotNull);
+      when(() => legacyStorage.delete(key: dbCipherKeyStorageKey))
+          .thenThrow(PlatformException(code: 'Keychain unavailable'));
+      await expectLater(
+        resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+      expect(store[dbCipherKeyStorageKey], primary);
+    });
 
     test(
       'deletes the pre-#9343 copy of the key through the legacy storage',
