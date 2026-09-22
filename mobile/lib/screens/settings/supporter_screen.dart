@@ -28,10 +28,8 @@ class SupporterScreen extends ConsumerWidget {
     return BlocProvider(
       create: (_) => SupporterCubit(
         repository: repository,
-        trackEvent: (event) => analytics.logEvent(
-          name: event,
-          parameters: const {},
-        ),
+        trackEvent: (event) =>
+            analytics.logEvent(name: event, parameters: const {}),
       ),
       child: const SupporterScreenView(),
     );
@@ -84,7 +82,7 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                     _PurchaseStatusNote(status: state.status),
                   if (state.isSupporter)
                     const _ActiveBadge()
-                  else if (!showPurchaseStatus && state.hasTiers)
+                  else if (state.hasTiers)
                     _TierList(state: state)
                   else if (!showPurchaseStatus)
                     _UnavailableNote(loading: state.isBusy),
@@ -272,6 +270,7 @@ class _RestoreButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DivineButton(
       type: DivineButtonType.link,
+      isLoading: state.status == SupporterStatus.restoring,
       onPressed: state.isBusy
           ? null
           : () => context.read<SupporterCubit>().restore(),

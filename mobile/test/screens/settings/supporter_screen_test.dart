@@ -118,24 +118,32 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
 
       await tester.tap(find.textContaining('Monthly Supporter'));
       await tester.pump();
 
-      expect(find.text('Preparing checkout…'), findsOneWidget);
+      expect(find.text(l10n.supporterPreparingCheckout), findsOneWidget);
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
-      expect(find.textContaining('Monthly Supporter'), findsNothing);
+      expect(find.textContaining('Monthly Supporter'), findsOneWidget);
+      final tierButton = tester.widget<DivineButton>(
+        find.ancestor(
+          of: find.textContaining('Monthly Supporter'),
+          matching: find.byType(DivineButton),
+        ),
+      );
+      expect(tierButton.onPressed, isNull);
       final restore = tester.widget<DivineButton>(
-        find.widgetWithText(DivineButton, 'Restore purchases'),
+        find.widgetWithText(DivineButton, l10n.supporterRestorePurchases),
       );
       expect(restore.onPressed, isNull);
       await tester.pump(const Duration(seconds: 2));
-      expect(find.text('Preparing checkout…'), findsOneWidget);
+      expect(find.text(l10n.supporterPreparingCheckout), findsOneWidget);
 
       purchase.complete(SupporterEntitlement.inactive);
       await tester.pumpAndSettle();
-      expect(find.text('Preparing checkout…'), findsNothing);
-      expect(find.text('Confirming your support…'), findsOneWidget);
+      expect(find.text(l10n.supporterPreparingCheckout), findsNothing);
+      expect(find.text(l10n.supporterPurchaseConfirming), findsOneWidget);
 
       controller.add(
         const SupporterEntitlement(
@@ -144,8 +152,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
-      expect(find.text('Confirming your support…'), findsNothing);
+      expect(find.textContaining(l10n.supporterActiveBadge), findsOneWidget);
+      expect(find.text(l10n.supporterPurchaseConfirming), findsNothing);
     });
 
     testWidgets('returns to purchase options when checkout is cancelled', (
@@ -163,6 +171,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
       await tester.tap(find.textContaining('Monthly Supporter'));
       await tester.pump();
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
@@ -173,7 +182,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DivineCircularProgressIndicator), findsNothing);
-      expect(find.text('Preparing checkout…'), findsNothing);
+      expect(find.text(l10n.supporterPreparingCheckout), findsNothing);
       final button = tester.widget<DivineButton>(
         find.ancestor(
           of: find.textContaining('Monthly Supporter'),
@@ -181,7 +190,10 @@ void main() {
         ),
       );
       expect(button.onPressed, isNotNull);
-      expect(find.textContaining('did not complete'), findsOneWidget);
+      expect(
+        find.textContaining(l10n.supporterErrorPurchaseFailed),
+        findsOneWidget,
+      );
     });
   });
 
@@ -251,9 +263,7 @@ void main() {
       );
     });
 
-    testWidgets('labels each tier with its own billing period', (
-      tester,
-    ) async {
+    testWidgets('labels each tier with its own billing period', (tester) async {
       final controller = StreamController<SupporterEntitlement>.broadcast();
       addTearDown(controller.close);
       final repo = _FakeRepository(
