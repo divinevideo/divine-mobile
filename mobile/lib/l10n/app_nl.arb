@@ -4668,7 +4668,7 @@
   "soundUploadSignInFirst": "Log in om een sound te delen.",
   "soundUploadAccountRestricted": "Je account is beperkt, dus dit geluid kon niet worden gedeeld.",
   "savedSoundDeleteConfirmTitle": "Dit geluid verwijderen?",
-  "savedSoundDeleteConfirmMessage": "Het is van jou, dus je kunt het voor iedereen van Divine halen. Video's die het al gebruiken houden hun audio.",
+  "savedSoundDeleteConfirmMessage": "Het is van jou, dus het verdwijnt voor iedereen uit de soundlijsten en credits op Divine. Het audiobestand zelf blijft voorlopig op zijn link staan, en video's die het al gebruiken houden hun audio.",
   "savedSoundDeleteForEveryone": "Voor iedereen verwijderen",
   "savedSoundRemoveLocallyOnly": "Alleen uit Sounds halen",
   "savedSoundDeleted": "Sound verwijderd",

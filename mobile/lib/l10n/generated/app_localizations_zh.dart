@@ -11482,7 +11482,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      '这是你的声音，你可以把它从 Divine 上对所有人删除。已经使用它的视频会保留原有音频。';
+      '这是你的声音，它会从 Divine 的声音列表和署名中对所有人消失。音频文件本身暂时仍保留在原链接，已经使用它的视频会保留原有音频。';
 
   @override
   String get savedSoundDeleteForEveryone => '对所有人删除';

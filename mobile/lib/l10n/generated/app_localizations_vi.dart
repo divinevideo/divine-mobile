@@ -12164,7 +12164,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Đây là âm thanh của bạn, nên bạn có thể gỡ nó khỏi Divine cho tất cả mọi người. Những video đã dùng nó vẫn giữ nguyên phần âm thanh.';
+      'Đây là âm thanh của bạn, nên nó sẽ biến mất khỏi danh sách âm thanh và phần ghi công trên Divine cho tất cả mọi người. Tệp âm thanh hiện vẫn còn ở đường dẫn của nó, và những video đã dùng nó vẫn giữ nguyên phần âm thanh.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Xóa cho tất cả mọi người';

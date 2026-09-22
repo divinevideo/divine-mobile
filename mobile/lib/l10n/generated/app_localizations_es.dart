@@ -12347,7 +12347,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Es tuyo, así que podés sacarlo de Divine para todos. Los videos que ya lo usan conservan su audio.';
+      'Es tuyo, así que desaparece de las listas de sonidos y los créditos de Divine para todos. El archivo de audio en sí sigue disponible en su enlace por ahora, y los videos que ya lo usan conservan su audio.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Eliminar para todos';

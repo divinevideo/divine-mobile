@@ -4668,7 +4668,7 @@
   "soundUploadSignInFirst": "Logga in för att dela ett ljud.",
   "soundUploadAccountRestricted": "Ditt konto är begränsat, så det här ljudet kunde inte delas.",
   "savedSoundDeleteConfirmTitle": "Ta bort det här ljudet?",
-  "savedSoundDeleteConfirmMessage": "Det är ditt, så du kan ta bort det från Divine för alla. Videor som redan använder det behåller sitt ljud.",
+  "savedSoundDeleteConfirmMessage": "Det är ditt, så det försvinner från Divines ljudlistor och krediteringar för alla. Själva ljudfilen finns kvar på sin länk tills vidare, och videor som redan använder det behåller sitt ljud.",
   "savedSoundDeleteForEveryone": "Ta bort för alla",
   "savedSoundRemoveLocallyOnly": "Ta bara bort det från Ljud",
   "savedSoundDeleted": "Ljudet är borttaget",

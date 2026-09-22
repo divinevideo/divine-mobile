@@ -3660,7 +3660,7 @@
   "soundUploadSignInFirst": "Mag-sign in para mag-share ng sound.",
   "soundUploadAccountRestricted": "Restricted ang account mo, kaya hindi na-share ang sound na ito.",
   "savedSoundDeleteConfirmTitle": "I-delete ang sound na ito?",
-  "savedSoundDeleteConfirmMessage": "Sa iyo ito, kaya puwede mo itong tanggalin sa Divine para sa lahat. Mananatili ang audio ng mga video na gumagamit na nito.",
+  "savedSoundDeleteConfirmMessage": "Sa iyo ito, kaya mawawala ito sa mga listahan ng sound at credits sa Divine para sa lahat. Mananatili muna ang audio file mismo sa link nito, at mananatili ang audio ng mga video na gumagamit na nito.",
   "savedSoundDeleteForEveryone": "I-delete para sa lahat",
   "savedSoundRemoveLocallyOnly": "Alisin lang sa Sounds",
   "savedSoundDeleted": "Na-delete ang sound",

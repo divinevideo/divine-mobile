@@ -4668,7 +4668,7 @@
   "soundUploadSignInFirst": "Ses paylaşmak için giriş yap.",
   "soundUploadAccountRestricted": "Hesabın kısıtlı olduğu için bu ses paylaşılamadı.",
   "savedSoundDeleteConfirmTitle": "Bu ses silinsin mi?",
-  "savedSoundDeleteConfirmMessage": "Senin sesin, o yüzden onu herkes için Divine'dan kaldırabilirsin. Onu zaten kullanan videoların sesi olduğu gibi kalır.",
+  "savedSoundDeleteConfirmMessage": "Senin sesin, o yüzden herkes için Divine'daki ses listelerinden ve kaynak bilgilerinden kalkar. Ses dosyasının kendisi şimdilik bağlantısında kalır ve onu zaten kullanan videoların sesi olduğu gibi kalır.",
   "savedSoundDeleteForEveryone": "Herkes için sil",
   "savedSoundRemoveLocallyOnly": "Sadece Seslerden kaldır",
   "savedSoundDeleted": "Ses silindi",

@@ -11613,7 +11613,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'あなたのサウンドなので、Divine 上から全員に対して削除できます。すでに使われている動画の音声はそのまま残ります。';
+      'あなたのサウンドなので、Divine 上のサウンド一覧とクレジットから全員に対して消えます。音声ファイル自体は当面リンク先に残り、すでに使われている動画の音声はそのまま残ります。';
 
   @override
   String get savedSoundDeleteForEveryone => '全員に対して削除';

@@ -4668,7 +4668,7 @@
   "soundUploadSignInFirst": "サウンドを共有するにはログインしてください。",
   "soundUploadAccountRestricted": "アカウントが制限されているため、このサウンドを共有できませんでした。",
   "savedSoundDeleteConfirmTitle": "このサウンドを削除しますか？",
-  "savedSoundDeleteConfirmMessage": "あなたのサウンドなので、Divine 上から全員に対して削除できます。すでに使われている動画の音声はそのまま残ります。",
+  "savedSoundDeleteConfirmMessage": "あなたのサウンドなので、Divine 上のサウンド一覧とクレジットから全員に対して消えます。音声ファイル自体は当面リンク先に残り、すでに使われている動画の音声はそのまま残ります。",
   "savedSoundDeleteForEveryone": "全員に対して削除",
   "savedSoundRemoveLocallyOnly": "サウンドから外すだけ",
   "savedSoundDeleted": "サウンドを削除しました",

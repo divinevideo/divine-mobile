@@ -20529,7 +20529,7 @@ abstract class AppLocalizations {
   /// No description provided for @savedSoundDeleteConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'It\'s yours, so you can take it off Divine for everyone. Videos that already use it keep their audio.'**
+  /// **'It\'s yours, so it comes off Divine\'s sound lists and credits for everyone. The audio file itself stays at its link for now, and videos that already use it keep their audio.'**
   String get savedSoundDeleteConfirmMessage;
 
   /// No description provided for @savedSoundDeleteForEveryone.

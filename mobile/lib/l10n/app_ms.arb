@@ -6431,7 +6431,7 @@
   "soundUploadSignInFirst": "Log masuk untuk berkongsi bunyi.",
   "soundUploadAccountRestricted": "Akaun anda dihadkan, jadi bunyi ini tidak dapat dikongsi.",
   "savedSoundDeleteConfirmTitle": "Padam bunyi ini?",
-  "savedSoundDeleteConfirmMessage": "Bunyi ini milik anda, jadi anda boleh mengeluarkannya daripada Divine untuk semua orang. Video yang sudah menggunakannya mengekalkan audionya.",
+  "savedSoundDeleteConfirmMessage": "Bunyi ini milik anda, jadi ia hilang daripada senarai bunyi dan kredit di Divine untuk semua orang. Fail audio itu sendiri kekal di pautannya buat masa ini, dan video yang sudah menggunakannya mengekalkan audionya.",
   "savedSoundDeleteForEveryone": "Padam untuk semua orang",
   "savedSoundRemoveLocallyOnly": "Alih keluar daripada Bunyi sahaja",
   "savedSoundDeleted": "Bunyi dipadam",

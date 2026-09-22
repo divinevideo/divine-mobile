@@ -12467,7 +12467,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'E al tău, deci îl poți scoate de pe Divine pentru toată lumea. Videoclipurile care îl folosesc deja își păstrează sunetul.';
+      'E al tău, deci dispare din listele de sunete și din creditele de pe Divine pentru toată lumea. Fișierul audio în sine rămâne deocamdată la linkul lui, iar videoclipurile care îl folosesc deja își păstrează sunetul.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Șterge pentru toată lumea';

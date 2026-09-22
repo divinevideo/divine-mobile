@@ -12550,7 +12550,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'ఇది మీది కాబట్టి అందరికీ Divine నుంచి తీసివేయవచ్చు. ఇప్పటికే దీన్ని వాడిన వీడియోల ఆడియో అలాగే ఉంటుంది.';
+      'ఇది మీది కాబట్టి అందరికీ Divine సౌండ్ జాబితాలు మరియు క్రెడిట్‌ల నుంచి తొలగిపోతుంది. ఆడియో ఫైల్ మాత్రం ప్రస్తుతానికి దాని లింక్‌లోనే ఉంటుంది, ఇప్పటికే దీన్ని వాడిన వీడియోల ఆడియో అలాగే ఉంటుంది.';
 
   @override
   String get savedSoundDeleteForEveryone => 'అందరికీ తొలగించండి';

@@ -4786,7 +4786,7 @@
   "soundUploadSignInFirst": "ድምፅ ለማጋራት ይግቡ።",
   "soundUploadAccountRestricted": "መለያዎ የተገደበ ስለሆነ ይህ ድምፅ ሊጋራ አልቻለም።",
   "savedSoundDeleteConfirmTitle": "ይህን ድምፅ ይሰረዝ?",
-  "savedSoundDeleteConfirmMessage": "የእርስዎ ስለሆነ ለሁሉም ሰው ከ Divine ማስወገድ ይችላሉ። አስቀድመው የሚጠቀሙበት ቪዲዮዎች ኦዲዮቸውን ይይዛሉ።",
+  "savedSoundDeleteConfirmMessage": "የእርስዎ ስለሆነ ለሁሉም ሰው ከ Divine የድምፅ ዝርዝሮች እና ክሬዲቶች ይወጣል። የኦዲዮ ፋይሉ ራሱ ለጊዜው በአገናኙ ላይ ይቆያል፣ አስቀድመው የሚጠቀሙበት ቪዲዮዎችም ኦዲዮቸውን ይይዛሉ።",
   "savedSoundDeleteForEveryone": "ለሁሉም ይሰርዙ",
   "savedSoundRemoveLocallyOnly": "ከድምፆች ብቻ ያስወግዱ",
   "savedSoundDeleted": "ድምፁ ተሰርዟል",

@@ -261,7 +261,13 @@ class ContentDeletionService {
   /// deletion no relay took is not recorded so the user can retry.
   ///
   /// Videos that reference the sound keep their audio — it is rendered into
-  /// them — so only the sound's own listing and attribution go away.
+  /// them — so only the sound's own listing and attribution go away. The
+  /// audio file stays on the media host too: moderation-service's creator
+  /// delete resolves its Blossom targets from `imeta` tags, which a Kind
+  /// 1063 does not carry (it uses NIP-94 `x`/`url`), so the enforcement call
+  /// the video path makes would only report `failed:permanent:no_sha256`.
+  /// Wire `CreatorDeleteEnforcementRepository.enforce` here once the service
+  /// reads those tags; until then the confirmation copy promises only this.
   Future<DeleteResult> deleteSound({
     required AudioEvent sound,
     required String reason,

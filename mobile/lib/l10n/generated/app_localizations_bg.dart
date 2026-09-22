@@ -12334,7 +12334,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Твой е, така че можеш да го махнеш от Divine за всички. Видеата, които вече го използват, запазват аудиото си.';
+      'Твой е, така че изчезва от списъците със звуци и от авторските бележки в Divine за всички. Самият аудиофайл засега остава на линка си, а видеата, които вече го използват, запазват аудиото си.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Изтрий за всички';

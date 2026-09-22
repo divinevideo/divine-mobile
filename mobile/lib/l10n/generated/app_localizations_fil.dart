@@ -12323,7 +12323,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Sa iyo ito, kaya puwede mo itong tanggalin sa Divine para sa lahat. Mananatili ang audio ng mga video na gumagamit na nito.';
+      'Sa iyo ito, kaya mawawala ito sa mga listahan ng sound at credits sa Divine para sa lahat. Mananatili muna ang audio file mismo sa link nito, at mananatili ang audio ng mga video na gumagamit na nito.';
 
   @override
   String get savedSoundDeleteForEveryone => 'I-delete para sa lahat';

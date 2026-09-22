@@ -8502,7 +8502,7 @@
   "soundUploadSignInFirst": "Sign in to share a sound.",
   "soundUploadAccountRestricted": "Your account is restricted, so this sound couldn't be shared.",
   "savedSoundDeleteConfirmTitle": "Delete this sound?",
-  "savedSoundDeleteConfirmMessage": "It's yours, so you can take it off Divine for everyone. Videos that already use it keep their audio.",
+  "savedSoundDeleteConfirmMessage": "It's yours, so it comes off Divine's sound lists and credits for everyone. The audio file itself stays at its link for now, and videos that already use it keep their audio.",
   "savedSoundDeleteForEveryone": "Delete for everyone",
   "savedSoundRemoveLocallyOnly": "Just remove it from Sounds",
   "@savedSoundRemoveLocallyOnly": {"description": "Secondary choice when removing one of the user's own published sounds: keep it public on Divine, drop it from the device library only."},

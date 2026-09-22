@@ -120,6 +120,17 @@ stops listing it in the same session. Videos that already use the sound keep
 their audio; it is rendered into them, and their attribution row falls back
 to the unresolved-sound credit once the event is gone.
 
+The audio file itself stays on the media host. The video path follows its
+kind 5 with `CreatorDeleteEnforcementRepository.enforce`, a NIP-98 call to
+moderation-service that takes the hosted media down, but that service
+resolves its Blossom targets from `imeta` tags, which a Kind 1063 does not
+carry (NIP-94 puts the hash in `x` and the file in `url`). Calling it for a
+sound would only report `failed:permanent:no_sha256`, so `deleteSound` does
+not, and the confirmation copy promises what ships: the sound leaves
+Divine's lists and credits, the file stays at its link for now. Once
+moderation-service reads NIP-94 tags, wire the same enforcement call and
+tighten the copy.
+
 ## Component boundaries
 
 - `LocalAudioEventPublisher` (`lib/services/`) uploads a device-local file to

@@ -11899,7 +11899,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'የእርስዎ ስለሆነ ለሁሉም ሰው ከ Divine ማስወገድ ይችላሉ። አስቀድመው የሚጠቀሙበት ቪዲዮዎች ኦዲዮቸውን ይይዛሉ።';
+      'የእርስዎ ስለሆነ ለሁሉም ሰው ከ Divine የድምፅ ዝርዝሮች እና ክሬዲቶች ይወጣል። የኦዲዮ ፋይሉ ራሱ ለጊዜው በአገናኙ ላይ ይቆያል፣ አስቀድመው የሚጠቀሙበት ቪዲዮዎችም ኦዲዮቸውን ይይዛሉ።';
 
   @override
   String get savedSoundDeleteForEveryone => 'ለሁሉም ይሰርዙ';

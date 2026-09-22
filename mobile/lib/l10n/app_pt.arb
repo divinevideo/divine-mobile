@@ -4668,7 +4668,7 @@
   "soundUploadSignInFirst": "Entre na sua conta para compartilhar um som.",
   "soundUploadAccountRestricted": "Sua conta está restrita, então este som não pôde ser compartilhado.",
   "savedSoundDeleteConfirmTitle": "Excluir este som?",
-  "savedSoundDeleteConfirmMessage": "Ele é seu, então você pode tirá-lo do Divine para todo mundo. Os vídeos que já usam esse som continuam com o áudio.",
+  "savedSoundDeleteConfirmMessage": "Ele é seu, então some das listas de sons e dos créditos do Divine para todo mundo. O arquivo de áudio em si continua no link dele por enquanto, e os vídeos que já usam esse som continuam com o áudio.",
   "savedSoundDeleteForEveryone": "Excluir para todo mundo",
   "savedSoundRemoveLocallyOnly": "Só remover de Sons",
   "savedSoundDeleted": "Som excluído",

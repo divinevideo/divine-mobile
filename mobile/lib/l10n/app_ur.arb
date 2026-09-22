@@ -6431,7 +6431,7 @@
   "soundUploadSignInFirst": "ساؤنڈ شیئر کرنے کے لیے سائن اِن کریں۔",
   "soundUploadAccountRestricted": "آپ کا اکاؤنٹ محدود ہے، اس لیے یہ ساؤنڈ شیئر نہیں ہو سکا۔",
   "savedSoundDeleteConfirmTitle": "کیا یہ ساؤنڈ حذف کر دیں؟",
-  "savedSoundDeleteConfirmMessage": "یہ آپ کا ہے، اس لیے آپ اسے سب کے لیے Divine سے ہٹا سکتے ہیں۔ جو ویڈیوز پہلے سے اسے استعمال کر رہی ہیں ان کی آواز برقرار رہے گی۔",
+  "savedSoundDeleteConfirmMessage": "یہ آپ کا ہے، اس لیے یہ سب کے لیے Divine کی ساؤنڈ فہرستوں اور کریڈٹس سے ہٹ جائے گا۔ آڈیو فائل خود فی الحال اپنے لنک پر رہے گی، اور جو ویڈیوز پہلے سے اسے استعمال کر رہی ہیں ان کی آواز برقرار رہے گی۔",
   "savedSoundDeleteForEveryone": "سب کے لیے حذف کریں",
   "savedSoundRemoveLocallyOnly": "صرف آوازوں سے ہٹائیں",
   "savedSoundDeleted": "ساؤنڈ حذف ہو گیا",

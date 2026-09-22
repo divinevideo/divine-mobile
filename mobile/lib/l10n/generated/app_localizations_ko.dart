@@ -11627,7 +11627,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      '내 사운드니까 Divine에서 모두에게 삭제할 수 있어요. 이미 이 사운드를 쓴 영상의 오디오는 그대로 남아요.';
+      '내 사운드니까 Divine의 사운드 목록과 크레딧에서 모두에게 사라져요. 오디오 파일 자체는 당분간 링크에 남아 있고, 이미 이 사운드를 쓴 영상의 오디오는 그대로 남아요.';
 
   @override
   String get savedSoundDeleteForEveryone => '모두에게 삭제';

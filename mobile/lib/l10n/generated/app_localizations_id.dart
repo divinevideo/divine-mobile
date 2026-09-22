@@ -12126,7 +12126,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Suara ini milikmu, jadi kamu bisa menghapusnya dari Divine untuk semua orang. Video yang sudah memakainya tetap punya audionya.';
+      'Suara ini milikmu, jadi akan hilang dari daftar suara dan kredit di Divine untuk semua orang. File audionya sendiri untuk saat ini tetap ada di tautannya, dan video yang sudah memakainya tetap punya audionya.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Hapus untuk semua orang';

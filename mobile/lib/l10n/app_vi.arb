@@ -6431,7 +6431,7 @@
   "soundUploadSignInFirst": "Đăng nhập để chia sẻ âm thanh.",
   "soundUploadAccountRestricted": "Tài khoản của bạn đang bị hạn chế nên không chia sẻ được âm thanh này.",
   "savedSoundDeleteConfirmTitle": "Xóa âm thanh này?",
-  "savedSoundDeleteConfirmMessage": "Đây là âm thanh của bạn, nên bạn có thể gỡ nó khỏi Divine cho tất cả mọi người. Những video đã dùng nó vẫn giữ nguyên phần âm thanh.",
+  "savedSoundDeleteConfirmMessage": "Đây là âm thanh của bạn, nên nó sẽ biến mất khỏi danh sách âm thanh và phần ghi công trên Divine cho tất cả mọi người. Tệp âm thanh hiện vẫn còn ở đường dẫn của nó, và những video đã dùng nó vẫn giữ nguyên phần âm thanh.",
   "savedSoundDeleteForEveryone": "Xóa cho tất cả mọi người",
   "savedSoundRemoveLocallyOnly": "Chỉ gỡ khỏi Âm thanh",
   "savedSoundDeleted": "Đã xóa âm thanh",

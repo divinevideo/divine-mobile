@@ -4668,7 +4668,7 @@
   "soundUploadSignInFirst": "Zaloguj się, aby udostępnić dźwięk.",
   "soundUploadAccountRestricted": "Twoje konto ma ograniczenia, więc tego dźwięku nie udało się udostępnić.",
   "savedSoundDeleteConfirmTitle": "Usunąć ten dźwięk?",
-  "savedSoundDeleteConfirmMessage": "Jest twój, więc możesz go zdjąć z Divine dla wszystkich. Wideo, które już go używają, zachowują swoje audio.",
+  "savedSoundDeleteConfirmMessage": "Jest twój, więc zniknie dla wszystkich z list dźwięków i podpisów na Divine. Sam plik audio na razie zostaje pod swoim linkiem, a wideo, które już go używają, zachowują swoje audio.",
   "savedSoundDeleteForEveryone": "Usuń dla wszystkich",
   "savedSoundRemoveLocallyOnly": "Usuń tylko z Dźwięków",
   "savedSoundDeleted": "Dźwięk usunięty",

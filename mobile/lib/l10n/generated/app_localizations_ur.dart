@@ -12204,7 +12204,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'یہ آپ کا ہے، اس لیے آپ اسے سب کے لیے Divine سے ہٹا سکتے ہیں۔ جو ویڈیوز پہلے سے اسے استعمال کر رہی ہیں ان کی آواز برقرار رہے گی۔';
+      'یہ آپ کا ہے، اس لیے یہ سب کے لیے Divine کی ساؤنڈ فہرستوں اور کریڈٹس سے ہٹ جائے گا۔ آڈیو فائل خود فی الحال اپنے لنک پر رہے گی، اور جو ویڈیوز پہلے سے اسے استعمال کر رہی ہیں ان کی آواز برقرار رہے گی۔';
 
   @override
   String get savedSoundDeleteForEveryone => 'سب کے لیے حذف کریں';

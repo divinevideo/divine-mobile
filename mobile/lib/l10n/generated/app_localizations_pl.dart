@@ -12452,7 +12452,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Jest twój, więc możesz go zdjąć z Divine dla wszystkich. Wideo, które już go używają, zachowują swoje audio.';
+      'Jest twój, więc zniknie dla wszystkich z list dźwięków i podpisów na Divine. Sam plik audio na razie zostaje pod swoim linkiem, a wideo, które już go używają, zachowują swoje audio.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Usuń dla wszystkich';

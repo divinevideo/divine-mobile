@@ -12140,7 +12140,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get savedSoundDeleteConfirmMessage =>
-      'Senin sesin, o yüzden onu herkes için Divine\'dan kaldırabilirsin. Onu zaten kullanan videoların sesi olduğu gibi kalır.';
+      'Senin sesin, o yüzden herkes için Divine\'daki ses listelerinden ve kaynak bilgilerinden kalkar. Ses dosyasının kendisi şimdilik bağlantısında kalır ve onu zaten kullanan videoların sesi olduğu gibi kalır.';
 
   @override
   String get savedSoundDeleteForEveryone => 'Herkes için sil';
