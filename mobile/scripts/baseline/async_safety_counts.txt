@@ -216,7 +216,6 @@ unawaited_futures|test/services/auth_service_oauth_local_signing_test.dart	1
 unawaited_futures|test/services/auth_service_oauth_recovery_test.dart	1
 unawaited_futures|test/services/auth_service_signing_mismatch_test.dart	1
 unawaited_futures|test/services/back_button_handler_test.dart	1
-unawaited_futures|test/services/profile_editing_race_condition_test.dart	6
 unawaited_futures|test/services/profile_editing_test.dart	1
 unawaited_futures|test/services/support/auth_service_test_harness.dart	1
 unawaited_futures|test/widgets/community_suggest/community_suggest_sheet_test.dart	1
