@@ -98,6 +98,10 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       transformer: sequential(),
     );
     on<ProfileFeedPinsChanged>(_onPinsChanged, transformer: sequential());
+    on<ProfileFeedPinsReloadRequested>(
+      _onPinsReloadRequested,
+      transformer: sequential(),
+    );
     on<ProfileFeedPinMutation>(
       _onPinMutation,
       transformer: sequential(),
@@ -745,6 +749,17 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       ),
     );
     await _resolveMissingPinnedVideos(emit);
+  }
+
+  Future<void> _onPinsReloadRequested(
+    ProfileFeedPinsReloadRequested event,
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    final cached = await _pinsRepository.readCached(_authorPubkey);
+    if (isClosed || cached == null || listEquals(cached, _pinnedCoordinates)) {
+      return;
+    }
+    await _onPinsChanged(ProfileFeedPinsChanged(cached), emit);
   }
 
   /// Fetches the pinned videos that neither the loaded window nor an earlier

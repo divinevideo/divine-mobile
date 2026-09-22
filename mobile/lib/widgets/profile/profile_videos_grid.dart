@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -400,9 +401,15 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                 type: DivineButtonType.secondary,
                 expanded: true,
                 leadingIcon: DivineIconName.warningCircle,
-                onPressed: () => context.push(
-                  RoutePaths.profileUnavailablePinsForNpub(widget.userIdHex),
-                ),
+                onPressed: () async {
+                  final feedCubit = context.read<ProfileFeedCubit>();
+                  await context.push(
+                    RoutePaths.profileUnavailablePinsForNpub(widget.userIdHex),
+                  );
+                  // The recovery page runs its own cubit over the shared
+                  // repository; pick up whatever it removed.
+                  feedCubit.addIfOpen(const ProfileFeedPinsReloadRequested());
+                },
               ),
             ),
           ),

@@ -1554,6 +1554,30 @@ void main() {
         expect(cubit.state.isPinMutationInFlight, isFalse);
       });
 
+      test('a pins reload adopts a list another route changed and clears '
+          'the unavailable pin it removed', () async {
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone'), _coordinate('b')]);
+        final cubit = await buildReady(
+          _result([_video('b', dTag: 'b')], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.unavailablePinnedCoordinates, [_coordinate('gone')]);
+
+        // The recovery page removed the coordinate through the shared
+        // repository, which cached the accepted list.
+        when(
+          () => h.pins.readCached(_author),
+        ).thenAnswer((_) async => [_coordinate('b')]);
+        cubit.add(const ProfileFeedPinsReloadRequested());
+        await pumpEventQueue();
+
+        expect(cubit.state.pinnedCoordinates, [_coordinate('b')]);
+        expect(cubit.state.unavailablePinnedCoordinates, isEmpty);
+        verifyNever(() => h.pins.unpin(any()));
+      });
+
       test(
         'reports connection and publish failures without changing pins',
         () async {

@@ -84,6 +84,12 @@ final class ProfileFeedPinsChanged extends ProfileFeedEvent {
   List<Object?> get props => [coordinates];
 }
 
+/// Re-reads the locally accepted pin list, e.g. after another route changed
+/// it through the shared repository.
+final class ProfileFeedPinsReloadRequested extends ProfileFeedEvent {
+  const ProfileFeedPinsReloadRequested();
+}
+
 /// Pin mutations use one serialized bucket so coordinate recovery cannot race
 /// a video-based pin or unpin operation.
 sealed class ProfileFeedPinMutation extends ProfileFeedEvent {
