@@ -51,8 +51,8 @@ void main() {
       mockBloc = _MockUserSearchBloc();
     });
 
-    tearDown(() {
-      mockBloc.close();
+    tearDown(() async {
+      await mockBloc.close();
     });
 
     Widget buildSubject({bool showAll = false}) {

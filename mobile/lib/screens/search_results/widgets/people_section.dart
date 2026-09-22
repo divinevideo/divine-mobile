@@ -11,6 +11,7 @@ import 'package:openvine/screens/search_results/widgets/search_section_empty_sta
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_user_tile.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
@@ -147,7 +148,12 @@ class _PeopleContent extends StatelessWidget {
   void _navigateToProfile(BuildContext context, UserProfile profile) {
     final npub = normalizeToNpub(profile.pubkey);
     if (npub != null) {
-      context.push(OtherProfileScreen.pathForNpub(npub));
+      runDetached(
+        context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+        'open profile search result',
+        logName: 'PeopleSection',
+        category: LogCategory.ui,
+      );
     }
   }
 }

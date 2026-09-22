@@ -23,8 +23,8 @@ void main() {
       mockBloc = _MockHashtagSearchBloc();
     });
 
-    tearDown(() {
-      mockBloc.close();
+    tearDown(() async {
+      await mockBloc.close();
     });
 
     Widget buildSubject({bool showAll = false}) {

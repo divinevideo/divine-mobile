@@ -44,8 +44,6 @@ discarded_futures|lib/screens/profile_screen_router.dart	1
 discarded_futures|lib/screens/profile_setup/view/profile_setup_view.dart	2
 discarded_futures|lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
 discarded_futures|lib/screens/relay_diagnostic_screen.dart	1
-discarded_futures|lib/screens/search_results/widgets/people_section.dart	1
-discarded_futures|lib/screens/search_results/widgets/videos_section.dart	1
 discarded_futures|lib/screens/sound_detail_screen.dart	4
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
 discarded_futures|lib/screens/verify/verify_screen.dart	1
@@ -156,13 +154,6 @@ discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
 discarded_futures|test/screens/auth/email_verification_screen_test.dart	1
 discarded_futures|test/screens/feed/feed_mode_switch_test.dart	2
-discarded_futures|test/screens/search_blocklist_filter_test.dart	6
-discarded_futures|test/screens/search_results/view/search_results_view_test.dart	5
-discarded_futures|test/screens/search_results/widgets/people_section_test.dart	1
-discarded_futures|test/screens/search_results/widgets/search_filter_pill_test.dart	2
-discarded_futures|test/screens/search_results/widgets/search_filter_sheet_test.dart	1
-discarded_futures|test/screens/search_results/widgets/tags_section_test.dart	1
-discarded_futures|test/screens/search_results/widgets/videos_section_test.dart	1
 discarded_futures|test/services/auth/oauth_session_coordinator_test.dart	6
 discarded_futures|test/services/auth_service_bootstrap_relay_list_test.dart	2
 discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
