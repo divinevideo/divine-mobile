@@ -9545,6 +9545,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t turn those stills into a clip. Your timeline is unchanged.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'One moment, we\'re turning your clip into stills';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Couldn\'t turn that clip into stills. Your timeline is unchanged.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Long press to drag';
 
   @override

@@ -5184,6 +5184,8 @@
   },
   "videoEditorLibraryImportProgressLabel": "稍等，正在把你的照片变成片段",
   "videoEditorLibraryImportFailed": "没能把那些照片变成片段。你的时间线没有改动。",
+  "videoEditorLibraryImportStillsProgressLabel": "稍等，正在把你的片段变成照片",
+  "videoEditorLibraryImportStillsFailed": "没能把那个片段变成照片。你的时间线没有改动。",
   "videoEditorTimelineLongPressToDragHint": "长按拖动",
   "videoEditorVideoTimelineSemanticLabel": "视频时间线",
   "videoEditorTimelinePositionFormat": "{minutes}分 {seconds}秒",

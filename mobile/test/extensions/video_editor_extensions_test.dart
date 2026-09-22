@@ -196,6 +196,62 @@ void main() {
           isFalse,
         );
       });
+
+      test(
+        'appends the sounds that arrived with the edit after the grown ones',
+        () {
+          // A clip sampled into stills brings its own audio; it lands in the
+          // same entry as the stills, ungrown, so one undo removes both.
+          final arrived = AudioEvent(
+            id: 'local_extracted_1',
+            pubkey: '',
+            createdAt: 0,
+            url: '/documents/audio/sampled.m4a',
+            duration: 3,
+            startTime: const Duration(seconds: 3),
+            endTime: const Duration(seconds: 5),
+          );
+          when(() => stateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [covering.toJson()],
+          });
+
+          editor.setLengthenedClipState(
+            previousClips: [_clip('clip-1')],
+            clips: [_clip('clip-1'), _clip('clip-2')],
+            addedAudioTracks: [arrived],
+          );
+
+          final audio = capturedAudio();
+          expect(audio.map((a) => a.id), ['sound-1', 'local_extracted_1']);
+          expect(audio.first.endTime, const Duration(seconds: 6));
+          expect(audio.last.startTime, const Duration(seconds: 3));
+          expect(audio.last.endTime, const Duration(seconds: 5));
+        },
+      );
+
+      test(
+        'writes the audio key for an arriving sound over a silent timeline',
+        () {
+          final arrived = AudioEvent(
+            id: 'local_extracted_1',
+            pubkey: '',
+            createdAt: 0,
+            url: '/documents/audio/sampled.m4a',
+            duration: 3,
+            startTime: const Duration(seconds: 3),
+            endTime: const Duration(seconds: 5),
+          );
+          when(() => stateManager.activeMeta).thenReturn({});
+
+          editor.setLengthenedClipState(
+            previousClips: [_clip('clip-1')],
+            clips: [_clip('clip-1'), _clip('clip-2')],
+            addedAudioTracks: [arrived],
+          );
+
+          expect(capturedAudio().single.id, 'local_extracted_1');
+        },
+      );
     });
 
     test('setClipState updates current markers when skipping history', () {

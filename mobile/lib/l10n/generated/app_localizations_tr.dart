@@ -9364,6 +9364,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu kareler klibe dönüştürülemedi. Zaman çizelgen değişmedi.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Bir saniye, klibini karelere dönüştürüyoruz';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Bu klip karelere dönüştürülemedi. Zaman çizelgen değişmedi.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Sürüklemek için uzun basın';
 

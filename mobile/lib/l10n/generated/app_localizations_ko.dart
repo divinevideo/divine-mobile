@@ -8994,6 +8994,14 @@ class AppLocalizationsKo extends AppLocalizations {
       '사진을 클립으로 만들지 못했어요. 타임라인은 그대로예요.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      '잠시만요, 클립을 사진으로 만들고 있어요';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      '클립을 사진으로 만들지 못했어요. 타임라인은 그대로예요.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => '길게 눌러 드래그';
 
   @override

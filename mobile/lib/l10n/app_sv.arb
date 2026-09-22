@@ -3941,6 +3941,8 @@
     "videoEditorMergeFailed": "Det gick inte att slå samman klippen. Försök igen.",
     "videoEditorLibraryImportProgressLabel": "Ett ögonblick, vi gör ett klipp av dina bilder",
     "videoEditorLibraryImportFailed": "Det gick inte att göra ett klipp av bilderna. Din tidslinje är oförändrad.",
+    "videoEditorLibraryImportStillsProgressLabel": "Ett ögonblick, vi gör bilder av ditt klipp",
+    "videoEditorLibraryImportStillsFailed": "Det gick inte att göra bilder av klippet. Din tidslinje är oförändrad.",
     "deleteAccountLocalDataDeletionFailed": "Raderingsförfrågningar skickade och du är utloggad, men vissa lokala data kunde inte tas bort från den här enheten.",
     "imageCropEditorRotateLabel": "Rotera",
     "imageCropEditorFlipLabel": "Vänd",

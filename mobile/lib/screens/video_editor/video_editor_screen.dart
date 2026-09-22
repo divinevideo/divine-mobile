@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
@@ -496,15 +495,12 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
     // The session's kind is fixed when it starts — by the recorder mode, or
     // by the library selection that opened it — and this picker never changes
-    // it. A stop-motion session keeps its frame-first editor, so it only sees
-    // stop-motion sets. A video session sees everything: a set picked here is
-    // rendered into a clip on import (ClipEditorLibraryClipsImportRequested),
-    // which is how stop-motion and camera footage end up in one loop.
-    final isStopMotionSession = isStopMotionComposition(currentClips);
-    final clipTypeFilter = isStopMotionSession
-        ? LibraryClipTypeFilter.stopMotion
-        : LibraryClipTypeFilter.all;
-
+    // it. It shows the whole library either way: on import
+    // (ClipEditorLibraryClipsImportRequested) a video session renders a
+    // picked set into a clip, and a stop-motion session samples a picked clip
+    // into stills, which is how stop-motion and camera footage end up in one
+    // loop whichever way round the session started.
+    final audioTitle = context.l10n.videoEditorClipAudioTitle;
     final newClips = await VineBottomSheet.show<List<DivineVideoClip>>(
       context: context,
       maxChildSize: 1,
@@ -513,8 +509,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       buildScrollBody: (scrollController) => LibraryScreen(
         initialTabIndex: 1,
         selectionMode: true,
-        clipTypeFilter: clipTypeFilter,
-        allowsMixedClipTypes: !isStopMotionSession,
+        allowsMixedClipTypes: true,
         editorClips: currentClips,
         scrollController: scrollController,
       ),
@@ -532,7 +527,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       // lastLibraryImportResult; the scaffold's result listener then writes
       // the new list into editor history, which mirrors it to the clip
       // manager the same way every other timeline edit reaches it.
-      clipEditorBloc.add(ClipEditorLibraryClipsImportRequested(newClips));
+      clipEditorBloc.add(
+        ClipEditorLibraryClipsImportRequested(newClips, audioTitle: audioTitle),
+      );
     }
   }
 

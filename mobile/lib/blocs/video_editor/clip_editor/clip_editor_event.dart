@@ -506,21 +506,21 @@ class ClipEditorAllClipsVolumeChanged extends ClipEditorEvent {
 ///
 /// [clips] arrive in selection order, exactly as the library handed them
 /// over; the handler drops unreadable stills and decides how each clip joins
-/// the timeline. A stop-motion set added to a stop-motion composition merges
-/// into its single frames clip; one added to a video composition is rendered
-/// into a clip first, so both types can share the same loop.
+/// the timeline. The composition's kind never changes: a video composition
+/// renders a picked stop-motion set into a clip, a stop-motion composition
+/// samples a picked video clip into stills at its own hold (and brings the
+/// clip's sound along as a track), and a set merges into the frames clip.
 ///
-/// A stop-motion composition is only ever handed stop-motion sets: a video
-/// clip cannot enter the frame-first editor, so the editor's picker offers
-/// nothing else over one (see `VideoEditorScreen`). The handler does not
-/// re-check that.
+/// [audioTitle] names the sound track a sampled clip contributes. Localized
+/// by the widget layer, which is the only place that can read the copy.
 class ClipEditorLibraryClipsImportRequested extends ClipEditorEvent {
-  const ClipEditorLibraryClipsImportRequested(this.clips);
+  const ClipEditorLibraryClipsImportRequested(this.clips, {this.audioTitle});
 
   final List<DivineVideoClip> clips;
+  final String? audioTitle;
 
   @override
-  List<Object?> get props => [clips];
+  List<Object?> get props => [clips, audioTitle];
 }
 
 class ClipEditorSaveClipToLibraryRequested extends ClipEditorEvent {

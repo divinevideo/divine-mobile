@@ -9553,6 +9553,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'Non è stato possibile trasformare quegli scatti in una clip. La timeline resta invariata.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Un momento, stiamo trasformando la tua clip in scatti';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Non è stato possibile trasformare quella clip in scatti. La timeline resta invariata.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tieni premuto per trascinare';
 

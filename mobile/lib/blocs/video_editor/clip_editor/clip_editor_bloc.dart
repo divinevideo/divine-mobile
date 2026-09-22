@@ -8,6 +8,7 @@ import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
@@ -15,6 +16,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
+import 'package:openvine/services/video_editor/stop_motion_frame_sample_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_transform_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
@@ -127,6 +129,22 @@ typedef MaterializeStopMotionClipFn = Future<DivineVideoClip?> Function(
   String? taskId,
 });
 
+/// Function signature matching [StopMotionFrameSampleService.sampleClip], the
+/// injectable seam that samples a video clip into stills so it can join a
+/// stop-motion composition, so tests can hand back frames without a decoder.
+typedef SampleStopMotionFramesFn = Future<List<StopMotionClipFrame>?> Function(
+  DivineVideoClip clip, {
+  required int framesPerImage,
+  String? taskId,
+  void Function(double progress)? onProgress,
+});
+
+/// Function signature matching
+/// [StopMotionFrameSampleService.cleanupSampledFrames], the injectable seam
+/// that deletes sampled stills an import did not commit, so tests can assert
+/// cleanup without touching the file system.
+typedef CleanupSampledFramesFn = Future<void> Function(Iterable<String> paths);
+
 /// Persists an already-flattened clip to the device's clip library, returning
 /// whether it was stored.
 ///
@@ -167,6 +185,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     DeferFileCleanupFn? deferFileCleanup,
     RenderClipPlaceholderFn? renderClipPlaceholder,
     MaterializeStopMotionClipFn? materializeStopMotionClip,
+    SampleStopMotionFramesFn? sampleStopMotionFrames,
+    CleanupSampledFramesFn? cleanupSampledFrames,
   }) : _audioExtractionService =
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
@@ -191,6 +211,11 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
            renderClipPlaceholder ?? ClipPlaceholderRenderService.render,
        _materializeStopMotionClip =
            materializeStopMotionClip ?? StopMotionRenderService.materialize,
+       _sampleStopMotionFrames =
+           sampleStopMotionFrames ?? StopMotionFrameSampleService.sampleClip,
+       _cleanupSampledFrames =
+           cleanupSampledFrames ??
+           StopMotionFrameSampleService.cleanupSampledFrames,
        _saveClipToLibrary = saveClipToLibrary,
        super(const ClipEditorState()) {
     // Clip data
@@ -317,6 +342,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final SaveClipToLibraryFn _saveClipToLibrary;
   final RenderClipPlaceholderFn _renderClipPlaceholder;
   final MaterializeStopMotionClipFn _materializeStopMotionClip;
+  final SampleStopMotionFramesFn _sampleStopMotionFrames;
+  final CleanupSampledFramesFn _cleanupSampledFrames;
 
   // === CLIP DATA ===
 
@@ -1273,24 +1300,14 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     final previousClips = state.clips;
 
-    // Stop-motion sets picked into a stop-motion composition collapse into
-    // its single frames clip — the frame-first editor edits exactly one
-    // frames list (see StopMotionFrameOps.mergeClips). A composition that
-    // holds any video clip never merges: it takes each set as a clip below.
-    final merged = StopMotionFrameOps.mergeClips([...previousClips, ...picked]);
-    if (merged != null) {
-      Log.info(
-        '📚 Merged ${picked.length} library set(s) into the frames clip',
-        name: 'ClipEditorBloc',
-        category: LogCategory.video,
-      );
-      emit(
-        state.copyWith(
-          clips: List.unmodifiable([merged]),
-          lastLibraryImportResult: ClipLibraryImportSuccess(
-            previousClips: previousClips,
-          ),
-        ),
+    // The composition's kind decides the shape every picked clip takes: a
+    // stop-motion composition turns footage into stills, a video composition
+    // turns sets into clips. Neither ever changes kind on an import.
+    if (isStopMotionComposition(previousClips)) {
+      await _importIntoStopMotionComposition(
+        picked,
+        emit,
+        audioTitle: event.audioTitle,
       );
       return;
     }
@@ -1377,6 +1394,227 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         lastLibraryImportResult: ClipLibraryImportSuccess(
           previousClips: previousClips,
         ),
+      ),
+    );
+  }
+
+  /// The stop-motion half of a library import.
+  ///
+  /// Every picked set contributes its stills as they are, every picked video
+  /// clip is sampled into stills at the composition's own hold, and all of it
+  /// lands on the end of the single frames clip the frame-first editor edits
+  /// (see StopMotionFrameOps.mergeClips for why there is exactly one). A
+  /// sampled clip's audio comes along as a sound track over its stills — the
+  /// stills themselves are silent, and the footage's own sound is usually the
+  /// point of bringing it in.
+  Future<void> _importIntoStopMotionComposition(
+    List<DivineVideoClip> picked,
+    Emitter<ClipEditorState> emit, {
+    required String? audioTitle,
+  }) async {
+    final previousClips = state.clips;
+    final sessionFrames = [
+      for (final clip in previousClips) ...?clip.stopMotionFrames,
+    ];
+    // Sampled at the hold the composition already runs at, so the footage
+    // keeps its own pace in the same cadence as the stills around it.
+    final hold = StopMotionFrameOps.globalDefaultFramesPerImage(sessionFrames);
+    final renderId = 'library_import_${DateTime.now().microsecondsSinceEpoch}';
+
+    final frames = [...sessionFrames];
+    final audioTracks = <AudioEvent>[];
+    final sampledPaths = <String>[];
+    var cursor = _framesSpan(frames);
+    var clipIndex = 0;
+    try {
+      for (final clip in picked) {
+        final stills = clip.stopMotionFrames;
+        if (clip.isStopMotion && stills != null) {
+          frames.addAll(stills);
+          cursor += _framesSpan(stills);
+          continue;
+        }
+        final taskId = '$renderId-${clipIndex++}';
+        emit(
+          state.copyWith(
+            isImportingLibraryClips: true,
+            libraryImportRenderId: taskId,
+            libraryImportProgress: 0,
+          ),
+        );
+        final sampled = await _sampleStopMotionFrames(
+          clip,
+          framesPerImage: hold,
+          taskId: taskId,
+          // The decoder reports through the frames it delivers, not the
+          // plugin's progress channel, so the overlay reads it from here.
+          onProgress: (progress) =>
+              emit(state.copyWith(libraryImportProgress: progress)),
+        );
+        if (sampled == null) {
+          // Matrix-NO: a clip the decoder cannot read is an IO failure.
+          Log.warning(
+            '⚠️ Library import: sampling clip ${clip.id} produced no still',
+            name: 'ClipEditorBloc',
+            category: LogCategory.video,
+          );
+          await _abandonStopMotionImport(
+            emit,
+            sampledPaths: sampledPaths,
+            audioTracks: audioTracks,
+            result: ClipLibraryImportFailure(),
+          );
+          return;
+        }
+        sampledPaths.addAll(sampled.map((frame) => frame.path));
+        final span = _framesSpan(sampled);
+        final audio = await _extractSampledClipAudio(
+          clip,
+          startTime: cursor,
+          span: span,
+          title: audioTitle,
+        );
+        if (audio != null) audioTracks.add(audio);
+        frames.addAll(sampled);
+        cursor += span;
+      }
+    } on RenderCanceledException {
+      await _abandonStopMotionImport(
+        emit,
+        sampledPaths: sampledPaths,
+        audioTracks: audioTracks,
+        result: ClipLibraryImportDiscarded(),
+      );
+      return;
+    } catch (e, stackTrace) {
+      final error = switch (e) {
+        StateError() || TypeError() || RangeError() => Reportable(
+          e,
+          context: '_importIntoStopMotionComposition',
+        ),
+        _ => e,
+      };
+      addError(error, stackTrace);
+      Log.error(
+        '❌ Failed to import library clips into stop-motion: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      await _abandonStopMotionImport(
+        emit,
+        sampledPaths: sampledPaths,
+        audioTracks: audioTracks,
+        result: ClipLibraryImportFailure(),
+      );
+      return;
+    }
+
+    // Closed while a clip was sampling: the emit below would be dropped and
+    // the stills would be orphans no history entry ever names.
+    if (isClosed) {
+      await _abandonStopMotionImport(
+        emit,
+        sampledPaths: sampledPaths,
+        audioTracks: audioTracks,
+        result: ClipLibraryImportDiscarded(),
+      );
+      return;
+    }
+
+    Log.info(
+      '📚 Added ${picked.length} library clip(s) to the frames clip, '
+      '$clipIndex of them sampled into stills',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable([
+          StopMotionFrameOps.clipWithFrames(previousClips.first, frames),
+        ]),
+        isImportingLibraryClips: false,
+        clearLibraryImportRenderId: true,
+        clearLibraryImportProgress: true,
+        lastLibraryImportResult: ClipLibraryImportSuccess(
+          previousClips: previousClips,
+          audioTracks: audioTracks,
+        ),
+      ),
+    );
+  }
+
+  static Duration _framesSpan(Iterable<StopMotionClipFrame> frames) =>
+      frames.fold(Duration.zero, (sum, frame) => sum + frame.duration);
+
+  /// The sound of a clip that was just sampled into stills, as a track over
+  /// exactly those stills, or `null` when the clip has no sound to bring.
+  ///
+  /// Extracted at source pace to match the stills, which sample source time.
+  /// A clip without an audio stream is an ordinary library clip, not a failed
+  /// import: its stills land, silently.
+  Future<AudioEvent?> _extractSampledClipAudio(
+    DivineVideoClip clip, {
+    required Duration startTime,
+    required Duration span,
+    required String? title,
+  }) async {
+    final videoPath = clip.video?.file?.path;
+    if (videoPath == null) return null;
+
+    final AudioExtractionResult result;
+    try {
+      result = await _audioExtractionService.extractAudioForDraft(
+        videoPath: videoPath,
+      );
+    } on AudioExtractionException catch (e) {
+      Log.info(
+        '🎵 No audio track for sampled clip ${clip.id}: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return null;
+    }
+
+    return AudioEvent(
+      id:
+          '${AudioEvent.localExtractedMarker}_'
+          '${DateTime.now().microsecondsSinceEpoch}',
+      pubkey: '',
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      url: result.audioFilePath,
+      mimeType: result.mimeType,
+      sha256: result.sha256Hash,
+      fileSize: result.fileSize,
+      duration: result.duration,
+      title: title,
+      startOffset: clip.trimStart,
+      startTime: startTime,
+      endTime: startTime + span,
+    );
+  }
+
+  /// Ends a stop-motion import that adds nothing: the timeline is left as it
+  /// was, and the stills and sound files already produced for clips earlier
+  /// in the same pick are deleted outright — no history entry names them.
+  Future<void> _abandonStopMotionImport(
+    Emitter<ClipEditorState> emit, {
+    required List<String> sampledPaths,
+    required List<AudioEvent> audioTracks,
+    required ClipLibraryImportResult result,
+  }) async {
+    await _cleanupSampledFrames(sampledPaths);
+    for (final track in audioTracks) {
+      final path = track.localFilePath;
+      if (path != null) await _cleanupDiscardedAudioExtraction(path);
+    }
+    emit(
+      state.copyWith(
+        isImportingLibraryClips: false,
+        clearLibraryImportRenderId: true,
+        clearLibraryImportProgress: true,
+        lastLibraryImportResult: result,
       ),
     );
   }

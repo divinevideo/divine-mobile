@@ -5,12 +5,18 @@ import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show EditorVideo, RenderCanceledException;
+
+class _MockAudioExtractionService extends Mock
+    implements AudioExtractionService {}
 
 DivineVideoClip _videoClip(String id) => DivineVideoClip(
   id: id,
@@ -49,6 +55,44 @@ DivineVideoClip _stopMotionSet(
   );
 }
 
+/// The stills a test's sampler hands back for [clip]: one per hold across
+/// the clip, on files that need not exist — the sampler is past sanitizing.
+List<StopMotionClipFrame> _sampledFor(
+  DivineVideoClip clip, {
+  required int framesPerImage,
+}) {
+  final hold = StopMotionFrameOps.framesPerImageToDuration(framesPerImage);
+  final count = clip.trimmedDuration.inMicroseconds ~/ hold.inMicroseconds;
+  return [
+    for (var i = 0; i < count; i++)
+      StopMotionClipFrame(path: '/documents/${clip.id}-$i.jpg', duration: hold),
+  ];
+}
+
+/// A stop-motion set whose stills are held for [framesPerImage] output
+/// frames each — the shape that decides a session's hold.
+DivineVideoClip _stopMotionSetOnHold(
+  String id, {
+  required Directory dir,
+  required int framesPerImage,
+  int frameCount = 2,
+}) {
+  final hold = StopMotionFrameOps.framesPerImageToDuration(framesPerImage);
+  final frames = <StopMotionClipFrame>[];
+  for (var i = 0; i < frameCount; i++) {
+    final file = File('${dir.path}/$id-$i.jpg')..writeAsBytesSync([1, 2, 3]);
+    frames.add(StopMotionClipFrame(path: file.path, duration: hold));
+  }
+  return DivineVideoClip(
+    id: id,
+    stopMotionFrames: frames,
+    duration: hold * frameCount,
+    recordedAt: DateTime(2026),
+    targetAspectRatio: .vertical,
+    originalAspectRatio: 9 / 16,
+  );
+}
+
 /// The rendered clip a test's materializer hands back for [set]: a plain
 /// video clip under the set's id, the way the real materializer returns it.
 DivineVideoClip _renderedFor(DivineVideoClip set) => set.copyWith(
@@ -68,18 +112,36 @@ void main() {
       tempDir.deleteSync(recursive: true);
     });
 
+    late _MockAudioExtractionService audioExtractionService;
+    late List<String> cleanedSampledPaths;
+
+    setUp(() {
+      audioExtractionService = _MockAudioExtractionService();
+      cleanedSampledPaths = [];
+      when(
+        () => audioExtractionService.cleanupAudioFile(any()),
+      ).thenAnswer((_) async {});
+    });
+
     ClipEditorBloc buildBloc({
       MaterializeStopMotionClipFn? materializeStopMotionClip,
+      SampleStopMotionFramesFn? sampleStopMotionFrames,
       DeferFileCleanupFn? deferFileCleanup,
     }) {
       final bloc = ClipEditorBloc(
         onFinalClipInvalidated: () {},
         saveClipToLibrary: ({required clip}) async => false,
+        audioExtractionService: audioExtractionService,
         deferFileCleanup: deferFileCleanup,
-        // Defaults to a failing render so a test that does not wire one up
-        // cannot silently pass a set it never rendered.
+        // Both conversions default to failing so a test that does not wire
+        // one up cannot silently pass a clip it never converted.
         materializeStopMotionClip:
             materializeStopMotionClip ?? (clip, {taskId}) async => null,
+        sampleStopMotionFrames:
+            sampleStopMotionFrames ??
+            (clip, {required framesPerImage, taskId, onProgress}) async => null,
+        cleanupSampledFrames: (paths) async =>
+            cleanedSampledPaths.addAll(paths),
       );
       addTearDown(bloc.close);
       return bloc;
@@ -88,14 +150,46 @@ void main() {
     Future<ClipEditorBloc> seeded(
       List<DivineVideoClip> clips, {
       MaterializeStopMotionClipFn? materializeStopMotionClip,
+      SampleStopMotionFramesFn? sampleStopMotionFrames,
       DeferFileCleanupFn? deferFileCleanup,
     }) async {
       final bloc = buildBloc(
         materializeStopMotionClip: materializeStopMotionClip,
+        sampleStopMotionFrames: sampleStopMotionFrames,
         deferFileCleanup: deferFileCleanup,
       )..add(ClipEditorInitialized(clips));
       await bloc.stream.first;
       return bloc;
+    }
+
+    /// A sampler that answers every clip with [_sampledFor] and records the
+    /// hold and task id each request carried.
+    SampleStopMotionFramesFn recordingSampler(
+      List<({String clipId, int framesPerImage, String? taskId})> requests,
+    ) => (clip, {required framesPerImage, taskId, onProgress}) async {
+      requests.add((
+        clipId: clip.id,
+        framesPerImage: framesPerImage,
+        taskId: taskId,
+      ));
+      return _sampledFor(clip, framesPerImage: framesPerImage);
+    };
+
+    void stubAudio({double duration = 2}) {
+      when(
+        () => audioExtractionService.extractAudioForDraft(
+          videoPath: any(named: 'videoPath'),
+          speed: any(named: 'speed'),
+        ),
+      ).thenAnswer(
+        (invocation) async => AudioExtractionResult(
+          audioFilePath: '${invocation.namedArguments[#videoPath]}.m4a',
+          duration: duration,
+          fileSize: 1,
+          sha256Hash: 'sha',
+          mimeType: 'audio/mp4',
+        ),
+      );
     }
 
     group('into a stop-motion composition', () {
@@ -122,14 +216,19 @@ void main() {
         );
       });
 
-      test('never renders: a merge costs no encode', () async {
-        var rendered = false;
+      test('never converts a set: a merge costs no encode', () async {
+        var converted = false;
         final bloc = await seeded(
           [_stopMotionSet('session', dir: tempDir)],
           materializeStopMotionClip: (clip, {taskId}) async {
-            rendered = true;
+            converted = true;
             return _renderedFor(clip);
           },
+          sampleStopMotionFrames:
+              (clip, {required framesPerImage, taskId, onProgress}) async {
+                converted = true;
+                return _sampledFor(clip, framesPerImage: framesPerImage);
+              },
         );
 
         bloc.add(
@@ -139,7 +238,239 @@ void main() {
         );
         await bloc.stream.first;
 
-        expect(rendered, isFalse);
+        expect(converted, isFalse);
+      });
+
+      test(
+        'samples a picked video clip at the session hold and appends it',
+        () async {
+          stubAudio();
+          final requests =
+              <({String clipId, int framesPerImage, String? taskId})>[];
+          // Two stills on threes: the session runs at 10 stills a second.
+          final session = _stopMotionSetOnHold(
+            'session',
+            dir: tempDir,
+            framesPerImage: 3,
+          );
+          final bloc = await seeded(
+            [session],
+            sampleStopMotionFrames: recordingSampler(requests),
+          );
+
+          bloc.add(
+            ClipEditorLibraryClipsImportRequested(
+              [_videoClip('footage')],
+              audioTitle: 'Clip Audio',
+            ),
+          );
+          final states = await bloc.stream.take(2).toList();
+
+          final inFlight = states.first;
+          expect(inFlight.isImportingLibraryClips, isTrue);
+          expect(requests.single.clipId, 'footage');
+          expect(requests.single.framesPerImage, 3);
+          expect(requests.single.taskId, inFlight.libraryImportRenderId);
+
+          final landed = states.last;
+          expect(landed.isImportingLibraryClips, isFalse);
+          expect(landed.libraryImportRenderId, isNull);
+          // Still one frames clip, the session's, with the footage's twenty
+          // stills (two seconds on threes) after the session's own two.
+          expect(landed.clips, hasLength(1));
+          expect(landed.clips.single.id, 'session');
+          expect(landed.clips.single.isStopMotion, isTrue);
+          final frames = landed.clips.single.stopMotionFrames!;
+          expect(frames, hasLength(22));
+          expect(
+            frames.take(2).map((f) => f.path),
+            session.stopMotionFrames!.map((f) => f.path),
+          );
+          expect(frames[2].path, '/documents/footage-0.jpg');
+          expect(
+            frames.skip(2).map((f) => f.duration).toSet(),
+            {StopMotionFrameOps.framesPerImageToDuration(3)},
+          );
+
+          // The footage's sound rides over exactly its stills: it starts
+          // where the session's two stills end and runs for the twenty.
+          final result =
+              landed.lastLibraryImportResult! as ClipLibraryImportSuccess;
+          expect(result.previousClips.map((c) => c.id), ['session']);
+          final audio = result.audioTracks.single;
+          expect(audio.isLocalExtracted, isTrue);
+          expect(audio.url, '/documents/footage.mp4.m4a');
+          expect(audio.title, 'Clip Audio');
+          expect(audio.startTime, session.duration);
+          expect(
+            audio.endTime,
+            session.duration +
+                StopMotionFrameOps.framesPerImageToDuration(3) * 20,
+          );
+          expect(audio.startOffset, Duration.zero);
+        },
+      );
+
+      test("carries the sampler's progress for the overlay", () async {
+        stubAudio();
+        final bloc = await seeded(
+          [_stopMotionSet('session', dir: tempDir)],
+          sampleStopMotionFrames:
+              (clip, {required framesPerImage, taskId, onProgress}) async {
+                onProgress?.call(0.5);
+                onProgress?.call(1);
+                return _sampledFor(clip, framesPerImage: framesPerImage);
+              },
+        );
+
+        bloc.add(ClipEditorLibraryClipsImportRequested([_videoClip('a')]));
+        final states = await bloc.stream
+            .takeWhile((s) => s.lastLibraryImportResult == null)
+            .toList();
+
+        // The decoder reports with its frames, not on the plugin's progress
+        // stream, so the state is the only place the overlay can read it.
+        expect(states.map((s) => s.libraryImportProgress), [0, 0.5, 1]);
+        expect(bloc.state.libraryImportProgress, isNull);
+      });
+
+      test('keeps the stills of a clip that has no sound', () async {
+        when(
+          () => audioExtractionService.extractAudioForDraft(
+            videoPath: any(named: 'videoPath'),
+            speed: any(named: 'speed'),
+          ),
+        ).thenThrow(const AudioExtractionException('no audio track'));
+        final bloc = await seeded(
+          [_stopMotionSet('session', dir: tempDir)],
+          sampleStopMotionFrames: recordingSampler([]),
+        );
+
+        bloc.add(ClipEditorLibraryClipsImportRequested([_videoClip('mute')]));
+        final states = await bloc.stream.take(2).toList();
+
+        final result =
+            states.last.lastLibraryImportResult! as ClipLibraryImportSuccess;
+        expect(result.audioTracks, isEmpty);
+        expect(
+          states.last.clips.single.stopMotionFrames!.length,
+          greaterThan(2),
+        );
+      });
+
+      test('keeps selection order across sets and footage', () async {
+        stubAudio();
+        final requests =
+            <({String clipId, int framesPerImage, String? taskId})>[];
+        final session = _stopMotionSetOnHold(
+          'session',
+          dir: tempDir,
+          framesPerImage: 1,
+        );
+        final set = _stopMotionSetOnHold(
+          'set',
+          dir: tempDir,
+          framesPerImage: 1,
+          frameCount: 3,
+        );
+        final bloc = await seeded(
+          [session],
+          sampleStopMotionFrames: recordingSampler(requests),
+        );
+
+        bloc.add(
+          ClipEditorLibraryClipsImportRequested([
+            _videoClip('first'),
+            set,
+            _videoClip('second'),
+          ]),
+        );
+        // One in-flight state per sampled clip (the set in between costs no
+        // decode and so no state), then the landed one.
+        final states = await bloc.stream.take(3).toList();
+
+        final frames = states.last.clips.single.stopMotionFrames!;
+        final hold = StopMotionFrameOps.framesPerImageToDuration(1);
+        final perClip = _sampledFor(
+          _videoClip('first'),
+          framesPerImage: 1,
+        ).length;
+        expect(frames, hasLength(2 + perClip + 3 + perClip));
+        expect(frames[2].path, '/documents/first-0.jpg');
+        expect(frames[2 + perClip].path, set.stopMotionFrames!.first.path);
+        expect(frames[2 + perClip + 3].path, '/documents/second-0.jpg');
+        // Each clip ran under its own id, in order, and the second sound
+        // starts after the set that sits between the two clips.
+        expect(requests.map((r) => r.clipId), ['first', 'second']);
+        expect(requests.map((r) => r.taskId).toSet(), hasLength(2));
+        final result =
+            states.last.lastLibraryImportResult! as ClipLibraryImportSuccess;
+        expect(result.audioTracks, hasLength(2));
+        expect(result.audioTracks.first.startTime, hold * 2);
+        expect(
+          result.audioTracks.last.startTime,
+          hold * (2 + perClip + 3),
+        );
+      });
+
+      test(
+        'leaves the timeline alone and cleans up when sampling fails',
+        () async {
+          stubAudio();
+          final bloc = await seeded(
+            [_stopMotionSet('session', dir: tempDir)],
+            sampleStopMotionFrames:
+                (clip, {required framesPerImage, taskId, onProgress}) async =>
+                    clip.id == 'bad'
+                    ? null
+                    : _sampledFor(clip, framesPerImage: framesPerImage),
+          );
+
+          bloc.add(
+            ClipEditorLibraryClipsImportRequested([
+              _videoClip('ok'),
+              _videoClip('bad'),
+            ]),
+          );
+          final states = await bloc.stream.take(3).toList();
+
+          // The pick lands as a whole or not at all: the first clip's stills
+          // and its extracted sound go, since no history entry names them.
+          expect(states.last.clips.single.stopMotionFrames, hasLength(2));
+          expect(states.last.isImportingLibraryClips, isFalse);
+          expect(
+            states.last.lastLibraryImportResult,
+            isA<ClipLibraryImportFailure>(),
+          );
+          expect(cleanedSampledPaths, isNotEmpty);
+          expect(cleanedSampledPaths.first, '/documents/ok-0.jpg');
+          verify(
+            () => audioExtractionService.cleanupAudioFile(
+              '/documents/ok.mp4.m4a',
+            ),
+          ).called(1);
+        },
+      );
+
+      test('discards a sampling the editor teardown cancelled', () async {
+        final bloc = await seeded(
+          [_stopMotionSet('session', dir: tempDir)],
+          sampleStopMotionFrames: (
+            clip, {
+            required framesPerImage,
+            taskId,
+            onProgress,
+          }) async => throw const RenderCanceledException(),
+        );
+
+        bloc.add(ClipEditorLibraryClipsImportRequested([_videoClip('a')]));
+        final states = await bloc.stream.take(2).toList();
+
+        expect(states.last.clips.single.stopMotionFrames, hasLength(2));
+        expect(
+          states.last.lastLibraryImportResult,
+          isA<ClipLibraryImportDiscarded>(),
+        );
       });
     });
 

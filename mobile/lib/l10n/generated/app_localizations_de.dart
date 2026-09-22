@@ -9569,6 +9569,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Aus den Bildern konnte kein Clip werden. Deine Timeline bleibt unverändert.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Einen Moment, wir machen aus deinem Clip Einzelbilder';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Aus dem Clip konnten keine Einzelbilder werden. Deine Timeline bleibt unverändert.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Lange drücken zum Ziehen';
 

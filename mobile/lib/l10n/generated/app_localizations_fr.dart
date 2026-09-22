@@ -9586,6 +9586,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de transformer ces images en clip. Ta timeline est inchangée.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Un instant, on transforme ton clip en images';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Impossible de transformer ce clip en images. Ta timeline est inchangée.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Appui long pour glisser';
 

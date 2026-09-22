@@ -6310,6 +6310,14 @@
   "@videoEditorLibraryImportFailed": {
     "description": "Snackbar message shown when rendering a stop-motion set picked from the library into a video clip fails. Nothing was added to the timeline."
   },
+  "videoEditorLibraryImportStillsProgressLabel": "One moment, we're turning your clip into stills",
+  "@videoEditorLibraryImportStillsProgressLabel": {
+    "description": "Status text shown while a video clip picked from the library is sampled into stills so it can join a stop-motion timeline."
+  },
+  "videoEditorLibraryImportStillsFailed": "Couldn't turn that clip into stills. Your timeline is unchanged.",
+  "@videoEditorLibraryImportStillsFailed": {
+    "description": "Snackbar message shown when sampling a video clip picked from the library into stop-motion stills fails. Nothing was added to the timeline."
+  },
   "videoEditorTimelineLongPressToDragHint": "Long press to drag",
   "videoEditorVideoTimelineSemanticLabel": "Video timeline",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

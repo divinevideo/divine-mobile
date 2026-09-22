@@ -9446,6 +9446,14 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att göra ett klipp av bilderna. Din tidslinje är oförändrad.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Ett ögonblick, vi gör bilder av ditt klipp';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Det gick inte att göra bilder av klippet. Din tidslinje är oförändrad.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Håll ned för att dra';
 
   @override

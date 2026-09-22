@@ -497,8 +497,8 @@ class _MasonryLayout extends StatelessWidget {
   /// Type of the current selection (`true` = stop-motion). When set, clips of
   /// the other type are disabled so a selection can't mix stop-motion stills
   /// with normal video clips. `null` when nothing is selected — or when the
-  /// library allows mixing, which the editor's picker over a video
-  /// composition does (see [ClipsLibraryState.allowsMixedClipTypes]).
+  /// library allows mixing, which the editor's picker does (see
+  /// [ClipsLibraryState.allowsMixedClipTypes]).
   final bool? selectedIsStopMotion;
 
   @override

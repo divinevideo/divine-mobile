@@ -3941,6 +3941,8 @@
     "videoEditorMergeFailed": "Kan clips niet samenvoegen. Probeer het opnieuw.",
     "videoEditorLibraryImportProgressLabel": "Een moment, we maken van je foto's een clip",
     "videoEditorLibraryImportFailed": "Kon van die foto's geen clip maken. Je tijdlijn blijft ongewijzigd.",
+    "videoEditorLibraryImportStillsProgressLabel": "Een moment, we maken van je clip foto's",
+    "videoEditorLibraryImportStillsFailed": "Kon van die clip geen foto's maken. Je tijdlijn blijft ongewijzigd.",
     "deleteAccountLocalDataDeletionFailed": "Verwijderverzoeken verstuurd en je bent afgemeld, maar sommige lokale gegevens konden niet van dit apparaat worden verwijderd.",
     "imageCropEditorRotateLabel": "Draaien",
     "imageCropEditorFlipLabel": "Spiegelen",

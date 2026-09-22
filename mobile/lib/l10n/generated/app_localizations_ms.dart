@@ -9456,6 +9456,14 @@ class AppLocalizationsMs extends AppLocalizations {
       'Gambar itu tidak dapat ditukar menjadi klip. Garis masa anda tidak berubah.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Sebentar, kami sedang menukar klip anda menjadi gambar';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Klip itu tidak dapat ditukar menjadi gambar. Garis masa anda tidak berubah.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tekan lama untuk menyeret';
 

@@ -3941,6 +3941,8 @@
     "videoEditorMergeFailed": "Nie udało się scalić klipów. Spróbuj ponownie.",
     "videoEditorLibraryImportProgressLabel": "Chwila, zamieniamy Twoje zdjęcia w klip",
     "videoEditorLibraryImportFailed": "Nie udało się zamienić tych zdjęć w klip. Twoja oś czasu pozostaje bez zmian.",
+    "videoEditorLibraryImportStillsProgressLabel": "Chwila, zamieniamy Twój klip w zdjęcia",
+    "videoEditorLibraryImportStillsFailed": "Nie udało się zamienić tego klipu w zdjęcia. Twoja oś czasu pozostaje bez zmian.",
     "deleteAccountLocalDataDeletionFailed": "Żądania usunięcia wysłane i wylogowano cię, ale niektórych danych lokalnych nie udało się usunąć z tego urządzenia.",
     "imageCropEditorRotateLabel": "Obróć",
     "imageCropEditorFlipLabel": "Odbij",

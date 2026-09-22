@@ -406,8 +406,9 @@ final class ClipsLibraryState extends Equatable {
   /// Whether one selection may hold both stop-motion sets and normal video
   /// clips.
   ///
-  /// On only for the editor's picker over a video composition, which renders
-  /// each stop-motion set into a clip as it lands on the timeline (see
+  /// On only for the editor's picker, whose import gives every picked clip
+  /// the composition's own shape — a set becomes a clip on a video timeline,
+  /// a clip becomes stills on a stop-motion one (see
   /// `ClipEditorLibraryClipsImportRequested`). Everywhere else the two stay
   /// apart: a frames-only set cannot sit on a video timeline, and a video
   /// clip cannot enter the frame-first stop-motion editor, so a mixed

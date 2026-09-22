@@ -9493,6 +9493,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon van die foto\'s geen clip maken. Je tijdlijn blijft ongewijzigd.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Een moment, we maken van je clip foto\'s';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Kon van die clip geen foto\'s maken. Je tijdlijn blijft ongewijzigd.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Lang indrukken om te slepen';
 

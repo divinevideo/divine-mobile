@@ -3941,6 +3941,8 @@
     "videoEditorMergeFailed": "Clips konnten nicht zusammengeführt werden. Bitte versuche es erneut.",
     "videoEditorLibraryImportProgressLabel": "Einen Moment, wir machen aus deinen Bildern einen Clip",
     "videoEditorLibraryImportFailed": "Aus den Bildern konnte kein Clip werden. Deine Timeline bleibt unverändert.",
+    "videoEditorLibraryImportStillsProgressLabel": "Einen Moment, wir machen aus deinem Clip Einzelbilder",
+    "videoEditorLibraryImportStillsFailed": "Aus dem Clip konnten keine Einzelbilder werden. Deine Timeline bleibt unverändert.",
     "deleteAccountLocalDataDeletionFailed": "Löschanfragen gesendet und du bist abgemeldet, aber einige lokale Daten konnten nicht von diesem Gerät entfernt werden.",
     "imageCropEditorRotateLabel": "Drehen",
     "imageCropEditorFlipLabel": "Spiegeln",

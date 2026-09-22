@@ -1525,7 +1525,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           start: trackStart,
           end: trackEnd,
         );
-      } else if (sound.isLocalImport && sound.localFilePath != null) {
+      } else if (sound.isDraftLocalAudio && sound.localFilePath != null) {
+        // Imported and extracted alike: a clip sampled into stills brings
+        // its own sound as an extracted track, and the file loader is the
+        // only one that takes a path — the network loader rejects it.
         source = AudioSourceConfig.file(
           sound.localFilePath!,
           start: trackStart,

@@ -9367,6 +9367,14 @@ class AppLocalizationsId extends AppLocalizations {
       'Foto-foto itu tidak bisa diubah menjadi klip. Timeline-mu tidak berubah.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Sebentar, kami sedang mengubah klipmu menjadi foto-foto';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Klip itu tidak bisa diubah menjadi foto-foto. Timeline-mu tidak berubah.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Tekan lama untuk menyeret';
 

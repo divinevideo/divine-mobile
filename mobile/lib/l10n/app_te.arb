@@ -6050,6 +6050,8 @@
   },
   "videoEditorLibraryImportProgressLabel": "ఒక్క క్షణం, మేము మీ ఫోటోలను క్లిప్‌గా మారుస్తున్నాము",
   "videoEditorLibraryImportFailed": "ఆ ఫోటోలను క్లిప్‌గా మార్చడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.",
+  "videoEditorLibraryImportStillsProgressLabel": "ఒక్క క్షణం, మేము మీ క్లిప్‌ను ఫోటోలుగా మారుస్తున్నాము",
+  "videoEditorLibraryImportStillsFailed": "ఆ క్లిప్‌ను ఫోటోలుగా మార్చడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.",
   "videoEditorTimelineLongPressToDragHint": "లాగడానికి ఎక్కువసేపు నొక్కండి",
   "videoEditorVideoTimelineSemanticLabel": "వీడియో టైమ్‌లైన్",
   "videoEditorTimelinePositionFormat": "{minutes}మీ {seconds}సె",

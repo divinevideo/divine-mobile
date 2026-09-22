@@ -9541,6 +9541,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudieron convertir esas fotos en un clip. Tu línea de tiempo queda igual.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Un momento, estamos convirtiendo tu clip en fotos';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'No se pudo convertir ese clip en fotos. Tu línea de tiempo queda igual.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Mantén presionado para arrastrar';
 

@@ -161,8 +161,8 @@ Future<void> openRecorderLibrary(BuildContext context, WidgetRef ref) async {
   // Scope the library to the current mode's clip type. A recording session is
   // one mode from the moment it starts, and a clip of the other kind pulled in
   // here would leave the session neither stills nor video. Mixing the two is
-  // the editor's job: its own picker offers both over a video composition and
-  // renders each set into a clip on the way in.
+  // the editor's job: its own picker offers both, and converts each pick to
+  // the composition's shape on the way in.
   final clipTypeFilter = bloc.state.recorderMode.capturesStills
       ? LibraryClipTypeFilter.stopMotion
       : LibraryClipTypeFilter.video;

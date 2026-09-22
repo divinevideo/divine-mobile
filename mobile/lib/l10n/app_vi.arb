@@ -5184,6 +5184,8 @@
   },
   "videoEditorLibraryImportProgressLabel": "Một chút thôi, bọn mình đang ghép các ảnh của bạn thành clip",
   "videoEditorLibraryImportFailed": "Không ghép được các ảnh đó thành clip. Timeline của bạn vẫn nguyên.",
+  "videoEditorLibraryImportStillsProgressLabel": "Một chút thôi, bọn mình đang tách clip của bạn thành các ảnh",
+  "videoEditorLibraryImportStillsFailed": "Không tách được clip đó thành các ảnh. Timeline của bạn vẫn nguyên.",
   "videoEditorTimelineLongPressToDragHint": "Nhấn giữ để kéo",
   "videoEditorVideoTimelineSemanticLabel": "Timeline video",
   "videoEditorTimelinePositionFormat": "{minutes} phút {seconds} giây",

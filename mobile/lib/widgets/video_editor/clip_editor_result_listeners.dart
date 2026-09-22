@@ -11,6 +11,7 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_window.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
@@ -623,8 +624,9 @@ class _ClipLibrarySaveResultListener extends StatelessWidget {
 
 /// Listens to [ClipEditorBloc.state.lastLibraryImportResult] and commits a
 /// successful import — clips picked in the library, now on the timeline — to
-/// editor history, or surfaces a snackbar when a stop-motion set could not be
-/// rendered into a clip.
+/// editor history, or surfaces a snackbar when a picked clip could not take
+/// the composition's shape (a set that would not render into a clip, a clip
+/// that would not sample into stills).
 ///
 /// The bloc has already grown its clip list by the time this fires. The
 /// history entry is what carries the change to the clip manager (and so to
@@ -632,7 +634,8 @@ class _ClipLibrarySaveResultListener extends StatelessWidget {
 /// [VideoEditorExtensions.setLengthenedClipState] because an import only ever
 /// makes the composition longer: a sound window that ran to the old end is
 /// carried onto the new one (#6401), while one the user trimmed short stays
-/// put.
+/// put. The sound a sampled clip brought along goes into the same entry, so
+/// one undo removes the stills and their sound together.
 class _ClipLibraryImportResultListener extends StatelessWidget {
   const _ClipLibraryImportResultListener({required this.child});
 
@@ -657,15 +660,20 @@ class _ClipLibraryImportResultListener extends StatelessWidget {
     if (result == null) return;
 
     switch (result) {
-      case ClipLibraryImportSuccess(:final previousClips):
+      case ClipLibraryImportSuccess(:final previousClips, :final audioTracks):
         VideoEditorScope.of(context).requireEditor.setLengthenedClipState(
           previousClips: previousClips,
           clips: state.clips,
+          addedAudioTracks: audioTracks,
         );
       case ClipLibraryImportFailure():
+        // The timeline is unchanged on failure, so its kind still says which
+        // shape the picked clip failed to take.
         ScaffoldMessenger.of(context).showSnackBar(
           DivineSnackbarContainer.snackBar(
-            context.l10n.videoEditorLibraryImportFailed,
+            isStopMotionComposition(state.clips)
+                ? context.l10n.videoEditorLibraryImportStillsFailed
+                : context.l10n.videoEditorLibraryImportFailed,
           ),
         );
       case ClipLibraryImportDiscarded():

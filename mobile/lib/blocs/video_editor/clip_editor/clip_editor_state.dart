@@ -53,6 +53,7 @@ class ClipEditorState extends Equatable {
     this.lastDetachedClipTransformResult,
     this.isImportingLibraryClips = false,
     this.libraryImportRenderId,
+    this.libraryImportProgress,
     this.lastLibraryImportResult,
   });
 
@@ -261,10 +262,17 @@ class ClipEditorState extends Equatable {
   /// plain video clips, complete within the handler.
   final bool isImportingLibraryClips;
 
-  /// Render id keying the progress stream of the set being assembled, or
-  /// `null`. Moves on to each set in turn when several were picked, so the
-  /// overlay follows whichever render is actually running.
+  /// Render id of the clip being converted, or `null`. Moves on to each clip
+  /// in turn when several were picked, so the overlay follows whichever
+  /// conversion is actually running. A set assembling into an mp4 reports
+  /// under this id on the plugin's progress stream.
   final String? libraryImportRenderId;
+
+  /// Share of a clip's sampling into stills done so far (0.0 to 1.0), or
+  /// `null` when the running conversion reports on the plugin's progress
+  /// stream instead. The decoder hands progress back with each frame rather
+  /// than under the render id, so the bloc carries it for the overlay.
+  final double? libraryImportProgress;
 
   /// Last completed library import.
   ///
@@ -353,6 +361,8 @@ class ClipEditorState extends Equatable {
     bool? isImportingLibraryClips,
     String? libraryImportRenderId,
     bool clearLibraryImportRenderId = false,
+    double? libraryImportProgress,
+    bool clearLibraryImportProgress = false,
     ClipLibraryImportResult? lastLibraryImportResult,
   }) {
     return ClipEditorState(
@@ -434,6 +444,9 @@ class ClipEditorState extends Equatable {
       libraryImportRenderId: clearLibraryImportRenderId
           ? null
           : (libraryImportRenderId ?? this.libraryImportRenderId),
+      libraryImportProgress: clearLibraryImportProgress
+          ? null
+          : (libraryImportProgress ?? this.libraryImportProgress),
       lastLibraryImportResult:
           lastLibraryImportResult ?? this.lastLibraryImportResult,
     );
@@ -493,6 +506,7 @@ class ClipEditorState extends Equatable {
     identityHashCode(lastDetachedClipTransformResult),
     isImportingLibraryClips,
     libraryImportRenderId,
+    libraryImportProgress,
     // Identity-only: each ClipLibraryImportResult is a fresh instance.
     identityHashCode(lastLibraryImportResult),
   ];
@@ -659,11 +673,17 @@ sealed class ClipLibraryImportResult {}
 /// The picked clips are on the timeline; [ClipEditorState.clips] already
 /// holds them. [previousClips] is the clip list as it was before the import,
 /// so the widget layer can carry audio windows that ran to the old end onto
-/// the new one.
+/// the new one. [audioTracks] are the sounds that arrived with the import —
+/// one per video clip sampled into a stop-motion composition — which the
+/// widget layer writes into the same history entry as the clips.
 final class ClipLibraryImportSuccess extends ClipLibraryImportResult {
-  ClipLibraryImportSuccess({required this.previousClips});
+  ClipLibraryImportSuccess({
+    required this.previousClips,
+    this.audioTracks = const [],
+  });
 
   final List<DivineVideoClip> previousClips;
+  final List<AudioEvent> audioTracks;
 }
 
 /// Rendering a stop-motion set into a clip failed; the timeline is unchanged.

@@ -16080,6 +16080,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t turn those stills into a clip. Your timeline is unchanged.'**
   String get videoEditorLibraryImportFailed;
 
+  /// Status text shown while a video clip picked from the library is sampled into stills so it can join a stop-motion timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'One moment, we\'re turning your clip into stills'**
+  String get videoEditorLibraryImportStillsProgressLabel;
+
+  /// Snackbar message shown when sampling a video clip picked from the library into stop-motion stills fails. Nothing was added to the timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t turn that clip into stills. Your timeline is unchanged.'**
+  String get videoEditorLibraryImportStillsFailed;
+
   /// No description provided for @videoEditorTimelineLongPressToDragHint.
   ///
   /// In en, this message translates to:

@@ -9219,6 +9219,14 @@ class AppLocalizationsAm extends AppLocalizations {
       'እነዚያን ፎቶዎች ወደ ቅንጥብ መቀየር አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'ትንሽ ይቆዩ፣ ቅንጥብዎን ወደ ፎቶዎች እየቀየርን ነው';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'ያንን ቅንጥብ ወደ ፎቶዎች መቀየር አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'ለመጎተት በረጅሙ ተጫን';
 
   @override

@@ -9536,6 +9536,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Кадрите не можаха да се превърнат в клип. Времевата ти линия остава непроменена.';
 
   @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Един момент, превръщаме клипа ти в кадри';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Клипът не можа да се превърне в кадри. Времевата ти линия остава непроменена.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Натисни дълго, за да плъзнеш';
 

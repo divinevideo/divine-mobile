@@ -4065,6 +4065,8 @@
     "videoEditorMergeFailed": "Клиповете не могат да бъдат обединени. Опитай отново.",
     "videoEditorLibraryImportProgressLabel": "Един момент, превръщаме кадрите ти в клип",
     "videoEditorLibraryImportFailed": "Кадрите не можаха да се превърнат в клип. Времевата ти линия остава непроменена.",
+    "videoEditorLibraryImportStillsProgressLabel": "Един момент, превръщаме клипа ти в кадри",
+    "videoEditorLibraryImportStillsFailed": "Клипът не можа да се превърне в кадри. Времевата ти линия остава непроменена.",
     "deleteAccountLocalDataDeletionFailed": "Заявките за изтриване са изпратени и си отписан, но някои локални данни не можаха да бъдат премахнати от това устройство.",
     "imageCropEditorRotateLabel": "Завъртане",
     "imageCropEditorFlipLabel": "Обръщане",
