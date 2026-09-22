@@ -1,6 +1,7 @@
 // ABOUTME: Tests for ScheduleApiClient: NIP-98 wiring per call and the
 // ABOUTME: classification of every relay answer for schedule/list/cancel.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:clock/clock.dart';
@@ -372,7 +373,7 @@ void main() {
           );
 
           ScheduleSubmitResult? result;
-          client.schedule(buildVideoEvent()).then((r) => result = r);
+          unawaited(client.schedule(buildVideoEvent()).then((r) => result = r));
           async.elapse(const Duration(seconds: 2));
 
           expect(

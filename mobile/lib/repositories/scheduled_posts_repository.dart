@@ -137,7 +137,10 @@ class ScheduledPostsRepository {
   Stream<void> get changes => _changes.stream;
 
   void dispose() {
-    _changes.close();
+    // Broadcast controller with no pending adds: close() completes as soon
+    // as its listeners are done, and the caller is tearing the repository
+    // down rather than waiting on it.
+    unawaited(_changes.close());
   }
 
   void _notify() {
