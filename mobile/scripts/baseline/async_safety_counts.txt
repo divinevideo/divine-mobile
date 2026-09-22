@@ -175,7 +175,6 @@ discarded_futures|test/services/subscription_manager_cache_test.dart	1
 discarded_futures|test/services/supporter_repository_test.dart	1
 discarded_futures|test/services/upload_manager_recovery_test.dart	1
 discarded_futures|test/services/video_event_service_home_feed_streaming_test.dart	3
-discarded_futures|test/utils/pause_aware_modals_test.dart	6
 discarded_futures|test/widgets/find_people_sheet_test.dart	1
 discarded_futures|test/widgets/profile/profile_actions_sheet/profile_actions_sheet_content_test.dart	1
 discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1

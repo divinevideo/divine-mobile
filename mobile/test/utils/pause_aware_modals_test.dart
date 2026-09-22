@@ -31,12 +31,14 @@ void main() {
               body: Builder(
                 builder: (context) => ElevatedButton(
                   onPressed: () {
-                    context.showVideoPausingVineBottomSheet<void>(
-                      showHeader: false,
-                      initialChildSize: 0.7,
-                      buildScrollBody: (scrollController) => ListView(
-                        controller: scrollController,
-                        children: const [Text('Metadata Body')],
+                    unawaited(
+                      context.showVideoPausingVineBottomSheet<void>(
+                        showHeader: false,
+                        initialChildSize: 0.7,
+                        buildScrollBody: (scrollController) => ListView(
+                          controller: scrollController,
+                          children: const [Text('Metadata Body')],
+                        ),
                       ),
                     );
                   },
@@ -75,9 +77,11 @@ void main() {
                     body: Builder(
                       builder: (innerContext) => ElevatedButton(
                         onPressed: () {
-                          innerContext.showVideoPausingVineBottomSheet<void>(
-                            title: const Text('Title'),
-                            children: const [Text('Body')],
+                          unawaited(
+                            innerContext.showVideoPausingVineBottomSheet<void>(
+                              title: const Text('Title'),
+                              children: const [Text('Body')],
+                            ),
                           );
                         },
                         child: const Text('Open'),
@@ -130,40 +134,46 @@ void main() {
                     body: Builder(
                       builder: (innerContext) => ElevatedButton(
                         onPressed: () {
-                          innerContext.showVideoPausingVineBottomSheet<void>(
-                            title: const Text('Sheet A'),
-                            children: [
-                              Builder(
-                                builder: (sheetContext) => ElevatedButton(
-                                  onPressed: () {
-                                    sheetContext
-                                        .showVideoPausingVineBottomSheet<void>(
-                                          title: const Text('Sheet B'),
-                                          children: [
-                                            const Text('Body B'),
-                                            ElevatedButton(
-                                              onPressed: () => Navigator.of(
-                                                sheetContext,
-                                                rootNavigator: true,
-                                              ).pop(),
-                                              child: const Text('Close B'),
+                          unawaited(
+                            innerContext.showVideoPausingVineBottomSheet<void>(
+                              title: const Text('Sheet A'),
+                              children: [
+                                Builder(
+                                  builder: (sheetContext) => ElevatedButton(
+                                    onPressed: () {
+                                      unawaited(
+                                        sheetContext
+                                            .showVideoPausingVineBottomSheet<
+                                              void
+                                            >(
+                                              title: const Text('Sheet B'),
+                                              children: [
+                                                const Text('Body B'),
+                                                ElevatedButton(
+                                                  onPressed: () => Navigator.of(
+                                                    sheetContext,
+                                                    rootNavigator: true,
+                                                  ).pop(),
+                                                  child: const Text('Close B'),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        );
-                                  },
-                                  child: const Text('Open nested'),
+                                      );
+                                    },
+                                    child: const Text('Open nested'),
+                                  ),
                                 ),
-                              ),
-                              Builder(
-                                builder: (sheetContext) => ElevatedButton(
-                                  onPressed: () => Navigator.of(
-                                    sheetContext,
-                                    rootNavigator: true,
-                                  ).pop(),
-                                  child: const Text('Close A'),
+                                Builder(
+                                  builder: (sheetContext) => ElevatedButton(
+                                    onPressed: () => Navigator.of(
+                                      sheetContext,
+                                      rootNavigator: true,
+                                    ).pop(),
+                                    child: const Text('Close A'),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           );
                         },
                         child: const Text('Open'),
@@ -222,11 +232,13 @@ void main() {
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () {
-                      context.showVideoPausingVineBottomSheet<void>(
-                        tapOutsideToDismiss: false,
-                        initialChildSize: 0.5,
-                        title: const Text('Pinned Sheet'),
-                        children: const [Text('Pinned Body')],
+                      unawaited(
+                        context.showVideoPausingVineBottomSheet<void>(
+                          tapOutsideToDismiss: false,
+                          initialChildSize: 0.5,
+                          title: const Text('Pinned Sheet'),
+                          children: const [Text('Pinned Body')],
+                        ),
                       );
                     },
                     child: const Text('Open'),
@@ -263,13 +275,15 @@ void main() {
                 body: Builder(
                   builder: (context) => ElevatedButton(
                     onPressed: () {
-                      context.showVideoPausingSelectionMenu(
-                        options: const [
-                          VineBottomSheetSelectionOptionData(
-                            label: 'Option A',
-                            value: 'a',
-                          ),
-                        ],
+                      unawaited(
+                        context.showVideoPausingSelectionMenu(
+                          options: const [
+                            VineBottomSheetSelectionOptionData(
+                              label: 'Option A',
+                              value: 'a',
+                            ),
+                          ],
+                        ),
                       );
                     },
                     child: const Text('Open'),
