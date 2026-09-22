@@ -19,9 +19,11 @@ class AudioReuseConsentResolver {
     }
     final sourceAddress = sound.sourceVideoReference;
     if (sourceAddress == null || sourceAddress.isEmpty) {
-      // A standalone sound (#9391) has no source video, so no video-scoped
-      // takedown can apply and its signed Kind 1063 terms are the authority.
-      return sound.hasExplicitReuseConsent &&
+      // A standalone Kind 1063 (#9391) has no source video, so no
+      // video-scoped takedown can apply and its signed terms are the
+      // authority. A video's own sound without a coordinate stays closed.
+      return !sound.isOriginalSound &&
+          sound.hasExplicitReuseConsent &&
           sound.allowsReuse &&
           !sound.requiresCurrentReuseVerification;
     }

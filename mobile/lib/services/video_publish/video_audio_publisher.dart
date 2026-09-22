@@ -388,9 +388,11 @@ class VideoAudioPublisher {
   /// Verifies that a selected sound is permitted to be reused.
   ///
   /// Bundled and local sounds do not represent another creator's Nostr
-  /// event. A creator may also reuse their own sound. Every other sound must
-  /// pass the fresh server policy check, including ordinary sounds with a
-  /// signed grant, so a later creator suppression takes effect immediately.
+  /// event. A creator may also reuse their own sound. Every other sound with a
+  /// source video must pass the fresh server policy check, including ordinary
+  /// sounds with a signed grant, so a later creator suppression takes effect
+  /// immediately. A standalone sound has no video to suppress, so its signed
+  /// terms decide.
   ///
   /// This answer is fail-closed, not a verdict: it is `false` for a refusal,
   /// for missing evidence, and for a lookup that never completed. Only

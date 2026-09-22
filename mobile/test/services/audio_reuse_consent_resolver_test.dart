@@ -287,6 +287,23 @@ void main() {
         expect(await resolver.verify(parsed), isTrue);
       });
 
+      test(
+        'fails closed for a video original sound with no coordinate',
+        () async {
+          final video = _video(
+            reuseMarker: 'false',
+            isVerifiedArchive: true,
+          ).copyWith(addressableDTag: '');
+          final sound = AudioEvent.fromVideoOriginalSound(video);
+
+          expect(sound.sourceVideoReference, isNull);
+          expect(sound.allowsReuse, isTrue);
+          expect(sound.hasExplicitReuseConsent, isTrue);
+          expect(await resolver.verify(sound), isFalse);
+          verifyNever(() => videosRepository.refreshAudioReusePolicy(any()));
+        },
+      );
+
       test("honors a standalone sound's explicit denial", () async {
         expect(
           await resolver.verify(
