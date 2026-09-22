@@ -11170,6 +11170,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Kamu Pendukung Divine. Terima kasih sudah menjaga ini tetap berjalan.';
 
   @override
+  String get supporterPreparingCheckout => 'Menyiapkan pembayaran…';
+
+  @override
   String get supporterPurchasePending => 'Pembelianmu menunggu persetujuan.';
 
   @override

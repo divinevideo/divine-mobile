@@ -7553,6 +7553,10 @@
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
   },
+  "supporterPreparingCheckout": "Preparing checkout…",
+  "@supporterPreparingCheckout": {
+    "description": "Progress message shown immediately after selecting a supporter plan, while preparing the native store checkout."
+  },
   "supporterPurchasePending": "Your purchase is pending approval.",
   "@supporterPurchasePending": {
     "description": "Status note shown while a supporter purchase awaits store approval."

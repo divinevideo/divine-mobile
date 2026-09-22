@@ -11352,6 +11352,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'Isa kang Divine Supporter. Salamat sa pagpapanatili nito.';
 
   @override
+  String get supporterPreparingCheckout => 'Inihahanda ang checkout…';
+
+  @override
   String get supporterPurchasePending =>
       'Naghihintay ng approval ang purchase mo.';
 

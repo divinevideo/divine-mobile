@@ -11204,6 +11204,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Bạn là Người ủng hộ Divine. Cảm ơn bạn đã giữ cho điều này tiếp tục.';
 
   @override
+  String get supporterPreparingCheckout => 'Đang chuẩn bị thanh toán…';
+
+  @override
   String get supporterPurchasePending =>
       'Giao dịch mua của bạn đang chờ phê duyệt.';
 

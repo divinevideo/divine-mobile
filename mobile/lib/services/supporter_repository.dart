@@ -65,6 +65,8 @@ class SupporterRepository {
   StreamSubscription<SupporterEntitlement>? _subscription;
   StreamSubscription<SupporterPurchaseProof>? _proofSubscription;
   Future<void>? _recoveryInFlight;
+  Future<SupporterAccountSnapshot>? _refreshInFlight;
+  SupporterAccountSnapshot? _latestServerSnapshot;
   bool _recoveryCompleted = false;
   int _claimFailureRevision = 0;
   final StreamController<SupporterEntitlement> _controller =
@@ -210,7 +212,20 @@ class SupporterRepository {
   bool get hasServerClient => _apiClient != null;
 
   /// Refreshes the account from canonical Worker state when configured.
-  Future<SupporterAccountSnapshot> refreshFromServer() async {
+  Future<SupporterAccountSnapshot> refreshFromServer() {
+    // Screen initialization and checkout both need the same account state.
+    // Share the request, including its signer round trip, while it is pending.
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) return inFlight;
+    late final Future<SupporterAccountSnapshot> refresh;
+    refresh = _fetchFromServer().whenComplete(() {
+      if (identical(_refreshInFlight, refresh)) _refreshInFlight = null;
+    });
+    _refreshInFlight = refresh;
+    return refresh;
+  }
+
+  Future<SupporterAccountSnapshot> _fetchFromServer() async {
     final client = _apiClient;
     if (client == null) {
       throw const SupporterApiException(
@@ -218,8 +233,13 @@ class SupporterRepository {
         'Supporter verification is not configured.',
       );
     }
+    final beforeRefresh = _latestServerSnapshot;
     final snapshot = await client.fetchMe(expectedPubkey: _pubkey);
-    _handleChange(snapshot.entitlement);
+    final latest = _latestServerSnapshot;
+    // A purchase may be verified while this earlier read is in flight. Do not
+    // publish the older response over that result, including to the cache.
+    if (latest != null && !identical(latest, beforeRefresh)) return latest;
+    _applyServerSnapshot(snapshot);
     return snapshot;
   }
 
@@ -235,7 +255,7 @@ class SupporterRepository {
       );
     }
     final snapshot = await client.claimPurchase(claim, expectedPubkey: _pubkey);
-    _handleChange(snapshot.entitlement);
+    _applyServerSnapshot(snapshot);
     return snapshot;
   }
 
@@ -258,7 +278,7 @@ class SupporterRepository {
       discoveryVisible: discoveryVisible,
       foundingHistoryVisible: foundingHistoryVisible,
     );
-    _handleChange(snapshot.entitlement);
+    _applyServerSnapshot(snapshot);
     return snapshot;
   }
 
@@ -296,6 +316,11 @@ class SupporterRepository {
       logName: 'SupporterRepository',
       category: LogCategory.system,
     );
+  }
+
+  void _applyServerSnapshot(SupporterAccountSnapshot snapshot) {
+    _latestServerSnapshot = snapshot;
+    _handleChange(snapshot.entitlement);
   }
 
   void _handleValidatorError(Object error, StackTrace stackTrace) {
@@ -374,7 +399,7 @@ class SupporterRepository {
         existingOwnerOnly: existingOwnerOnly,
       );
       await _rememberOwner(proofOwnerKey);
-      _handleChange(snapshot.entitlement);
+      _applyServerSnapshot(snapshot);
       await _validator.completePurchase(proof);
       if (_prefs.getString(pendingKey) == _pubkey) {
         await _prefs.remove(pendingKey);

@@ -11366,6 +11366,9 @@ class AppLocalizationsBg extends AppLocalizations {
       'Ти си поддръжник на Divine. Благодарим ти, че караш това да продължава.';
 
   @override
+  String get supporterPreparingCheckout => 'Подготвяне на плащането…';
+
+  @override
   String get supporterPurchasePending => 'Покупката ти чака одобрение.';
 
   @override

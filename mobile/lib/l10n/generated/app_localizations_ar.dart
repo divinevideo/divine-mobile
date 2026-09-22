@@ -11188,6 +11188,9 @@ class AppLocalizationsAr extends AppLocalizations {
       'أنت داعم لـ Divine. شكرًا لإبقائك هذا مستمرًا.';
 
   @override
+  String get supporterPreparingCheckout => 'جارٍ تجهيز الدفع…';
+
+  @override
   String get supporterPurchasePending => 'عملية شرائك في انتظار الموافقة.';
 
   @override

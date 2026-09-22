@@ -19002,6 +19002,12 @@ abstract class AppLocalizations {
   /// **'You\'re a Divine Supporter. Thank you for keeping this going.'**
   String get supporterActiveBadge;
 
+  /// Progress message shown immediately after selecting a supporter plan, while preparing the native store checkout.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing checkout…'**
+  String get supporterPreparingCheckout;
+
   /// Status note shown while a supporter purchase awaits store approval.
   ///
   /// In en, this message translates to:

@@ -11471,6 +11471,9 @@ class AppLocalizationsPl extends AppLocalizations {
       'Jesteś w gronie Wspierających Divine. Dziękujemy, że utrzymujesz to w ruchu.';
 
   @override
+  String get supporterPreparingCheckout => 'Przygotowywanie płatności…';
+
+  @override
   String get supporterPurchasePending => 'Zakup oczekuje na zatwierdzenie.';
 
   @override

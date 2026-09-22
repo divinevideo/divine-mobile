@@ -11254,6 +11254,9 @@ class AppLocalizationsMs extends AppLocalizations {
       'Anda ialah Penyokong Divine. Terima kasih kerana memastikan ini terus berjalan.';
 
   @override
+  String get supporterPreparingCheckout => 'Menyediakan pembayaran…';
+
+  @override
   String get supporterPurchasePending =>
       'Pembelian anda sedang menunggu kelulusan.';
 

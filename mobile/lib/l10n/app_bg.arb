@@ -3214,6 +3214,7 @@
     "@supporterHeroBody": {"description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."},
     "supporterActiveBadge": "Ти си поддръжник на Divine. Благодарим ти, че караш това да продължава.",
     "@supporterActiveBadge": {"description": "Confirmation shown to users with an active supporter subscription."},
+    "supporterPreparingCheckout": "Подготвяне на плащането…",
     "supporterPurchasePending": "Покупката ти чака одобрение.",
     "@supporterPurchasePending": {"description": "Status note shown while a supporter purchase awaits store approval."},
     "supporterPurchaseConfirming": "Потвърждаваме подкрепата ти…",

@@ -31,6 +31,7 @@ class SupporterCubit extends Cubit<SupporterState> {
 
   StreamSubscription<SupporterEntitlement>? _entitlementSub;
   StreamSubscription<EntitlementLifecycle>? _lifecycleSub;
+  int _foregroundOperationRevision = 0;
 
   /// Begin listening to the repository's entitlement stream. Call from the
   /// screen's `initState` so external purchase updates (renewals, restores)
@@ -94,6 +95,7 @@ class SupporterCubit extends Cubit<SupporterState> {
   /// Begin a purchase for [productId].
   Future<void> subscribe(String productId) async {
     if (state.isBusy) return;
+    _foregroundOperationRevision++;
     _emit(
       state.copyWith(
         status: SupporterStatus.purchasing,
@@ -138,6 +140,7 @@ class SupporterCubit extends Cubit<SupporterState> {
   /// Restore previous purchases tied to the store account.
   Future<void> restore() async {
     if (state.isBusy) return;
+    _foregroundOperationRevision++;
     _emit(
       state.copyWith(status: SupporterStatus.restoring, clearFailure: true),
     );
@@ -209,9 +212,12 @@ class SupporterCubit extends Cubit<SupporterState> {
   }
 
   Future<void> _refreshFromServer() async {
+    final revision = _foregroundOperationRevision;
     try {
       final snapshot = await _repository.refreshFromServer();
-      if (isClosed) return;
+      // The screen's initial refresh must not reset a purchase or restore
+      // that the user started while that request was in flight.
+      if (isClosed || revision != _foregroundOperationRevision) return;
       _emit(
         state.copyWith(
           entitlement: snapshot.entitlement,
@@ -222,6 +228,7 @@ class SupporterCubit extends Cubit<SupporterState> {
         ),
       );
     } on SupporterApiException catch (error) {
+      if (isClosed || revision != _foregroundOperationRevision) return;
       _emitApiFailure(error);
     }
   }

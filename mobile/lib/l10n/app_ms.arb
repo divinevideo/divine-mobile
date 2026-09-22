@@ -6151,6 +6151,7 @@
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
   },
+  "supporterPreparingCheckout": "Menyediakan pembayaran…",
   "supporterPurchasePending": "Pembelian anda sedang menunggu kelulusan.",
   "@supporterPurchasePending": {
     "description": "Status note shown while a supporter purchase awaits store approval."

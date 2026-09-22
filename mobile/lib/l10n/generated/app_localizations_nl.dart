@@ -11314,6 +11314,9 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je bent een Divine-supporter. Bedankt dat je dit laat doorgaan.';
 
   @override
+  String get supporterPreparingCheckout => 'Betaling voorbereiden…';
+
+  @override
   String get supporterPurchasePending => 'Je aankoop wacht op goedkeuring.';
 
   @override

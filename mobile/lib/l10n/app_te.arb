@@ -7289,6 +7289,7 @@
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
   },
+  "supporterPreparingCheckout": "చెల్లింపును సిద్ధం చేస్తున్నాం…",
   "supporterPurchasePending": "మీ కొనుగోలు ఆమోదం పెండింగ్‌లో ఉంది.",
   "@supporterPurchasePending": {
     "description": "Status note shown while a supporter purchase awaits store approval."
