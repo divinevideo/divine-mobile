@@ -1,6 +1,7 @@
 // ABOUTME: Minor-account review Riverpod providers for auth restriction gating
 // ABOUTME: Wires API-backed status, last-known cache, repository and overrides
 
+import 'dart:async';
 import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -14,7 +15,10 @@ import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
+import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:openvine/services/support_email_composer.dart';
+import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
 
 typedef MinorAccountReviewComposeEmail = Future<void> Function({
   required String toEmail,
@@ -92,3 +96,13 @@ final minorAccountReviewStatusStoreProvider =
         prefs: ref.watch(sharedPreferencesProvider),
       );
     });
+/// Recorder used by the in-app parent-consent capture flow.
+final minorConsentRecorderProvider = Provider<MinorConsentRecorder>((ref) {
+  final camera = CameraService.create(
+    onUpdateState: ({bool? forceCameraRebuild}) {},
+    onAutoStopped: (EditorVideo? video) {},
+  );
+  final recorder = CameraMinorConsentRecorder(camera: camera);
+  ref.onDispose(() => recorder.dispose().ignore());
+  return recorder;
+});
