@@ -2,6 +2,7 @@
 // ABOUTME: database and a mocked ScheduleApiClient: submit, sync, cancel,
 // ABOUTME: backoff and the client-publish schedule.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -117,6 +118,24 @@ void main() {
     });
 
     group('submit', () {
+      test('a concurrent second call does not reach the relay', () async {
+        final event = buildEvent();
+        await repository.enqueue(event: event, draftId: 'draft-1');
+        final gate = Completer<ScheduleSubmitResult>();
+        when(() => client.schedule(any())).thenAnswer((_) => gate.future);
+
+        final first = repository.submit(event.id);
+        await pumpEventQueue();
+        final second = await repository.submit(event.id);
+
+        expect(second.outcome, ScheduledPostSubmitOutcome.retryLater);
+        gate.complete(
+          ScheduleSubmitAccepted(eventId: event.id, publishAt: event.createdAt),
+        );
+        expect((await first).outcome, ScheduledPostSubmitOutcome.submitted);
+        verify(() => client.schedule(any())).called(1);
+      });
+
       test('an accepted hand-off marks the row scheduled', () async {
         final event = buildEvent();
         await repository.enqueue(event: event, draftId: 'draft-1');

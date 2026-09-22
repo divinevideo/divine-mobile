@@ -187,7 +187,25 @@ class ScheduledPostsRepository {
   }
 
   /// Hands a `pendingSubmit` row to the relay and records the answer.
+  ///
+  /// One request per event at a time. Enqueueing notifies the coordinator,
+  /// whose sweep reaches for the same row the publish path is already
+  /// submitting — without this both POST it, and the relay answers the second
+  /// with a 409 it never needed to see.
   Future<ScheduledPostSubmitResult> submit(String eventId) async {
+    if (!_submitting.add(eventId)) {
+      return const ScheduledPostSubmitResult.retryLater('already_submitting');
+    }
+    try {
+      return await _submit(eventId);
+    } finally {
+      _submitting.remove(eventId);
+    }
+  }
+
+  final Set<String> _submitting = <String>{};
+
+  Future<ScheduledPostSubmitResult> _submit(String eventId) async {
     final post = await _dao.getById(eventId);
     if (post == null || post.status != ScheduledPostStatus.pendingSubmit) {
       return const ScheduledPostSubmitResult.retryLater('not_pending');
