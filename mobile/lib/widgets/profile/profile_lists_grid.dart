@@ -2,6 +2,7 @@
 // ABOUTME: two-column gallery of the user's video and people lists.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -161,9 +162,13 @@ class _OwnListsGallery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<PeopleListsBloc, PeopleListsState, List<UserList>>(
-      selector: (state) => state.lists,
-      builder: (context, peopleLists) {
+    return BlocBuilder<PeopleListsBloc, PeopleListsState>(
+      // Lists compare by identity, so selecting them would rebuild on every
+      // emission; compare what they hold instead.
+      buildWhen: (previous, current) =>
+          !listEquals(previous.lists, current.lists),
+      builder: (context, state) {
+        final peopleLists = state.lists;
         if (videoLists.isEmpty && peopleLists.isEmpty) {
           return const _EmptyListsMessage();
         }
