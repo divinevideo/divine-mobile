@@ -2298,8 +2298,10 @@ void main() {
         );
 
         test('reports a follow that could not be recorded', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
           final repository = buildRepository(
             nostrClient: _MockNostrClient(),
+            cache: cache,
             followedListsStore: _FailingFollowStore(),
           );
 
@@ -2316,6 +2318,8 @@ void main() {
             await repository.readFollowedLists(viewerPubkey: viewer),
             isEmpty,
           );
+          // The copy written ahead of the follow is taken back out.
+          expect(await cache.readFollowedCopies(viewerPubkey: viewer), isEmpty);
         });
       });
 

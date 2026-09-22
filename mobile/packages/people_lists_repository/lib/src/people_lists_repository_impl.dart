@@ -431,10 +431,21 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       // affordances, whatever the caller resolved it as.
       list: list.copyWith(isEditable: false),
     );
-    await _followedListsStore.add(
-      viewerPubkey: viewerPubkey,
-      ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: list.id),
-    );
+    try {
+      await _followedListsStore.add(
+        viewerPubkey: viewerPubkey,
+        ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: list.id),
+      );
+    } on Object {
+      // The follow was not recorded, so the copy is nobody's: take it back
+      // out rather than leave it in the box until account cleanup.
+      await _removeCopyQuietly(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ownerPubkey,
+        listId: list.id,
+      );
+      rethrow;
+    }
   }
 
   @override
@@ -447,6 +458,24 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       viewerPubkey: viewerPubkey,
       ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
     );
+    await _removeCopyQuietly(
+      viewerPubkey: viewerPubkey,
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+    );
+  }
+
+  /// Removes the copy of a list no follow names.
+  ///
+  /// A copy that cannot be removed is left where it is: it is never shown,
+  /// and the next follow of the same list replaces it. Failing the caller
+  /// over it would report a failed unfollow that in fact held, or hide why
+  /// a follow failed behind why its cleanup did.
+  Future<void> _removeCopyQuietly({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
     try {
       await _cache.removeFollowedCopy(
         viewerPubkey: viewerPubkey,
@@ -454,11 +483,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
         listId: listId,
       );
     } on Object catch (error, stackTrace) {
-      // The unfollow already holds; a copy left behind is never shown and is
-      // replaced by the next follow. Failing here would report a failed
-      // unfollow that in fact succeeded.
       Log.warning(
-        'Failed to remove the copy of an unfollowed people list',
+        'Failed to remove the copy of a people list that is not followed',
         name: _logName,
         category: LogCategory.storage,
         error: error,
