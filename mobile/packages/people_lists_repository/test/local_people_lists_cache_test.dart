@@ -647,7 +647,7 @@ void main() {
             list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 1, 1)),
           );
 
-          final wrote = await cache.refreshFollowedCopy(
+          await cache.refreshFollowedCopy(
             viewerPubkey: _ownerA,
             ownerPubkey: _ownerB,
             list: _list(
@@ -660,7 +660,6 @@ void main() {
           final copies = await cache.readFollowedCopies(
             viewerPubkey: _ownerA,
           );
-          expect(wrote, isTrue);
           expect(copies.single.list.pubkeys, equals([_memberA, _memberB]));
         });
 
@@ -669,7 +668,7 @@ void main() {
           () async {
             final cache = LocalPeopleListsCache(openBox: makeOpener());
 
-            final wrote = await cache.refreshFollowedCopy(
+            await cache.refreshFollowedCopy(
               viewerPubkey: _ownerA,
               ownerPubkey: _ownerB,
               list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
@@ -678,20 +677,26 @@ void main() {
             final copies = await cache.readFollowedCopies(
               viewerPubkey: _ownerA,
             );
-            expect(wrote, isTrue);
             expect(copies.single.list.id, equals('crew'));
           },
         );
 
-        test('skips a revision that is not newer', () async {
+        test('skips a revision that is not newer, waking nobody', () async {
           final cache = LocalPeopleListsCache(openBox: makeOpener());
           await cache.putFollowedCopy(
             viewerPubkey: _ownerA,
             ownerPubkey: _ownerB,
             list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
           );
+          final emissions = <int>[];
+          final subscription = cache
+              .watchFollowedCopies(viewerPubkey: _ownerA)
+              .listen((copies) => emissions.add(copies.length));
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+          expect(emissions, hasLength(1));
 
-          final wrote = await cache.refreshFollowedCopy(
+          await cache.refreshFollowedCopy(
             viewerPubkey: _ownerA,
             ownerPubkey: _ownerB,
             list: _list(
@@ -700,12 +705,26 @@ void main() {
               updatedAt: DateTime.utc(2026, 2, 1),
             ),
           );
+          await pumpEventQueue();
 
           final copies = await cache.readFollowedCopies(
             viewerPubkey: _ownerA,
           );
-          expect(wrote, isFalse);
           expect(copies.single.list.name, equals('Crew'));
+          expect(emissions, hasLength(1));
+
+          // The positive control: a newer revision does wake the listener.
+          await cache.refreshFollowedCopy(
+            viewerPubkey: _ownerA,
+            ownerPubkey: _ownerB,
+            list: _list(
+              id: 'crew',
+              name: 'Fresh',
+              updatedAt: DateTime.utc(2026, 3, 1),
+            ),
+          );
+          await pumpEventQueue();
+          expect(emissions, hasLength(2));
         });
 
         test('repairs a row whose copy no longer decodes', () async {
@@ -717,7 +736,7 @@ void main() {
             'list': 'not a map',
           });
 
-          final wrote = await cache.refreshFollowedCopy(
+          await cache.refreshFollowedCopy(
             viewerPubkey: _ownerA,
             ownerPubkey: _ownerB,
             list: _list(id: 'crew', updatedAt: DateTime.utc(2026, 2, 1)),
@@ -726,7 +745,6 @@ void main() {
           final copies = await cache.readFollowedCopies(
             viewerPubkey: _ownerA,
           );
-          expect(wrote, isTrue);
           expect(copies.single.list.id, equals('crew'));
         });
       });

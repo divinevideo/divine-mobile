@@ -20,6 +20,10 @@ Future<SharedPreferences> _prefs([
   return SharedPreferences.getInstance();
 }
 
+/// The on-disk key, spelled out: renaming it in the store would strand every
+/// account's follows under the old name, so the test pins the spelling.
+String _keyFor(String viewerPubkey) => 'followed_people_lists_$viewerPubkey';
+
 void main() {
   group(PrefsFollowedPeopleListsStore, () {
     group('read', () {
@@ -33,7 +37,7 @@ void main() {
       test('skips a damaged entry and keeps the rest', () async {
         final store = PrefsFollowedPeopleListsStore(
           await _prefs({
-            PrefsFollowedPeopleListsStore.storageKey(_viewerA): [
+            _keyFor(_viewerA): [
               'no-separator',
               ':no-owner',
               '$_owner:',
@@ -139,7 +143,7 @@ void main() {
         await store.clear(viewerPubkey: _viewerA);
 
         expect(
-          prefs.containsKey(PrefsFollowedPeopleListsStore.storageKey(_viewerA)),
+          prefs.containsKey(_keyFor(_viewerA)),
           isFalse,
         );
         expect(

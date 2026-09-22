@@ -338,13 +338,13 @@ class LocalPeopleListsCache {
   }
 
   /// Stores [list] as [viewerPubkey]'s copy when none is held, or when it is
-  /// a newer revision than the one held, and reports whether it wrote.
+  /// a newer revision than the one held.
   ///
   /// An equal or older revision is skipped so a relay refresh that found
   /// nothing new does not wake every listener.
   ///
   /// Throws if the Hive box cannot be opened or the write fails.
-  Future<bool> refreshFollowedCopy({
+  Future<void> refreshFollowedCopy({
     required String viewerPubkey,
     required String ownerPubkey,
     required UserList list,
@@ -354,10 +354,9 @@ class LocalPeopleListsCache {
     final existing = box.get(key);
     final stored = existing is Map ? _decodeFollowedCopy(existing) : null;
     if (stored != null && !list.updatedAt.isAfter(stored.list.updatedAt)) {
-      return false;
+      return;
     }
     await box.put(key, _followedRow(ownerPubkey, list));
-    return true;
   }
 
   /// Removes [viewerPubkey]'s copy of the list [ownerPubkey] published as

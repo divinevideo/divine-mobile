@@ -34,7 +34,7 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
   ///
   /// It carries the pubkey, so one account's follows can never be read as
   /// another's.
-  static String storageKey(String viewerPubkey) => '$_keyPrefix$viewerPubkey';
+  static String _storageKey(String viewerPubkey) => '$_keyPrefix$viewerPubkey';
 
   @override
   Future<List<FollowedPeopleListRef>> read({
@@ -83,7 +83,7 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
 
   @override
   Future<void> clear({required String viewerPubkey}) async {
-    final key = storageKey(viewerPubkey);
+    final key = _storageKey(viewerPubkey);
     if (!_prefs.containsKey(key)) return;
     await _prefs.remove(key);
     _changedViewers.add(viewerPubkey);
@@ -96,7 +96,7 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
   /// its own, so one damaged entry does not cost the account its other
   /// follows.
   List<FollowedPeopleListRef> _read(String viewerPubkey) {
-    final entries = _prefs.getStringList(storageKey(viewerPubkey));
+    final entries = _prefs.getStringList(_storageKey(viewerPubkey));
     if (entries == null) return const [];
     final refs = <FollowedPeopleListRef>[];
     for (final entry in entries) {
@@ -115,7 +115,7 @@ class PrefsFollowedPeopleListsStore implements FollowedPeopleListsStore {
     String viewerPubkey,
     List<FollowedPeopleListRef> refs,
   ) async {
-    await _prefs.setStringList(storageKey(viewerPubkey), [
+    await _prefs.setStringList(_storageKey(viewerPubkey), [
       for (final ref in refs) '${ref.ownerPubkey}$_entrySeparator${ref.listId}',
     ]);
     _changedViewers.add(viewerPubkey);
