@@ -8,8 +8,8 @@ import 'package:material_ui/material_ui.dart';
 /// The `DivineSticker` collection in Figma is the source of truth for the
 /// catalog, the names and the artwork. Each value maps to a photographic
 /// cutout exported from its Figma component into `assets/divine_stickers/`: a
-/// transparent PNG at most 512 px on its long edge, in its original
-/// proportions.
+/// lossless WebP with transparency, at most 512 px on its long edge, in its
+/// original proportions.
 ///
 /// The OpenMoji SVGs in `assets/stickers/` belong to the video editor's sticker
 /// picker and are a separate set. [grandfather] is the only variant still drawn
@@ -208,7 +208,7 @@ enum DivineStickerName {
   /// The full asset path for this sticker.
   String get assetPath => isLegacySvg
       ? 'assets/stickers/$fileName.svg'
-      : 'assets/divine_stickers/$fileName.png';
+      : 'assets/divine_stickers/$fileName.webp';
 }
 
 /// A sticker from the Divine design system.
