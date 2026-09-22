@@ -1,7 +1,8 @@
 // ABOUTME: Guards the DivineSticker artwork bundled with the app: every
-// ABOUTME: variant has a file, every file is a transparent PNG within 512 px,
-// ABOUTME: and the directory holds nothing the catalog does not name.
+// ABOUTME: variant has a file, every file is a lossless WebP within 512 px that
+// ABOUTME: keeps its alpha, and the directory holds nothing the catalog does not name.
 
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -10,19 +11,70 @@ import 'package:flutter_test/flutter_test.dart';
 
 const _directory = 'assets/divine_stickers';
 const _maxLongEdge = 512;
-const _pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-// PNG colour types that carry an alpha channel: grey+alpha and RGBA.
-const _alphaColorTypes = {4, 6};
+/// Stickers whose artwork has no transparent pixel at all, so the encoder
+/// stores them without an alpha channel. The Polaroid is a rectangular print.
+/// Anything else arriving here has been flattened onto a background.
+const Set<DivineStickerName> _opaqueStickers = {DivineStickerName.polaroid};
 
-({int width, int height, int colorType}) _readPngHeader(Uint8List bytes) {
+/// What the RIFF container of a WebP file declares about its image.
+typedef _WebpHeader = ({
+  int width,
+  int height,
+  bool lossless,
+  bool alpha,
+  List<String> chunks,
+});
+
+/// Reads the container without decoding pixels.
+///
+/// A simple lossless file is one `VP8L` chunk, whose 5-byte header carries
+/// the size and an alpha flag. An extended file starts with `VP8X`, which
+/// carries the canvas size and the flags, followed by the image chunks; the
+/// image is lossless only when it is a `VP8L` chunk rather than a lossy
+/// `VP8 ` one.
+_WebpHeader _readWebpHeader(Uint8List bytes) {
   final data = ByteData.sublistView(bytes);
+  expect(ascii.decode(bytes.sublist(0, 4)), equals('RIFF'));
+  expect(ascii.decode(bytes.sublist(8, 12)), equals('WEBP'));
+
+  final chunks = <String, int>{};
+  var offset = 12;
+  while (offset + 8 <= bytes.length) {
+    final fourCc = ascii.decode(bytes.sublist(offset, offset + 4));
+    final size = data.getUint32(offset + 4, Endian.little);
+    chunks.putIfAbsent(fourCc, () => offset + 8);
+    offset += 8 + size + (size.isOdd ? 1 : 0);
+  }
+
+  final lossless = chunks.containsKey('VP8L') && !chunks.containsKey('VP8 ');
+  if (chunks.containsKey('VP8X')) {
+    final payload = chunks['VP8X']!;
+    return (
+      width: _uint24(data, payload + 4) + 1,
+      height: _uint24(data, payload + 7) + 1,
+      lossless: lossless,
+      alpha: data.getUint8(payload) & 0x10 != 0,
+      chunks: chunks.keys.toList(),
+    );
+  }
+
+  final payload = chunks['VP8L']!;
+  expect(data.getUint8(payload), equals(0x2f), reason: 'VP8L signature');
+  final bits = data.getUint32(payload + 1, Endian.little);
   return (
-    width: data.getUint32(16),
-    height: data.getUint32(20),
-    colorType: data.getUint8(25),
+    width: (bits & 0x3fff) + 1,
+    height: ((bits >> 14) & 0x3fff) + 1,
+    lossless: lossless,
+    alpha: (bits >> 28) & 0x1 != 0,
+    chunks: chunks.keys.toList(),
   );
 }
+
+int _uint24(ByteData data, int offset) =>
+    data.getUint8(offset) |
+    (data.getUint8(offset + 1) << 8) |
+    (data.getUint8(offset + 2) << 16);
 
 void main() {
   // Tests run with the package root as the working directory.
@@ -48,32 +100,38 @@ void main() {
           .map((file) => file.uri.pathSegments.last)
           .toSet();
       final expected = figmaBacked
-          .map((sticker) => '${sticker.fileName}.png')
+          .map((sticker) => '${sticker.fileName}.webp')
           .toSet();
 
       expect(onDisk, equals(expected));
     });
 
-    test('every artwork file is a PNG with an alpha channel', () {
+    test('every artwork file is a lossless WebP', () {
       for (final sticker in figmaBacked) {
-        final bytes = File(sticker.assetPath).readAsBytesSync();
+        final header = _readWebpHeader(
+          File(sticker.assetPath).readAsBytesSync(),
+        );
 
         expect(
-          bytes.sublist(0, 8),
-          equals(_pngSignature),
-          reason: '${sticker.assetPath} is not a PNG.',
-        );
-        expect(
-          _alphaColorTypes,
-          contains(_readPngHeader(bytes).colorType),
-          reason: '${sticker.assetPath} has no alpha channel.',
+          header.lossless,
+          isTrue,
+          reason: '${sticker.assetPath} carries ${header.chunks}.',
         );
       }
     });
 
+    test('every artwork file keeps its transparency', () {
+      final withoutAlpha = figmaBacked.where((sticker) {
+        final bytes = File(sticker.assetPath).readAsBytesSync();
+        return !_readWebpHeader(bytes).alpha;
+      }).toSet();
+
+      expect(withoutAlpha, equals(_opaqueStickers));
+    });
+
     test('no artwork file exceeds $_maxLongEdge px on its long edge', () {
       for (final sticker in figmaBacked) {
-        final header = _readPngHeader(
+        final header = _readWebpHeader(
           File(sticker.assetPath).readAsBytesSync(),
         );
         final longEdge = header.width > header.height

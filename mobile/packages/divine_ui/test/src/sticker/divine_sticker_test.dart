@@ -7,17 +7,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
-// 1×1 transparent PNG bytes (from Flutter's test suite).
-final _transparentPng = Uint8List.fromList(const <int>[
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, //
-  0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
-  0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41,
-  0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
-  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00,
-  0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
-  0x42, 0x60, 0x82,
+// 1×1 transparent lossless WebP, the format the real stickers ship in.
+final _transparentWebp = Uint8List.fromList(const <int>[
+  0x52, 0x49, 0x46, 0x46, 0x1a, 0x00, 0x00, 0x00, //
+  0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x4c,
+  0x0d, 0x00, 0x00, 0x00, 0x2f, 0x00, 0x00, 0x00,
+  0x10, 0x07, 0x10, 0x11, 0x11, 0x88, 0x88, 0xfe,
+  0x07, 0x00,
 ]);
 
 const _emptySvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
@@ -36,7 +32,7 @@ class _TestAssetBundle extends CachingAssetBundle {
   }
 
   late final ByteData _manifest;
-  final ByteData _png = ByteData.sublistView(_transparentPng);
+  final ByteData _webp = ByteData.sublistView(_transparentWebp);
   final ByteData _svg = ByteData.sublistView(utf8.encode(_emptySvg));
 
   @override
@@ -44,7 +40,7 @@ class _TestAssetBundle extends CachingAssetBundle {
     if (key == 'AssetManifest.bin') {
       return SynchronousFuture<ByteData>(_manifest);
     }
-    return SynchronousFuture<ByteData>(key.endsWith('.svg') ? _svg : _png);
+    return SynchronousFuture<ByteData>(key.endsWith('.svg') ? _svg : _webp);
   }
 }
 
@@ -59,17 +55,17 @@ void main() {
       expect(DivineStickerName.values.length, equals(137));
     });
 
-    test('assetPath points Figma artwork at the PNG directory', () {
+    test('assetPath points Figma artwork at the WebP directory', () {
       expect(
         DivineStickerName.boom.assetPath,
-        equals('assets/divine_stickers/boom.png'),
+        equals('assets/divine_stickers/boom.webp'),
       );
     });
 
     test('assetPath returns correct path for multi-word name', () {
       expect(
         DivineStickerName.forgotPassword.assetPath,
-        equals('assets/divine_stickers/forgot_password.png'),
+        equals('assets/divine_stickers/forgot_password.webp'),
       );
     });
 
@@ -201,7 +197,7 @@ void main() {
         isA<AssetImage>().having(
           (asset) => asset.assetName,
           'assetName',
-          equals('assets/divine_stickers/hang_loose.png'),
+          equals('assets/divine_stickers/hang_loose.webp'),
         ),
       );
     });
