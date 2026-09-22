@@ -121,6 +121,19 @@ abstract interface class PeopleListsRepository {
     required String viewerPubkey,
   });
 
+  /// Whether [viewerPubkey] follows the list [ownerPubkey] published as
+  /// [listId].
+  ///
+  /// This is the follow itself, so it holds while the copy is not held —
+  /// after a cache reset, until [syncFollowedLists] brings it back — and
+  /// while the owner is blocked, both of which leave the list out of
+  /// [readFollowedLists].
+  Future<bool> isFollowingList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  });
+
   /// Follows [list], published by [ownerPubkey], on behalf of [viewerPubkey],
   /// keeping a read-only copy so its members are known offline.
   ///

@@ -99,6 +99,35 @@ void main() {
         expect(source.persistenceValue, equals('people:$_ownerA:crew'));
       });
 
+      test('reads the follow back out of the persisted value', () {
+        const source = VideoFeedSource.peopleList(
+          listId: 'crew:2026',
+          listName: 'Crew',
+          listOwnerPubkey: _ownerA,
+        );
+
+        expect(
+          VideoFeedSource.peopleListRefFromValue(source.persistenceValue),
+          equals(
+            const FollowedPeopleListRef(
+              ownerPubkey: _ownerA,
+              listId: 'crew:2026',
+            ),
+          ),
+        );
+      });
+
+      test('names no follow for any other persisted value', () {
+        expect(VideoFeedSource.peopleListRefFromValue('forYou'), isNull);
+        expect(VideoFeedSource.peopleListRefFromValue('list:crew'), isNull);
+        expect(VideoFeedSource.peopleListRefFromValue('people:'), isNull);
+        expect(VideoFeedSource.peopleListRefFromValue('people:crew'), isNull);
+        expect(
+          VideoFeedSource.peopleListRefFromValue('people:$_ownerA:'),
+          isNull,
+        );
+      });
+
       test('tells apart two owners who share a d tag', () {
         const mine = VideoFeedSource.peopleList(
           listId: 'friends',

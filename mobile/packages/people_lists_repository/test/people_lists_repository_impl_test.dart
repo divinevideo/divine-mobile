@@ -2268,6 +2268,50 @@ void main() {
         });
       });
 
+      group('isFollowingList', () {
+        test(
+          'holds for the follow itself, whatever the copy or owner',
+          () async {
+            final cache = LocalPeopleListsCache(openBox: makeOpener());
+            final repository = buildRepository(
+              nostrClient: _MockNostrClient(),
+              cache: cache,
+              blockFilter: (owner) => owner == _ownerPubkey,
+            );
+            Future<bool> following() => repository.isFollowingList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+
+            expect(await following(), isFalse);
+
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+            // Blocked owner: left out of readFollowedLists, still followed.
+            expect(await following(), isTrue);
+            expect(
+              await repository.readFollowedLists(viewerPubkey: viewer),
+              isEmpty,
+            );
+
+            // A cache reset takes the copy, not the follow.
+            await cache.clearFollowedCopies(viewerPubkey: viewer);
+            expect(await following(), isTrue);
+
+            await repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            expect(await following(), isFalse);
+          },
+        );
+      });
+
       group('watchFollowedLists', () {
         test('emits on follow and unfollow, without blocked owners', () async {
           final repository = buildRepository(

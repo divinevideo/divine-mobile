@@ -365,6 +365,18 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     return _withoutBlockedOwners(_followedInOrder(refs, copies));
   }
 
+  @override
+  Future<bool> isFollowingList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
+    return refs.contains(
+      FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
+    );
+  }
+
   /// The copies of the lists [refs] names, in follow order.
   ///
   /// A follow whose copy is not held yet is left out until a sync brings it
