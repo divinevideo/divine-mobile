@@ -55,6 +55,7 @@ import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 import 'package:openvine/widgets/profile/profile_website_row.dart';
 import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
+import 'package:openvine/widgets/supporter_membership.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -531,6 +532,53 @@ void main() {
       return goRouter == null
           ? scoped
           : MockGoRouterProvider(goRouter: goRouter, child: scoped);
+    }
+
+    for (final ownProfile in [true, false]) {
+      testWidgets(
+        'shows the ${ownProfile ? 'private membership chip' : 'public supporter badge'} '
+        'on ${ownProfile ? 'your own' : "someone else's"} profile',
+        (tester) async {
+          // The private chip reads the signed-in account's membership, so on
+          // anyone else's profile it would show the viewer's status, not theirs.
+          await tester.pumpWidget(
+            buildTestWidget(
+              userIdHex: testUserHex,
+              isOwnProfile: ownProfile,
+              suppliedProfile: createTestProfile(displayName: 'Supporter'),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.byType(SupporterMembership),
+            ownProfile ? findsOneWidget : findsNothing,
+          );
+          expect(
+            find.byType(PublicSupporterBadge),
+            ownProfile ? findsNothing : findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'hides supporter entries on a vanished '
+        '${ownProfile ? 'own' : 'other'} profile',
+        (tester) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              userIdHex: testUserHex,
+              isOwnProfile: ownProfile,
+              suppliedProfile: createTestProfile(displayName: 'Supporter'),
+              isVanished: true,
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(SupporterMembership), findsNothing);
+          expect(find.byType(PublicSupporterBadge), findsNothing);
+        },
+      );
     }
 
     testWidgets('opens accepted NIP-58 badge details from profile header', (
