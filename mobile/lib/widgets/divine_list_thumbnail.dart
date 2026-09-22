@@ -113,14 +113,14 @@ class DivineListThumbnail extends StatelessWidget {
   /// twice with a bare count in between — the badge and the footer are
   /// both decorative once this label carries their content. The description
   /// travels as the hint, so the card's text is still heard.
-  String _semanticLabel(AppLocalizations l10n) => [
+  String _semanticLabel(AppLocalizations l10n) => l10n.listCardSemanticLabel(
     name,
-    if (isPrivate) l10n.listVisibilityPrivate,
+    isPrivate ? 'private' : 'public',
     switch (_kind) {
       _ListKind.videos => l10n.listVideoCount(_count),
       _ListKind.people => l10n.listMemberCount(_count),
     },
-  ].join(', ');
+  );
 
   @override
   Widget build(BuildContext context) {
