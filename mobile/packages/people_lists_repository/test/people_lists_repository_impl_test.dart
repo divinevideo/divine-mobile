@@ -24,7 +24,9 @@ class _MockNostrClient extends Mock implements NostrClient {
     // gave (#8273). Mirror whatever `queryEvents` is stubbed to return, as a
     // *settled* answer — the state every existing test describes. Tests about
     // the inconclusive read override this with `timedOut` or `noRelays`.
-    when(() => queryEvents(any())).thenAnswer((_) async => <Event>[]);
+    when(
+      () => queryEvents(any(), timeout: any(named: 'timeout')),
+    ).thenAnswer((_) async => <Event>[]);
     when(
       () => queryEventsDetailed(
         any(),
@@ -90,6 +92,18 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(<Filter>[_FakeFilter()]);
+  });
+
+  group('kPublicPeopleListsRelayReadTimeout', () {
+    test("outlasts the relay client's default query budget", () {
+      // The client's default is 5 seconds, and the startup syncs exhaust it
+      // on the first read after launch: exactly when a freshly attached
+      // account refreshes its followed lists or opens a deep-linked one.
+      expect(
+        kPublicPeopleListsRelayReadTimeout,
+        greaterThan(const Duration(seconds: 5)),
+      );
+    });
   });
 
   group(PeopleListsRepositoryImpl, () {
@@ -1171,7 +1185,11 @@ void main() {
           );
 
           when(
-            () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenAnswer((_) async => [remoteEvent]);
 
           final repository = buildRepository(nostrClient: client);
@@ -1182,6 +1200,7 @@ void main() {
             () => client.queryEvents(
               captureAny(),
               useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
             ),
           ).captured.cast<List<Filter>>();
           expect(capturedFilters, hasLength(1));
@@ -1217,7 +1236,11 @@ void main() {
         );
 
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [crewEvent, blockEvent]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1277,7 +1300,11 @@ void main() {
           );
 
           when(
-            () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenAnswer((_) async => [staleEvent]);
 
           await repository.syncOwner(ownerPubkey: _ownerPubkey);
@@ -1317,12 +1344,32 @@ void main() {
         );
       }
 
+      test('reads with the shared public-lists budget', () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        final repository = buildRepository(nostrClient: client);
+
+        await repository.discoverPublicLists();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+          ),
+        ).called(1);
+      });
+
       test("skips other clients' machinery sets", () async {
         // A titled mute set is still a mute set: nothing to browse.
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(
@@ -1356,7 +1403,11 @@ void main() {
       test('returns lists newest first without a text filter', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(
@@ -1388,7 +1439,11 @@ void main() {
       test('drops lists authored by excludeAuthor', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(
@@ -1419,7 +1474,11 @@ void main() {
       test('keeps the newest event per addressable coordinate', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(
@@ -1450,7 +1509,11 @@ void main() {
       test('returns empty when the relay has nothing', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => const []);
 
         final repository = buildRepository(nostrClient: client);
@@ -1485,7 +1548,11 @@ void main() {
       test('queries by author and d tag and returns the match', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(pubkey: _ownerPubkey, dTag: 'crew', title: 'Crew'),
@@ -1508,6 +1575,7 @@ void main() {
           () => client.queryEvents(
             captureAny(),
             useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured.cast<List<Filter>>();
         final filter = capturedFilters.single.single;
@@ -1518,7 +1586,11 @@ void main() {
       test('ignores a same-d list from another author', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(pubkey: secondOwner, dTag: 'crew', title: 'Impostor'),
@@ -1538,7 +1610,11 @@ void main() {
       test('returns null when relays hold nothing', () async {
         final client = _MockNostrClient();
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => const []);
 
         final repository = buildRepository(nostrClient: client);
@@ -1584,7 +1660,11 @@ void main() {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer(
           (_) async => [
             peopleEvent(
@@ -1613,7 +1693,11 @@ void main() {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => const []);
 
         final repository = buildRepository(nostrClient: client);
@@ -1624,6 +1708,7 @@ void main() {
           () => client.queryEvents(
             captureAny(),
             useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
           ),
         ).captured.cast<List<Filter>>();
         expect(capturedFilters, hasLength(1));
@@ -1640,7 +1725,11 @@ void main() {
 
         expect(emissions, isEmpty);
         verifyNever(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         );
       });
 
@@ -1664,7 +1753,11 @@ void main() {
           pubkeys: const [_memberA, _memberB],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [event]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1703,7 +1796,11 @@ void main() {
           pubkeys: const [_memberA],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [empty, full]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1726,7 +1823,11 @@ void main() {
           pubkeys: const [_memberA],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [block]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1753,7 +1854,11 @@ void main() {
           pubkeys: const [_memberB],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [blocked, allowed]);
 
         final repository = buildRepository(
@@ -1794,7 +1899,11 @@ void main() {
             pubkeys: const [_memberA],
           );
           when(
-            () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenAnswer((_) async => [byName, byDescription, nonMatching]);
 
           final repository = buildRepository(nostrClient: client);
@@ -1827,7 +1936,11 @@ void main() {
           pubkeys: const [_memberB],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [fromOwner, fromSecondOwner]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1871,7 +1984,11 @@ void main() {
           createdAt: 1710000500,
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [older, newer]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1914,7 +2031,11 @@ void main() {
                   '00000000000000000000000000000000'
                   '00000000000000000000000000000000';
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [lowerId, higherId]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1950,7 +2071,11 @@ void main() {
           createdAt: 1710000500,
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [newer, older]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1977,7 +2102,11 @@ void main() {
           pubkeys: const [_memberA],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [event]);
 
         final repository = buildRepository(nostrClient: client);
@@ -2396,7 +2525,9 @@ void main() {
 
           await repository.syncFollowedLists(viewerPubkey: viewer);
 
-          verifyNever(() => client.queryEvents(any()));
+          verifyNever(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          );
         });
 
         test('asks for the followed coordinates in one filter', () async {
@@ -2416,7 +2547,12 @@ void main() {
           await repository.syncFollowedLists(viewerPubkey: viewer);
 
           final filter =
-              (verify(() => client.queryEvents(captureAny())).captured.single
+              (verify(
+                        () => client.queryEvents(
+                          captureAny(),
+                          timeout: kPublicPeopleListsRelayReadTimeout,
+                        ),
+                      ).captured.single
                       as List<Filter>)
                   .single;
           expect(filter.kinds, equals([_peopleListKind]));
@@ -2426,7 +2562,9 @@ void main() {
 
         test("takes the owner's newer revision, read-only", () async {
           final client = _MockNostrClient();
-          when(() => client.queryEvents(any())).thenAnswer(
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
             (_) async => [
               peopleEvent(
                 pubkey: _ownerPubkey,
@@ -2463,7 +2601,9 @@ void main() {
         test("ignores another owner's list that shares a followed d tag "
             'and events that do not decode', () async {
           final client = _MockNostrClient();
-          when(() => client.queryEvents(any())).thenAnswer(
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
             (_) async => [
               // `otherOwner` is followed for `friends`, not for `crew`.
               peopleEvent(
@@ -2505,7 +2645,9 @@ void main() {
         test('a follow outlives a wiped cache, and the sync brings its copy '
             'back in place', () async {
           final client = _MockNostrClient();
-          when(() => client.queryEvents(any())).thenAnswer(
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
             (_) async => [
               peopleEvent(
                 pubkey: _ownerPubkey,
@@ -2551,7 +2693,7 @@ void main() {
         test('keeps the stored copies when the relay read fails', () async {
           final client = _MockNostrClient();
           when(
-            () => client.queryEvents(any()),
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
           ).thenThrow(Exception('relay down'));
           final repository = buildRepository(nostrClient: client);
           await repository.followList(
@@ -2574,7 +2716,9 @@ void main() {
         test('does not bring back a list unfollowed during the read', () async {
           final client = _MockNostrClient();
           late PeopleListsRepositoryImpl repository;
-          when(() => client.queryEvents(any())).thenAnswer((_) async {
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((_) async {
             await repository.unfollowList(
               viewerPubkey: viewer,
               ownerPubkey: _ownerPubkey,
