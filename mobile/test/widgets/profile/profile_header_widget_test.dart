@@ -34,6 +34,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
@@ -472,6 +473,8 @@ void main() {
 
       final scoped = ProviderScope(
         overrides: [
+          // Membership has separate account/lifecycle coverage.
+          supporterApiConfiguredProvider.overrideWithValue(false),
           ...getStandardTestOverrides(
             mockNostrService: mockNostrClient,
             mockSharedPreferences: sharedPreferences,
@@ -2950,6 +2953,8 @@ void main() {
               goRouter: mockGoRouter,
               child: ProviderScope(
                 overrides: [
+                  // Membership has separate account/lifecycle coverage.
+                  supporterApiConfiguredProvider.overrideWithValue(false),
                   ...getStandardTestOverrides(
                     mockNostrService: mockNostrClient,
                     mockSharedPreferences: prefs,
@@ -3067,6 +3072,8 @@ void main() {
               goRouter: mockGoRouter,
               child: ProviderScope(
                 overrides: [
+                  // Membership has separate account/lifecycle coverage.
+                  supporterApiConfiguredProvider.overrideWithValue(false),
                   ...getStandardTestOverrides(
                     mockNostrService: mockNostrClient,
                     mockSharedPreferences: prefs,

@@ -3,6 +3,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
+import 'package:openvine/services/supporter_api_client.dart';
 
 enum SupporterStatus {
   idle,
@@ -40,12 +41,17 @@ enum SupporterFailure {
 
 class SupporterState extends Equatable {
   const SupporterState({
+    this.snapshot,
+    this.savingRecognition = false,
     this.tiers = const [],
     this.entitlement = SupporterEntitlement.inactive,
     this.status = SupporterStatus.idle,
     this.failure,
     this.awaitingPurchaseConfirmation = false,
   });
+
+  final SupporterAccountSnapshot? snapshot;
+  final bool savingRecognition;
 
   /// Purchasable supporter tiers loaded from the store.
   final List<SupporterTier> tiers;
@@ -69,6 +75,8 @@ class SupporterState extends Equatable {
   bool get hasTiers => tiers.isNotEmpty;
 
   SupporterState copyWith({
+    SupporterAccountSnapshot? snapshot,
+    bool? savingRecognition,
     List<SupporterTier>? tiers,
     SupporterEntitlement? entitlement,
     SupporterStatus? status,
@@ -77,6 +85,8 @@ class SupporterState extends Equatable {
     bool? awaitingPurchaseConfirmation,
   }) {
     return SupporterState(
+      snapshot: snapshot ?? this.snapshot,
+      savingRecognition: savingRecognition ?? this.savingRecognition,
       awaitingPurchaseConfirmation:
           awaitingPurchaseConfirmation ?? this.awaitingPurchaseConfirmation,
       tiers: tiers ?? this.tiers,
@@ -88,6 +98,8 @@ class SupporterState extends Equatable {
 
   @override
   List<Object?> get props => [
+    snapshot,
+    savingRecognition,
     tiers,
     entitlement,
     status,

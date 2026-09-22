@@ -19068,6 +19068,66 @@ abstract class AppLocalizations {
   /// **'Connection was canceled on {platform}'**
   String crosspostingConnectionDenied(String platform);
 
+  /// No description provided for @supporterMembershipBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.'**
+  String get supporterMembershipBody;
+
+  /// No description provided for @supporterRecognitionDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.'**
+  String get supporterRecognitionDisclaimer;
+
+  /// No description provided for @supporterBadgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Supporter'**
+  String get supporterBadgeLabel;
+
+  /// No description provided for @supporterJoinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Become a supporter'**
+  String get supporterJoinLabel;
+
+  /// No description provided for @supporterPublicRecognition.
+  ///
+  /// In en, this message translates to:
+  /// **'Show my Supporter badge publicly'**
+  String get supporterPublicRecognition;
+
+  /// No description provided for @supporterPublicRecognitionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see that you support Divine. This is optional and is not a verification badge.'**
+  String get supporterPublicRecognitionBody;
+
+  /// No description provided for @supporterVerificationJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Become a supporter to apply for verification'**
+  String get supporterVerificationJoin;
+
+  /// No description provided for @supporterVerificationEligible.
+  ///
+  /// In en, this message translates to:
+  /// **'Your support makes you eligible to apply for verification'**
+  String get supporterVerificationEligible;
+
+  /// No description provided for @supporterVerificationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.'**
+  String get supporterVerificationBody;
+
+  /// No description provided for @supporterExploreVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore verification'**
+  String get supporterExploreVerification;
+
   /// Title of the supporter subscription settings screen and its settings tile.
   ///
   /// In en, this message translates to:
@@ -19089,7 +19149,7 @@ abstract class AppLocalizations {
   /// Introductory copy on the supporter subscription screen explaining the optional monthly support.
   ///
   /// In en, this message translates to:
-  /// **'Divine is free and always will be. If you want to help us keep the loops going, become a monthly supporter. Nothing is locked — it just keeps the lights on and earns our thanks.'**
+  /// **'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.'**
   String get supporterHeroBody;
 
   /// Confirmation shown to users with an active supporter subscription.

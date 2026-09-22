@@ -39,6 +39,49 @@ void main() {
 
   tearDown(() => httpClient.close());
 
+  group('public recognition', () {
+    const pubkey =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    for (final visible in [true, false]) {
+      test('returns $visible without calling the signer', () async {
+        when(() => httpClient.get(any(), headers: any(named: 'headers')))
+            .thenAnswer(
+              (_) async => http.Response(
+                jsonEncode({
+                  'supporters': visible
+                      ? [
+                          {'pubkey': pubkey, 'haloVisible': true},
+                        ]
+                      : [],
+                }),
+                200,
+              ),
+            );
+        expect(await buildClient().fetchPublicRecognition(pubkey), visible);
+        expect(authCalls, isEmpty);
+        final request =
+            verify(
+                  () => httpClient.get(
+                    captureAny(),
+                    headers: any(named: 'headers'),
+                  ),
+                ).captured.single
+                as Uri;
+        expect(request.path, '/v1/public/supporters');
+        expect(request.queryParameters, {'pubkeys': pubkey});
+      });
+    }
+    test(
+      'hides recognition on errors or a response for another account',
+      () async {
+        when(() => httpClient.get(any(), headers: any(named: 'headers')))
+            .thenAnswer((_) async => http.Response('{"supporters":[]}', 503));
+        expect(await buildClient().fetchPublicRecognition(pubkey), isFalse);
+        expect(authCalls, isEmpty);
+      },
+    );
+  });
+
   group('SupporterApiClient methods', () {
     test('does not extend expired billing grace', () {
       final past = DateTime.now().toUtc().subtract(const Duration(days: 1));

@@ -58,6 +58,7 @@ import 'package:openvine/widgets/profile/profile_website_row.dart';
 import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:openvine/widgets/profile_badge_explanation_sheet.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
+import 'package:openvine/widgets/supporter_membership.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';

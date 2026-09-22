@@ -14,6 +14,7 @@ import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
+import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 
 import '../../helpers/l10n.dart';
@@ -23,18 +24,39 @@ class _FakeRepository extends Fake implements SupporterRepository {
   _FakeRepository(
     this._controller, {
     this.initial = SupporterEntitlement.inactive,
+    this.accountSnapshot,
     List<SupporterTier> tiers = const [],
   }) : validator = _EmptyValidator(tiers: tiers);
 
   final StreamController<SupporterEntitlement> _controller;
   final SupporterEntitlement initial;
   Completer<SupporterEntitlement>? purchaseCompleter;
+  SupporterAccountSnapshot? accountSnapshot;
+  bool? savedHalo;
+  @override
+  Future<SupporterAccountSnapshot> updateRecognition({
+    required bool haloVisible,
+    required bool discoveryVisible,
+    required bool foundingHistoryVisible,
+  }) async {
+    savedHalo = haloVisible;
+    return accountSnapshot = SupporterAccountSnapshot(
+      entitlement: initial,
+      status: SupporterServerStatus.active,
+      haloVisible: haloVisible,
+      discoveryVisible: discoveryVisible,
+      foundingHistoryVisible: foundingHistoryVisible,
+    );
+  }
 
   @override
   SupporterEntitlement get current => initial;
 
   @override
   bool get hasServerClient => false;
+
+  @override
+  SupporterAccountSnapshot? get snapshot => accountSnapshot;
 
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
@@ -239,6 +261,76 @@ void main() {
     );
   });
 
+  group('recognition interactions', () {
+    testWidgets('thanks a newly confirmed purchase immediately', (
+      tester,
+    ) async {
+      final controller = StreamController<SupporterEntitlement>.broadcast();
+      addTearDown(controller.close);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            supporterRepositoryProvider.overrideWithValue(
+              _FakeRepository(controller),
+            ),
+          ],
+          child: buildLocalizedWidget(const SupporterScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining("You're a Divine Supporter"), findsNothing);
+      controller.add(
+        const SupporterEntitlement(
+          productId: 'divine.supporter.monthly',
+          source: EntitlementSource.server,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
+      expect(find.text('Explore verification'), findsOneWidget);
+    });
+
+    testWidgets('saves public badge opt-in without changing other consent', (
+      tester,
+    ) async {
+      final controller = StreamController<SupporterEntitlement>.broadcast();
+      addTearDown(controller.close);
+      final repo = _FakeRepository(
+        controller,
+        initial: const SupporterEntitlement(
+          productId: 'divine.supporter.monthly',
+          source: EntitlementSource.server,
+        ),
+        accountSnapshot: const SupporterAccountSnapshot(
+          entitlement: SupporterEntitlement(
+            productId: 'divine.supporter.monthly',
+            source: EntitlementSource.server,
+          ),
+          status: SupporterServerStatus.active,
+          discoveryVisible: true,
+          foundingHistoryVisible: true,
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          child: buildLocalizedWidget(const SupporterScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Show my Supporter badge publicly'));
+      await tester.pumpAndSettle();
+      expect(repo.savedHalo, isTrue);
+      expect(repo.snapshot?.haloVisible, isTrue);
+      expect(repo.snapshot?.discoveryVisible, isTrue);
+      expect(repo.snapshot?.foundingHistoryVisible, isTrue);
+      await tester.tap(find.text('Show my Supporter badge publicly'));
+      await tester.pumpAndSettle();
+      expect(repo.snapshot?.haloVisible, isFalse);
+      expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
+    });
+  });
+
   group('renders', () {
     testWidgets('renders hero copy and restore button when not a supporter', (
       tester,
@@ -257,6 +349,10 @@ void main() {
 
       expect(find.text('Keep Divine running'), findsOneWidget);
       expect(find.text('Restore purchases'), findsOneWidget);
+      expect(
+        find.text('Become a supporter to apply for verification'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows active badge when entitlement is active', (
@@ -282,6 +378,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
+      expect(find.text('Show my Supporter badge publicly'), findsOneWidget);
+      expect(find.text('Explore verification'), findsOneWidget);
     });
 
     testWidgets('shows unavailable note when store has no tiers', (

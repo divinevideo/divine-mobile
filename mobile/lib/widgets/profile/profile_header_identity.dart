@@ -66,6 +66,10 @@ class _ProfileNameAndBio extends StatelessWidget {
             ],
           ),
         ),
+        if (!isVanished && isOwnProfile)
+          const SupporterMembership(compact: true)
+        else if (!isVanished)
+          PublicSupporterBadge(pubkey: userIdHex),
         Skeleton.keep(child: _ProfileBadgesBlock(userIdHex: userIdHex)),
         Padding(
           padding: inset,

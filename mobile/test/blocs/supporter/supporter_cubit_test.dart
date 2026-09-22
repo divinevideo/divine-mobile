@@ -27,6 +27,9 @@ class _FakeRepository extends Fake implements SupporterRepository {
   @override
   bool get hasServerClient => refreshCompleter != null;
 
+  @override
+  SupporterAccountSnapshot? get snapshot => null;
+
   Object? purchaseError;
   Completer<SupporterEntitlement>? purchaseCompleter;
   Completer<SupporterAccountSnapshot>? refreshCompleter;

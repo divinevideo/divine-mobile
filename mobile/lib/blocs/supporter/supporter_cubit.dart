@@ -26,7 +26,12 @@ class SupporterCubit extends Cubit<SupporterState> {
     SupporterAnalyticsSink trackEvent = _noopAnalytics,
   }) : _repository = repository,
        _trackEvent = trackEvent,
-       super(SupporterState(entitlement: repository.current));
+       super(
+         SupporterState(
+           entitlement: repository.current,
+           snapshot: repository.snapshot,
+         ),
+       );
 
   final SupporterRepository _repository;
   final SupporterAnalyticsSink _trackEvent;
@@ -38,7 +43,7 @@ class SupporterCubit extends Cubit<SupporterState> {
   /// Begin listening to the repository's entitlement stream. Call from the
   /// screen's `initState` so external purchase updates (renewals, restores)
   /// reflect in the UI.
-  void start() {
+  void start({bool loadStore = true}) {
     _entitlementSub ??= _repository.changes.listen(
       (entitlement) {
         if (entitlement.isSupporter) _finishPurchaseAnalytics(succeeded: true);
@@ -47,6 +52,7 @@ class SupporterCubit extends Cubit<SupporterState> {
             awaitingPurchaseConfirmation:
                 !entitlement.isSupporter && state.awaitingPurchaseConfirmation,
             entitlement: entitlement,
+            snapshot: _repository.snapshot,
             status: entitlement.isSupporter
                 ? SupporterStatus.active
                 : state.status,
@@ -66,8 +72,33 @@ class SupporterCubit extends Cubit<SupporterState> {
         ),
       ),
     );
-    unawaited(loadTiers());
-    if (_repository.hasServerClient) unawaited(_refreshFromServer());
+    if (loadStore) {
+      unawaited(loadTiers());
+      if (_repository.hasServerClient) unawaited(_refreshFromServer());
+    }
+  }
+
+  /// Saves explicit public recognition consent, preserving other preferences.
+  Future<void> setPublicRecognition(bool visible) async {
+    final snapshot = state.snapshot;
+    if (snapshot == null || state.savingRecognition) return;
+    _emit(state.copyWith(savingRecognition: true, clearFailure: true));
+    try {
+      await _repository.updateRecognition(
+        haloVisible: visible,
+        discoveryVisible: snapshot.discoveryVisible,
+        foundingHistoryVisible: snapshot.foundingHistoryVisible,
+      );
+      _emit(
+        state.copyWith(
+          snapshot: _repository.snapshot,
+          savingRecognition: false,
+        ),
+      );
+    } on SupporterApiException catch (error) {
+      _emitApiFailure(error);
+      _emit(state.copyWith(savingRecognition: false));
+    }
   }
 
   /// Fetch the available supporter tiers from the store.
@@ -272,7 +303,8 @@ class SupporterCubit extends Cubit<SupporterState> {
       if (isClosed || revision != _foregroundOperationRevision) return;
       _emit(
         state.copyWith(
-          entitlement: snapshot.entitlement,
+          entitlement: _repository.current,
+          snapshot: snapshot,
           status: snapshot.entitlement.isSupporter
               ? SupporterStatus.active
               : SupporterStatus.idle,

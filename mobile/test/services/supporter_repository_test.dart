@@ -286,6 +286,233 @@ void main() {
       expect(validator.purchaseCallCount, 1);
     });
 
+    test(
+      'passive refresh finds existing membership once without store restore',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        var calls = 0;
+        final response = Completer<http.Response>();
+        final client = SupporterApiClient(
+          baseUri: Uri.parse('https://supporters.test'),
+          authHeaderProvider:
+              ({required url, required method, payload}) async =>
+                  (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+          httpClient: MockClient((_) {
+            calls++;
+            return response.future;
+          }),
+        );
+        addTearDown(client.dispose);
+        final repo = SupporterRepository(
+          pubkey: pubkeyA,
+          validator: validator,
+          prefs: prefs,
+          apiClient: client,
+        );
+        addTearDown(repo.dispose);
+        final first = repo.refreshIfStale();
+        final second = repo.refreshIfStale();
+        response.complete(
+          http.Response(
+            jsonEncode({
+              'status': 'active',
+              'entitlement': {'source': 'server', 'isActive': true},
+              'recognition': {'haloVisible': true, 'discoveryVisible': true},
+            }),
+            200,
+          ),
+        );
+        await Future.wait([first, second]);
+        await repo.refreshIfStale();
+        expect(calls, 1);
+        expect(repo.isSupporter, isTrue);
+        expect(repo.snapshot?.haloVisible, isTrue);
+        expect(validator.restoreCallCount, 0);
+        await pumpEventQueue();
+        final reloaded = SupporterRepository(
+          pubkey: pubkeyA,
+          validator: validator,
+          prefs: prefs,
+        );
+        final other = SupporterRepository(
+          pubkey: pubkeyB,
+          validator: validator,
+          prefs: prefs,
+        );
+        addTearDown(reloaded.dispose);
+        addTearDown(other.dispose);
+        expect(reloaded.isSupporter, isTrue);
+        expect(reloaded.snapshot?.haloVisible, isTrue);
+        expect(reloaded.snapshot?.discoveryVisible, isTrue);
+        expect(other.isSupporter, isFalse);
+        expect(other.snapshot, isNull);
+      },
+    );
+
+    test('recognition-only updates notify listeners and preserve other preferences', () async {
+      final prefs = await SharedPreferences.getInstance();
+      var visible = false;
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr test-token', pubkey: pubkeyA),
+        httpClient: MockClient((request) async {
+          if (request.method == 'PATCH') {
+            final payload = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(payload['discovery_visible'], isTrue);
+            expect(payload['founding_history_visible'], isTrue);
+            visible = payload['halo_visible'] as bool;
+          }
+          return http.Response(
+            jsonEncode({
+              'status': 'active',
+              'entitlement': {'source': 'server', 'isActive': true},
+              'recognition': {
+                'haloVisible': visible,
+                'discoveryVisible': true,
+                'foundingHistoryVisible': true,
+              },
+            }),
+            200,
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      await repo.refreshFromServer();
+      await pumpEventQueue();
+      final changed = repo.changes.first;
+      await repo.updateRecognition(
+        haloVisible: true,
+        discoveryVisible: true,
+        foundingHistoryVisible: true,
+      );
+      expect(await changed, repo.current);
+      expect(repo.snapshot?.haloVisible, isTrue);
+    });
+
+    test('transient and unknown responses preserve known membership', () async {
+      final prefs = await SharedPreferences.getInstance();
+      var mode = 'active';
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr fixture', pubkey: pubkeyA),
+        httpClient: MockClient(
+          (_) async => mode == 'failure'
+              ? http.Response('{}', 503)
+              : http.Response(
+                  jsonEncode({
+                    'status': mode,
+                    'entitlement': {
+                      'source': 'server',
+                      'isActive': mode == 'active',
+                    },
+                    'recognition': {'haloVisible': false},
+                  }),
+                  200,
+                ),
+        ),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      await repo.refreshFromServer();
+      expect(repo.isSupporter, isTrue);
+      mode = 'failure';
+      await expectLater(
+        repo.refreshFromServer(),
+        throwsA(isA<SupporterApiException>()),
+      );
+      expect(repo.isSupporter, isTrue);
+      mode = 'unknown';
+      await repo.refreshFromServer();
+      expect(repo.isSupporter, isTrue);
+      mode = 'expired';
+      await repo.refreshFromServer();
+      expect(repo.isSupporter, isFalse);
+    });
+
+    for (final mutation in ['recognition', 'claim']) {
+      test(
+        'newer $mutation wins over an older in-flight status refresh',
+        () async {
+          final read = Completer<http.Response>();
+          final readStarted = Completer<void>();
+          Map<String, dynamic> body(bool visible) => {
+            'status': mutation == 'recognition' || visible
+                ? 'active'
+                : 'expired',
+            'entitlement': {
+              'source': 'server',
+              'isActive': mutation == 'recognition' || visible,
+            },
+            'recognition': {'haloVisible': visible},
+          };
+          final client = SupporterApiClient(
+            baseUri: Uri.parse('https://supporters.test'),
+            authHeaderProvider: ({
+              required url,
+              required method,
+              payload,
+            }) async => (authorizationHeader: 'Nostr fixture', pubkey: pubkeyA),
+            httpClient: MockClient((request) async {
+              if (request.method == 'GET') {
+                readStarted.complete();
+                return read.future;
+              }
+              return http.Response(jsonEncode(body(true)), 200);
+            }),
+          );
+          addTearDown(client.dispose);
+          final repo = SupporterRepository(
+            pubkey: pubkeyA,
+            validator: validator,
+            prefs: await SharedPreferences.getInstance(),
+            apiClient: client,
+          );
+          addTearDown(repo.dispose);
+          final refresh = repo.refreshFromServer();
+          await readStarted.future;
+          if (mutation == 'claim') {
+            await repo.claimPurchase(
+              const SupporterPurchaseClaim(
+                store: 'apple',
+                productId: 'divine.supporter.monthly',
+                idempotencyKey: 'synthetic-claim',
+                proof: {},
+              ),
+            );
+          } else {
+            await repo.updateRecognition(
+              haloVisible: true,
+              discoveryVisible: false,
+              foundingHistoryVisible: false,
+            );
+          }
+          expect(repo.isSupporter, isTrue);
+          expect(repo.snapshot?.haloVisible, isTrue);
+          read.complete(http.Response(jsonEncode(body(false)), 200));
+          final result = await refresh;
+          expect(repo.snapshot?.haloVisible, isTrue);
+          expect(result.haloVisible, isTrue);
+          expect(repo.isSupporter, isTrue);
+          expect(result.entitlement.isSupporter, isTrue);
+        },
+      );
+    }
+
     for (final error in <Object>[
       const StoreUnavailableException(),
       const PurchaseFailedException('not_started', 'Store did not start.'),
@@ -547,6 +774,27 @@ void main() {
       addTearDown(repo.dispose);
       expect(repo.hasRecoverableEvidence, isFalse);
     });
+
+    test(
+      'a cached non-member lookup is not evidence of a store purchase',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'divine_supporter_entitlement:$pubkeyA': jsonEncode({
+            ...SupporterEntitlement.inactive.toJson(),
+            'status': 'expired',
+            'recognition': {'haloVisible': false},
+          }),
+        });
+        final repo = SupporterRepository(
+          pubkey: pubkeyA,
+          validator: validator,
+          prefs: await SharedPreferences.getInstance(),
+        );
+        addTearDown(repo.dispose);
+        expect(repo.snapshot?.status, SupporterServerStatus.expired);
+        expect(repo.hasRecoverableEvidence, isFalse);
+      },
+    );
 
     test('reports recoverable evidence from a cached entitlement', () async {
       final cached = SupporterEntitlement(
