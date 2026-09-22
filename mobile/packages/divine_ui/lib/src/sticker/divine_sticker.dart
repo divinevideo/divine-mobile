@@ -15,7 +15,8 @@ import 'package:material_ui/material_ui.dart';
 /// picker and are a separate set. [grandfather] is the only variant still drawn
 /// from them.
 enum DivineStickerName {
-  /// The siren. [hazardSign] is a separate sticker.
+  /// The warning triangle. [policeSiren] and [hazardSign] are separate
+  /// stickers.
   alert('alert'),
 
   art('art'),
@@ -26,7 +27,7 @@ enum DivineStickerName {
   bicep('bicep'),
   binoculars('binoculars'),
 
-  /// The stop hand. [stopSign] is a separate sticker.
+  /// The stop-hand sign. [raisedHand] and [stopSign] are separate stickers.
   blocked('blocked'),
 
   bobRoss('bob_ross'),
@@ -66,6 +67,10 @@ enum DivineStickerName {
   email('email'),
   espressoMartini('espresso_martini'),
   fingerPointing('finger_pointing'),
+
+  /// The pool mattress. Not a variant of [unicornFloat].
+  floatingLilo('floating_lilo'),
+
   foamFinger('foam_finger'),
   forest('forest'),
   forgotPassword('forgot_password'),
@@ -95,6 +100,10 @@ enum DivineStickerName {
   hotAirBalloon('hot_air_balloon'),
   idLicense('id_license'),
   indexFingerPointingUp('index_finger_pointing_up'),
+
+  /// The flamingo pool float. Not a variant of [unicornFloat].
+  inflatableFlamingo('inflatable_flamingo'),
+
   knightInArmor('knight_in_armor'),
   lavaLamp('lava_lamp'),
   lipPiercing('lip_piercing'),
@@ -121,6 +130,10 @@ enum DivineStickerName {
   pizzaSlice('pizza_slice'),
   polaroid('polaroid'),
   polaroidCamera('polaroid_camera'),
+
+  /// The red siren. Not a variant of [alert].
+  policeSiren('police_siren'),
+
   poopEmoji('poop_emoji'),
   profile('profile'),
   programmer('programmer'),
@@ -128,6 +141,10 @@ enum DivineStickerName {
   purpleDiamond('purple_diamond'),
   radar('radar'),
   rainforest('rainforest'),
+
+  /// The open palm. Not a variant of [blocked].
+  raisedHand('raised_hand'),
+
   rollerSkates('roller_skates'),
   rotaryPhone('rotary_phone'),
   samoyedDog('samoyed_dog'),
