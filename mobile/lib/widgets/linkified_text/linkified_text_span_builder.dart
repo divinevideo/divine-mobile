@@ -59,6 +59,17 @@ class LinkifiedTextSpanBuilder {
 
   static const _trailingUrlPunctuation = '.!,?:;';
 
+  /// Length of a fixed-payload bech32 reference (`npub` / `note`), which is
+  /// always `hrp` + 58 data characters.
+  static const _fixedBech32Length = 63;
+
+  /// Upper bound on how many trailing characters are trimmed when repairing a
+  /// variable-length TLV reference (`nprofile` / `nevent` / `naddr`).
+  static const _maxTlvTrim = 4;
+
+  /// Floor for a TLV candidate, so a short invalid token is not scanned down.
+  static const _minTlvLength = 20;
+
   /// Text to split into plain and tappable spans.
   final String text;
 
@@ -153,7 +164,13 @@ class LinkifiedTextSpanBuilder {
       } else if (hashtag != null) {
         spans.add(_buildHashtagSpan(hashtag));
       } else if (nostrId != null) {
-        spans.add(_buildNostrReferenceSpan(nostrId));
+        final (reference, trailing) = _splitDecodableNostrReference(nostrId);
+        spans.add(_buildNostrReferenceSpan(reference));
+        if (trailing.isNotEmpty) {
+          final trailingSpans = _plainSpans(trailing, heartBudget);
+          heartBudget -= trailingSpans.whereType<WidgetSpan>().length;
+          spans.addAll(trailingSpans);
+        }
       } else if (hexReference != null) {
         spans.add(_buildHexReferenceSpan(hexReference, match.start));
       } else if (plainMention != null) {
@@ -238,6 +255,81 @@ class LinkifiedTextSpanBuilder {
     }
 
     return TextSpan(text: nostrId, style: style);
+  }
+
+  /// Splits a matched bech32 token into a decodable reference plus any
+  /// trailing characters the greedy `[a-z0-9]+` alternative swallowed with it.
+  ///
+  /// The alternative has no way to know where a bech32 payload ends, so a
+  /// reference followed immediately by another alphanumeric character — a
+  /// stray character in a caption, or a word like `nostr:<npub>and` — arrives
+  /// as one over-long token that fails its checksum and renders as dead text.
+  /// Bech32's checksum makes cutting back to the real boundary safe: a
+  /// shortened candidate only decodes when it is the genuine reference.
+  (String, String) _splitDecodableNostrReference(String token) {
+    if (_isDecodableNostrReference(token)) return (token, '');
+
+    final lower = token.toLowerCase();
+
+    // `npub` and `note` payloads are always 63 characters, so an overrun can
+    // only be repaired by cutting back to exactly that length.
+    if (lower.startsWith('npub1') || lower.startsWith('note1')) {
+      if (token.length > _fixedBech32Length) {
+        final candidate = token.substring(0, _fixedBech32Length);
+        if (_isDecodableNostrReference(candidate)) {
+          return (candidate, token.substring(_fixedBech32Length));
+        }
+      }
+      return (token, '');
+    }
+
+    // TLV encodings (`nprofile` / `nevent` / `naddr`) vary in length, so trim a
+    // bounded number of trailing characters.
+    if (lower.startsWith('nprofile1') ||
+        lower.startsWith('nevent1') ||
+        lower.startsWith('naddr1')) {
+      for (var trimmed = 1; trimmed <= _maxTlvTrim; trimmed++) {
+        final end = token.length - trimmed;
+        if (end < _minTlvLength) break;
+        final candidate = token.substring(0, end);
+        if (_isDecodableNostrReference(candidate)) {
+          return (candidate, token.substring(end));
+        }
+      }
+    }
+
+    return (token, '');
+  }
+
+  bool _isDecodableNostrReference(String reference) {
+    final lower = reference.toLowerCase();
+
+    if (lower.startsWith('npub1')) {
+      final hexPubkey = npubToHexOrNull(reference);
+      return hexPubkey != null && hexPubkey.length == 64;
+    }
+
+    if (lower.startsWith('nprofile1')) {
+      final decoded = NIP19Tlv.decodeNprofile(reference);
+      final pubkey = decoded?.pubkey;
+      return pubkey != null && pubkey.length == 64;
+    }
+
+    if (lower.startsWith('note1')) {
+      return Nip19.decode(reference).length == 64;
+    }
+
+    if (lower.startsWith('nevent1')) {
+      final decoded = NIP19Tlv.decodeNevent(reference);
+      final id = decoded?.id;
+      return id != null && id.isNotEmpty;
+    }
+
+    if (lower.startsWith('naddr1')) {
+      return NIP19Tlv.decodeNaddr(reference) != null;
+    }
+
+    return false;
   }
 
   TextSpan _buildHexReferenceSpan(String hexReference, int start) {

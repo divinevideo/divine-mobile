@@ -252,6 +252,89 @@ void main() {
       expect(tapped, equals([malformedNote, malformedNevent]));
     });
 
+    // The bech32 alternative is `[a-z0-9]+` with no way to know where the
+    // payload ends, so a reference immediately followed by another
+    // alphanumeric character — a stray character an importer left behind, or a
+    // word like `nostr:<npub>and` — arrives as one over-long token that fails
+    // its checksum and rendered as dead text.
+    group('bech32 references run together with trailing characters', () {
+      const profileHex =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      final npub = NostrKeyUtils.encodePubKey(profileHex);
+
+      test('links an npub a trailing character ran into', () {
+        String? tappedProfile;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'nostr:${npub}s',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          profileLabelForHex: (_) => 'casey',
+          onProfileTap: (hexPubkey) => tappedProfile = hexPubkey,
+        ).build();
+
+        expect(spans.map((span) => span.text).join(), equals('@caseys'));
+
+        final profileSpan = spans.tappableSpans.single;
+        expect(profileSpan.text, equals('@casey'));
+        profileSpan.tap();
+        expect(tappedProfile, equals(profileHex));
+      });
+
+      test('links an npub followed by a word and keeps the word', () {
+        String? tappedProfile;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'nostr:${npub}and more',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          mentionStyle: mentionStyle,
+          profileLabelForHex: (_) => 'casey',
+          onProfileTap: (hexPubkey) => tappedProfile = hexPubkey,
+        ).build();
+
+        expect(spans.map((span) => span.text).join(), equals('@caseyand more'));
+        expect(spans.tappableSpans.single.text, equals('@casey'));
+        spans.tappableSpans.single.tap();
+        expect(tappedProfile, equals(profileHex));
+      });
+
+      test('links a note id a trailing character ran into', () {
+        const eventId =
+            '4444444444444444444444444444444444444444444444444444444444444444';
+        final note = Nip19.encodeNoteId(eventId);
+        String? tappedVideo;
+
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'watch nostr:${note}x',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+          videoLabel: 'View video',
+          onVideoTap: (routeReference) => tappedVideo = routeReference,
+        ).build();
+
+        expect(
+          spans.map((span) => span.text).join(),
+          equals('watch View videox'),
+        );
+
+        final videoSpan = spans.tappableSpans.single;
+        videoSpan.tap();
+        expect(tappedVideo, equals(eventId));
+      });
+
+      test('still leaves an over-long invalid npub plain', () {
+        final spans = LinkifiedTextSpanBuilder(
+          text: 'nostr:${npub.substring(0, 60)}zzzzs',
+          defaultStyle: defaultStyle,
+          linkStyle: linkStyle,
+        ).build();
+
+        expect(spans.tappableSpans, isEmpty);
+      });
+    });
+
     test('routes profile-like hex references to profile taps', () {
       const profileHex =
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
