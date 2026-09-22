@@ -10813,6 +10813,60 @@ class AppLocalizationsRo extends AppLocalizations {
       'Bună ziua, echipă de asistență Divine,\n\nvă scriu despre Divine Greenlight pentru un adolescent între 13 și 15 ani.\n\nAm atașat un scurt videoclip privat care arată:\n- adolescentul\n- un părinte sau tutore vorbind în fața camerei\n- că adolescentul are permisiunea de a folosi Divine\n- că părintele sau tutorele știe de cont și îi va supraveghea folosirea\n\nȚara/țările de reședință:\n\nContext util:\n\nMulțumesc.';
 
   @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
   String get minorAccountReviewParentSupportInstructions =>
       'Instrucțiuni de asistență pentru părinți';
 
