@@ -500,16 +500,38 @@ print(int((now - created).total_seconds() // 86400), sys.argv[2])
 ' "$created" "$tags" 2>/dev/null || return 1
 }
 
+# Image overrides for the Funnelcake services that the staleness check covers.
+_FUNNELCAKE_IMAGE_OVERRIDE_VARS=(
+    FUNNELCAKE_MIGRATE_IMAGE
+    FUNNELCAKE_RELAY_IMAGE
+    FUNNELCAKE_API_IMAGE
+)
+
+# Image overrides that select one of the local stack's buildable services.
+_STACK_IMAGE_OVERRIDE_VARS=(
+    "${_FUNNELCAKE_IMAGE_OVERRIDE_VARS[@]}"
+    KEYCAST_IMAGE
+)
+
+# Returns success only for an unqualified local-builder reference. The stack's
+# local builders produce references such as keycast:262-local; a slash makes
+# the reference registry-backed, including Docker Hub namespace references.
+_stack_image_reference_is_local() {
+    local reference="$1"
+    [[ "$reference" != */* ]] && return 0
+    return 1
+}
+
 # preflight_image_staleness <script_dir>
 # Warns when the default funnelcake images are stale. Always returns 0.
 preflight_image_staleness() {
     local script_dir="$1"
-    local package age_and_tags age tags stale=""
+    local package age_and_tags age tags stale="" var
 
     # An explicit image override means the developer already knows.
-    if [[ -n "${FUNNELCAKE_RELAY_IMAGE:-}${FUNNELCAKE_API_IMAGE:-}${FUNNELCAKE_MIGRATE_IMAGE:-}" ]]; then
-        return 0
-    fi
+    for var in "${_FUNNELCAKE_IMAGE_OVERRIDE_VARS[@]}"; do
+        [[ -z "${!var:-}" ]] || return 0
+    done
 
     for package in funnelcake-migrate funnelcake-relay funnelcake-api; do
         age_and_tags="$(_stack_ghcr_image_age "$package")" || continue
@@ -541,4 +563,54 @@ preflight_image_staleness() {
         echo ""
     } >&2
     return 0
+}
+
+# Fails when an image override in .env names a locally-built tag that no longer
+# exists. `build_funnelcake.sh` prints FUNNELCAKE_*_IMAGE=...:local lines to add
+# to .env, and they persist there; once the matching image is pruned, compose
+# aborts partway through startup with a bare
+# `No such image: funnelcake-migrate:local`, which names neither the override
+# nor the script that rebuilds it.
+preflight_pinned_images() {
+    local script_dir="$1"
+    local var value missing="" missing_funnelcake="" missing_keycast=""
+
+    for var in "${_STACK_IMAGE_OVERRIDE_VARS[@]}"; do
+        value="${!var:-}"
+        [[ -n "$value" ]] || continue
+        # Registry references are the daemon's job to fetch, and failing here
+        # would break an offline-capable pull that compose could otherwise
+        # satisfy from its own cache.
+        _stack_image_reference_is_local "$value" || continue
+        if ! docker image inspect "$value" >/dev/null 2>&1; then
+            missing="${missing}  ${var}=${value}
+"
+            if [[ "$var" == KEYCAST_IMAGE ]]; then
+                missing_keycast=1
+            else
+                missing_funnelcake=1
+            fi
+        fi
+    done
+
+    [[ -n "$missing" ]] || return 0
+
+    {
+        echo ""
+        echo "ERROR: ${script_dir}/.env pins locally-built image(s) that do not exist:"
+        echo ""
+        printf '%s' "$missing"
+        echo ""
+        echo "Rebuild them, or drop the override lines from ${script_dir}/.env to fall"
+        echo "back to the published images:"
+        echo ""
+        if [[ -n "$missing_funnelcake" ]]; then
+            echo "    bash ${script_dir}/build_funnelcake.sh"
+        fi
+        if [[ -n "$missing_keycast" ]]; then
+            echo "    Rebuild the Keycast image from its checkout with the tag above."
+        fi
+        echo ""
+    } >&2
+    return 1
 }
