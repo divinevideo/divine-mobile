@@ -61,8 +61,16 @@ void main() {
       ).thenAnswer((_) async => null);
     });
 
-    Widget buildSubject({MockGoRouter? goRouter, ScrollPhysics? physics}) {
-      const grid = ProfileSavedGrid(userIdHex: 'test-user');
+    /// [physics] is the ambient platform behaviour; [gridPhysics] is what the
+    /// host hands the grid, and defaults to the grid's own default.
+    Widget buildSubject({
+      MockGoRouter? goRouter,
+      ScrollPhysics? physics,
+      ScrollPhysics? gridPhysics,
+    }) {
+      final grid = gridPhysics == null
+          ? const ProfileSavedGrid(userIdHex: 'test-user')
+          : ProfileSavedGrid(userIdHex: 'test-user', physics: gridPhysics);
       final app = testProviderScope(
         additionalOverrides: [],
         child: MaterialApp(
@@ -258,12 +266,13 @@ void main() {
       // `debugDefaultTargetPlatformOverride` version of this test passes alone
       // and fails in a suite (#7623, #7639).
       //
-      // `ProfileTabErrorState` opts into AlwaysScrollableScrollPhysics, so the
-      // drag is accepted even though the content fits, and `maxScrollExtent`
-      // is 0 — which makes the mixin's near-bottom test
-      // (`pixels >= maxScrollExtent - threshold`) trivially true. What decides
-      // it is whether the drag moves `pixels` at all: bouncing overscroll
-      // notifies, clamping pins the position at the boundary and never does.
+      // A host with its own pull-to-refresh hands the grid
+      // AlwaysScrollableScrollPhysics, so the drag is accepted even though the
+      // content fits, and `maxScrollExtent` is 0 — which makes the mixin's
+      // near-bottom test (`pixels >= maxScrollExtent - threshold`) trivially
+      // true. What decides it is whether the drag moves `pixels` at all:
+      // bouncing overscroll notifies, clamping pins the position at the
+      // boundary and never does.
       testWidgets(
         'bouncing overscroll of the unresolved state requests the next page',
         (tester) async {
@@ -276,7 +285,10 @@ void main() {
           );
 
           await tester.pumpWidget(
-            buildSubject(physics: const BouncingScrollPhysics()),
+            buildSubject(
+              physics: const BouncingScrollPhysics(),
+              gridPhysics: const AlwaysScrollableScrollPhysics(),
+            ),
           );
           final l10n = lookupAppLocalizations(const Locale('en'));
           expect(find.text(l10n.profileErrorLoadingSaved), findsOneWidget);
@@ -305,7 +317,42 @@ void main() {
           );
 
           await tester.pumpWidget(
-            buildSubject(physics: const ClampingScrollPhysics()),
+            buildSubject(
+              physics: const ClampingScrollPhysics(),
+              gridPhysics: const AlwaysScrollableScrollPhysics(),
+            ),
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.profileErrorLoadingSaved), findsOneWidget);
+
+          await tester.drag(
+            find.byType(CustomScrollView),
+            const Offset(0, 400),
+          );
+          await tester.pumpAndSettle();
+
+          verifyNever(
+            () => mockBloc.add(const ProfileSavedVideosLoadMoreRequested()),
+          );
+        },
+      );
+
+      // The profile tab: the enclosing NestedScrollView owns the overscroll,
+      // so the grid must not start one of its own even where the platform
+      // bounces. Every sibling tab clamps for the same reason.
+      testWidgets(
+        'does not overscroll by default, even on a bouncing platform',
+        (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            ProfileSavedVideosState(
+              status: ProfileSavedVideosStatus.success,
+              savedEventIds: List.generate(40, (i) => 'saved-$i'),
+              nextPageOffset: 36,
+            ),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(physics: const BouncingScrollPhysics()),
           );
           final l10n = lookupAppLocalizations(const Locale('en'));
           expect(find.text(l10n.profileErrorLoadingSaved), findsOneWidget);

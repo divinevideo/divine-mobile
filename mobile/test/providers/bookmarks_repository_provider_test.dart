@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // ABOUTME: Pins bookmarksRepositoryProvider to one BookmarksRepository per
 // ABOUTME: container, and pins that an identity change still rebuilds it.
 
@@ -99,6 +101,35 @@ void main() {
               "A repository bound to the previous identity's client must not "
               'survive the swap — keeping it alive would serve the previous '
               "account's bookmarks.",
+        );
+      });
+
+      test("closes the previous instance's change stream", () async {
+        final nostrService = _SwappableNostrService(nostrClient);
+        final container = containerWith(nostrService);
+
+        final before = container.read(bookmarksRepositoryProvider);
+        final closed = Completer<void>();
+        final subscription = before.watchGlobalBookmarks().listen(
+          (_) {},
+          onDone: closed.complete,
+        );
+        addTearDown(subscription.cancel);
+
+        nostrService.replaceWith(_MockNostrClient());
+        await container.pump();
+        // The element is only rebuilt — and the old one disposed — on the
+        // next read.
+        container.read(bookmarksRepositoryProvider);
+
+        // A grid still subscribed to the previous account's repository is
+        // released instead of being left listening to it.
+        await closed.future.timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => fail(
+            'The previous repository change stream did not close after '
+            'identity replacement.',
+          ),
         );
       });
     });

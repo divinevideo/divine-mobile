@@ -879,7 +879,7 @@ final class BookmarksRepositoryProvider
 }
 
 String _$bookmarksRepositoryHash() =>
-    r'3527ae51b53e15eb6b600f7efbd3fa944fce0f19';
+    r'ac8d517214891bb5075222d2d948a0bef524c12b';
 
 /// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).
 ///

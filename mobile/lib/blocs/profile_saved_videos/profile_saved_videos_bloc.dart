@@ -30,8 +30,8 @@ part 'profile_saved_videos_state.dart';
 /// - [VideosRepository]: Fetches video data with cache-first lookups via
 ///   SQLite local storage. Automatically checks cache before relay queries.
 ///
-/// Bookmarks are a private user artifact, so this BLoC is only wired for the
-/// current user's own profile.
+/// Bookmarks are the current viewer's own list, so this BLoC is only wired for
+/// the current user's own profile.
 class ProfileSavedVideosBloc
     extends Bloc<ProfileSavedVideosEvent, ProfileSavedVideosState> {
   ProfileSavedVideosBloc({
@@ -45,21 +45,21 @@ class ProfileSavedVideosBloc
        _currentUserPubkey = currentUserPubkey,
        _deletedVideoFilter = deletedVideoFilter,
        super(const ProfileSavedVideosState()) {
-    on<ProfileSavedVideosSyncRequested>(
-      _onSyncRequested,
-      // Sequential, not droppable: a dropped event never reaches the handler,
-      // so nothing would complete its completer and pull-to-refresh would spin
-      // forever. Rapid syncs queue instead of coalescing.
-      transformer: sequential(),
-    );
-    on<ProfileSavedVideosLoadMoreRequested>(_onLoadMoreRequested);
-    on<ProfileSavedVideosVideoRemoved>(
-      _onVideoRemoved,
-      transformer: sequential(),
-    );
+    // One queue owns all grid and snapshot mutations. Separate per-event
+    // queues let a slow sync overwrite a newer bookmark notification.
+    // Queue rather than drop syncs so every refresh completer is released.
+    on<ProfileSavedVideosEvent>(_onEvent, transformer: sequential());
     _removedVideoIdsSubscription = removedVideoIds.listen((videoId) {
       if (isClosed) return;
       add(ProfileSavedVideosVideoRemoved(videoId));
+    });
+    // The share sheet saves through the same repository instance, so this is
+    // how a grid that is already mounted learns about it.
+    _bookmarksSubscription = bookmarksRepository.watchGlobalBookmarks().listen((
+      items,
+    ) {
+      if (isClosed) return;
+      add(ProfileSavedVideosReconcileRequested(_savedVideoIds(items)));
     });
   }
 
@@ -67,11 +67,64 @@ class ProfileSavedVideosBloc
   final VideosRepository _videosRepository;
   final String _currentUserPubkey;
   late final StreamSubscription<String> _removedVideoIdsSubscription;
+  late final StreamSubscription<List<BookmarkItem>> _bookmarksSubscription;
   final bool Function(VideoEvent video) _deletedVideoFilter;
+  bool _loadMorePending = false;
 
-  /// Cache key for the saved-videos snapshot (bookmarks are private, so the
-  /// key is scoped to the signed-in user for sign-out invalidation).
-  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos';
+  @override
+  void add(ProfileSavedVideosEvent event) {
+    if (event is! ProfileSavedVideosLoadMoreRequested || isClosed) {
+      super.add(event);
+      return;
+    }
+    // Coalesce scroll ticks at admission, including while another mutation
+    // owns the queue. A handler-only guard runs too late for queued requests.
+    if (_loadMorePending) return;
+    _loadMorePending = true;
+    try {
+      super.add(event);
+    } on Object {
+      _loadMorePending = false;
+      rethrow;
+    }
+  }
+
+  /// Cache key for the saved-videos snapshot. The key is scoped to the signed-
+  /// in user because this is the viewer's own list and must be cleared on
+  /// sign-out.
+  ///
+  /// `_v2` because the snapshot now reverses the repository order. Reusing
+  /// the previous order would widen reconciliation to the entire list when
+  /// the old top ID moves to the far end. Starting cold loads one page.
+  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v2';
+
+  /// Video bookmarks in reverse repository order: private entries first,
+  /// then public entries, with each group reversed. The source contains no
+  /// per-bookmark timestamps for a chronological merge across the groups.
+  static List<String> _savedVideoIds(List<BookmarkItem> items) => [
+    for (final item in items.reversed)
+      if (item.type == 'e') item.id,
+  ];
+
+  Future<void> _onEvent(
+    ProfileSavedVideosEvent event,
+    Emitter<ProfileSavedVideosState> emit,
+  ) async {
+    switch (event) {
+      case ProfileSavedVideosSyncRequested():
+        await _onSyncRequested(event, emit);
+      case ProfileSavedVideosLoadMoreRequested():
+        try {
+          await _onLoadMoreRequested(event, emit);
+        } finally {
+          _loadMorePending = false;
+        }
+      case ProfileSavedVideosReconcileRequested():
+        await _onReconcileRequested(event, emit);
+      case ProfileSavedVideosVideoRemoved():
+        await _onVideoRemoved(event, emit);
+    }
+  }
 
   /// Handle sync request using stale-while-revalidate backed by [CacheSync].
   ///
@@ -165,10 +218,7 @@ class ProfileSavedVideosBloc
   /// as fatal, because republishing an unreconciled list destroys bookmarks.)
   Future<List<String>> _resolveSavedIds() async {
     await _bookmarksRepository.syncGlobalBookmarks();
-    return _bookmarksRepository.globalBookmarks
-        .where((item) => item.type == 'e')
-        .map((item) => item.id)
-        .toList();
+    return _savedVideoIds(_bookmarksRepository.globalBookmarks);
   }
 
   /// Cold path: nothing cached. Fetch the first page for [savedEventIds].
@@ -257,6 +307,52 @@ class ProfileSavedVideosBloc
         hasMoreContent: reconciled.hasMoreContent,
       ),
     );
+  }
+
+  /// Lands a bookmark change made while the grid is already showing — a save
+  /// or an unsave from the share sheet — without waiting for the next sync.
+  Future<void> _onReconcileRequested(
+    ProfileSavedVideosReconcileRequested event,
+    Emitter<ProfileSavedVideosState> emit,
+  ) async {
+    // Ignore the initial subscription replay before the first sync request.
+    // Notifications received during a sync wait in the shared event queue.
+    if (state.status == ProfileSavedVideosStatus.initial) {
+      return;
+    }
+    final freshIds = event.savedEventIds;
+    if (listEquals(freshIds, state.savedEventIds)) return;
+
+    try {
+      final reconciled = await _reconcile(freshIds);
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          status: ProfileSavedVideosStatus.success,
+          videos: reconciled.videos,
+          savedEventIds: freshIds,
+          nextPageOffset: reconciled.nextPageOffset,
+          hasMoreContent: reconciled.hasMoreContent,
+          lastFetchResolvedVideoCount: reconciled.resolvedVideoCount,
+          clearError: true,
+        ),
+      );
+      await _persistSnapshot(
+        ProfileVideoListSnapshot(
+          videos: reconciled.videos,
+          itemIds: freshIds,
+          nextPageOffset: reconciled.nextPageOffset,
+          hasMoreContent: reconciled.hasMoreContent,
+        ),
+      );
+    } catch (e, stackTrace) {
+      Log.error(
+        'ProfileSavedVideosBloc: Failed to reconcile saved videos - $e',
+        name: 'ProfileSavedVideosBloc',
+        category: LogCategory.video,
+      );
+      addError(e, stackTrace);
+    }
   }
 
   /// Reconciles displayed videos against a fresh [freshIds] list: keeps saved
@@ -577,7 +673,9 @@ class ProfileSavedVideosBloc
   @override
   Future<void> close() async {
     final removedVideoIdsCancelled = _removedVideoIdsSubscription.cancel();
+    final bookmarksCancelled = _bookmarksSubscription.cancel();
     await super.close();
     await removedVideoIdsCancelled;
+    await bookmarksCancelled;
   }
 }

@@ -12,8 +12,9 @@ import 'package:openvine/widgets/profile/profile_cache_load_indicator.dart';
 /// from being announced as the accessible name (#6951).
 typedef ProfileTab = ({String semanticId, String label, DivineIconName icon});
 
-/// Sticky tab bar rendering the profile's [tabs] (5 on other profiles, 6 on
-/// the own profile, which also shows Lists). See `profileTabKinds`.
+/// Sticky tab bar rendering the profile's [tabs] (5 on other profiles, 7 on
+/// the own profile, which also shows Bookmarks and Lists). See
+/// `profileTabKinds`.
 class ProfileTabBar extends StatefulWidget {
   const ProfileTabBar({
     required this.controller,
@@ -112,6 +113,12 @@ class _ProfileTabBarState extends State<ProfileTabBar> {
 
   @override
   Widget build(BuildContext context) {
+    // This sliver is full-bleed in the NestedScrollView. MediaQuery changes
+    // when the viewport is resized or rotated, while the sliver's scroll
+    // constraints also change on every header scroll frame.
+    final scrollable =
+        MediaQuery.sizeOf(context).width <
+        widget.tabs.length * kMinInteractiveDimension;
     return SliverPersistentHeader(
       pinned: true,
       delegate: _SliverAppBarDelegate(
@@ -119,28 +126,27 @@ class _ProfileTabBarState extends State<ProfileTabBar> {
         isRefreshing: widget.isRefreshing,
         TabBar(
           controller: widget.controller,
+          isScrollable: scrollable,
+          tabAlignment: scrollable ? TabAlignment.start : TabAlignment.fill,
           indicatorColor: VineTheme.tabIndicatorGreen,
           indicatorWeight: 4,
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: VineTheme.transparent,
-          // Material's default 16 leaves each icon only `width / tabs - 32`
-          // to grow into. On the own profile (6 tabs) that is 28dp at 360dp
-          // wide — exactly the unscaled size, so the icons never actually
-          // scale. 8 fits the 1.3x cap down to a 320dp screen.
-          //
-          // Tabs are equal-width and the icon is centred, so neither icon
-          // position nor indicator extent moves. Icon *size* at 1.0x is
-          // unchanged from 360dp up, but below that the default padding was
-          // already squashing the glyph — 21.3dp at 320dp — and it now
-          // renders at its nominal 28dp.
-          labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+          // Scroll only when equal-width targets would be smaller than 48dp.
+          // Elsewhere, 4dp padding leaves room for scaled icons in seven tabs.
+          labelPadding: scrollable
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 4),
           tabs: [
             for (var i = 0; i < widget.tabs.length; i++)
-              _ProfileTab(
-                semanticId: widget.tabs[i].semanticId,
-                label: widget.tabs[i].label,
-                icon: widget.tabs[i].icon,
-                isSelected: widget.controller.index == i,
+              SizedBox(
+                width: scrollable ? kMinInteractiveDimension : null,
+                child: _ProfileTab(
+                  semanticId: widget.tabs[i].semanticId,
+                  label: widget.tabs[i].label,
+                  icon: widget.tabs[i].icon,
+                  isSelected: widget.controller.index == i,
+                ),
               ),
           ],
         ),
@@ -169,7 +175,7 @@ class _ProfileTab extends StatelessWidget {
       icon: Semantics(
         // The tab renders no visible text, so this label is the only
         // accessible name. Material merges it with its own "Tab N of M",
-        // giving "Tab 3 of 6, Liked".
+        // giving "Tab 3 of 7, Liked".
         identifier: semanticId,
         label: label,
         child: DivineIcon(

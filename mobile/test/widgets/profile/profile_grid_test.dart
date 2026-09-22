@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/profile/profile_grid.dart';
+import 'package:openvine/widgets/profile/profile_saved_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_kind.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:reposts_repository/reposts_repository.dart';
@@ -37,6 +39,8 @@ class _MockRepostsRepository extends Mock implements RepostsRepository {}
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
+
+class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {
@@ -214,6 +218,7 @@ void main() {
       bool isLoadingVideos = false,
       MockAuthService? mockAuthService,
       CuratedListService? curatedListService,
+      BookmarksRepository? bookmarksRepository,
       Locale? locale,
     }) {
       final grid = MultiBlocProvider(
@@ -265,6 +270,8 @@ void main() {
             curatedListsStateProvider.overrideWith(
               () => _FakeCuratedListsState(curatedListService),
             ),
+          if (bookmarksRepository != null)
+            bookmarksRepositoryProvider.overrideWithValue(bookmarksRepository),
         ],
       );
     }
@@ -643,6 +650,207 @@ void main() {
       verify(
         () => profileFeedCubit.add(const ProfileFeedRefreshRequested()),
       ).called(1);
+    });
+
+    // Bookmarks tab. Flat rather than a nested group on purpose: nesting
+    // would turn this file's own setUp into one these tests inherit from a
+    // distance (#8399). Each test calls [stubBookmarks] itself instead, so the
+    // stubs it depends on are visible where it runs.
+    late _MockBookmarksRepository bookmarksRepository;
+    late StreamController<List<BookmarkItem>> bookmarkChanges;
+
+    /// What the repository currently holds, oldest-first as NIP-51 keeps it.
+    late List<BookmarkItem> heldBookmarks;
+
+    VideoEvent savedVideo(String id) => VideoEvent(
+      id: id,
+      pubkey: '0' * 64,
+      createdAt: DateTime(2024).millisecondsSinceEpoch ~/ 1000,
+      content: '',
+      timestamp: DateTime(2024),
+      title: 'Saved $id',
+      videoUrl: 'https://example.com/$id.mp4',
+    );
+
+    void stubBookmarks({List<BookmarkItem> held = const []}) {
+      bookmarksRepository = _MockBookmarksRepository();
+      bookmarkChanges = StreamController<List<BookmarkItem>>.broadcast();
+      addTearDown(bookmarkChanges.close);
+      heldBookmarks = held;
+      when(
+        bookmarksRepository.watchGlobalBookmarks,
+      ).thenAnswer((_) => bookmarkChanges.stream);
+      when(
+        bookmarksRepository.syncGlobalBookmarks,
+      ).thenAnswer((_) async => true);
+      when(
+        () => bookmarksRepository.globalBookmarks,
+      ).thenAnswer((_) => heldBookmarks);
+      when(
+        () => videosRepository.getVideosByIds(
+          any(),
+          cacheResults: any(named: 'cacheResults'),
+        ),
+      ).thenAnswer(
+        (invocation) async =>
+            (invocation.positionalArguments.first as List<String>)
+                .map(savedVideo)
+                .toList(),
+      );
+    }
+
+    Future<void> openBookmarksTab(WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: true,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.profileBookmarksTab),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Bookmarks tab renders the saved grid with its empty state', (
+      tester,
+    ) async {
+      stubBookmarks();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await openBookmarksTab(tester);
+
+      expect(find.byType(ProfileSavedGrid), findsOneWidget);
+      // The same empty state the standalone saved-videos screen shows.
+      expect(find.text(l10n.profileNoSavedVideosTitle), findsOneWidget);
+      expect(find.text(l10n.profileSavedOwnEmpty), findsOneWidget);
+    });
+
+    testWidgets('Bookmarks tab announces a localized name, not its anchor', (
+      tester,
+    ) async {
+      stubBookmarks();
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: true,
+          bookmarksRepository: bookmarksRepository,
+          locale: const Locale('de'),
+        ),
+      );
+      await tester.pump();
+
+      final label = tester
+          .getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.profileBookmarksTab),
+          )
+          .getSemanticsData()
+          .label;
+      final de = lookupAppLocalizations(const Locale('de'));
+      expect(label, contains(de.shareMenuBookmarks));
+      expect(label, isNot(contains(SemanticIds.profileBookmarksTab)));
+
+      handle.dispose();
+    });
+
+    testWidgets('Bookmarks tab does not read bookmarks until it is viewed', (
+      tester,
+    ) async {
+      stubBookmarks();
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: true,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      verifyNever(bookmarksRepository.syncGlobalBookmarks);
+
+      await tester.tap(
+        find.bySemanticsIdentifier(SemanticIds.profileBookmarksTab),
+      );
+      await tester.pumpAndSettle();
+
+      verify(bookmarksRepository.syncGlobalBookmarks).called(1);
+    });
+
+    testWidgets('Bookmarks tab shows a save made while it is already open', (
+      tester,
+    ) async {
+      stubBookmarks(
+        held: const [BookmarkItem(type: 'e', id: 'video-1')],
+      );
+      await openBookmarksTab(tester);
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.savedVideoThumbnail(0)),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.savedVideoThumbnail(1)),
+        findsNothing,
+      );
+
+      // The share sheet publishes through the same repository, which
+      // announces the new list; nothing here asks for a refresh.
+      bookmarkChanges.add(const [
+        BookmarkItem(type: 'e', id: 'video-1'),
+        BookmarkItem(type: 'e', id: 'video-2'),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.savedVideoThumbnail(1)),
+        findsOneWidget,
+      );
+      verify(bookmarksRepository.syncGlobalBookmarks).called(1);
+    });
+
+    testWidgets(
+      'Bookmarks tab is re-read by pull-to-refresh once it was viewed',
+      (
+        tester,
+      ) async {
+        stubBookmarks();
+        await openBookmarksTab(tester);
+
+        final refreshIndicator = tester.widget<RefreshIndicator>(
+          find.byType(RefreshIndicator),
+        );
+        // Driven by pumps, not runAsync: the tab blocs were created in the
+        // test's fake-async zone, so under the real event loop the
+        // completers this waits on would never fire.
+        var refreshed = false;
+        unawaited(refreshIndicator.onRefresh().then((_) => refreshed = true));
+        await tester.pumpAndSettle();
+
+        // The spinner runs until this future resolves, so the tab has to
+        // complete the completer it was handed.
+        expect(refreshed, isTrue);
+        // Once for the first view, once for the pull.
+        verify(bookmarksRepository.syncGlobalBookmarks).called(2);
+      },
+    );
+
+    testWidgets("another user's profile has no Bookmarks tab", (
+      tester,
+    ) async {
+      stubBookmarks();
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.bySemanticsIdentifier(SemanticIds.profileBookmarksTab),
+        findsNothing,
+      );
+      expect(find.byType(Tab), findsNWidgets(5));
+      // The viewer's own list is not opened while looking at someone else.
+      verifyNever(bookmarksRepository.watchGlobalBookmarks);
     });
   });
 }
