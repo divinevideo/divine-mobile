@@ -1684,6 +1684,73 @@ void main() {
       expect(find.text('Loops'), findsOneWidget);
     });
 
+    testWidgets('opens creator analytics when the owner taps Loops', (
+      tester,
+    ) async {
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push<Object?>(any()))
+          .thenAnswer((_) async => null);
+      final testProfile = createTestProfile(displayName: 'Owner');
+      const profileStats = ProfileStats(
+        pubkey: testUserHex,
+        videoCount: 2,
+        totalLikes: 3,
+        totalViews: 7,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: true,
+          suppliedProfile: testProfile,
+          profileStats: profileStats,
+          videoCount: 2,
+          goRouter: mockGoRouter,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Loops'));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => mockGoRouter.push<Object?>(RoutePaths.creatorAnalytics),
+      ).called(1);
+    });
+
+    testWidgets("leaves a visitor's Loops column untappable", (tester) async {
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push<Object?>(any()))
+          .thenAnswer((_) async => null);
+      final testProfile = createTestProfile(displayName: 'Counted User');
+      const profileStats = ProfileStats(
+        pubkey: testUserHex,
+        videoCount: 42,
+        totalLikes: 100,
+        totalViews: 50000,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: testProfile,
+          profileStats: profileStats,
+          videoCount: 3,
+          goRouter: mockGoRouter,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loops'), findsOneWidget);
+      await tester.tap(find.text('Loops'));
+      await tester.pumpAndSettle();
+
+      verifyNever(
+        () => mockGoRouter.push<Object?>(RoutePaths.creatorAnalytics),
+      );
+    });
+
     testWidgets('shows a visitor a total exactly at the floor', (tester) async {
       final testProfile = createTestProfile(displayName: 'Counted User');
       const profileStats = ProfileStats(

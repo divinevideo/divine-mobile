@@ -327,6 +327,12 @@ class _ProfileStatsRowState extends State<_ProfileStatsRow> {
           count: isLoading ? _skeletonPlaceholderCount : totalViews!,
           label: l10n.profileLoopsLabel,
           isLoading: isLoading && _timeoutExpired,
+          // Loops is the owner's own reach figure, so it is where a creator
+          // looks first for the detail behind it. Visitors get no tap: the
+          // dashboard is the owner's, and Settings keeps its own entry.
+          onTap: widget.isOwnProfile && !isLoading
+              ? () => context.push(RoutePaths.creatorAnalytics)
+              : null,
         ),
       if (hasLikes || isLoading)
         ProfileStatColumn(
