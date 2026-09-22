@@ -45,6 +45,31 @@ class AudioReuseNotPermittedException implements Exception {
 }
 
 /// The authoritative Divine publish surface rejected the signed-in account.
+/// A signer returned a scheduled event stamped with a different
+/// `created_at` than the publish time it was asked for (#3538).
+///
+/// The event is self-consistent — its id hashes its own timestamp — so
+/// neither the id check nor the signature check catches it. Publishing it
+/// would either be refused by the relay as "not far enough in the future"
+/// or, worse, go out now.
+class ScheduledSignatureTimestampException implements Exception {
+  const ScheduledSignatureTimestampException({
+    required this.requestedCreatedAt,
+    required this.signedCreatedAt,
+  });
+
+  /// The publish time the app asked the signer for, in unix seconds.
+  final int requestedCreatedAt;
+
+  /// The timestamp the signer actually stamped, in unix seconds.
+  final int signedCreatedAt;
+
+  @override
+  String toString() =>
+      'ScheduledSignatureTimestampException: signer stamped $signedCreatedAt '
+      'instead of $requestedCreatedAt';
+}
+
 class AccountRestrictedPublishException implements Exception {
   const AccountRestrictedPublishException({
     required this.reason,

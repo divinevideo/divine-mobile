@@ -221,6 +221,8 @@ class VideoEventPublisher {
     String textTrackLang = 'en',
     void Function()? onEventSigned,
     void Function()? onAudioReuseDegraded,
+    DateTime? scheduledAt,
+    void Function(Event event)? onScheduledEventSigned,
   }) async {
     // Create a temporary upload with updated metadata
     final updatedUpload = upload.copyWith(
@@ -252,6 +254,8 @@ class VideoEventPublisher {
       textTrackLang: textTrackLang,
       onEventSigned: onEventSigned,
       onAudioReuseDegraded: onAudioReuseDegraded,
+      scheduledAt: scheduledAt,
+      onScheduledEventSigned: onScheduledEventSigned,
     );
   }
 
@@ -268,6 +272,14 @@ class VideoEventPublisher {
   /// when `selectedAudio`'s reuse consent could not be verified — the legacy
   /// source-video lookup cannot tell a refusal from an unreachable relay, so
   /// it is treated as a transport failure a retry can clear.
+  ///
+  /// With [scheduledAt] the event is signed with `created_at` and
+  /// `published_at` set to that time, handed to [onScheduledEventSigned], and
+  /// **not** broadcast: the caller hands it to the relay's hold queue
+  /// (#3538). Nothing about it is persisted here either — a future-dated
+  /// event must never enter the publish-retry channel, which would broadcast
+  /// it as "now". [expirationTimestamp] is then expected to be relative to
+  /// [scheduledAt] already.
   ///
   /// Throws:
   ///
@@ -304,6 +316,8 @@ class VideoEventPublisher {
     String textTrackLang = 'en',
     void Function()? onEventSigned,
     void Function()? onAudioReuseDegraded,
+    DateTime? scheduledAt,
+    void Function(Event event)? onScheduledEventSigned,
   }) async {
     final videoId = upload.videoId;
     if (videoId == null || upload.cdnUrl == null) {
@@ -349,6 +363,8 @@ class VideoEventPublisher {
       textTrackLang: textTrackLang,
       onEventSigned: onEventSigned,
       onAudioReuseDegraded: onAudioReuseDegraded,
+      scheduledAt: scheduledAt,
+      onScheduledEventSigned: onScheduledEventSigned,
     );
     _inFlightDirectPublishes[videoId] = publish;
     try {
@@ -387,6 +403,8 @@ class VideoEventPublisher {
     required String textTrackLang,
     required void Function()? onEventSigned,
     required void Function()? onAudioReuseDegraded,
+    required DateTime? scheduledAt,
+    required void Function(Event event)? onScheduledEventSigned,
   }) async {
     // Validate that at least one video URL is publishable. This prevents
     // local file paths and known dead media hosts from being published.
@@ -435,7 +453,7 @@ class VideoEventPublisher {
       addVideoMetadataTags(
         tags,
         upload: upload,
-        publishedAt: DateTime.now(),
+        publishedAt: scheduledAt ?? DateTime.now(),
         language: language,
         contentWarning: contentWarning,
         expirationTimestamp: expirationTimestamp,
@@ -522,7 +540,14 @@ class VideoEventPublisher {
       );
 
       final signWatch = Stopwatch()..start();
-      final reusedEvent = _loadRetryableSignedEvent(upload);
+      // A scheduled post never reuses a cached event: its id is bound to the
+      // chosen time, and the cached one would be a different post.
+      final reusedEvent = scheduledAt == null
+          ? _loadRetryableSignedEvent(upload)
+          : null;
+      final scheduledCreatedAt = scheduledAt == null
+          ? null
+          : scheduledAt.millisecondsSinceEpoch ~/ 1000;
       final Event? event;
       if (reusedEvent != null) {
         event = reusedEvent;
@@ -539,6 +564,7 @@ class VideoEventPublisher {
           kind: NIP71VideoKinds.getPreferredAddressableKind(), // NIP-71 addressable short video
           content: content,
           tags: tags,
+          createdAt: scheduledCreatedAt,
         );
       }
       signWatch.stop();
@@ -563,6 +589,34 @@ class VideoEventPublisher {
       // caller gets a step here rather than waiting out the whole phase. Kept
       // below the null check so a failed signing cannot advance the bar.
       onEventSigned?.call();
+
+      if (scheduledCreatedAt != null) {
+        // A remote signer that re-stamps `created_at` returns a
+        // self-consistent event the relay would either refuse as "not far
+        // enough in the future" or, worse, publish now.
+        if (event.createdAt != scheduledCreatedAt) {
+          Log.error(
+            'Signer changed created_at of scheduled event ${event.id} from '
+            '$scheduledCreatedAt to ${event.createdAt}; refusing to schedule',
+            name: _logName,
+            category: LogCategory.video,
+          );
+          throw ScheduledSignatureTimestampException(
+            requestedCreatedAt: scheduledCreatedAt,
+            signedCreatedAt: event.createdAt,
+          );
+        }
+        // The sound markers cannot heal on a later retry the way they do
+        // for an immediate publish: this event is final once handed off.
+        if (audioReuseDegraded) onAudioReuseDegraded?.call();
+        Log.info(
+          'Signed scheduled video event ${event.id} for $scheduledCreatedAt',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        onScheduledEventSigned?.call(event);
+        return true;
+      }
 
       // A degraded event carries none of the audio markers the creator asked
       // for. Caching it would make "Try Again" reuse it verbatim (the reuse
@@ -623,6 +677,11 @@ class VideoEventPublisher {
     } on AccountRestrictedPublishException {
       _totalEventsFailed++;
       rethrow;
+    } on ScheduledSignatureTimestampException {
+      // The signer answered with a different publish time; the caller turns
+      // that into a scheduling failure rather than a transport one.
+      _totalEventsFailed++;
+      rethrow;
     } on AsyncCancelledException {
       // Disposed mid-retry: teardown rather than a failed publish, so it is
       // neither counted nor logged as one. The caller decides what it means.
@@ -643,11 +702,30 @@ class VideoEventPublisher {
     }
   }
 
+  /// Broadcasts a held scheduled [event] from this device (#3538).
+  ///
+  /// Always a retry-mode publish: the relay may have published the event
+  /// already, and the retry ladder's presence check turns that into a
+  /// confirmed publish instead of a second broadcast.
+  Future<EventPublishOutcome> broadcastScheduledEvent(Event event) =>
+      _relayPublisher.publish(event, isRetry: true);
+
+  /// Runs the confirmed-publish side effects for a scheduled [event] the
+  /// relay (or this app, in its stead) has just published (#3538).
+  ///
+  /// [uploadId] names the `PendingUpload` whose media the event references;
+  /// it may be gone by now, in which case only the upload status update is
+  /// skipped.
+  Future<void> recordScheduledPublish(Event event, {String? uploadId}) {
+    final upload = uploadId == null ? null : _uploadManager.getUpload(uploadId);
+    return _recordConfirmedPublish(upload, event, addToDiscoveryCache: true);
+  }
+
   /// Makes a relay-confirmed [event] visible locally: local echo, the
   /// discovery cache, the upload's published status, and the profile stats
   /// invalidation that bumps the creator's video count.
   Future<void> _recordConfirmedPublish(
-    PendingUpload upload,
+    PendingUpload? upload,
     Event event, {
     required bool addToDiscoveryCache,
   }) async {
@@ -671,11 +749,13 @@ class VideoEventPublisher {
       }
     }
 
-    await _uploadManager.updateUploadStatus(
-      upload.id,
-      UploadStatus.published,
-      nostrEventId: event.id,
-    );
+    if (upload != null) {
+      await _uploadManager.updateUploadStatus(
+        upload.id,
+        UploadStatus.published,
+        nostrEventId: event.id,
+      );
+    }
 
     _totalEventsPublished++;
     _lastPublishTime = DateTime.now();
@@ -697,7 +777,7 @@ class VideoEventPublisher {
       category: LogCategory.video,
     );
     Log.debug(
-      'Video URL: ${upload.cdnUrl}',
+      'Video URL: ${upload?.cdnUrl}',
       name: _logName,
       category: LogCategory.video,
     );

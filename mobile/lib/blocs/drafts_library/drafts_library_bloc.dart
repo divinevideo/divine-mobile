@@ -40,15 +40,17 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
 
   /// Whether [draft] belongs in the library list.
   ///
-  /// Drops published and publishing drafts, plus the autosave when it holds
-  /// nothing yet or [includeAutosaveDraft] is off.
+  /// Drops published, publishing and scheduled drafts (the last belong to
+  /// the Scheduled tab), plus the autosave when it holds nothing yet or
+  /// [includeAutosaveDraft] is off.
   bool _isListable(DivineVideoDraft draft) {
     if (draft.id == VideoEditorConstants.autoSaveId &&
         (!includeAutosaveDraft || draft.clips.isEmpty)) {
       return false;
     }
     return draft.publishStatus != PublishStatus.published &&
-        draft.publishStatus != PublishStatus.publishing;
+        draft.publishStatus != PublishStatus.publishing &&
+        draft.publishStatus != PublishStatus.scheduled;
   }
 
   Future<void> _onMutation(

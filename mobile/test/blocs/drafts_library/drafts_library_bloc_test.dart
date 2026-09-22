@@ -206,6 +206,29 @@ void main() {
       );
 
       blocTest<DraftsLibraryBloc, DraftsLibraryState>(
+        'filters out scheduled drafts, which the Scheduled tab lists',
+        setUp: () {
+          when(() => mockDraftStorageService.getAllDrafts()).thenAnswer(
+            (_) async => [
+              createDraft(id: 'draft1'),
+              createDraft(
+                id: 'draft2',
+                publishStatus: PublishStatus.scheduled,
+              ),
+            ],
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const DraftsLibraryLoadRequested()),
+        expect: () => [
+          const DraftsLibraryLoading(),
+          isA<DraftsLibraryLoaded>()
+              .having((s) => s.drafts.length, 'drafts.length', 1)
+              .having((s) => s.drafts.first.id, 'first draft id', 'draft1'),
+        ],
+      );
+
+      blocTest<DraftsLibraryBloc, DraftsLibraryState>(
         'sorts drafts by lastModified descending',
         setUp: () {
           when(() => mockDraftStorageService.getAllDrafts()).thenAnswer(

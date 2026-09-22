@@ -31,6 +31,7 @@ import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -39,6 +40,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/router/navigator_keys.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
@@ -174,6 +176,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
       ),
       languagePreferenceService: ref.read(languagePreferenceServiceProvider),
+      scheduledPostsRepository: ref.read(scheduledPostsRepositoryProvider),
       performanceMonitor: ref.read(performanceMonitoringServiceProvider),
       onProgressChanged: ({required String draftId, required double progress}) {
         setUploadProgress(draftId: draftId, progress: progress);
@@ -614,7 +617,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       var didNavigate = false;
       final postPublishExperiment = ref.read(postPublishExperimentProvider);
 
-      if (context.mounted && videoReplyContext != null) {
+      if (context.mounted && publishDraft.scheduledAt != null) {
+        // The post is not live yet, so the profile has nothing to show; the
+        // Scheduled tab is where it can be watched, moved or withdrawn.
+        context.go(RoutePaths.libraryScheduled);
+        didNavigate = true;
+      } else if (context.mounted && videoReplyContext != null) {
         final destination = videoReplyPublishDestinationFor(videoReplyContext);
         context.go(destination.path, extra: destination.extra);
         unawaited(
@@ -673,6 +681,14 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           if (result.audioReuseDegraded) {
             _showAudioReuseDegradedWarning();
           }
+
+        case PublishScheduled(:final eventId, :final publishAt):
+          await creationTracker.publishSucceeded(recorderMode);
+          Log.info(
+            '📅 Video scheduled: $eventId for ${publishAt.toIso8601String()}',
+            name: 'VideoPublishNotifier',
+            category: .video,
+          );
 
         case PublishError(:final kind, :final serverName, :final rawFallback):
           final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));

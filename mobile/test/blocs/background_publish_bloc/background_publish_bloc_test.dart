@@ -369,6 +369,64 @@ void main() {
         );
       });
 
+      group('when the post is scheduled', () {
+        final scheduledDraft = _MockVineDraft();
+        const scheduledDraftId = 'publish_scheduled';
+        const sourceDraftId = 'draft_source';
+        final scheduled = PublishScheduled(
+          eventId: 'e' * 64,
+          publishAt: DateTime.utc(2026, 10),
+          submitted: true,
+        );
+
+        setUp(() {
+          when(() => scheduledDraft.id).thenReturn(scheduledDraftId);
+          when(() => scheduledDraft.sourceDraftId).thenReturn(sourceDraftId);
+        });
+
+        blocTest<BackgroundPublishBloc, BackgroundPublishState>(
+          'leaves the uploads list, keeps the copy as a scheduled draft '
+          'and reclaims only the source',
+          build: () => BackgroundPublishBloc(
+            videoPublishServiceFactory: defaultVieoPublishServiceFactory,
+            draftStorageService: mockDraftStorageService,
+          ),
+          act: (bloc) => bloc.add(
+            BackgroundPublishRequested(
+              draft: scheduledDraft,
+              publishmentProcess: Future.value(scheduled),
+            ),
+          ),
+          expect: () => [
+            BackgroundPublishState(
+              uploads: [
+                BackgroundUpload(
+                  draft: scheduledDraft,
+                  result: null,
+                  progress: 0,
+                ),
+              ],
+            ),
+            // Not published: nothing to confirm, no draft to celebrate.
+            const BackgroundPublishState(),
+          ],
+          verify: (_) {
+            verify(
+              () => mockDraftStorageService.updatePublishStatus(
+                draftId: scheduledDraftId,
+                status: PublishStatus.scheduled,
+              ),
+            ).called(1);
+            verify(
+              () => mockDraftStorageService.deleteDraft(sourceDraftId),
+            ).called(1);
+            verifyNever(
+              () => mockDraftStorageService.deleteDraft(scheduledDraftId),
+            );
+          },
+        );
+      });
+
       group('when a transient publish copy succeeds', () {
         final publishDraft = _MockVineDraft();
 

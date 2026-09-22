@@ -26,7 +26,13 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-enum PublishStatus { draft, publishing, failed, published }
+/// Where a draft is in its publish lifecycle.
+///
+/// [scheduled] marks the publish copy of a post whose signed event waits for
+/// a future publish time; the queue state itself lives in the
+/// `scheduled_posts` table (#3538). It is deliberately not [publishing] or
+/// [failed], so startup resume and the Drafts list leave it alone.
+enum PublishStatus { draft, publishing, failed, published, scheduled }
 
 class DivineVideoDraft {
   const DivineVideoDraft({
@@ -44,6 +50,7 @@ class DivineVideoDraft {
     this.sourceDraftId,
     this.allowAudioReuse = false,
     this.expireTime,
+    this.scheduledAt,
     this.proofManifestJson,
     this.editorStateHistory = const {},
     this.editorEditingParameters = const {},
@@ -71,6 +78,7 @@ class DivineVideoDraft {
     required String selectedApproach,
     bool allowAudioReuse = false,
     Duration? expireTime,
+    DateTime? scheduledAt,
     String? id,
     String? proofManifestJson,
     Map<String, dynamic>? editorStateHistory,
@@ -101,6 +109,7 @@ class DivineVideoDraft {
       lastModified: now,
       allowAudioReuse: allowAudioReuse,
       expireTime: expireTime,
+      scheduledAt: scheduledAt,
       publishStatus: PublishStatus.draft,
       publishAttempts: 0,
       proofManifestJson: proofManifestJson,
@@ -177,6 +186,9 @@ class DivineVideoDraft {
       lastModified: DateTime.parse(json['lastModified'] as String),
       expireTime: json['expireTime'] != null
           ? Duration(milliseconds: json['expireTime'] as int)
+          : null,
+      scheduledAt: json['scheduledAt'] != null
+          ? DateTime.parse(json['scheduledAt'] as String).toUtc()
           : null,
       publishStatus: json['publishStatus'] != null
           ? PublishStatus.values.byName(json['publishStatus'] as String)
@@ -301,6 +313,13 @@ class DivineVideoDraft {
   final DateTime createdAt;
   final DateTime lastModified;
   final Duration? expireTime;
+
+  /// The requested publish time (UTC), or null to post immediately.
+  ///
+  /// An input to the publish flow: the signed event carries it as
+  /// `created_at`, and `scheduled_posts` becomes the record of truth from
+  /// then on.
+  final DateTime? scheduledAt;
   final PublishStatus publishStatus;
   final String? proofManifestJson;
   final String? publishError;
@@ -419,6 +438,8 @@ class DivineVideoDraft {
     String? sourceDraftId,
     bool clearSourceDraftId = false,
     Duration? expireTime,
+    DateTime? scheduledAt,
+    bool clearScheduledAt = false,
     bool? allowAudioReuse,
     int? publishAttempts,
     String? proofManifestJson,
@@ -454,6 +475,7 @@ class DivineVideoDraft {
     createdAt: createdAt,
     lastModified: skipUpdateLastModified ? lastModified : DateTime.now(),
     expireTime: expireTime ?? this.expireTime,
+    scheduledAt: clearScheduledAt ? null : (scheduledAt ?? this.scheduledAt),
     allowAudioReuse: allowAudioReuse ?? this.allowAudioReuse,
     publishStatus: publishStatus ?? this.publishStatus,
     publishError: clearPublishError
@@ -575,6 +597,8 @@ class DivineVideoDraft {
     'createdAt': createdAt.toIso8601String(),
     'lastModified': lastModified.toIso8601String(),
     if (expireTime != null) 'expireTime': expireTime!.inMilliseconds,
+    if (scheduledAt != null)
+      'scheduledAt': scheduledAt!.toUtc().toIso8601String(),
     'allowAudioReuse': allowAudioReuse,
     'publishStatus': publishStatus.name,
     'publishError': publishError,
@@ -654,6 +678,7 @@ class DivineVideoDraft {
   bool get hasHashtags => hashtags.isNotEmpty;
   bool get canRetry => publishStatus == PublishStatus.failed;
   bool get isPublishing => publishStatus == PublishStatus.publishing;
+  bool get isScheduled => publishStatus == PublishStatus.scheduled;
 
   /// Whether the draft can be posted directly from the library.
   ///
