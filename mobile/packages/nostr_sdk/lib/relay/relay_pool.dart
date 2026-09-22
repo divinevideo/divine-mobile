@@ -2035,12 +2035,13 @@ class RelayPool {
           await _retryAuthRequiredPublishesForRelay(relay);
         } else {
           relay.relayStatus.authed = false;
-          log('🔐 AUTH failed for ${relay.url}: $message');
+          final diagnosticReason = relayNoticeForDiagnostics(message);
+          log('🔐 AUTH failed for ${relay.url}: $diagnosticReason');
           _diagnose(
             RelayDiagnosticSite.authentication,
             RelayDiagnosticLevel.warning,
             relay.url,
-            'Relay authentication failed',
+            'Relay authentication failed: $diagnosticReason',
           );
           _rejectAuthRequiredPublishesForRelay(relay, message);
           // The gate stayed shut, so the queries parked for the post-AUTH

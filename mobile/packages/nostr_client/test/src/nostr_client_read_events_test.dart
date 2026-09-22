@@ -537,6 +537,47 @@ void main() {
       expect(result.noRelays, isFalse);
       expect(result.events, hasLength(1));
     });
+
+    test(
+      'accepts a CLOSED relay when another relay answered only by opt-in',
+      () async {
+        final nostr = _newNostr();
+        final answering = _ScriptedRelay('wss://answers.example');
+        final refusing = _ScriptedRelay('wss://refuses.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(refusing), isTrue);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+        );
+
+        var reqIndex = 0;
+        Future<bool> run({
+          required bool optIn,
+        }) async {
+          final pending = client.queryEventsDetailed(
+            [_textNotes()],
+            useCache: false,
+            timeout: const Duration(seconds: 3),
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: optIn,
+          );
+          final answeringSub = await answering.awaitReq(reqIndex);
+          final refusingSub = await refusing.awaitReq(reqIndex);
+          reqIndex++;
+          await answering.deliver(['EOSE', answeringSub]);
+          await refusing.deliver([
+            'CLOSED',
+            refusingSub,
+            'error: unsupported request',
+          ]);
+          return (await pending).timedOut;
+        }
+
+        expect(await run(optIn: false), isTrue);
+        expect(await run(optIn: true), isFalse);
+      },
+    );
   });
 
   group('NostrClient.queryEvents', () {

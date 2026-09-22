@@ -13,6 +13,8 @@ class QueryOutcome {
   /// Creates a query outcome.
   const QueryOutcome({
     required this.endedBy,
+    this.answeredNetworkRelayCount = 0,
+    this.unansweredRelayCount = 0,
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
     this.relays = const [],
@@ -28,6 +30,13 @@ class QueryOutcome {
   /// reaches [QueryEnd.deadline] on its own, because it does not own the
   /// caller's deadline; only `RelayPool.reportQueryDeadline` reports it.
   final QueryEnd endedBy;
+
+  /// Number of non-cache relays that sent EOSE, including those that returned
+  /// no matching events.
+  final int answeredNetworkRelayCount;
+
+  /// Number of participating relays that neither answered nor refused.
+  final int unansweredRelayCount;
 
   /// Whether a relay may have withheld matching events because the query
   /// reached that relay's result-size limit; see [QueryResult.possiblyCapped].

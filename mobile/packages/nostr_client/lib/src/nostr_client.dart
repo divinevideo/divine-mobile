@@ -912,6 +912,11 @@ class NostrClient {
   /// Note this only bounds the WebSocket leg; cached rows are merged in either
   /// way.
   ///
+  /// [acceptRelayClosedWhenOthersAnswered] opts a caller into treating a
+  /// terminal `CLOSED` as settled when a non-cache relay answered and none of
+  /// the participating relays stayed unanswered. It does not accept silence, a
+  /// dropped socket, or a deadline.
+  ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
   /// the call arrived, and a fan-out no relay took — the last of which a
@@ -942,6 +947,7 @@ class NostrClient {
     bool useQueryPool = true,
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
+    bool acceptRelayClosedWhenOthersAnswered = false,
   }) async {
     final read = await _read(
       filters,
@@ -956,7 +962,12 @@ class NostrClient {
     );
     return (
       events: read.result.events,
-      timedOut: read.timedOut,
+      timedOut:
+          read.timedOut &&
+          !(acceptRelayClosedWhenOthersAnswered &&
+              read.result.endedBy == QueryEnd.relayClosed &&
+              read.result.answeredNetworkRelayCount > 0 &&
+              read.result.unansweredRelayCount == 0),
       noRelays: read.noRelays,
     );
   }
@@ -1252,6 +1263,8 @@ class NostrClient {
     final result = QueryResult(
       events: events,
       endedBy: network.endedBy,
+      answeredNetworkRelayCount: network.answeredNetworkRelayCount,
+      unansweredRelayCount: network.unansweredRelayCount,
       possiblyCapped: network.possiblyCapped,
       confirmedExhaustive: network.confirmedExhaustive,
     );

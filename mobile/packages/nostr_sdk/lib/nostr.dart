@@ -734,6 +734,8 @@ class Nostr {
         result: QueryResult(
           events: eventBox.all(),
           endedBy: outcome.endedBy,
+          answeredNetworkRelayCount: outcome.answeredNetworkRelayCount,
+          unansweredRelayCount: outcome.unansweredRelayCount,
           possiblyCapped: outcome.possiblyCapped,
           confirmedExhaustive: outcome.confirmedExhaustive,
         ),

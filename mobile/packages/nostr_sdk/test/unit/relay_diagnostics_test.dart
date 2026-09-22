@@ -1,6 +1,8 @@
 // ABOUTME: Regression tests for structured relay diagnostics emitted by RelayPool.
 // ABOUTME: Proves support-safe metadata is emitted while raw relay frames stay out.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
@@ -9,6 +11,7 @@ class _DiagnosticRelay extends Relay {
   _DiagnosticRelay(String url) : super(url, RelayStatus(url));
 
   final List<List<dynamic>> sent = [];
+  final Completer<void> firstReq = Completer<void>();
 
   @override
   Future<bool> doConnect() async {
@@ -29,6 +32,9 @@ class _DiagnosticRelay extends Relay {
     DateTime? deadline,
   }) async {
     sent.add(message);
+    if (message.isNotEmpty && message.first == 'REQ' && !firstReq.isCompleted) {
+      firstReq.complete();
+    }
     return true;
   }
 
@@ -261,6 +267,42 @@ void main() {
       expect(notices.first, contains(publicEventId));
       expect(notices.last, contains('[truncated]'));
       expect(notices.last, isNot(contains('x')));
+    });
+
+    test('includes a sanitized AUTH rejection reason in diagnostics', () async {
+      final relay = _DiagnosticRelay('wss://auth-rejects.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      final pending = nostr.queryEventsDetailed(
+        [
+          {
+            'kinds': [1],
+          },
+        ],
+        timeout: const Duration(seconds: 2),
+        requireAllRelaysSettled: true,
+      );
+
+      await relay.firstReq.future;
+      await relay.deliver(['AUTH', 'test-challenge']);
+      final authFrame = relay.sent.firstWhere(
+        (message) => message.first == 'AUTH',
+      );
+      final authEventId = (authFrame[1] as Map)['id'] as String;
+      await relay.deliver([
+        'OK',
+        authEventId,
+        false,
+        'invalid: token=auth-secret',
+      ]);
+      await pending;
+
+      final authDiagnostic = diagnostics.singleWhere(
+        (entry) =>
+            entry.site == RelayDiagnosticSite.authentication &&
+            entry.message.startsWith('Relay authentication failed:'),
+      );
+      expect(authDiagnostic.message, contains('invalid: token=[REDACTED]'));
+      expect(authDiagnostic.message, isNot(contains('auth-secret')));
     });
 
     test('categorizes a CLOSED reason by its NIP-01 prefix', () async {

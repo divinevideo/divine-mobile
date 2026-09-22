@@ -736,6 +736,9 @@ void main() {
           tempRelays: any(named: 'tempRelays'),
           relayTypes: any(named: 'relayTypes'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -982,6 +985,9 @@ void main() {
         tempRelays: any(named: 'tempRelays'),
         relayTypes: any(named: 'relayTypes'),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        acceptRelayClosedWhenOthersAnswered: any(
+          named: 'acceptRelayClosedWhenOthersAnswered',
+        ),
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -2343,6 +2349,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -2463,6 +2472,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -4468,6 +4480,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).called(1);
@@ -4750,6 +4765,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => answeredList(events));
@@ -4783,6 +4801,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) => stalledRead.future);
@@ -4955,6 +4976,9 @@ void main() {
                     requireAllRelaysSettled: any(
                       named: 'requireAllRelaysSettled',
                     ),
+                    acceptRelayClosedWhenOthersAnswered: any(
+                      named: 'acceptRelayClosedWhenOthersAnswered',
+                    ),
                     timeout: any(named: 'timeout'),
                   ),
                 ).captured.single
@@ -4971,6 +4995,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenThrow(Exception('relay down'));
@@ -4996,6 +5023,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(
@@ -5041,6 +5071,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => answer);
@@ -5079,6 +5112,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -5156,6 +5192,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -5237,6 +5276,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -5277,6 +5319,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -5366,6 +5411,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -5425,6 +5473,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -5476,6 +5527,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -5540,6 +5594,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) {
@@ -5798,6 +5855,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -5889,6 +5949,9 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         );
@@ -5913,6 +5976,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenThrow(Exception('relay down'));
@@ -5944,6 +6010,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -6009,6 +6078,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -6056,6 +6128,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => answer);
@@ -6085,6 +6160,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -6383,6 +6461,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((invocation) async {
@@ -6438,6 +6519,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) async {
@@ -6488,6 +6572,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -6526,6 +6613,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) => read.future);
@@ -6561,6 +6651,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) => read.future);
@@ -6616,6 +6709,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filters =
@@ -6653,6 +6749,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer(
           (_) async => unansweredPage(noRelays: noRelays, timedOut: timedOut),
@@ -6725,6 +6824,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -6808,6 +6910,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filter =
@@ -6873,6 +6978,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -7034,6 +7142,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             capturedFilters.addAll(
@@ -7078,6 +7189,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           // The drain recovered the user's own last-sent message in this convo.
@@ -7226,6 +7340,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -7240,6 +7357,13 @@ void main() {
             final isNip04Recovery =
                 filter.authors != null && (filter.p?.isEmpty ?? true);
             if (!isNip04Recovery) return answeredPage(const <Event>[]);
+            expect(
+              inv.namedArguments[#acceptRelayClosedWhenOthersAnswered],
+              isTrue,
+              reason:
+                  'legacy outgoing recovery opts into '
+                  'terminal refusal handling',
+            );
             authorsUntils.add(filter.until);
             nip04Pages++;
             return answeredPage(nip04Pages == 1 ? [outgoing] : const <Event>[]);
@@ -7362,6 +7486,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -7419,6 +7546,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -7652,6 +7782,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -7741,6 +7874,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -7780,6 +7916,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -7814,6 +7953,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         );
       });
@@ -7830,6 +7972,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         );
       });
@@ -7846,6 +7991,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -7899,6 +8047,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -7984,6 +8135,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -8037,6 +8191,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenThrow(error);
 
@@ -8093,6 +8250,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8248,6 +8408,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filter =
@@ -8387,6 +8550,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8523,6 +8689,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filter =
@@ -8568,6 +8737,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8634,6 +8806,9 @@ void main() {
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8677,6 +8852,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
+              ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
           ).thenAnswer((inv) async {
@@ -8745,6 +8923,9 @@ void main() {
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8807,6 +8988,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
+              ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
           ).thenAnswer((inv) async {
@@ -9007,6 +9191,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -9049,6 +9236,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -9092,6 +9282,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -9242,6 +9435,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filters =
@@ -9888,6 +10084,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -15160,6 +15359,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -16102,6 +16304,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => answer);
@@ -16243,6 +16448,9 @@ void main() {
                 useCache: any(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((invocation) async {
@@ -21877,6 +22085,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => unansweredList(noRelays: true));
@@ -23413,6 +23624,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -24982,6 +25196,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -25103,6 +25320,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => unansweredList(timedOut: true));
@@ -25871,6 +26091,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => unansweredList(noRelays: true));
@@ -26692,6 +26915,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(

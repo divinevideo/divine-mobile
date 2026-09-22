@@ -218,6 +218,16 @@ class QueryOutcomeTracker {
     };
     final outcome = QueryOutcome(
       endedBy: _endedBy(judgements, atDeadline: atDeadline),
+      answeredNetworkRelayCount: judgements.entries
+          .where(
+            (entry) =>
+                entry.value.standing == _Standing.answered &&
+                entry.key.relay.relayStatus.relayType != RelayType.cache,
+          )
+          .length,
+      unansweredRelayCount: judgements.values
+          .where((judgement) => judgement.standing == _Standing.noAnswer)
+          .length,
       possiblyCapped: judgements.keys.any(_isCapped),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [

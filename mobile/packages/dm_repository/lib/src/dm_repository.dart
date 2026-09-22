@@ -1505,13 +1505,14 @@ class DmRepository {
   /// already sets `currentUserHasSent` for self-authored messages. Bounded by
   /// [DmHistoryDrainConfig.maxPages].
   ///
-  /// Returns `true` when the pass completed against a relay that actually
-  /// answered — genuine exhaustion or the page budget — and `false` when it
-  /// could not run: nothing answered the page, the repository was torn down /
-  /// the user switched, or a relay error. A `false` result MUST NOT mark the
-  /// drain complete, mirroring the gift-wrap drain's authoritative-page guard
-  /// so a momentary outage in this window doesn't silently skip recovery *and*
-  /// permanently strand the user's outgoing NIP-04 history. See #5304, #8209.
+  /// Returns `true` when the pass completed against answering relays — a
+  /// genuine empty answer, terminal refusal by another relay, or the page
+  /// budget — and `false` when no relay answered, a relay stayed silent or
+  /// dropped, the request timed out, or the repository was torn down. This
+  /// legacy pass accepts a terminal refusal only when another relay answered:
+  /// retrying a relay that permanently refuses cannot improve coverage, while
+  /// holding the entire DM restore open indefinitely is worse. The primary
+  /// gift-wrap drain retains its strict full-settlement cursor guard.
   Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -1530,6 +1531,11 @@ class DmRepository {
           subscriptionId: dmNip04DrainSubscriptionId(pubkey, page),
           useCache: false,
           requireAllRelaysSettled: true,
+          // This legacy pass is supplementary to the gift-wrap drain.
+          // A relay that explicitly closes the query cannot contribute on a
+          // retry, so accept other relays answering while still deferring on
+          // silence, disconnects, deadlines, or a refusal with no answer.
+          acceptRelayClosedWhenOthersAnswered: true,
         );
         final events = result.events;
         if (_ingestSessionEnded(pubkey, generation)) return false;

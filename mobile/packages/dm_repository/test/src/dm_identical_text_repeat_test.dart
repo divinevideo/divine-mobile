@@ -75,6 +75,9 @@ void main() {
           useCache: any(named: 'useCache'),
           tempRelays: any(named: 'tempRelays'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer(
