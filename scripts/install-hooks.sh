@@ -11,6 +11,30 @@ if [[ "$GIT_COMMON_DIR" != /* ]]; then
 fi
 HOOKS_DIR="$GIT_COMMON_DIR/hooks"
 
+# Content hash of this installer, stamped into every generated hook. A hook
+# whose stamp no longer matches this file re-installs itself before running, so
+# a checkout cannot keep running a hook built by an older contract — for
+# example one that called `flutter`/`dart` directly instead of through
+# `mise exec` and therefore used whatever toolchain happened to be on PATH.
+GENERATOR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+if command -v sha256sum >/dev/null 2>&1; then
+  GENERATOR_HASH="$(sha256sum "$GENERATOR_PATH" | awk '{print $1}')"
+else
+  GENERATOR_HASH="$(shasum -a 256 "$GENERATOR_PATH" | awk '{print $1}')"
+fi
+
+# Substitute the @GENERATOR_HASH@ stamp and install by rename. A rename leaves
+# the inode a currently-running hook is reading untouched, so a hook that
+# re-installs itself mid-run cannot truncate the file bash is still executing.
+install_hook() {
+  local source_file="$1" target="$2" tmp
+  tmp="$(mktemp)"
+  awk -v hash="$GENERATOR_HASH" '{ gsub(/@GENERATOR_HASH@/, hash); print }' "$source_file" > "$tmp"
+  chmod +x "$tmp"
+  mv "$tmp" "$target"
+  rm -f "$source_file"
+}
+
 if ! command -v mise >/dev/null 2>&1; then
   echo "mise is required but not found on PATH."
   echo "Install mise: https://mise.jdx.dev/getting-started.html"
@@ -20,7 +44,8 @@ fi
 echo "Installing git hooks..."
 
 # Create pre-commit hook
-cat > "$HOOKS_DIR/pre-commit" << 'EOF'
+PRECOMMIT_TMP="$(mktemp)"
+cat > "$PRECOMMIT_TMP" << 'EOF'
 #!/bin/bash
 # Pre-commit hook for divine-mobile
 # Fast checks only:
@@ -60,6 +85,30 @@ capture_generated_status() {
         | grep -E '^mobile/.*(\.g\.dart|\.mocks\.dart|\.types\.temp\.dart)$' \
         | sort -u || true
 }
+
+# Content hash of scripts/install-hooks.sh at generation time. When the
+# installer changes, this no longer matches and the hook re-installs itself
+# below, so a checkout never runs a hook built by an older toolchain contract.
+HOOKS_GENERATOR_HASH="@GENERATOR_HASH@"
+
+current_installer_hash() {
+    local installer="$REPO_ROOT/scripts/install-hooks.sh"
+    [ -f "$installer" ] || return 0
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$installer" 2>/dev/null | awk '{print $1}' || true
+    else
+        shasum -a 256 "$installer" 2>/dev/null | awk '{print $1}' || true
+    fi
+}
+
+CURRENT_INSTALLER_HASH="$(current_installer_hash)"
+if [ -n "$CURRENT_INSTALLER_HASH" ] && [ "$CURRENT_INSTALLER_HASH" != "$HOOKS_GENERATOR_HASH" ]; then
+    echo "Git hooks are stale: scripts/install-hooks.sh changed since they were installed."
+    echo "Re-installing hooks..."
+    bash "$REPO_ROOT/scripts/install-hooks.sh" >/dev/null 2>&1 || true
+    echo "Hooks updated. Re-run your command."
+    exit 1
+fi
 
 # Check if any Dart files are staged
 STAGED_DART_FILES=$(git diff --cached --name-only --diff-filter=ACM \
@@ -112,10 +161,11 @@ if [ -n "$CODEGEN_INPUTS" ]; then
 fi
 EOF
 
-chmod +x "$HOOKS_DIR/pre-commit"
+install_hook "$PRECOMMIT_TMP" "$HOOKS_DIR/pre-commit"
 
 # Create pre-push hook
-cat > "$HOOKS_DIR/pre-push" << 'EOF'
+PREPUSH_TMP="$(mktemp)"
+cat > "$PREPUSH_TMP" << 'EOF'
 #!/bin/bash
 # Pre-push hook for divine-mobile
 # Verifies generated files and runs tests related to changed files before pushing
@@ -151,6 +201,30 @@ capture_generated_status() {
         | grep -E '^mobile/.*(\.g\.dart|\.mocks\.dart|\.types\.temp\.dart)$' \
         | sort -u || true
 }
+
+# Content hash of scripts/install-hooks.sh at generation time. When the
+# installer changes, this no longer matches and the hook re-installs itself
+# below, so a checkout never runs a hook built by an older toolchain contract.
+HOOKS_GENERATOR_HASH="@GENERATOR_HASH@"
+
+current_installer_hash() {
+    local installer="$REPO_ROOT/scripts/install-hooks.sh"
+    [ -f "$installer" ] || return 0
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$installer" 2>/dev/null | awk '{print $1}' || true
+    else
+        shasum -a 256 "$installer" 2>/dev/null | awk '{print $1}' || true
+    fi
+}
+
+CURRENT_INSTALLER_HASH="$(current_installer_hash)"
+if [ -n "$CURRENT_INSTALLER_HASH" ] && [ "$CURRENT_INSTALLER_HASH" != "$HOOKS_GENERATOR_HASH" ]; then
+    echo "Git hooks are stale: scripts/install-hooks.sh changed since they were installed."
+    echo "Re-installing hooks..."
+    bash "$REPO_ROOT/scripts/install-hooks.sh" >/dev/null 2>&1 || true
+    echo "Hooks updated. Re-run your command."
+    exit 1
+fi
 
 echo "Running pre-push checks..."
 
@@ -502,7 +576,7 @@ else
 fi
 EOF
 
-chmod +x "$HOOKS_DIR/pre-push"
+install_hook "$PREPUSH_TMP" "$HOOKS_DIR/pre-push"
 
 echo "Git hooks installed!"
 echo ""
