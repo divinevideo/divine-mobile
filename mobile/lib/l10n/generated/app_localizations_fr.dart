@@ -825,7 +825,8 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other:
           'Tu peux épingler jusqu\'à $count vidéos. Désépingle-en une pour faire de la place.',
-      one: 'Tu peux épingler $count vidéo. Désépingle-la pour faire de la place.',
+      one:
+          'Tu peux épingler $count vidéo. Désépingle-la pour faire de la place.',
     );
     return '$_temp0';
   }
@@ -11201,7 +11202,8 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other:
           'Cela supprime $count fichiers qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
-      one: 'Cela supprime $count fichier qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
+      one:
+          'Cela supprime $count fichier qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
     );
     return '$_temp0';
   }

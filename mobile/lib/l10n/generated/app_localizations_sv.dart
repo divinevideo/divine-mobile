@@ -11037,7 +11037,8 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           'Det raderar $count filer som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
-      one: 'Det raderar $count fil som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
+      one:
+          'Det raderar $count fil som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
     );
     return '$_temp0';
   }

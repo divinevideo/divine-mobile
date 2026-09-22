@@ -11157,7 +11157,8 @@ class AppLocalizationsEs extends AppLocalizations {
       locale: localeName,
       other:
           'Esto elimina $count archivos que ningún clip, borrador ni subida usa ya, y libera $size. No se puede deshacer.',
-      one: 'Esto elimina $count archivo que ningún clip, borrador ni subida usa ya, y libera $size. No se puede deshacer.',
+      one:
+          'Esto elimina $count archivo que ningún clip, borrador ni subida usa ya, y libera $size. No se puede deshacer.',
     );
     return '$_temp0';
   }

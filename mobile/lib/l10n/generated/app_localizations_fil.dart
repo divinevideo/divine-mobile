@@ -11135,7 +11135,8 @@ class AppLocalizationsFil extends AppLocalizations {
       locale: localeName,
       other:
           'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
-      one: 'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
+      one:
+          'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
     );
     return '$_temp0';
   }

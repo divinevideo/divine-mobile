@@ -11118,7 +11118,8 @@ class AppLocalizationsPt extends AppLocalizations {
       locale: localeName,
       other:
           'Isso exclui $count arquivos que nenhum clipe, rascunho ou upload usa mais e libera $size. Não dá para desfazer.',
-      one: 'Isso exclui $count arquivo que nenhum clipe, rascunho ou upload usa mais e libera $size. Não dá para desfazer.',
+      one:
+          'Isso exclui $count arquivo que nenhum clipe, rascunho ou upload usa mais e libera $size. Não dá para desfazer.',
     );
     return '$_temp0';
   }

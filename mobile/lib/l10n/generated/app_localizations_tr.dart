@@ -10966,7 +10966,8 @@ class AppLocalizationsTr extends AppLocalizations {
       locale: localeName,
       other:
           'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
-      one: 'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
+      one:
+          'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
     );
     return '$_temp0';
   }

@@ -10989,7 +10989,8 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
-      one: 'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
+      one:
+          'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
     );
     return '$_temp0';
   }

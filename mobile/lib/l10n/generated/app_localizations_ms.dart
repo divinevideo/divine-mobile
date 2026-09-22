@@ -11038,7 +11038,8 @@ class AppLocalizationsMs extends AppLocalizations {
       locale: localeName,
       other:
           'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
-      one: 'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
+      one:
+          'Ini memadam $count fail yang tidak lagi digunakan oleh mana-mana klip, draf atau muat naik, dan membebaskan $size. Tidak boleh dibuat asal.',
     );
     return '$_temp0';
   }

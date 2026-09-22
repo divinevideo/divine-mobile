@@ -284,6 +284,23 @@ void main() {
       expect(result.status, CreatorDeleteEnforcementStatus.delayed);
     });
 
+    test(
+      'keeps mixed synchronous success and transient targets delayed',
+      () async {
+        final result = await build(
+          (_) => http.Response(
+            '{"status":"failed","targets":['
+            '{"status":"success"},'
+            '{"status":"failed:transient:network"}'
+            ']}',
+            200,
+          ),
+        ).enforce('kind5');
+
+        expect(result.status, CreatorDeleteEnforcementStatus.delayed);
+      },
+    );
+
     test('reports a synchronous response with missing target states', () async {
       final result = await build(
         (_) => http.Response('{"status":"failed"}', 200),
