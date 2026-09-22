@@ -11338,10 +11338,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get supporterHeroTitle => 'Håll Divine igång';
 
   @override
-  String get supporterHeroBody =>
-      'Divine är gratis och kommer alltid att vara det. Om du vill hjälpa oss att hålla looparna igång, bli månadssupporter. Inget är låst – det håller bara ljusen tända och ger dig vår tacksamhet.';
-
-  @override
   String get supporterActiveBadge =>
       'Du är Divine-supporter. Tack för att du håller det här igång.';
 
@@ -11392,10 +11388,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Något gick fel. Försök igen.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine bekräftar supporterstatus efter att butiken verifierat ditt köp. Erkännande är valfritt, och glorian är ingen verifiering.';
 
   @override
   String get profileNotifyBellOff => 'Meddela om nya vines';

@@ -29,6 +29,32 @@ void main() {
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
   group('own account membership', () {
+    testWidgets('signed-out compact entry supplies its own Material', (
+      tester,
+    ) async {
+      final auth = _MockAuth();
+      when(() => auth.isAuthenticated).thenReturn(false);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.unauthenticated,
+            ),
+          ],
+          child: buildLocalizedWidget(
+            const ColoredBox(
+              color: Colors.black,
+              child: SupporterMembership(compact: true),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ActionChip), findsOneWidget);
+      expect(find.byType(ListTile), findsNothing);
+    });
+
     testWidgets('account switch ignores an old in-flight membership response', (
       tester,
     ) async {

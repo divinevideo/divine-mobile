@@ -7592,10 +7592,6 @@
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
-  "supporterHeroBody": "Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
-  },
   "supporterActiveBadge": "You're a Divine Supporter. Thank you for keeping this going.",
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
@@ -7655,10 +7651,6 @@
   "supporterErrorUnknown": "Something went wrong. Please try again.",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "Divine confirms supporter status after the store verifies your purchase. Recognition is optional, and the halo is not verification.",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "Get notified about new vines",
   "@profileNotifyBellOff": {

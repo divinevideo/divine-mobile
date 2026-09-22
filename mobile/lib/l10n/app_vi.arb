@@ -6148,10 +6148,6 @@
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
-  "supporterHeroBody": "Divine miễn phí và sẽ luôn như vậy. Nếu bạn muốn giúp bọn mình giữ những vòng loop chạy tiếp, hãy trở thành người ủng hộ hàng tháng. Không có gì bị khóa — chỉ là giúp duy trì hoạt động và nhận lời cảm ơn của bọn mình.",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
-  },
   "supporterActiveBadge": "Bạn là Người ủng hộ Divine. Cảm ơn bạn đã giữ cho điều này tiếp tục.",
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
@@ -6208,10 +6204,6 @@
   "supporterErrorUnknown": "Có gì đó không ổn. Vui lòng thử lại.",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "Divine xác nhận trạng thái người ủng hộ sau khi cửa hàng xác minh giao dịch mua của bạn. Việc ghi nhận là tùy chọn, và vòng hào quang không phải là xác minh danh tính.",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "Nhận thông báo về vine mới",
   "profileNotifyBellOn": "Ngừng thông báo về vine mới",

@@ -6148,10 +6148,6 @@
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
-  "supporterHeroBody": "Divine 免费，而且永远免费。如果你想帮我们让循环一直转下去，可以成为月度支持者。没有任何功能被锁定——它只是让服务器有电可用，并赢得我们的感谢。",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
-  },
   "supporterActiveBadge": "你是 Divine 支持者。谢谢你让这一切继续。",
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
@@ -6208,10 +6204,6 @@
   "supporterErrorUnknown": "出了点问题，请重试。",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "Divine 会在商店验证你的购买后确认支持者状态。展示与否完全自愿，光环标识不代表认证。",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "接收新视频通知",
   "profileNotifyBellOn": "停止新视频通知",

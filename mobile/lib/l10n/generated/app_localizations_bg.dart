@@ -11451,10 +11451,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get supporterHeroTitle => 'Помогни на Divine да продължава';
 
   @override
-  String get supporterHeroBody =>
-      'Divine е безплатен и винаги ще бъде. Ако искаш да ни помогнеш да поддържаме луповете, стани месечен поддръжник. Нищо не е заключено — просто държиш лампите запалени и печелиш благодарността ни.';
-
-  @override
   String get supporterActiveBadge =>
       'Ти си поддръжник на Divine. Благодарим ти, че караш това да продължава.';
 
@@ -11505,10 +11501,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Нещо се обърка. Опитай пак.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine потвърждава статуса на поддръжник, след като магазинът провери покупката ти. Признанието е по желание, а ореолът не е потвърждение.';
 
   @override
   String get profileNotifyBellOff => 'Получавай известия за нови видеа';

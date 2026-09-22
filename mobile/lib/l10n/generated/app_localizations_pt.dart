@@ -11420,10 +11420,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get supporterHeroTitle => 'Mantenha o Divine rodando';
 
   @override
-  String get supporterHeroBody =>
-      'O Divine é grátis e sempre será. Se você quiser nos ajudar a manter os loops girando, vire um apoiador mensal. Nada é bloqueado — só mantém as luzes acesas e garante nosso agradecimento.';
-
-  @override
   String get supporterActiveBadge =>
       'Você é um apoiador do Divine. Obrigado por manter isso no ar.';
 
@@ -11476,10 +11472,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Algo deu errado. Tente novamente.';
-
-  @override
-  String get supporterDisclaimer =>
-      'O Divine confirma o status de apoiador depois que a loja verifica sua compra. O reconhecimento é opcional, e a auréola não é uma verificação.';
 
   @override
   String get profileNotifyBellOff => 'Avisar sobre novos vines';

@@ -3,8 +3,10 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 
 import 'test_provider_overrides.dart';
@@ -27,6 +29,7 @@ void main() {
 
       expect(auth.authState, AuthState.unauthenticated);
       expect(auth.isAuthenticated, isFalse);
+      expect(auth.canPublishNostrWritesNow, isFalse);
       expect(auth.currentPublicKeyHex, isNull);
     });
 
@@ -44,6 +47,18 @@ void main() {
   });
 
   group('getStandardTestOverrides', () {
+    test('standard overrides isolate supporter network and store clients', () {
+      final container = ProviderContainer(
+        overrides: getStandardTestOverrides(),
+      );
+      addTearDown(container.dispose);
+      expect(container.read(supporterApiClientProvider), isNull);
+      expect(
+        container.read(entitlementValidatorProvider),
+        isA<StubEntitlementValidator>(),
+      );
+    });
+
     test('standard overrides give auth mocks a session-cleanup callback', () {
       final auth = MockAuthService();
 

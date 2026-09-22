@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/screens/settings/appearance_settings_screen.dart';
 import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
@@ -75,6 +76,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            // Membership is exercised by dedicated status/recognition tests.
+            supporterApiConfiguredProvider.overrideWithValue(false),
             sharedPreferencesProvider.overrideWithValue(preferences),
             authServiceProvider.overrideWithValue(authService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),

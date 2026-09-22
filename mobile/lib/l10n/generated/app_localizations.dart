@@ -19146,12 +19146,6 @@ abstract class AppLocalizations {
   /// **'Keep Divine running'**
   String get supporterHeroTitle;
 
-  /// Introductory copy on the supporter subscription screen explaining the optional monthly support.
-  ///
-  /// In en, this message translates to:
-  /// **'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.'**
-  String get supporterHeroBody;
-
   /// Confirmation shown to users with an active supporter subscription.
   ///
   /// In en, this message translates to:
@@ -19241,12 +19235,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again.'**
   String get supporterErrorUnknown;
-
-  /// Footnote on the supporter screen explaining server-side confirmation and that recognition is optional.
-  ///
-  /// In en, this message translates to:
-  /// **'Divine confirms supporter status after the store verifies your purchase. Recognition is optional, and the halo is not verification.'**
-  String get supporterDisclaimer;
 
   /// Accessibility label on the profile bell when the viewer is not subscribed. Describes the action the tap performs, not the current state.
   ///

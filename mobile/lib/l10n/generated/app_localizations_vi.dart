@@ -11289,10 +11289,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supporterHeroTitle => 'Giữ Divine hoạt động';
 
   @override
-  String get supporterHeroBody =>
-      'Divine miễn phí và sẽ luôn như vậy. Nếu bạn muốn giúp bọn mình giữ những vòng loop chạy tiếp, hãy trở thành người ủng hộ hàng tháng. Không có gì bị khóa — chỉ là giúp duy trì hoạt động và nhận lời cảm ơn của bọn mình.';
-
-  @override
   String get supporterActiveBadge =>
       'Bạn là Người ủng hộ Divine. Cảm ơn bạn đã giữ cho điều này tiếp tục.';
 
@@ -11345,10 +11341,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Có gì đó không ổn. Vui lòng thử lại.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine xác nhận trạng thái người ủng hộ sau khi cửa hàng xác minh giao dịch mua của bạn. Việc ghi nhận là tùy chọn, và vòng hào quang không phải là xác minh danh tính.';
 
   @override
   String get profileNotifyBellOff => 'Nhận thông báo về vine mới';

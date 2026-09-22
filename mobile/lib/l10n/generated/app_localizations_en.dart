@@ -11427,10 +11427,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterHeroTitle => 'Keep Divine running';
 
   @override
-  String get supporterHeroBody =>
-      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
-
-  @override
   String get supporterActiveBadge =>
       'You\'re a Divine Supporter. Thank you for keeping this going.';
 
@@ -11482,10 +11478,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Something went wrong. Please try again.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine confirms supporter status after the store verifies your purchase. Recognition is optional, and the halo is not verification.';
 
   @override
   String get profileNotifyBellOff => 'Get notified about new vines';

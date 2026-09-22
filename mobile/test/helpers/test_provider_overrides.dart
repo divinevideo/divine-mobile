@@ -7,6 +7,7 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
@@ -137,6 +139,7 @@ MockAuthService createMockAuthService({
     () => mockAuth.isAuthenticated,
   ).thenReturn(authState == AuthState.authenticated);
   when(() => mockAuth.canExportLocalNsec).thenReturn(false);
+  when(() => mockAuth.canPublishNostrWritesNow).thenReturn(false);
   when(
     () => mockAuth.authenticationSource,
   ).thenReturn(AuthenticationSource.none);
@@ -446,6 +449,10 @@ List<Override> getStandardTestOverrides({
     // Mirror DeviceScope's required bootstrap overrides for test containers.
     appVersionProvider.overrideWithValue('test'),
     documentsPathProvider.overrideWithValue('/documents'),
+    // Profile badges must not start HTTP requests or a native store connection
+    // in unrelated widget tests. Dedicated supporter tests supply their own API.
+    supporterApiClientProvider.overrideWithValue(null),
+    entitlementValidatorProvider.overrideWithValue(StubEntitlementValidator()),
     // Analytics has its own focused tests. Other widget tests must not create
     // its transport, timers, or session listeners as an incidental side effect.
     analyticsServiceProvider.overrideWithValue(

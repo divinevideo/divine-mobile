@@ -10652,10 +10652,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterHeroTitle => '让 Divine 一直转下去';
 
   @override
-  String get supporterHeroBody =>
-      'Divine 免费，而且永远免费。如果你想帮我们让循环一直转下去，可以成为月度支持者。没有任何功能被锁定——它只是让服务器有电可用，并赢得我们的感谢。';
-
-  @override
   String get supporterActiveBadge => '你是 Divine 支持者。谢谢你让这一切继续。';
 
   @override
@@ -10699,10 +10695,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => '出了点问题，请重试。';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine 会在商店验证你的购买后确认支持者状态。展示与否完全自愿，光环标识不代表认证。';
 
   @override
   String get profileNotifyBellOff => '接收新视频通知';

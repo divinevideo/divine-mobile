@@ -66,6 +66,8 @@ class SupporterState extends Equatable {
   final bool awaitingPurchaseConfirmation;
 
   bool get isSupporter => entitlement.isSupporter;
+  bool get isConfirmedInactive =>
+      snapshot?.status == SupporterServerStatus.expired;
   bool get isBusy =>
       status == SupporterStatus.purchasing ||
       status == SupporterStatus.pending ||

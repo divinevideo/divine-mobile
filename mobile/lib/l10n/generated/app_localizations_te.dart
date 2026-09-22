@@ -11655,10 +11655,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get supporterHeroTitle => 'Divine రన్ చేస్తూ ఉండండి';
 
   @override
-  String get supporterHeroBody =>
-      'Divine ఉచితం మరియు ఎల్లప్పుడూ ఉంటుంది. మీరు లూప్‌లను కొనసాగించడంలో మాకు సహాయం చేయాలనుకుంటే, నెలవారీ మద్దతుదారుగా అవ్వండి. ఏదీ లాక్ చేయబడలేదు - ఇది కేవలం లైట్లను ఆన్ చేస్తుంది మరియు మా కృతజ్ఞతలు పొందుతుంది.';
-
-  @override
   String get supporterActiveBadge =>
       'మీరు Divine మద్దతుదారు. దీన్ని కొనసాగించినందుకు ధన్యవాదాలు.';
 
@@ -11711,10 +11707,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.\nస్టోర్ మీ కొనుగోలును ధృవీకరించిన తర్వాత ';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine మద్దతుదారు స్థితిని నిర్ధారిస్తుంది. గుర్తింపు అనేది ఐచ్ఛికం మరియు హాలో అనేది ధృవీకరణ కాదు.';
 
   @override
   String get profileNotifyBellOff => 'కొత్త తీగల గురించి తెలియజేయండి';

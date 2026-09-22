@@ -11467,10 +11467,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get supporterHeroTitle => 'Mantieni Divine in funzione';
 
   @override
-  String get supporterHeroBody =>
-      'Divine è gratis e lo sarà sempre. Se vuoi aiutarci a tenere in vita i loop, diventa un sostenitore mensile. Niente è bloccato — serve solo a tenere accese le luci e a guadagnarti i nostri ringraziamenti.';
-
-  @override
   String get supporterActiveBadge =>
       'Sei un Sostenitore Divine. Grazie per mantenere vivo tutto questo.';
 
@@ -11524,10 +11520,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Qualcosa è andato storto. Riprova.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine conferma lo stato di sostenitore dopo che lo store ha verificato il tuo acquisto. Il riconoscimento è facoltativo, e l\'aureola non è una verifica.';
 
   @override
   String get profileNotifyBellOff => 'Avvisami dei nuovi vine';

@@ -17,7 +17,6 @@ import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
-import 'package:openvine/services/supporter_api_client.dart';
 
 /// Private acknowledgement remains visible even when public recognition is off.
 class SupporterMembership extends ConsumerWidget {
@@ -33,11 +32,10 @@ class SupporterMembership extends ConsumerWidget {
     ref.watch(currentAuthStateProvider);
     final auth = ref.watch(authServiceProvider);
     if (!auth.isAuthenticated) {
-      return DivineListTile(
-        title: context.l10n.supporterTitle,
-        icon: DivineIconName.heart,
+      return _MembershipEntry(
+        compact: compact,
+        label: context.l10n.supporterTitle,
         subtitle: context.l10n.supporterVerificationJoin,
-        onTap: () => context.push(SupporterScreen.path),
       );
     }
     ref.watch(currentAuthRpcCapabilityProvider);
@@ -65,29 +63,20 @@ class SupporterMembership extends ConsumerWidget {
       },
       child: BlocBuilder<SupporterCubit, SupporterState>(
         builder: (context, state) {
-          final confirmedInactive =
-              state.snapshot?.status == SupporterServerStatus.expired;
+          final confirmedInactive = state.isConfirmedInactive;
           final label = state.isSupporter
               ? context.l10n.supporterBadgeLabel
               : confirmedInactive
               ? context.l10n.supporterJoinLabel
               : context.l10n.supporterTitle;
-          if (compact) {
-            return ActionChip(
-              avatar: const DivineIcon(icon: DivineIconName.heart, size: 16),
-              label: Text(label),
-              onPressed: () => context.push(SupporterScreen.path),
-            );
-          }
-          return DivineListTile(
-            title: label,
-            icon: DivineIconName.heart,
+          return _MembershipEntry(
+            compact: compact,
+            label: label,
             subtitle: state.isSupporter
                 ? context.l10n.supporterActiveBadge
                 : confirmedInactive
                 ? context.l10n.supporterVerificationJoin
                 : context.l10n.supporterTileSubtitle,
-            onTap: () => context.push(SupporterScreen.path),
           );
         },
       ),
@@ -109,16 +98,54 @@ class PublicSupporterBadge extends ConsumerWidget {
     if (client == null) return const SizedBox.shrink();
     return BlocProvider(
       key: ValueKey((client, pubkey)),
-      create: (_) =>
-          PublicSupporterCubit(client: client, pubkey: pubkey)..load(),
+      create: (_) {
+        final cubit = PublicSupporterCubit(client: client, pubkey: pubkey);
+        unawaited(cubit.load());
+        return cubit;
+      },
       child: BlocBuilder<PublicSupporterCubit, bool>(
         builder: (context, visible) => visible
-            ? Chip(
-                avatar: const DivineIcon(icon: DivineIconName.heart, size: 16),
-                label: Text(context.l10n.supporterBadgeLabel),
+            ? Material(
+                type: MaterialType.transparency,
+                child: Chip(
+                  avatar: const DivineIcon(
+                    icon: DivineIconName.heart,
+                    size: 16,
+                  ),
+                  label: Text(context.l10n.supporterBadgeLabel),
+                ),
               )
             : const SizedBox.shrink(),
       ),
     );
   }
+}
+
+class _MembershipEntry extends StatelessWidget {
+  const _MembershipEntry({
+    required this.compact,
+    required this.label,
+    required this.subtitle,
+  });
+
+  final bool compact;
+  final String label;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    type: MaterialType.transparency,
+    child: compact
+        ? ActionChip(
+            avatar: const DivineIcon(icon: DivineIconName.heart, size: 16),
+            label: Text(label),
+            onPressed: () => context.push(SupporterScreen.path),
+          )
+        : DivineListTile(
+            title: label,
+            icon: DivineIconName.heart,
+            subtitle: subtitle,
+            onTap: () => context.push(SupporterScreen.path),
+          ),
+  );
 }

@@ -11322,10 +11322,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get supporterHeroTitle => 'Divine کو چلتے رکھیں';
 
   @override
-  String get supporterHeroBody =>
-      'Divine مفت ہے اور ہمیشہ رہے گا۔ اگر آپ لوپ چلتے رکھنے میں ہماری مدد کرنا چاہتے ہیں تو ماہانہ سپورٹر بنیں۔ کچھ بھی مقفل نہیں — یہ بس چراغ جلائے رکھتا ہے اور ہمارا شکریہ کما لیتا ہے۔';
-
-  @override
   String get supporterActiveBadge =>
       'آپ Divine سپورٹر ہیں۔ اسے چلتے رکھنے کے لیے شکریہ۔';
 
@@ -11378,10 +11374,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get supporterDisclaimer =>
-      'اسٹور آپ کی خریداری کی تصدیق کرنے کے بعد Divine سپورٹر اسٹیٹس کی تصدیق کرتا ہے۔ پہچان اختیاری ہے، اور ہالہ تصدیق نہیں ہے۔';
 
   @override
   String get profileNotifyBellOff => 'نئی ویڈیوز کی اطلاع دیں';

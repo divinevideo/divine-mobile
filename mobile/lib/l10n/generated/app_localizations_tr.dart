@@ -11266,10 +11266,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get supporterHeroTitle => 'Divine\'ı ayakta tut';
 
   @override
-  String get supporterHeroBody =>
-      'Divine ücretsiz ve hep öyle kalacak. Döngülerin devam etmesine yardım etmek istersen aylık destekçi ol. Hiçbir şey kilitli değil — sadece ışıkları açık tutar ve teşekkürlerimizi kazandırır.';
-
-  @override
   String get supporterActiveBadge =>
       'Divine Destekçisisin. Bunu sürdürdüğün için teşekkürler.';
 
@@ -11321,10 +11317,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'Bir şeyler ters gitti. Lütfen tekrar dene.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine, mağaza satın alımını doğruladıktan sonra destekçi durumunu onaylar. Tanınma isteğe bağlıdır ve hale bir doğrulama değildir.';
 
   @override
   String get profileNotifyBellOff => 'Yeni vine\'lardan haberdar et';

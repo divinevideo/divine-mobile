@@ -10774,10 +10774,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterHeroTitle => 'Divine を走らせ続けよう';
 
   @override
-  String get supporterHeroBody =>
-      'Divine は無料だよ。これからもずっと。ループを回し続ける手伝いがしたかったら、月額サポーターになってね。ロックされるものは何もないよ — ただ灯りを灯し続けるだけ。そして私たちの感謝付き。';
-
-  @override
   String get supporterActiveBadge => 'あなたは Divine サポーターだよ。続けてくれてありがとう。';
 
   @override
@@ -10822,10 +10818,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => '問題が発生したよ。もう一回試してみて。';
-
-  @override
-  String get supporterDisclaimer =>
-      'ストアが購入を確認した後、Divine がサポーター状態を確定するよ。表示は任意だし、ハローは認証マークじゃないよ。';
 
   @override
   String get profileNotifyBellOff => '新しい動画を通知する';

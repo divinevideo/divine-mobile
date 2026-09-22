@@ -114,11 +114,6 @@ void main() {
       when(() => mockLocaleCubit.state).thenReturn(const LocaleState());
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);
-      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(false);
-      when(() => mockAuthService.authRpcCapability)
-          .thenReturn(AuthRpcCapability.unavailable);
-      when(() => mockAuthService.authRpcCapabilityStream)
-          .thenAnswer((_) => const Stream.empty());
       when(() => mockAuthService.isAnonymous).thenReturn(false);
       when(() => mockAuthService.currentPublicKeyHex).thenReturn(currentPubkey);
       when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
@@ -134,6 +129,16 @@ void main() {
       ).thenAnswer((_) async => 0);
     });
 
+    void stubReadOnlySupporterEntry() {
+      // This subject renders a read-only supporter entry; dedicated supporter
+      // widget tests supply real canonical responses and signing capabilities.
+      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(false);
+      when(() => mockAuthService.authRpcCapability)
+          .thenReturn(AuthRpcCapability.unavailable);
+      when(() => mockAuthService.authRpcCapabilityStream)
+          .thenAnswer((_) => const Stream.empty());
+    }
+
     Widget buildSubject({
       AuthState authState = AuthState.authenticated,
       MockGoRouter? goRouter,
@@ -142,6 +147,7 @@ void main() {
       bool developerMode = false,
       AccountEnforcementKind? enforcement,
     }) {
+      stubReadOnlySupporterEntry();
       when(
         () => mockAuthService.getKnownAccounts(),
       ).thenAnswer((_) async => knownAccounts);
@@ -246,6 +252,7 @@ void main() {
     testWidgets('account header keeps the npub over the own follower count', (
       tester,
     ) async {
+      stubReadOnlySupporterEntry();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -363,6 +370,7 @@ void main() {
           initialState: const BackgroundPublishState(),
         );
 
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -528,6 +536,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      stubReadOnlySupporterEntry();
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -622,6 +631,7 @@ void main() {
         when(() => mockAuthService.isAnonymous).thenReturn(true);
         when(() => mockAuthService.hasExpiredOAuthSession).thenReturn(true);
 
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -703,6 +713,7 @@ void main() {
     testWidgets(
       'keeps Bluesky Publishing off the hub when feature flag is on',
       (tester) async {
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -975,6 +986,7 @@ void main() {
           sharedPreferences: sharedPreferences,
         );
 
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [

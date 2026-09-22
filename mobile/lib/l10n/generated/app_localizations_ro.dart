@@ -11581,10 +11581,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get supporterHeroTitle => 'Ține Divine pe picioare';
 
   @override
-  String get supporterHeroBody =>
-      'Divine e gratuit și așa va rămâne. Dacă vrei să ne ajuți să menținem buclele în mișcare, devino susținător lunar. Nimic nu e blocat — pur și simplu ține luminile aprinse și îți câștigă mulțumirile noastre.';
-
-  @override
   String get supporterActiveBadge =>
       'Ești Susținător Divine. Mulțumim că ții asta în mișcare.';
 
@@ -11636,10 +11632,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Ceva nu a mers bine. Încearcă din nou.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine confirmă statutul de susținător după ce magazinul îți verifică cumpărătura. Recunoașterea e opțională, iar haloul nu e o verificare.';
 
   @override
   String get profileNotifyBellOff => 'Anunță-mă despre videoclipuri noi';

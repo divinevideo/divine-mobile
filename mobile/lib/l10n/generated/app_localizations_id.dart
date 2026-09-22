@@ -11255,10 +11255,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get supporterHeroTitle => 'Bantu Divine tetap berjalan';
 
   @override
-  String get supporterHeroBody =>
-      'Divine gratis dan akan selalu gratis. Kalau kamu ingin membantu kami menjaga loop tetap berjalan, jadilah pendukung bulanan. Tidak ada yang dikunci — cuma menjaga lampu tetap menyala dan membuat kami berterima kasih.';
-
-  @override
   String get supporterActiveBadge =>
       'Kamu Pendukung Divine. Terima kasih sudah menjaga ini tetap berjalan.';
 
@@ -11310,10 +11306,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Terjadi kesalahan. Silakan coba lagi.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine mengonfirmasi status pendukung setelah toko memverifikasi pembelianmu. Pengakuan bersifat opsional, dan halo bukan verifikasi.';
 
   @override
   String get profileNotifyBellOff => 'Beri tahu tentang vine baru';

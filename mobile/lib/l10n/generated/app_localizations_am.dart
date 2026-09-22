@@ -11046,10 +11046,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterHeroTitle => 'Divineን እንዲቀጥል ያድርጉ';
 
   @override
-  String get supporterHeroBody =>
-      'Divine ነፃ ነው እና ሁልጊዜም ይሆናል። ሉፖቹ እንዲቀጥሉ ለመርዳት ከፈለጉ፣ ወርሃዊ ደጋፊ ይሁኑ። ምንም አይታገድም — መብራቱን የሚያቆይ እና ምስጋናችንን የሚያገኝ ብቻ ነው።';
-
-  @override
   String get supporterActiveBadge => 'የDivine ደጋፊ ነዎት። ይህንን ስላስቀጠሉ እናመሰግናለን።';
 
   @override
@@ -11095,10 +11091,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።';
-
-  @override
-  String get supporterDisclaimer =>
-      'መደብሩ ግዢዎን ካረጋገጠ በኋላ Divine የደጋፊ ሁኔታን ያረጋግጣል። እውቅናው አማራጭ ነው፣ እና ሄሎው ማረጋገጫ አይደለም።';
 
   @override
   String get profileNotifyBellOff => 'ስለ አዲስ ቫይኖች አሳውቀኝ';

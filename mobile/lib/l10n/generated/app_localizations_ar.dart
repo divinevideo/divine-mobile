@@ -11273,10 +11273,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supporterHeroTitle => 'ساعد Divine على الاستمرار';
 
   @override
-  String get supporterHeroBody =>
-      'Divine مجاني وسيبقى كذلك دائمًا. إذا أردت مساعدتنا في إبقاء التكرارات مستمرة، فكن داعمًا شهريًا. لا شيء مقفل — هذا فقط يُبقي الأنوار مضاءة ويكسبك شكرنا.';
-
-  @override
   String get supporterActiveBadge =>
       'أنت داعم لـ Divine. شكرًا لإبقائك هذا مستمرًا.';
 
@@ -11326,10 +11322,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'حدث خطأ ما. يرجى المحاولة مرّة أخرى.';
-
-  @override
-  String get supporterDisclaimer =>
-      'يؤكّد Divine حالة الداعم بعد أن يتحقّق المتجر من عملية شرائك. التقدير اختياري، والهالة ليست توثيقًا.';
 
   @override
   String get profileNotifyBellOff => 'أبلغني عن المقاطع الجديدة';

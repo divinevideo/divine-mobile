@@ -11437,10 +11437,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get supporterHeroTitle => 'Panatilihing tumatakbo ang Divine';
 
   @override
-  String get supporterHeroBody =>
-      'Libre ang Divine at laging magiging libre. Kung gusto mo kaming tulungang panatilihing umaandar ang mga loop, maging monthly supporter ka. Walang naka-lock — pinapanatili lang nitong bukas ang ilaw at taos-puso kaming nagpapasalamat.';
-
-  @override
   String get supporterActiveBadge =>
       'Isa kang Divine Supporter. Salamat sa pagpapanatili nito.';
 
@@ -11494,10 +11490,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'May nangyaring problema. Pakisubukan ulit.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Kinukumpirma ng Divine ang supporter status pagkatapos i-verify ng store ang purchase mo. Optional ang recognition, at hindi verification ang halo.';
 
   @override
   String get profileNotifyBellOff => 'Ipaalam ang mga bagong vine';
