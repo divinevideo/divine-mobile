@@ -73,25 +73,43 @@ class _RosterListResolver extends ConsumerWidget {
       return ref
           .watch(provider)
           .when(
-            data: (list) =>
-                list == null ? const _RosterNotFoundView() : builder(list),
+            data: (list) {
+              if (list == null) return const _RosterNotFoundView();
+              return builder(list);
+            },
             loading: () => const _RosterLoadingView(),
             error: (_, _) =>
                 _RosterFailedView(onRetry: () => ref.invalidate(provider)),
           );
     }
 
-    return BlocSelector<PeopleListsBloc, PeopleListsState, UserList?>(
-      selector: (state) {
-        for (final list in state.lists) {
-          if (list.id == listId) return list;
-        }
-        return null;
+    return BlocSelector<
+      PeopleListsBloc,
+      PeopleListsState,
+      ({bool listsKnown, UserList? list})
+    >(
+      selector: (state) => (
+        listsKnown: state.listsKnown,
+        list: _ownListById(state, listId),
+      ),
+      builder: (context, selected) {
+        final list = selected.list;
+        if (list != null) return builder(list);
+        // "Not found" is only known once the viewer's lists have arrived;
+        // before that a cold deep link would flash it over a list that is
+        // still on its way.
+        if (!selected.listsKnown) return const _RosterLoadingView();
+        return const _RosterNotFoundView();
       },
-      builder: (context, list) =>
-          list == null ? const _RosterNotFoundView() : builder(list),
     );
   }
+}
+
+UserList? _ownListById(PeopleListsState state, String listId) {
+  for (final list in state.lists) {
+    if (list.id == listId) return list;
+  }
+  return null;
 }
 
 /// Owns the roster cubit for [list]; re-keyed when the profile repository
@@ -151,20 +169,31 @@ class _RosterView extends StatelessWidget {
             ),
         ],
       ),
-      body: list.pubkeys.isEmpty
-          ? const _EmptyRosterView()
-          : BlocBuilder<PeopleListMembersCubit, PeopleListMembersState>(
-              builder: (context, state) => ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: state.members.length,
-                itemBuilder: (context, index) => PeopleListMemberTile(
-                  key: ValueKey(state.members[index].pubkey),
-                  pubkey: state.members[index].pubkey,
-                  listId: list.id,
-                  canRemove: list.isEditable,
-                ),
-              ),
-            ),
+      body: _RosterBody(list: list),
+    );
+  }
+}
+
+/// The ranked roster, or the empty view for a list with no members yet.
+class _RosterBody extends StatelessWidget {
+  const _RosterBody({required this.list});
+
+  final UserList list;
+
+  @override
+  Widget build(BuildContext context) {
+    if (list.pubkeys.isEmpty) return const _EmptyRosterView();
+    return BlocBuilder<PeopleListMembersCubit, PeopleListMembersState>(
+      builder: (context, state) => ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: state.members.length,
+        itemBuilder: (context, index) => PeopleListMemberTile(
+          key: ValueKey(state.members[index].pubkey),
+          pubkey: state.members[index].pubkey,
+          listId: list.id,
+          canRemove: list.isEditable,
+        ),
+      ),
     );
   }
 }

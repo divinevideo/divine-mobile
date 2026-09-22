@@ -19,6 +19,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -630,6 +631,38 @@ void main() {
       },
     );
 
+    testWidgets("shows loading until the viewer's lists have arrived", (
+      tester,
+    ) async {
+      // A cold deep link reaches the screen before the bloc has delivered
+      // the viewer's lists; that is not "not found" yet.
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.loading,
+        ),
+      );
+
+      await tester.pumpWidget(
+        testProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<PeopleListsBloc>.value(
+              value: bloc,
+              child: const UserListPeopleScreen(listId: 'missing-id'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+      expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+    });
+
     testWidgets('shows the add-people action when current list is editable', (
       tester,
     ) async {
@@ -942,6 +975,22 @@ void main() {
               ownerPubkey: _otherOwnerPubkey,
             ),
           );
+        // Two frames: one for the states to land, one for the confirmation
+        // sheet to be gone. The spinner never settles, so no pumpAndSettle.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // The new account's lists are still on their way: not "not found"
+        // yet, and no announcement or pop either way.
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
+
+        controller.add(
+          const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _otherOwnerPubkey,
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(announcements, isEmpty);
