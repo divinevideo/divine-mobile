@@ -70,7 +70,7 @@ void main() {
       // Execute the retry logic
       final result = await asyncScope.retryWithBackoff(
         operation: () async {
-          mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+          await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
           final profile = await mockProfileRepository.fetchFreshProfile(
             pubkey: testPubkey,
           );
@@ -119,7 +119,7 @@ void main() {
         // Execute
         final result = await asyncScope.retryWithBackoff(
           operation: () async {
-            mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+            await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
             final profile = await mockProfileRepository.fetchFreshProfile(
               pubkey: testPubkey,
             );
@@ -165,7 +165,7 @@ void main() {
       expect(
         asyncScope.retryWithBackoff(
           operation: () async {
-            mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+            await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
             final profile = await mockProfileRepository.fetchFreshProfile(
               pubkey: testPubkey,
             );
@@ -202,7 +202,7 @@ void main() {
       expect(
         asyncScope.retryWithBackoff(
           operation: () async {
-            mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+            await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
             final profile = await mockProfileRepository.fetchFreshProfile(
               pubkey: testPubkey,
             );
@@ -245,7 +245,7 @@ void main() {
 
       final result = await asyncScope.retryWithBackoff(
         operation: () async {
-          mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+          await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
           final profile = await mockProfileRepository.fetchFreshProfile(
             pubkey: testPubkey,
           );
@@ -290,7 +290,7 @@ void main() {
 
       final result = await asyncScope.retryWithBackoff(
         operation: () async {
-          mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
+          await mockProfileRepository.deleteCachedProfile(pubkey: testPubkey);
           final profile = await mockProfileRepository.fetchFreshProfile(
             pubkey: testPubkey,
           );
