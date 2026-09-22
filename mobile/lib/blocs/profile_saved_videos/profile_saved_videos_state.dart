@@ -44,8 +44,8 @@ final class ProfileSavedVideosState extends Equatable {
   /// The current loading status.
   final ProfileSavedVideosStatus status;
 
-  /// The saved videos, most recently saved first — the reverse of the order
-  /// [BookmarksRepository] holds them in.
+  /// The saved videos in reverse repository order: reversed private entries
+  /// followed by reversed public entries, not a global chronological merge.
   final List<VideoEvent> videos;
 
   /// The bookmark event IDs backing the current video list.

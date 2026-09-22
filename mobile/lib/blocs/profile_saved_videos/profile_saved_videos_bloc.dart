@@ -45,22 +45,10 @@ class ProfileSavedVideosBloc
        _currentUserPubkey = currentUserPubkey,
        _deletedVideoFilter = deletedVideoFilter,
        super(const ProfileSavedVideosState()) {
-    on<ProfileSavedVideosSyncRequested>(
-      _onSyncRequested,
-      // Sequential, not droppable: a dropped event never reaches the handler,
-      // so nothing would complete its completer and pull-to-refresh would spin
-      // forever. Rapid syncs queue instead of coalescing.
-      transformer: sequential(),
-    );
-    on<ProfileSavedVideosLoadMoreRequested>(_onLoadMoreRequested);
-    on<ProfileSavedVideosReconcileRequested>(
-      _onReconcileRequested,
-      transformer: sequential(),
-    );
-    on<ProfileSavedVideosVideoRemoved>(
-      _onVideoRemoved,
-      transformer: sequential(),
-    );
+    // One queue owns all grid and snapshot mutations. Separate per-event
+    // queues let a slow sync overwrite a newer bookmark notification.
+    // Queue rather than drop syncs so every refresh completer is released.
+    on<ProfileSavedVideosEvent>(_onEvent, transformer: sequential());
     _removedVideoIdsSubscription = removedVideoIds.listen((videoId) {
       if (isClosed) return;
       add(ProfileSavedVideosVideoRemoved(videoId));
@@ -81,27 +69,61 @@ class ProfileSavedVideosBloc
   late final StreamSubscription<String> _removedVideoIdsSubscription;
   late final StreamSubscription<List<BookmarkItem>> _bookmarksSubscription;
   final bool Function(VideoEvent video) _deletedVideoFilter;
+  bool _loadMorePending = false;
+
+  @override
+  void add(ProfileSavedVideosEvent event) {
+    if (event is! ProfileSavedVideosLoadMoreRequested || isClosed) {
+      super.add(event);
+      return;
+    }
+    // Coalesce scroll ticks at admission, including while another mutation
+    // owns the queue. A handler-only guard runs too late for queued requests.
+    if (_loadMorePending) return;
+    _loadMorePending = true;
+    try {
+      super.add(event);
+    } on Object {
+      _loadMorePending = false;
+      rethrow;
+    }
+  }
 
   /// Cache key for the saved-videos snapshot (bookmarks are private, so the
   /// key is scoped to the signed-in user for sign-out invalidation).
   ///
-  /// `_v2` because the snapshot's ID order flipped to newest-first. Reconciling
-  /// an oldest-first snapshot against a newest-first list finds the old top ID
-  /// at the far end, which reads as "everything above it is new" and widens
-  /// the window to the whole list — one relay query for every bookmark the
-  /// viewer has. Starting cold loads one page instead.
+  /// `_v2` because the snapshot now reverses the repository order. Reusing
+  /// the previous order would widen reconciliation to the entire list when
+  /// the old top ID moves to the far end. Starting cold loads one page.
   String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v2';
 
-  /// The video bookmarks in [items], most recently saved first.
-  ///
-  /// NIP-51 appends, so the list arrives oldest-first. Reversed here because
-  /// the grid loads one page from the front: left as-is, a save made a moment
-  /// ago sits past the loaded window for anyone with more than a page of
-  /// bookmarks, and at the very bottom for everyone else.
+  /// Video bookmarks in reverse repository order: private entries first,
+  /// then public entries, with each group reversed. The source contains no
+  /// per-bookmark timestamps for a chronological merge across the groups.
   static List<String> _savedVideoIds(List<BookmarkItem> items) => [
     for (final item in items.reversed)
       if (item.type == 'e') item.id,
   ];
+
+  Future<void> _onEvent(
+    ProfileSavedVideosEvent event,
+    Emitter<ProfileSavedVideosState> emit,
+  ) async {
+    switch (event) {
+      case ProfileSavedVideosSyncRequested():
+        await _onSyncRequested(event, emit);
+      case ProfileSavedVideosLoadMoreRequested():
+        try {
+          await _onLoadMoreRequested(event, emit);
+        } finally {
+          _loadMorePending = false;
+        }
+      case ProfileSavedVideosReconcileRequested():
+        await _onReconcileRequested(event, emit);
+      case ProfileSavedVideosVideoRemoved():
+        await _onVideoRemoved(event, emit);
+    }
+  }
 
   /// Handle sync request using stale-while-revalidate backed by [CacheSync].
   ///
@@ -292,9 +314,9 @@ class ProfileSavedVideosBloc
     ProfileSavedVideosReconcileRequested event,
     Emitter<ProfileSavedVideosState> emit,
   ) async {
-    // Nothing has settled yet, so there is no list to reconcile against. The
-    // sync that is about to settle reads the same repository.
-    if (state.status == ProfileSavedVideosStatus.initial || state.isLoading) {
+    // Ignore the initial subscription replay before the first sync request.
+    // Notifications received during a sync wait in the shared event queue.
+    if (state.status == ProfileSavedVideosStatus.initial) {
       return;
     }
     final freshIds = event.savedEventIds;

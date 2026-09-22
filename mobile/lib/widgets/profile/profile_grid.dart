@@ -645,7 +645,6 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         _savedRefreshSub?.cancel(),
         'cancel stale saved videos refresh subscription',
       );
-      _savedRefreshSub = null;
       _savedRefreshing = false;
       _savedVideosBloc = bookmarksRepository == null
           ? null

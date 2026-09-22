@@ -31,7 +31,7 @@ final class ProfileSavedVideosLoadMoreRequested
 /// Internal: the bookmark list changed while the grid was showing.
 ///
 /// Dispatched from the bloc's own subscription to the bookmarks repository;
-/// [savedEventIds] is the new list, most recently saved first.
+/// [savedEventIds] is the new list in reverse repository order.
 final class ProfileSavedVideosReconcileRequested
     extends ProfileSavedVideosEvent {
   const ProfileSavedVideosReconcileRequested(this.savedEventIds);

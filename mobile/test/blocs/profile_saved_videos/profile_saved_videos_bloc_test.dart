@@ -99,8 +99,8 @@ void main() {
 
     /// The list the repository holds for a grid showing [ids] top to bottom.
     ///
-    /// NIP-51 appends, so the repository keeps bookmarks oldest-first and the
-    /// bloc reverses them.
+    /// These public-only fixtures are reversed for presentation, matching
+    /// the bloc's reverse repository order.
     List<BookmarkItem> repositoryListShownAs(List<String> ids) => [
       for (final id in ids.reversed) BookmarkItem(type: 'e', id: id),
     ];
@@ -121,6 +121,133 @@ void main() {
         thumbnailUrl: 'https://example.com/thumb.jpg',
       );
     }
+
+    for (final warmRefresh in [false, true]) {
+      test(
+        'retains a save made during ${warmRefresh ? 'warm' : 'cold'} sync',
+        () async {
+          final firstId = 'a' * 64;
+          final secondId = 'b' * 64;
+          final newestId = 'c' * 64;
+          final changes = StreamController<List<BookmarkItem>>.broadcast();
+          var items = repositoryListShownAs([firstId]);
+          when(() => mockBookmarksRepository.globalBookmarks)
+              .thenAnswer((_) => items);
+          when(() => mockBookmarksRepository.watchGlobalBookmarks())
+              .thenAnswer((_) => changes.stream);
+          when(() => mockBookmarksRepository.syncGlobalBookmarks())
+              .thenAnswer((_) async {
+                changes.add(items);
+                return true;
+              });
+          final fetchedIds = <String>[];
+          final fetchStarted = Completer<void>();
+          final fetchGate = Completer<void>();
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((invocation) async {
+            final ids = invocation.positionalArguments.first as List<String>;
+            fetchedIds.addAll(ids);
+            if (ids.contains(secondId) && !fetchStarted.isCompleted) {
+              fetchStarted.complete();
+              await fetchGate.future;
+            }
+            return ids.map(createTestVideo).toList();
+          });
+          final bloc = createBloc();
+          addTearDown(() async {
+            if (!fetchGate.isCompleted) fetchGate.complete();
+            await bloc.close();
+            await changes.close();
+          });
+          if (warmRefresh) {
+            final initial = Completer<void>();
+            bloc.add(ProfileSavedVideosSyncRequested(completer: initial));
+            await initial.future;
+            await pumpEventQueue();
+          }
+          items = repositoryListShownAs([secondId, firstId]);
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await fetchStarted.future;
+          await pumpEventQueue();
+          items = repositoryListShownAs([newestId, secondId, firstId]);
+          changes.add(items);
+          await pumpEventQueue();
+          fetchGate.complete();
+          await sync.future;
+          await pumpEventQueue();
+          expect(bloc.state.savedEventIds, [newestId, secondId, firstId]);
+          expect(fetchedIds.where((id) => id == secondId), hasLength(1));
+          expect(fetchedIds.where((id) => id == newestId), hasLength(1));
+          final persisted = await cacheDao.read(snapshotCacheKey);
+          expect(ProfileVideoListSnapshot.fromJson(persisted!).itemIds, [
+            newestId,
+            secondId,
+            firstId,
+          ]);
+        },
+      );
+    }
+
+    test('coalesces load-more requests queued during a refresh', () async {
+      final ids = List.generate(
+        ProfileTabPagination.pageSize * 4,
+        (i) => i.toRadixString(16).padLeft(64, '0'),
+      );
+      when(() => mockBookmarksRepository.globalBookmarks)
+          .thenReturn(repositoryListShownAs(ids));
+      when(
+        () => mockVideosRepository.getVideosByIds(
+          any(),
+          cacheResults: any(named: 'cacheResults'),
+        ),
+      ).thenAnswer(
+        (invocation) async =>
+            (invocation.positionalArguments.first as List<String>)
+                .map(createTestVideo)
+                .toList(),
+      );
+      final bloc = createBloc();
+      final refreshGate = Completer<void>();
+      addTearDown(() async {
+        if (!refreshGate.isCompleted) refreshGate.complete();
+        await bloc.close();
+      });
+      final initial = Completer<void>();
+      bloc.add(ProfileSavedVideosSyncRequested(completer: initial));
+      await initial.future;
+      final refreshStarted = Completer<void>();
+      when(() => mockBookmarksRepository.syncGlobalBookmarks())
+          .thenAnswer((_) async {
+            if (!refreshStarted.isCompleted) refreshStarted.complete();
+            await refreshGate.future;
+            return true;
+          });
+      final refresh = Completer<void>();
+      bloc.add(ProfileSavedVideosSyncRequested(completer: refresh));
+      await refreshStarted.future;
+      for (var i = 0; i < 4; i++) {
+        bloc.add(const ProfileSavedVideosLoadMoreRequested());
+        await pumpEventQueue();
+      }
+      refreshGate.complete();
+      await refresh.future;
+      await pumpEventQueue();
+      expect(bloc.state.nextPageOffset, ProfileTabPagination.pageSize * 2);
+      final persisted = await cacheDao.read(snapshotCacheKey);
+      expect(
+        ProfileVideoListSnapshot.fromJson(persisted!).nextPageOffset,
+        ProfileTabPagination.pageSize * 2,
+      );
+      // A new gesture after completion still loads the next page.
+      bloc.add(const ProfileSavedVideosLoadMoreRequested());
+      await pumpEventQueue();
+      expect(bloc.state.nextPageOffset, ProfileTabPagination.pageSize * 3);
+    });
 
     test('initial state is initial with empty collections', () {
       final bloc = createBloc();
