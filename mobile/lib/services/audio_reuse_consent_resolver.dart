@@ -1,5 +1,6 @@
 // ABOUTME: Verifies audio reuse terms and fresh creator takedown decisions.
-// ABOUTME: Allows verified classic Vine audio unless explicitly suppressed.
+// ABOUTME: Allows verified classic Vine audio unless explicitly suppressed,
+// ABOUTME: and standalone sounds on their own signed terms.
 
 import 'package:models/models.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -17,7 +18,13 @@ class AudioReuseConsentResolver {
       return external.license.allowsDerivatives;
     }
     final sourceAddress = sound.sourceVideoReference;
-    if (sourceAddress == null || sourceAddress.isEmpty) return false;
+    if (sourceAddress == null || sourceAddress.isEmpty) {
+      // A standalone sound (#9391) has no source video, so no video-scoped
+      // takedown can apply and its signed Kind 1063 terms are the authority.
+      return sound.hasExplicitReuseConsent &&
+          sound.allowsReuse &&
+          !sound.requiresCurrentReuseVerification;
+    }
 
     VideoEvent? source;
     try {

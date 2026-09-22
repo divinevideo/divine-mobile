@@ -1,5 +1,6 @@
 // ABOUTME: Tests fail-closed consent verification for legacy Kind 1063 audio.
-// ABOUTME: Ensures only the sound's own source video can grant reuse.
+// ABOUTME: Ensures only the source video, or a standalone sound's own signed
+// ABOUTME: terms, can grant reuse.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -244,12 +245,75 @@ void main() {
       expect(await resolver.verify(_sound()), isFalse);
     });
 
-    test('fails closed without a source address', () async {
-      expect(
-        await resolver.verify(_sound(sourceVideoReference: null)),
-        isFalse,
-      );
-      verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+    group('without a source address', () {
+      test('fails closed for a sound with no reuse terms', () async {
+        expect(
+          await resolver.verify(_sound(sourceVideoReference: null)),
+          isFalse,
+        );
+        verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+      });
+
+      test('grants a standalone sound its explicit signed grant', () async {
+        expect(
+          await resolver.verify(
+            _sound(
+              allowsReuse: true,
+              hasExplicitReuseConsent: true,
+              sourceVideoReference: null,
+            ),
+          ),
+          isTrue,
+        );
+        verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+        verifyNever(() => videosRepository.refreshAudioReusePolicy(any()));
+      });
+
+      test('grants a published standalone Kind 1063 round trip', () async {
+        final published = AudioEvent(
+          id: '',
+          pubkey: _pubkey,
+          createdAt: 100,
+          url: 'https://blossom.example/$_audioSha256.m4a',
+          sha256: _audioSha256,
+          title: 'Beat',
+          creatorName: 'Creator',
+        );
+        final parsed = AudioEvent.fromNostrEvent(
+          Event(_pubkey, audioEventKind, published.toTags(), 'Beat'),
+        );
+
+        expect(parsed.sourceVideoReference, isNull);
+        expect(await resolver.verify(parsed), isTrue);
+      });
+
+      test("honors a standalone sound's explicit denial", () async {
+        expect(
+          await resolver.verify(
+            _sound(hasExplicitReuseConsent: true, sourceVideoReference: null),
+          ),
+          isFalse,
+        );
+      });
+
+      test('fails closed for a grant without a consent marker', () async {
+        expect(
+          await resolver.verify(
+            _sound(allowsReuse: true, sourceVideoReference: null),
+          ),
+          isFalse,
+        );
+      });
+
+      test('fails closed when the grant needs current verification', () async {
+        final sound = _sound(
+          allowsReuse: true,
+          hasExplicitReuseConsent: true,
+          sourceVideoReference: null,
+        ).copyWith(requiresCurrentReuseVerification: true);
+
+        expect(await resolver.verify(sound), isFalse);
+      });
     });
 
     test('fails closed when the source video is unreachable', () async {
