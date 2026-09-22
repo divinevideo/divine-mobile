@@ -54,6 +54,8 @@ abstract final class RoutePaths {
   static const likedVideos = '/liked-videos';
   static const messageRequests = '/inbox/message-requests';
   static const minorAccountReview = '/account-review';
+  static const minorAccountReviewConsentRecord =
+      '/account-review/parent-consent/record';
   static const monetizationLinksSettings = '/settings/monetization-links';
   static const monetizationLinksSettingsSubpath = 'monetization-links';
   static const nip05Settings = '/nostr-settings/$nip05SettingsSubpath';

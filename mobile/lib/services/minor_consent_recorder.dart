@@ -6,6 +6,12 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 
 /// Narrow recording surface used by the in-app parent-consent capture flow.
 abstract class MinorConsentRecorder {
+  /// Prepares the camera so the live preview and recording are ready.
+  ///
+  /// Call before [start]; a capture screen needs an initialized camera for its
+  /// preview to render. Throws when the platform camera cannot be initialized.
+  Future<void> initialize();
+
   /// Starts recording, capping the clip at [maxDuration] and writing it under
   /// [outputDirectory]. Returns whether the camera actually started.
   Future<bool> start({
@@ -27,6 +33,9 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
     : _camera = camera;
 
   final CameraService _camera;
+
+  @override
+  Future<void> initialize() => _camera.initialize();
 
   @override
   Future<bool> start({
