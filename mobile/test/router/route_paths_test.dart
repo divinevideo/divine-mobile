@@ -129,6 +129,10 @@ void main() {
         equals('/subtitle-edit/v%201'),
       );
       expect(RoutePaths.videoDetailForId('v1'), equals('/video/v1'));
+      expect(
+        RoutePaths.videoDetailForId('a?b/c#d'),
+        equals('/video/a%3Fb%2Fc%23d'),
+      );
       expect(RoutePaths.videoFeedForIndex(7), equals('/home/7'));
       expect(
         RoutePaths.videoMetadataEditFor('v 1'),

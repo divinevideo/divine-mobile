@@ -1955,7 +1955,13 @@ class FunnelcakeApiClient {
       throw const FunnelcakeException('Video ID cannot be empty');
     }
 
-    final uri = Uri.parse('$_baseUrl/api/videos/$videoId');
+    // Percent-encoded for the reason [getVideoLikers] is:
+    // [videoId] is a hex id or a `d` tag, and a d tag decoded from an
+    // untrusted `naddr1` is arbitrary UTF-8. Raw, a `?`, `#` or `/` in it
+    // retargets the request at a different endpoint.
+    final uri = Uri.parse(
+      '$_baseUrl/api/videos/${Uri.encodeComponent(videoId)}',
+    );
 
     try {
       final response = await _get(uri);

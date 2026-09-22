@@ -129,7 +129,8 @@ abstract final class RoutePaths {
   static String soundDetailForId(String id) => '$soundDetailBase/$id';
   static String subtitleEditorFor(String videoId) =>
       '$subtitleEditor/${Uri.encodeComponent(videoId)}';
-  static String videoDetailForId(String id) => '$videoDetailBase/$id';
+  static String videoDetailForId(String id) =>
+      '$videoDetailBase/${Uri.encodeComponent(id)}';
   static String videoFeedForIndex(int index) => '/home/$index';
   static String videoMetadataEditFor(String videoId) =>
       '$videoMetadataEdit/${Uri.encodeComponent(videoId)}';
