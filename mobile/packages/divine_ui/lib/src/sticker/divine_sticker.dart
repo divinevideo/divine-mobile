@@ -14,6 +14,9 @@ import 'package:material_ui/material_ui.dart';
 /// The OpenMoji SVGs in `assets/stickers/` belong to the video editor's sticker
 /// picker and are a separate set. [grandfather] is the only variant still drawn
 /// from them.
+///
+/// Figma's `bobRoss` component is deliberately left out because it depicts a
+/// real person.
 enum DivineStickerName {
   /// The warning triangle. [policeSiren] and [hazardSign] are separate
   /// stickers.
@@ -30,7 +33,6 @@ enum DivineStickerName {
   /// The stop-hand sign. [raisedHand] and [stopSign] are separate stickers.
   blocked('blocked'),
 
-  bobRoss('bob_ross'),
   boom('boom'),
   brokenHeart('broken_heart'),
   cactusVase('cactus_vase'),
