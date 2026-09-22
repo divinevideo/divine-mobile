@@ -915,7 +915,8 @@ class NostrClient {
   /// [acceptRelayClosedWhenOthersAnswered] opts a caller into treating a
   /// terminal `CLOSED` as settled when a non-cache relay answered and none of
   /// the participating relays stayed unanswered. It does not accept silence, a
-  /// dropped socket, or a deadline.
+  /// dropped socket, a deadline, or a `rate-limited` refusal, which NIP-01
+  /// defines as temporary.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -967,7 +968,8 @@ class NostrClient {
           !(acceptRelayClosedWhenOthersAnswered &&
               read.result.endedBy == QueryEnd.relayClosed &&
               read.result.answeredNetworkRelayCount > 0 &&
-              read.result.unansweredRelayCount == 0),
+              read.result.unansweredRelayCount == 0 &&
+              read.result.rateLimitedRelayCount == 0),
       noRelays: read.noRelays,
     );
   }
@@ -1265,6 +1267,7 @@ class NostrClient {
       endedBy: network.endedBy,
       answeredNetworkRelayCount: network.answeredNetworkRelayCount,
       unansweredRelayCount: network.unansweredRelayCount,
+      rateLimitedRelayCount: network.rateLimitedRelayCount,
       possiblyCapped: network.possiblyCapped,
       confirmedExhaustive: network.confirmedExhaustive,
     );

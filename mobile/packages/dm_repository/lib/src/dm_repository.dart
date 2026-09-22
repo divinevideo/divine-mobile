@@ -1507,12 +1507,13 @@ class DmRepository {
   ///
   /// Returns `true` when the pass completed against answering relays — a
   /// genuine empty answer, terminal refusal by another relay, or the page
-  /// budget — and `false` when no relay answered, a relay stayed silent or
-  /// dropped, the request timed out, or the repository was torn down. This
-  /// legacy pass accepts a terminal refusal only when another relay answered:
-  /// retrying a relay that permanently refuses cannot improve coverage, while
-  /// holding the entire DM restore open indefinitely is worse. The primary
-  /// gift-wrap drain retains its strict full-settlement cursor guard.
+  /// budget — and `false` when no relay answered, a relay stayed silent,
+  /// dropped, or was rate limited, the request timed out, or the repository
+  /// was torn down. This legacy pass accepts a terminal refusal only when
+  /// another relay answered: retrying a relay that permanently refuses cannot
+  /// improve coverage, while holding the entire DM restore open indefinitely
+  /// is worse. The primary gift-wrap drain retains its strict full-settlement
+  /// cursor guard.
   Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -1532,9 +1533,10 @@ class DmRepository {
           useCache: false,
           requireAllRelaysSettled: true,
           // This legacy pass is supplementary to the gift-wrap drain.
-          // A relay that explicitly closes the query cannot contribute on a
-          // retry, so accept other relays answering while still deferring on
-          // silence, disconnects, deadlines, or a refusal with no answer.
+          // A relay that explicitly closes the query is unlikely to contribute
+          // on a retry, so accept other relays answering while still deferring
+          // on silence, disconnects, deadlines, a rate limit, or a refusal
+          // with no answer.
           acceptRelayClosedWhenOthersAnswered: true,
         );
         final events = result.events;
@@ -1542,8 +1544,8 @@ class DmRepository {
         final authoritative = !result.noRelays && !result.timedOut;
         if (events.isEmpty) {
           // An empty page is genuine exhaustion only if a relay actually
-          // ANSWERED it. Nothing answering — no relay took the REQ, a relay
-          // refused it with `CLOSED`, or only some answered — arrives as an
+          // ANSWERED it. Nothing answering — no relay took the REQ, every
+          // answer was a refusal, or some relay stayed silent — arrives as an
           // ordinary empty list, and concluding "nothing to recover" would let
           // the caller mark the drain complete and permanently strand the
           // user's outgoing NIP-04 (the #5202 failure mode, mirrored here).

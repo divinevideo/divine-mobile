@@ -578,6 +578,89 @@ void main() {
         expect(await run(optIn: true), isFalse);
       },
     );
+
+    group('keeps an opted-in read timed out', () {
+      late Nostr nostr;
+      late _ScriptedRelay first;
+      late _ScriptedRelay second;
+      late NostrClient client;
+
+      setUp(() async {
+        nostr = _newNostr();
+        first = _ScriptedRelay('wss://first.example');
+        second = _ScriptedRelay('wss://second.example');
+        expect(await nostr.relayPool.add(first), isTrue);
+        expect(await nostr.relayPool.add(second), isTrue);
+        client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://first.example', 'wss://second.example'],
+        );
+      });
+
+      /// Starts an opted-in read once both relays hold its `REQ`; the record
+      /// wraps the pending `timedOut` so `await` cannot flatten it.
+      Future<({Future<bool> timedOut})> optedInRead({
+        Duration timeout = const Duration(seconds: 3),
+      }) async {
+        final pending = client.queryEventsDetailed(
+          [_textNotes()],
+          useCache: false,
+          timeout: timeout,
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        );
+        await first.awaitReq(0);
+        await second.awaitReq(0);
+        return (timedOut: pending.then((result) => result.timedOut));
+      }
+
+      test('when the refusal is a rate limit', () async {
+        final read = await optedInRead();
+        await first.deliver(['EOSE', first.reqSubIds.single]);
+        await second.deliver([
+          'CLOSED',
+          second.reqSubIds.single,
+          'rate-limited: slow down',
+        ]);
+
+        expect(await read.timedOut, isTrue);
+      });
+
+      test('when every relay refused and none answered', () async {
+        final read = await optedInRead();
+        await first.deliver([
+          'CLOSED',
+          first.reqSubIds.single,
+          'error: unsupported request',
+        ]);
+        await second.deliver([
+          'CLOSED',
+          second.reqSubIds.single,
+          'error: unsupported request',
+        ]);
+
+        expect(await read.timedOut, isTrue);
+      });
+
+      test('when another relay dropped its socket', () async {
+        final read = await optedInRead(
+          timeout: const Duration(milliseconds: 400),
+        );
+        await first.deliver(['EOSE', first.reqSubIds.single]);
+        second.onError('socket closed');
+
+        expect(await read.timedOut, isTrue);
+      });
+
+      test('when another relay stayed silent', () async {
+        final read = await optedInRead(
+          timeout: const Duration(milliseconds: 400),
+        );
+        await first.deliver(['EOSE', first.reqSubIds.single]);
+
+        expect(await read.timedOut, isTrue);
+      });
+    });
   });
 
   group('NostrClient.queryEvents', () {

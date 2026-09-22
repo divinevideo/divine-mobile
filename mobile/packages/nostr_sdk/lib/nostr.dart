@@ -736,6 +736,7 @@ class Nostr {
           endedBy: outcome.endedBy,
           answeredNetworkRelayCount: outcome.answeredNetworkRelayCount,
           unansweredRelayCount: outcome.unansweredRelayCount,
+          rateLimitedRelayCount: outcome.rateLimitedRelayCount,
           possiblyCapped: outcome.possiblyCapped,
           confirmedExhaustive: outcome.confirmedExhaustive,
         ),

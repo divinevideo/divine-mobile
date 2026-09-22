@@ -71,6 +71,7 @@ class QueryResult {
     required this.endedBy,
     this.answeredNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
+    this.rateLimitedRelayCount = 0,
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
   });
@@ -99,8 +100,13 @@ class QueryResult {
   /// other peers.
   final int answeredNetworkRelayCount;
 
-  /// Number of participating relays that neither answered nor refused.
+  /// Number of connected participating relays that sent no terminal frame
+  /// and can still be expected to answer. A dropped relay is not counted.
   final int unansweredRelayCount;
+
+  /// Number of relays that refused the read with a `rate-limited` `CLOSED`.
+  /// NIP-01 defines that refusal as temporary, so a retry may still succeed.
+  final int rateLimitedRelayCount;
 
   /// `true` when a relay may have withheld matching events because the read
   /// reached that relay's own result-size limit, rather than the relay

@@ -15,6 +15,7 @@ class QueryOutcome {
     required this.endedBy,
     this.answeredNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
+    this.rateLimitedRelayCount = 0,
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
     this.relays = const [],
@@ -35,8 +36,13 @@ class QueryOutcome {
   /// no matching events.
   final int answeredNetworkRelayCount;
 
-  /// Number of participating relays that neither answered nor refused.
+  /// Number of connected participating relays that sent no terminal frame
+  /// and can still be expected to answer. A dropped relay is not counted.
   final int unansweredRelayCount;
+
+  /// Number of relays that refused the query with a `rate-limited` `CLOSED`,
+  /// which NIP-01 defines as temporary.
+  final int rateLimitedRelayCount;
 
   /// Whether a relay may have withheld matching events because the query
   /// reached that relay's result-size limit; see [QueryResult.possiblyCapped].

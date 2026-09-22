@@ -228,6 +228,13 @@ class QueryOutcomeTracker {
       unansweredRelayCount: judgements.values
           .where((judgement) => judgement.standing == _Standing.noAnswer)
           .length,
+      rateLimitedRelayCount: judgements.entries
+          .where(
+            (entry) =>
+                entry.value.standing == _Standing.closed &&
+                entry.key.closedReason == 'rate-limited',
+          )
+          .length,
       possiblyCapped: judgements.keys.any(_isCapped),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [
