@@ -253,7 +253,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     VideoFeedStarted event,
     Emitter<VideoFeedBlocState> emit,
   ) async {
-    final followedPeopleLists = await _readFollowedPeopleLists();
+    final followedRead = await _readFollowedPeopleLists();
+    final followedPeopleLists =
+        followedRead ?? const <PeopleListSearchResult>[];
     final source = event.forceMode
         ? VideoFeedSource.fromMode(event.mode)
         : _modePreferences.restoreSource(
@@ -261,8 +263,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
             followedPeopleLists: followedPeopleLists,
           );
     if (!event.forceMode &&
-        _sharedPreferences?.getString(_modePreferences.key) !=
-            source.persistenceValue) {
+        await _mayPersistRestoredSource(source, followedRead)) {
       await _modePreferences.persist(source);
     }
 
@@ -348,10 +349,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
     _followedPeopleListsSubscription = _watchFollowedPeopleLists();
   }
 
-  /// The people lists the viewer follows, or none when signed out, when Home
-  /// was built without the repository, or when the local read fails: a cache
-  /// that cannot be read must not take the feed down with it.
-  Future<List<PeopleListSearchResult>> _readFollowedPeopleLists() async {
+  /// The people lists the viewer follows: none when signed out or when Home
+  /// was built without the repository, and `null` when the local read fails.
+  /// A cache that cannot be read must not take the feed down with it, but
+  /// its answer is unknown, not empty: [_mayPersistRestoredSource] keeps a
+  /// stored selection on the strength of that difference.
+  Future<List<PeopleListSearchResult>?> _readFollowedPeopleLists() async {
     final repository = _peopleListsRepository;
     final viewerPubkey = _userPubkey;
     if (repository == null || viewerPubkey == null) return const [];
@@ -365,7 +368,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         error: error,
         stackTrace: stackTrace,
       );
-      return const [];
+      return null;
     } catch (error, stackTrace) {
       // A box that will not open throws a `HiveError`, which is an `Error`.
       // It is reported, and Home still loads without the people-list feeds.
@@ -376,7 +379,54 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState> {
         ),
         stackTrace,
       );
-      return const [];
+      return null;
+    }
+  }
+
+  /// Whether the [restored] source may replace the stored one.
+  ///
+  /// A stored people list that did not resolve is kept while the answer is
+  /// unknown: the follows could not be read ([followed] is null), or the
+  /// follow is still held and only its copy is missing until the next relay
+  /// sync, as after "Reset app data". Persisting For You there would turn a
+  /// transient failure into a lost selection; the feed shows For You for
+  /// this session and the list is restored once its copy is back. A follow
+  /// that is gone is replaced, as an unsubscribed video list's is.
+  Future<bool> _mayPersistRestoredSource(
+    VideoFeedSource restored,
+    List<PeopleListSearchResult>? followed,
+  ) async {
+    final stored = _sharedPreferences?.getString(_modePreferences.key);
+    if (stored == restored.persistenceValue) return false;
+    final ref = stored == null
+        ? null
+        : VideoFeedSource.peopleListRefFromValue(stored);
+    if (ref == null) return true;
+    if (followed == null) return false;
+    return !await _isStillFollowed(ref);
+  }
+
+  /// Whether the viewer still follows [ref]. A follow that cannot be checked
+  /// counts as held, so a failed check cannot lose the stored selection.
+  Future<bool> _isStillFollowed(FollowedPeopleListRef ref) async {
+    final repository = _peopleListsRepository;
+    final viewerPubkey = _userPubkey;
+    if (repository == null || viewerPubkey == null) return true;
+    try {
+      return await repository.isFollowingList(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ref.ownerPubkey,
+        listId: ref.listId,
+      );
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'VideoFeedBloc: could not check whether a people list is followed',
+        name: 'VideoFeedBloc',
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return true;
     }
   }
 

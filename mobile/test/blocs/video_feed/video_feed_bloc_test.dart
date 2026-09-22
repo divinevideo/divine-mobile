@@ -3651,6 +3651,13 @@ void main() {
         when(
           () => peopleListsRepository.readFollowedLists(viewerPubkey: viewer),
         ).thenAnswer((_) async => []);
+        when(
+          () => peopleListsRepository.isFollowingList(
+            viewerPubkey: any(named: 'viewerPubkey'),
+            ownerPubkey: any(named: 'ownerPubkey'),
+            listId: any(named: 'listId'),
+          ),
+        ).thenAnswer((_) async => false);
       });
 
       tearDown(() => followedController.close());
@@ -3794,7 +3801,7 @@ void main() {
           },
           build: () => savedModeBloc,
           act: (bloc) => bloc.add(const VideoFeedStarted()),
-          verify: (bloc) {
+          verify: (bloc) async {
             expect(bloc.state.source, equals(const VideoFeedSource.forYou()));
             expect(bloc.state.status, equals(VideoFeedStatus.success));
             verifyNever(
@@ -3803,6 +3810,54 @@ void main() {
                 limit: any(named: 'limit'),
                 until: any(named: 'until'),
               ),
+            );
+            // The follow itself is gone, so the fallback is the new
+            // preference, as it is for an unsubscribed video list.
+            verify(
+              () => peopleListsRepository.isFollowingList(
+                viewerPubkey: viewer,
+                ownerPubkey: listOwner,
+                listId: 'crew',
+              ),
+            ).called(1);
+            final prefs = await SharedPreferences.getInstance();
+            expect(
+              prefs.getString('selected_feed_mode_$viewer'),
+              equals(FeedMode.forYou.name),
+            );
+          },
+        );
+
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'keeps the stored people list while its copy is not held yet',
+          setUp: () async {
+            // After "Reset app data" the follow survives but its copy is
+            // gone until the next relay sync, so the read leaves it out.
+            final crew = followedList();
+            SharedPreferences.setMockInitialValues({
+              'selected_feed_mode_$viewer': sourceFor(crew).persistenceValue,
+            });
+            stubRecommended(createTestVideos(2));
+            when(
+              () => peopleListsRepository.isFollowingList(
+                viewerPubkey: viewer,
+                ownerPubkey: listOwner,
+                listId: 'crew',
+              ),
+            ).thenAnswer((_) async => true);
+            savedModeBloc = createPeopleBloc(
+              sharedPreferences: await SharedPreferences.getInstance(),
+            );
+          },
+          build: () => savedModeBloc,
+          act: (bloc) => bloc.add(const VideoFeedStarted()),
+          verify: (bloc) async {
+            expect(bloc.state.source, equals(const VideoFeedSource.forYou()));
+            expect(bloc.state.status, equals(VideoFeedStatus.success));
+            final prefs = await SharedPreferences.getInstance();
+            expect(
+              prefs.getString('selected_feed_mode_$viewer'),
+              equals(sourceFor(followedList()).persistenceValue),
             );
           },
         );
@@ -3822,6 +3877,44 @@ void main() {
             expect(bloc.state.status, equals(VideoFeedStatus.success));
             expect(bloc.state.videos, hasLength(2));
             expect(bloc.state.followedPeopleLists, isEmpty);
+          },
+        );
+
+        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          'keeps the stored people list when the follows cannot be read',
+          setUp: () async {
+            SharedPreferences.setMockInitialValues({
+              'selected_feed_mode_$viewer': sourceFor(followedList())
+                  .persistenceValue,
+            });
+            stubRecommended(createTestVideos(2));
+            when(
+              () =>
+                  peopleListsRepository.readFollowedLists(viewerPubkey: viewer),
+            ).thenThrow(Exception('box will not open'));
+            savedModeBloc = createPeopleBloc(
+              sharedPreferences: await SharedPreferences.getInstance(),
+            );
+          },
+          build: () => savedModeBloc,
+          act: (bloc) => bloc.add(const VideoFeedStarted()),
+          verify: (bloc) async {
+            // Unknown is not "unfollowed": Home shows For You this session
+            // and the selection is still there for the next launch.
+            expect(bloc.state.source, equals(const VideoFeedSource.forYou()));
+            expect(bloc.state.status, equals(VideoFeedStatus.success));
+            verifyNever(
+              () => peopleListsRepository.isFollowingList(
+                viewerPubkey: any(named: 'viewerPubkey'),
+                ownerPubkey: any(named: 'ownerPubkey'),
+                listId: any(named: 'listId'),
+              ),
+            );
+            final prefs = await SharedPreferences.getInstance();
+            expect(
+              prefs.getString('selected_feed_mode_$viewer'),
+              equals(sourceFor(followedList()).persistenceValue),
+            );
           },
         );
 

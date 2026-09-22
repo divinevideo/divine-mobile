@@ -139,6 +139,22 @@ final class VideoFeedSource extends Equatable {
   /// Prefix of [persistenceValue] for a followed people list.
   static const peopleListPersistencePrefix = 'people:';
 
+  /// The follow a people list's [persistenceValue] names, or `null` for a
+  /// value that is not one.
+  ///
+  /// The owner is the hex pubkey between the prefix and the first separator
+  /// after it; the rest is the `d` tag, separators and all.
+  static FollowedPeopleListRef? peopleListRefFromValue(String value) {
+    if (!value.startsWith(peopleListPersistencePrefix)) return null;
+    final rest = value.substring(peopleListPersistencePrefix.length);
+    final split = rest.indexOf(':');
+    if (split <= 0 || split == rest.length - 1) return null;
+    return FollowedPeopleListRef(
+      ownerPubkey: rest.substring(0, split),
+      listId: rest.substring(split + 1),
+    );
+  }
+
   /// Legacy mode projection for compatibility.
   FeedMode get mode => switch (type) {
     VideoFeedSourceType.forYou => FeedMode.forYou,
