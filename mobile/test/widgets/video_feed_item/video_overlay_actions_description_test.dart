@@ -253,7 +253,7 @@ void main() {
         testProviderScope(
           additionalOverrides: [
             repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
-            userProfileStatsReactiveProvider(testVideo.pubkey).overrideWith(
+            videoCardAuthorStatsProvider(testVideo.pubkey).overrideWith(
               (ref) => Stream.value(
                 ProfileStats(pubkey: testVideo.pubkey, totalViews: 1),
               ),

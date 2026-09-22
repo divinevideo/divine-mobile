@@ -316,7 +316,7 @@ class VideoOverlayActions extends ConsumerWidget {
                     // work. Null while stats are unknown, so the line stays
                     // hidden instead of flashing "0 loops" on first paint.
                     final authorTotalLoops = ref
-                        .watch(userProfileStatsReactiveProvider(authorPubkey))
+                        .watch(videoCardAuthorStatsProvider(authorPubkey))
                         .value
                         ?.totalViews;
                     // Use embedded author data from REST API as fallback

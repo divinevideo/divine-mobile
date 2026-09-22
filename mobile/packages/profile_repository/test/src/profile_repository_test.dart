@@ -548,6 +548,82 @@ void main() {
       });
     });
 
+    group('getCachedProfileStats', () {
+      late MockProfileStatsDao mockProfileStatsDao;
+      late ProfileRepository profileRepository;
+
+      setUp(() {
+        mockProfileStatsDao = MockProfileStatsDao();
+        profileRepository = ProfileRepository(
+          nostrClient: mockNostrClient,
+          userProfilesDao: mockUserProfilesDao,
+          httpClient: mockHttpClient,
+          profileStatsDao: mockProfileStatsDao,
+        );
+      });
+
+      test('maps a cached row to the ProfileStats domain model', () async {
+        final row = ProfileStatRow(
+          pubkey: testPubkey,
+          videoCount: 5,
+          followerCount: 100,
+          followingCount: 50,
+          totalViews: 1000,
+          totalLikes: 200,
+          cachedAt: DateTime(2026),
+        );
+        when(
+          () => mockProfileStatsDao.getStats(any()),
+        ).thenAnswer((_) async => row);
+
+        final stats = await profileRepository.getCachedProfileStats(
+          pubkey: testPubkey,
+        );
+
+        expect(
+          stats,
+          equals(
+            ProfileStats(
+              pubkey: testPubkey,
+              videoCount: 5,
+              totalLikes: 200,
+              followers: 100,
+              following: 50,
+              totalViews: 1000,
+              lastUpdated: DateTime(2026),
+            ),
+          ),
+        );
+      });
+
+      test('returns null when no row is cached', () async {
+        when(
+          () => mockProfileStatsDao.getStats(any()),
+        ).thenAnswer((_) async => null);
+
+        expect(
+          await profileRepository.getCachedProfileStats(pubkey: testPubkey),
+          isNull,
+        );
+      });
+
+      test(
+        'returns null without querying when no stats DAO is injected',
+        () async {
+          final repoWithoutStats = ProfileRepository(
+            nostrClient: mockNostrClient,
+            userProfilesDao: mockUserProfilesDao,
+            httpClient: mockHttpClient,
+          );
+
+          expect(
+            await repoWithoutStats.getCachedProfileStats(pubkey: testPubkey),
+            isNull,
+          );
+        },
+      );
+    });
+
     group('fetchFreshProfile', () {
       /// Stubs both relay and indexer to return nothing, so tests that
       /// only care about one layer can focus on that.

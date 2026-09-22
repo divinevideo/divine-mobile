@@ -106,7 +106,7 @@ void main() {
                 ? (ref, pubkey) => Completer<bool>().future
                 : (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
           ),
-          userProfileStatsReactiveProvider(video.pubkey).overrideWith(
+          videoCardAuthorStatsProvider(video.pubkey).overrideWith(
             (ref) => authorTotalLoops == null
                 ? const Stream<ProfileStats?>.empty()
                 : Stream.value(

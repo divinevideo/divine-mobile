@@ -8,6 +8,146 @@ part of 'user_profile_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// The author's lifetime stats for a feed card, auto-disposing and
+/// cache-first.
+///
+/// The card prints one author's lifetime loop total beside their name, and a
+/// scroll through the feed mounts many distinct authors. The shared
+/// [userProfileStatsReactiveProvider] is a non-auto-disposing family whose
+/// stream fetches before it watches, so a card using it would both start a
+/// fresh profile fetch per distinct author and leave that author's Drift
+/// watcher alive for the rest of the session (#9431). This provider is scoped
+/// to the card: `@riverpod` makes it auto-dispose, so the watcher is released
+/// when the card leaves the tree, and a fresh cached row short-circuits the
+/// fetch so re-mounting a card does not re-fetch.
+
+@ProviderFor(videoCardAuthorStats)
+final videoCardAuthorStatsProvider = VideoCardAuthorStatsFamily._();
+
+/// The author's lifetime stats for a feed card, auto-disposing and
+/// cache-first.
+///
+/// The card prints one author's lifetime loop total beside their name, and a
+/// scroll through the feed mounts many distinct authors. The shared
+/// [userProfileStatsReactiveProvider] is a non-auto-disposing family whose
+/// stream fetches before it watches, so a card using it would both start a
+/// fresh profile fetch per distinct author and leave that author's Drift
+/// watcher alive for the rest of the session (#9431). This provider is scoped
+/// to the card: `@riverpod` makes it auto-dispose, so the watcher is released
+/// when the card leaves the tree, and a fresh cached row short-circuits the
+/// fetch so re-mounting a card does not re-fetch.
+
+final class VideoCardAuthorStatsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProfileStats?>,
+          ProfileStats?,
+          Stream<ProfileStats?>
+        >
+    with $FutureModifier<ProfileStats?>, $StreamProvider<ProfileStats?> {
+  /// The author's lifetime stats for a feed card, auto-disposing and
+  /// cache-first.
+  ///
+  /// The card prints one author's lifetime loop total beside their name, and a
+  /// scroll through the feed mounts many distinct authors. The shared
+  /// [userProfileStatsReactiveProvider] is a non-auto-disposing family whose
+  /// stream fetches before it watches, so a card using it would both start a
+  /// fresh profile fetch per distinct author and leave that author's Drift
+  /// watcher alive for the rest of the session (#9431). This provider is scoped
+  /// to the card: `@riverpod` makes it auto-dispose, so the watcher is released
+  /// when the card leaves the tree, and a fresh cached row short-circuits the
+  /// fetch so re-mounting a card does not re-fetch.
+  VideoCardAuthorStatsProvider._({
+    required VideoCardAuthorStatsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'videoCardAuthorStatsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$videoCardAuthorStatsHash();
+
+  @override
+  String toString() {
+    return r'videoCardAuthorStatsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<ProfileStats?> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<ProfileStats?> create(Ref ref) {
+    final argument = this.argument as String;
+    return videoCardAuthorStats(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VideoCardAuthorStatsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$videoCardAuthorStatsHash() =>
+    r'799921ca92acce42ca7a4db1d946b692bb3de4ce';
+
+/// The author's lifetime stats for a feed card, auto-disposing and
+/// cache-first.
+///
+/// The card prints one author's lifetime loop total beside their name, and a
+/// scroll through the feed mounts many distinct authors. The shared
+/// [userProfileStatsReactiveProvider] is a non-auto-disposing family whose
+/// stream fetches before it watches, so a card using it would both start a
+/// fresh profile fetch per distinct author and leave that author's Drift
+/// watcher alive for the rest of the session (#9431). This provider is scoped
+/// to the card: `@riverpod` makes it auto-dispose, so the watcher is released
+/// when the card leaves the tree, and a fresh cached row short-circuits the
+/// fetch so re-mounting a card does not re-fetch.
+
+final class VideoCardAuthorStatsFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<ProfileStats?>, String> {
+  VideoCardAuthorStatsFamily._()
+    : super(
+        retry: null,
+        name: r'videoCardAuthorStatsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The author's lifetime stats for a feed card, auto-disposing and
+  /// cache-first.
+  ///
+  /// The card prints one author's lifetime loop total beside their name, and a
+  /// scroll through the feed mounts many distinct authors. The shared
+  /// [userProfileStatsReactiveProvider] is a non-auto-disposing family whose
+  /// stream fetches before it watches, so a card using it would both start a
+  /// fresh profile fetch per distinct author and leave that author's Drift
+  /// watcher alive for the rest of the session (#9431). This provider is scoped
+  /// to the card: `@riverpod` makes it auto-dispose, so the watcher is released
+  /// when the card leaves the tree, and a fresh cached row short-circuits the
+  /// fetch so re-mounting a card does not re-fetch.
+
+  VideoCardAuthorStatsProvider call(String pubkey) =>
+      VideoCardAuthorStatsProvider._(argument: pubkey, from: this);
+
+  @override
+  String toString() => r'videoCardAuthorStatsProvider';
+}
+
 /// Reactive profile provider backed by Drift's watchProfile stream.
 ///
 /// On first access for a pubkey:

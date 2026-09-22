@@ -777,18 +777,34 @@ class ProfileRepository implements ProfileReader {
   Stream<ProfileStats?> watchProfileStats({required String pubkey}) {
     final dao = _profileStatsDao;
     if (dao == null) return const Stream.empty();
-    return dao.watchStats(pubkey).map((row) {
-      if (row == null) return null;
-      return ProfileStats(
-        pubkey: row.pubkey,
-        videoCount: row.videoCount ?? 0,
-        totalLikes: row.totalLikes ?? 0,
-        followers: row.followerCount,
-        following: row.followingCount,
-        totalViews: row.totalViews ?? 0,
-        lastUpdated: row.cachedAt,
-      );
-    });
+    return dao.watchStats(pubkey).map(_statsFromRowOrNull);
+  }
+
+  /// Returns the cached stats for [pubkey] from local storage only.
+  ///
+  /// The stats counterpart to [getCachedProfile]: one Drift read that applies
+  /// the same 5-minute freshness window [watchProfileStats] consumers see, so
+  /// a caller can decide whether a fresh fetch is worth starting without
+  /// starting one. Returns `null` when no fresh row is cached, or when no
+  /// stats DAO was injected.
+  @override
+  Future<ProfileStats?> getCachedProfileStats({required String pubkey}) async {
+    final dao = _profileStatsDao;
+    if (dao == null) return null;
+    return _statsFromRowOrNull(await dao.getStats(pubkey));
+  }
+
+  static ProfileStats? _statsFromRowOrNull(ProfileStatRow? row) {
+    if (row == null) return null;
+    return ProfileStats(
+      pubkey: row.pubkey,
+      videoCount: row.videoCount ?? 0,
+      totalLikes: row.totalLikes ?? 0,
+      followers: row.followerCount,
+      following: row.followingCount,
+      totalViews: row.totalViews ?? 0,
+      lastUpdated: row.cachedAt,
+    );
   }
 
   /// Caches profile stats — social counts, video stats and engagement data —
