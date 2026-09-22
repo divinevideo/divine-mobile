@@ -2232,6 +2232,50 @@ void main() {
       });
     });
 
+    test(
+      'private retry on older relay answer announces recovered items',
+      () async {
+        final privateId = 'c' * 64;
+        final ciphertext = await encryptToSelf([
+          ['e', privateId],
+        ]);
+        final current = bookmarkListEvent(
+          [],
+          content: ciphertext,
+          createdAt: 200,
+        );
+        final older = bookmarkListEvent([], createdAt: 100);
+        final broken = _MockNostrSigner();
+        when(
+          () => broken.nip44Decrypt(any(), any()),
+        ).thenAnswer((_) async => null);
+        when(() => signer.currentIdentity).thenReturn(broken);
+        stubRelay(events: [current]);
+        final service = createService();
+        final emissions = <List<String>>[];
+        final subscription = service.watchGlobalBookmarks().listen(
+          (items) => emissions.add(items.map((i) => i.id).toList()),
+        );
+        addTearDown(() async {
+          await subscription.cancel();
+          service.dispose();
+        });
+        await service.syncGlobalBookmarks();
+        await pumpEventQueue();
+        expect(service.hasUnreadablePrivateItems, isTrue);
+        expect(emissions, [isEmpty]);
+        when(() => signer.currentIdentity).thenReturn(identity);
+        stubRelay(events: [older]);
+        await service.syncGlobalBookmarks();
+        await pumpEventQueue();
+        expect(service.globalBookmarks.map((i) => i.id), contains(privateId));
+        expect(
+          emissions.last,
+          contains(privateId),
+          reason: 'recovered private items must reach the subscribed grid',
+        );
+      },
+    );
     group('watchGlobalBookmarks', () {
       /// Collects what the stream announces, as lists of ids.
       List<List<String>> recordChanges(BookmarksRepository service) {

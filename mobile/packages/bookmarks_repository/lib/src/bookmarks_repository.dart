@@ -617,6 +617,7 @@ class BookmarksRepository {
             ..clear()
             ..addAll(_itemsFromTags(private.tags));
           _privateItemsState = private.state;
+          _emitGlobalBookmarks();
           Log.info(
             'Ignoring kind 10003 ${newest.id} - older than the revision this '
             'device holds, keeping ${globalBookmarks.length} bookmarks',
