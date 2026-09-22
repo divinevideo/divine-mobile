@@ -156,11 +156,13 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
   }
 
   void _cancelRelayReadySubscription() {
-    final relayReadySubscription = _relayReadySubscription;
+    // cancel() on the field rather than a local copy: cancel_subscriptions
+    // only sees the call when it targets _relayReadySubscription itself.
+    final cancelled = _relayReadySubscription?.cancel();
     _relayReadySubscription = null;
-    if (relayReadySubscription == null) return;
+    if (cancelled == null) return;
     runDetached(
-      relayReadySubscription.cancel(),
+      cancelled,
       'cancel relay-ready subscription',
       logName: 'VideoDetailScreen',
       category: LogCategory.video,
@@ -327,13 +329,7 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
     }
 
     _retryScheduled = true;
-    runDetached(
-      _relayReadySubscription?.cancel() ?? Future<void>.value(),
-      'cancel relay-ready subscription',
-      logName: 'VideoDetailScreen',
-      category: LogCategory.video,
-    );
-    _relayReadySubscription = null;
+    _cancelRelayReadySubscription();
 
     void retry() {
       _cancelRelayReadySubscription();
