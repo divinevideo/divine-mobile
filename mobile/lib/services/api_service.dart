@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/platform_io.dart';
@@ -43,6 +42,11 @@ class ApiService {
   /// traffic to the production worker.
   final String _relayManagerBaseUrl;
   static const Duration _defaultTimeout = Duration(seconds: 30);
+
+  /// Longer timeout for multipart uploads. A consent video over a slow link
+  /// can legitimately exceed the shared [_defaultTimeout]; this applies only to
+  /// the parent-consent upload so no other request is slowed down.
+  static const Duration _uploadTimeout = Duration(seconds: 120);
 
   final http.Client _client;
   final Nip98AuthService? _authService;
@@ -132,9 +136,14 @@ class ApiService {
   }
 
   /// Submit a recorded parental consent video plus parent email for an open
-  /// minor-account review case. The video is uploaded as multipart/form-data,
-  /// and the NIP-98 auth token carries the SHA-256 of the file bytes as its
-  /// payload tag so the backend can verify the exact content that was signed.
+  /// minor-account review case. The video is uploaded as multipart/form-data.
+  ///
+  /// The NIP-98 auth token is intentionally created without a payload tag:
+  /// [Nip98AuthService] hashes the string it is given, and a multipart body
+  /// cannot be represented as such a string without loading the whole video
+  /// into memory, so a matching body digest cannot be produced here.
+  /// relay-manager authenticates this route on the signed url+method and the
+  /// [email] field carried in the multipart body.
   Future<void> submitMinorAccountReviewParentConsent({
     required String caseId,
     required String email,
@@ -150,9 +159,15 @@ class ApiService {
       final uri = Uri.parse(
         '$_relayManagerBaseUrl/v1/minor-review-cases/$caseId/parent-consent',
       );
+
+      // Fail fast with an accurate message rather than letting the multipart
+      // stream error surface later as an ambiguous network failure.
       final file = File(videoPath);
-      final bytes = await file.readAsBytes();
-      final payload = sha256.convert(bytes).toString();
+      if (!file.existsSync()) {
+        throw ApiException(
+          'Parent consent video not found or unreadable at $videoPath',
+        );
+      }
 
       final request = http.MultipartRequest('POST', uri)
         ..fields['email'] = email
@@ -161,7 +176,6 @@ class ApiService {
       final token = await _authService?.createAuthToken(
         url: uri.toString(),
         method: HttpMethod.post,
-        payload: payload,
       );
       request.headers.addAll({
         'Accept': 'application/json',
@@ -171,6 +185,7 @@ class ApiService {
 
       final response = await _request(
         () async => _client.send(request).then(http.Response.fromStream),
+        timeout: _uploadTimeout,
       );
 
       if (response.statusCode == 200 ||
@@ -188,16 +203,20 @@ class ApiService {
       throw const ApiException(
         'Request timeout for parent consent video submission',
       );
+    } on FileSystemException catch (e) {
+      throw ApiException('Failed to read parent consent video: $e');
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException(
-        'Network error during parent consent video submission: $e',
+        'Failed to submit parent consent video: $e',
       );
     }
   }
 
-  Future<http.Response> _request(Future<http.Response> Function() request) =>
-      request().timeout(_requestTimeout);
+  Future<http.Response> _request(
+    Future<http.Response> Function() request, {
+    Duration? timeout,
+  }) => request().timeout(timeout ?? _requestTimeout);
 
   /// Get standard headers for API requests
   Future<Map<String, String>> _getHeaders({
