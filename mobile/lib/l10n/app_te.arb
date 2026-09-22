@@ -2417,7 +2417,7 @@
   "shareMenuDeleteCleanupInProgress": "వీడియోని తీసివేస్తోంది…",
   "shareMenuDeleteCleanupConfirmed": "వీడియో తొలగించబడింది.",
   "shareMenuDeleteCleanupDelayed": "వీడియో తొలగించబడింది. ప్రతిచోటా అదృశ్యం కావడానికి కొంచెం సమయం పట్టవచ్చు.",
-  "shareMenuDeleteCleanupFailed": "వీడియో తొలగించబడింది, కానీ మేము ప్రతి కాపీని తీసివేయలేకపోయాము. దయచేసి మద్దతును సంప్రదించండి.",
+  "shareMenuDeleteCleanupFailed": "వీడియో తొలగించబడింది. కొన్ని కాపీలు ఇప్పటికీ అందుబాటులో ఉండవచ్చు.",
   "authSessionExpired": "మీ సెషన్ గడువు ముగిసింది. దయచేసి మళ్లీ సైన్ ఇన్ చేయండి.",
   "authAccountRestoreFailed": "మేము ఈ పరికరంలో ఆ ఖాతాను అన్‌లాక్ చేయలేకపోయాము. మళ్లీ సైన్ ఇన్ చేయండి.",
   "@authAccountRestoreFailed": {

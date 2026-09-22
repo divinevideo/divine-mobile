@@ -2030,7 +2030,7 @@
   "shareMenuDeleteCleanupInProgress": "ویڈیو ہٹائی جا رہی ہے…",
   "shareMenuDeleteCleanupConfirmed": "ویڈیو حذف کر دی گئی۔",
   "shareMenuDeleteCleanupDelayed": "ویڈیو حذف کر دی گئی۔ اسے ہر جگہ سے غائب ہونے میں کچھ وقت لگ سکتا ہے۔",
-  "shareMenuDeleteCleanupFailed": "ویڈیو حذف کر دی گئی، لیکن ہم ہر نقل کو نہیں ہٹا سکے۔ سپورٹ سے رابطہ کریں۔",
+  "shareMenuDeleteCleanupFailed": "ویڈیو حذف کر دی گئی۔ کچھ نقول اب بھی دستیاب ہو سکتی ہیں۔",
   "authSessionExpired": "آپ کا سیشن ختم ہو گیا ہے۔ براہ کرم دوبارہ سائن ان کریں۔",
   "authSignInFailed": "سائن ان نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
   "webAuthNotSupportedSecureMode": "محفوظ موڈ میں ویب تصدیق تعاون یافتہ نہیں ہے۔ محفوظ کلید مینجمنٹ کے لیے براہ کرم موبائل ایپ استعمال کریں۔",

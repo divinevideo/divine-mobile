@@ -4019,7 +4019,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video verwijderd, maar we konden niet elke kopie weghalen. Neem contact op met support.';
+      'Video verwijderd. Sommige kopieën zijn mogelijk nog beschikbaar.';
 
   @override
   String get authSessionExpired => 'Je sessie is verlopen. Log opnieuw in.';

@@ -3935,7 +3935,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video dihapus, tetapi kami tidak dapat menghapus semua salinannya. Hubungi dukungan.';
+      'Video dihapus. Beberapa salinan mungkin masih tersedia.';
 
   @override
   String get authSessionExpired =>
@@ -10958,8 +10958,7 @@ class AppLocalizationsId extends AppLocalizations {
       locale: localeName,
       other:
           'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
-      one:
-          'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
+      one: 'Ini menghapus $count file yang sudah tidak dipakai klip, draf, atau unggahan mana pun, dan membebaskan $size. Tidak bisa dibatalkan.',
     );
     return '$_temp0';
   }

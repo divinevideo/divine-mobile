@@ -4033,7 +4033,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Vídeo excluído, mas não conseguimos remover todas as cópias. Entre em contato com o suporte.';
+      'Vídeo excluído. Algumas cópias ainda podem estar disponíveis.';
 
   @override
   String get authSessionExpired => 'Sua sessão expirou. Entre novamente.';
@@ -11118,8 +11118,7 @@ class AppLocalizationsPt extends AppLocalizations {
       locale: localeName,
       other:
           'Isso exclui $count arquivos que nenhum clipe, rascunho ou upload usa mais e libera $size. Não dá para desfazer.',
-      one:
-          'Isso exclui $count arquivo que nenhum clipe, rascunho ou upload usa mais e libera $size. Não dá para desfazer.',
+      one: 'Isso exclui $count arquivo que nenhum clipe, rascunho ou upload usa mais e libera $size. Não dá para desfazer.',
     );
     return '$_temp0';
   }

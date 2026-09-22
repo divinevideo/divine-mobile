@@ -3739,7 +3739,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareMenuDeleteCleanupDelayed => '视频已删除。它可能需要一点时间才能从所有地方消失。';
 
   @override
-  String get shareMenuDeleteCleanupFailed => '视频已删除，但我们无法移除每个副本。请联系支持团队。';
+  String get shareMenuDeleteCleanupFailed => '视频已删除。部分副本可能仍然可用。';
 
   @override
   String get authSessionExpired => '你的登录已过期，请重新登录。';

@@ -3999,7 +3999,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Videon har tagits bort, men vi kunde inte ta bort alla kopior. Kontakta supporten.';
+      'Videon har tagits bort. Vissa kopior kan fortfarande vara tillgängliga.';
 
   @override
   String get authSessionExpired => 'Din session har löpt ut. Logga in igen.';
@@ -11037,8 +11037,7 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           'Det raderar $count filer som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
-      one:
-          'Det raderar $count fil som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
+      one: 'Det raderar $count fil som inget klipp, utkast eller ingen uppladdning använder längre och frigör $size. Det går inte att ångra.',
     );
     return '$_temp0';
   }

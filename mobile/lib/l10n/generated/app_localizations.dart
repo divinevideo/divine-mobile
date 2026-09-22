@@ -6853,7 +6853,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareMenuDeleteCleanupFailed.
   ///
   /// In en, this message translates to:
-  /// **'Video deleted, but we couldn\'t remove every copy. Please contact support.'**
+  /// **'Video deleted. Some copies may still be available.'**
   String get shareMenuDeleteCleanupFailed;
 
   /// No description provided for @authSessionExpired.

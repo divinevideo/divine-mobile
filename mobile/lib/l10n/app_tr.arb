@@ -1374,7 +1374,7 @@
     "shareMenuDeleteCleanupInProgress": "Video kaldırılıyor…",
     "shareMenuDeleteCleanupConfirmed": "Video silindi.",
     "shareMenuDeleteCleanupDelayed": "Video silindi. Her yerden kaybolması biraz zaman alabilir.",
-    "shareMenuDeleteCleanupFailed": "Video silindi ancak her kopyayı kaldıramadık. Lütfen destek ekibiyle iletişime geç.",
+    "shareMenuDeleteCleanupFailed": "Video silindi. Bazı kopyalar hâlâ erişilebilir olabilir.",
     "authSessionExpired": "Oturumun sona erdi. Lütfen tekrar giriş yap.",
     "authSignInFailed": "Giriş başarısız. Lütfen tekrar dene.",
     "webAuthNotSupportedSecureMode": "Web kimlik doğrulaması güvenli modda desteklenmiyor. Güvenli anahtar yönetimi için lütfen mobil uygulamayı kullan.",

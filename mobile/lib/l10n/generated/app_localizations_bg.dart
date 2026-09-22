@@ -4052,7 +4052,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Видеото е изтрито, но не успяхме да премахнем всяко копие. Свържи се с поддръжката.';
+      'Видеото е изтрито. Някои копия може все още да са достъпни.';
 
   @override
   String get authSessionExpired => 'Сесията ти изтече. Влез отново.';
@@ -11148,8 +11148,7 @@ class AppLocalizationsBg extends AppLocalizations {
       locale: localeName,
       other:
           'Това изтрива $count файла, които вече не се използват от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
-      one:
-          'Това изтрива $count файл, който вече не се използва от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
+      one: 'Това изтрива $count файл, който вече не се използва от никой клип, чернова или качване, и освобождава $size. Не може да се отмени.',
     );
     return '$_temp0';
   }

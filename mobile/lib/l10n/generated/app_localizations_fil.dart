@@ -4027,7 +4027,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Na-delete ang video, pero hindi namin naalis ang lahat ng kopya. Makipag-ugnayan sa support.';
+      'Na-delete ang video. Maaaring available pa rin ang ilang kopya.';
 
   @override
   String get authSessionExpired =>
@@ -11135,8 +11135,7 @@ class AppLocalizationsFil extends AppLocalizations {
       locale: localeName,
       other:
           'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
-      one:
-          'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
+      one: 'Bubura ito ng $count file na hindi na ginagamit ng kahit anong clip, draft, o upload, at makakapag-free ng $size. Hindi ito maibabalik.',
     );
     return '$_temp0';
   }

@@ -4056,7 +4056,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video gelöscht, aber wir konnten nicht jede Kopie entfernen. Kontaktiere bitte den Support.';
+      'Video gelöscht. Einige Kopien sind möglicherweise noch verfügbar.';
 
   @override
   String get authSessionExpired =>
@@ -11176,8 +11176,7 @@ class AppLocalizationsDe extends AppLocalizations {
       locale: localeName,
       other:
           'Das löscht $count Dateien, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
-      one:
-          'Das löscht $count Datei, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
+      one: 'Das löscht $count Datei, die kein Clip, Entwurf oder Upload mehr verwendet, und gibt $size frei. Das lässt sich nicht rückgängig machen.',
     );
     return '$_temp0';
   }

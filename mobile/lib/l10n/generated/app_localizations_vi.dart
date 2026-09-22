@@ -3973,7 +3973,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Đã xóa video nhưng chúng tôi không thể xóa mọi bản sao. Hãy liên hệ bộ phận hỗ trợ.';
+      'Đã xóa video. Một số bản sao có thể vẫn còn.';
 
   @override
   String get authSessionExpired =>
@@ -10989,8 +10989,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
-      one:
-          'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
+      one: 'Thao tác này xóa $count tệp không còn được clip, bản nháp hay lượt tải lên nào dùng nữa và giải phóng $size. Không thể hoàn tác.',
     );
     return '$_temp0';
   }

@@ -1367,7 +1367,7 @@
     "shareMenuDeleteCleanupInProgress": "動画を削除しています…",
     "shareMenuDeleteCleanupConfirmed": "動画を削除しました。",
     "shareMenuDeleteCleanupDelayed": "動画を削除しました。すべての場所から消えるまで少し時間がかかる場合があります。",
-    "shareMenuDeleteCleanupFailed": "動画を削除しましたが、すべてのコピーを削除できませんでした。サポートにお問い合わせください。",
+    "shareMenuDeleteCleanupFailed": "動画を削除しました。一部のコピーは引き続き利用できる場合があります。",
     "authSessionExpired": "セッションが切れちゃった。もう一回サインインしてね。",
     "authSignInFailed": "サインインがうまくいかなかった。もう一回試してみて。",
     "webAuthNotSupportedSecureMode": "セキュアモードではウェブ認証は対応してないよ。安全な鍵管理にはモバイルアプリを使ってね。",

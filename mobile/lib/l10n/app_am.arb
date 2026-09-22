@@ -1753,7 +1753,7 @@
     "shareMenuDeleteCleanupInProgress": "ቪዲዮው እየተወገደ ነው…",
     "shareMenuDeleteCleanupConfirmed": "ቪዲዮው ተሰርዟል።",
     "shareMenuDeleteCleanupDelayed": "ቪዲዮው ተሰርዟል። ከሁሉም ቦታ ለመጥፋት ትንሽ ጊዜ ሊወስድ ይችላል።",
-    "shareMenuDeleteCleanupFailed": "ቪዲዮው ተሰርዟል፣ ግን ሁሉንም ቅጂዎች ማስወገድ አልቻልንም። ድጋፍን ያነጋግሩ።",
+    "shareMenuDeleteCleanupFailed": "ቪዲዮው ተሰርዟል። አንዳንድ ቅጂዎች አሁንም ሊገኙ ይችላሉ።",
     "authSessionExpired": "ክፍለ ጊዜዎ ጊዜው አልፎበታል። እባክዎ እንደገና ይግቡ።",
     "authSignInFailed": "መግባት አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
     "webAuthNotSupportedSecureMode": "የድር ማረጋገጥ በአስተማማኝ ሁነታ አይደገፍም። እባክዎን ደህንነቱ የተጠበቀ ቁልፍ አስተዳደር ለማግኘት የሞባይል መተግበሪያን ይጠቀሙ።",

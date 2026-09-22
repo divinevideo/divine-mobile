@@ -4131,7 +4131,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Videoclip eliminat, dar nu am putut șterge fiecare copie. Contactează asistența.';
+      'Videoclip eliminat. Unele copii pot fi încă disponibile.';
 
   @override
   String get authSessionExpired =>
@@ -11278,8 +11278,7 @@ class AppLocalizationsRo extends AppLocalizations {
           'Se șterg $count de fișiere pe care niciun clip, schiță sau încărcare nu le mai folosește și se eliberează $size. Nu se poate anula.',
       few:
           'Se șterg $count fișiere pe care niciun clip, schiță sau încărcare nu le mai folosește și se eliberează $size. Nu se poate anula.',
-      one:
-          'Se șterge $count fișier pe care niciun clip, schiță sau încărcare nu îl mai folosește și se eliberează $size. Nu se poate anula.',
+      one: 'Se șterge $count fișier pe care niciun clip, schiță sau încărcare nu îl mai folosește și se eliberează $size. Nu se poate anula.',
     );
     return '$_temp0';
   }

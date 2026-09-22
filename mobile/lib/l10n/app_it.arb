@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Rimozione del video…",
     "shareMenuDeleteCleanupConfirmed": "Video eliminato.",
     "shareMenuDeleteCleanupDelayed": "Video eliminato. Potrebbe volerci un po’ prima che scompaia ovunque.",
-    "shareMenuDeleteCleanupFailed": "Video eliminato, ma non siamo riusciti a rimuovere tutte le copie. Contatta l’assistenza.",
+    "shareMenuDeleteCleanupFailed": "Video eliminato. Alcune copie potrebbero essere ancora disponibili.",
     "authSessionExpired": "La tua sessione è scaduta. Accedi di nuovo.",
     "authSignInFailed": "Accesso fallito. Riprova.",
     "webAuthNotSupportedSecureMode": "Autenticazione web non supportata in modalità sicura. Usa l'app mobile per una gestione sicura delle chiavi.",

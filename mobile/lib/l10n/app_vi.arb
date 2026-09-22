@@ -2030,7 +2030,7 @@
   "shareMenuDeleteCleanupInProgress": "Đang xóa video…",
   "shareMenuDeleteCleanupConfirmed": "Đã xóa video.",
   "shareMenuDeleteCleanupDelayed": "Đã xóa video. Có thể mất một lúc để video biến mất ở mọi nơi.",
-  "shareMenuDeleteCleanupFailed": "Đã xóa video nhưng chúng tôi không thể xóa mọi bản sao. Hãy liên hệ bộ phận hỗ trợ.",
+  "shareMenuDeleteCleanupFailed": "Đã xóa video. Một số bản sao có thể vẫn còn.",
   "authSessionExpired": "Phiên đăng nhập của bạn đã hết hạn. Vui lòng đăng nhập lại.",
   "authSignInFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
   "webAuthNotSupportedSecureMode": "Không hỗ trợ xác thực web ở chế độ bảo mật. Hãy dùng ứng dụng di động để quản lý khóa an toàn.",

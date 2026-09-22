@@ -1367,7 +1367,7 @@
     "shareMenuDeleteCleanupInProgress": "جارٍ إزالة الفيديو…",
     "shareMenuDeleteCleanupConfirmed": "تم حذف الفيديو.",
     "shareMenuDeleteCleanupDelayed": "تم حذف الفيديو. قد يستغرق اختفاؤه من كل مكان بعض الوقت.",
-    "shareMenuDeleteCleanupFailed": "تم حذف الفيديو، لكننا لم نتمكن من إزالة كل نسخة. التواصل مع الدعم.",
+    "shareMenuDeleteCleanupFailed": "تم حذف الفيديو. قد تظل بعض النسخ متاحة.",
     "authSessionExpired": "انتهت جلستك. يرجى تسجيل الدخول مرّة أخرى.",
     "authSignInFailed": "فشل تسجيل الدخول. حاول مرّة أخرى.",
     "webAuthNotSupportedSecureMode": "مصادقة الويب غير مدعومة في الوضع الآمن. يرجى استخدام تطبيق الجوال لإدارة المفاتيح بأمان.",

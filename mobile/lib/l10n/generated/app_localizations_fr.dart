@@ -825,8 +825,7 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other:
           'Tu peux épingler jusqu\'à $count vidéos. Désépingle-en une pour faire de la place.',
-      one:
-          'Tu peux épingler $count vidéo. Désépingle-la pour faire de la place.',
+      one: 'Tu peux épingler $count vidéo. Désépingle-la pour faire de la place.',
     );
     return '$_temp0';
   }
@@ -4067,7 +4066,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Vidéo supprimée, mais nous n’avons pas pu retirer toutes les copies. Contacte l’assistance.';
+      'Vidéo supprimée. Certaines copies peuvent rester disponibles.';
 
   @override
   String get authSessionExpired => 'Ta session a expiré. Reconnecte-toi.';
@@ -11202,8 +11201,7 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other:
           'Cela supprime $count fichiers qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
-      one:
-          'Cela supprime $count fichier qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
+      one: 'Cela supprime $count fichier qu\'aucun clip, brouillon ou envoi n\'utilise plus, et libère $size. C\'est irréversible.',
     );
     return '$_temp0';
   }

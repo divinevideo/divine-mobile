@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Video wird entfernt…",
     "shareMenuDeleteCleanupConfirmed": "Video gelöscht.",
     "shareMenuDeleteCleanupDelayed": "Video gelöscht. Es kann etwas dauern, bis es überall verschwindet.",
-    "shareMenuDeleteCleanupFailed": "Video gelöscht, aber wir konnten nicht jede Kopie entfernen. Kontaktiere bitte den Support.",
+    "shareMenuDeleteCleanupFailed": "Video gelöscht. Einige Kopien sind möglicherweise noch verfügbar.",
     "authSessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
     "authSignInFailed": "Anmeldung fehlgeschlagen. Bitte versuch es nochmal.",
     "webAuthNotSupportedSecureMode": "Web-Authentifizierung wird im sicheren Modus nicht unterstützt. Bitte nutze die mobile App für sichere Schlüsselverwaltung.",

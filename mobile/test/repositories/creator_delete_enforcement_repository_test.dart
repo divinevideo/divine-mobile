@@ -264,10 +264,45 @@ void main() {
 
     test('maps synchronous terminal failure to permanent failure', () async {
       final result = await build(
+        (_) => http.Response(
+          '{"status":"failed","targets":[{"status":"failed:permanent:blossom_400"}]}',
+          200,
+        ),
+      ).enforce('kind5');
+
+      expect(result.status, CreatorDeleteEnforcementStatus.failed);
+    });
+
+    test('keeps synchronous transient target failures delayed', () async {
+      final result = await build(
+        (_) => http.Response(
+          '{"status":"failed","targets":[{"status":"failed:transient:network"}]}',
+          200,
+        ),
+      ).enforce('kind5');
+
+      expect(result.status, CreatorDeleteEnforcementStatus.delayed);
+    });
+
+    test('reports a synchronous response with missing target states', () async {
+      final result = await build(
         (_) => http.Response('{"status":"failed"}', 200),
       ).enforce('kind5');
 
       expect(result.status, CreatorDeleteEnforcementStatus.failed);
+      expect(reports, hasLength(1));
+    });
+
+    test('reports malformed synchronous target states', () async {
+      final result = await build(
+        (_) => http.Response(
+          '{"status":"failed","targets":[{"status":null}]}',
+          200,
+        ),
+      ).enforce('kind5');
+
+      expect(result.status, CreatorDeleteEnforcementStatus.failed);
+      expect(reports, hasLength(1));
     });
 
     test('polls after 202 and confirms all targets', () async {
@@ -276,10 +311,7 @@ void main() {
         calls++;
         return calls == 1
             ? http.Response('{"status":"in_progress"}', 202)
-            : http.Response(
-                '{"targets":[{"status":"success"}]}',
-                200,
-              );
+            : http.Response('{"targets":[{"status":"success"}]}', 200);
       }).enforce('kind5');
 
       expect(result.status, CreatorDeleteEnforcementStatus.confirmed);
@@ -292,10 +324,7 @@ void main() {
         calls++;
         return calls == 1
             ? http.Response('', 404)
-            : http.Response(
-                '{"targets":[{"status":"success"}]}',
-                200,
-              );
+            : http.Response('{"targets":[{"status":"success"}]}', 200);
       }).enforce('kind5');
 
       expect(result.status, CreatorDeleteEnforcementStatus.delayed);
@@ -324,10 +353,7 @@ void main() {
         calls++;
         return calls < 3
             ? http.Response('', 429)
-            : http.Response(
-                '{"targets":[{"status":"success"}]}',
-                200,
-              );
+            : http.Response('{"targets":[{"status":"success"}]}', 200);
       }).enforce('kind5');
 
       expect(result.status, CreatorDeleteEnforcementStatus.delayed);

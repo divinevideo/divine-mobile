@@ -3943,7 +3943,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video silindi ancak her kopyayı kaldıramadık. Lütfen destek ekibiyle iletişime geç.';
+      'Video silindi. Bazı kopyalar hâlâ erişilebilir olabilir.';
 
   @override
   String get authSessionExpired =>
@@ -10966,8 +10966,7 @@ class AppLocalizationsTr extends AppLocalizations {
       locale: localeName,
       other:
           'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
-      one:
-          'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
+      one: 'Bu, hiçbir klibin, taslağın veya yüklemenin artık kullanmadığı $count dosyayı siler ve $size yer açar. Geri alınamaz.',
     );
     return '$_temp0';
   }

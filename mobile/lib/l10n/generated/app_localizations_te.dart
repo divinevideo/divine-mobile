@@ -830,8 +830,7 @@ class AppLocalizationsTe extends AppLocalizations {
       locale: localeName,
       other:
           'మీరు గరిష్టంగా $count వీడియోలను పిన్ చేయవచ్చు. చోటు కోసం ఒకదాని పిన్ తీసివేయండి.',
-      one:
-          'మీరు $count వీడియోను పిన్ చేయవచ్చు. చోటు కోసం దాని పిన్ తీసివేయండి.',
+      one: 'మీరు $count వీడియోను పిన్ చేయవచ్చు. చోటు కోసం దాని పిన్ తీసివేయండి.',
     );
     return '$_temp0';
   }
@@ -4158,7 +4157,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'వీడియో తొలగించబడింది, కానీ మేము ప్రతి కాపీని తీసివేయలేకపోయాము. దయచేసి మద్దతును సంప్రదించండి.';
+      'వీడియో తొలగించబడింది. కొన్ని కాపీలు ఇప్పటికీ అందుబాటులో ఉండవచ్చు.';
 
   @override
   String get authSessionExpired =>
@@ -11345,8 +11344,7 @@ class AppLocalizationsTe extends AppLocalizations {
       locale: localeName,
       other:
           'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌లను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
-      one:
-          'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌ను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
+      one: 'ఇది ఏ క్లిప్, చిత్తుప్రతి లేదా అప్‌లోడ్ ఇకపై ఉపయోగించని $count ఫైల్‌ను తొలగించి $size ఖాళీ చేస్తుంది. దీన్ని రద్దు చేయలేరు.',
     );
     return '$_temp0';
   }

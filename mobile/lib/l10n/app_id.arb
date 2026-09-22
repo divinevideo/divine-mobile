@@ -1374,7 +1374,7 @@
     "shareMenuDeleteCleanupInProgress": "Menghapus video…",
     "shareMenuDeleteCleanupConfirmed": "Video dihapus.",
     "shareMenuDeleteCleanupDelayed": "Video dihapus. Mungkin perlu waktu hingga video menghilang dari semua tempat.",
-    "shareMenuDeleteCleanupFailed": "Video dihapus, tetapi kami tidak dapat menghapus semua salinannya. Hubungi dukungan.",
+    "shareMenuDeleteCleanupFailed": "Video dihapus. Beberapa salinan mungkin masih tersedia.",
     "authSessionExpired": "Sesimu sudah kedaluwarsa. Silakan masuk lagi.",
     "authSignInFailed": "Gagal masuk. Silakan coba lagi.",
     "webAuthNotSupportedSecureMode": "Autentikasi web tidak didukung dalam mode aman. Silakan pakai aplikasi seluler untuk manajemen kunci yang aman.",

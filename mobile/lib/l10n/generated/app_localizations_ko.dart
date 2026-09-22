@@ -3764,7 +3764,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      '영상은 삭제했지만 모든 사본을 지우지는 못했어요. 지원팀에 문의해 주세요.';
+      '영상이 삭제되었어요. 일부 사본은 여전히 이용할 수 있을 수 있어요.';
 
   @override
   String get authSessionExpired => '세션이 만료됐어요. 다시 로그인해주세요.';

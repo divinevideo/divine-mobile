@@ -996,7 +996,7 @@
     "shareMenuDeleteCleanupInProgress": "Inaalis ang video…",
     "shareMenuDeleteCleanupConfirmed": "Na-delete ang video.",
     "shareMenuDeleteCleanupDelayed": "Na-delete ang video. Maaaring matagalan nang kaunti bago ito mawala sa lahat ng lugar.",
-    "shareMenuDeleteCleanupFailed": "Na-delete ang video, pero hindi namin naalis ang lahat ng kopya. Makipag-ugnayan sa support.",
+    "shareMenuDeleteCleanupFailed": "Na-delete ang video. Maaaring available pa rin ang ilang kopya.",
     "authSessionExpired": "Nag-expire na ang iyong session. Mag-sign in ulit.",
     "authSignInFailed": "Hindi nag-sign in. Subukan ulit.",
     "webAuthNotSupportedSecureMode": "Hindi suportado ang web authentication sa secure mode. Gamitin ang mobile app para sa secure key management.",

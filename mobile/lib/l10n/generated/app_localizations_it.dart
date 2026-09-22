@@ -4051,7 +4051,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video eliminato, ma non siamo riusciti a rimuovere tutte le copie. Contatta l’assistenza.';
+      'Video eliminato. Alcune copie potrebbero essere ancora disponibili.';
 
   @override
   String get authSessionExpired =>
@@ -11167,8 +11167,7 @@ class AppLocalizationsIt extends AppLocalizations {
       locale: localeName,
       other:
           'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
-      one:
-          'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
+      one: 'Elimina $count file che nessun clip, bozza o caricamento usa più e libera $size. Non si può annullare.',
     );
     return '$_temp0';
   }

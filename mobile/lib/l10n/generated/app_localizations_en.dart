@@ -4082,7 +4082,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video deleted, but we couldn\'t remove every copy. Please contact support.';
+      'Video deleted. Some copies may still be available.';
 
   @override
   String get authSessionExpired =>

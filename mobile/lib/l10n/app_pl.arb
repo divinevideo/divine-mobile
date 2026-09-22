@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Usuwanie filmu…",
     "shareMenuDeleteCleanupConfirmed": "Film usunięty.",
     "shareMenuDeleteCleanupDelayed": "Film usunięty. Może minąć trochę czasu, zanim zniknie wszędzie.",
-    "shareMenuDeleteCleanupFailed": "Film usunięty, ale nie udało nam się usunąć każdej kopii. Skontaktuj się z pomocą.",
+    "shareMenuDeleteCleanupFailed": "Film usunięty. Niektóre kopie mogą być nadal dostępne.",
     "authSessionExpired": "Twoja sesja wygasła. Zaloguj się ponownie.",
     "authSignInFailed": "Nie udało się zalogować. Spróbuj ponownie.",
     "webAuthNotSupportedSecureMode": "Uwierzytelnianie przez WWW nie jest obsługiwane w trybie bezpiecznym. Użyj aplikacji mobilnej do bezpiecznego zarządzania kluczami.",

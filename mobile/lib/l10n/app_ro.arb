@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Se elimină videoclipul…",
     "shareMenuDeleteCleanupConfirmed": "Videoclip șters.",
     "shareMenuDeleteCleanupDelayed": "Videoclip eliminat. Poate dura puțin până dispare de peste tot.",
-    "shareMenuDeleteCleanupFailed": "Videoclip eliminat, dar nu am putut șterge fiecare copie. Contactează asistența.",
+    "shareMenuDeleteCleanupFailed": "Videoclip eliminat. Unele copii pot fi încă disponibile.",
     "authSessionExpired": "Sesiunea ta a expirat. Autentifică-te din nou.",
     "authSignInFailed": "N-am putut autentifica. Încearcă din nou.",
     "webAuthNotSupportedSecureMode": "Autentificarea web nu e suportată în modul sigur. Folosește aplicația mobilă pentru gestionarea sigură a cheilor.",

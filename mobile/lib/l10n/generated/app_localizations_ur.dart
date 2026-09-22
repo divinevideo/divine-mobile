@@ -4009,7 +4009,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'ویڈیو حذف کر دی گئی، لیکن ہم ہر نقل کو نہیں ہٹا سکے۔ سپورٹ سے رابطہ کریں۔';
+      'ویڈیو حذف کر دی گئی۔ کچھ نقول اب بھی دستیاب ہو سکتی ہیں۔';
 
   @override
   String get authSessionExpired =>
@@ -11021,8 +11021,7 @@ class AppLocalizationsUr extends AppLocalizations {
       locale: localeName,
       other:
           'اس سے $count فائلیں حذف ہو جائیں گی جنہیں اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
-      one:
-          'اس سے $count فائل حذف ہو جائے گی جسے اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
+      one: 'اس سے $count فائل حذف ہو جائے گی جسے اب کوئی کلپ، ڈرافٹ یا اپ لوڈ استعمال نہیں کرتا، اور $size خالی ہو گی۔ اسے واپس نہیں کیا جا سکتا۔',
     );
     return '$_temp0';
   }
