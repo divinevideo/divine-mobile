@@ -913,7 +913,7 @@
     "shareMenuDeleteCleanupInProgress": "영상을 삭제하는 중…",
     "shareMenuDeleteCleanupConfirmed": "영상을 삭제했어요.",
     "shareMenuDeleteCleanupDelayed": "영상을 삭제했어요. 모든 곳에서 사라질 때까지 시간이 조금 걸릴 수 있어요.",
-    "shareMenuDeleteCleanupFailed": "영상은 삭제했지만 모든 사본을 지우지는 못했어요. 지원팀에 문의해 주세요.",
+    "shareMenuDeleteCleanupFailed": "영상이 삭제되었어요. 일부 사본은 여전히 이용할 수 있을 수 있어요.",
     "authSessionExpired": "세션이 만료됐어요. 다시 로그인해주세요.",
     "authSignInFailed": "로그인에 실패했어요. 다시 시도해주세요.",
     "webAuthNotSupportedSecureMode": "보안 모드에서는 웹 인증을 지원하지 않아요. 안전한 키 관리를 위해 모바일 앱을 이용해주세요.",

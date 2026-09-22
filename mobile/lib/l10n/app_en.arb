@@ -2493,7 +2493,7 @@
   "shareMenuDeleteCleanupInProgress": "Removing video…",
   "shareMenuDeleteCleanupConfirmed": "Video deleted.",
   "shareMenuDeleteCleanupDelayed": "Video deleted. It may take a little while to disappear everywhere.",
-  "shareMenuDeleteCleanupFailed": "Video deleted, but we couldn't remove every copy. Please contact support.",
+  "shareMenuDeleteCleanupFailed": "Video deleted. Some copies may still be available.",
   "authSessionExpired": "Your session has expired. Please sign in again.",
   "authAccountRestoreFailed": "We couldn't unlock that account on this device. Sign in again.",
   "@authAccountRestoreFailed": {

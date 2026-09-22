@@ -4009,7 +4009,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'ویڈیو حذف کر دی گئی، لیکن ہم ہر نقل کو نہیں ہٹا سکے۔ سپورٹ سے رابطہ کریں۔';
+      'ویڈیو حذف کر دی گئی۔ کچھ نقول اب بھی دستیاب ہو سکتی ہیں۔';
 
   @override
   String get authSessionExpired =>

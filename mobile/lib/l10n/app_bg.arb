@@ -1567,7 +1567,7 @@
     "shareMenuDeleteCleanupInProgress": "Премахване на видеото…",
     "shareMenuDeleteCleanupConfirmed": "Видеото е изтрито.",
     "shareMenuDeleteCleanupDelayed": "Видеото е изтрито. Може да отнеме малко време, докато изчезне отвсякъде.",
-    "shareMenuDeleteCleanupFailed": "Видеото е изтрито, но не успяхме да премахнем всяко копие. Свържи се с поддръжката.",
+    "shareMenuDeleteCleanupFailed": "Видеото е изтрито. Някои копия може все още да са достъпни.",
     "authSessionExpired": "Сесията ти изтече. Влез отново.",
     "authSignInFailed": "Входът не мина. Опитай пак.",
     "webAuthNotSupportedSecureMode": "Уеб удостоверяването не се поддържа в защитен режим. Използвай мобилното приложение, за да управляваш ключовете си сигурно.",

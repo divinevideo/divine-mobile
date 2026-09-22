@@ -4052,7 +4052,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Видеото е изтрито, но не успяхме да премахнем всяко копие. Свържи се с поддръжката.';
+      'Видеото е изтрито. Някои копия може все още да са достъпни.';
 
   @override
   String get authSessionExpired => 'Сесията ти изтече. Влез отново.';

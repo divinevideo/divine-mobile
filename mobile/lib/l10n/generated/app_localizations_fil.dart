@@ -4027,7 +4027,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Na-delete ang video, pero hindi namin naalis ang lahat ng kopya. Makipag-ugnayan sa support.';
+      'Na-delete ang video. Maaaring available pa rin ang ilang kopya.';
 
   @override
   String get authSessionExpired =>

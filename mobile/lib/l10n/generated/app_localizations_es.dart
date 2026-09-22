@@ -4047,7 +4047,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video eliminado, pero no pudimos borrar todas las copias. Contactá a soporte.';
+      'Video eliminado. Es posible que algunas copias sigan disponibles.';
 
   @override
   String get authSessionExpired => 'Tu sesión expiró. Iniciá sesión de nuevo.';

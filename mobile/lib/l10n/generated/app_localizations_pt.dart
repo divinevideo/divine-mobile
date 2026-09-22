@@ -4033,7 +4033,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Vídeo excluído, mas não conseguimos remover todas as cópias. Entre em contato com o suporte.';
+      'Vídeo excluído. Algumas cópias ainda podem estar disponíveis.';
 
   @override
   String get authSessionExpired => 'Sua sessão expirou. Entre novamente.';

@@ -4131,7 +4131,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Videoclip eliminat, dar nu am putut șterge fiecare copie. Contactează asistența.';
+      'Videoclip eliminat. Unele copii pot fi încă disponibile.';
 
   @override
   String get authSessionExpired =>

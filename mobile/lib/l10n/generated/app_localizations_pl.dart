@@ -4119,7 +4119,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Film usunięty, ale nie udało nam się usunąć każdej kopii. Skontaktuj się z pomocą.';
+      'Film usunięty. Niektóre kopie mogą być nadal dostępne.';
 
   @override
   String get authSessionExpired => 'Twoja sesja wygasła. Zaloguj się ponownie.';

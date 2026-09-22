@@ -132,14 +132,41 @@ class CreatorDeleteEnforcementRepository {
 
   CreatorDeleteEnforcementResult _decodePostBody(String body) {
     final json = _decodeObject(body);
-    if (json?['status'] == 'success') {
+    final status = json?['status'];
+    if (status == 'success') {
       return const CreatorDeleteEnforcementResult.confirmed();
     }
-    if (json?['status'] == 'failed') {
-      return const CreatorDeleteEnforcementResult.failed();
+    if (status == 'failed') {
+      return _classifyTargetStates(json?['targets'], response: 'POST');
     }
     _reportContractFailure('POST returned an invalid terminal response');
     return const CreatorDeleteEnforcementResult.failed();
+  }
+
+  CreatorDeleteEnforcementResult _classifyTargetStates(
+    Object? rawTargets, {
+    required String response,
+  }) {
+    if (rawTargets is! List<Object?> || rawTargets.isEmpty) {
+      _reportContractFailure('$response returned no target states');
+      return const CreatorDeleteEnforcementResult.failed();
+    }
+    final statuses = rawTargets
+        .whereType<Map<String, dynamic>>()
+        .map((target) => target['status'])
+        .whereType<String>()
+        .toList();
+    if (statuses.length != rawTargets.length) {
+      _reportContractFailure('$response returned malformed target states');
+      return const CreatorDeleteEnforcementResult.failed();
+    }
+    if (statuses.any((status) => status.startsWith('failed:permanent:'))) {
+      return const CreatorDeleteEnforcementResult.failed();
+    }
+    if (statuses.every((status) => status == 'success')) {
+      return const CreatorDeleteEnforcementResult.confirmed();
+    }
+    return const CreatorDeleteEnforcementResult.delayed();
   }
 
   Future<CreatorDeleteEnforcementResult> _poll(
@@ -194,27 +221,10 @@ class CreatorDeleteEnforcementRepository {
     }
     if (response.statusCode != 200) return null;
     final json = _decodeObject(response.body);
-    final targets = json?['targets'];
-    if (targets is! List<Object?> || targets.isEmpty) {
-      _reportContractFailure('GET returned no target states');
-      return const CreatorDeleteEnforcementResult.failed();
-    }
-    final statuses = targets
-        .whereType<Map<String, dynamic>>()
-        .map((target) => target['status'])
-        .whereType<String>()
-        .toList();
-    if (statuses.length != targets.length) {
-      _reportContractFailure('GET returned malformed target states');
-      return const CreatorDeleteEnforcementResult.failed();
-    }
-    if (statuses.any((status) => status.startsWith('failed:permanent:'))) {
-      return const CreatorDeleteEnforcementResult.failed();
-    }
-    if (statuses.every((status) => status == 'success')) {
-      return const CreatorDeleteEnforcementResult.confirmed();
-    }
-    return null;
+    final result = _classifyTargetStates(json?['targets'], response: 'GET');
+    return result.status == CreatorDeleteEnforcementStatus.delayed
+        ? null
+        : result;
   }
 
   Future<http.Response?> _request(

@@ -4067,7 +4067,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Vidéo supprimée, mais nous n’avons pas pu retirer toutes les copies. Contacte l’assistance.';
+      'Vidéo supprimée. Certaines copies peuvent rester disponibles.';
 
   @override
   String get authSessionExpired => 'Ta session a expiré. Reconnecte-toi.';

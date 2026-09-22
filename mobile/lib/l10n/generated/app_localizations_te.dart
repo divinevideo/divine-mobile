@@ -4158,7 +4158,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'వీడియో తొలగించబడింది, కానీ మేము ప్రతి కాపీని తీసివేయలేకపోయాము. దయచేసి మద్దతును సంప్రదించండి.';
+      'వీడియో తొలగించబడింది. కొన్ని కాపీలు ఇప్పటికీ అందుబాటులో ఉండవచ్చు.';
 
   @override
   String get authSessionExpired =>

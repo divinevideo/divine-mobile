@@ -2030,7 +2030,7 @@
   "shareMenuDeleteCleanupInProgress": "Mengalih keluar video…",
   "shareMenuDeleteCleanupConfirmed": "Video dipadamkan.",
   "shareMenuDeleteCleanupDelayed": "Video dipadamkan. Ia mungkin mengambil sedikit masa untuk hilang dari semua tempat.",
-  "shareMenuDeleteCleanupFailed": "Video dipadamkan, tetapi kami tidak dapat mengalih keluar setiap salinan. Hubungi sokongan.",
+  "shareMenuDeleteCleanupFailed": "Video dipadamkan. Sesetengah salinan mungkin masih tersedia.",
   "authSessionExpired": "Sesi anda telah tamat tempoh. Sila log masuk semula.",
   "authSignInFailed": "Gagal log masuk. Sila cuba lagi.",
   "webAuthNotSupportedSecureMode": "Pengesahan web tidak disokong dalam mod selamat. Sila guna apl mudah alih untuk pengurusan kunci selamat.",

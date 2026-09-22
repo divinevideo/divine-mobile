@@ -3973,7 +3973,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Đã xóa video nhưng chúng tôi không thể xóa mọi bản sao. Hãy liên hệ bộ phận hỗ trợ.';
+      'Đã xóa video. Một số bản sao có thể vẫn còn.';
 
   @override
   String get authSessionExpired =>

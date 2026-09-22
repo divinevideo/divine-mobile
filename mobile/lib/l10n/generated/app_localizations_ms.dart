@@ -3998,7 +3998,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video dipadamkan, tetapi kami tidak dapat mengalih keluar setiap salinan. Hubungi sokongan.';
+      'Video dipadamkan. Sesetengah salinan mungkin masih tersedia.';
 
   @override
   String get authSessionExpired =>

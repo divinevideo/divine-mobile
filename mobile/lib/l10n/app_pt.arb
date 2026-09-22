@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Removendo vídeo…",
     "shareMenuDeleteCleanupConfirmed": "Vídeo excluído.",
     "shareMenuDeleteCleanupDelayed": "Vídeo excluído. Pode demorar um pouco até desaparecer de todos os lugares.",
-    "shareMenuDeleteCleanupFailed": "Vídeo excluído, mas não conseguimos remover todas as cópias. Entre em contato com o suporte.",
+    "shareMenuDeleteCleanupFailed": "Vídeo excluído. Algumas cópias ainda podem estar disponíveis.",
     "authSessionExpired": "Sua sessão expirou. Entre novamente.",
     "authSignInFailed": "Falha ao entrar. Tente novamente.",
     "webAuthNotSupportedSecureMode": "Autenticação web não suportada no modo seguro. Use o app para celular para gerenciamento seguro de chaves.",

@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Tar bort videon…",
     "shareMenuDeleteCleanupConfirmed": "Videon har raderats.",
     "shareMenuDeleteCleanupDelayed": "Videon har tagits bort. Det kan ta en stund innan den försvinner överallt.",
-    "shareMenuDeleteCleanupFailed": "Videon har tagits bort, men vi kunde inte ta bort alla kopior. Kontakta supporten.",
+    "shareMenuDeleteCleanupFailed": "Videon har tagits bort. Vissa kopior kan fortfarande vara tillgängliga.",
     "authSessionExpired": "Din session har löpt ut. Logga in igen.",
     "authSignInFailed": "Kunde inte logga in. Försök igen.",
     "webAuthNotSupportedSecureMode": "Webbautentisering stöds inte i säkert läge. Använd mobilappen för säker nyckelhantering.",

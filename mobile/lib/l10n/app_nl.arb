@@ -1377,7 +1377,7 @@
     "shareMenuDeleteCleanupInProgress": "Video verwijderen…",
     "shareMenuDeleteCleanupConfirmed": "Video verwijderd.",
     "shareMenuDeleteCleanupDelayed": "Video verwijderd. Het kan even duren voordat die overal verdwenen is.",
-    "shareMenuDeleteCleanupFailed": "Video verwijderd, maar we konden niet elke kopie weghalen. Neem contact op met support.",
+    "shareMenuDeleteCleanupFailed": "Video verwijderd. Sommige kopieën zijn mogelijk nog beschikbaar.",
     "authSessionExpired": "Je sessie is verlopen. Log opnieuw in.",
     "authSignInFailed": "Inloggen mislukt. Probeer het opnieuw.",
     "webAuthNotSupportedSecureMode": "Webauthenticatie wordt niet ondersteund in veilige modus. Gebruik de mobiele app voor veilig sleutelbeheer.",

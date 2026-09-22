@@ -3999,7 +3999,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Videon har tagits bort, men vi kunde inte ta bort alla kopior. Kontakta supporten.';
+      'Videon har tagits bort. Vissa kopior kan fortfarande vara tillgängliga.';
 
   @override
   String get authSessionExpired => 'Din session har löpt ut. Logga in igen.';

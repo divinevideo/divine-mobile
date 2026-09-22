@@ -3909,7 +3909,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'ቪዲዮው ተሰርዟል፣ ግን ሁሉንም ቅጂዎች ማስወገድ አልቻልንም። ድጋፍን ያነጋግሩ።';
+      'ቪዲዮው ተሰርዟል። አንዳንድ ቅጂዎች አሁንም ሊገኙ ይችላሉ።';
 
   @override
   String get authSessionExpired => 'ክፍለ ጊዜዎ ጊዜው አልፎበታል። እባክዎ እንደገና ይግቡ።';

@@ -3935,7 +3935,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video dihapus, tetapi kami tidak dapat menghapus semua salinannya. Hubungi dukungan.';
+      'Video dihapus. Beberapa salinan mungkin masih tersedia.';
 
   @override
   String get authSessionExpired =>

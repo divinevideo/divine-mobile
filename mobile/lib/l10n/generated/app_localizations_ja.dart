@@ -3748,7 +3748,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      '動画を削除しましたが、すべてのコピーを削除できませんでした。サポートにお問い合わせください。';
+      '動画を削除しました。一部のコピーは引き続き利用できる場合があります。';
 
   @override
   String get authSessionExpired => 'セッションが切れちゃった。もう一回サインインしてね。';

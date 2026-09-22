@@ -2030,7 +2030,7 @@
   "shareMenuDeleteCleanupInProgress": "正在移除视频…",
   "shareMenuDeleteCleanupConfirmed": "视频已删除。",
   "shareMenuDeleteCleanupDelayed": "视频已删除。它可能需要一点时间才能从所有地方消失。",
-  "shareMenuDeleteCleanupFailed": "视频已删除，但我们无法移除每个副本。请联系支持团队。",
+  "shareMenuDeleteCleanupFailed": "视频已删除。部分副本可能仍然可用。",
   "authSessionExpired": "你的登录已过期，请重新登录。",
   "authSignInFailed": "登录失败，请重试。",
   "webAuthNotSupportedSecureMode": "安全模式下不支持网页认证。请使用移动应用进行安全的密钥管理。",

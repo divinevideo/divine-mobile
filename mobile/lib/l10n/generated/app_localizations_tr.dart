@@ -3943,7 +3943,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareMenuDeleteCleanupFailed =>
-      'Video silindi ancak her kopyayı kaldıramadık. Lütfen destek ekibiyle iletişime geç.';
+      'Video silindi. Bazı kopyalar hâlâ erişilebilir olabilir.';
 
   @override
   String get authSessionExpired =>
