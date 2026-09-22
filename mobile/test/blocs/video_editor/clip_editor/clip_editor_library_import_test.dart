@@ -1,6 +1,7 @@
 // ABOUTME: Tests for adding clips picked in the library to the composition —
 // ABOUTME: stop-motion sets merge into a frames clip or render into a video one
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -663,6 +664,38 @@ void main() {
           isA<ClipLibraryImportDiscarded>(),
         );
       });
+
+      test(
+        'queues the rendered mp4 for cleanup when the editor closes mid-render',
+        () async {
+          final render = Completer<DivineVideoClip?>();
+          final started = Completer<void>();
+          final deferred = <String?>[];
+          final bloc = await seeded(
+            [_videoClip('a')],
+            materializeStopMotionClip: (clip, {taskId}) {
+              started.complete();
+              return render.future;
+            },
+            deferFileCleanup: deferred.addAll,
+          );
+
+          bloc.add(
+            ClipEditorLibraryClipsImportRequested([
+              _stopMotionSet('picked', dir: tempDir),
+            ]),
+          );
+          await started.future;
+          final closing = bloc.close();
+          render.complete(_renderedFor(_stopMotionSet('picked', dir: tempDir)));
+          await closing;
+          await pumpEventQueue();
+
+          // No clip will ever reference the render the closed editor could
+          // not land, so it must be reclaimed rather than left on disk.
+          expect(deferred, ['/documents/stop_motion_picked.mp4']);
+        },
+      );
 
       blocTest<ClipEditorBloc, ClipEditorState>(
         'reports an invariant failure and leaves the timeline alone',

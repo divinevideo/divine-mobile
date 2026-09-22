@@ -1388,6 +1388,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       return;
     }
 
+    // Closed while a set was assembling: the emit below would be dropped and
+    // the rendered mp4s would be orphans no clip ever references.
+    if (isClosed) {
+      _abandonLibraryImport(emit, renderedPaths, ClipLibraryImportDiscarded());
+      return;
+    }
+
     Log.info(
       '📚 Added ${imported.length} library clip(s), '
       '$setIndex of them assembled from stills',
