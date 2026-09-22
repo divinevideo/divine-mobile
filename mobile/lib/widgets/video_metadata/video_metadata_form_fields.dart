@@ -1,6 +1,8 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
@@ -11,6 +13,7 @@ import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_s
 import 'package:openvine/widgets/video_metadata/video_metadata_expiration_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_limit_warning_banner.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_schedule_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
 
 class VideoMetadataFormFields extends ConsumerStatefulWidget {
@@ -18,6 +21,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
     super.key,
     this.enableTags = true,
     this.enableExpiration = true,
+    this.enableSchedule = true,
     this.enableContentWarning = true,
     this.enableCollaborators = true,
     this.enableInspiredBy = true,
@@ -28,6 +32,10 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
 
   final bool enableTags;
   final bool enableExpiration;
+
+  /// Whether the "Post time" tile is offered. Off when editing a published
+  /// video and for video replies; the feature flag gates it on top.
+  final bool enableSchedule;
   final bool enableContentWarning;
   final bool enableCollaborators;
   final bool enableInspiredBy;
@@ -120,6 +128,9 @@ class _VideoMetadataFormFieldsState
           if (widget.enableExpiration)
             const _InputWrapper(child: VideoMetadataExpirationSelector()),
 
+          if (widget.enableSchedule)
+            const _InputWrapper(child: _ScheduleSelectorGate()),
+
           if (widget.enableCollaborators)
             const _InputWrapper(child: VideoMetadataCollaboratorsInput()),
 
@@ -139,6 +150,23 @@ class _VideoMetadataFormFieldsState
         ],
       ),
     );
+  }
+}
+
+/// Shows the "Post time" tile only when scheduling is enabled and the
+/// recording is not a video reply — a reply belongs to its thread now, and
+/// scheduled replies are out of scope (#3538).
+class _ScheduleSelectorGate extends ConsumerWidget {
+  const _ScheduleSelectorGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.scheduledPosts),
+    );
+    final replyContext = ref.watch(videoReplyContextProvider);
+    if (!enabled || replyContext != null) return const SizedBox.shrink();
+    return const VideoMetadataScheduleSelector();
   }
 }
 

@@ -93,6 +93,47 @@ void main() {
       expect(find.text('Post'), findsOneWidget);
     });
 
+    testWidgets('a post time turns Post into Schedule (#3538)', (
+      tester,
+    ) async {
+      final scheduledState = VideoEditorProviderState(
+        title: 'Test Video',
+        scheduledAt: DateTime(2026, 10, 1, 9, 30).toUtc(),
+        finalRenderedClip: DivineVideoClip(
+          id: 'test-clip',
+          video: EditorVideo.file('test.mp4'),
+          duration: const Duration(seconds: 10),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: models.AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        ),
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            videoEditorProvider.overrideWith(
+              () => _MockVideoEditorNotifier(scheduledState),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: VideoMetadataCaptureBottomBar()),
+          ),
+        ),
+      );
+
+      expect(find.text(l10n.videoMetadataScheduleButton), findsOneWidget);
+      expect(find.text(l10n.videoMetadataPostButton), findsNothing);
+      final semantics = tester.getSemantics(
+        find.bySemanticsIdentifier('post_button'),
+      );
+      expect(semantics.hint, contains('Oct 1'));
+      expect(semantics.hint, contains('9:30'));
+    });
+
     testWidgets('buttons are disabled when metadata is invalid', (
       tester,
     ) async {

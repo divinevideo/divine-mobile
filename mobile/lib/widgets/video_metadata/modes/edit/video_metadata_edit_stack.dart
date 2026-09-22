@@ -164,9 +164,11 @@ class _VideoMetadataEditStackContentState
                       pendingThumbnailPath: _pendingThumbnailPath,
                     ),
                   ),
-                  // Editing is post-publish; expiration cannot be changed.
+                  // Editing is post-publish; expiration cannot be changed
+                  // and there is no post time left to pick.
                   const VideoMetadataFormFields(
                     enableExpiration: false,
+                    enableSchedule: false,
                     enableCaptionMentionAutocomplete: false,
                   ),
                 ],

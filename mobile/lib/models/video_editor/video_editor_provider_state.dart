@@ -35,6 +35,7 @@ class VideoEditorProviderState {
     this.description = '',
     this.tags = const {},
     this.expiration = .notExpire,
+    this.scheduledAt,
     this.metadataLimitReached = false,
     this.finalRenderedClip,
     this.editorStateHistory = const {},
@@ -125,6 +126,9 @@ class VideoEditorProviderState {
 
   /// Expiration setting determining when the video post expires.
   final VideoMetadataExpiration expiration;
+
+  /// When the post should go live (UTC), or null to post right away.
+  final DateTime? scheduledAt;
 
   /// Whether the 64KB metadata limit was reached during the last update.
   final bool metadataLimitReached;
@@ -267,6 +271,8 @@ class VideoEditorProviderState {
     String? description,
     Set<String>? tags,
     VideoMetadataExpiration? expiration,
+    DateTime? scheduledAt,
+    bool clearScheduledAt = false,
     bool? metadataLimitReached,
     DivineVideoClip? finalRenderedClip,
     bool clearFinalRenderedClip = false,
@@ -325,6 +331,7 @@ class VideoEditorProviderState {
       description: description ?? this.description,
       tags: tags ?? this.tags,
       expiration: expiration ?? this.expiration,
+      scheduledAt: clearScheduledAt ? null : (scheduledAt ?? this.scheduledAt),
       metadataLimitReached: metadataLimitReached ?? this.metadataLimitReached,
       finalRenderedClip: clearFinalRenderedClip
           ? null

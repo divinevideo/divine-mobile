@@ -53,6 +53,14 @@ class BuildConfiguration {
           'FF_CLIENT_SEEN_FILTERING',
           defaultValue: true,
         );
+      case FeatureFlag.scheduledPosts:
+        // On for development and internal builds; off in release until the
+        // gateway routes /api/schedule to the relay (#3538).
+        const isReleaseBuild = bool.fromEnvironment('dart.vm.product');
+        return const bool.fromEnvironment(
+          'FF_SCHEDULED_POSTS',
+          defaultValue: !isReleaseBuild,
+        );
       case FeatureFlag.postPublishConfirmationExperiment:
         return const bool.fromEnvironment(
           'FF_POST_PUBLISH_CONFIRMATION_EXPERIMENT',
@@ -103,6 +111,8 @@ class BuildConfiguration {
         return 'FF_NEW_POST_NOTIFICATIONS';
       case FeatureFlag.clientSeenFiltering:
         return 'FF_CLIENT_SEEN_FILTERING';
+      case FeatureFlag.scheduledPosts:
+        return 'FF_SCHEDULED_POSTS';
       case FeatureFlag.postPublishConfirmationExperiment:
         return 'FF_POST_PUBLISH_CONFIRMATION_EXPERIMENT';
       case FeatureFlag.postPublishConfirmationTreatment:

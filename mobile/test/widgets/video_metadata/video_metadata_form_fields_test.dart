@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, VineSound;
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -19,6 +21,8 @@ void main() {
       bool enableContentWarning = true,
       bool enableCollaborators = true,
       bool enableInspiredBy = true,
+      bool enableSchedule = true,
+      bool scheduledPostsFlag = true,
       VideoReplyContext? replyContext,
     }) {
       return ProviderScope(
@@ -29,6 +33,9 @@ void main() {
           videoReplyContextProvider.overrideWith(
             () => _TestVideoReplyContextNotifier(replyContext),
           ),
+          isFeatureEnabledProvider(
+            FeatureFlag.scheduledPosts,
+          ).overrideWithValue(scheduledPostsFlag),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -41,6 +48,7 @@ void main() {
                 enableContentWarning: enableContentWarning,
                 enableCollaborators: enableCollaborators,
                 enableInspiredBy: enableInspiredBy,
+                enableSchedule: enableSchedule,
               ),
             ),
           ),
@@ -86,7 +94,12 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [videoEditorProvider.overrideWith(() => mockNotifier)],
+          overrides: [
+            videoEditorProvider.overrideWith(() => mockNotifier),
+            isFeatureEnabledProvider(
+              FeatureFlag.scheduledPosts,
+            ).overrideWithValue(false),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -116,7 +129,12 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [videoEditorProvider.overrideWith(() => mockNotifier)],
+          overrides: [
+            videoEditorProvider.overrideWith(() => mockNotifier),
+            isFeatureEnabledProvider(
+              FeatureFlag.scheduledPosts,
+            ).overrideWithValue(false),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -135,6 +153,46 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mockNotifier.lastDescription, equals('A description'));
+    });
+
+    group('post time tile (#3538)', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      testWidgets('renders when scheduling is on', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsOneWidget);
+      });
+
+      testWidgets('hides when enableSchedule is false', (tester) async {
+        await tester.pumpWidget(buildWidget(enableSchedule: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+      });
+
+      testWidgets('hides when the feature flag is off', (tester) async {
+        await tester.pumpWidget(buildWidget(scheduledPostsFlag: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+      });
+
+      testWidgets('hides for a video reply', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            replyContext: const VideoReplyContext(
+              rootEventId: 'root-id',
+              rootEventKind: 34236,
+              rootAuthorPubkey: 'root-author',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+      });
     });
 
     testWidgets('hides tags section when enableTags is false', (tester) async {
@@ -181,6 +239,9 @@ void main() {
         ProviderScope(
           overrides: [
             videoEditorProvider.overrideWith(() => mockNotifier),
+            isFeatureEnabledProvider(
+              FeatureFlag.scheduledPosts,
+            ).overrideWithValue(false),
             videoReplyContextProvider.overrideWith(
               () => _TestVideoReplyContextNotifier(
                 const VideoReplyContext(

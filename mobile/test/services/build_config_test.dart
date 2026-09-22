@@ -40,6 +40,17 @@ void main() {
       expect(config.getDefault(FeatureFlag.videoReplies), isTrue);
     });
 
+    test('scheduledPosts is on by default in debug builds only', () {
+      // Tests run in a non-product VM, so the default mirrors a debug build;
+      // release builds ship it off until the relay endpoint is routed.
+      const config = BuildConfiguration();
+      expect(config.getDefault(FeatureFlag.scheduledPosts), isTrue);
+      expect(
+        config.getEnvironmentKey(FeatureFlag.scheduledPosts),
+        equals('FF_SCHEDULED_POSTS'),
+      );
+    });
+
     test('should provide all flags with defaults', () {
       const config = BuildConfiguration();
 

@@ -69,6 +69,12 @@ enum FeatureFlag {
     'Demote recently-seen videos in home feeds and drop them from '
         'classics/discovery. Kill-switch for the Aug 2026 campaign load.',
   ),
+  scheduledPosts(
+    'Scheduled Posts',
+    'Pick a later date and time for a post. The relay publishes it then; '
+        'the app steps in if it is open and the relay is late. Off in '
+        'release builds until the relay endpoint is routed in production.',
+  ),
   postPublishConfirmationExperiment(
     'Post-Publish Confirmation Test',
     'Enable the 50/50 View and Share confirmation test after publishing. '
