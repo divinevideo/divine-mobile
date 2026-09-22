@@ -18,6 +18,16 @@ import 'package:unified_logger/unified_logger.dart';
 /// Logger name for repository-level diagnostics.
 const String _logName = 'people_lists_repository.impl';
 
+/// How long a read of public people lists waits before giving up.
+///
+/// Above the relay client's default 5-second query budget, which the startup
+/// syncs exhaust on the first read after launch, and equal to the video-list
+/// discovery budget (`kPublicCuratedListsRelayReadTimeout`), so the two
+/// columns of the Explore Lists tab wait the same; the app pins the two
+/// equal. Shared by discovery, search, a deep-linked list, and the refresh of
+/// followed lists at account attach, which runs inside that same window.
+const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
+
 /// Filter callback for owner-authored people-list search results.
 ///
 /// Returns `true` when content from [ownerPubkey] should be hidden.
@@ -467,13 +477,16 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       // One filter for the whole set. Authors and `d` tags combine as AND, so
       // it can also match an owner's other list that shares a followed
       // list's `d` tag; the lookup below drops those.
-      events = await _nostrClient.queryEvents([
-        Filter(
-          kinds: const [Nip51PeopleListCodec.kind],
-          authors: {for (final ref in refs) ref.ownerPubkey}.toList(),
-          d: {for (final ref in refs) ref.listId}.toList(),
-        ),
-      ]);
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: const [Nip51PeopleListCodec.kind],
+            authors: {for (final ref in refs) ref.ownerPubkey}.toList(),
+            d: {for (final ref in refs) ref.listId}.toList(),
+          ),
+        ],
+        timeout: kPublicPeopleListsRelayReadTimeout,
+      );
     } on Exception catch (error, stackTrace) {
       Log.warning(
         'Failed to refresh followed people lists; keeping the stored copies',
@@ -527,14 +540,17 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) async {
     final List<Event> events;
     try {
-      events = await _nostrClient.queryEvents([
-        Filter(
-          kinds: const [Nip51PeopleListCodec.kind],
-          limit: limit,
-          authors: author == null ? null : [author],
-          d: dTag == null ? null : [dTag],
-        ),
-      ]);
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: const [Nip51PeopleListCodec.kind],
+            limit: limit,
+            authors: author == null ? null : [author],
+            d: dTag == null ? null : [dTag],
+          ),
+        ],
+        timeout: kPublicPeopleListsRelayReadTimeout,
+      );
     } on Object catch (error, stackTrace) {
       Log.error(
         'Failed to query public people lists $logContext',

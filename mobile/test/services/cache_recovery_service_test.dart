@@ -167,13 +167,16 @@ void main() {
         const member =
             'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
         registerFallbackValue(<Filter>[]);
+        registerFallbackValue(Duration.zero);
         SharedPreferences.setMockInitialValues({});
         final store = PrefsFollowedPeopleListsStore(
           await SharedPreferences.getInstance(),
         );
         addTearDown(store.dispose);
         final nostrClient = _MockNostrClient();
-        when(() => nostrClient.queryEvents(any())).thenAnswer(
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
           (_) async => [
             Event(
               owner,

@@ -50,6 +50,18 @@ PeopleListSearchResult _peopleList(String id) => PeopleListSearchResult(
 );
 
 void main() {
+  group('relay read budget', () {
+    test('people-list reads wait as long as video-list reads', () {
+      // Both columns of the Explore Lists tab read on the first query after
+      // launch, while the startup syncs hold the relay pool. One budget for
+      // both, or one column times out where the other waits.
+      expect(
+        kPublicPeopleListsRelayReadTimeout,
+        equals(kPublicCuratedListsRelayReadTimeout),
+      );
+    });
+  });
+
   group(ListsDiscoveryCubit, () {
     late _MockCuratedListService service;
     late _MockCuratedListRepository curatedRepository;
