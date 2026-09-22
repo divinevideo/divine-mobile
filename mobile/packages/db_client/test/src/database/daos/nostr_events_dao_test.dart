@@ -903,6 +903,36 @@ void main() {
         expect(results.first.id, equals(commentOnVideo.id));
       });
 
+      test('filters by m tags (NIP-94 file MIME type)', () async {
+        final audioFile = createEvent(
+          kind: 1063,
+          tags: [
+            ['url', 'https://example.com/sound.wav'],
+            ['m', 'audio/wav'],
+          ],
+          content: '',
+          createdAt: 1000,
+        );
+        final pdfFile = createEvent(
+          kind: 1063,
+          tags: [
+            ['url', 'https://example.com/flyer.pdf'],
+            ['m', 'application/pdf'],
+          ],
+          content: '',
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([audioFile, pdfFile]);
+
+        final results = await dao.getEventsByFilter(
+          Filter(kinds: [1063], m: ['audio/wav', 'audio/mpeg']),
+        );
+
+        expect(results.length, equals(1));
+        expect(results.first.id, equals(audioFile.id));
+      });
+
       test(
         'filters by uppercase A tags (NIP-22 root addressable event reference)',
         () async {
