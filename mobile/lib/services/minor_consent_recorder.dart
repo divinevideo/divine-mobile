@@ -33,6 +33,7 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
     : _camera = camera;
 
   final CameraService _camera;
+  bool _disposed = false;
 
   @override
   Future<void> initialize() => _camera.initialize();
@@ -53,5 +54,9 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
   }
 
   @override
-  Future<void> dispose() => _camera.dispose();
+  Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
+    await _camera.dispose();
+  }
 }
