@@ -100,6 +100,10 @@ class CameraController(
 
     // Callback for startRecording - called when recording truly starts or is aborted
     private var startRecordingCallback: ((String?) -> Unit)? = null
+
+    // True while [pausePreview] has unbound the use cases. The camera stays
+    // "initialized" (the Flutter texture and use-case objects are kept) so
+    // [resumePreview] only has to rebind them.
     private var isPaused: Boolean = false
 
     // Screen brightness for front camera "torch" mode
@@ -245,8 +249,35 @@ class CameraController(
         val callback: (String?) -> Unit
     )
 
+    /**
+     * Which physical cameras back each lens type, derived once from
+     * `CameraCharacteristics`. The set of cameras does not change while the
+     * process lives, so a fresh controller (one per initialize) reuses it
+     * instead of querying every camera's characteristics again.
+     */
+    private data class CameraInventory(
+        val hasFrontCamera: Boolean,
+        val hasBackCamera: Boolean,
+        val frontCameraId: String?,
+        val frontUltraWideCameraId: String?,
+        val backCameraId: String?,
+        val ultraWideCameraId: String?,
+        val telephotoCameraId: String?,
+        val macroCameraId: String?,
+        val mainCameraFocalLength: Float,
+        val ultraWideCameraFocalLength: Float,
+        val telephotoCameraFocalLength: Float,
+        val mainNativeMaxZoom: Float,
+        val ultraWideNativeMaxZoom: Float,
+        val telephotoNativeMaxZoom: Float,
+    )
+
     companion object {
         private const val MAX_ENCODER_RETRIES = 2
+
+        // Process-wide result of the camera scan; see [CameraInventory].
+        @Volatile
+        private var cachedInventory: CameraInventory? = null
 
         // Safety net: resolve a lens switch even if the incoming camera never
         // reports a frame (rare device quirk), so `await switchCamera` on the
@@ -371,9 +402,10 @@ class CameraController(
         mirrorFrontCameraOutput: Boolean = true,
         enableAutoLensSwitch: Boolean = true,
         preferUnprocessedAudio: Boolean = false,
+        videoStabilizationMode: String = STABILIZATION_OFF,
         callback: (Map<String, Any?>?, String?) -> Unit
     ) {
-        DivineCameraLog.d(TAG, "Initializing camera with lens: $lens, quality: $quality, enableScreenFlash: $enableScreenFlash, mirrorFrontCameraOutput: $mirrorFrontCameraOutput, autoLensSwitch: $enableAutoLensSwitch, unprocessedAudio: $preferUnprocessedAudio (portrait mode 1080x1920)")
+        DivineCameraLog.d(TAG, "Initializing camera with lens: $lens, quality: $quality, enableScreenFlash: $enableScreenFlash, mirrorFrontCameraOutput: $mirrorFrontCameraOutput, autoLensSwitch: $enableAutoLensSwitch, unprocessedAudio: $preferUnprocessedAudio, stabilization: $videoStabilizationMode (portrait mode 1080x1920)")
 
         screenFlashFeatureEnabled = enableScreenFlash
         this.mirrorFrontCameraOutput = mirrorFrontCameraOutput
@@ -411,6 +443,10 @@ class CameraController(
             }
         }
 
+        // Applied by the first bind below. Setting it after initialize instead
+        // would rebind the whole camera a second time just to change it.
+        requestedStabilizationMode = initialStabilizationMode(videoStabilizationMode)
+
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             try {
@@ -431,6 +467,10 @@ class CameraController(
      * Detects front, back, ultra-wide, telephoto, and macro cameras.
      */
     private fun checkCameraAvailability() {
+        cachedInventory?.let {
+            applyInventory(it)
+            return
+        }
         try {
             val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             
@@ -569,8 +609,64 @@ class CameraController(
                 "frontUltraWide=${frontUltraWideCameraId != null}, back=$hasBackCamera, " +
                 "ultraWide=${ultraWideCameraId != null}, telephoto=${telephotoCameraId != null}, " +
                 "macro=${macroCameraId != null}")
+
+            // An empty scan is not cached: the camera service can briefly
+            // report no cameras while it is still coming up.
+            if (hasFrontCamera || hasBackCamera) {
+                cachedInventory = CameraInventory(
+                    hasFrontCamera = hasFrontCamera,
+                    hasBackCamera = hasBackCamera,
+                    frontCameraId = frontCameraId,
+                    frontUltraWideCameraId = frontUltraWideCameraId,
+                    backCameraId = backCameraId,
+                    ultraWideCameraId = ultraWideCameraId,
+                    telephotoCameraId = telephotoCameraId,
+                    macroCameraId = macroCameraId,
+                    mainCameraFocalLength = mainCameraFocalLength,
+                    ultraWideCameraFocalLength = ultraWideCameraFocalLength,
+                    telephotoCameraFocalLength = telephotoCameraFocalLength,
+                    mainNativeMaxZoom = mainNativeMaxZoom,
+                    ultraWideNativeMaxZoom = ultraWideNativeMaxZoom,
+                    telephotoNativeMaxZoom = telephotoNativeMaxZoom,
+                )
+            }
         } catch (e: Exception) {
             DivineCameraLog.e(TAG, "Error checking camera availability", e)
+        }
+    }
+
+    /** Restores the fields [checkCameraAvailability] derives from a scan. */
+    private fun applyInventory(inventory: CameraInventory) {
+        hasFrontCamera = inventory.hasFrontCamera
+        hasBackCamera = inventory.hasBackCamera
+        frontCameraId = inventory.frontCameraId
+        frontUltraWideCameraId = inventory.frontUltraWideCameraId
+        backCameraId = inventory.backCameraId
+        ultraWideCameraId = inventory.ultraWideCameraId
+        telephotoCameraId = inventory.telephotoCameraId
+        macroCameraId = inventory.macroCameraId
+        mainCameraFocalLength = inventory.mainCameraFocalLength
+        ultraWideCameraFocalLength = inventory.ultraWideCameraFocalLength
+        telephotoCameraFocalLength = inventory.telephotoCameraFocalLength
+        mainNativeMaxZoom = inventory.mainNativeMaxZoom
+        ultraWideNativeMaxZoom = inventory.ultraWideNativeMaxZoom
+        telephotoNativeMaxZoom = inventory.telephotoNativeMaxZoom
+    }
+
+    /**
+     * The stabilization mode the first bind should use: [mode] when it is a
+     * recognised mode the opened lens supports, otherwise off — the same gate
+     * the recorder applied when it restored the preference after start.
+     */
+    private fun initialStabilizationMode(mode: String): String {
+        if (mode == STABILIZATION_OFF || !isCanonicalStabilizationMode(mode)) {
+            return STABILIZATION_OFF
+        }
+        return if (mode in availableVideoStabilizationModesForCurrentLens()) {
+            mode
+        } else {
+            DivineCameraLog.w(TAG, "Stabilization mode $mode unsupported on $currentLensType; opening with off")
+            STABILIZATION_OFF
         }
     }
     
@@ -2055,6 +2151,9 @@ class CameraController(
         provider: ProcessCameraProvider,
         cameraSelector: CameraSelector
     ): Camera? {
+        // Any full bind (initialize, lens switch, stabilization change) leaves
+        // the camera running, which supersedes a pause.
+        isPaused = false
         val owner = activity as LifecycleOwner
         val photo = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
@@ -2496,30 +2595,92 @@ class CameraController(
 
     /**
      * Pauses the camera preview.
+     *
+     * With [releaseCamera] the use cases are unbound, which closes the camera
+     * and stops the capture stream, so a recorder screen that stays in the
+     * foreground without a preview (the Upload tab) stops burning the sensor,
+     * the ISP and the battery, and the OS camera indicator goes out. A
+     * transient interruption (`releaseCamera = false`, e.g. the notification
+     * shade) keeps the camera running: rebinding costs a visible restart on
+     * every pull.
+     *
+     * A recording in progress is never interrupted — the pause is skipped.
      */
-    fun pausePreview() {
-        DivineCameraLog.d(TAG, "Pausing preview")
+    fun pausePreview(releaseCamera: Boolean = true) {
+        DivineCameraLog.d(TAG, "Pausing preview (releaseCamera=$releaseCamera)")
         forceDisableScreenFlash()
-        isPaused = true
+        if (!releaseCamera || isPaused) return
+        if (isRecording || recording != null) {
+            DivineCameraLog.d(TAG, "Recording in progress — keeping the camera bound")
+            return
+        }
+        val provider = cameraProvider ?: return
+        if (camera == null) return
+        try {
+            provider.unbindAll()
+            isPaused = true
+        } catch (e: Exception) {
+            DivineCameraLog.e(TAG, "Failed to unbind camera for pause", e)
+        }
     }
 
     /**
-     * Resumes the camera preview.
+     * Resumes the camera preview, rebinding the use cases a releasing
+     * [pausePreview] unbound. The preview keeps its Flutter texture, so the
+     * Dart side needs no rebuild; zoom and torch are restored because
+     * reopening the camera resets both.
      */
     fun resumePreview(callback: (Map<String, Any?>?, String?) -> Unit) {
         DivineCameraLog.d(TAG, "Resuming preview")
-        isPaused = false
-        
+
         // Re-enable screen flash if front camera torch mode was active
         if (currentLens == CameraSelector.LENS_FACING_FRONT && isTorchEnabled) {
             enableScreenFlash()
         }
-        
-        if (cameraProvider != null && camera != null) {
-            callback(getCameraState(), null)
-        } else {
+
+        val provider = cameraProvider
+        if (provider == null || camera == null) {
+            isPaused = false
             callback(null, "Camera not initialized")
+            return
         }
+
+        if (isPaused) {
+            try {
+                rebindAfterPause(provider)
+            } catch (e: Exception) {
+                DivineCameraLog.e(TAG, "Failed to rebind camera on resume", e)
+                callback(null, "Failed to resume preview: ${e.message}")
+                return
+            }
+        }
+        callback(getCameraState(), null)
+    }
+
+    /**
+     * Binds the existing use cases again after a releasing [pausePreview].
+     * Clears [isPaused] only once the bind succeeded, so a failed resume can
+     * be retried.
+     */
+    private fun rebindAfterPause(provider: ProcessCameraProvider) {
+        val owner = activity as LifecycleOwner
+        val selector = buildCameraSelectorForLens(currentLensType, provider)
+        val photo = imageCapture
+        val bound = if (photo != null) {
+            provider.bindToLifecycle(owner, selector, preview, videoCapture, photo)
+        } else {
+            provider.bindToLifecycle(owner, selector, preview, videoCapture)
+        }
+        camera = bound
+        isPaused = false
+
+        if (currentZoom != 1.0f) {
+            bound.cameraControl.setZoomRatio(currentZoom)
+        }
+        if (isTorchEnabled && currentLens != CameraSelector.LENS_FACING_FRONT) {
+            bound.cameraControl.enableTorch(true)
+        }
+        DivineCameraLog.d(TAG, "Camera rebound after pause")
     }
 
     // SENSOR_ORIENTATION is immutable per camera id, so cache it and avoid a

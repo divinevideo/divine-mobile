@@ -124,7 +124,8 @@ class DivineCameraPlugin :
                 val mirrorFrontCameraOutput = call.argument<Boolean>("mirrorFrontCameraOutput") ?: true
                 val enableAutoLensSwitch = call.argument<Boolean>("enableAutoLensSwitch") ?: true
                 val preferUnprocessedAudio = call.argument<Boolean>("preferUnprocessedAudio") ?: false
-                initializeCamera(lens, videoQuality, enableScreenFlash, mirrorFrontCameraOutput, enableAutoLensSwitch, preferUnprocessedAudio, oneShotResult)
+                val videoStabilizationMode = call.argument<String>("videoStabilizationMode") ?: "off"
+                initializeCamera(lens, videoQuality, enableScreenFlash, mirrorFrontCameraOutput, enableAutoLensSwitch, preferUnprocessedAudio, videoStabilizationMode, oneShotResult)
             }
 
             "disposeCamera" -> {
@@ -185,7 +186,8 @@ class DivineCameraPlugin :
             }
 
             "pausePreview" -> {
-                pausePreview(oneShotResult)
+                val releaseAudio = call.argument<Boolean>("releaseAudio") ?: true
+                pausePreview(releaseAudio, oneShotResult)
             }
 
             "resumePreview" -> {
@@ -226,7 +228,7 @@ class DivineCameraPlugin :
         }
     }
 
-    private fun initializeCamera(lens: String, videoQuality: String, enableScreenFlash: Boolean, mirrorFrontCameraOutput: Boolean, enableAutoLensSwitch: Boolean, preferUnprocessedAudio: Boolean, result: Result) {
+    private fun initializeCamera(lens: String, videoQuality: String, enableScreenFlash: Boolean, mirrorFrontCameraOutput: Boolean, enableAutoLensSwitch: Boolean, preferUnprocessedAudio: Boolean, videoStabilizationMode: String, result: Result) {
         val currentActivity = activity
         if (currentActivity == null) {
             result.error("NO_ACTIVITY", "Activity not available", null)
@@ -246,7 +248,7 @@ class DivineCameraPlugin :
                 channel.invokeMethod("onRecordingAutoStopped", recordingResult)
             }
 
-            cameraController?.initialize(lens, videoQuality, enableScreenFlash, mirrorFrontCameraOutput, enableAutoLensSwitch, preferUnprocessedAudio) { state, error ->
+            cameraController?.initialize(lens, videoQuality, enableScreenFlash, mirrorFrontCameraOutput, enableAutoLensSwitch, preferUnprocessedAudio, videoStabilizationMode) { state, error ->
                 if (error != null) {
                     result.error("INIT_ERROR", error, null)
                 } else {
@@ -448,9 +450,11 @@ class DivineCameraPlugin :
         }
     }
 
-    private fun pausePreview(result: Result) {
+    private fun pausePreview(releaseAudio: Boolean, result: Result) {
         try {
-            cameraController?.pausePreview()
+            // `releaseAudio = false` marks a transient interruption (the app
+            // is still in front), which keeps the camera bound.
+            cameraController?.pausePreview(releaseCamera = releaseAudio)
             result.success(null)
         } catch (e: Exception) {
             result.error("PAUSE_ERROR", e.message, null)

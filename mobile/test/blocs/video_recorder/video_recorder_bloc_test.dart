@@ -963,6 +963,36 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'drops a stale zoom whose platform reply lands after a newer one',
+        setUp: () {
+          final slowFirst = Completer<double?>();
+          when(() => cameraService.setZoomLevel(any())).thenAnswer((inv) {
+            final requested = inv.positionalArguments.first as double;
+            if (requested == 2) return slowFirst.future;
+            // The newer request finishes first; release the older reply
+            // afterwards so it arrives late, as a busy platform thread does.
+            scheduleMicrotask(() => slowFirst.complete(2));
+            return Future.value(requested);
+          });
+        },
+        build: buildBloc,
+        act: (bloc) async {
+          bloc
+            ..add(const VideoRecorderZoomLevelSet(2))
+            ..add(const VideoRecorderZoomLevelSet(3));
+          await pumpEventQueue();
+        },
+        expect: () => const [
+          VideoRecorderBlocState(
+            zoomLevel: 3,
+            minZoomLevel: 0.5,
+            maxZoomLevel: 5,
+            showZoomIndicator: true,
+          ),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'emits the zoom the camera actually applied — not the request — '
         'when the OS silently clamps it, and mirrors the shrunk range',
         setUp: () {
@@ -2518,6 +2548,7 @@ void main() {
             initialLens: any(named: 'initialLens'),
             enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
             preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+            videoStabilizationMode: any(named: 'videoStabilizationMode'),
           ),
         ).thenAnswer((_) async {});
         when(
@@ -2577,6 +2608,7 @@ void main() {
               initialLens: any(named: 'initialLens'),
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
             ),
           ).thenThrow(Exception('camera boom')),
           build: buildTraced,
@@ -2599,6 +2631,7 @@ void main() {
               initialLens: any(named: 'initialLens'),
               enableAutoLensSwitch: true,
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
             ),
           ).called(1);
         },
@@ -2620,6 +2653,7 @@ void main() {
               initialLens: any(named: 'initialLens'),
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: true,
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
             ),
           ).called(1);
         },
@@ -2682,6 +2716,7 @@ void main() {
               initialLens: any(named: 'initialLens'),
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
             ),
           );
         },
@@ -2771,102 +2806,91 @@ void main() {
         },
       );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'restores the persisted stabilization mode the camera supports',
-        setUp: () {
-          when(
-            () => prefs.getString('camera_last_used_stabilization'),
-          ).thenReturn(DivineVideoStabilizationMode.cinematic.toNativeString());
-          when(
-            () => cameraService.availableVideoStabilizationModes,
-          ).thenReturn(const [
-            DivineVideoStabilizationMode.off,
-            DivineVideoStabilizationMode.cinematic,
-          ]);
-          when(
-            () => cameraService.setVideoStabilizationMode(any()),
-          ).thenAnswer((_) async => true);
-        },
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        verify: (_) {
-          verify(
-            () => cameraService.setVideoStabilizationMode(
-              DivineVideoStabilizationMode.cinematic,
-            ),
-          ).called(1);
-        },
-      );
+      group('stabilization mode', () {
+        DivineVideoStabilizationMode? initializedWith() =>
+            verify(
+                  () => cameraService.initialize(
+                    videoQuality: any(named: 'videoQuality'),
+                    initialLens: any(named: 'initialLens'),
+                    enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+                    preferUnprocessedAudio: any(
+                      named: 'preferUnprocessedAudio',
+                    ),
+                    videoStabilizationMode: captureAny(
+                      named: 'videoStabilizationMode',
+                    ),
+                  ),
+                ).captured.single
+                as DivineVideoStabilizationMode?;
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'does not restore a stabilization mode the camera does not support',
-        setUp: () {
-          when(
-            () => prefs.getString('camera_last_used_stabilization'),
-          ).thenReturn(DivineVideoStabilizationMode.cinematic.toNativeString());
-          // availableVideoStabilizationModes stays [off] from the outer setUp.
-        },
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        verify: (_) {
-          verifyNever(() => cameraService.setVideoStabilizationMode(any()));
-        },
-      );
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'opens the camera with the persisted mode',
+          setUp: () {
+            when(
+              () => prefs.getString('camera_last_used_stabilization'),
+            ).thenReturn(
+              DivineVideoStabilizationMode.cinematic.toNativeString(),
+            );
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+          verify: (_) {
+            expect(initializedWith(), DivineVideoStabilizationMode.cinematic);
+          },
+        );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'does not restore when no stabilization mode is persisted',
-        // prefs.getString returns null by default (see outer setUp).
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        verify: (_) {
-          verifyNever(() => cameraService.setVideoStabilizationMode(any()));
-        },
-      );
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'opens the camera with stabilization off when none is persisted',
+          // prefs.getString returns null by default (see outer setUp).
+          build: buildBloc,
+          act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+          verify: (_) {
+            expect(initializedWith(), DivineVideoStabilizationMode.off);
+          },
+        );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'does not restore when the persisted mode is off',
-        setUp: () {
-          when(
-            () => prefs.getString('camera_last_used_stabilization'),
-          ).thenReturn(DivineVideoStabilizationMode.off.toNativeString());
-        },
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        verify: (_) {
-          verifyNever(() => cameraService.setVideoStabilizationMode(any()));
-        },
-      );
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'does not reconfigure stabilization after the camera opened',
+          // A post-init set rebinds the whole camera on Android — the mode
+          // must ride the initialize call instead.
+          setUp: () {
+            when(
+              () => prefs.getString('camera_last_used_stabilization'),
+            ).thenReturn(
+              DivineVideoStabilizationMode.cinematic.toNativeString(),
+            );
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+          verify: (_) {
+            verifyNever(() => cameraService.setVideoStabilizationMode(any()));
+          },
+        );
 
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'leaves the mode at off when the camera refuses the restore',
-        setUp: () {
-          when(
-            () => prefs.getString('camera_last_used_stabilization'),
-          ).thenReturn(DivineVideoStabilizationMode.cinematic.toNativeString());
-          when(
-            () => cameraService.availableVideoStabilizationModes,
-          ).thenReturn(const [
-            DivineVideoStabilizationMode.off,
-            DivineVideoStabilizationMode.cinematic,
-          ]);
-          when(
-            () => cameraService.setVideoStabilizationMode(any()),
-          ).thenAnswer((_) async => false);
-        },
-        build: buildBloc,
-        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
-        verify: (bloc) {
-          verify(
-            () => cameraService.setVideoStabilizationMode(
-              DivineVideoStabilizationMode.cinematic,
-            ),
-          ).called(1);
-          expect(
-            bloc.state.videoStabilizationMode,
-            DivineVideoStabilizationMode.off,
-          );
-        },
-      );
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'reports the mode the camera opened with',
+          setUp: () {
+            when(
+              () => prefs.getString('camera_last_used_stabilization'),
+            ).thenReturn(
+              DivineVideoStabilizationMode.cinematic.toNativeString(),
+            );
+            // The platform fell back to off: the lens can't stabilize.
+            when(
+              () => cameraService.videoStabilizationMode,
+            ).thenReturn(DivineVideoStabilizationMode.off);
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+          verify: (bloc) {
+            expect(initializedWith(), DivineVideoStabilizationMode.cinematic);
+            expect(
+              bloc.state.videoStabilizationMode,
+              DivineVideoStabilizationMode.off,
+            );
+          },
+        );
+      });
 
       group('recorderMode', () {
         // Stateful stand-in for the persisted last-used mode, so a re-init
@@ -3205,6 +3229,7 @@ void main() {
               initialLens: any(named: 'initialLens'),
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
             ),
           ).thenAnswer((_) async {});
           when(

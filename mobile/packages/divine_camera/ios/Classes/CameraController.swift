@@ -934,9 +934,14 @@ class CameraController: NSObject {
     private var videoEncodingBitRate = 8_000_000
 
     /// Initializes the camera with the specified lens and video quality.
-    func initialize(lens: String, videoQuality: String, enableScreenFlash: Bool = true, mirrorFrontCameraOutput: Bool = true, enableAutoLensSwitch: Bool = true, preferUnprocessedAudio: Bool = false, completion: @escaping ([String: Any]?, String?) -> Void) {
+    func initialize(lens: String, videoQuality: String, enableScreenFlash: Bool = true, mirrorFrontCameraOutput: Bool = true, enableAutoLensSwitch: Bool = true, preferUnprocessedAudio: Bool = false, videoStabilizationMode: String = "off", completion: @escaping ([String: Any]?, String?) -> Void) {
         self.autoLensSwitchRequested = enableAutoLensSwitch
         self.prefersUnprocessedAudio = preferUnprocessedAudio
+        // Applied when setupCamera configures the video connection, instead
+        // of a separate reconfigure after the session is already running.
+        // Unknown strings open with stabilization off.
+        requestedStabilizationMode =
+            Self.stabilizationMode(from: videoStabilizationMode) ?? .off
         currentLensType = lens
         currentLens = getPositionForLensType(lens)
         screenFlashFeatureEnabled = enableScreenFlash
@@ -1157,9 +1162,14 @@ class CameraController: NSObject {
         // Get camera properties
         updateCameraProperties(device: videoDevice)
 
-        // Re-assert the requested stabilization mode on the freshly built
-        // video connection (a no-op while the mode is still .off).
-        applyVideoStabilization()
+        // Apply the stabilization mode initialize asked for on the freshly
+        // built video connection (a no-op while the mode is .off). A mode the
+        // connection or format cannot take falls back to off, as a rejected
+        // setVideoStabilizationMode would.
+        if !applyVideoStabilization() && requestedStabilizationMode != .off {
+            requestedStabilizationMode = .off
+            applyVideoStabilization()
+        }
 
         // Set initial zoom to 1.0x (wide angle) for virtual multi-camera devices.
         // Without this, the camera starts at native 1.0 which is the ultra-wide (0.5x).

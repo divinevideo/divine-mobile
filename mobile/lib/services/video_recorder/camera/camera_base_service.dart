@@ -59,6 +59,8 @@ abstract class CameraService {
   /// speech-tuned noise suppression, so instruments survive at their real
   /// level (default: false). iOS and Android — see
   /// `MusicModePreferenceService`.
+  /// [videoStabilizationMode] is applied by the first capture-session
+  /// configuration; a mode the opened lens cannot take falls back to off.
   ///
   /// Mobile implementations rethrow platform initialization failures after
   /// updating [initializationError]. Callers must handle those exceptions.
@@ -67,6 +69,8 @@ abstract class CameraService {
     DivineCameraLens initialLens = DivineCameraLens.front,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   });
 
   /// Releases camera resources and cleans up.

@@ -112,6 +112,9 @@ class DivineCamera {
   /// speech-tuned noise suppression the platform applies by default, so
   /// instruments and music survive at their real level. iOS and Android
   /// act on it; every other platform ignores it.
+  /// [videoStabilizationMode] is applied by the first session configuration
+  /// instead of a second reconfigure after start (a full CameraX rebind on
+  /// Android). A mode the opened lens does not support falls back to off.
   ///
   /// Returns the initialized camera state.
   Future<CameraState> initialize({
@@ -121,6 +124,8 @@ class DivineCamera {
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = true,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     // Register auto-stop callback with platform
     _platform.onRecordingAutoStopped = _handleAutoStop;
@@ -138,6 +143,7 @@ class DivineCamera {
       mirrorFrontCameraOutput: mirrorFrontCameraOutput,
       enableAutoLensSwitch: enableAutoLensSwitch,
       preferUnprocessedAudio: preferUnprocessedAudio,
+      videoStabilizationMode: videoStabilizationMode,
     );
     _notifyStateChanged();
     return _state;

@@ -13,6 +13,9 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
 
   final List<String> audioCaptureCalls = [];
 
+  /// The stabilization mode the last [initializeCamera] asked for.
+  DivineVideoStabilizationMode? lastStabilizationMode;
+
   @override
   void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
 
@@ -27,7 +30,10 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
     bool mirrorFrontCameraOutput = true,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
+    lastStabilizationMode = videoStabilizationMode;
     if (shouldFail) throw StateError('camera unavailable');
     return const CameraState(isInitialized: true, textureId: 1);
   }
@@ -93,6 +99,19 @@ void main() {
       expect(service.isInitialized, isTrue);
       expect(service.initializationError, isNull);
       expect(rebuildRequests, [isTrue, isTrue]);
+    });
+
+    test('opens the camera with the requested stabilization mode', () async {
+      platform.shouldFail = false;
+
+      await service.initialize(
+        videoStabilizationMode: DivineVideoStabilizationMode.standard,
+      );
+
+      expect(
+        platform.lastStabilizationMode,
+        DivineVideoStabilizationMode.standard,
+      );
     });
 
     group('audio capture suspension', () {

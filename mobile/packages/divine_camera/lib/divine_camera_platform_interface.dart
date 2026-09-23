@@ -45,6 +45,10 @@ abstract class DivineCameraPlatform extends PlatformInterface {
   /// without the speech-tuned processing it applies by default. iOS and
   /// Android act on it; other platforms ignore it.
   ///
+  /// [videoStabilizationMode] is applied by the first capture-session
+  /// configuration, so a saved preference costs no second bind. A mode the
+  /// opened lens does not support falls back to off.
+  ///
   /// Returns the initial camera state.
   Future<CameraState> initializeCamera({
     DivineCameraLens lens = DivineCameraLens.back,
@@ -53,6 +57,8 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     bool mirrorFrontCameraOutput = true,
     bool enableAutoLensSwitch = true,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) {
     throw UnimplementedError('initializeCamera() has not been implemented.');
   }

@@ -112,6 +112,29 @@ void main() {
     );
   });
 
+  group('generateSha256FileHash', () {
+    test('returns the hex SHA-256 of the file contents', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'native-proofmode-hash-test-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/clip.mp4');
+      await file.writeAsString('abc');
+
+      expect(
+        await NativeProofModeService.generateSha256FileHash(file.path),
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      );
+    });
+
+    test('throws when the file does not exist', () async {
+      await expectLater(
+        NativeProofModeService.generateSha256FileHash('/no/such/clip.mp4'),
+        throwsA(isA<FileSystemException>()),
+      );
+    });
+  });
+
   group('proofFile C2PA failure handling', () {
     test('skips manifest read after failed signing', () async {
       final directory = await Directory.systemTemp.createTemp(

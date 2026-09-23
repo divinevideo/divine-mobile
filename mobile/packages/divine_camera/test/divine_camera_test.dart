@@ -19,6 +19,9 @@ class MockDivineCameraPlatform
   /// `null` if it was never called.
   bool? lastPauseReleaseAudio;
 
+  /// The stabilization mode the last [initializeCamera] call asked for.
+  DivineVideoStabilizationMode? lastInitStabilizationMode;
+
   /// Counts [suspendAudioCapture] calls that reached the platform.
   int suspendAudioCaptureCalls = 0;
 
@@ -78,7 +81,10 @@ class MockDivineCameraPlatform
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
+    lastInitStabilizationMode = videoStabilizationMode;
     return _state = CameraState(
       isInitialized: true,
       lens: lens,
@@ -352,6 +358,26 @@ void main() {
         );
 
         expect(state.isInitialized, isTrue);
+      });
+
+      test('asks the platform for no stabilization by default', () async {
+        await DivineCamera.instance.initialize();
+
+        expect(
+          mockPlatform.lastInitStabilizationMode,
+          DivineVideoStabilizationMode.off,
+        );
+      });
+
+      test('forwards the requested stabilization mode', () async {
+        await DivineCamera.instance.initialize(
+          videoStabilizationMode: DivineVideoStabilizationMode.cinematic,
+        );
+
+        expect(
+          mockPlatform.lastInitStabilizationMode,
+          DivineVideoStabilizationMode.cinematic,
+        );
       });
 
       test('mirrorFrontCameraOutput defaults to false', () async {
@@ -2067,6 +2093,8 @@ class _RotatedFocusMock extends MockDivineCameraPlatform {
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     return CameraState(
       isInitialized: true,
@@ -2087,6 +2115,8 @@ class _NoFocusSupportMock extends MockDivineCameraPlatform {
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     return const CameraState(
       isInitialized: true,
@@ -2105,6 +2135,8 @@ class _NoExposureSupportMock extends MockDivineCameraPlatform {
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     return const CameraState(isInitialized: true, isFocusPointSupported: true);
   }
@@ -2120,6 +2152,8 @@ class _SingleCameraMock extends MockDivineCameraPlatform {
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     return const CameraState(isInitialized: true, hasBackCamera: true);
   }

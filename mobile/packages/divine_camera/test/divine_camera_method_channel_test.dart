@@ -157,6 +157,22 @@ void main() {
       expect(lastInitializeArgs?['preferUnprocessedAudio'], isTrue);
     });
 
+    test('initializeCamera defaults to no stabilization', () async {
+      await platform.initializeCamera();
+
+      expect(lastInitializeArgs?['videoStabilizationMode'], 'off');
+    });
+
+    test('initializeCamera forwards the stabilization mode', () async {
+      // The native side applies it to the first bind, so dropping it here
+      // would silently open unstabilized.
+      await platform.initializeCamera(
+        videoStabilizationMode: DivineVideoStabilizationMode.standard,
+      );
+
+      expect(lastInitializeArgs?['videoStabilizationMode'], 'standard');
+    });
+
     test('initializeCamera with front lens', () async {
       final state = await platform.initializeCamera(
         lens: DivineCameraLens.front,

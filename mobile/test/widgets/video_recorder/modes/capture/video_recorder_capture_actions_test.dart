@@ -120,11 +120,13 @@ void main() {
         expect(find.byType(Tooltip), findsNWidgets(5));
       });
 
-      testWidgets('renders DivineIcon for each button', (tester) async {
+      testWidgets('renders a baked icon for each button', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(DivineIcon), findsNWidgets(5));
+        // Baked once instead of a colour-filtered SVG re-rasterized with
+        // every camera frame.
+        expect(find.byType(ShadowedDivineIcon), findsNWidgets(5));
       });
     });
 

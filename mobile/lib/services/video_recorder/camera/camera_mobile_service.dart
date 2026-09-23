@@ -30,6 +30,8 @@ class CameraMobileService extends CameraService {
     DivineCameraLens initialLens = DivineCameraLens.front,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     _isInitialized = false;
     _initializationError = null;
@@ -46,6 +48,7 @@ class CameraMobileService extends CameraService {
         videoQuality: videoQuality,
         enableAutoLensSwitch: enableAutoLensSwitch,
         preferUnprocessedAudio: preferUnprocessedAudio,
+        videoStabilizationMode: videoStabilizationMode,
       );
       _camera.onRecordingAutoStopped = (result) {
         onAutoStopped(
@@ -167,18 +170,13 @@ class CameraMobileService extends CameraService {
   @override
   Future<double?> setZoomLevel(double value) async {
     if (!_isInitialized) return null;
+    // No per-call log: a pinch sends one request per pointer update.
     try {
-      Log.info(
-        '📷 Setting zoom level to $value',
-        name: 'CameraMobileService',
-        category: .video,
-      );
-
       // DivineCamera clamps the request and returns what the camera
       // actually applied (which iOS can silently cap below the request).
       final applied = await _camera.setZoomLevel(value);
       if (applied != null && (applied - value).abs() > 0.01) {
-        Log.info(
+        Log.debug(
           '📷 Zoom clamped by platform: requested $value, applied $applied '
           '(available ${_camera.minZoomLevel}-${_camera.maxZoomLevel})',
           name: 'CameraMobileService',

@@ -205,10 +205,31 @@ void main() {
         expect(modeChanges, isNot(contains(VideoRecorderMode.classic)));
       });
 
-      testWidgets('uses ShaderMask for fade-out edges', (tester) async {
-        await pumpSelector(tester);
+      testWidgets('fades the edges into the recorder bar without a mask', (
+        tester,
+      ) async {
+        await pumpSelector(tester, theme: VineTheme.theme);
 
-        expect(find.byType(ShaderMask), findsOneWidget);
+        // A ShaderMask is a saveLayer re-rasterized with every camera frame.
+        expect(find.byType(ShaderMask), findsNothing);
+
+        final barColor = VineTheme.theme
+            .extension<VineThemeColors>()!
+            .surfaceContainerHigh;
+        final fade = tester
+            .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+            .map((box) => box.decoration)
+            .whereType<BoxDecoration>()
+            .map((decoration) => decoration.gradient)
+            .whereType<LinearGradient>()
+            .single;
+        expect(fade.colors, [
+          barColor,
+          barColor.withValues(alpha: 0),
+          barColor.withValues(alpha: 0),
+          barColor,
+        ]);
+        expect(fade.stops, [0.0, 0.18, 0.82, 1.0]);
       });
 
       testWidgets('renders horizontal ListView', (tester) async {
