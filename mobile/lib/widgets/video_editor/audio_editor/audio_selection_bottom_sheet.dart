@@ -474,8 +474,13 @@ class _AudioSelectionBottomSheetState
     final matchingSavedSounds = savedSoundsState.sounds
         .where((sound) => sound.matchesSearch(_searchQuery))
         .toList(growable: false);
+    // Only the Community tab shows relay results. The field is shared, so
+    // on any other tab the query stays local: on My sounds it is often a
+    // private label, which must not go out as a `#t` filter.
     final searchResults = ref.watch(
-      soundSearchResultsProvider(_debouncedQuery),
+      soundSearchResultsProvider(
+        _category == AudioCategory.community ? _debouncedQuery : '',
+      ),
     );
 
     final bundledVineSounds =

@@ -106,6 +106,7 @@ void main() {
       String? viewerPubkey,
       Map<String, int>? usageCounts,
       Map<String, List<AudioEvent>> searchResults = const {},
+      List<String>? relaySearches,
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
@@ -147,9 +148,10 @@ void main() {
               ),
             // Always overridden: without it a keystroke would build the real
             // repository, and with it a Nostr client, inside a widget test.
-            soundSearchResultsProvider.overrideWith(
-              (ref, query) async => searchResults[query] ?? const [],
-            ),
+            soundSearchResultsProvider.overrideWith((ref, query) async {
+              if (query.isNotEmpty) relaySearches?.add(query);
+              return searchResults[query] ?? const [];
+            }),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -455,6 +457,34 @@ void main() {
 
         expect(find.text('Horses hooves'), findsOneWidget);
         expect(find.text('Victory Lap'), findsNothing);
+      });
+
+      testWidgets('keeps a saved-sounds search off the relays', (tester) async {
+        // Private labels are the words a user reaches for on this tab, and
+        // only the Community tab shows relay results, so a query typed here
+        // must not go out as a `#t` filter.
+        final relaySearches = <String>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            relaySearches: relaySearches,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'hooves');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+
+        expect(relaySearches, isEmpty);
+
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+
+        expect(relaySearches, equals(['hooves']));
       });
 
       testWidgets('titles a saved row with its label, not the published name', (
