@@ -289,6 +289,7 @@ void main() {
       const StoreUnavailableException(),
       const PurchaseFailedException('not_started', 'Store did not start.'),
       const PurchaseFailedException('cancelled', 'Canceled.'),
+      const PurchasePendingException(),
     ]) {
       test('releases pending ownership after $error', () async {
         final prefs = await SharedPreferences.getInstance();

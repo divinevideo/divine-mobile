@@ -143,20 +143,36 @@ class SupporterRepository {
         capturedPubkey: _pubkey,
         attemptId: 'supporter-${DateTime.now().microsecondsSinceEpoch}',
       );
-    } on StoreUnavailableException {
-      if (pendingOwner == null && _prefs.getString(pendingKey) == _pubkey) {
-        await _prefs.remove(pendingKey);
-      }
-      rethrow;
-    } on PurchaseFailedException catch (error) {
-      if ((error.responseCode == 'cancelled' ||
-              error.responseCode == 'not_started') &&
+    } on EntitlementException catch (error) {
+      final storeCode = error is PurchaseFailedException
+          ? ', code=${error.responseCode}'
+          : '';
+      Log.warning(
+        'Supporter purchase did not complete for ${pubkeyForLogs(_pubkey)} '
+        '(productId=$productId, failure=${error.kind}$storeCode)',
+        name: 'SupporterRepository',
+        category: LogCategory.system,
+      );
+      if (_endedWithoutStorePurchase(error) &&
           pendingOwner == null &&
           _prefs.getString(pendingKey) == _pubkey) {
         await _prefs.remove(pendingKey);
       }
       rethrow;
     }
+  }
+
+  /// Whether the store ended the attempt without creating a purchase that it
+  /// could later deliver for this account to claim.
+  static bool _endedWithoutStorePurchase(EntitlementException error) {
+    return switch (error) {
+      // A pending refusal points at an unfinished purchase this attempt did
+      // not create, so the attempt must not record this account as its owner.
+      StoreUnavailableException() || PurchasePendingException() => true,
+      PurchaseFailedException(:final responseCode) =>
+        responseCode == 'cancelled' || responseCode == 'not_started',
+      RestoreFailedException() => false,
+    };
   }
 
   /// Restores purchases for this exact signed-in account.
