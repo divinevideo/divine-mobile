@@ -168,8 +168,8 @@ void main() {
         addTearDown(() => Bloc.observer = priorObserver);
 
         final cubit = SoundSyncCubit(repository: repository);
-        addTearDown(() {
-          if (!cubit.isClosed) cubit.close();
+        addTearDown(() async {
+          if (!cubit.isClosed) await cubit.close();
         });
 
         final syncFuture = cubit.syncNow();

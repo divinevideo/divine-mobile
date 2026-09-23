@@ -583,7 +583,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          router.push('/sheet');
+          unawaited(router.push<void>('/sheet'));
           await tester.pumpAndSettle();
 
           expect(find.text('Original sound - Source Creator'), findsOneWidget);

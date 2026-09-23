@@ -71,10 +71,10 @@ void main() {
       return SoundWaveformBloc();
     }
 
-    test('initial state is $SoundWaveformInitial', () {
+    test('initial state is $SoundWaveformInitial', () async {
       final bloc = buildBloc();
       expect(bloc.state, isA<SoundWaveformInitial>());
-      bloc.close();
+      await bloc.close();
     });
 
     group(SoundWaveformExtract, () {

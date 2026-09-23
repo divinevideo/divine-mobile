@@ -603,9 +603,9 @@ void main() {
             soundsRepositoryProvider.overrideWithValue(mockRepository),
           ],
         );
-        addTearDown(() {
+        addTearDown(() async {
           container.dispose();
-          streamController.close();
+          await streamController.close();
         });
 
         // Start listening to provider
