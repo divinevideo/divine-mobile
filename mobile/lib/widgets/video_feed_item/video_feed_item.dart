@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -313,12 +314,21 @@ class VideoOverlayActions extends ConsumerWidget {
                     // loops, not this video's. The figure is social proof for
                     // the creator, and a per-video number beside every card
                     // reads as a verdict on one clip rather than a body of
-                    // work. Null while stats are unknown, so the line stays
-                    // hidden instead of flashing "0 loops" on first paint.
-                    final authorTotalLoops = ref
+                    // work. Null while the total is unknown or below the
+                    // shared visibility floor, so the card never flashes
+                    // "0 loops" on first paint or discourages a new creator.
+                    final authorStats = ref
                         .watch(videoCardAuthorStatsProvider(authorPubkey))
-                        .value
-                        ?.totalViews;
+                        .value;
+                    final authorTotalLoops =
+                        authorStats?.hasKnownTotalViews == true
+                        ? authorStats!.totalViews
+                        : null;
+                    final visibleAuthorLoops =
+                        authorTotalLoops != null &&
+                            authorTotalLoops >= profileLoopsVisibilityFloor
+                        ? authorTotalLoops
+                        : null;
                     // Use embedded author data from REST API as fallback
                     // This avoids WebSocket profile fetches for videos
                     // that already have author_name/author_avatar embedded
@@ -492,7 +502,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                               ],
                                             ),
                                             _VideoCardMetaLine(
-                                              totalLoops: authorTotalLoops,
+                                              totalLoops: visibleAuthorLoops,
                                             ),
                                           ],
                                         ),

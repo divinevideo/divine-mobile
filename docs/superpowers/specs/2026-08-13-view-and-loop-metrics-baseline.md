@@ -7,7 +7,8 @@
 > **Superseded in part, 2026-09-23 (#9431):** every reference below to
 > `mobile/lib/widgets/video_feed_item/video_card_meta.dart` and
 > `publicLoopCountFloor` describes the pre-#9431 feed card. The card now shows
-> the author's lifetime total with no floor; the file and the constant are gone.
+> the author's lifetime total gated by `profileLoopsVisibilityFloor`; the file
+> and the old per-video constant are gone.
 > The measurements themselves are unchanged and still stand as the pre-change
 > baseline for the metrics redefinition.
 

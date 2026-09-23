@@ -244,18 +244,18 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized singular loop label for 1', (
+    testWidgets('author line uses localized plural loop label at the floor', (
       tester,
     ) async {
-      // The line reports the author's lifetime total, so a total of exactly 1
-      // is what exercises the singular ICU form.
+      // Totals below the visibility floor are hidden, so visible totals use
+      // the plural ICU form.
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [
             repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
             videoCardAuthorStatsProvider(testVideo.pubkey).overrideWith(
               (ref) => Stream.value(
-                ProfileStats(pubkey: testVideo.pubkey, totalViews: 1),
+                ProfileStats(pubkey: testVideo.pubkey, totalViews: 10000),
               ),
             ),
           ],
@@ -281,7 +281,10 @@ void main() {
       final l10n = _l10n(tester);
       expect(
         find.textContaining(
-          l10n.videoFeedLoopCountLine(StringUtils.formatCompactNumber(1), 1),
+          l10n.videoFeedLoopCountLine(
+            StringUtils.formatCompactNumber(10000),
+            10000,
+          ),
         ),
         findsOneWidget,
       );
