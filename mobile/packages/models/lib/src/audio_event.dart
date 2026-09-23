@@ -4,6 +4,7 @@
 
 import 'package:meta/meta.dart';
 import 'package:models/src/nostr_hex_utils.dart';
+import 'package:models/src/sound_search_terms.dart';
 import 'package:models/src/video_event.dart';
 import 'package:models/src/vine_sound.dart';
 import 'package:nostr_sdk/event.dart';
@@ -390,6 +391,31 @@ class AudioEvent {
   /// own volume arc — unlike [isOriginalSound] alone, which would also hide
   /// those added tracks.
   bool get isClipAnchoredOriginalSound => isOriginalSound && isAnchored;
+
+  /// Every value a sound search may match, in their published casing.
+  ///
+  /// Public tags are in here for the reason they are published at all: a
+  /// creator who labels a clip "horses" and "hooves" expects those words to
+  /// find it, and the title rarely carries them. The bundled catalogue's
+  /// [VineSound.matchesSearch] has always searched its tags, so a community
+  /// sound matching on title alone was the outlier.
+  Iterable<String> get searchableValues sync* {
+    yield* [
+      title,
+      creatorName,
+      source,
+      externalSource?.creatorName,
+      externalSource?.providerName,
+    ].nonNulls;
+    yield* publicTags;
+    yield* externalSource?.catalogTags ?? const [];
+  }
+
+  /// Whether [query] matches this sound's [searchableValues].
+  ///
+  /// See [matchesSearchTerms] for how a multi-word query is split and ANDed.
+  bool matchesSearch(String query) =>
+      matchesSearchTerms(query, searchableValues);
 
   /// Whether this audio is a bundled sound (from app assets).
   bool get isBundled => id.startsWith('${bundledMarker}_');

@@ -2,7 +2,7 @@
 // ABOUTME: Keeps private organization separate from publishable AudioEvent data.
 
 import 'package:meta/meta.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, matchesSearchTerms;
 
 const _unsetSavedSoundValue = Object();
 
@@ -108,6 +108,32 @@ class SavedSound {
   final List<double> waveformSamples;
 
   String get id => audio.id;
+
+  /// Every value a library search may match on this saved sound.
+  ///
+  /// The private half comes from this record — the label and hashtags the
+  /// user typed, plus the context of the video it was lifted from — and the
+  /// public half is [AudioEvent.searchableValues], so the published tags that
+  /// found this sound in the picker find it here too.
+  Iterable<String> get searchableValues sync* {
+    final source = sourceContext;
+    yield* [
+      personalLabel,
+      source?.title,
+      source?.creatorName,
+      source?.description,
+      source?.transcript,
+    ].nonNulls;
+    yield* personalHashtags;
+    yield* catalogTags;
+    yield* audio.searchableValues;
+  }
+
+  /// Whether [query] matches this sound's [searchableValues].
+  ///
+  /// See [matchesSearchTerms] for how a multi-word query is split and ANDed.
+  bool matchesSearch(String query) =>
+      matchesSearchTerms(query, searchableValues);
 
   SavedSound copyWith({
     AudioEvent? audio,

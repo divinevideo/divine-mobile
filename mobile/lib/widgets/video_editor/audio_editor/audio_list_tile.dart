@@ -11,6 +11,7 @@ class AudioListTile extends StatelessWidget {
     required this.audio,
     required this.isSelected,
     required this.onTap,
+    this.displayTitle,
     this.isPlaying = false,
     this.isUnavailable = false,
     this.videoCount,
@@ -22,6 +23,15 @@ class AudioListTile extends StatelessWidget {
   final bool isSelected;
   final bool isPlaying;
   final VoidCallback onTap;
+
+  /// Title to show instead of [AudioEvent.title].
+  ///
+  /// The saved-sounds list passes the private label the user gave the sound,
+  /// so the row reads the way they filed it — the same name the Library shows
+  /// and the one a search on that label just matched. It is display only: the
+  /// [audio] handed to the editor keeps its published title, which is what
+  /// gets credited.
+  final String? displayTitle;
 
   /// Whether this sound cannot be attached because its device-local audio
   /// file is gone.
@@ -47,6 +57,7 @@ class AudioListTile extends StatelessWidget {
       identifier: semanticIdentifier,
       child: _Tile(
         audio: audio,
+        displayTitle: displayTitle,
         isSelected: isSelected,
         isPlaying: isPlaying,
         isUnavailable: isUnavailable,
@@ -60,6 +71,7 @@ class AudioListTile extends StatelessWidget {
 class _Tile extends StatelessWidget {
   const _Tile({
     required this.audio,
+    required this.displayTitle,
     required this.isSelected,
     required this.isPlaying,
     required this.isUnavailable,
@@ -68,6 +80,7 @@ class _Tile extends StatelessWidget {
   });
 
   final AudioEvent audio;
+  final String? displayTitle;
   final bool isSelected;
   final bool isPlaying;
   final bool isUnavailable;
@@ -83,7 +96,9 @@ class _Tile extends StatelessWidget {
         enabled: !isUnavailable,
         minTileHeight: 48,
         title: Text(
-          audio.title ?? context.l10n.videoEditorAudioUntitledSound,
+          displayTitle ??
+              audio.title ??
+              context.l10n.videoEditorAudioUntitledSound,
           style: VineTheme.titleMediumFont(
             color: isUnavailable
                 ? context.vineColors.onSurfaceVariant

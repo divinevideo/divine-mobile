@@ -80,6 +80,50 @@ void main() {
 
       expect(saved.copyWith(personalLabel: null).personalLabel, isNull);
     });
+
+    group('matchesSearch', () {
+      final saved = SavedSound(
+        audio: AudioEvent(
+          id: _audio().id,
+          pubkey: _audio().pubkey,
+          createdAt: 1700000000,
+          url: 'https://example.com/sound.m4a',
+          title: 'Field recording 04',
+          publicTags: const ['horses'],
+        ),
+        personalLabel: 'Horses hooves',
+        personalHashtags: const ['foley'],
+        catalogTags: const ['field recording'],
+        waveformSamples: const [],
+        sourceContext: const SavedSoundSourceContext(creatorName: 'Alice'),
+      );
+
+      test('matches the private label the user filed it under', () {
+        expect(saved.matchesSearch('hooves'), isTrue);
+      });
+
+      test('matches a private hashtag', () {
+        expect(saved.matchesSearch('foley'), isTrue);
+      });
+
+      test('matches the published tags the audio carries', () {
+        expect(
+          saved.matchesSearch('horses'),
+          isTrue,
+          reason:
+              'a sound found by its public tag in the picker has to be '
+              'findable the same way once saved',
+        );
+      });
+
+      test('matches the source video it was lifted from', () {
+        expect(saved.matchesSearch('alice'), isTrue);
+      });
+
+      test('rejects a query nothing on the record carries', () {
+        expect(saved.matchesSearch('trumpet'), isFalse);
+      });
+    });
   });
 
   group(SavedSoundLibraryPayload, () {

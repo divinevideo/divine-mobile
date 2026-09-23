@@ -201,6 +201,166 @@ abstract class _$TrendingSounds extends $AsyncNotifier<List<AudioEvent>> {
   }
 }
 
+/// Community sounds matching a free-text [query].
+///
+/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
+/// for reach plus the in-memory cache for partial and title matches — so this
+/// is a thin pass-through. Blank queries resolve to an empty list without a
+/// round trip; the caller shows the trending list instead of searching.
+///
+/// Auto-disposed, so the per-query cache does not outlive the search field
+/// that opened it. Give it a debounced query: one instance is created per
+/// distinct string, so feeding it raw keystrokes is one relay query per
+/// character.
+///
+/// Usage:
+/// ```dart
+/// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
+/// ```
+
+@ProviderFor(soundSearchResults)
+final soundSearchResultsProvider = SoundSearchResultsFamily._();
+
+/// Community sounds matching a free-text [query].
+///
+/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
+/// for reach plus the in-memory cache for partial and title matches — so this
+/// is a thin pass-through. Blank queries resolve to an empty list without a
+/// round trip; the caller shows the trending list instead of searching.
+///
+/// Auto-disposed, so the per-query cache does not outlive the search field
+/// that opened it. Give it a debounced query: one instance is created per
+/// distinct string, so feeding it raw keystrokes is one relay query per
+/// character.
+///
+/// Usage:
+/// ```dart
+/// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
+/// ```
+
+final class SoundSearchResultsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<AudioEvent>>,
+          List<AudioEvent>,
+          FutureOr<List<AudioEvent>>
+        >
+    with $FutureModifier<List<AudioEvent>>, $FutureProvider<List<AudioEvent>> {
+  /// Community sounds matching a free-text [query].
+  ///
+  /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
+  /// for reach plus the in-memory cache for partial and title matches — so this
+  /// is a thin pass-through. Blank queries resolve to an empty list without a
+  /// round trip; the caller shows the trending list instead of searching.
+  ///
+  /// Auto-disposed, so the per-query cache does not outlive the search field
+  /// that opened it. Give it a debounced query: one instance is created per
+  /// distinct string, so feeding it raw keystrokes is one relay query per
+  /// character.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
+  /// ```
+  SoundSearchResultsProvider._({
+    required SoundSearchResultsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundSearchResultsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundSearchResultsHash();
+
+  @override
+  String toString() {
+    return r'soundSearchResultsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<AudioEvent>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<AudioEvent>> create(Ref ref) {
+    final argument = this.argument as String;
+    return soundSearchResults(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundSearchResultsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundSearchResultsHash() =>
+    r'c5e18937417a701887488662a12e57429a4c511d';
+
+/// Community sounds matching a free-text [query].
+///
+/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
+/// for reach plus the in-memory cache for partial and title matches — so this
+/// is a thin pass-through. Blank queries resolve to an empty list without a
+/// round trip; the caller shows the trending list instead of searching.
+///
+/// Auto-disposed, so the per-query cache does not outlive the search field
+/// that opened it. Give it a debounced query: one instance is created per
+/// distinct string, so feeding it raw keystrokes is one relay query per
+/// character.
+///
+/// Usage:
+/// ```dart
+/// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
+/// ```
+
+final class SoundSearchResultsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<AudioEvent>>, String> {
+  SoundSearchResultsFamily._()
+    : super(
+        retry: null,
+        name: r'soundSearchResultsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Community sounds matching a free-text [query].
+  ///
+  /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
+  /// for reach plus the in-memory cache for partial and title matches — so this
+  /// is a thin pass-through. Blank queries resolve to an empty list without a
+  /// round trip; the caller shows the trending list instead of searching.
+  ///
+  /// Auto-disposed, so the per-query cache does not outlive the search field
+  /// that opened it. Give it a debounced query: one instance is created per
+  /// distinct string, so feeding it raw keystrokes is one relay query per
+  /// character.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
+  /// ```
+
+  SoundSearchResultsProvider call(String query) =>
+      SoundSearchResultsProvider._(argument: query, from: this);
+
+  @override
+  String toString() => r'soundSearchResultsProvider';
+}
+
 /// Family provider to fetch a single sound by event ID.
 ///
 /// First checks the cache, then falls back to network query.
