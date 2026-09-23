@@ -764,6 +764,34 @@ void main() {
         );
       });
 
+      final storeRestoreFailures = <String, Exception>{
+        'StoreKit': PlatformException(code: 'storekit2_restore_failed'),
+        'Google Play': InAppPurchaseException(
+          source: 'google_play',
+          code: 'restore_transactions_failed',
+        ),
+      };
+      for (final MapEntry(key: storeName, value: failure)
+          in storeRestoreFailures.entries) {
+        test(
+          'throws RestoreFailedException when $storeName fails to restore',
+          () async {
+            when(store.isAvailable).thenAnswer((_) async => true);
+            when(
+              () => store.purchaseStream,
+            ).thenAnswer((_) => const Stream<List<PurchaseDetails>>.empty());
+            when(
+              () => store.restorePurchases(),
+            ).thenAnswer((_) async => throw failure);
+
+            await expectLater(
+              validator.restorePurchases(),
+              throwsA(isA<RestoreFailedException>()),
+            );
+          },
+        );
+      }
+
       test(
         'resolves inactive and calls restorePurchases on the store',
         () async {

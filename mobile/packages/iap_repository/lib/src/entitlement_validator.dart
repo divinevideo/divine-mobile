@@ -104,6 +104,9 @@ abstract class EntitlementValidator {
   ///
   /// Starts restore delivery. Store results are emitted as proofs and remain
   /// inactive until the canonical Worker verifies them.
+  ///
+  /// Throws StoreUnavailableException, or RestoreFailedException when the
+  /// store fails the restore.
   Future<SupporterEntitlement> restorePurchases({
     String? capturedPubkey,
     String? attemptId,

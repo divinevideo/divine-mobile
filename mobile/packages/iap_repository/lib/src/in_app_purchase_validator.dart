@@ -39,6 +39,10 @@ Set<String> get supporterProductIds => supporterProducts.keys.toSet();
 /// product still has an unfinished transaction.
 const _unfinishedPurchaseCode = 'storekit_duplicate_product_object';
 
+/// Reported when the store itself fails a restore (StoreKit finds an
+/// entitlement it cannot verify, or Google Play cannot query purchases).
+const _storeRestoreFailure = 'The store could not restore purchases.';
+
 /// [EntitlementValidator] backed by the `in_app_purchase` plugin.
 ///
 /// Purchase results arrive asynchronously on [InAppPurchase.purchaseStream];
@@ -306,6 +310,10 @@ class InAppPurchaseValidator implements EntitlementValidator {
     );
     try {
       await _store.restorePurchases();
+    } on PlatformException {
+      throw const RestoreFailedException(_storeRestoreFailure);
+    } on InAppPurchaseException {
+      throw const RestoreFailedException(_storeRestoreFailure);
     } finally {
       _restoreContext = null;
     }

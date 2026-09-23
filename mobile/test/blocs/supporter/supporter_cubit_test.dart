@@ -3,7 +3,6 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:models/models.dart';
@@ -360,9 +359,7 @@ void main() {
       'ends restore when the store fails outside the typed contract',
       build: () {
         final repo = _FakeRepository(controller);
-        repo.validator.restoreError = PlatformException(
-          code: 'storekit2_restore_failed',
-        );
+        repo.validator.restoreError = StateError('store channel closed');
         return SupporterCubit(repository: repo);
       },
       act: (cubit) => cubit.restore(),
@@ -377,7 +374,7 @@ void main() {
         isA<Reportable<Object>>().having(
           (error) => error.unwrap(),
           'unwrap',
-          isA<PlatformException>(),
+          isA<StateError>(),
         ),
       ],
     );
