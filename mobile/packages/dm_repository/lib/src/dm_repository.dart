@@ -1510,10 +1510,10 @@ class DmRepository {
   /// budget — and `false` when no relay answered, a relay stayed silent,
   /// dropped, or was rate limited, the request timed out, or the repository
   /// was torn down. This legacy pass accepts a terminal refusal only when
-  /// another relay answered: retrying a relay that permanently refuses cannot
-  /// improve coverage, while holding the entire DM restore open indefinitely
-  /// is worse. The primary gift-wrap drain retains its strict full-settlement
-  /// cursor guard.
+  /// another relay answered. An `error:` refusal must first repeat from the
+  /// same relay on a confirmation query, since that category can also describe
+  /// transient failures. The primary gift-wrap drain retains its strict
+  /// full-settlement cursor guard.
   Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -1533,8 +1533,8 @@ class DmRepository {
           useCache: false,
           requireAllRelaysSettled: true,
           // This legacy pass is supplementary to the gift-wrap drain.
-          // A relay that explicitly closes the query is unlikely to contribute
-          // on a retry, so accept other relays answering while still deferring
+          // An explicit refusal cannot contribute on this query, so accept
+          // other relays answering while still deferring
           // on silence, disconnects, deadlines, a rate limit, or a refusal
           // with no answer.
           acceptRelayClosedWhenOthersAnswered: true,

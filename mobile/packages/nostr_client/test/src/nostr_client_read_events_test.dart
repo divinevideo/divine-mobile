@@ -571,6 +571,17 @@ void main() {
             refusingSub,
             'error: unsupported request',
           ]);
+          if (optIn) {
+            final retryAnsweringSub = await answering.awaitReq(reqIndex);
+            final retryRefusingSub = await refusing.awaitReq(reqIndex);
+            reqIndex++;
+            await answering.deliver(['EOSE', retryAnsweringSub]);
+            await refusing.deliver([
+              'CLOSED',
+              retryRefusingSub,
+              'error: unsupported request',
+            ]);
+          }
           return (await pending).timedOut;
         }
 
@@ -651,6 +662,30 @@ void main() {
 
         expect(await read.timedOut, isTrue);
       });
+
+      test(
+        'when a different relay returns error on the confirmation read',
+        () async {
+          final read = await optedInRead();
+          await first.deliver([
+            'CLOSED',
+            first.reqSubIds[0],
+            'error: temporary failure',
+          ]);
+          await second.deliver(['EOSE', second.reqSubIds[0]]);
+
+          await first.awaitReq(1);
+          await second.awaitReq(1);
+          await first.deliver(['EOSE', first.reqSubIds[1]]);
+          await second.deliver([
+            'CLOSED',
+            second.reqSubIds[1],
+            'error: temporary failure',
+          ]);
+
+          expect(await read.timedOut, isTrue);
+        },
+      );
 
       test('when another relay stayed silent', () async {
         final read = await optedInRead(

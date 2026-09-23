@@ -235,6 +235,13 @@ class QueryOutcomeTracker {
                 entry.key.closedReason == 'rate-limited',
           )
           .length,
+      closedRelayReasons: {
+        for (final tally in _tallies.values)
+          if (tally.terminalFrame == _TerminalFrame.closed &&
+              tally.closedReason != null &&
+              tally.relay.relayStatus.relayType != RelayType.cache)
+            tally.relay.url: tally.closedReason!,
+      },
       possiblyCapped: judgements.keys.any(_isCapped),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [

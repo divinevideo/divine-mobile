@@ -916,7 +916,8 @@ class NostrClient {
   /// terminal `CLOSED` as settled when a non-cache relay answered and none of
   /// the participating relays stayed unanswered. It does not accept silence, a
   /// dropped socket, a deadline, or a `rate-limited` refusal, which NIP-01
-  /// defines as temporary.
+  /// defines as temporary. An `error:` refusal gets one confirmation query
+  /// and is accepted only if the same relay repeats it.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -950,7 +951,8 @@ class NostrClient {
     bool requireAllRelaysSettled = false,
     bool acceptRelayClosedWhenOthersAnswered = false,
   }) async {
-    final read = await _read(
+    final startedAt = clock.now();
+    var read = await _read(
       filters,
       subscriptionId: subscriptionId,
       tempRelays: tempRelays,
@@ -961,6 +963,64 @@ class NostrClient {
       timeout: timeout,
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
+    var repeatedErrorRefusals = true;
+    final firstErrorRefusals = read.result.closedRelayReasons.entries
+        .where((entry) => entry.value == 'error')
+        .map((entry) => entry.key)
+        .toSet();
+    if (acceptRelayClosedWhenOthersAnswered &&
+        firstErrorRefusals.isNotEmpty &&
+        read.result.endedBy == QueryEnd.relayClosed &&
+        read.result.answeredNetworkRelayCount > 0 &&
+        read.result.unansweredRelayCount == 0 &&
+        read.result.rateLimitedRelayCount == 0) {
+      // `error:` is often transient (for example, a replay/query timeout).
+      // Repeat the same query once and only accept an error refusal when the
+      // same relay returns the same category again. Keep one caller deadline
+      // across both attempts.
+      final remaining = timeout - clock.now().difference(startedAt);
+      if (remaining > Duration.zero) {
+        final firstEvents = read.result.events;
+        read = await _read(
+          filters,
+          subscriptionId: subscriptionId,
+          tempRelays: tempRelays,
+          relayTypes: relayTypes,
+          sendAfterAuth: sendAfterAuth,
+          useCache: useCache,
+          useQueryPool: useQueryPool,
+          timeout: remaining,
+          requireAllRelaysSettled: requireAllRelaysSettled,
+        );
+        final secondErrorRefusals = read.result.closedRelayReasons.entries
+            .where((entry) => entry.value == 'error')
+            .map((entry) => entry.key);
+        repeatedErrorRefusals = secondErrorRefusals.every(
+          firstErrorRefusals.contains,
+        );
+        final limit = filters.length == 1 ? filters.first.limit : null;
+        read = (
+          result: QueryResult(
+            events: _mergeEvents(
+              const [],
+              [...firstEvents, ...read.result.events],
+              limit: limit,
+            ),
+            endedBy: read.result.endedBy,
+            answeredNetworkRelayCount: read.result.answeredNetworkRelayCount,
+            unansweredRelayCount: read.result.unansweredRelayCount,
+            rateLimitedRelayCount: read.result.rateLimitedRelayCount,
+            closedRelayReasons: read.result.closedRelayReasons,
+            possiblyCapped: read.result.possiblyCapped,
+            confirmedExhaustive: read.result.confirmedExhaustive,
+          ),
+          timedOut: read.timedOut,
+          noRelays: read.noRelays,
+        );
+      } else {
+        repeatedErrorRefusals = false;
+      }
+    }
     return (
       events: read.result.events,
       timedOut:
@@ -969,7 +1029,8 @@ class NostrClient {
               read.result.endedBy == QueryEnd.relayClosed &&
               read.result.answeredNetworkRelayCount > 0 &&
               read.result.unansweredRelayCount == 0 &&
-              read.result.rateLimitedRelayCount == 0),
+              read.result.rateLimitedRelayCount == 0 &&
+              repeatedErrorRefusals),
       noRelays: read.noRelays,
     );
   }
@@ -1268,6 +1329,7 @@ class NostrClient {
       answeredNetworkRelayCount: network.answeredNetworkRelayCount,
       unansweredRelayCount: network.unansweredRelayCount,
       rateLimitedRelayCount: network.rateLimitedRelayCount,
+      closedRelayReasons: network.closedRelayReasons,
       possiblyCapped: network.possiblyCapped,
       confirmedExhaustive: network.confirmedExhaustive,
     );

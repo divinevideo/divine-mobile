@@ -72,6 +72,7 @@ class QueryResult {
     this.answeredNetworkRelayCount = 0,
     this.unansweredRelayCount = 0,
     this.rateLimitedRelayCount = 0,
+    this.closedRelayReasons = const {},
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
   });
@@ -107,6 +108,10 @@ class QueryResult {
   /// Number of relays that refused the read with a `rate-limited` `CLOSED`.
   /// NIP-01 defines that refusal as temporary, so a retry may still succeed.
   final int rateLimitedRelayCount;
+
+  /// NIP-01 reason categories reported by relays that closed this query.
+  /// Relay-supplied explanatory text is deliberately omitted.
+  final Map<String, String> closedRelayReasons;
 
   /// `true` when a relay may have withheld matching events because the read
   /// reached that relay's own result-size limit, rather than the relay
