@@ -9,28 +9,38 @@ typedef RestampedScheduledEvent = ({String content, List<List<String>> tags});
 
 /// Moves [source] to [createdAt]: same `d` tag, media, credits and proof
 /// tags, with `published_at` replaced and the NIP-40 `expiration` recomputed
-/// from [expireAfterSecs] (dropped when null). The caller signs the result,
-/// which mints a new event id — a Nostr id is a hash over `created_at`, so
-/// a reschedule is always a new event and the old one is cancelled.
+/// from [expireAfterSecs] (dropped when null). Both are rewritten where they
+/// stand, because tag order is part of the event id: a restamp to the time
+/// [source] already has rebuilds it exactly, so the caller can tell that
+/// no-op from a real move by the signed id. Any other time mints a new id.
 RestampedScheduledEvent restampScheduledEvent(
   Event source, {
   required int createdAt,
   int? expireAfterSecs,
 }) {
+  final publishedAt = ['published_at', createdAt.toString()];
+  final expiration = expireAfterSecs == null
+      ? null
+      : ['expiration', (createdAt + expireAfterSecs).toString()];
+  var wrotePublishedAt = false;
+  var wroteExpiration = false;
   final tags = <List<String>>[];
   for (final tag in source.tags) {
     if (tag.isEmpty) continue;
     switch (tag[0]) {
       case 'published_at':
+        if (wrotePublishedAt) continue;
+        tags.add(publishedAt);
+        wrotePublishedAt = true;
       case 'expiration':
-        continue;
+        if (expiration == null || wroteExpiration) continue;
+        tags.add(expiration);
+        wroteExpiration = true;
       default:
         tags.add(List<String>.of(tag));
     }
   }
-  tags.add(['published_at', createdAt.toString()]);
-  if (expireAfterSecs != null) {
-    tags.add(['expiration', (createdAt + expireAfterSecs).toString()]);
-  }
+  if (!wrotePublishedAt) tags.add(publishedAt);
+  if (expiration != null && !wroteExpiration) tags.add(expiration);
   return (content: source.content, tags: tags);
 }

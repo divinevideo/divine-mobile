@@ -695,7 +695,7 @@ void main() {
           () => client.cancel(any()),
         ).thenAnswer((_) async => const ScheduleCancelled());
         final newTime = publishAt.add(const Duration(days: 1));
-        // The first move re-signs the body with `published_at` last, so
+        // The first move adds `published_at` and the expiration, so
         // re-signing the result for the same time yields the same event id.
         await coordinator.reschedule(event.id, newTime);
         final held = (await repository.list()).single;
@@ -713,6 +713,35 @@ void main() {
             status: any(named: 'status'),
           ),
         );
+      });
+
+      test('keeps a freshly scheduled post moved to its own time', () async {
+        stubAccepted();
+        final at = publishAt.millisecondsSinceEpoch ~/ 1000;
+        // The publisher writes published_at and the expiration mid-list,
+        // ahead of the credit tags.
+        final event = Event(
+          owner,
+          34236,
+          [
+            ['d', 'video-1'],
+            ['title', 'Plants'],
+            ['published_at', '$at'],
+            ['alt', 'Plants'],
+            ['expiration', '${at + 86400}'],
+            ['p', collaborator, 'wss://relay.divine.video', 'collaborator'],
+          ],
+          'A plant video',
+          createdAt: at,
+        );
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+
+        final outcome = await coordinator.reschedule(event.id, publishAt);
+
+        expect(outcome, ScheduledPostActionOutcome.done);
+        expect((await repository.list()).single.eventId, event.id);
+        verifyNever(() => client.cancel(any()));
+        verifyNever(() => client.schedule(any()));
       });
 
       test(
