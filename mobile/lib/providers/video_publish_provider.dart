@@ -156,6 +156,22 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
   }
 
   /// Creates the publish service with callbacks wired to this notifier.
+  /// Whether this publish will be held rather than posted now.
+  ///
+  /// The hand-off is dispatched before its result is known, so the
+  /// destination is decided here on the same rule the service applies: a
+  /// time the relay would refuse as too close is posted immediately, and
+  /// that post belongs on the profile like any other. Read from the
+  /// repository rather than restated, so the two cannot drift.
+  bool _willBeScheduled(DivineVideoDraft draft) {
+    final scheduledAt = draft.scheduledAt;
+    final repository = ref.read(scheduledPostsRepositoryProvider);
+    if (scheduledAt == null || repository == null) return false;
+    return scheduledAt.isAfter(
+      DateTime.now().add(repository.config.directPublishLead),
+    );
+  }
+
   Future<VideoPublishService> _createPublishService({
     required OnProgressChanged onProgressChanged,
   }) async {
@@ -617,7 +633,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       var didNavigate = false;
       final postPublishExperiment = ref.read(postPublishExperimentProvider);
 
-      if (context.mounted && publishDraft.scheduledAt != null) {
+      if (context.mounted && _willBeScheduled(publishDraft)) {
         // The post is not live yet, so the profile has nothing to show; the
         // Scheduled section above the drafts is where it can be watched,
         // moved or withdrawn.
