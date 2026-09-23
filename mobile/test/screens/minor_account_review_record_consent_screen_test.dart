@@ -1,7 +1,7 @@
 // ABOUTME: Tests for the in-app consent capture screen's confirm-and-submit
 // ABOUTME: step, covering the accepted clip, the submitted email, and failures.
 
-import 'dart:io' show SocketException;
+import 'dart:io' show Directory, File, SocketException;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +20,7 @@ import 'package:openvine/screens/minor_account_review_record_consent_screen.dart
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:permissions_service/permissions_service.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeRepository implements MinorAccountReviewRepository {
@@ -91,7 +92,15 @@ class _ProviderWatcher extends ConsumerWidget {
 }
 
 class _FakeRecorder implements MinorConsentRecorder {
+  _FakeRecorder({this.stopResult = '/tmp/consent.mp4'});
+
+  final String? stopResult;
   bool initialized = false;
+
+  @override
+  void Function(String? path)? onAutoStopped;
+
+  void fireAutoStopped(String? path) => onAutoStopped?.call(path);
 
   @override
   Future<void> initialize() async => initialized = true;
@@ -103,7 +112,7 @@ class _FakeRecorder implements MinorConsentRecorder {
   }) async => true;
 
   @override
-  Future<String?> stop() async => '/tmp/consent.mp4';
+  Future<String?> stop() async => stopResult;
 
   @override
   Future<void> dispose() async {}
@@ -150,10 +159,29 @@ class _FakePermissions implements PermissionsService {
       PermissionStatus.granted;
 }
 
+Future<void> _pumpFrames(WidgetTester tester) async {
+  // The live preview keeps a camera listener alive, so park on a bounded set of
+  // frames instead of pumpAndSettle, which would never quiesce.
+  for (var i = 0; i < 12; i++) {
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+}
+
+/// Grows the test surface so the capture and review ListViews build their
+/// controls instead of lazy-building only the on-screen prompt card.
+void _useTallSurface(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1200, 2600);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 Future<void> _pumpRecordConsentScreen(
   WidgetTester tester, {
   required _FakeRecorder recorder,
   required PermissionsService permissions,
+  List<Override> overrides = const [],
+  bool settle = true,
 }) async {
   final router = GoRouter(
     routes: [
@@ -175,6 +203,7 @@ Future<void> _pumpRecordConsentScreen(
       overrides: [
         minorConsentRecorderProvider.overrideWithValue(recorder),
         permissionsServiceProvider.overrideWithValue(permissions),
+        ...overrides,
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -183,7 +212,11 @@ Future<void> _pumpRecordConsentScreen(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await _pumpFrames(tester);
+  }
 }
 
 void main() {
@@ -531,6 +564,134 @@ void main() {
 
         expect(reviewStatusReads, greaterThan(reviewReadsBefore));
         expect(protectedStatusReads, greaterThan(protectedReadsBefore));
+      },
+    );
+  });
+
+  group('MinorAccountReviewRecordConsentScreen clip cleanup', () {
+    late Directory tempDir;
+    late File clip;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('minor-consent-test');
+      clip = File('${tempDir.path}/consent.mp4')..writeAsBytesSync([0, 1, 2]);
+    });
+
+    tearDown(() {
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+
+    testWidgets(
+      'auto-stop reaches review without a manual stop tap',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final recorder = _FakeRecorder();
+        _useTallSurface(tester);
+
+        await _pumpRecordConsentScreen(
+          tester,
+          recorder: recorder,
+          permissions: _FakePermissions(),
+          settle: false,
+        );
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+        );
+        await _pumpFrames(tester);
+
+        recorder.fireAutoStopped(clip.path);
+        await _pumpFrames(tester);
+
+        expect(
+          find.text(l10n.minorAccountReviewRecordConsentReviewTitle),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox());
+        await _pumpFrames(tester);
+      },
+    );
+
+    testWidgets(
+      'discards the recorded clip when the screen is disposed before accepting',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final recorder = _FakeRecorder(stopResult: clip.path);
+        _useTallSurface(tester);
+
+        await _pumpRecordConsentScreen(
+          tester,
+          recorder: recorder,
+          permissions: _FakePermissions(),
+          settle: false,
+        );
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentStopCta),
+        );
+        await _pumpFrames(tester);
+
+        expect(
+          find.text(l10n.minorAccountReviewRecordConsentReviewTitle),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox());
+        await _pumpFrames(tester);
+
+        expect(clip.existsSync(), isFalse);
+      },
+    );
+
+    testWidgets(
+      'discards the accepted clip when the screen is disposed without submitting',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final recorder = _FakeRecorder(stopResult: clip.path);
+        _useTallSurface(tester);
+
+        await _pumpRecordConsentScreen(
+          tester,
+          recorder: recorder,
+          permissions: _FakePermissions(),
+          settle: false,
+          overrides: [
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => _statusWithCase(),
+            ),
+          ],
+        );
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentStopCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentUseVideoCta),
+        );
+        await _pumpFrames(tester);
+
+        expect(
+          find.text(l10n.minorAccountReviewRecordConsentConfirmEmailTitle),
+          findsOneWidget,
+        );
+        expect(clip.existsSync(), isTrue);
+
+        await tester.pumpWidget(const SizedBox());
+        await _pumpFrames(tester);
+
+        expect(clip.existsSync(), isFalse);
       },
     );
   });
