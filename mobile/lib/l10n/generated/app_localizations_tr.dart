@@ -9356,6 +9356,26 @@ class AppLocalizationsTr extends AppLocalizations {
       'Klipler birleştirilemedi. Lütfen tekrar dene.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Bir saniye, karelerini klibe dönüştürüyoruz';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Bu kareler klibe dönüştürülemedi. Zaman çizelgen değişmedi.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Bir saniye, klibini karelere dönüştürüyoruz';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Bu klip karelere dönüştürülemedi. Zaman çizelgen değişmedi.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Bu kareler bulunamadı. Zaman çizelgen değişmedi.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Sürüklemek için uzun basın';
 

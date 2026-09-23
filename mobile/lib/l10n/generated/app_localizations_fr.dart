@@ -9578,6 +9578,26 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de fusionner les clips. Veuillez réessayer.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Un instant, on transforme tes images en clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Impossible de transformer ces images en clip. Ta timeline est inchangée.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Un instant, on transforme ton clip en images';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Impossible de transformer ce clip en images. Ta timeline est inchangée.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Impossible de retrouver ces images. Ta timeline est inchangée.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Appui long pour glisser';
 

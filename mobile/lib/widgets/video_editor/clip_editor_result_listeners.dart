@@ -11,6 +11,7 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_window.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
@@ -25,8 +26,9 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
-/// detach, detached-clip transform, remove, audio extraction, library save —
-/// reports its outcome through a `last*Result` field on [ClipEditorState].
+/// detach, detached-clip transform, remove, audio extraction, library save,
+/// library import — reports its outcome through a `last*Result` field on
+/// [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
 ///
@@ -47,7 +49,9 @@ class ClipEditorResultListeners extends StatelessWidget {
               child: _DetachedClipTransformResultListener(
                 child: _ClipsRemovedResultListener(
                   child: _AudioExtractionResultListener(
-                    child: _ClipLibrarySaveResultListener(child: child),
+                    child: _ClipLibrarySaveResultListener(
+                      child: _ClipLibraryImportResultListener(child: child),
+                    ),
                   ),
                 ),
               ),
@@ -614,6 +618,74 @@ class _ClipLibrarySaveResultListener extends StatelessWidget {
             context.l10n.videoEditorClipSaveFailed,
           ),
         );
+    }
+  }
+}
+
+/// Listens to [ClipEditorBloc.state.lastLibraryImportResult] and commits a
+/// successful import — clips picked in the library, now on the timeline — to
+/// editor history, or surfaces a snackbar when a picked clip could not take
+/// the composition's shape (a set that would not render into a clip, a clip
+/// that would not sample into stills).
+///
+/// The bloc has already grown its clip list by the time this fires. The
+/// history entry is what carries the change to the clip manager (and so to
+/// autosave), and it is written with
+/// [VideoEditorExtensions.setLengthenedClipState] because an import only ever
+/// makes the composition longer: a sound window that ran to the old end is
+/// carried onto the new one (#6401), while one the user trimmed short stays
+/// put. The sound a sampled clip brought along goes into the same entry, so
+/// one undo removes the stills and their sound together.
+class _ClipLibraryImportResultListener extends StatelessWidget {
+  const _ClipLibraryImportResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastLibraryImportResult,
+            curr.lastLibraryImportResult,
+          ) &&
+          curr.lastLibraryImportResult != null,
+      listener: _onLibraryImportResult,
+      child: child,
+    );
+  }
+
+  void _onLibraryImportResult(BuildContext context, ClipEditorState state) {
+    final result = state.lastLibraryImportResult;
+    if (result == null) return;
+
+    switch (result) {
+      case ClipLibraryImportSuccess(:final previousClips, :final audioTracks):
+        VideoEditorScope.of(context).requireEditor.setLengthenedClipState(
+          previousClips: previousClips,
+          clips: state.clips,
+          addedAudioTracks: audioTracks,
+        );
+      case ClipLibraryImportFailure():
+        // The timeline is unchanged on failure, so its kind still says which
+        // shape the picked clip failed to take.
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            isStopMotionComposition(state.clips)
+                ? context.l10n.videoEditorLibraryImportStillsFailed
+                : context.l10n.videoEditorLibraryImportFailed,
+          ),
+        );
+      case ClipLibraryImportStillsMissing():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorLibraryImportStillsMissing,
+          ),
+        );
+      case ClipLibraryImportDiscarded():
+        // The render was cancelled by the editor's own teardown — there is no
+        // timeline left to add to and no user action that warrants a snackbar.
+        break;
     }
   }
 }

@@ -325,9 +325,16 @@ extension VideoEditorExtensions on ProImageEditorState {
   /// generic clip writer with no previous-clip list to compare against, and
   /// the transition path measures its output with `TransitionTimelineMap`
   /// rather than a plain sum of playback durations.
+  ///
+  /// [addedAudioTracks] are sounds that arrived *with* the edit — the audio
+  /// of a clip sampled into stills — and land in the same entry after the
+  /// grown ones, so one undo takes the sound away together with the stills
+  /// it belongs to. They are not grown: their windows were cut to the new
+  /// footage in the first place.
   void setLengthenedClipState({
     required List<DivineVideoClip> previousClips,
     required List<DivineVideoClip> clips,
+    List<AudioEvent> addedAudioTracks = const [],
     List<Duration>? timelineMarkers,
   }) {
     final currentTracks = stateManager.audioTracks;
@@ -338,13 +345,13 @@ extension VideoEditorExtensions on ProImageEditorState {
       maxDuration: VideoEditorConstants.maxDuration,
     );
 
-    if (identical(grownTracks, currentTracks)) {
+    if (identical(grownTracks, currentTracks) && addedAudioTracks.isEmpty) {
       setClipState(clips, timelineMarkers: timelineMarkers);
       return;
     }
     setClipAndAudioState(
       clips: clips,
-      audioTracks: grownTracks,
+      audioTracks: [...grownTracks, ...addedAudioTracks],
       timelineMarkers: timelineMarkers,
     );
   }

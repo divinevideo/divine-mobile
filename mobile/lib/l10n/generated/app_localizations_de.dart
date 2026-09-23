@@ -9561,6 +9561,26 @@ class AppLocalizationsDe extends AppLocalizations {
       'Clips konnten nicht zusammengeführt werden. Bitte versuche es erneut.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Einen Moment, wir machen aus deinen Bildern einen Clip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Aus den Bildern konnte kein Clip werden. Deine Timeline bleibt unverändert.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Einen Moment, wir machen aus deinem Clip Einzelbilder';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Aus dem Clip konnten keine Einzelbilder werden. Deine Timeline bleibt unverändert.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Die Einzelbilder waren nicht mehr da. Deine Timeline bleibt unverändert.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Lange drücken zum Ziehen';
 

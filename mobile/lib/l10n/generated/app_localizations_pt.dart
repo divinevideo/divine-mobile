@@ -9509,6 +9509,26 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível mesclar os clipes. Tente novamente.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Um momento, estamos transformando suas fotos em um clipe';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Não foi possível transformar essas fotos em um clipe. Sua linha do tempo fica igual.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Um momento, estamos transformando seu clipe em fotos';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Não foi possível transformar esse clipe em fotos. Sua linha do tempo fica igual.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Não foi possível encontrar essas fotos. Sua linha do tempo fica igual.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Pressione e segure para arrastar';
 

@@ -251,6 +251,19 @@ void main() {
         );
         expect(state.selectedIsStopMotion, isTrue);
       });
+
+      test('is null whichever type is selected when mixing is allowed', () {
+        // The grid and the toggle guard both read this to disable the other
+        // type; with nothing to match, neither disables anything.
+        final state = ClipsLibraryState(
+          status: ClipsLibraryStatus.loaded,
+          clips: [clip1, smClip],
+          selectedClipIds: const {'sm1'},
+          allowsMixedClipTypes: true,
+        );
+        expect(state.selectedIsStopMotion, isNull);
+        expect(state.stopMotionTypeOf(const {'sm1'}), isTrue);
+      });
     });
 
     test('props are correct', () {
@@ -286,6 +299,7 @@ void main() {
         const ClipLibraryAllFilter(),
         null,
         null,
+        false,
       ]);
     });
   });

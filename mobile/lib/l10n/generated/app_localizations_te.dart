@@ -9717,6 +9717,26 @@ class AppLocalizationsTe extends AppLocalizations {
       'క్లిప్‌లను విలీనం చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'ఒక్క క్షణం, మేము మీ ఫోటోలను క్లిప్‌గా మారుస్తున్నాము';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'ఆ ఫోటోలను క్లిప్‌గా మార్చడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'ఒక్క క్షణం, మేము మీ క్లిప్‌ను ఫోటోలుగా మారుస్తున్నాము';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'ఆ క్లిప్‌ను ఫోటోలుగా మార్చడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'ఆ ఫోటోలు కనిపించలేదు. మీ టైమ్‌లైన్ మారలేదు.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'లాగడానికి ఎక్కువసేపు నొక్కండి';
 

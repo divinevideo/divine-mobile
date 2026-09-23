@@ -9513,6 +9513,26 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi mapagsama ang mga clip. Pakisubukang muli.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Sandali lang, ginagawa naming clip ang mga still mo';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Hindi nagawang clip ang mga still na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Sandali lang, ginagawa naming mga still ang clip mo';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Hindi nagawang mga still ang clip na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Hindi mahanap ang mga still na iyon. Hindi nagbago ang timeline mo.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Pindutin nang matagal para i-drag';
 

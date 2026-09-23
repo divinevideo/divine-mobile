@@ -484,6 +484,29 @@ class ClipEditorAllClipsVolumeChanged extends ClipEditorEvent {
   List<Object?> get props => [volume];
 }
 
+// === IMPORT FROM CLIP LIBRARY ===
+
+/// Adds clips the user picked in the library to the composition.
+///
+/// [clips] arrive in selection order, exactly as the library handed them
+/// over; the handler drops unreadable stills and decides how each clip joins
+/// the timeline. The composition's kind never changes: a video composition
+/// renders a picked stop-motion set into a clip, a stop-motion composition
+/// samples a picked video clip into stills at its own hold (and brings the
+/// clip's sound along as a track), and a set merges into the frames clip.
+///
+/// [audioTitle] names the sound track a sampled clip contributes. Localized
+/// by the widget layer, which is the only place that can read the copy.
+class ClipEditorLibraryClipsImportRequested extends ClipEditorEvent {
+  const ClipEditorLibraryClipsImportRequested(this.clips, {this.audioTitle});
+
+  final List<DivineVideoClip> clips;
+  final String? audioTitle;
+
+  @override
+  List<Object?> get props => [clips, audioTitle];
+}
+
 // === SAVE TO CLIP LIBRARY ===
 
 /// Save the clip with [clipId] to the persistent clip library as a standalone

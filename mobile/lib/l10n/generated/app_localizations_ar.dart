@@ -9386,6 +9386,26 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر دمج المقاطع. يُرجى المحاولة مرة أخرى.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'لحظة من فضلك، نحوّل صورك إلى مقطع';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'تعذّر تحويل هذه الصور إلى مقطع. الجدول الزمني كما هو دون تغيير.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'لحظة من فضلك، نحوّل مقطعك إلى صور';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'تعذّر تحويل هذا المقطع إلى صور. الجدول الزمني كما هو دون تغيير.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'تعذّر العثور على هذه الصور. الجدول الزمني كما هو دون تغيير.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'اضغط مطولاً للسحب';
 
   @override

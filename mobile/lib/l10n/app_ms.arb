@@ -5182,6 +5182,11 @@
   "@videoEditorMergeFailed": {
     "description": "Snackbar message shown when merging the selected clips fails during rendering."
   },
+  "videoEditorLibraryImportProgressLabel": "Sebentar, kami sedang menukar gambar anda menjadi klip",
+  "videoEditorLibraryImportFailed": "Gambar itu tidak dapat ditukar menjadi klip. Garis masa anda tidak berubah.",
+  "videoEditorLibraryImportStillsProgressLabel": "Sebentar, kami sedang menukar klip anda menjadi gambar",
+  "videoEditorLibraryImportStillsFailed": "Klip itu tidak dapat ditukar menjadi gambar. Garis masa anda tidak berubah.",
+  "videoEditorLibraryImportStillsMissing": "Gambar itu tidak dapat ditemui. Garis masa anda tidak berubah.",
   "videoEditorTimelineLongPressToDragHint": "Tekan lama untuk menyeret",
   "videoEditorVideoTimelineSemanticLabel": "Garis masa video",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

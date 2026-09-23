@@ -9437,6 +9437,26 @@ class AppLocalizationsUr extends AppLocalizations {
       'کلپس نہیں ملائی جا سکیں۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'ایک لمحہ، ہم آپ کی تصاویر کو کلپ بنا رہے ہیں';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'ان تصاویر سے کلپ نہیں بن سکی۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'ایک لمحہ، ہم آپ کی کلپ کو تصاویر بنا رہے ہیں';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'اس کلپ سے تصاویر نہیں بن سکیں۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'وہ تصاویر نہیں مل سکیں۔ آپ کی ٹائم لائن ویسی ہی ہے۔';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'کھینچنے کے لیے دیر تک دبائیں';
 

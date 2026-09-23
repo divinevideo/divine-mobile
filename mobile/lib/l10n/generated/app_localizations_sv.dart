@@ -9438,6 +9438,26 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att slå samman klippen. Försök igen.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Ett ögonblick, vi gör ett klipp av dina bilder';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Det gick inte att göra ett klipp av bilderna. Din tidslinje är oförändrad.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Ett ögonblick, vi gör bilder av ditt klipp';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Det gick inte att göra bilder av klippet. Din tidslinje är oförändrad.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Det gick inte att hitta bilderna. Din tidslinje är oförändrad.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'Håll ned för att dra';
 
   @override

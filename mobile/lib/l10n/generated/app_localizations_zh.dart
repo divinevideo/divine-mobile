@@ -8886,6 +8886,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorMergeFailed => '无法合并片段，请重试。';
 
   @override
+  String get videoEditorLibraryImportProgressLabel => '稍等，正在把你的照片变成片段';
+
+  @override
+  String get videoEditorLibraryImportFailed => '没能把那些照片变成片段。你的时间线没有改动。';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel => '稍等，正在把你的片段变成照片';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed => '没能把那个片段变成照片。你的时间线没有改动。';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing => '找不到那些照片。你的时间线没有改动。';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => '长按拖动';
 
   @override

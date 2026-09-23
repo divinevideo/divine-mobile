@@ -6302,6 +6302,26 @@
   "@videoEditorMergeFailed": {
     "description": "Snackbar message shown when merging the selected clips fails during rendering."
   },
+  "videoEditorLibraryImportProgressLabel": "One moment, we're turning your stills into a clip",
+  "@videoEditorLibraryImportProgressLabel": {
+    "description": "Status text shown while a stop-motion set picked from the library is rendered into a video clip so it can join a regular video timeline."
+  },
+  "videoEditorLibraryImportFailed": "Couldn't turn those stills into a clip. Your timeline is unchanged.",
+  "@videoEditorLibraryImportFailed": {
+    "description": "Snackbar message shown when rendering a stop-motion set picked from the library into a video clip fails. Nothing was added to the timeline."
+  },
+  "videoEditorLibraryImportStillsProgressLabel": "One moment, we're turning your clip into stills",
+  "@videoEditorLibraryImportStillsProgressLabel": {
+    "description": "Status text shown while a video clip picked from the library is sampled into stills so it can join a stop-motion timeline."
+  },
+  "videoEditorLibraryImportStillsFailed": "Couldn't turn that clip into stills. Your timeline is unchanged.",
+  "@videoEditorLibraryImportStillsFailed": {
+    "description": "Snackbar message shown when sampling a video clip picked from the library into stop-motion stills fails. Nothing was added to the timeline."
+  },
+  "videoEditorLibraryImportStillsMissing": "Couldn't find those stills. Your timeline is unchanged.",
+  "@videoEditorLibraryImportStillsMissing": {
+    "description": "Snackbar message shown when every clip picked from the library is a stop-motion set whose still images are no longer on the device, so nothing could be added. Nothing was added to the timeline."
+  },
   "videoEditorTimelineLongPressToDragHint": "Long press to drag",
   "videoEditorVideoTimelineSemanticLabel": "Video timeline",
   "videoEditorTimelinePositionFormat": "{minutes}m {seconds}s",

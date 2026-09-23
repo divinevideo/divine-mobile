@@ -112,11 +112,13 @@ void main() {
 
     ClipsLibraryBloc createBloc({
       LibraryClipTypeFilter clipTypeFilter = LibraryClipTypeFilter.all,
+      bool allowsMixedClipTypes = false,
     }) => ClipsLibraryBloc(
       clipLibraryService: mockClipLibraryService,
       gallerySaveService: mockGallerySaveService,
       sharedPreferences: sharedPreferences,
       clipTypeFilter: clipTypeFilter,
+      allowsMixedClipTypes: allowsMixedClipTypes,
     );
 
     test('initial state is correct', () {
@@ -126,6 +128,12 @@ void main() {
       expect(bloc.state.clips, isEmpty);
       expect(bloc.state.selectedClipIds, isEmpty);
       bloc.close();
+    });
+
+    test('initial state carries the mixed-types allowance', () async {
+      final bloc = createBloc(allowsMixedClipTypes: true);
+      expect(bloc.state.allowsMixedClipTypes, isTrue);
+      await bloc.close();
     });
 
     group('ClipsLibraryGridColumnsChanged', () {
@@ -449,6 +457,37 @@ void main() {
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'adds a clip of the other type when mixing is allowed',
+        seed: () => ClipsLibraryState(
+          status: ClipsLibraryStatus.loaded,
+          clips: [
+            clip1,
+            createStopMotionClip(id: 'sm1'),
+          ],
+          selectedClipIds: const {'clip1'},
+          selectedDuration: const Duration(seconds: 5),
+          allowsMixedClipTypes: true,
+        ),
+        build: () => createBloc(allowsMixedClipTypes: true),
+        act: (bloc) => bloc.add(
+          ClipsLibraryToggleSelection(createStopMotionClip(id: 'sm1')),
+        ),
+        expect: () => [
+          isA<ClipsLibraryState>()
+              .having(
+                (s) => s.selectedClipIds,
+                'selectedClipIds',
+                equals({'clip1', 'sm1'}),
+              )
+              .having(
+                (s) => s.selectedDuration,
+                'selectedDuration',
+                equals(const Duration(seconds: 6)),
+              ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         'allows selecting a second clip of the same type',
         seed: () => ClipsLibraryState(
           status: ClipsLibraryStatus.loaded,
@@ -499,12 +538,14 @@ void main() {
         List<DivineVideoClip> clips, {
         Set<String> selectedClipIds = const {},
         Set<String> disabledClipIds = const {},
+        bool allowsMixedClipTypes = false,
       }) => ClipsLibraryState(
         status: ClipsLibraryStatus.loaded,
         clips: clips,
         sortedClips: clips,
         selectedClipIds: selectedClipIds,
         disabledClipIds: disabledClipIds,
+        allowsMixedClipTypes: allowsMixedClipTypes,
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
@@ -638,6 +679,26 @@ void main() {
             (s) => s.selectedClipIds.toList(),
             'selectedClipIds',
             equals(['a', 'c']),
+          ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'picks up both types along the range when mixing is allowed',
+        seed: () => seedWith(
+          [a, createStopMotionClip(id: 'sm1'), c],
+          allowsMixedClipTypes: true,
+        ),
+        build: () => createBloc(allowsMixedClipTypes: true),
+        act: (bloc) => bloc
+          ..add(ClipsLibraryDragSelectionStarted(a))
+          ..add(ClipsLibraryDragSelectionExtended(c)),
+        expect: () => [
+          isA<ClipsLibraryState>(),
+          isA<ClipsLibraryState>().having(
+            (s) => s.selectedClipIds.toList(),
+            'selectedClipIds',
+            equals(['a', 'sm1', 'c']),
           ),
         ],
       );

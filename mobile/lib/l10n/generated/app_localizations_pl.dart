@@ -9624,6 +9624,26 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się scalić klipów. Spróbuj ponownie.';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'Chwila, zamieniamy Twoje zdjęcia w klip';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'Nie udało się zamienić tych zdjęć w klip. Twoja oś czasu pozostaje bez zmian.';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'Chwila, zamieniamy Twój klip w zdjęcia';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'Nie udało się zamienić tego klipu w zdjęcia. Twoja oś czasu pozostaje bez zmian.';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'Nie udało się znaleźć tych zdjęć. Twoja oś czasu pozostaje bez zmian.';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint =>
       'Przytrzymaj, aby przeciągnąć';
 

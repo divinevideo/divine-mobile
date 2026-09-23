@@ -1,11 +1,13 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, transform, detach, merge) that block the editor.
+// ABOUTME: (reverse, transform, detach, merge, library import) that block the
+// ABOUTME: editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 /// The blocking progress overlays for [ClipEditorBloc]'s render operations.
@@ -28,6 +30,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
         _TransformProgressOverlay(),
         _DetachProgressOverlay(),
         _MergeProgressOverlay(),
+        _LibraryImportProgressOverlay(),
       ],
     );
   }
@@ -160,12 +163,21 @@ class _TransformProgressOverlay extends StatelessWidget {
 /// A render's progress, over the whole editor, absorbing input for the
 /// duration so nothing underneath can start a competing edit.
 class _RenderProgressContent extends StatelessWidget {
-  const _RenderProgressContent({required this.renderId, required this.label});
+  const _RenderProgressContent({
+    required this.renderId,
+    required this.label,
+    this.progress,
+  });
 
   final String renderId;
 
   /// What the user is waiting for, already localized.
   final String label;
+
+  /// Progress the owner already knows, for an operation that does not report
+  /// under [renderId] on the plugin's progress stream. `null` reads the
+  /// stream.
+  final double? progress;
 
   @override
   Widget build(BuildContext context) {
@@ -178,13 +190,18 @@ class _RenderProgressContent extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               spacing: 24,
               children: [
-                StreamBuilder<ProgressModel>(
-                  stream: ProVideoEditor.instance.progressStreamById(renderId),
-                  builder: (context, snapshot) {
-                    final progress = snapshot.data?.progress ?? 0;
-                    return PartialCircleSpinner(progress: progress);
-                  },
-                ),
+                if (progress case final progress?)
+                  PartialCircleSpinner(progress: progress)
+                else
+                  StreamBuilder<ProgressModel>(
+                    stream: ProVideoEditor.instance.progressStreamById(
+                      renderId,
+                    ),
+                    builder: (context, snapshot) {
+                      final progress = snapshot.data?.progress ?? 0;
+                      return PartialCircleSpinner(progress: progress);
+                    },
+                  ),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 240),
                   child: Text(
@@ -231,6 +248,54 @@ class _MergeProgressOverlay extends StatelessWidget {
               : _RenderProgressContent(
                   renderId: renderId,
                   label: context.l10n.videoEditorMergeProgressLabel,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while a clip picked in the library
+/// takes the composition's shape: a stop-motion set assembled into the clip
+/// that joins a video composition, or a video clip sampled into the stills
+/// that join a stop-motion one. Absorbs input for the duration so the
+/// timeline controls underneath can't start a competing edit mid-render, and
+/// fades in/out via [AnimatedSwitcher].
+///
+/// The render id moves on to each clip in turn when several were picked, and
+/// the progress stream follows it, so the ring fills once per clip rather
+/// than once over the whole pick.
+class _LibraryImportProgressOverlay extends StatelessWidget {
+  const _LibraryImportProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<
+      ClipEditorBloc,
+      ClipEditorState,
+      ({String? renderId, double? progress, bool intoStills})
+    >(
+      selector: (state) => (
+        renderId: state.isImportingLibraryClips
+            ? state.libraryImportRenderId
+            : null,
+        progress: state.libraryImportProgress,
+        // The timeline keeps its kind throughout an import, so it says which
+        // way the picked clip is being converted.
+        intoStills: isStopMotionComposition(state.clips),
+      ),
+      builder: (context, import) {
+        final renderId = import.renderId;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  progress: import.progress,
+                  label: import.intoStills
+                      ? context.l10n.videoEditorLibraryImportStillsProgressLabel
+                      : context.l10n.videoEditorLibraryImportProgressLabel,
                 ),
         );
       },

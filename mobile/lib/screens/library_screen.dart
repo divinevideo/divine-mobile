@@ -71,6 +71,7 @@ class LibraryScreen extends ConsumerWidget {
     this.selectionMode = false,
     this.tabsMode = LibraryTabsMode.allTabs,
     this.clipTypeFilter = LibraryClipTypeFilter.all,
+    this.allowsMixedClipTypes = false,
     this.includeAutosaveDraft = true,
     this.editorClips = const [],
     this.scrollController,
@@ -95,8 +96,15 @@ class LibraryScreen extends ConsumerWidget {
 
   /// Restricts which clip types the clips tab shows. Set by the recorder
   /// entry-point to the current mode's type (stop-motion vs normal video);
-  /// [LibraryClipTypeFilter.all] for the standalone library.
+  /// [LibraryClipTypeFilter.all] for the standalone library and for the
+  /// editor's picker.
   final LibraryClipTypeFilter clipTypeFilter;
+
+  /// Whether one selection may combine stop-motion sets and normal video
+  /// clips. On for the editor's picker, whose import converts each picked
+  /// clip to the composition's shape; off everywhere else, where the two
+  /// types have no shared timeline to land on.
+  final bool allowsMixedClipTypes;
 
   /// Whether the drafts tab lists the in-progress autosave draft. Off for the
   /// recorder entry-point, which opens on top of the session writing it.
@@ -126,6 +134,7 @@ class LibraryScreen extends ConsumerWidget {
             clipLibraryService,
             gallerySaveService,
             clipTypeFilter,
+            allowsMixedClipTypes,
           )),
           create: (_) {
             final editorClipIds = selectionMode
@@ -136,6 +145,7 @@ class LibraryScreen extends ConsumerWidget {
               gallerySaveService: gallerySaveService,
               sharedPreferences: ref.read(sharedPreferencesProvider),
               clipTypeFilter: clipTypeFilter,
+              allowsMixedClipTypes: allowsMixedClipTypes,
             )..add(
               ClipsLibraryLoadRequested(
                 preSelectedIds: editorClipIds,

@@ -9211,6 +9211,26 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorMergeFailed => 'ቅንጥቦችን ማዋሃድ አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
 
   @override
+  String get videoEditorLibraryImportProgressLabel =>
+      'ትንሽ ይቆዩ፣ ፎቶዎችዎን ወደ ቅንጥብ እየቀየርን ነው';
+
+  @override
+  String get videoEditorLibraryImportFailed =>
+      'እነዚያን ፎቶዎች ወደ ቅንጥብ መቀየር አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
+  String get videoEditorLibraryImportStillsProgressLabel =>
+      'ትንሽ ይቆዩ፣ ቅንጥብዎን ወደ ፎቶዎች እየቀየርን ነው';
+
+  @override
+  String get videoEditorLibraryImportStillsFailed =>
+      'ያንን ቅንጥብ ወደ ፎቶዎች መቀየር አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
+  String get videoEditorLibraryImportStillsMissing =>
+      'እነዚያን ፎቶዎች ማግኘት አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።';
+
+  @override
   String get videoEditorTimelineLongPressToDragHint => 'ለመጎተት በረጅሙ ተጫን';
 
   @override
