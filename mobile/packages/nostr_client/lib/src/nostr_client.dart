@@ -1002,8 +1002,8 @@ class NostrClient {
         read = (
           result: QueryResult(
             events: _mergeEvents(
-              const [],
-              [...firstEvents, ...read.result.events],
+              firstEvents,
+              read.result.events,
               limit: limit,
             ),
             endedBy: read.result.endedBy,

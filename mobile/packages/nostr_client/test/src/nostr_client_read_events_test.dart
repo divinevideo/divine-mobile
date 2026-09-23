@@ -590,6 +590,94 @@ void main() {
       },
     );
 
+    test(
+      'keeps a full page of distinct events across the confirmation read',
+      () async {
+        final nostr = _newNostr();
+        final answering = _ScriptedRelay('wss://answers.example');
+        final refusing = _ScriptedRelay('wss://refuses.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(refusing), isTrue);
+        final notes = await _signedNotes(nostr, 2);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+        );
+
+        final pending = client.queryEventsDetailed(
+          [
+            Filter(kinds: const [EventKind.textNote], limit: 2),
+          ],
+          useCache: false,
+          timeout: const Duration(seconds: 3),
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        );
+        // Both reads draw the same page from the answering relay: the
+        // confirmation re-asks every relay, not only the one that refused.
+        for (final reqIndex in [0, 1]) {
+          final answeringSub = await answering.awaitReq(reqIndex);
+          final refusingSub = await refusing.awaitReq(reqIndex);
+          for (final note in notes) {
+            await answering.deliver(['EVENT', answeringSub, note.toJson()]);
+          }
+          await answering.deliver(['EOSE', answeringSub]);
+          await refusing.deliver([
+            'CLOSED',
+            refusingSub,
+            'error: unsupported request',
+          ]);
+        }
+        final result = await pending;
+
+        expect(result.timedOut, isFalse);
+        expect(
+          result.events.map((event) => event.id),
+          unorderedEquals(notes.map((note) => note.id)),
+          reason: 'a repeated event must not take a second slot on the page',
+        );
+      },
+    );
+
+    test('keeps the events of both reads when they differ', () async {
+      final nostr = _newNostr();
+      final answering = _ScriptedRelay('wss://answers.example');
+      final refusing = _ScriptedRelay('wss://refuses.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(refusing), isTrue);
+      final notes = await _signedNotes(nostr, 2);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+      );
+
+      final pending = client.queryEventsDetailed(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(seconds: 3),
+        requireAllRelaysSettled: true,
+        acceptRelayClosedWhenOthersAnswered: true,
+      );
+      for (final (reqIndex, note) in notes.indexed) {
+        final answeringSub = await answering.awaitReq(reqIndex);
+        final refusingSub = await refusing.awaitReq(reqIndex);
+        await answering.deliver(['EVENT', answeringSub, note.toJson()]);
+        await answering.deliver(['EOSE', answeringSub]);
+        await refusing.deliver([
+          'CLOSED',
+          refusingSub,
+          'error: unsupported request',
+        ]);
+      }
+      final result = await pending;
+
+      expect(result.timedOut, isFalse);
+      expect(
+        result.events.map((event) => event.id),
+        unorderedEquals(notes.map((note) => note.id)),
+      );
+    });
+
     group('keeps an opted-in read timed out', () {
       late Nostr nostr;
       late _ScriptedRelay first;
