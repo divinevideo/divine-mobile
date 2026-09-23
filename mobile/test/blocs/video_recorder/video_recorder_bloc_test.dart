@@ -2611,6 +2611,47 @@ void main() {
         });
       });
 
+      group('opening into the Upload tab', () {
+        test('pauses the camera once it has started', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.upload,
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(bloc.state.isCameraInitialized, isTrue);
+          verifyInOrder([
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+            ),
+            () => cameraService.handleAppLifecycleState(
+              AppLifecycleState.paused,
+            ),
+          ]);
+        });
+
+        test('leaves the camera running on a capture tab', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.capture,
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(bloc.state.isCameraInitialized, isTrue);
+          verifyNever(() => cameraService.handleAppLifecycleState(any()));
+        });
+      });
+
       group('camera_startup trace', () {
         // Telemetry-only: a regression here mislabels a Firebase sample, not a
         // user-facing bug — a touch belt-and-suspenders, kept so the outcome

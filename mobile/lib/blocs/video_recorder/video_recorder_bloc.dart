@@ -463,6 +463,12 @@ class VideoRecorderBloc
       aspectRatio: clips.isNotEmpty ? clips.first.targetAspectRatio : null,
     );
 
+    // Opening straight into Upload: the screen's pause for that tab arrived
+    // while the camera was still starting and was dropped, so release it now.
+    if (state.recorderMode == VideoRecorderMode.upload) {
+      await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
+    }
+
     await _setupRemoteRecordControl();
 
     Log.info(
