@@ -564,10 +564,17 @@ class ScheduledPostCoordinator {
         expireAfterSecs: post.expireAfterSecs,
       );
       await _repository.delete(post.eventId);
-      await _repository.submit(signed.id);
-      return ScheduledPostActionOutcome.done;
+      return _outcomeOfHandOff(await _repository.submit(signed.id));
     });
   }
+
+  /// A refused hand-off leaves the row failed, which the action must not
+  /// report as done; one that could not reach the relay is retried later.
+  ScheduledPostActionOutcome _outcomeOfHandOff(
+    ScheduledPostSubmitResult handOff,
+  ) => handOff.outcome == ScheduledPostSubmitOutcome.rejected
+      ? ScheduledPostActionOutcome.failed
+      : ScheduledPostActionOutcome.done;
 
   /// Publishes [eventId] right away, as a newly signed event dated now.
   Future<ScheduledPostActionOutcome> publishNow(String eventId) async {
@@ -623,8 +630,7 @@ class ScheduledPostCoordinator {
         now.add(_repository.config.directPublishLead),
       )) {
         await _repository.requeue(eventId);
-        await _repository.submit(eventId);
-        return ScheduledPostActionOutcome.done;
+        return _outcomeOfHandOff(await _repository.submit(eventId));
       }
       return publishNow(eventId);
     });

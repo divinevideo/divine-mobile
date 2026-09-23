@@ -605,6 +605,57 @@ void main() {
         verify(() => client.cancel(event.id)).called(1);
       });
 
+      test('reports a new time the relay refuses as failed', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(
+          () => client.cancel(event.id),
+        ).thenAnswer((_) async => const ScheduleCancelled());
+        when(() => client.schedule(any())).thenAnswer(
+          (_) async => const ScheduleSubmitRejected(
+            statusCode: 429,
+            kind: ScheduleRejectionKind.overCap,
+            message: 'author already has 100 posts pending',
+          ),
+        );
+
+        final outcome = await coordinator.reschedule(
+          event.id,
+          publishAt.add(const Duration(days: 1)),
+        );
+
+        expect(outcome, ScheduledPostActionOutcome.failed);
+        expect(
+          (await repository.list()).single.status,
+          ScheduledPostStatus.failed,
+        );
+      });
+
+      test('holds a new time the relay cannot take yet as done', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(
+          () => client.cancel(event.id),
+        ).thenAnswer((_) async => const ScheduleCancelled());
+        when(() => client.schedule(any())).thenAnswer(
+          (_) async => const ScheduleSubmitTransientFailure(
+            'http_404',
+            unavailable: true,
+          ),
+        );
+
+        final outcome = await coordinator.reschedule(
+          event.id,
+          publishAt.add(const Duration(days: 1)),
+        );
+
+        expect(outcome, ScheduledPostActionOutcome.done);
+        expect(
+          (await repository.list()).single.status,
+          ScheduledPostStatus.pendingSubmit,
+        );
+      });
+
       test('keeps the held event when signing fails', () async {
         final event = buildEvent();
         await enqueue(event, status: ScheduledPostStatus.scheduled);
@@ -786,6 +837,27 @@ void main() {
         final stored = await repository.getById(event.id);
         expect(stored!.status, ScheduledPostStatus.scheduled);
         expect(stored.failureReason, isNull);
+      });
+
+      test('reports a hand-off the relay refuses again as failed', () async {
+        final event = buildEvent();
+        await enqueue(event);
+        await repository.markFailed(event.id, 'too many pending posts');
+        when(() => client.schedule(any())).thenAnswer(
+          (_) async => const ScheduleSubmitRejected(
+            statusCode: 429,
+            kind: ScheduleRejectionKind.overCap,
+            message: 'author already has 100 posts pending',
+          ),
+        );
+
+        final outcome = await coordinator.retry(event.id);
+
+        expect(outcome, ScheduledPostActionOutcome.failed);
+        expect(
+          (await repository.getById(event.id))!.status,
+          ScheduledPostStatus.failed,
+        );
       });
 
       test('publishes a failed post whose time has passed', () async {
