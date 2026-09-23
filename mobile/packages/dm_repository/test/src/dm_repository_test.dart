@@ -9083,6 +9083,105 @@ void main() {
         });
       });
 
+      test('does not confirm a refusal that a different relay repeats', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusingRelays = [
+            'wss://first.example',
+            'wss://second.example',
+            'wss://second.example',
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final relay = refusingRelays[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test("an account switch forgets the previous account's refusals", () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyB]);
+        });
+      });
+
       test('failed NIP-04 recovery cannot replenish retries forever', () {
         fakeAsync((async) {
           stubRelayStatus(
