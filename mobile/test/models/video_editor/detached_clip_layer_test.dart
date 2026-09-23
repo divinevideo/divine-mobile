@@ -678,6 +678,50 @@ void main() {
         }
       });
 
+      test('lifts the lock where a real draft stores it, in references', () {
+        // A draft holds each layer's full map once, under `references`; its
+        // history entries carry only the layer id plus what changed, and
+        // import rebuilds each entry from that shared map. Undo entries
+        // become rotatable through the reference, not through their own copy.
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips({
+          'position': 1,
+          'references': {
+            'layer-1': {
+              'id': 'layer-1',
+              ...detachedLayerMap(interaction: {'enableRotate': false}),
+            },
+          },
+          'history': [
+            {
+              'layers': [
+                {'id': 'layer-1'},
+              ],
+            },
+            {
+              'layers': [
+                {'id': 'layer-1', 'x': 2.0},
+              ],
+            },
+          ],
+        });
+
+        final reference = (migrated['references']! as Map)['layer-1']! as Map;
+        expect((reference['interaction']! as Map)['enableRotate'], isTrue);
+        expect(migrated['position'], 1);
+        expect(migrated['history'], [
+          {
+            'layers': [
+              {'id': 'layer-1'},
+            ],
+          },
+          {
+            'layers': [
+              {'id': 'layer-1', 'x': 2.0},
+            ],
+          },
+        ]);
+      });
+
       test("leaves the caller's history untouched", () {
         final original = historyWith(
           detachedLayerMap(interaction: {'enableRotate': false}),
