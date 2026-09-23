@@ -192,13 +192,11 @@ void main() {
       );
 
       final image = tester.widget<Image>(find.byType(Image));
+      // Equality covers the package too, which decides the key the app's
+      // asset bundle is asked for.
       expect(
         image.image,
-        isA<AssetImage>().having(
-          (asset) => asset.assetName,
-          'assetName',
-          equals('assets/divine_stickers/hang_loose.webp'),
-        ),
+        equals(const AssetImage('assets/divine_stickers/hang_loose.webp')),
       );
     });
 
