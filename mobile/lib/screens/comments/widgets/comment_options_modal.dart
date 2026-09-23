@@ -101,6 +101,7 @@ class CommentOptionsModal {
     BuildContext context, {
     required String authorPubkey,
   }) async {
+    final navigator = Navigator.of(context);
     final action = await VineBottomSheet.show<String>(
       context: context,
       scrollable: false,
@@ -117,7 +118,7 @@ class CommentOptionsModal {
             label: context.l10n.commentOptionsFlagContentLabel,
             semanticLabel: context.l10n.commentOptionsFlagContentSemanticLabel,
             iconPath: DivineIconName.flag.assetPath,
-            onTap: () => context.pop('flag'),
+            onTap: () => navigator.pop('flag'),
           ),
           _OptionTile(
             identifier: 'block_user_option',
@@ -125,7 +126,7 @@ class CommentOptionsModal {
             semanticLabel: context.l10n.reportBlockUser,
             iconPath: DivineIconName.prohibit.assetPath,
             isDestructive: true,
-            onTap: () => context.pop('block'),
+            onTap: () => navigator.pop('block'),
           ),
         ],
       ),

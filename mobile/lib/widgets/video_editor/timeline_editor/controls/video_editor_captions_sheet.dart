@@ -75,6 +75,7 @@ Future<CaptionsEditorResult?> showCaptionsEditorSheet(
         blossomUploadService: blossomUploadService,
       );
   unawaited(sessionCubit.initialize());
+  final navigator = Navigator.of(context);
 
   void confirm() {
     final state = sessionCubit.state;
@@ -82,7 +83,7 @@ Future<CaptionsEditorResult?> showCaptionsEditorSheet(
     // Normalization (drop cleared cues, sort by start) lives on the cubit
     // state so it stays testable and downstream-consistent.
     final track = state.committedTrack;
-    Navigator.of(context).pop<CaptionsEditorResult>(
+    navigator.pop<CaptionsEditorResult>(
       CaptionsConfirmed(track: track, cues: track.cues),
     );
   }
@@ -100,13 +101,12 @@ Future<CaptionsEditorResult?> showCaptionsEditorSheet(
       onPrimaryPressed: () => navigator.pop(true),
       onSecondaryPressed: () => navigator.pop(false),
     );
-    if ((confirmed ?? false) && context.mounted) {
-      Navigator.of(context).pop<CaptionsEditorResult>(const CaptionsDeleted());
+    if (confirmed ?? false) {
+      navigator.pop<CaptionsEditorResult>(const CaptionsDeleted());
     }
   }
 
   try {
-    final navigator = Navigator.of(context);
     return await VineBottomSheet.show<CaptionsEditorResult>(
       context: context,
       initialChildSize: 0.8,
