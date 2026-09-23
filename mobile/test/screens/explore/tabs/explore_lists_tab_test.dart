@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -252,12 +253,18 @@ void main() {
 
       await tester.tap(find.text('Video skate'));
 
-      verify(
-        () => goRouter.push<void>(
-          '/list/skate',
-          extra: any(named: 'extra'),
-        ),
-      ).called(1);
+      // The record rides along, so the screen can share and describe the
+      // list before a Follow caches it.
+      final extra =
+          verify(
+                () => goRouter.push<void>(
+                  '/list/skate',
+                  extra: captureAny(named: 'extra'),
+                ),
+              ).captured.single
+              as CuratedListRouteExtra;
+      expect(extra.list?.id, equals('skate'));
+      expect(extra.authorPubkey, equals(extra.list?.pubkey));
     });
 
     testWidgets('people card navigates with the owner query param', (

@@ -1,6 +1,8 @@
 // ABOUTME: Extra data classes for GoRouter navigation
 // ABOUTME: Used to pass structured data between routes via GoRouter extra
 
+import 'package:models/models.dart';
+
 /// Safely reads a GoRouter `state.extra` payload as [T].
 ///
 /// Returns `null` when [extra] is not a [T]. A deep link arrives with no
@@ -34,9 +36,18 @@ class CuratedListRouteExtra {
     required this.listName,
     this.videoIds,
     this.authorPubkey,
+    this.list,
   });
 
   final String listName;
   final List<String>? videoIds;
   final String? authorPubkey;
+
+  /// The relay-discovered record, when the caller holds it.
+  ///
+  /// Lets the screen share and describe a list the local store has never
+  /// seen, before a Follow caches it, the way a deep link by author does. A
+  /// warm-start hint like the rest: a restored or linked route arrives
+  /// without it and the screen falls back to the id.
+  final CuratedList? list;
 }

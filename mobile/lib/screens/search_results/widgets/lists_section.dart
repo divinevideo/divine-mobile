@@ -375,6 +375,7 @@ void _navigateToCuratedList(BuildContext context, CuratedList list) {
         listName: list.name,
         videoIds: list.videoEventIds,
         authorPubkey: list.pubkey,
+        list: list,
       ),
     ),
     'open curated list search result',

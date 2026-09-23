@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/search_results/widgets/lists_section.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
@@ -211,6 +212,62 @@ void main() {
           ).called(1);
         },
       );
+
+      testWidgets('a video result navigates with its record riding along', (
+        tester,
+      ) async {
+        // The record lets the list screen share and describe a list the
+        // local store has never seen, before a Follow caches it.
+        final goRouter = MockGoRouter();
+        when(
+          () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
+        when(() => mockBloc.state).thenReturn(
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'test',
+            videoResults: [testList],
+          ),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [...getStandardTestOverrides()],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SizedBox(
+                  width: 800,
+                  height: 1000,
+                  child: BlocProvider<ListSearchBloc>.value(
+                    value: mockBloc,
+                    child: MockGoRouterProvider(
+                      goRouter: goRouter,
+                      child: const CustomScrollView(
+                        slivers: [ListsSection()],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text(testList.name));
+
+        final extra =
+            verify(
+                  () => goRouter.push<void>(
+                    '/list/${Uri.encodeComponent(testList.id)}',
+                    extra: captureAny(named: 'extra'),
+                  ),
+                ).captured.single
+                as CuratedListRouteExtra;
+        expect(extra.list, same(testList));
+      });
     });
 
     testWidgets('retry dispatches $ListSearchQueryChanged with current query', (
