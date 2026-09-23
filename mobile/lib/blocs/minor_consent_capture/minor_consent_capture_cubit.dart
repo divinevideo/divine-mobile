@@ -99,11 +99,25 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     emit(const MinorConsentCaptureIdle());
   }
 
+  /// Releases the camera once a clip has been accepted for submission.
+  ///
+  /// The captured file stays on disk and remains usable for upload; only the
+  /// live camera session and the recorder are torn down. Idempotent, and
+  /// [close] tolerates a recorder that was already released here.
+  Future<void> releaseRecorder() async {
+    if (_disposed || isClosed) return;
+    _disposed = true;
+    if (state is MinorConsentCaptureRecording) {
+      await _recorder.stop();
+    }
+    await _recorder.dispose();
+  }
+
   /// Stops an in-flight recording and releases the camera.
   ///
   /// A clip stopped here is never emitted, so a parent who leaves mid-recording
   /// cannot have it submitted. Idempotent: the recorder and its provider both
-  /// call it.
+  /// call it, and [releaseRecorder] may have disposed it already.
   @override
   Future<void> close() async {
     if (_disposed) return super.close();
