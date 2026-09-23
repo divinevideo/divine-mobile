@@ -42,7 +42,10 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   Future<void> loadConnections() async {
     emit(state.copyWith(status: VideoCrosspostStatus.loadingConnections));
     try {
-      final connections = await _client.getConnections();
+      final connections = [
+        for (final connection in await _client.getConnections())
+          if (connection.platform.isVisibleInApp) connection,
+      ];
       if (isClosed) return;
       emit(
         state.copyWith(

@@ -208,13 +208,13 @@ void main() {
       () async {
         const reauth = CrosspostingConnection(
           id: 'reauth',
-          platform: CrosspostingPlatform.x,
+          platform: CrosspostingPlatform.tiktok,
           status: CrosspostingConnectionStatus.needsReauth,
         );
         when(apiClient.getPlatforms).thenAnswer(
           (_) async => const [
             CrosspostingPlatformInfo(
-              platform: CrosspostingPlatform.x,
+              platform: CrosspostingPlatform.tiktok,
               enabled: true,
               supportsAutomatic: true,
             ),
@@ -224,7 +224,7 @@ void main() {
           (_) async => const [
             CrosspostingConnection(
               id: 'disconnected',
-              platform: CrosspostingPlatform.x,
+              platform: CrosspostingPlatform.tiktok,
               status: CrosspostingConnectionStatus.disconnected,
             ),
             reauth,
@@ -233,7 +233,7 @@ void main() {
         when(apiClient.getPreferences).thenAnswer(
           (_) async => const [
             CrosspostingPreference(
-              platform: CrosspostingPlatform.x,
+              platform: CrosspostingPlatform.tiktok,
               mode: CrosspostingMode.disabled,
               connectionId: 'missing',
             ),
@@ -250,7 +250,7 @@ void main() {
       when(apiClient.getPlatforms).thenAnswer(
         (_) async => const [
           CrosspostingPlatformInfo(
-            platform: CrosspostingPlatform.x,
+            platform: CrosspostingPlatform.tiktok,
             enabled: true,
             supportsAutomatic: true,
           ),
@@ -259,8 +259,8 @@ void main() {
       when(apiClient.getConnections).thenAnswer(
         (_) async => const [
           CrosspostingConnection(
-            id: 'old-x',
-            platform: CrosspostingPlatform.x,
+            id: 'old-tiktok',
+            platform: CrosspostingPlatform.tiktok,
             status: CrosspostingConnectionStatus.disconnected,
           ),
         ],
@@ -279,7 +279,7 @@ void main() {
         when(apiClient.getPlatforms).thenAnswer(
           (_) async => const [
             CrosspostingPlatformInfo(
-              platform: CrosspostingPlatform.x,
+              platform: CrosspostingPlatform.tiktok,
               enabled: true,
               supportsAutomatic: false,
             ),
@@ -289,7 +289,7 @@ void main() {
         when(apiClient.getPreferences).thenAnswer(
           (_) async => const [
             CrosspostingPreference(
-              platform: CrosspostingPlatform.x,
+              platform: CrosspostingPlatform.tiktok,
               mode: CrosspostingMode.automatic,
             ),
           ],
@@ -299,11 +299,37 @@ void main() {
 
         // The load no longer throws; the stale preference degrades to manual so
         // one inconsistent server value cannot brick the settings screen.
-        expect(settings.single.platform, CrosspostingPlatform.x);
+        expect(settings.single.platform, CrosspostingPlatform.tiktok);
         expect(settings.single.supportsAutomatic, isFalse);
         expect(settings.single.mode, CrosspostingMode.manual);
       },
     );
+
+    test('drops platforms that are not visible in the app', () async {
+      when(apiClient.getPlatforms).thenAnswer(
+        (_) async => const [
+          CrosspostingPlatformInfo(
+            platform: CrosspostingPlatform.instagram,
+            enabled: true,
+            supportsAutomatic: true,
+          ),
+          CrosspostingPlatformInfo(
+            platform: CrosspostingPlatform.x,
+            enabled: true,
+            supportsAutomatic: true,
+          ),
+        ],
+      );
+      when(apiClient.getConnections).thenAnswer((_) async => const []);
+      when(apiClient.getPreferences).thenAnswer((_) async => const []);
+
+      final entries = await repository.loadSettings();
+
+      expect(
+        entries.map((entry) => entry.platform),
+        equals([CrosspostingPlatform.instagram]),
+      );
+    });
   });
 
   test('platform settings are immutable values with mode copyWith', () {
