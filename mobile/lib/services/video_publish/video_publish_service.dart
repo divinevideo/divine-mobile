@@ -81,14 +81,24 @@ class PublishScheduled extends PublishResult {
     required this.eventId,
     required this.publishAt,
     required this.submitted,
+    this.audioReuseDegraded = false,
   });
 
   final String eventId;
   final DateTime publishAt;
   final bool submitted;
 
+  /// As [PublishSuccess.audioReuseDegraded]. The signed event is final, so
+  /// unlike a failed immediate publish no retry can restore the sound.
+  final bool audioReuseDegraded;
+
   @override
-  List<Object?> get props => [eventId, publishAt, submitted];
+  List<Object?> get props => [
+    eventId,
+    publishAt,
+    submitted,
+    audioReuseDegraded,
+  ];
 }
 
 /// A failed publish, classified by [kind] so the UI can localize it.
@@ -569,6 +579,7 @@ class VideoPublishService {
             upload: pendingUpload,
             event: signedForLater,
             publishAt: scheduledAt,
+            audioReuseDegraded: audioReuseDegraded,
           ),
         );
         onProgressChanged(draftId: draft.id, progress: 1);
@@ -629,6 +640,7 @@ class VideoPublishService {
     required PendingUpload upload,
     required Event event,
     required DateTime publishAt,
+    required bool audioReuseDegraded,
   }) async {
     final repository = scheduledPostsRepository!;
     await repository.enqueue(
@@ -645,6 +657,7 @@ class VideoPublishService {
           eventId: event.id,
           publishAt: publishAt,
           submitted: true,
+          audioReuseDegraded: audioReuseDegraded,
         );
       case ScheduledPostSubmitOutcome.retryLater:
         Log.warning(
@@ -656,6 +669,7 @@ class VideoPublishService {
           eventId: event.id,
           publishAt: publishAt,
           submitted: false,
+          audioReuseDegraded: audioReuseDegraded,
         );
       case ScheduledPostSubmitOutcome.rejected:
         Log.error(

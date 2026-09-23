@@ -2958,7 +2958,12 @@ void main() {
       /// Answers `publishVideoEvent` the way the real publisher does for a
       /// scheduled post: signs for the requested time and hands it back.
       /// [handsOver] false breaks that contract: true, but no event.
-      Event stubScheduledSigning({bool handsOver = true}) {
+      /// [degradesAudio] reports the sound dropped, as the publisher does
+      /// before handing the event over.
+      Event stubScheduledSigning({
+        bool handsOver = true,
+        bool degradesAudio = false,
+      }) {
         final signed = Event(
           'a' * 64,
           34236,
@@ -2999,6 +3004,11 @@ void main() {
             onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
           ),
         ).thenAnswer((invocation) async {
+          if (degradesAudio) {
+            (invocation.namedArguments[#onAudioReuseDegraded]
+                    as void Function()?)
+                ?.call();
+          }
           final onSigned =
               invocation.namedArguments[#onScheduledEventSigned]
                   as void Function(Event)?;
@@ -3129,6 +3139,28 @@ void main() {
           );
         },
       );
+
+      test('reports a sound the scheduled event had to drop', () async {
+        final signed = stubScheduledSigning(degradesAudio: true);
+        when(
+          () => repository.submit(signed.id),
+        ).thenAnswer((_) async => const ScheduledPostSubmitResult.submitted());
+        final draft = _createTestDraft().copyWith(
+          scheduledAt: publishAt,
+          skipUpdateLastModified: true,
+        );
+
+        final result = await scheduledService().publishVideo(draft: draft);
+
+        expect(
+          result,
+          isA<PublishScheduled>().having(
+            (r) => r.audioReuseDegraded,
+            'audioReuseDegraded',
+            isTrue,
+          ),
+        );
+      });
 
       test('keeps the post locally when the relay cannot be reached', () async {
         final signed = stubScheduledSigning();

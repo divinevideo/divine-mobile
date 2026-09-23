@@ -683,13 +683,20 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
             _showAudioReuseDegradedWarning();
           }
 
-        case PublishScheduled(:final eventId, :final publishAt):
+        case PublishScheduled(
+          :final eventId,
+          :final publishAt,
+          :final audioReuseDegraded,
+        ):
           await creationTracker.publishSucceeded(recorderMode);
           Log.info(
             '📅 Video scheduled: $eventId for ${publishAt.toIso8601String()}',
             name: 'VideoPublishNotifier',
             category: .video,
           );
+          if (audioReuseDegraded) {
+            _showAudioReuseDegradedWarning();
+          }
 
         case PublishError(:final kind, :final serverName, :final rawFallback):
           final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
