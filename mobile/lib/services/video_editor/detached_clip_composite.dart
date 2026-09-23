@@ -127,8 +127,8 @@ PartitionedLayers partitionDetachedClipLayers(
 /// the sum to a single division that is well conditioned at every angle:
 /// `(1 + aspectRatio) * (c + s)` never drops below `1 + aspectRatio`.
 ///
-/// Both measured dimensions feed the result rather than just one, so a pixel
-/// of layout rounding in either is halved instead of carried through whole.
+/// The recovery uses the sum of the measured dimensions, with the clip's
+/// aspect ratio supplying the constraint that separates width from height.
 @visibleForTesting
 Size unrotatedLayerBox({
   required Size boundingBox,
