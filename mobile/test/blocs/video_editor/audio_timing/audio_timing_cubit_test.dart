@@ -3,9 +3,9 @@
 // ABOUTME: and start offset calculation using mocktail AudioClipPlayer mocks.
 
 import 'dart:async';
-import 'dart:ui' show Size;
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -478,6 +478,29 @@ void main() {
                   as AudioSourceConfig;
           expect(captured.isAsset, isTrue);
           expect(captured.isFile, isFalse);
+        },
+      );
+
+      blocTest<AudioTimingCubit, AudioTimingState>(
+        'swallows a clip the platform cannot open',
+        build: () {
+          // `(-11828) Cannot Open` is what AVFoundation answers for a clip
+          // it cannot read. It reaches `resumePlayback` through
+          // `AudioPlayer.load`; while that method did not share
+          // `_loadAndPlayAudio`'s guard it escaped to the uncaught-zone
+          // reporter on every drag-to-resume.
+          when(() => mockClipPlayer.setClip(any())).thenThrow(
+            PlatformException(code: '-11828', message: 'Cannot Open'),
+          );
+          return buildCubit();
+        },
+        seed: () => const AudioTimingState(audioDuration: 20, startOffset: 0.5),
+        act: (cubit) => cubit.resumePlayback(),
+        expect: () => const <AudioTimingState>[],
+        errors: () => const <Object>[],
+        verify: (_) {
+          verify(() => mockClipPlayer.setClip(any())).called(1);
+          verifyNever(() => mockClipPlayer.play());
         },
       );
     });
