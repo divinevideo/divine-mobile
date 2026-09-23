@@ -122,6 +122,12 @@ void main() {
       ),
     ).thenAnswer((_) async => true);
     when(
+      () => draftService.updateScheduledAt(
+        draftId: any(named: 'draftId'),
+        scheduledAt: any(named: 'scheduledAt'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
       () => inviteService.sendInvites(
         collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
         creatorPubkey: any(named: 'creatorPubkey'),
@@ -577,6 +583,70 @@ void main() {
         expect(await repository.getById(event.id), isNotNull);
       });
 
+      test(
+        'keeps this device from publishing a post it could not withdraw',
+        () async {
+          final event = buildEvent();
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          when(() => client.cancel(event.id)).thenAnswer(
+            (_) async => const ScheduleCancelTransientFailure(
+              'http_404',
+              unavailable: true,
+            ),
+          );
+          expect(
+            await coordinator.cancel(event.id),
+            ScheduledPostActionOutcome.unavailable,
+          );
+
+          // Past the fallback grace: without the withdrawal on record this
+          // device would broadcast the post its owner just took back.
+          now = publishAt.add(const Duration(minutes: 10));
+          await coordinator.sweep(force: true);
+
+          expect(broadcasts, isEmpty);
+          expect(await repository.getById(event.id), isNotNull);
+        },
+      );
+
+      test('withdraws on a later sweep once the relay answers again', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(() => client.cancel(event.id)).thenAnswer(
+          (_) async => const ScheduleCancelTransientFailure(
+            'http_404',
+            unavailable: true,
+          ),
+        );
+        await coordinator.cancel(event.id);
+
+        when(
+          () => client.cancel(event.id),
+        ).thenAnswer((_) async => const ScheduleCancelled());
+        now = publishAt.add(const Duration(minutes: 10));
+        await coordinator.sweep(force: true);
+
+        expect(broadcasts, isEmpty);
+        expect(await repository.getById(event.id), isNull);
+        verify(
+          () => draftService.updateScheduledAt(draftId: 'draft-1'),
+        ).called(1);
+      });
+
+      test('clears the draft of the time it was withdrawn from', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(
+          () => client.cancel(event.id),
+        ).thenAnswer((_) async => const ScheduleCancelled());
+
+        await coordinator.cancel(event.id);
+
+        verify(
+          () => draftService.updateScheduledAt(draftId: 'draft-1'),
+        ).called(1);
+      });
+
       test('refuses for another account', () async {
         final event = buildEvent();
         await enqueue(event);
@@ -646,6 +716,25 @@ void main() {
           (await repository.list()).single.status,
           ScheduledPostStatus.failed,
         );
+      });
+
+      test('moves the draft onto the time the post was moved to', () async {
+        stubAccepted();
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(
+          () => client.cancel(event.id),
+        ).thenAnswer((_) async => const ScheduleCancelled());
+        final moved = publishAt.add(const Duration(days: 1));
+
+        await coordinator.reschedule(event.id, moved);
+
+        verify(
+          () => draftService.updateScheduledAt(
+            draftId: 'draft-1',
+            scheduledAt: moved,
+          ),
+        ).called(1);
       });
 
       test('holds a new time the relay cannot take yet as done', () async {

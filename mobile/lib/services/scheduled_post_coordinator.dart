@@ -286,9 +286,22 @@ class ScheduledPostCoordinator {
     }
     if (_stop) return;
 
+    if (_withdrawing.isNotEmpty) {
+      for (final eventId in _withdrawing.toList()) {
+        if (_stop) return;
+        if (_acting.contains(eventId)) continue;
+        await cancel(eventId);
+      }
+      if (_stop) return;
+      // A withdrawal that landed deletes its row, and the list read above
+      // still holds it: re-read before deciding what to broadcast.
+      pending = await _repository.pending();
+    }
+    if (_stop) return;
     for (final post in _repository.dueForClientPublish(pending, _now())) {
       if (_stop) return;
       if (_acting.contains(post.eventId)) continue;
+      if (_withdrawing.contains(post.eventId)) continue;
       await _publishHeldPost(post);
     }
   }
@@ -375,6 +388,7 @@ class ScheduledPostCoordinator {
   /// The post is live: echo it locally, send the collaborator invites that
   /// waited for it, and retire the draft copy and the outbox row.
   Future<void> _finalizePublished(ScheduledPost post) async {
+    _withdrawing.remove(post.eventId);
     final event = ScheduledPostsRepository.decodeEvent(post);
     try {
       await _recordPublish(event, uploadId: post.uploadId);
@@ -401,6 +415,7 @@ class ScheduledPostCoordinator {
   /// unless another row still holds it — a move hands the draft to its
   /// replacement before the old row goes.
   Future<void> _finalizeCancelled(ScheduledPost post) async {
+    _withdrawing.remove(post.eventId);
     final stillHeld = (await _repository.list()).any(
       (other) =>
           other.draftId == post.draftId &&
@@ -412,6 +427,9 @@ class ScheduledPostCoordinator {
         draftId: post.draftId,
         status: PublishStatus.draft,
       );
+      // Withdrawn means the creator no longer wants that time. Leaving it on
+      // the draft pre-fills Post details with the schedule they just undid.
+      await _draftService.updateScheduledAt(draftId: post.draftId);
     }
     await _repository.delete(post.eventId);
   }
@@ -509,6 +527,14 @@ class ScheduledPostCoordinator {
   }
 
   /// Withdraws [eventId] and returns its draft to the Drafts list.
+  /// Rows the creator withdrew while the relay could not be reached.
+  ///
+  /// The relay may still publish them, so the row is left alone and the
+  /// DELETE retried; this only stops *this* device's fallback from
+  /// broadcasting a post its owner already asked to take back. In memory
+  /// only: after a restart the retried DELETE is the sole line of defence.
+  final Set<String> _withdrawing = <String>{};
+
   Future<ScheduledPostActionOutcome> cancel(String eventId) async {
     if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
     return _whileHolding(eventId, (_) async {
@@ -523,6 +549,11 @@ class ScheduledPostCoordinator {
           await _finalizePublished(post);
           return ScheduledPostActionOutcome.alreadyPublished;
         case ScheduledPostCancelOutcome.unavailable:
+          // The relay never heard the withdrawal, so the row stays as it is
+          // and a later sweep tries the DELETE again. What must not happen
+          // meanwhile is this device publishing the post the creator just
+          // withdrew: the fallback skips a row while its cancel is pending.
+          _withdrawing.add(eventId);
           return ScheduledPostActionOutcome.unavailable;
         case ScheduledPostCancelOutcome.failure:
           return ScheduledPostActionOutcome.failed;
@@ -567,6 +598,12 @@ class ScheduledPostCoordinator {
         expireAfterSecs: post.expireAfterSecs,
       );
       await _repository.delete(post.eventId);
+      // Keep the draft's remembered time on the post's: a later withdrawal
+      // hands it back offering the time it actually had, not the first one.
+      await _draftService.updateScheduledAt(
+        draftId: post.draftId,
+        scheduledAt: newPublishAt,
+      );
       return _outcomeOfHandOff(await _repository.submit(signed.id));
     });
   }
