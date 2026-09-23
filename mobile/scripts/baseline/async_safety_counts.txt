@@ -17,11 +17,6 @@ discarded_futures|lib/screens/apps/app_detail_screen.dart	1
 discarded_futures|lib/screens/apps/apps_directory_screen.dart	1
 discarded_futures|lib/screens/apps/apps_permissions_screen.dart	1
 discarded_futures|lib/screens/apps/nostr_app_sandbox_screen.dart	1
-discarded_futures|lib/screens/auth/create_account_screen.dart	1
-discarded_futures|lib/screens/auth/login_options_screen.dart	2
-discarded_futures|lib/screens/auth/nostr_connect_screen.dart	3
-discarded_futures|lib/screens/auth/secure_account_screen.dart	2
-discarded_futures|lib/screens/auth/welcome_screen.dart	3
 discarded_futures|lib/screens/category_gallery_screen.dart	2
 discarded_futures|lib/screens/comments/comments_screen.dart	1
 discarded_futures|lib/screens/comments/widgets/pending_video_reply_tile.dart	1
@@ -140,9 +135,7 @@ discarded_futures|test/providers/subtitle_visibility_test.dart	1
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
 discarded_futures|test/router/providers/tab_history_provider_test.dart	1
-discarded_futures|test/screens/auth/email_verification_screen_test.dart	1
 discarded_futures|test/screens/feed/feed_mode_switch_test.dart	2
-discarded_futures|test/services/auth/oauth_session_coordinator_test.dart	6
 discarded_futures|test/services/auth_service_bootstrap_relay_list_test.dart	2
 discarded_futures|test/services/auth_service_signout_cleanup_test.dart	1
 discarded_futures|test/services/crossposting_api_client_test.dart	1
@@ -163,9 +156,6 @@ discarded_futures|test/widgets/video_metadata/video_metadata_help_sheet_test.dar
 discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
-unawaited_futures|lib/screens/auth/create_account_screen.dart	1
-unawaited_futures|lib/screens/auth/nostr_connect_screen.dart	2
-unawaited_futures|lib/screens/auth/secure_account_screen.dart	1
 unawaited_futures|lib/screens/feed/video_feed_page.dart	1
 unawaited_futures|lib/screens/verify/verify_screen.dart	1
 unawaited_futures|lib/screens/video_metadata/video_metadata_cover_screen.dart	3

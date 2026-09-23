@@ -14,6 +14,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/auth/auth_error_box.dart';
 import 'package:openvine/widgets/auth/auth_form_scaffold.dart';
@@ -53,15 +54,25 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
   void _onConflictSignIn() {
     // Push (not go) so a failed sign-in pops back here, where the
     // "Contact support" fallback is still available.
-    context.push(
-      WelcomeScreen.loginOptionsPathWithRecovery(
-        email: _emailController.text.trim(),
+    runDetached(
+      context.push<void>(
+        WelcomeScreen.loginOptionsPathWithRecovery(
+          email: _emailController.text.trim(),
+        ),
       ),
+      'open sign-in recovery',
+      logName: 'SecureAccountScreen',
+      category: LogCategory.auth,
     );
   }
 
   void _onConflictContactSupport() {
-    context.push(SupportCenterScreen.path);
+    runDetached(
+      context.push<void>(SupportCenterScreen.path),
+      'open support center',
+      logName: 'SecureAccountScreen',
+      category: LogCategory.ui,
+    );
   }
 
   @override
@@ -173,10 +184,15 @@ class _SecureAccountScreenState extends ConsumerState<SecureAccountScreen> {
         });
         // Announce the new recovery state so a screen-reader user knows
         // registration hit a recoverable conflict.
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          context.l10n.authSecureAccountAlreadyRegistered,
-          Directionality.of(context),
+        runDetached(
+          SemanticsService.sendAnnouncement(
+            View.of(context),
+            context.l10n.authSecureAccountAlreadyRegistered,
+            Directionality.of(context),
+          ),
+          'announce account conflict',
+          logName: 'SecureAccountScreen',
+          category: LogCategory.auth,
         );
         return;
       }

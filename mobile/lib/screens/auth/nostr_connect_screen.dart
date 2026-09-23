@@ -15,6 +15,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -61,7 +62,15 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
 
   @override
   void dispose() {
-    _stateSubscription?.cancel();
+    final stateSubscription = _stateSubscription;
+    if (stateSubscription != null) {
+      runDetached(
+        stateSubscription.cancel(),
+        'cancel signer state subscription',
+        logName: 'NostrConnectScreen',
+        category: LogCategory.auth,
+      );
+    }
     _uiTimer?.cancel();
     _elapsedTimer.stop();
     // Android can route the signer callback through GoRouter before the
@@ -85,13 +94,26 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
       return;
     }
 
-    _startSession();
+    runDetached(
+      _startSession(),
+      'start signer connection',
+      logName: 'NostrConnectScreen',
+      category: LogCategory.auth,
+    );
   }
 
   void _resumeActiveSession(String activeUrl, NostrConnectState activeState) {
     _authService.claimNostrConnectCallbackHandoff();
     final attempt = ++_sessionAttempt;
-    unawaited(_stateSubscription?.cancel());
+    final stateSubscription = _stateSubscription;
+    if (stateSubscription != null) {
+      runDetached(
+        stateSubscription.cancel(),
+        'cancel previous signer state subscription',
+        logName: 'NostrConnectScreen',
+        category: LogCategory.auth,
+      );
+    }
     _stateSubscription = null;
     _uiTimer?.cancel();
     _uiTimer = null;
@@ -121,7 +143,12 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
         _sessionState = state;
       });
       if (state == NostrConnectState.listening) {
-        unawaited(_waitForConnection(attempt));
+        runDetached(
+          _waitForConnection(attempt),
+          'wait for resumed signer connection',
+          logName: 'NostrConnectScreen',
+          category: LogCategory.auth,
+        );
       }
     });
 
@@ -130,7 +157,12 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
     });
 
     if (activeState == NostrConnectState.listening) {
-      unawaited(_waitForConnection(attempt));
+      runDetached(
+        _waitForConnection(attempt),
+        'wait for resumed signer connection',
+        logName: 'NostrConnectScreen',
+        category: LogCategory.auth,
+      );
     }
   }
 
@@ -179,7 +211,12 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
       });
 
       // Start waiting for the connection
-      _waitForConnection(attempt);
+      runDetached(
+        _waitForConnection(attempt),
+        'wait for signer connection',
+        logName: 'NostrConnectScreen',
+        category: LogCategory.auth,
+      );
     } catch (e) {
       Log.error(
         'Failed to start nostrconnect session: $e',
@@ -232,7 +269,12 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
 
   void _retry() {
     _elapsedTimer.reset();
-    _startSession();
+    runDetached(
+      _startSession(),
+      'retry signer connection',
+      logName: 'NostrConnectScreen',
+      category: LogCategory.auth,
+    );
   }
 
   Future<void> _copyUrl() async {
@@ -356,7 +398,8 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
     _switchedToBunker = true;
     _sessionAttempt++;
     _authService.cancelNostrConnect();
-    _stateSubscription?.cancel();
+    await _stateSubscription?.cancel();
+    _stateSubscription = null;
     _uiTimer?.cancel();
     _elapsedTimer.stop();
 

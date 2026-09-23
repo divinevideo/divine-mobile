@@ -228,23 +228,29 @@ void main() {
           ).thenAnswer((_) => Completer<KeycastSession?>().future);
 
           final coordinator = build();
-          coordinator.refreshSession(timeout: const Duration(hours: 1));
+          unawaited(
+            coordinator
+                .refreshSession(timeout: const Duration(hours: 1))
+                .catchError((Object _) => null),
+          );
 
           Object? joinedError;
           var joinedDone = false;
-          coordinator
-              .refreshSession(timeout: const Duration(milliseconds: 50))
-              .then(
-                (_) {
-                  joinedDone = true;
-                  return null;
-                },
-                onError: (Object error) {
-                  joinedError = error;
-                  joinedDone = true;
-                  return null;
-                },
-              );
+          unawaited(
+            coordinator
+                .refreshSession(timeout: const Duration(milliseconds: 50))
+                .then(
+                  (_) {
+                    joinedDone = true;
+                    return null;
+                  },
+                  onError: (Object error) {
+                    joinedError = error;
+                    joinedDone = true;
+                    return null;
+                  },
+                ),
+          );
 
           async.elapse(const Duration(milliseconds: 51));
 
@@ -275,14 +281,16 @@ void main() {
 
           Object? firstError;
           var firstDone = false;
-          coordinator.refreshSession().then(
-            (_) {
-              firstDone = true;
-            },
-            onError: (Object error) {
-              firstError = error;
-              firstDone = true;
-            },
+          unawaited(
+            coordinator.refreshSession().then(
+              (_) {
+                firstDone = true;
+              },
+              onError: (Object error) {
+                firstError = error;
+                firstDone = true;
+              },
+            ),
           );
 
           async.elapse(oauthTimeout + const Duration(milliseconds: 1));
@@ -291,7 +299,7 @@ void main() {
           expect(calls, equals(1));
 
           // Slot released: a fresh call issues a new client request.
-          coordinator.refreshSession();
+          unawaited(coordinator.refreshSession());
           async.flushMicrotasks();
           expect(calls, equals(2));
         });
@@ -366,20 +374,24 @@ void main() {
           var secondAttemptRan = false;
 
           bool? firstResult;
-          coordinator
-              .refreshExpiredSession(
-                attempt: () => Completer<bool>().future, // hangs
-              )
-              .then((r) => firstResult = r);
+          unawaited(
+            coordinator
+                .refreshExpiredSession(
+                  attempt: () => Completer<bool>().future, // hangs
+                )
+                .then((r) => firstResult = r),
+          );
 
           async.elapse(expiredTimeout + const Duration(milliseconds: 1));
           expect(firstResult, isFalse);
 
-          coordinator.refreshExpiredSession(
-            attempt: () async {
-              secondAttemptRan = true;
-              return true;
-            },
+          unawaited(
+            coordinator.refreshExpiredSession(
+              attempt: () async {
+                secondAttemptRan = true;
+                return true;
+              },
+            ),
           );
           async.flushMicrotasks();
           expect(secondAttemptRan, isTrue);
