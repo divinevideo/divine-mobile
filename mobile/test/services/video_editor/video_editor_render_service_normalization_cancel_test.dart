@@ -192,6 +192,35 @@ void main() {
       );
     });
 
+    test('keeps a cancel that lands during normalization when renderVideo '
+        'owns the generation itself (a preview seam, #9347)', () async {
+      // No generation is started here: a preview seam calls renderVideo on
+      // its own, and the watchdog's cancel has to be kept from the first
+      // normalized clip on, not only once the concatenation registers.
+      const seamTaskId = 'seam-task';
+      final plugin = _MockProVideoEditor(
+        resolutions: resolutions,
+        onRender: (_) => RenderCancellationRegistry.cancel(seamTaskId),
+      );
+      ProVideoEditor.instance = plugin;
+
+      final outputPath = await VideoEditorRenderService.renderVideo(
+        clips: clips,
+        aspectRatio: model.AspectRatio.vertical,
+        taskId: seamTaskId,
+      );
+
+      expect(plugin.renderedTaskIds, ['clip-a_normalized']);
+      expect(outputPath, isNull);
+      expect(
+        VideoEditorRenderService.isTaskCancellationRequestedForTesting(
+          seamTaskId,
+        ),
+        isFalse,
+        reason: 'renderVideo must retire the generation it started',
+      );
+    });
+
     test(
       'deletes earlier normalized clips when a later clip is cancelled',
       () async {

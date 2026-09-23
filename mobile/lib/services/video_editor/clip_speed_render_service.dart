@@ -8,8 +8,10 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show EditorVideo, ProVideoEditor, VideoRenderData, VideoSegment;
@@ -41,6 +43,10 @@ class ClipSpeedRenderService {
   final _cache = <String, RenderedSpeedClip>{};
   final _inFlight = <String, Future<RenderedSpeedClip?>>{};
   int _clearGeneration = 0;
+
+  /// Process-wide count of native speed renders started, so every attempt
+  /// gets a task id of its own — see [_nativeTaskId].
+  static int _renderAttempts = 0;
 
   /// True while a speed body for this clip is being rendered.
   bool isRendering(DivineVideoClip clip) => _inFlight.containsKey(_key(clip));
@@ -177,22 +183,36 @@ class ClipSpeedRenderService {
         // backlog from encoding bodies nobody will play — the case that kept
         // the encoder busy for ~20s after the editor was torn down.
         if (_isStale(renderGeneration)) return null;
-        await VideoEditorRenderService.renderNativeVideoToFile(
-          tempOutput,
-          VideoRenderData(
-            id: 'speed_$hash',
-            videoSegments: [
-              VideoSegment(
-                video: video,
-                startTime: clip.trimStart == Duration.zero
-                    ? null
-                    : clip.trimStart,
-                endTime: clip.trimStart + clip.trimmedDuration,
-                playbackSpeed: clip.playbackSpeed,
-              ),
-            ],
-            shouldOptimizeForNetworkUse: true,
+        // Bounded while it holds the slot: a render that stalls inside
+        // `pro_video_editor`'s setup stage never settles on its own
+        // (hm21/pro_video_editor#201), and an unbounded await here kept one of
+        // the [_maxConcurrentRenders] slots for the rest of the session
+        // (#9347). The timeout throws through `finally`, which hands the slot
+        // on, and the outer catch drops the key so the clip is retried on the
+        // next timeline change.
+        final taskId = _nativeTaskId(hash);
+        await VideoRenderWatchdog.run(
+          render: VideoEditorRenderService.renderNativeVideoToFile(
+            tempOutput,
+            VideoRenderData(
+              id: taskId,
+              videoSegments: [
+                VideoSegment(
+                  video: video,
+                  startTime: clip.trimStart == Duration.zero
+                      ? null
+                      : clip.trimStart,
+                  endTime: clip.trimStart + clip.trimmedDuration,
+                  playbackSpeed: clip.playbackSpeed,
+                ),
+              ],
+              shouldOptimizeForNetworkUse: true,
+            ),
           ),
+          taskId: taskId,
+          cancelTask: VideoEditorRenderService.cancelTask,
+          timeout: VideoEditorConstants.previewRenderWatchdogTimeout,
+          reason: 'clip speed render timed out',
         );
       } finally {
         _releaseRenderSlot();
@@ -375,6 +395,16 @@ class ClipSpeedRenderService {
       'v$_cacheVersion|${clip.video?.file?.path}:'
       '${clip.duration.inMicroseconds}:${clip.trimStart.inMicroseconds}:'
       '${clip.trimEnd.inMicroseconds}:${clip.playbackSpeed ?? 1.0}';
+
+  /// The native task id for one render attempt of the body hashed as [hash].
+  ///
+  /// Distinct per attempt on purpose. A retry that restarts a cancelled id
+  /// waits in `pro_video_editor`'s job registry until the cancelled pipeline
+  /// reports back — and the stalled setup stage the watchdog cancels never
+  /// does, so a retry under the same id would hang behind it for good. The
+  /// hash stays in the id so a log line still names the body it was
+  /// rendering.
+  String _nativeTaskId(String hash) => 'speed_${hash}_${++_renderAttempts}';
 
   /// Deterministic on-disk path for a rendered body, keyed by [hash] so the same
   /// clip + trims + speed can reuse a temp-cache file while it remains valid.
