@@ -196,6 +196,40 @@ void main() {
       expect(find.text(l10n.crosspostReconnect), findsOneWidget);
     });
 
+    testWidgets('reconnect runs the supplied callback', (tester) async {
+      var reconnected = false;
+      when(() => cubit.state).thenReturn(
+        const VideoCrosspostState(
+          status: VideoCrosspostStatus.finished,
+          jobs: [
+            CrosspostJob(
+              id: 'job-1',
+              platform: 'instagram',
+              status: CrosspostJobStatus.needsReauth,
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<VideoCrosspostCubit>.value(
+              value: cubit,
+              child: CrosspostSheetView(onReconnect: () => reconnected = true),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text(l10n.crosspostReconnect));
+      await tester.pump();
+
+      expect(reconnected, isTrue);
+    });
+
     testWidgets('shows still-working note when polling timed out', (
       tester,
     ) async {

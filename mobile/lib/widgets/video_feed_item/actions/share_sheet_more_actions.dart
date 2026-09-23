@@ -53,15 +53,6 @@ class _MoreActionsSection extends ConsumerWidget {
 
     final isSaved = bookmarkStatus == ShareSheetBookmarkStatus.saved;
 
-    // The crosspost action only appears once the connections fetch
-    // reports at least one connected platform.
-    var connectedCrosspostPlatforms = const <String>[];
-    if (onCrosspost != null) {
-      connectedCrosspostPlatforms = context.select(
-        (VideoCrosspostCubit cubit) => cubit.state.connectedPlatforms,
-      );
-    }
-
     final actions = <_ActionData>[
       if (onEditVideo != null)
         _ActionData(
@@ -106,7 +97,7 @@ class _MoreActionsSection extends ConsumerWidget {
           label: context.l10n.shareSheetAddToClips,
           onTap: onAddVideoToClips!,
         ),
-      if (onCrosspost != null && connectedCrosspostPlatforms.isNotEmpty)
+      if (onCrosspost != null)
         _ActionData(
           icon: DivineIconName.arrowsClockwise,
           label: context.l10n.shareSheetCrosspost,
