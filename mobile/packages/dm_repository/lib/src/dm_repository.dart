@@ -2301,11 +2301,13 @@ class DmRepository {
   /// deliberately does not arm one: that budget resumes on the next inbox
   /// open by design. See #8550.
   void _resumeDrainWhenRelayConnects(String pubkey, int generation) {
+    // A drain that outlived its session must not cancel the retry the current
+    // session armed; _resetState already cancelled the stale session's own.
+    if (_ingestSessionEnded(pubkey, generation)) return;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
-    if (_ingestSessionEnded(pubkey, generation)) return;
     if (_automaticDrainRetryCount >=
         DmHistoryDrainConfig.deferredRetryDelays.length) {
       Log.warning(

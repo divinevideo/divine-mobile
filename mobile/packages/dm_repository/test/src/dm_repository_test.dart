@@ -9208,9 +9208,19 @@ void main() {
               ),
             ).thenAnswer((_) {
               nip04Reads++;
-              return nip04Reads == 1
-                  ? oldAccountRead.future
-                  : Future<QueryResult>.value(refusal);
+              return switch (nip04Reads) {
+                1 => oldAccountRead.future,
+                // The new account's first sweep sees no refusal at all.
+                2 => Future<QueryResult>.value(
+                  const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.deadline,
+                    answeredNetworkRelayCount: 1,
+                    unansweredRelayCount: 1,
+                  ),
+                ),
+                _ => Future<QueryResult>.value(refusal),
+              };
             });
 
             final syncState = armedSyncState();
@@ -9225,27 +9235,85 @@ void main() {
               signer: LocalNostrSigner(_validPrivateKey),
               messageService: mockMessageService,
             );
-            oldAccountRead.complete(refusal);
-            async.flushMicrotasks();
-
             unawaited(repository.backfillHistoryIfNeeded());
             async.flushMicrotasks();
-
             expect(nip04Reads, 2);
-            expect(
-              syncState.markedCompletePubkeys,
-              isEmpty,
-              reason: 'new account sees its first refusal as unconfirmed',
-            );
 
+            // The old account's sweep settles after the new session's first
+            // sweep, with a refusal the new account has not seen yet.
+            oldAccountRead.complete(refusal);
             async
+              ..flushMicrotasks()
               ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
               ..flushMicrotasks();
 
-            expect(syncState.markedCompletePubkeys, [_validPubkeyB]);
+            expect(nip04Reads, 3);
+            expect(
+              syncState.markedCompletePubkeys,
+              isEmpty,
+              reason:
+                  "the new account's first refusal must not be confirmed by "
+                  "the previous account's refusal memory",
+            );
           });
         },
       );
+
+      test('stale drain does not cancel the new account retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final oldAccountRead = Completer<QueryResult>();
+          var nip04Reads = 0;
+          const unsettled = QueryResult(
+            events: [],
+            endedBy: QueryEnd.deadline,
+            answeredNetworkRelayCount: 1,
+            unansweredRelayCount: 1,
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            nip04Reads++;
+            return nip04Reads == 1
+                ? oldAccountRead.future
+                : Future<QueryResult>.value(unsettled);
+          });
+
+          final repository = createRepository(syncState: armedSyncState());
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 2);
+
+          oldAccountRead.complete(unsettled);
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(
+            nip04Reads,
+            3,
+            reason:
+                "the previous account's drain ending must leave the new "
+                "account's retry armed",
+          );
+        });
+      });
 
       test('only the deferred retry can confirm a repeated refusal', () {
         fakeAsync((async) {
