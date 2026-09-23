@@ -1,10 +1,12 @@
 // ABOUTME: Guards the DivineSticker artwork bundled with the app: every
-// ABOUTME: variant has a file, every file is a lossless WebP within 512 px that
-// ABOUTME: keeps its alpha, and the directory holds nothing the catalog does not name.
+// ABOUTME: variant has a file, every file is a lossless WebP within 512 px
+// ABOUTME: that decodes and keeps its alpha, and the directory holds nothing
+// ABOUTME: the catalog does not name.
 
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,6 +102,24 @@ _WebpHeader _readWebpHeader(String path) {
   );
 }
 
+/// Whether the engine can decode the image at [path].
+///
+/// A truncated or corrupted file keeps a valid header, so only decoding it
+/// proves the app can draw it.
+Future<bool> _decodes(String path) async {
+  try {
+    final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
+    try {
+      (await codec.getNextFrame()).image.dispose();
+    } finally {
+      codec.dispose();
+    }
+    return true;
+  } on Exception {
+    return false;
+  }
+}
+
 int _uint24(ByteData data, int offset) =>
     data.getUint8(offset) |
     (data.getUint8(offset + 1) << 8) |
@@ -170,6 +190,15 @@ void main() {
           reason: '${sticker.assetPath} is ${header.width}x${header.height}.',
         );
       }
+    });
+
+    test('every artwork file decodes', () async {
+      final undecodable = [
+        for (final sticker in figmaBacked)
+          if (!await _decodes(sticker.assetPath)) sticker.assetPath,
+      ];
+
+      expect(undecodable, isEmpty);
     });
 
     group('stickers that must stay separate do not share artwork', () {
