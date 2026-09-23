@@ -11138,6 +11138,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'E-mel sokongan Divine';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Bantuan semakan Divine Greenlight (umur 13-15)';
 
@@ -11198,6 +11201,17 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>

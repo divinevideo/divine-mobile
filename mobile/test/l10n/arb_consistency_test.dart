@@ -809,6 +809,10 @@ const _knownUntranslatedDebt = <String>{
   'minorAccountReviewRecordConsentErrorTitle',
   'minorAccountReviewRecordConsentErrorBody',
   'minorAccountReviewRecordConsentTryAgainCta',
+  'minorAccountReviewRecordConsentConfirmEmailTitle',
+  'minorAccountReviewRecordConsentSubmitCta',
+  'minorAccountReviewRecordConsentSubmitError',
+  'minorAccountReviewParentConsentRecordCta',
   // The four social-proof keys and searchUserVideoCount left this list when
   // this branch translated them into every locale.
   // Crossposting CTA copy. Every locale except Amharic and Telugu received a
