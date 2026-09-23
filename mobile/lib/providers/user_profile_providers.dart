@@ -100,7 +100,7 @@ Stream<ProfileStats?> videoCardAuthorStats(Ref ref, String pubkey) async* {
   }
 
   final cached = await repo.getCachedProfileStats(pubkey: pubkey);
-  if (cached == null) {
+  if (cached?.hasKnownTotalViews != true) {
     unawaited(
       repo
           .fetchFreshProfile(pubkey: pubkey)

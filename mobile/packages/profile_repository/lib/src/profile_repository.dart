@@ -780,18 +780,24 @@ class ProfileRepository implements ProfileReader {
     return dao.watchStats(pubkey).map(_statsFromRowOrNull);
   }
 
-  /// Returns the cached stats for [pubkey] from local storage only.
+  /// Returns fresh cached stats with a known lifetime view total for [pubkey].
   ///
-  /// The stats counterpart to [getCachedProfile]: one Drift read that applies
-  /// the same 5-minute freshness window [watchProfileStats] consumers see, so
-  /// a caller can decide whether a fresh fetch is worth starting without
-  /// starting one. Returns `null` when no fresh row is cached, or when no
-  /// stats DAO was injected.
+  /// Unlike [watchProfileStats], this read is for deciding whether the card
+  /// should start a fetch. It reads the row without deleting it, then applies
+  /// the five-minute cache window and treats a missing lifetime total as a
+  /// cache miss. Returns `null` when no fresh total is cached or no DAO exists.
   @override
   Future<ProfileStats?> getCachedProfileStats({required String pubkey}) async {
     final dao = _profileStatsDao;
     if (dao == null) return null;
-    return _statsFromRowOrNull(await dao.getStats(pubkey));
+    final row = await dao.getStatsRaw(pubkey);
+    if (row == null || row.totalViews == null) return null;
+    if (row.cachedAt.isBefore(
+      DateTime.now().subtract(profileStatsCacheDuration),
+    )) {
+      return null;
+    }
+    return _statsFromRowOrNull(row);
   }
 
   static ProfileStats? _statsFromRowOrNull(ProfileStatRow? row) {
@@ -803,6 +809,7 @@ class ProfileRepository implements ProfileReader {
       followers: row.followerCount,
       following: row.followingCount,
       totalViews: row.totalViews ?? 0,
+      hasKnownTotalViews: row.totalViews != null,
       lastUpdated: row.cachedAt,
     );
   }

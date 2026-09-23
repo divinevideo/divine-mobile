@@ -503,7 +503,7 @@ void main() {
       });
 
       test(
-        'defaults engagement counts to zero but leaves follower counts null',
+        'defaults video and like counts while flagging unknown totals',
         () async {
           final row = ProfileStatRow(
             pubkey: testPubkey,
@@ -529,7 +529,12 @@ void main() {
                   // of a wrong count.
                   .having((s) => s.followers, 'followers', isNull)
                   .having((s) => s.following, 'following', isNull)
-                  .having((s) => s.totalViews, 'totalViews', equals(0)),
+                  .having((s) => s.totalViews, 'totalViews', equals(0))
+                  .having(
+                    (s) => s.hasKnownTotalViews,
+                    'hasKnownTotalViews',
+                    isFalse,
+                  ),
             ),
           );
         },
@@ -563,6 +568,7 @@ void main() {
       });
 
       test('maps a cached row to the ProfileStats domain model', () async {
+        final cachedAt = DateTime.now();
         final row = ProfileStatRow(
           pubkey: testPubkey,
           videoCount: 5,
@@ -570,10 +576,10 @@ void main() {
           followingCount: 50,
           totalViews: 1000,
           totalLikes: 200,
-          cachedAt: DateTime(2026),
+          cachedAt: cachedAt,
         );
         when(
-          () => mockProfileStatsDao.getStats(any()),
+          () => mockProfileStatsDao.getStatsRaw(any()),
         ).thenAnswer((_) async => row);
 
         final stats = await profileRepository.getCachedProfileStats(
@@ -590,7 +596,7 @@ void main() {
               followers: 100,
               following: 50,
               totalViews: 1000,
-              lastUpdated: DateTime(2026),
+              lastUpdated: cachedAt,
             ),
           ),
         );
@@ -598,8 +604,43 @@ void main() {
 
       test('returns null when no row is cached', () async {
         when(
-          () => mockProfileStatsDao.getStats(any()),
+          () => mockProfileStatsDao.getStatsRaw(any()),
         ).thenAnswer((_) async => null);
+
+        expect(
+          await profileRepository.getCachedProfileStats(pubkey: testPubkey),
+          isNull,
+        );
+      });
+
+      test('does not delete an expired row while checking the cache', () async {
+        final row = ProfileStatRow(
+          pubkey: testPubkey,
+          totalViews: 1000,
+          cachedAt: DateTime.now().subtract(const Duration(minutes: 6)),
+        );
+        when(
+          () => mockProfileStatsDao.getStatsRaw(any()),
+        ).thenAnswer((_) async => row);
+
+        expect(
+          await profileRepository.getCachedProfileStats(pubkey: testPubkey),
+          isNull,
+        );
+        verify(() => mockProfileStatsDao.getStatsRaw(testPubkey)).called(1);
+        verifyNever(() => mockProfileStatsDao.getStats(testPubkey));
+      });
+
+      test('treats a fresh follower-only row as a cache miss', () async {
+        final row = ProfileStatRow(
+          pubkey: testPubkey,
+          followerCount: 100,
+          followingCount: 50,
+          cachedAt: DateTime.now(),
+        );
+        when(
+          () => mockProfileStatsDao.getStatsRaw(any()),
+        ).thenAnswer((_) async => row);
 
         expect(
           await profileRepository.getCachedProfileStats(pubkey: testPubkey),

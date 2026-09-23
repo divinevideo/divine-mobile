@@ -102,7 +102,7 @@ final class VideoCardAuthorStatsProvider
 }
 
 String _$videoCardAuthorStatsHash() =>
-    r'799921ca92acce42ca7a4db1d946b692bb3de4ce';
+    r'6f57bcfd9c984abed043890af9cc2f57d3511766';
 
 /// The author's lifetime stats for a feed card, auto-disposing and
 /// cache-first.

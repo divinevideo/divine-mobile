@@ -58,14 +58,12 @@ abstract interface class ProfileReader {
   /// was injected.
   Stream<ProfileStats?> watchProfileStats({required String pubkey});
 
-  /// Returns the cached follower/following/video counts for [pubkey] from
-  /// local storage only, or `null` when nothing fresh is cached.
+  /// Returns fresh cached stats with a known lifetime view total for [pubkey],
+  /// or `null` when no such row is cached.
   ///
-  /// The stats counterpart to [getCachedProfile]: a one-shot Drift read that
-  /// applies the same 5-minute freshness window as [watchProfileStats], so a
-  /// caller can decide whether a fresh fetch is worth starting without
-  /// starting one. It touches no relay and no network, so it is signer-free
-  /// and relay-optional like the other members here.
+  /// This is a one-shot local read. Expired rows return `null` without being
+  /// deleted. It touches no relay and no network, so it is signer-free and
+  /// relay-optional like the other members here.
   Future<ProfileStats?> getCachedProfileStats({required String pubkey});
 
   /// Fetches the freshest profile for [pubkey] and caches it locally.
