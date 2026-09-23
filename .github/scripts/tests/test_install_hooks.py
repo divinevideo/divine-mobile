@@ -109,6 +109,13 @@ class InstallHooksTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("stale", result.stdout.lower())
 
+    def assert_hooks_match_installer(self):
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                body = (self.hooks_dir() / name).read_text()
+                self.assertIn(f'HOOKS_GENERATOR_HASH="{self.installer_hash()}"', body)
+                self.assert_runs_clean(self.run_hook(name))
+
     def assert_stale_hook_heals(self, name):
         self.install()
         self.change_installer()
@@ -163,6 +170,34 @@ class InstallHooksTest(unittest.TestCase):
         for name in HOOKS:
             with self.subTest(hook=name):
                 self.assert_runs_clean(self.run_hook(name, cwd=linked))
+
+    def test_stamp_survives_an_exported_cdpath(self):
+        # With CDPATH set, `cd scripts` can land in a same-named directory
+        # elsewhere and print where it went.
+        decoy = Path(self._tmp.name) / "decoy"
+        (decoy / "scripts").mkdir(parents=True)
+        self.env = {**self.env, "CDPATH": str(decoy)}
+
+        self.install()
+
+        self.assert_hooks_match_installer()
+
+    def test_stamp_survives_a_backslash_in_the_checkout_path(self):
+        # For such a path, shasum and GNU sha256sum prefix the digest with a
+        # backslash. macOS's /sbin/sha256sum does not, so leave it off PATH.
+        moved = Path(self._tmp.name) / "back\\slash" / "repo"
+        moved.parent.mkdir()
+        self.root = self.root.rename(moved)
+        self.installer = self.root / "scripts" / "install-hooks.sh"
+        path = self.env["PATH"].split(os.pathsep)
+        self.env = {
+            **self.env,
+            "PATH": os.pathsep.join(p for p in path if p != "/sbin"),
+        }
+
+        self.install()
+
+        self.assert_hooks_match_installer()
 
     def test_installed_hooks_are_readable_and_runnable_by_everyone(self):
         previous = os.umask(0o022)

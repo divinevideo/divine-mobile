@@ -4,6 +4,10 @@
 
 set -e
 
+# An exported CDPATH makes `cd` print where it lands, or land in a same-named
+# directory elsewhere, and the command substitutions below capture either.
+unset CDPATH
+
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 GIT_COMMON_DIR="$(git rev-parse --git-common-dir)"
 if [[ "$GIT_COMMON_DIR" != /* ]]; then
@@ -17,10 +21,12 @@ HOOKS_DIR="$GIT_COMMON_DIR/hooks"
 # example one that called `flutter`/`dart` directly instead of through
 # `mise exec` and therefore used whatever toolchain happened to be on PATH.
 GENERATOR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+# Hashed from stdin: given a path containing a backslash, shasum and GNU
+# sha256sum prefix the digest with one, and the stamp would never match.
 if command -v sha256sum >/dev/null 2>&1; then
-  GENERATOR_HASH="$(sha256sum "$GENERATOR_PATH" | awk '{print $1}')"
+  GENERATOR_HASH="$(sha256sum < "$GENERATOR_PATH" | awk '{print $1}')"
 else
-  GENERATOR_HASH="$(shasum -a 256 "$GENERATOR_PATH" | awk '{print $1}')"
+  GENERATOR_HASH="$(shasum -a 256 < "$GENERATOR_PATH" | awk '{print $1}')"
 fi
 
 # Substitute the @GENERATOR_HASH@ stamp and install by rename. A rename leaves
@@ -100,10 +106,11 @@ HOOKS_GENERATOR_HASH="@GENERATOR_HASH@"
 current_installer_hash() {
     local installer="$REPO_ROOT/scripts/install-hooks.sh"
     [ -f "$installer" ] || return 0
+    # From stdin, so a backslash in the path cannot prefix the digest.
     if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$installer" 2>/dev/null | awk '{print $1}' || true
+        sha256sum < "$installer" 2>/dev/null | awk '{print $1}' || true
     else
-        shasum -a 256 "$installer" 2>/dev/null | awk '{print $1}' || true
+        shasum -a 256 < "$installer" 2>/dev/null | awk '{print $1}' || true
     fi
 }
 
@@ -216,10 +223,11 @@ HOOKS_GENERATOR_HASH="@GENERATOR_HASH@"
 current_installer_hash() {
     local installer="$REPO_ROOT/scripts/install-hooks.sh"
     [ -f "$installer" ] || return 0
+    # From stdin, so a backslash in the path cannot prefix the digest.
     if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$installer" 2>/dev/null | awk '{print $1}' || true
+        sha256sum < "$installer" 2>/dev/null | awk '{print $1}' || true
     else
-        shasum -a 256 "$installer" 2>/dev/null | awk '{print $1}' || true
+        shasum -a 256 < "$installer" 2>/dev/null | awk '{print $1}' || true
     fi
 }
 
