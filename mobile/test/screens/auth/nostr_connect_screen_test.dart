@@ -182,6 +182,54 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
 
+    testWidgets(
+      'does not set state after disposal while cancelling a signer subscription',
+      (tester) async {
+        const connectUrl =
+            'nostrconnect://abc123?relay=wss://relay.example.com&secret=xyz';
+        const bunkerUrl =
+            'bunker://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            '?relay=wss://relay.example.com';
+        final cancellation = Completer<void>();
+        final stateController = StreamController<NostrConnectState>(
+          onCancel: () => cancellation.future,
+        );
+        addTearDown(() async {
+          if (!stateController.isClosed) await stateController.close();
+        });
+
+        when(() => mockAuthService.nostrConnectUrl).thenReturn(connectUrl);
+        when(
+          () => mockAuthService.nostrConnectState,
+        ).thenReturn(NostrConnectState.listening);
+        when(
+          () => mockAuthService.nostrConnectStateStream,
+        ).thenAnswer((_) => stateController.stream);
+        when(
+          () => mockAuthService.waitForNostrConnectResponse(),
+        ).thenAnswer((_) => Completer<AuthResult>().future);
+        when(() => mockAuthService.cancelNostrConnect()).thenReturn(null);
+
+        await tester.pumpWidget(createTestWidget());
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.ensureVisible(find.text(l10n.authAddBunker));
+        await tester.tap(find.text(l10n.authAddBunker));
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.enterText(find.byType(TextField), bunkerUrl);
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+        cancellation.complete();
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        verifyNever(() => mockAuthService.connectWithBunker(any()));
+      },
+    );
+
     testWidgets('connected state stays skeletonized with an inert action bar', (
       tester,
     ) async {

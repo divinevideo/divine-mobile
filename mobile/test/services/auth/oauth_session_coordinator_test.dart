@@ -299,7 +299,7 @@ void main() {
           expect(calls, equals(1));
 
           // Slot released: a fresh call issues a new client request.
-          unawaited(coordinator.refreshSession());
+          coordinator.refreshSession().ignore();
           async.flushMicrotasks();
           expect(calls, equals(2));
         });
@@ -385,14 +385,14 @@ void main() {
           async.elapse(expiredTimeout + const Duration(milliseconds: 1));
           expect(firstResult, isFalse);
 
-          unawaited(
-            coordinator.refreshExpiredSession(
-              attempt: () async {
-                secondAttemptRan = true;
-                return true;
-              },
-            ),
-          );
+          coordinator
+              .refreshExpiredSession(
+                attempt: () async {
+                  secondAttemptRan = true;
+                  return true;
+                },
+              )
+              .ignore();
           async.flushMicrotasks();
           expect(secondAttemptRan, isTrue);
         });

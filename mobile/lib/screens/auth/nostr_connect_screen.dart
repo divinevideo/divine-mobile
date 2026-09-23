@@ -399,6 +399,7 @@ class _NostrConnectScreenState extends ConsumerState<NostrConnectScreen> {
     _sessionAttempt++;
     _authService.cancelNostrConnect();
     await _stateSubscription?.cancel();
+    if (!mounted) return;
     _stateSubscription = null;
     _uiTimer?.cancel();
     _elapsedTimer.stop();
