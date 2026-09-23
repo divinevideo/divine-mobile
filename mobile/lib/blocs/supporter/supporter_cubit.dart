@@ -248,6 +248,18 @@ class SupporterCubit extends Cubit<SupporterState> {
           failure: SupporterFailure.fromMessage(error.message),
         ),
       );
+    } else {
+      addError(
+        Reportable(error, context: SupporterReportableSites.purchaseUpdate),
+        stackTrace,
+      );
+      _emit(
+        state.copyWith(
+          awaitingPurchaseConfirmation: false,
+          status: SupporterStatus.error,
+          failure: SupporterFailure.unknown,
+        ),
+      );
     }
   }
 

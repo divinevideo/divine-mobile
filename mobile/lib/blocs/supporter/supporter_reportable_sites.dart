@@ -13,4 +13,7 @@ abstract class SupporterReportableSites {
 
   /// Unexpected failure while restoring supporter purchases.
   static const String restore = 'restore';
+
+  /// Unexpected failure delivered with a store or verification update.
+  static const String purchaseUpdate = 'purchaseUpdate';
 }

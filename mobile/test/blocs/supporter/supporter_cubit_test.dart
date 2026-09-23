@@ -598,6 +598,33 @@ void main() {
       },
     );
 
+    blocTest<SupporterCubit, SupporterState>(
+      'ends confirmation when a purchase update fails outside the typed '
+      'contract',
+      build: () => SupporterCubit(repository: _FakeRepository(controller)),
+      act: (cubit) async {
+        cubit.start();
+        await pumpEventQueue();
+        await cubit.subscribe('divine.supporter.monthly');
+        expect(cubit.state.status, SupporterStatus.confirming);
+
+        controller.addError(StateError('store acknowledgement failed'));
+        await pumpEventQueue();
+      },
+      verify: (cubit) {
+        expect(cubit.state.status, SupporterStatus.error);
+        expect(cubit.state.failure, SupporterFailure.unknown);
+        expect(cubit.state.isBusy, isFalse);
+      },
+      errors: () => [
+        isA<Reportable<Object>>().having(
+          (error) => error.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      ],
+    );
+
     test('surfaces pending and confirming purchase lifecycle', () async {
       final lifecycle = StreamController<EntitlementLifecycle>.broadcast();
       addTearDown(lifecycle.close);
