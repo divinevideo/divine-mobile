@@ -639,6 +639,44 @@ void main() {
       },
     );
 
+    test(
+      'makes no confirmation read when the read was not held for full '
+      'settlement',
+      () async {
+        final nostr = _newNostr();
+        final answering = _ScriptedRelay('wss://answers.example');
+        final refusing = _ScriptedRelay('wss://refuses.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(refusing), isTrue);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+        );
+
+        // Without full settlement a refusal never reports `timedOut`, so a
+        // second read could only spend the budget and risk turning it on.
+        final pending = client.queryEventsDetailed(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(milliseconds: 800),
+          acceptRelayClosedWhenOthersAnswered: true,
+        );
+        final answeringSub = await answering.awaitReq(0);
+        final refusingSub = await refusing.awaitReq(0);
+        await answering.deliver(['EOSE', answeringSub]);
+        await refusing.deliver([
+          'CLOSED',
+          refusingSub,
+          'error: unsupported request',
+        ]);
+        final result = await pending;
+
+        expect(result.timedOut, isFalse);
+        expect(answering.reqSubIds, hasLength(1));
+        expect(refusing.reqSubIds, hasLength(1));
+      },
+    );
+
     test('keeps the events of both reads when they differ', () async {
       final nostr = _newNostr();
       final answering = _ScriptedRelay('wss://answers.example');

@@ -952,7 +952,9 @@ class NostrClient {
     bool acceptRelayClosedWhenOthersAnswered = false,
   }) async {
     final startedAt = clock.now();
-    var read = await _read(
+    Future<({QueryResult result, bool timedOut, bool noRelays})> readWithin(
+      Duration budget,
+    ) => _read(
       filters,
       subscriptionId: subscriptionId,
       tempRelays: tempRelays,
@@ -960,80 +962,73 @@ class NostrClient {
       sendAfterAuth: sendAfterAuth,
       useCache: useCache,
       useQueryPool: useQueryPool,
-      timeout: timeout,
+      timeout: budget,
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
-    var repeatedErrorRefusals = true;
-    final firstErrorRefusals = read.result.closedRelayReasons.entries
-        .where((entry) => entry.value == 'error')
-        .map((entry) => entry.key)
-        .toSet();
-    if (acceptRelayClosedWhenOthersAnswered &&
-        firstErrorRefusals.isNotEmpty &&
-        read.result.endedBy == QueryEnd.relayClosed &&
-        read.result.answeredNetworkRelayCount > 0 &&
-        read.result.unansweredRelayCount == 0 &&
-        read.result.rateLimitedRelayCount == 0) {
-      // `error:` is often transient (for example, a replay/query timeout).
-      // Repeat the same query once and only accept an error refusal when the
-      // same relay returns the same category again. Keep one caller deadline
-      // across both attempts.
-      final remaining = timeout - clock.now().difference(startedAt);
-      if (remaining > Duration.zero) {
-        final firstEvents = read.result.events;
-        read = await _read(
-          filters,
-          subscriptionId: subscriptionId,
-          tempRelays: tempRelays,
-          relayTypes: relayTypes,
-          sendAfterAuth: sendAfterAuth,
-          useCache: useCache,
-          useQueryPool: useQueryPool,
-          timeout: remaining,
-          requireAllRelaysSettled: requireAllRelaysSettled,
-        );
-        final secondErrorRefusals = read.result.closedRelayReasons.entries
-            .where((entry) => entry.value == 'error')
-            .map((entry) => entry.key);
-        repeatedErrorRefusals = secondErrorRefusals.every(
-          firstErrorRefusals.contains,
-        );
-        final limit = filters.length == 1 ? filters.first.limit : null;
-        read = (
-          result: QueryResult(
-            events: _mergeEvents(
-              firstEvents,
-              read.result.events,
-              limit: limit,
-            ),
-            endedBy: read.result.endedBy,
-            answeredNetworkRelayCount: read.result.answeredNetworkRelayCount,
-            unansweredRelayCount: read.result.unansweredRelayCount,
-            rateLimitedRelayCount: read.result.rateLimitedRelayCount,
-            closedRelayReasons: read.result.closedRelayReasons,
-            possiblyCapped: read.result.possiblyCapped,
-            confirmedExhaustive: read.result.confirmedExhaustive,
-          ),
-          timedOut: read.timedOut,
-          noRelays: read.noRelays,
-        );
-      } else {
-        repeatedErrorRefusals = false;
-      }
+
+    final first = await readWithin(timeout);
+    // Only a read that would otherwise report `timedOut` has anything for
+    // the refusals to settle.
+    if (!acceptRelayClosedWhenOthersAnswered ||
+        !first.timedOut ||
+        !_othersAnsweredDespiteRefusals(first.result)) {
+      return (
+        events: first.result.events,
+        timedOut: first.timedOut,
+        noRelays: first.noRelays,
+      );
     }
+    final errorRefusers = _errorRefusers(first.result);
+    if (errorRefusers.isEmpty) {
+      return (
+        events: first.result.events,
+        timedOut: false,
+        noRelays: first.noRelays,
+      );
+    }
+    // NIP-01's own `error:` examples ("could not connect to the database",
+    // "shutting down idle subscription") are transient, so confirm before
+    // settling on one. The retry spends only what is left of [timeout].
+    final remaining = timeout - clock.now().difference(startedAt);
+    if (remaining <= Duration.zero) {
+      return (
+        events: first.result.events,
+        timedOut: true,
+        noRelays: first.noRelays,
+      );
+    }
+    final confirmation = await readWithin(remaining);
+    final limit = filters.length == 1 ? filters.first.limit : null;
     return (
-      events: read.result.events,
+      events: _mergeEvents(
+        first.result.events,
+        confirmation.result.events,
+        limit: limit,
+      ),
       timedOut:
-          read.timedOut &&
-          !(acceptRelayClosedWhenOthersAnswered &&
-              read.result.endedBy == QueryEnd.relayClosed &&
-              read.result.answeredNetworkRelayCount > 0 &&
-              read.result.unansweredRelayCount == 0 &&
-              read.result.rateLimitedRelayCount == 0 &&
-              repeatedErrorRefusals),
-      noRelays: read.noRelays,
+          confirmation.timedOut &&
+          !(_othersAnsweredDespiteRefusals(confirmation.result) &&
+              _errorRefusers(
+                confirmation.result,
+              ).every(errorRefusers.contains)),
+      noRelays: confirmation.noRelays,
     );
   }
+
+  /// Whether [result] ended on refusals alone while a non-cache relay
+  /// answered, with no relay still unanswered and none rate limited.
+  static bool _othersAnsweredDespiteRefusals(QueryResult result) =>
+      result.endedBy == QueryEnd.relayClosed &&
+      result.answeredNetworkRelayCount > 0 &&
+      result.unansweredRelayCount == 0 &&
+      result.rateLimitedRelayCount == 0;
+
+  /// The relays that refused [result] with an `error:` `CLOSED`.
+  static Set<String> _errorRefusers(QueryResult result) => {
+    for (final MapEntry(key: url, value: category)
+        in result.closedRelayReasons.entries)
+      if (category == 'error') url,
+  };
 
   /// Reads the events [filters] match and reports how the read ended.
   ///
