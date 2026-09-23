@@ -1,7 +1,7 @@
 // ABOUTME: Riverpod providers for the sounds/audio reuse feature.
 // ABOUTME: Provides reactive state management for sounds from SoundsRepository.
 
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, searchTermsOf;
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
@@ -75,6 +75,33 @@ class TrendingSounds extends _$TrendingSounds {
       return repository.cachedSounds;
     });
   }
+}
+
+/// Community sounds matching a free-text [query].
+///
+/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
+/// for reach plus the in-memory cache for partial and title matches — so this
+/// is a thin pass-through. Blank queries resolve to an empty list without a
+/// round trip; the caller shows the trending list instead of searching.
+///
+/// Auto-disposed, so the per-query cache does not outlive the search field
+/// that opened it. Give it a debounced query: one instance is created per
+/// distinct string, so feeding it raw keystrokes is one relay query per
+/// character.
+///
+/// Usage:
+/// ```dart
+/// final resultsAsync = ref.watch(soundSearchResultsProvider(query));
+/// ```
+@riverpod
+Future<List<AudioEvent>> soundSearchResults(Ref ref, String query) async {
+  // Answered before the repository is read, so a search field that is merely
+  // open does not construct one — and with it a Nostr client — for a query
+  // nobody has typed yet.
+  if (searchTermsOf(query).isEmpty) return const [];
+
+  final repository = ref.watch(soundsRepositoryProvider);
+  return repository.searchSounds(query);
 }
 
 /// Family provider to fetch a single sound by event ID.

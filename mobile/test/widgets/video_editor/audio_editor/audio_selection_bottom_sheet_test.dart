@@ -99,26 +99,29 @@ void main() {
     Widget buildWidget({
       AsyncValue<List<AudioEvent>>? trendingSoundsAsync,
       List<AudioEvent> savedSounds = const [],
+      List<SavedSound> savedSoundRecords = const [],
       Set<String> missingFileSoundIds = const {},
       List<VineSound> bundledSounds = const [],
       AudioPlaybackService? audioService,
       String? viewerPubkey,
       Map<String, int>? usageCounts,
+      Map<String, List<AudioEvent>> searchResults = const {},
     }) {
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
         SavedSoundsState(
           status: SavedSoundsStatus.loaded,
-          sounds: savedSounds
-              .map(
-                (sound) => SavedSound(
-                  audio: sound,
-                  personalHashtags: const [],
-                  catalogTags: const [],
-                  waveformSamples: const [],
-                ),
-              )
-              .toList(growable: false),
+          sounds: [
+            ...savedSounds.map(
+              (sound) => SavedSound(
+                audio: sound,
+                personalHashtags: const [],
+                catalogTags: const [],
+                waveformSamples: const [],
+              ),
+            ),
+            ...savedSoundRecords,
+          ],
           missingFileSoundIds: missingFileSoundIds,
         ),
       );
@@ -142,6 +145,11 @@ void main() {
               trendingSoundUsageCountsProvider.overrideWith(
                 (_) async => usageCounts,
               ),
+            // Always overridden: without it a keystroke would build the real
+            // repository, and with it a Nostr client, inside a widget test.
+            soundSearchResultsProvider.overrideWith(
+              (ref, query) async => searchResults[query] ?? const [],
+            ),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -319,6 +327,164 @@ void main() {
 
         expect(find.text('Uh Oh'), findsOneWidget);
         expect(find.text('Victory Lap'), findsNothing);
+      });
+
+      testWidgets('finds a community sound by a tag its title omits', (
+        tester,
+      ) async {
+        final tagged = _createTestAudioEvent(
+          id: 'sound-4',
+          title: 'Field recording 04',
+        ).copyWith(publicTags: const ['horses', 'hooves']);
+
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data([...testSounds, tagged]),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.enterText(find.byType(TextField).first, 'hooves');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Field recording 04'), findsOneWidget);
+        expect(find.text('Alpha Track'), findsNothing);
+      });
+
+      testWidgets('reaches past the loaded page once the query settles', (
+        tester,
+      ) async {
+        final offPage = _createTestAudioEvent(
+          id: 'sound-off-page',
+          title: 'Crowd ambience',
+        );
+
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            searchResults: {
+              'crowd': [offPage],
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'crowd');
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Crowd ambience'),
+          findsNothing,
+          reason:
+              'nothing on the loaded page matches, and the relay has not '
+              'been asked yet',
+        );
+
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Crowd ambience'), findsOneWidget);
+      });
+
+      testWidgets('keeps loaded matches on screen while the query settles', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, 'beta');
+        await tester.pump();
+
+        expect(
+          find.text('Beta Song'),
+          findsOneWidget,
+          reason:
+              'the list narrows on the first keystroke rather than '
+              'blanking until the debounced search answers',
+        );
+        expect(find.text('Alpha Track'), findsNothing);
+      });
+
+      testWidgets('finds a saved sound by the label its owner gave it', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            savedSoundRecords: [
+              SavedSound(
+                audio: _createTestAudioEvent(
+                  id: 'saved-1',
+                  title: 'Original sound',
+                ),
+                personalLabel: 'Horses hooves',
+                personalHashtags: const ['foley'],
+                catalogTags: const [],
+                waveformSamples: const [],
+              ),
+              SavedSound(
+                audio: _createTestAudioEvent(
+                  id: 'saved-2',
+                  title: 'Victory Lap',
+                ),
+                personalHashtags: const [],
+                catalogTags: const [],
+                waveformSamples: const [],
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.enterText(find.byType(TextField).first, 'hooves');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Horses hooves'), findsOneWidget);
+        expect(find.text('Victory Lap'), findsNothing);
+      });
+
+      testWidgets('titles a saved row with its label, not the published name', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            savedSoundRecords: [
+              SavedSound(
+                audio: _createTestAudioEvent(
+                  id: 'saved-1',
+                  title: 'Original sound',
+                ),
+                personalLabel: 'Horses hooves',
+                personalHashtags: const [],
+                catalogTags: const [],
+                waveformSamples: const [],
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Horses hooves'), findsOneWidget);
+        expect(find.text('Original sound'), findsNothing);
       });
 
       testWidgets('does not select a sound that forbids reuse', (tester) async {

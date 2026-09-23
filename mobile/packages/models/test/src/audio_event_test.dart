@@ -749,6 +749,109 @@ void main() {
       });
     });
 
+    group('matchesSearch', () {
+      AudioEvent soundWith({
+        String? title,
+        String? creatorName,
+        String? source,
+        List<String> publicTags = const [],
+        AudioExternalSource? externalSource,
+      }) => AudioEvent(
+        id: testHexId,
+        pubkey: testPubkey,
+        createdAt: 1779120000,
+        url: 'https://example.com/audio.mp3',
+        title: title,
+        creatorName: creatorName,
+        source: source,
+        publicTags: publicTags,
+        externalSource: externalSource,
+      );
+
+      test('matches a published tag the title never mentions', () {
+        final sound = soundWith(
+          title: 'Field recording 04',
+          publicTags: const ['horses', 'hooves'],
+        );
+
+        expect(sound.matchesSearch('hooves'), isTrue);
+      });
+
+      test('matches a phrase spread across two tags', () {
+        final sound = soundWith(
+          title: 'Untitled',
+          publicTags: const ['horses', 'hooves'],
+        );
+
+        expect(sound.matchesSearch('horses hooves'), isTrue);
+      });
+
+      test('still matches on title, creator and source', () {
+        final sound = soundWith(
+          title: 'Wind blowing',
+          creatorName: 'Foley Fred',
+          source: 'Original Sound',
+        );
+
+        expect(sound.matchesSearch('wind'), isTrue);
+        expect(sound.matchesSearch('fred'), isTrue);
+        expect(sound.matchesSearch('original'), isTrue);
+      });
+
+      test('matches an external provider sound on its catalog tags', () {
+        final sound = soundWith(
+          title: 'Oh No No No Crowd',
+          externalSource: AudioExternalSource(
+            provider: 'freesound',
+            providerSoundId: '502915',
+            providerName: 'Freesound',
+            creatorName: 'ThePauny',
+            catalogTags: const ['crowd', 'field recording'],
+            license: AudioLicenseMetadata(
+              type: 'cc0',
+              name: 'Creative Commons 0',
+              url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+              allowsCommercialUse: true,
+              allowsDerivatives: true,
+              requiresAttribution: false,
+            ),
+          ),
+        );
+
+        expect(sound.matchesSearch('field recording'), isTrue);
+        expect(sound.matchesSearch('thepauny'), isTrue);
+        expect(sound.matchesSearch('freesound'), isTrue);
+      });
+
+      test('rejects a query no value carries', () {
+        final sound = soundWith(
+          title: 'Wind blowing',
+          publicTags: const ['wind'],
+        );
+
+        expect(sound.matchesSearch('horses'), isFalse);
+      });
+
+      test('rejects a phrase when only one term lands', () {
+        final sound = soundWith(
+          title: 'Wind blowing',
+          publicTags: const ['wind'],
+        );
+
+        expect(sound.matchesSearch('wind horses'), isFalse);
+      });
+
+      test('matches every sound for a blank query', () {
+        expect(soundWith().matchesSearch('  '), isTrue);
+      });
+
+      test('searchableValues keeps published casing', () {
+        final sound = soundWith(title: 'Wind Blowing');
+
+        expect(sound.searchableValues, contains('Wind Blowing'));
+      });
+    });
+
     group('external provider metadata', () {
       test('round trips external source and license metadata through JSON', () {
         final audioEvent = AudioEvent(

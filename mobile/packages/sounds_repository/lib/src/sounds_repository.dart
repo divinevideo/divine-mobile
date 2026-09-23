@@ -6,7 +6,7 @@
 import 'dart:async';
 
 import 'package:models/models.dart'
-    show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind;
+    show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
@@ -41,6 +41,9 @@ class SoundsRepository {
   /// Applies to the whole batch, not per sound — see
   /// [fetchVideosUsingSoundCounts].
   static const int maxBatchedUsageCountScan = 500;
+
+  /// Default cap on the sounds one [searchSounds] tag query pulls.
+  static const int maxSearchResults = 50;
 
   /// The `m` tag values every audio query asks the relay for.
   ///
@@ -251,6 +254,77 @@ class SoundsRepository {
       );
       rethrow;
     }
+  }
+
+  /// Sounds matching [query], drawn from the relays and from this cache.
+  ///
+  /// Two sources, because neither answers the question alone. A relay `#t`
+  /// filter is the only way to reach a sound outside the window
+  /// [fetchTrendingSounds] pulled, but NIP-01 tag matching is exact, so it
+  /// can never answer a partial word or a hit on a title; the cache covers
+  /// those and the union is what the caller sees. Composing them here rather
+  /// than in a bloc is what keeps the caller from having to know that.
+  ///
+  /// A multi-word query is split by [searchTermsOf] and every term must match
+  /// something on the sound — the relay is asked for *any* of them, which is
+  /// how candidates are found, and [AudioEvent.matchesSearch] then narrows
+  /// them. Returns an empty list without querying when [query] holds no
+  /// searchable term.
+  ///
+  /// Best-effort on the relay half: a query that throws an [Exception] is
+  /// logged and the cached matches are returned anyway, since a search over a
+  /// partial index is already partial and fewer results read better than an
+  /// error over a list the user can see is there. Anything that is not an
+  /// [Exception] still propagates. Results are cached like any other fetch.
+  Future<List<AudioEvent>> searchSounds(
+    String query, {
+    int limit = maxSearchResults,
+  }) async {
+    final terms = searchTermsOf(query);
+    if (terms.isEmpty) {
+      Log.debug(
+        'Blank sound search query',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return const [];
+    }
+
+    final matches = <String, AudioEvent>{
+      for (final sound in _cache.values)
+        if (sound.matchesSearch(query)) sound.id: sound,
+    };
+
+    try {
+      final events = await _nostrClient.queryEvents([
+        Filter(
+          kinds: const [audioEventKind],
+          m: audioMimeTypes,
+          t: terms,
+          limit: limit,
+        ),
+      ]);
+      for (final sound in _processAndCacheEvents(events)) {
+        if (sound.matchesSearch(query)) matches[sound.id] = sound;
+      }
+    } on Exception catch (e) {
+      Log.error(
+        'Error searching sounds by tag: $e',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+    }
+
+    final results = matches.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    Log.debug(
+      'Sound search for ${terms.length} term(s) matched ${results.length}',
+      name: 'SoundsRepository',
+      category: LogCategory.api,
+    );
+
+    return List.unmodifiable(results);
   }
 
   /// Fetch a specific sound by event ID.

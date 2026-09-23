@@ -38,21 +38,14 @@ class SavedSoundsState extends Equatable {
   bool isMissingFile(SavedSound sound) =>
       missingFileSoundIds.contains(sound.audio.id);
 
-  List<SavedSound> get visibleSounds {
-    final normalizedQuery = query.trim().toLowerCase();
-    return sounds
-        .where((sound) {
-          final matchesTag =
-              selectedHashtag == null ||
-              sound.personalHashtags.contains(selectedHashtag);
-          return matchesTag &&
-              (normalizedQuery.isEmpty ||
-                  _searchableValues(sound).any(
-                    (value) => value.toLowerCase().contains(normalizedQuery),
-                  ));
-        })
-        .toList(growable: false);
-  }
+  List<SavedSound> get visibleSounds => sounds
+      .where((sound) {
+        final matchesTag =
+            selectedHashtag == null ||
+            sound.personalHashtags.contains(selectedHashtag);
+        return matchesTag && sound.matchesSearch(query);
+      })
+      .toList(growable: false);
 
   SavedSoundsState copyWith({
     SavedSoundsStatus? status,
@@ -84,18 +77,3 @@ class SavedSoundsState extends Equatable {
 }
 
 const _unset = Object();
-
-Iterable<String> _searchableValues(SavedSound sound) sync* {
-  final source = sound.sourceContext;
-  final nullableValues = [
-    sound.personalLabel,
-    sound.audio.title,
-    source?.title,
-    source?.creatorName,
-    source?.description,
-    source?.transcript,
-  ];
-  yield* nullableValues.whereType<String>();
-  yield* sound.personalHashtags;
-  yield* sound.catalogTags;
-}

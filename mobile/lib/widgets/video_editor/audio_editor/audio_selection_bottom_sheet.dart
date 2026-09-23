@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -107,7 +108,18 @@ class _AudioSelectionBottomSheetState
   AudioEvent? _selectedItem;
   AudioCategory _category = .divine;
   String _searchQuery = '';
+
+  /// [_searchQuery] as it stood when the user last paused typing.
+  ///
+  /// The relay tag query is keyed on this rather than on every keystroke: one
+  /// provider instance is created per distinct string, so an undebounced field
+  /// would open a relay round trip per character.
+  String _debouncedQuery = '';
+  Timer? _searchDebounce;
   bool _isLoadingAudio = false;
+
+  /// How long the field must be quiet before the relay is asked.
+  static const _searchDebounceDelay = Duration(milliseconds: 350);
 
   @override
   int get tabCount => AudioCategory.values.length;
@@ -132,6 +144,7 @@ class _AudioSelectionBottomSheetState
       logName: 'AudioSelectionBottomSheet',
       category: LogCategory.ui,
     );
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -158,15 +171,43 @@ class _AudioSelectionBottomSheetState
     setState(() {
       _searchQuery = query.toLowerCase().trim();
     });
+    _searchDebounce?.cancel();
+    if (_searchQuery == _debouncedQuery) return;
+    _searchDebounce = Timer(_searchDebounceDelay, () {
+      if (!mounted) return;
+      setState(() => _debouncedQuery = _searchQuery);
+    });
   }
 
   List<AudioEvent> _filterAudioEvents(List<AudioEvent> sounds) {
     if (_searchQuery.isEmpty) return sounds;
-    return sounds.where((sound) {
-      final title = sound.title?.toLowerCase() ?? '';
-      final source = sound.source?.toLowerCase() ?? '';
-      return title.contains(_searchQuery) || source.contains(_searchQuery);
-    }).toList();
+    return sounds
+        .where((sound) => sound.matchesSearch(_searchQuery))
+        .toList(growable: false);
+  }
+
+  /// The community list to show for the current query.
+  ///
+  /// The loaded page is filtered first, so the list narrows on the first
+  /// keystroke instead of blanking while a debounced query is in flight. Once
+  /// [searchResults] has answered for exactly what is typed, the sounds it
+  /// reached that the page did not hold are appended.
+  ///
+  /// Appended rather than swapped in, for two reasons: rows the user can
+  /// already see stay where they are when the answer lands, and the list
+  /// cannot lose one if the repository's cache no longer holds the loaded
+  /// page — as it briefly does not while a refresh is in flight.
+  List<AudioEvent> _communitySounds(
+    List<AudioEvent> loaded,
+    AsyncValue<List<AudioEvent>> searchResults,
+  ) {
+    if (_searchQuery.isEmpty) return loaded;
+    final matches = _filterAudioEvents(loaded);
+    if (_debouncedQuery != _searchQuery) return matches;
+    final reached = searchResults.value;
+    if (reached == null) return matches;
+    final listed = matches.map((sound) => sound.id).toSet();
+    return [...matches, ...reached.where((sound) => listed.add(sound.id))];
   }
 
   Future<void> _togglePlayPause({bool enforcePlay = false}) async {
@@ -427,9 +468,15 @@ class _AudioSelectionBottomSheetState
     // fails: the counts are supplementary, so the list never waits on them.
     final usageCounts = ref.watch(trendingSoundUsageCountsProvider).value;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
-    final savedSounds = savedSoundsState.sounds
-        .map((sound) => sound.audio)
+    // Searched as whole records, not as their bare audio: the label and
+    // hashtags the user filed a sound under live on the record, and they are
+    // the words they will reach for here.
+    final matchingSavedSounds = savedSoundsState.sounds
+        .where((sound) => sound.matchesSearch(_searchQuery))
         .toList(growable: false);
+    final searchResults = ref.watch(
+      soundSearchResultsProvider(_debouncedQuery),
+    );
 
     final bundledVineSounds =
         bundledSoundsAsync.whenOrNull(data: (service) => service.sounds) ??
@@ -451,7 +498,6 @@ class _AudioSelectionBottomSheetState
             .indexed
             .map((e) => AudioEvent.fromBundledSound(e.$2, index: e.$1))
             .toList();
-    final filteredSavedSounds = _filterAudioEvents(savedSounds);
     const searchEmptyState = _SearchEmptyState();
 
     return Stack(
@@ -480,7 +526,7 @@ class _AudioSelectionBottomSheetState
                     data: (nostrSounds) {
                       return _SoundsContent(
                         scrollController: widget.scrollController,
-                        sounds: _filterAudioEvents(nostrSounds),
+                        sounds: _communitySounds(nostrSounds, searchResults),
                         selectedSound: _selectedItem,
                         audioService: _audioService,
                         onSelect: _selectSound,
@@ -506,7 +552,13 @@ class _AudioSelectionBottomSheetState
                   ),
                   _SoundsContent(
                     scrollController: widget.scrollController,
-                    sounds: filteredSavedSounds,
+                    sounds: matchingSavedSounds
+                        .map((sound) => sound.audio)
+                        .toList(growable: false),
+                    displayTitles: {
+                      for (final sound in matchingSavedSounds)
+                        sound.id: ?sound.personalLabel,
+                    },
                     selectedSound: _selectedItem,
                     audioService: _audioService,
                     onSelect: _selectSound,
@@ -634,6 +686,7 @@ class _SoundsContent extends StatelessWidget {
     required this.selectedSound,
     required this.audioService,
     required this.onSelect,
+    this.displayTitles = const {},
     this.unavailableSoundIds = const {},
     this.usageCounts,
     this.emptyState = const _EmptyState(),
@@ -644,6 +697,12 @@ class _SoundsContent extends StatelessWidget {
   final AudioEvent? selectedSound;
   final AudioPlaybackService audioService;
   final ValueChanged<AudioEvent> onSelect;
+
+  /// Row titles that override the sound's own, keyed by `AudioEvent.id`.
+  ///
+  /// The saved tab passes the private labels, so a row reads the way its
+  /// owner filed it.
+  final Map<String, String> displayTitles;
 
   /// Sounds listed here but not selectable, because their device-local audio
   /// file is gone.
@@ -687,6 +746,7 @@ class _SoundsContent extends StatelessWidget {
             if (!isSelected) {
               return AudioListTile(
                 audio: audio,
+                displayTitle: displayTitles[audio.id],
                 isSelected: false,
                 isUnavailable: isUnavailable,
                 videoCount: _videoCountFor(audio),
@@ -704,6 +764,7 @@ class _SoundsContent extends StatelessWidget {
               builder: (context, snapshot) {
                 return AudioListTile(
                   audio: displayAudio,
+                  displayTitle: displayTitles[displayAudio.id],
                   isSelected: true,
                   isPlaying: snapshot.data ?? false,
                   videoCount: _videoCountFor(displayAudio),
