@@ -31,9 +31,9 @@ void main() {
       ).thenReturn(const VideoSearchState());
     });
 
-    tearDown(() {
-      mockCubit.close();
-      mockVideoSearchBloc.close();
+    tearDown(() async {
+      await mockCubit.close();
+      await mockVideoSearchBloc.close();
     });
 
     Widget buildSubject() {

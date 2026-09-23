@@ -24,8 +24,8 @@ void main() {
       when(() => mockCubit.state).thenReturn(SearchResultsFilter.all);
     });
 
-    tearDown(() {
-      mockCubit.close();
+    tearDown(() async {
+      await mockCubit.close();
     });
 
     Widget buildSubject({required Widget child}) {

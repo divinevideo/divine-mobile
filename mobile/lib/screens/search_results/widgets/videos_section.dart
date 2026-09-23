@@ -14,6 +14,7 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:rxdart/rxdart.dart';
@@ -90,23 +91,28 @@ class _VideosContent extends ConsumerStatefulWidget {
 class _VideosContentState extends ConsumerState<_VideosContent> {
   void _onVideoTap(List<VideoEvent> videos, int index) {
     final bloc = context.read<VideoSearchBloc>();
-    context.push(
-      PooledFullscreenVideoFeedScreen.pathForVideoId(videos[index].id),
-      extra: PooledFullscreenVideoFeedArgs(
-        source: SearchViewSource(bloc.state.query),
-        feedRepository: StreamFeedRepository(
-          videos: bloc.stream.map((state) => state.videos).startWith(videos),
-          hasMore: bloc.stream
-              .map((state) => state.hasMore)
-              .startWith(bloc.state.hasMore),
-          onLoadMore: () async => bloc.add(const VideoSearchLoadMore()),
+    runDetached(
+      context.push<void>(
+        PooledFullscreenVideoFeedScreen.pathForVideoId(videos[index].id),
+        extra: PooledFullscreenVideoFeedArgs(
+          source: SearchViewSource(bloc.state.query),
+          feedRepository: StreamFeedRepository(
+            videos: bloc.stream.map((state) => state.videos).startWith(videos),
+            hasMore: bloc.stream
+                .map((state) => state.hasMore)
+                .startWith(bloc.state.hasMore),
+            onLoadMore: () async => bloc.add(const VideoSearchLoadMore()),
+          ),
+          initialIndex: index,
+          initialVideoId: videos[index].id,
+          contextTitle: 'Search Results',
+          trafficSource: ViewTrafficSource.search,
+          sourceDetail: bloc.state.query,
         ),
-        initialIndex: index,
-        initialVideoId: videos[index].id,
-        contextTitle: 'Search Results',
-        trafficSource: ViewTrafficSource.search,
-        sourceDetail: bloc.state.query,
       ),
+      'open search video result',
+      logName: 'VideosSection',
+      category: LogCategory.ui,
     );
   }
 

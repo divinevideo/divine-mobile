@@ -61,12 +61,12 @@ void main() {
       when(() => mockListBloc.state).thenReturn(const ListSearchState());
     });
 
-    tearDown(() {
-      mockFilterCubit.close();
-      mockVideoBloc.close();
-      mockUserBloc.close();
-      mockHashtagBloc.close();
-      mockListBloc.close();
+    tearDown(() async {
+      await mockFilterCubit.close();
+      await mockVideoBloc.close();
+      await mockUserBloc.close();
+      await mockHashtagBloc.close();
+      await mockListBloc.close();
       controller.dispose();
     });
 
