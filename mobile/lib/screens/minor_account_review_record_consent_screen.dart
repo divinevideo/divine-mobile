@@ -2,6 +2,7 @@
 // ABOUTME: video, lets the parent review or retake it, and falls back to email.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -68,11 +69,24 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   bool _cameraReady = false;
   bool _accessDenied = false;
   String? _pendingVideoPath;
+  String? _lastRecordedPath;
+  bool _uploadInFlight = false;
+  bool _disposed = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _prepareCamera());
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    // The capture is local only until the parent submits; discard a clip they
+    // exit without submitting. A clip whose upload is still in flight is kept
+    // until that upload returns (see _onUploadFinished).
+    _deletePendingClip();
+    super.dispose();
   }
 
   /// Requests camera and microphone access, then initializes the preview.
@@ -120,11 +134,19 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   }
 
   Future<void> _onRecord() async {
-    final outputDirectory = (await getTemporaryDirectory()).path;
-    if (!mounted) return;
-    await context.read<MinorConsentCaptureCubit>().start(
-      outputDirectory: outputDirectory,
-    );
+    try {
+      final outputDirectory = (await getTemporaryDirectory()).path;
+      if (!mounted) return;
+      await context.read<MinorConsentCaptureCubit>().start(
+        outputDirectory: outputDirectory,
+      );
+    } catch (_) {
+      // Resolving the temp directory or starting the camera can throw before
+      // the recorder reports a denial; surface it as an error so the retry
+      // pane stays reachable instead of a dead record control.
+      if (!mounted) return;
+      context.read<MinorConsentCaptureCubit>().fail();
+    }
   }
 
   Future<void> _onStop() async {
@@ -146,9 +168,40 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   }
 
   Future<void> _acceptVideo(String filePath) async {
-    await context.read<MinorConsentCaptureCubit>().releaseRecorder();
+    try {
+      await context.read<MinorConsentCaptureCubit>().releaseRecorder();
+    } catch (_) {
+      // Releasing the camera failed; the accepted clip is still submittable, so
+      // keep going rather than stranding the parent on the review pane.
+    }
     if (!mounted) return;
     setState(() => _pendingVideoPath = filePath);
+  }
+
+  void _onUploadStarted() => _uploadInFlight = true;
+
+  void _onUploadFinished() {
+    _uploadInFlight = false;
+    // The screen may have been disposed mid-upload; now that the upload has
+    // returned, the retained clip can be discarded.
+    if (_disposed) _deletePendingClip();
+  }
+
+  void _deletePendingClip() {
+    if (_uploadInFlight) return;
+    final path = _pendingVideoPath ?? _lastRecordedPath;
+    if (path == null) return;
+    _pendingVideoPath = null;
+    _lastRecordedPath = null;
+    _deleteClip(path);
+  }
+
+  void _deleteClip(String path) {
+    try {
+      File(path).deleteSync();
+    } on FileSystemException {
+      // Already removed by retake or the OS; discarding is best-effort.
+    }
   }
 
   @override
@@ -170,36 +223,52 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
                     onUseEmailFallback: () => context.push(
                       MinorAccountReviewParentConsentScreen.path,
                     ),
+                    onUploadStarted: _onUploadStarted,
+                    onUploadFinished: _onUploadFinished,
                   )
-                : BlocBuilder<
+                : BlocListener<
                     MinorConsentCaptureCubit,
                     MinorConsentCaptureState
                   >(
-                    builder: (context, state) {
-                      return switch (state) {
-                        MinorConsentCaptureIdle() =>
-                          _accessDenied
-                              ? const _DeniedPane()
-                              : _CapturePane(
-                                  cameraReady: _cameraReady,
-                                  onRecord: _onRecord,
-                                ),
-                        MinorConsentCaptureRecording() => _RecordingPane(
-                          cameraReady: _cameraReady,
-                          onStop: _onStop,
-                        ),
-                        MinorConsentCaptureReview(:final filePath) =>
-                          _ReviewPane(
-                            filePath: filePath,
-                            onRetake: _onRetake,
-                            onUseVideo: () => _onUseVideo(filePath),
-                          ),
-                        MinorConsentCaptureDenied() => const _DeniedPane(),
-                        MinorConsentCaptureError() => _ErrorPane(
-                          onRetry: _onRetake,
-                        ),
-                      };
+                    listenWhen: (_, current) =>
+                        current is MinorConsentCaptureReview,
+                    listener: (context, state) {
+                      if (state is MinorConsentCaptureReview) {
+                        _lastRecordedPath = state.filePath;
+                      }
                     },
+                    child:
+                        BlocBuilder<
+                          MinorConsentCaptureCubit,
+                          MinorConsentCaptureState
+                        >(
+                          builder: (context, state) {
+                            return switch (state) {
+                              MinorConsentCaptureIdle() =>
+                                _accessDenied
+                                    ? const _DeniedPane()
+                                    : _CapturePane(
+                                        cameraReady: _cameraReady,
+                                        onRecord: _onRecord,
+                                      ),
+                              MinorConsentCaptureRecording() => _RecordingPane(
+                                cameraReady: _cameraReady,
+                                onStop: _onStop,
+                              ),
+                              MinorConsentCaptureReview(:final filePath) =>
+                                _ReviewPane(
+                                  filePath: filePath,
+                                  onRetake: _onRetake,
+                                  onUseVideo: () => _onUseVideo(filePath),
+                                ),
+                              MinorConsentCaptureDenied() =>
+                                const _DeniedPane(),
+                              MinorConsentCaptureError() => _ErrorPane(
+                                onRetry: _onRetake,
+                              ),
+                            };
+                          },
+                        ),
                   ),
           ),
         ),
@@ -219,6 +288,8 @@ class MinorConsentSubmitView extends ConsumerStatefulWidget {
   const MinorConsentSubmitView({
     required this.videoPath,
     required this.onUseEmailFallback,
+    this.onUploadStarted,
+    this.onUploadFinished,
     super.key,
   });
 
@@ -227,6 +298,12 @@ class MinorConsentSubmitView extends ConsumerStatefulWidget {
 
   /// Invoked when the parent chooses the email / private-link fallback.
   final VoidCallback onUseEmailFallback;
+
+  /// Called when the consent upload starts, before any await.
+  final VoidCallback? onUploadStarted;
+
+  /// Called once the consent upload has returned, success or failure.
+  final VoidCallback? onUploadFinished;
 
   @override
   ConsumerState<MinorConsentSubmitView> createState() =>
@@ -255,6 +332,7 @@ class _MinorConsentSubmitViewState
       _isSubmitting = true;
       _errorMessage = null;
     });
+    widget.onUploadStarted?.call();
 
     try {
       if (kDebugMode) {
@@ -307,6 +385,9 @@ class _MinorConsentSubmitViewState
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
+      // Called even if the screen unmounted mid-upload so the owner can discard
+      // the retained clip once the upload has returned.
+      widget.onUploadFinished?.call();
     }
   }
 

@@ -4,8 +4,22 @@
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+/// Extracts the clip path from the camera's auto-stop payload.
+///
+/// The platform hands back an [EditorVideo] when the 60-second cap fires or an
+/// interruption ends the recording; the path is what the capture flow needs.
+String? minorConsentAutoStoppedPath(EditorVideo? video) => video?.file?.path;
+
 /// Narrow recording surface used by the in-app parent-consent capture flow.
 abstract class MinorConsentRecorder {
+  /// Invoked when the camera stops recording on its own — the max duration was
+  /// reached, or (iOS only) the camera was interrupted. Receives the recorded
+  /// clip's path, or null when nothing was captured.
+  ///
+  /// The capture cubit subscribes here so an auto-stop reaches the UI instead
+  /// of leaving it stuck on the recording pane.
+  void Function(String? path)? onAutoStopped;
+
   /// Prepares the camera so the live preview and recording are ready.
   ///
   /// Call before [start]; a capture screen needs an initialized camera for its
@@ -34,6 +48,9 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
 
   final CameraService _camera;
   bool _disposed = false;
+
+  @override
+  void Function(String? path)? onAutoStopped;
 
   @override
   Future<void> initialize() => _camera.initialize();

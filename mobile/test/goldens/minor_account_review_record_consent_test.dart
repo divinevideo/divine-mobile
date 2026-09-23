@@ -28,6 +28,9 @@ const ValueKey<String> _goldenKey = ValueKey('minor-consent-golden');
 /// Keeping initialization pending leaves the screen on the inert idle layout.
 class _PendingInitRecorder implements MinorConsentRecorder {
   @override
+  void Function(String? path)? onAutoStopped;
+
+  @override
   Future<void> initialize() => Completer<void>().future;
 
   @override
@@ -45,6 +48,9 @@ class _PendingInitRecorder implements MinorConsentRecorder {
 
 /// Recorder that reports a completed clip, so the screen can reach review.
 class _ReviewRecorder implements MinorConsentRecorder {
+  @override
+  void Function(String? path)? onAutoStopped;
+
   @override
   Future<void> initialize() async {}
 
