@@ -21,11 +21,13 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 enum _PeopleListAction { delete }
@@ -481,6 +483,24 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
         customActions: [
           if (widget.ownerPubkey case final owner? when !userList.isEditable)
             _FollowPeopleListAction(ownerPubkey: owner, userList: userList),
+          // Someone else's list is shareable by construction: it reached
+          // this screen as a public list with a known author.
+          if (widget.ownerPubkey case final owner? when !userList.isEditable)
+            ShareListButton(
+              onPressed: () => runDetached(
+                shareListLink(
+                  context,
+                  name: userList.name,
+                  path: RoutePaths.peopleListForId(
+                    userList.id,
+                    ownerPubkey: owner,
+                  ),
+                ),
+                'share people list',
+                logName: 'UserListPeopleScreen',
+                category: LogCategory.ui,
+              ),
+            ),
           if (userList.isEditable)
             _PeopleListActionsMenu(
               onSelected: (action) {

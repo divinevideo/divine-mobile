@@ -293,6 +293,45 @@ void main() {
         expect(result.listId, equals('my-vines'));
       });
 
+      test('parses /people-lists/{listId}?owner={pubkey}', () {
+        const url =
+            'https://divine.video/people-lists/crew?owner=$authorPubkey';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.peopleList));
+        expect(result.listPubkey, equals(authorPubkey));
+        expect(result.listId, equals('crew'));
+      });
+
+      test('normalizes an npub people list owner to hex', () {
+        final npub = NostrKeyUtils.encodePubKey(authorPubkey);
+        final url = 'https://divine.video/people-lists/crew?owner=$npub';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.peopleList));
+        expect(result.listPubkey, equals(authorPubkey));
+      });
+
+      test('ignores a people list link without an owner', () {
+        // Without an owner the path names the viewer's own list, which
+        // nobody else can open.
+        const url = 'https://divine.video/people-lists/crew';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.unknown));
+      });
+
+      test('ignores a people list link with a malformed owner', () {
+        const url = 'https://divine.video/people-lists/crew?owner=not-a-key';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.unknown));
+      });
+
       test('decodes URL-encoded list identifiers', () {
         const url =
             'https://divine.video/list/$authorPubkey/my%20favorite%20vines';
