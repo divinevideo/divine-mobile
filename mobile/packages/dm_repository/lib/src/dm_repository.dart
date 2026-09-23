@@ -1519,7 +1519,11 @@ class DmRepository {
   /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). Ambiguous
   /// refusals are confirmed only when the same relay and page return the same
   /// category on a later deferred drain retry.
-  Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
+  Future<bool> _recoverOutgoingNip04(
+    String pubkey,
+    int generation, {
+    required bool allowRefusalConfirmation,
+  }) async {
     final priorRefusals = _previousNip04Refusals;
     final currentRefusals = <String>{};
     try {
@@ -1553,6 +1557,7 @@ class DmRepository {
             result.unansweredRelayCount == 0 &&
             result.rateLimitedRelayCount == 0;
         final confirmedRefusals =
+            allowRefusalConfirmation &&
             result.closedRelayReasons.isNotEmpty &&
             ambiguousRefusals.every(priorRefusals.contains);
         final authoritative =
@@ -1598,7 +1603,12 @@ class DmRepository {
       );
       return false;
     } finally {
-      _previousNip04Refusals = currentRefusals;
+      // A pending read can finish after logout, account switch, or teardown.
+      // _resetState clears this memory for the next session; do not let the
+      // stale sweep repopulate it with another account's refusal signatures.
+      if (!_ingestSessionEnded(pubkey, generation)) {
+        _previousNip04Refusals = currentRefusals;
+      }
     }
   }
 
@@ -1692,9 +1702,17 @@ class DmRepository {
   /// isolate — so it is safe to fire-and-forget from the inbox BLoC on
   /// every open.
   Future<void> backfillHistoryIfNeeded() {
+    return _backfillHistoryIfNeeded();
+  }
+
+  Future<void> _backfillHistoryIfNeeded({
+    bool allowNip04RefusalConfirmation = false,
+  }) {
     final existing = _historyDrain;
     if (existing != null) return existing;
-    final drain = _runHistoryDrain();
+    final drain = _runHistoryDrain(
+      allowNip04RefusalConfirmation: allowNip04RefusalConfirmation,
+    );
     _historyDrain = drain;
     unawaited(
       drain.whenComplete(() {
@@ -1860,7 +1878,9 @@ class DmRepository {
     }
   }
 
-  Future<void> _runHistoryDrain() async {
+  Future<void> _runHistoryDrain({
+    required bool allowNip04RefusalConfirmation,
+  }) async {
     // Ahead of isInitialized, which stopListening() deliberately leaves true so
     // a restart can re-open: the preamble below writes before reaching the
     // first session guard. upgradeDrainVersionIfNeeded re-stamps the drain
@@ -2164,7 +2184,11 @@ class DmRepository {
         // (e.g. a momentary disconnect in this window) so a flaky network
         // never silently skips recovery AND marks the drain complete — it
         // resumes on the next inbox open instead.
-        final nip04Recovered = await _recoverOutgoingNip04(pubkey, gen);
+        final nip04Recovered = await _recoverOutgoingNip04(
+          pubkey,
+          gen,
+          allowRefusalConfirmation: allowNip04RefusalConfirmation,
+        );
         if (nip04Recovered) {
           // This run reached a conclusive answer about the account's own
           // inbox relays — completion is only reachable when it did — so a
@@ -2340,7 +2364,9 @@ class DmRepository {
         'bounded retry delay',
         category: LogCategory.system,
       );
-      unawaited(backfillHistoryIfNeeded());
+      unawaited(
+        _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
+      );
     });
   }
 
