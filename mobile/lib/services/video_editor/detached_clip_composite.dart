@@ -149,10 +149,10 @@ Size unrotatedLayerBox({
 
 /// Builds the composition layer that places [item] over the base track.
 ///
-/// Geometry mirrors `VideoEditorRenderService.buildImageLayers` exactly, so a
-/// detached clip lands where its raster would have: editor body space scaled by
-/// `videoSize.width / bodySize.width`, with the layer's centre-relative offset
-/// converted to a top-left corner.
+/// Placement uses the same body-space scale and centre-relative offset
+/// convention as `VideoEditorRenderService.buildImageLayers`, but recovers the
+/// unrotated box and passes rotation separately: detached clips are composited
+/// from their video rather than the rotated raster used for image layers.
 ///
 /// [resolvedVideo] is the clip's media as the composition can take it — the
 /// clip's own file, or a speed-flattened re-render, since a composition layer
