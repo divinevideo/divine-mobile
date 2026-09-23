@@ -622,8 +622,8 @@ void main() {
       });
 
       test(
-        'settles once a relay repeats the strfry-style ERROR: auth-required '
-        'refusal',
+        'keeps a strfry-style ERROR: auth-required refusal timed out for a '
+        'later attempt to confirm',
         () async {
           // strfry prefixes every CLOSED reason with "ERROR: ", so its NIP-42
           // refusal is categorised `error`, not `auth-required`.
