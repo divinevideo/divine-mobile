@@ -135,6 +135,52 @@ void main() {
       });
     });
 
+    group('google_fonts font fetch', () {
+      // google_fonts reports the fetch failure as a bare `Exception` whose
+      // message is the transport error stringified, on a future nothing
+      // listens to — so the zone handler is the only place left to classify
+      // it. Both messages below are the shipped 1.0.22 non-fatals.
+      const fontUrl = 'https://fonts.gstatic.com/s/a/e3bb63f2cd24.ttf';
+
+      test('treats a font fetch that failed on DNS as expected', () {
+        final error = Exception(
+          'Failed to load font with url $fontUrl: ClientException with '
+          "SocketException: Failed host lookup: 'fonts.gstatic.com' "
+          '(OS Error: nodename nor servname provided, or not known, '
+          'errno = 8)',
+        );
+
+        expect(isExpectedNetworkFailure(error), isTrue);
+      });
+
+      test('treats a dropped font connection as expected', () {
+        final error = Exception(
+          'Failed to load font with url $fontUrl: ClientException: '
+          'Connection closed before full header was received, uri=$fontUrl',
+        );
+
+        expect(isExpectedNetworkFailure(error), isTrue);
+      });
+
+      test('reports a font the CDN answered with a non-200', () {
+        // No transport marker: the request completed and the server said no,
+        // which is worth hearing about for a font we pin by hash.
+        final error = Exception('Failed to load font with url: $fontUrl');
+
+        expect(isExpectedNetworkFailure(error), isFalse);
+      });
+
+      test('reports a font whose bytes failed the checksum', () {
+        // Integrity, not connectivity — this is the one font failure that
+        // would mean something served us the wrong file.
+        final error = Exception(
+          'File from $fontUrl did not match expected length and checksum.',
+        );
+
+        expect(isExpectedNetworkFailure(error), isFalse);
+      });
+    });
+
     group('unrelated errors', () {
       test('does not treat a programming-invariant violation as expected', () {
         expect(

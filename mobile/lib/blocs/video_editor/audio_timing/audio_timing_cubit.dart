@@ -127,13 +127,14 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
 
   /// Resumes audio playback from the current offset.
   ///
-  /// Re-creates the clipped audio source to match the current offset
-  /// and starts playback.
-  Future<void> resumePlayback() async {
-    await _setClippedAudioSource();
-    await _clipPlayer.play();
-    emitIfOpen(state.copyWith(isPlaying: true));
-  }
+  /// Re-creates the clipped audio source to match the current offset and
+  /// starts playback — the same work [_loadAndPlayAudio] does on entry, and
+  /// deliberately the same guard. `setClip` reaches `AudioPlayer.load`, and a
+  /// clip the platform cannot open (an evicted cache file, a CDN that served
+  /// no playable body) raises a `PlatformException` there. That is an
+  /// expected failure of loading remote media, not a defect; unguarded it
+  /// escaped to the uncaught-zone reporter on every drag-to-resume.
+  Future<void> resumePlayback() => _loadAndPlayAudio();
 
   /// Stops audio playback completely.
   Future<void> stopPlayback() async {
