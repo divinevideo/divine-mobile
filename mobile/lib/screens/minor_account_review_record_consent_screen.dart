@@ -80,7 +80,16 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   /// A refusal lands the screen on the email fallback rather than a dead end.
   Future<void> _prepareCamera() async {
     final permissions = ref.read(permissionsServiceProvider);
-    final allowed = await _ensureAccess(permissions);
+    final bool allowed;
+    try {
+      allowed = await _ensureAccess(permissions);
+    } catch (_) {
+      // A platform permission check that throws must not strand the parent on a
+      // dead preview; treat it like a refusal and offer the email fallback.
+      if (!mounted) return;
+      setState(() => _accessDenied = true);
+      return;
+    }
     if (!mounted) return;
     if (!allowed) {
       setState(() => _accessDenied = true);
