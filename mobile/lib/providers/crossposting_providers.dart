@@ -8,17 +8,45 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/auth_service.dart' show AuthState;
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-final crosspostingEligibleProvider = Provider<bool>((ref) {
-  // Hidden entirely while the platform's OAuth callback path is unknown or
-  // unreliable (iOS < 17.4) — offering the flow there fails mid-session.
-  final oauthSupported = ref.watch(appOAuthSupportProvider).value ?? false;
-  if (!oauthSupported) return false;
+/// How this build can drive the crossposting connect flow.
+enum CrosspostingAvailability {
+  /// Authenticated and in-app OAuth works; connect inside the app.
+  native,
+
+  /// Authenticated, but in-app OAuth cannot deliver the callback (iOS < 17.4,
+  /// or the system version could not be determined). Connect on the web.
+  webOnly,
+
+  /// Signed out or not registered; show no crossposting CTA.
+  unavailable,
+}
+
+/// Opens the crossposter web setup page; the fallback when in-app OAuth is
+/// unsupported.
+typedef CrosspostingWebOpener = Future<bool> Function(Uri url);
+
+final crosspostingWebOpenerProvider = Provider<CrosspostingWebOpener>((ref) {
+  return (url) => launchUrl(url, mode: LaunchMode.externalApplication);
+});
+
+final crosspostingAvailabilityProvider = Provider<CrosspostingAvailability>((
+  ref,
+) {
   final authState = ref.watch(currentAuthStateProvider);
   final authService = ref.watch(authServiceProvider);
-  return authState == AuthState.authenticated &&
+  final registered =
+      authState == AuthState.authenticated &&
       authService.currentPublicKeyHex != null &&
       authService.isRegistered;
+  if (!registered) return CrosspostingAvailability.unavailable;
+  // Fail to webOnly, not unavailable: an unresolved lookup must not hide the
+  // feature, and the web page is a working connect path regardless.
+  final oauthSupported = ref.watch(appOAuthSupportProvider).value ?? false;
+  return oauthSupported
+      ? CrosspostingAvailability.native
+      : CrosspostingAvailability.webOnly;
 });
 
 typedef CrosspostingApiClientFactory = CrosspostingApiClient Function(
