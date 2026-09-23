@@ -491,7 +491,27 @@ class VideoRecorderBloc
     VideoRecorderAppLifecycleChanged event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    await _cameraService.handleAppLifecycleState(event.state);
+    try {
+      await _cameraService.handleAppLifecycleState(event.state);
+    } catch (e, stackTrace) {
+      Log.warning(
+        '⚠️ Camera failed to handle ${event.state.name}: $e',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      addError(e, stackTrace);
+      if (event.state != AppLifecycleState.resumed) return;
+      // A camera that does not come back would leave a black preview. Show
+      // the initialization error instead; the next initialize (leaving and
+      // returning to the Upload tab, or reopening the recorder) recovers.
+      emit(
+        state.copyWith(
+          isCameraInitialized: false,
+          canRecord: false,
+          initializationError: CameraInitializationError.failed,
+        ),
+      );
+    }
   }
 
   Future<void> _onRemoteRecordPaused(

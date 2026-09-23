@@ -2461,6 +2461,71 @@ void main() {
       );
     });
 
+    group('VideoRecorderAppLifecycleChanged', () {
+      const initialized = VideoRecorderBlocState(
+        isCameraInitialized: true,
+        canRecord: true,
+      );
+
+      test(
+        'shows the initialization error when the camera fails to resume',
+        () async {
+          when(
+            () => cameraService.handleAppLifecycleState(
+              AppLifecycleState.resumed,
+            ),
+          ).thenThrow(PlatformException(code: 'RESUME_ERROR'));
+          final bloc = buildBloc()..emit(initialized);
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+          );
+          await pumpEventQueue();
+
+          expect(bloc.state.isCameraInitialized, isFalse);
+          expect(bloc.state.canRecord, isFalse);
+          expect(
+            bloc.state.initializationError,
+            CameraInitializationError.failed,
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps the camera state when a pause fails',
+        setUp: () {
+          when(
+            () => cameraService.handleAppLifecycleState(
+              AppLifecycleState.paused,
+            ),
+          ).thenThrow(PlatformException(code: 'PAUSE_ERROR'));
+        },
+        build: buildBloc,
+        seed: () => initialized,
+        act: (bloc) => bloc.add(
+          const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+        ),
+        expect: () => const <VideoRecorderBlocState>[],
+        errors: () => [isA<PlatformException>()],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'emits nothing when the camera resumes',
+        build: buildBloc,
+        seed: () => initialized,
+        act: (bloc) => bloc.add(
+          const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+        ),
+        expect: () => const <VideoRecorderBlocState>[],
+        verify: (_) => verify(
+          () => cameraService.handleAppLifecycleState(
+            AppLifecycleState.resumed,
+          ),
+        ).called(1),
+      );
+    });
+
     group('VideoRecorderResetRequested', () {
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'restores the default state object',
