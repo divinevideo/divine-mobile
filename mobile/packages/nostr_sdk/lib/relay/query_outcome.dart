@@ -33,20 +33,20 @@ class QueryOutcome {
   /// caller's deadline; only `RelayPool.reportQueryDeadline` reports it.
   final QueryEnd endedBy;
 
-  /// Number of non-cache relays that sent EOSE, including those that returned
-  /// no matching events.
+  /// Number of non-cache relays that sent `EOSE`; see
+  /// [QueryResult.answeredNetworkRelayCount].
   final int answeredNetworkRelayCount;
 
-  /// Number of connected participating relays that sent no terminal frame
-  /// and can still be expected to answer. A dropped relay is not counted.
+  /// Number of relays that sent no terminal frame and could still have
+  /// answered; see [QueryResult.unansweredRelayCount].
   final int unansweredRelayCount;
 
-  /// Number of relays that refused the query with a `rate-limited` `CLOSED`,
-  /// which NIP-01 defines as temporary.
+  /// Number of relays that refused with a `rate-limited` `CLOSED`; see
+  /// [QueryResult.rateLimitedRelayCount].
   final int rateLimitedRelayCount;
 
-  /// NIP-01 reason categories reported by relays that closed this query.
-  /// Relay-supplied explanatory text is deliberately omitted.
+  /// Each non-cache relay's `CLOSED` reason category, keyed by url; see
+  /// [QueryResult.closedRelayReasons].
   final Map<String, String> closedRelayReasons;
 
   /// Whether a relay may have withheld matching events because the query

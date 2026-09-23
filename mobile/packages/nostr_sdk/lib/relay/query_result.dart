@@ -96,21 +96,26 @@ class QueryResult {
   /// any relay took the `REQ` is still unknown.
   final QueryEnd endedBy;
 
-  /// Number of non-cache relays that sent EOSE, including relays with no
-  /// matching events. Useful when a caller accepts terminal refusals from
-  /// other peers.
+  /// Number of non-cache relays that sent `EOSE`, including relays with no
+  /// matching events.
   final int answeredNetworkRelayCount;
 
-  /// Number of connected participating relays that sent no terminal frame
-  /// and can still be expected to answer. A dropped relay is not counted.
+  /// Number of participating relays, cache relays included, that sent no
+  /// terminal frame and could still have answered: those serving the query on
+  /// a live socket, plus any whose `REQ` was still being written when a
+  /// deadline ended the read. A dropped relay, or one behind a shut NIP-42
+  /// gate, is not counted.
   final int unansweredRelayCount;
 
   /// Number of relays that refused the read with a `rate-limited` `CLOSED`.
-  /// NIP-01 defines that refusal as temporary, so a retry may still succeed.
+  /// A rate limit throttles the client rather than describing what the relay
+  /// holds, so a retry may still succeed.
   final int rateLimitedRelayCount;
 
-  /// NIP-01 reason categories reported by relays that closed this query.
-  /// Relay-supplied explanatory text is deliberately omitted.
+  /// The `CLOSED` reason category of each non-cache relay whose last frame for
+  /// this query was `CLOSED`, keyed by relay url: a NIP-01 prefix, NIP-42's
+  /// `auth-required`, `unsupported`, or `other` when the reason carries none
+  /// of them. Only the category is kept, never the relay's own text.
   final Map<String, String> closedRelayReasons;
 
   /// `true` when a relay may have withheld matching events because the read

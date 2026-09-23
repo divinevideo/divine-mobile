@@ -88,7 +88,8 @@ final RegExp _relayNoticeCredential = RegExp(
   caseSensitive: false,
 );
 
-/// Makes a relay-controlled NOTICE body safe and bounded for support logs.
+/// Makes relay-controlled text, such as a NOTICE body or an AUTH `OK`
+/// rejection reason, safe and bounded for support logs.
 ///
 /// Public Nostr identifiers are deliberately retained in full. When the
 /// length boundary lands inside the final token, that whole token is omitted

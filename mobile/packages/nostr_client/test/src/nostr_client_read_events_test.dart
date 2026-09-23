@@ -923,8 +923,8 @@ void main() {
         );
       });
 
-      /// Starts an opted-in read once both relays hold its `REQ`; the record
-      /// wraps the pending `timedOut` so `await` cannot flatten it.
+      /// Starts an opted-in read and returns once both relays hold its `REQ`;
+      /// the record keeps `await` from flattening the pending `timedOut`.
       Future<({Future<bool> timedOut})> optedInRead({
         Duration timeout = const Duration(seconds: 3),
       }) async {

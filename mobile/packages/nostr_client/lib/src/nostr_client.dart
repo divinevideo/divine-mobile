@@ -912,12 +912,15 @@ class NostrClient {
   /// Note this only bounds the WebSocket leg; cached rows are merged in either
   /// way.
   ///
-  /// [acceptRelayClosedWhenOthersAnswered] opts a caller into treating a
-  /// terminal `CLOSED` as settled when a non-cache relay answered and none of
-  /// the participating relays stayed unanswered. It does not accept silence, a
-  /// dropped socket, a deadline, or a `rate-limited` refusal, which NIP-01
-  /// defines as temporary. An `error:` refusal gets one confirmation query
-  /// and is accepted only if the same relay repeats it.
+  /// [acceptRelayClosedWhenOthersAnswered] lets a [requireAllRelaysSettled]
+  /// read settle on relay refusals once a non-cache relay sent `EOSE` and no
+  /// relay is still unanswered. It never settles on silence, a dropped socket,
+  /// a deadline, or a `rate-limited` refusal, all of which a retry may change.
+  /// An `error:` refusal settles only when one confirmation read, within what
+  /// is left of [timeout], draws no `error:` refusal from a relay that did not
+  /// already send one. Any other category, `other` included, settles on the
+  /// first read, except the NIP-42 refusals the pool parks for its post-AUTH
+  /// replay, which hold the read to its deadline.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -1038,7 +1041,8 @@ class NostrClient {
   /// [QueryResult.possiblyCapped] / [QueryResult.confirmedExhaustive] how
   /// complete the relays' answer was.
   ///
-  /// All three describe the **network leg only**. A cached row merged into
+  /// Every field except [QueryResult.events] describes the **network leg
+  /// only**. A cached row merged into
   /// [QueryResult.events] can never make a read the relays did not finish
   /// look finished.
   ///

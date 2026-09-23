@@ -1505,15 +1505,14 @@ class DmRepository {
   /// already sets `currentUserHasSent` for self-authored messages. Bounded by
   /// [DmHistoryDrainConfig.maxPages].
   ///
-  /// Returns `true` when the pass completed against answering relays — a
-  /// genuine empty answer, terminal refusal by another relay, or the page
-  /// budget — and `false` when no relay answered, a relay stayed silent,
-  /// dropped, or was rate limited, the request timed out, or the repository
-  /// was torn down. This legacy pass accepts a terminal refusal only when
-  /// another relay answered. An `error:` refusal must first repeat from the
-  /// same relay on a confirmation query, since that category can also describe
-  /// transient failures. The primary gift-wrap drain retains its strict
-  /// full-settlement cursor guard.
+  /// Returns `true` only when every page it read was authoritative and the
+  /// walk ended on an empty page, at the epoch, or at the page budget. Returns
+  /// `false` when a page was not, the query threw, or the ingest session
+  /// ended; a `false` result MUST NOT mark the drain complete, so a momentary
+  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). Unlike
+  /// the gift-wrap drain, this pass opts into `queryEventsDetailed`'s
+  /// `acceptRelayClosedWhenOthersAnswered`, which documents the refusals it
+  /// settles on.
   Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -1532,11 +1531,9 @@ class DmRepository {
           subscriptionId: dmNip04DrainSubscriptionId(pubkey, page),
           useCache: false,
           requireAllRelaysSettled: true,
-          // This legacy pass is supplementary to the gift-wrap drain.
-          // An explicit refusal cannot contribute on this query, so accept
-          // other relays answering while still deferring
-          // on silence, disconnects, deadlines, a rate limit, or a refusal
-          // with no answer.
+          // Supplementary to the gift-wrap drain, so a refusal a retry would
+          // not change need not hold this pass open once another relay
+          // answered.
           acceptRelayClosedWhenOthersAnswered: true,
         );
         final events = result.events;
@@ -2166,7 +2163,8 @@ class DmRepository {
           Log.warning(
             'DM history drain reached the end for ${pubkeyForLogs(pubkey)} but '
             'outgoing '
-            'NIP-04 recovery could not complete (no live relay); deferring '
+            'NIP-04 recovery could not complete (not every relay settled it); '
+            'deferring '
             'completion to the next inbox open.',
             category: LogCategory.system,
           );
