@@ -430,10 +430,12 @@ class SupporterRepository {
     } on Object catch (error, stackTrace) {
       _claimFailureRevision++;
       _recoveryCompleted = _isTerminalClaimFailure(error);
+      final failure = error is SupporterApiException
+          ? '${error.kind.name}, status=${error.statusCode}'
+          : '${error.runtimeType}';
       Log.warning(
         'Supporter purchase claim failed for ${pubkeyForLogs(_pubkey)}; '
-        'purchase left unacknowledged for redelivery '
-        '(failure=${error.runtimeType})',
+        'purchase left unacknowledged for redelivery (failure=$failure)',
         name: 'SupporterRepository',
         category: LogCategory.system,
       );

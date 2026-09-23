@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A controllable fake validator that emits on a stream we own.
 class _FakeValidator implements EntitlementValidator {
@@ -1007,6 +1008,50 @@ void main() {
       // a verification client is configured.
       expect(validator.completePurchaseCallCount, 0);
       expect(repo.isSupporter, isFalse);
+    });
+
+    test('logs why the Worker rejected a claim', () async {
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      final prefs = await SharedPreferences.getInstance();
+      final client = buildApiClient(
+        claimStatus: 400,
+        claimErrorCode: 'invalid_proof',
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      final errorFuture = expectLater(
+        repo.changes,
+        emitsError(isA<SupporterApiException>()),
+      );
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'rejected-claim',
+          store: 'apple',
+          productId: 'divine.supporter.annual',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+      await errorFuture;
+
+      final claimFailure = logCapture.getRecentLogs().singleWhere(
+        (entry) => entry.message.contains('claim failed'),
+      );
+      expect(
+        claimFailure.message,
+        contains('failure=requestFailed, status=400'),
+      );
+      expect(validator.completePurchaseCallCount, 0);
     });
 
     test(
