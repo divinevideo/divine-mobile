@@ -50,17 +50,30 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   static const Duration maxDuration = Duration(seconds: 60);
 
   final MinorConsentRecorder _recorder;
+  bool _disposed = false;
+
+  /// Prepares the camera behind the recorder for a live preview.
+  Future<void> initialize() async {
+    if (_disposed || isClosed) return;
+    await _recorder.initialize();
+  }
 
   /// Starts recording under [outputDirectory], capping at [maxDuration].
   ///
   /// Emits [MinorConsentCaptureDenied] when the camera refuses to start, so the
   /// screen can route the parent to the email fallback.
   Future<void> start({required String outputDirectory}) async {
+    if (_disposed || isClosed) return;
     final started = await _recorder.start(
       maxDuration: maxDuration,
       outputDirectory: outputDirectory,
     );
-    if (isClosed) return;
+    if (isClosed || _disposed) {
+      // The screen was left while the camera was starting. Discard the clip
+      // rather than leaving a recording running with no owner.
+      if (started) await _recorder.stop();
+      return;
+    }
     if (!started) {
       emit(const MinorConsentCaptureDenied());
       return;
@@ -70,8 +83,9 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
 
   /// Stops recording and moves to review, or to error when no file was written.
   Future<void> stop() async {
+    if (_disposed || isClosed) return;
     final path = await _recorder.stop();
-    if (isClosed) return;
+    if (isClosed || _disposed) return;
     if (path == null) {
       emit(const MinorConsentCaptureError());
       return;
@@ -81,7 +95,23 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
 
   /// Discards the recorded clip and returns to the idle preview.
   void retake() {
-    if (isClosed) return;
+    if (_disposed || isClosed) return;
     emit(const MinorConsentCaptureIdle());
+  }
+
+  /// Stops an in-flight recording and releases the camera.
+  ///
+  /// A clip stopped here is never emitted, so a parent who leaves mid-recording
+  /// cannot have it submitted. Idempotent: the recorder and its provider both
+  /// call it.
+  @override
+  Future<void> close() async {
+    if (_disposed) return super.close();
+    _disposed = true;
+    if (state is MinorConsentCaptureRecording) {
+      await _recorder.stop();
+    }
+    await _recorder.dispose();
+    return super.close();
   }
 }

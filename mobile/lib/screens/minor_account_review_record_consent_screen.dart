@@ -41,10 +41,11 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch (not read) so the auto-disposed recorder stays alive for this
+    // screen's lifetime and is released when the screen unmounts.
+    final recorder = ref.watch(minorConsentRecorderProvider);
     return BlocProvider(
-      create: (_) => MinorConsentCaptureCubit(
-        recorder: ref.read(minorConsentRecorderProvider),
-      ),
+      create: (_) => MinorConsentCaptureCubit(recorder: recorder),
       child: _RecordConsentView(onUseVideo: onUseVideo),
     );
   }
@@ -81,7 +82,7 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
       return;
     }
     try {
-      await ref.read(minorConsentRecorderProvider).initialize();
+      await context.read<MinorConsentCaptureCubit>().initialize();
     } catch (_) {
       if (!mounted) return;
       setState(() => _accessDenied = true);
