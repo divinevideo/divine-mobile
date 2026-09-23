@@ -167,6 +167,9 @@ class ScheduledPostCoordinator {
     // Coming back or reconnecting is when an unconfirmed broadcast most
     // likely goes through, so neither waits out its backoff.
     _foregroundSubscription = _appForegroundStream.listen((foreground) {
+      // The provider replays the current state on subscribe; only a change
+      // is a return, and the sweep below already covers startup.
+      if (foreground == _foreground) return;
       _foreground = foreground;
       if (foreground) {
         _repository.resetClientPublishBackoff();

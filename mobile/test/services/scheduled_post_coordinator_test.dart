@@ -444,6 +444,23 @@ void main() {
     });
 
     group('lifecycle', () {
+      test(
+        'syncs once when the provider replays that the app is open',
+        () async {
+          when(
+            () => client.list(),
+          ).thenAnswer((_) async => const ScheduleListLoaded([]));
+
+          await coordinator.initialize();
+          // appForegroundProvider is listened to with fireImmediately, so the
+          // current state arrives right after initialize's own sweep starts.
+          foreground.add(true);
+          await pumpEventQueue();
+
+          verify(() => client.list()).called(1);
+        },
+      );
+
       test('sweeps on initialize, foreground and reconnect', () async {
         stubAccepted();
         await enqueue(buildEvent());
