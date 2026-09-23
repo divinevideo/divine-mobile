@@ -15,11 +15,6 @@ final class ScheduledPostsStarted extends ScheduledPostsEvent {
   const ScheduledPostsStarted();
 }
 
-/// Pull-to-refresh: asks the relay again.
-final class ScheduledPostsRefreshRequested extends ScheduledPostsEvent {
-  const ScheduledPostsRefreshRequested();
-}
-
 /// The outbox changed; rebuild the list. Internal.
 final class _ScheduledPostsOutboxChanged extends ScheduledPostsEvent {
   const _ScheduledPostsOutboxChanged(this.posts);

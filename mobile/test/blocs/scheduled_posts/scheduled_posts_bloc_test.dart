@@ -172,18 +172,6 @@ void main() {
       );
     });
 
-    group('ScheduledPostsRefreshRequested', () {
-      blocTest<ScheduledPostsBloc, ScheduledPostsState>(
-        'forces a sweep and refreshes the remote entries',
-        build: build,
-        act: (bloc) => bloc.add(const ScheduledPostsRefreshRequested()),
-        expect: () => [const ScheduledPostsState()],
-        verify: (_) {
-          verify(() => coordinator.sweep(force: true)).called(1);
-        },
-      );
-    });
-
     group('actions', () {
       final event = buildEvent();
 

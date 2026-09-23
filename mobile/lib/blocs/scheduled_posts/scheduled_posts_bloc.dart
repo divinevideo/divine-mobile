@@ -30,7 +30,6 @@ class ScheduledPostsBloc
        _draftService = draftService,
        super(const ScheduledPostsState()) {
     on<ScheduledPostsStarted>(_onStarted, transformer: restartable());
-    on<ScheduledPostsRefreshRequested>(_onRefresh, transformer: droppable());
     on<_ScheduledPostsOutboxChanged>(
       _onOutboxChanged,
       transformer: restartable(),
@@ -60,14 +59,6 @@ class ScheduledPostsBloc
         onData: (_) => emit(state.copyWith(remotePosts: _remotePosts())),
       ),
     ]);
-  }
-
-  Future<void> _onRefresh(
-    ScheduledPostsRefreshRequested event,
-    Emitter<ScheduledPostsState> emit,
-  ) async {
-    await _coordinator.sweep(force: true);
-    emit(state.copyWith(remotePosts: _remotePosts()));
   }
 
   Future<void> _onOutboxChanged(
