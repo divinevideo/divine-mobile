@@ -36,8 +36,12 @@ final class PurchaseFailedException extends EntitlementException {
   final String? responseCode;
 }
 
-/// A purchase was initiated but is still pending (e.g. awaiting parental
-/// approval or payment settlement). The entitlement is not yet active.
+/// The store already holds an unfinished purchase of the product, so it did
+/// not start another one. The entitlement is not yet active.
+///
+/// Callers treat this as "no new purchase exists", so a purchase that is only
+/// waiting on the store (parental approval or payment settlement) must not
+/// use it; that wait is reported through lifecycle updates instead.
 final class PurchasePendingException extends EntitlementException {
   /// Creates a [PurchasePendingException].
   const PurchasePendingException([String message = 'Purchase is pending.'])
