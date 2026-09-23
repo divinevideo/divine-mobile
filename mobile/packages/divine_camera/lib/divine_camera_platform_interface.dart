@@ -155,12 +155,14 @@ abstract class DivineCameraPlatform extends PlatformInterface {
 
   /// Pauses the camera preview.
   ///
-  /// When [releaseAudio] is `true` (genuine background), the platform also
-  /// releases the microphone and deactivates the shared audio session so the
-  /// OS stops attributing an active recording to the app. Pass `false` for
-  /// transient foreground interruptions (e.g. iOS `.inactive` from a Control
-  /// Center / app-switcher pull), which stop only the video preview and leave
-  /// the audio session untouched to avoid churning other apps' playback.
+  /// When [releaseAudio] is `true` (genuine background, or the Upload tab),
+  /// iOS also releases the microphone and deactivates the shared audio session
+  /// so the OS stops attributing an active recording to the app, and Android
+  /// unbinds the camera unless a recording is in progress. Pass `false` for
+  /// transient foreground interruptions (e.g. `.inactive` from a Control
+  /// Center / notification-shade pull): iOS then stops only the video preview
+  /// and leaves the audio session untouched, and Android keeps the camera
+  /// bound and the preview running.
   Future<void> pausePreview({bool releaseAudio = true}) {
     throw UnimplementedError('pausePreview() has not been implemented.');
   }
