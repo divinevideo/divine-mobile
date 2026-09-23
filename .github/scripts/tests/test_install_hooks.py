@@ -19,6 +19,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INSTALLER = REPO_ROOT / "scripts" / "install-hooks.sh"
+HOOKS = ("pre-commit", "pre-push")
 
 
 def run(cmd, cwd, env):
@@ -28,10 +29,12 @@ def run(cmd, cwd, env):
 class InstallHooksTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
         self.root = Path(self._tmp.name) / "repo"
         (self.root / "scripts").mkdir(parents=True)
         # The generated hooks cd into mobile/ before their staleness check.
         (self.root / "mobile").mkdir()
+        (self.root / "mobile" / ".gitkeep").touch()
         shutil.copy(INSTALLER, self.root / "scripts" / "install-hooks.sh")
         self.installer = self.root / "scripts" / "install-hooks.sh"
 
@@ -53,14 +56,23 @@ class InstallHooksTest(unittest.TestCase):
         env["GIT_CONFIG_NOSYSTEM"] = "1"
         self.env = env
 
-        subprocess.run(
-            ["git", "init", "-q", "-b", "main"],
+        self.git("init", "-q", "-b", "main")
+        # pre-push reads HEAD, and a linked worktree needs a commit to check out.
+        self.git("add", "-A")
+        self.git(
+            "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+            "commit", "-q", "-m", "init",
+        )
+
+    def git(self, *args):
+        return subprocess.run(
+            ["git", *args],
             cwd=self.root,
             env=self.env,
             check=True,
             capture_output=True,
+            text=True,
         )
-        self.addCleanup(self._tmp.cleanup)
 
     def hooks_dir(self):
         return self.root / ".git" / "hooks"
@@ -73,32 +85,84 @@ class InstallHooksTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    def test_installs_both_hooks_with_a_matching_stamp(self):
-        self.install()
-
-        expected = self.installer_hash()
-        for name in ("pre-commit", "pre-push"):
-            body = (self.hooks_dir() / name).read_text()
-            self.assertNotIn("@GENERATOR_HASH@", body)
-            self.assertIn(f'HOOKS_GENERATOR_HASH="{expected}"', body)
-
-    def test_stale_hook_reinstalls_itself_and_aborts(self):
-        self.install()
+    def change_installer(self):
         self.installer.write_text(
             self.installer.read_text() + "\n# installer changed\n"
         )
 
-        result = run(
-            ["bash", ".git/hooks/pre-push", "origin", "https://example.invalid"],
-            self.root,
-            self.env,
+    def run_hook(self, name, cwd=None):
+        # Executed the way git runs it, so a hook that lost its executable bit
+        # fails here rather than passing under an explicit `bash`.
+        argv = [str(self.hooks_dir() / name)]
+        if name == "pre-push":
+            argv += ["origin", "https://example.invalid"]
+        return subprocess.run(
+            argv,
+            cwd=cwd or self.root,
+            env=self.env,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
         )
 
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn("stale", result.stdout.lower())
+    def assert_runs_clean(self, result):
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("stale", result.stdout.lower())
+
+    def assert_stale_hook_heals(self, name):
+        self.install()
+        self.change_installer()
+
+        stale = self.run_hook(name)
+
+        self.assertEqual(stale.returncode, 1, stale.stdout + stale.stderr)
+        self.assertIn("stale", stale.stdout.lower())
         # The re-install stamped the current installer, so the next run is clean.
-        body = (self.hooks_dir() / "pre-push").read_text()
-        self.assertIn(f'HOOKS_GENERATOR_HASH="{self.installer_hash()}"', body)
+        self.assert_runs_clean(self.run_hook(name))
+
+    def test_installs_both_hooks_with_a_matching_stamp(self):
+        self.install()
+
+        expected = self.installer_hash()
+        for name in HOOKS:
+            body = (self.hooks_dir() / name).read_text()
+            self.assertNotIn("@GENERATOR_HASH@", body)
+            self.assertIn(f'HOOKS_GENERATOR_HASH="{expected}"', body)
+
+    def test_freshly_installed_hooks_pass_their_staleness_check(self):
+        self.install()
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                self.assert_runs_clean(self.run_hook(name))
+
+    def test_stale_pre_commit_reinstalls_itself_and_aborts(self):
+        self.assert_stale_hook_heals("pre-commit")
+
+    def test_stale_pre_push_reinstalls_itself_and_aborts(self):
+        self.assert_stale_hook_heals("pre-push")
+
+    def test_reinstall_leaves_a_running_hook_its_original_script(self):
+        self.install()
+        hook = self.hooks_dir() / "pre-push"
+
+        # bash reads a hook it is running through an open descriptor like this.
+        with hook.open("rb") as running:
+            original = hook.read_bytes()
+            self.change_installer()
+            self.install()
+
+            self.assertNotEqual(hook.read_bytes(), original)
+            self.assertEqual(running.read(), original)
+
+    def test_hooks_run_clean_from_a_linked_worktree(self):
+        self.install()
+        linked = Path(self._tmp.name) / "linked"
+        self.git("worktree", "add", "-q", "-b", "feature", str(linked))
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                self.assert_runs_clean(self.run_hook(name, cwd=linked))
 
 
 if __name__ == "__main__":
