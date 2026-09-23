@@ -16,10 +16,10 @@ fi
 HOOKS_DIR="$GIT_COMMON_DIR/hooks"
 
 # Content hash of this installer, stamped into every generated hook. A hook
-# whose stamp no longer matches this file re-installs itself before running, so
-# a checkout cannot keep running a hook built by an older contract — for
-# example one that called `flutter`/`dart` directly instead of through
-# `mise exec` and therefore used whatever toolchain happened to be on PATH.
+# whose stamp no longer matches this file re-installs itself and exits instead
+# of running its checks, so a change here reaches hooks already installed.
+# Hooks generated before the stamp existed carry none and never update
+# themselves; they need one manual run of this installer.
 GENERATOR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 # Hashed from stdin: given a path containing a backslash, shasum and GNU
 # sha256sum prefix the digest with one, and the stamp would never match.
@@ -100,7 +100,7 @@ capture_generated_status() {
 
 # Content hash of scripts/install-hooks.sh at generation time. When the
 # installer changes, this no longer matches and the hook re-installs itself
-# below, so a checkout never runs a hook built by an older toolchain contract.
+# below instead of running its checks.
 HOOKS_GENERATOR_HASH="@GENERATOR_HASH@"
 
 current_installer_hash() {
@@ -222,7 +222,7 @@ capture_generated_status() {
 
 # Content hash of scripts/install-hooks.sh at generation time. When the
 # installer changes, this no longer matches and the hook re-installs itself
-# below, so a checkout never runs a hook built by an older toolchain contract.
+# below instead of running its checks.
 HOOKS_GENERATOR_HASH="@GENERATOR_HASH@"
 
 current_installer_hash() {

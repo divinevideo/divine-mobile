@@ -8,21 +8,24 @@ The repo has pre-commit and pre-push hooks that mirror CI checks locally. They l
 cd mobile && mise run setup_hooks
 ```
 
-The hooks are **generated copies**, not symlinks — editing `scripts/install-hooks.sh` does nothing until each developer re-runs the command above. When a PR changes hook behaviour, say so in its description, because an already-installed hook keeps the old behaviour silently.
+The hooks are **generated copies**, not symlinks. Each one carries a hash of the `scripts/install-hooks.sh` that generated it; when the installer changes, the next commit or push re-installs the hooks and stops with `Hooks updated. Re-run your command.` Hooks installed before that hash existed carry none and never update themselves, so re-run the command above once. When a PR changes hook behaviour, still say so in its description.
 
-Most recent change: the pre-push untested-services check now invokes its Dart detector through the pinned SDK. Re-run `mise run setup_hooks` to pick up the change; a stale hook can fail with `dart: command not found` when a service or test file changes.
+Most recent change: the hooks carry the installer hash described above and re-install themselves when the installer changes (#9447). Re-run `mise run setup_hooks` once to get hooks that have it.
 
-Before that: the pre-push merge-conflict check moved into `scripts/check_branch_mergeable.sh`, so future fixes to it apply without re-running `mise run setup_hooks`. Re-run it once to pick up the delegation; a stale hook keeps reporting a shallow clone as a merge conflict (see below).
+Before that: the pre-push untested-services check now invokes its Dart detector through the pinned SDK. Re-run `mise run setup_hooks` to pick up the change; a stale hook can fail with `dart: command not found` when a service or test file changes.
 
-Earlier: the pre-push hook skips changed files under `mobile/test/goldens/`. Without re-running `mise run setup_hooks`, a golden change is unpushable on macOS — the stale hook runs the image goldens against Ubuntu-rendered references and fails every time.
+Earlier: the pre-push merge-conflict check moved into `scripts/check_branch_mergeable.sh`, so future fixes to it apply without re-running `mise run setup_hooks`. Re-run it once to pick up the delegation; a stale hook keeps reporting a shallow clone as a merge conflict (see below).
+
+Earlier still: the pre-push hook skips changed files under `mobile/test/goldens/`. Without re-running `mise run setup_hooks`, a golden change is unpushable on macOS — the stale hook runs the image goldens against Ubuntu-rendered references and fails every time.
 
 When a developer reports CI failures on format, analyze, or codegen that they didn't catch locally, FIRST check whether hooks are installed (`ls .git/hooks/pre-commit .git/hooks/pre-push`) before analyzing the failure itself. If hooks are missing, that is likely the root cause — suggest `mise run setup_hooks`. Do not skip this check.
 
 ## What the hooks check
 
+**Both hooks**, before anything else and on every commit and push: the installer-hash staleness check described above.
+
 **Pre-commit** (staged `.dart` files only):
 - `dart format --output=none --set-exit-if-changed`
-- `flutter analyze lib test integration_test`
 - build_runner codegen verification (if codegen inputs changed)
 
 **Pre-push**:

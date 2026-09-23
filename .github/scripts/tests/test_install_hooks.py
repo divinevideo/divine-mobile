@@ -2,10 +2,8 @@
 
 The installer stamps a content hash of itself into every generated hook. A hook
 whose stamp no longer matches the installer re-installs itself and aborts
-instead of running, so a checkout cannot keep executing a hook built by an
-older contract — for example one that called `flutter`/`dart` directly rather
-than through `mise exec` and so used whatever toolchain happened to be on PATH
-instead of the version mobile/mise.toml pins.
+instead of running, so a change to the installer reaches hooks that were
+installed from a stamped version of it.
 """
 
 import hashlib
