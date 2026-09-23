@@ -232,10 +232,10 @@ class ScheduledPostsRepository {
         );
         _notify();
         return ScheduledPostSubmitResult.rejected(kind: kind, message: message);
-      case ScheduleSubmitTransientFailure(:final reason):
+      case ScheduleSubmitTransientFailure(:final reason, :final unavailable):
         await _dao.updateStatus(
           eventId: eventId,
-          failureReason: reason,
+          failureReason: unavailable ? '$_unavailablePrefix$reason' : reason,
           attemptedAt: attemptedAt,
         );
         _notify();
@@ -251,11 +251,15 @@ class ScheduledPostsRepository {
     return !now.isBefore(lastAttempt.add(_backoffFor(post)));
   }
 
+  /// Marks the stored reason of a submission the client judged unserved
+  /// (gateway 404, 503), which retries at the slower unavailable pace.
+  static const _unavailablePrefix = 'unavailable: ';
+
   Duration _backoffFor(ScheduledPost post) {
     if (post.attempts == 0) return Duration.zero;
-    final unavailable =
-        post.failureReason == 'http_404' || post.failureReason == 'http_503';
-    if (unavailable) return _config.unavailableDelay;
+    if (post.failureReason?.startsWith(_unavailablePrefix) ?? false) {
+      return _config.unavailableDelay;
+    }
     final factor = math.pow(_config.backoffMultiplier, post.attempts - 1);
     final millis = _config.initialDelay.inMilliseconds * factor;
     return Duration(

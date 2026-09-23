@@ -180,11 +180,10 @@ void main() {
       test('a transient failure keeps the row pending and counts', () async {
         final event = buildEvent();
         await repository.enqueue(event: event, draftId: 'draft-1');
-        when(() => client.schedule(any())).thenAnswer(
-          (_) async => const ScheduleSubmitTransientFailure(
-            'http_404',
-            unavailable: true,
-          ),
+        when(
+          () => client.schedule(any()),
+        ).thenAnswer(
+          (_) async => const ScheduleSubmitTransientFailure('timeout'),
         );
 
         final result = await repository.submit(event.id);
@@ -193,7 +192,7 @@ void main() {
         final stored = await repository.getById(event.id);
         expect(stored!.status, ScheduledPostStatus.pendingSubmit);
         expect(stored.attempts, 1);
-        expect(stored.failureReason, 'http_404');
+        expect(stored.failureReason, 'timeout');
       });
 
       test('does not resubmit a row the relay already holds', () async {
@@ -256,11 +255,19 @@ void main() {
         );
       });
 
-      test('an unserved endpoint retries at the unavailable pace', () {
-        final post = pendingWith(
-          attempts: 1,
-          lastAttemptAt: now,
-          failureReason: 'http_404',
+      Future<ScheduledPost> afterTransientFailure(
+        ScheduleSubmitTransientFailure failure,
+      ) async {
+        final event = buildEvent();
+        await repository.enqueue(event: event, draftId: 'draft-1');
+        when(() => client.schedule(any())).thenAnswer((_) async => failure);
+        await repository.submit(event.id);
+        return (await repository.getById(event.id))!;
+      }
+
+      test('an unserved endpoint retries at the unavailable pace', () async {
+        final post = await afterTransientFailure(
+          const ScheduleSubmitTransientFailure('http_404', unavailable: true),
         );
         expect(
           repository.isSubmitDue(post, now.add(const Duration(minutes: 14))),
@@ -268,6 +275,16 @@ void main() {
         );
         expect(
           repository.isSubmitDue(post, now.add(const Duration(minutes: 15))),
+          isTrue,
+        );
+      });
+
+      test('a 404 the relay answered itself keeps the normal pace', () async {
+        final post = await afterTransientFailure(
+          const ScheduleSubmitTransientFailure('http_404'),
+        );
+        expect(
+          repository.isSubmitDue(post, now.add(const Duration(seconds: 30))),
           isTrue,
         );
       });
