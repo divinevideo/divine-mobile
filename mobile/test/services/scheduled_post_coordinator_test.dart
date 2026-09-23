@@ -906,5 +906,64 @@ void main() {
         expect(await repository.getById(event.id), isNull);
       });
     });
+
+    group('a broadcast no relay confirmed', () {
+      setUp(() => broadcastOutcome = EventPublishOutcome.transientFailure);
+
+      test('waits out a backoff before the next attempt', () async {
+        await enqueue(buildEvent(), status: ScheduledPostStatus.scheduled);
+        now = publishAt.add(const Duration(minutes: 10));
+
+        await coordinator.sweep();
+        await coordinator.sweep();
+        expect(broadcasts, hasLength(1));
+
+        now = now.add(const Duration(seconds: 30));
+        await coordinator.sweep();
+        expect(broadcasts, hasLength(2));
+      });
+
+      test(
+        'holds a post in the direct window without handing it off',
+        () async {
+          await enqueue(buildEvent());
+          now = publishAt.subtract(const Duration(seconds: 90));
+
+          await coordinator.sweep();
+          await coordinator.sweep();
+
+          expect(broadcasts, hasLength(1));
+          verifyNever(() => client.schedule(any()));
+        },
+      );
+
+      test('retries at once after a reconnect', () async {
+        await enqueue(buildEvent(), status: ScheduledPostStatus.scheduled);
+        now = publishAt.add(const Duration(minutes: 10));
+        await coordinator.initialize();
+        await pumpEventQueue();
+        expect(broadcasts, hasLength(1));
+
+        reconnect.add(null);
+        await pumpEventQueue();
+
+        expect(broadcasts, hasLength(2));
+      });
+
+      test('retries at once when the app comes back', () async {
+        await enqueue(buildEvent(), status: ScheduledPostStatus.scheduled);
+        now = publishAt.add(const Duration(minutes: 10));
+        await coordinator.initialize();
+        await pumpEventQueue();
+        expect(broadcasts, hasLength(1));
+
+        foreground
+          ..add(false)
+          ..add(true);
+        await pumpEventQueue();
+
+        expect(broadcasts, hasLength(2));
+      });
+    });
   });
 }

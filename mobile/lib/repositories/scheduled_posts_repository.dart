@@ -23,7 +23,8 @@ class ScheduledPostRetryConfig {
     this.directPublishLead = const Duration(minutes: 2),
   });
 
-  /// Backoff for a submission the relay did not answer.
+  /// Backoff for a submission the relay did not answer, and for a broadcast
+  /// from this device no relay confirmed.
   final Duration initialDelay;
   final Duration maxDelay;
   final double backoffMultiplier;
@@ -260,21 +261,51 @@ class ScheduledPostsRepository {
     if (post.failureReason?.startsWith(_unavailablePrefix) ?? false) {
       return _config.unavailableDelay;
     }
-    final factor = math.pow(_config.backoffMultiplier, post.attempts - 1);
+    return _delayAfter(post.attempts);
+  }
+
+  Duration _delayAfter(int failures) {
+    final factor = math.pow(_config.backoffMultiplier, failures - 1);
     final millis = _config.initialDelay.inMilliseconds * factor;
     return Duration(
       milliseconds: math.min(millis, _config.maxDelay.inMilliseconds).round(),
     );
   }
 
+  /// Broadcasts from this device that no relay confirmed, by event id. Kept
+  /// in memory: a restart earns a post one immediate attempt.
+  final _broadcastFailures = <String, ({int count, DateTime retryAt})>{};
+
+  /// Records that a broadcast of [eventId] from this device went unconfirmed.
+  /// The next waits out the same backoff a failed hand-off does, so an
+  /// unreachable or refusing relay is not retried on every sweep.
+  void recordClientPublishFailure(String eventId) {
+    final count = (_broadcastFailures[eventId]?.count ?? 0) + 1;
+    _broadcastFailures[eventId] = (
+      count: count,
+      retryAt: _now().add(_delayAfter(count)),
+    );
+  }
+
+  /// Lets every backed-off broadcast go again at once, as after a reconnect.
+  void resetClientPublishBackoff() => _broadcastFailures.clear();
+
+  /// Whether [post]'s last broadcast from here went unconfirmed recently
+  /// enough that the next must still wait at [now].
+  bool isClientPublishBackingOff(ScheduledPost post, DateTime now) =>
+      _broadcastFailures[post.eventId]?.retryAt.isAfter(now) ?? false;
+
   /// When the app itself should broadcast [post] rather than wait: a held
   /// post the relay has not published [ScheduledPostRetryConfig.fallbackGrace]
-  /// after its time, or a never-handed-off post whose time has come.
+  /// after its time, or a never-handed-off post whose time has come — and
+  /// not before an unconfirmed broadcast's backoff runs out.
   DateTime clientPublishTime(ScheduledPost post) {
     final publishAt = post.publishAtUtc;
-    return post.status == ScheduledPostStatus.scheduled
+    final due = post.status == ScheduledPostStatus.scheduled
         ? publishAt.add(_config.fallbackGrace)
         : publishAt;
+    final retryAt = _broadcastFailures[post.eventId]?.retryAt;
+    return retryAt != null && retryAt.isAfter(due) ? retryAt : due;
   }
 
   /// A `pendingSubmit` post the relay would refuse as "not far enough in the
@@ -301,7 +332,11 @@ class ScheduledPostsRepository {
     for (final post in pending) {
       if (!post.isPending) continue;
       final candidates = <DateTime>[clientPublishTime(post)];
-      if (post.status == ScheduledPostStatus.pendingSubmit) {
+      if (shouldPublishDirectly(post, now)) {
+        // Broadcast from here, never handed off: due once a failed
+        // broadcast's backoff runs out.
+        candidates.add(_broadcastFailures[post.eventId]?.retryAt ?? now);
+      } else if (post.status == ScheduledPostStatus.pendingSubmit) {
         final lastAttempt = post.lastAttemptAt;
         candidates.add(
           lastAttempt == null ? now : lastAttempt.add(_backoffFor(post)),

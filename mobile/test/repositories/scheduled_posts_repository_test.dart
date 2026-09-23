@@ -382,6 +382,88 @@ void main() {
       test('nextWakeIn is null with nothing pending', () async {
         expect(repository.nextWakeIn(const [], now), isNull);
       });
+
+      test(
+        'a broadcast no relay confirmed waits out a growing backoff',
+        () async {
+          final event = buildEvent();
+          await repository.enqueue(event: event, draftId: 'draft-1');
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            status: ScheduledPostStatus.scheduled,
+          );
+          final pending = await repository.pending();
+          final late = publishAt.add(const Duration(minutes: 6));
+
+          clockNow = late;
+          repository.recordClientPublishFailure(event.id);
+          final firstRetry = late.add(const Duration(seconds: 30));
+          expect(repository.dueForClientPublish(pending, late), isEmpty);
+          expect(
+            repository.dueForClientPublish(pending, firstRetry),
+            hasLength(1),
+          );
+
+          clockNow = firstRetry;
+          repository.recordClientPublishFailure(event.id);
+          expect(
+            repository.dueForClientPublish(
+              pending,
+              firstRetry.add(const Duration(seconds: 59)),
+            ),
+            isEmpty,
+          );
+          expect(
+            repository.dueForClientPublish(
+              pending,
+              firstRetry.add(const Duration(minutes: 1)),
+            ),
+            hasLength(1),
+          );
+        },
+      );
+
+      test('a reset lets a backed-off broadcast go again at once', () async {
+        final event = buildEvent();
+        await repository.enqueue(event: event, draftId: 'draft-1');
+        await database.scheduledPostsDao.updateStatus(
+          eventId: event.id,
+          status: ScheduledPostStatus.scheduled,
+        );
+        final pending = await repository.pending();
+        clockNow = publishAt.add(const Duration(minutes: 6));
+        repository.recordClientPublishFailure(event.id);
+
+        repository.resetClientPublishBackoff();
+
+        expect(repository.dueForClientPublish(pending, clockNow), hasLength(1));
+      });
+
+      test(
+        'a post in the direct window wakes when its broadcast may retry',
+        () async {
+          final event = buildEvent();
+          await repository.enqueue(event: event, draftId: 'draft-1');
+          final pending = await repository.pending();
+          final inWindow = publishAt.subtract(const Duration(seconds: 90));
+          expect(
+            repository.shouldPublishDirectly(pending.single, inWindow),
+            isTrue,
+          );
+
+          clockNow = inWindow;
+          repository.recordClientPublishFailure(event.id);
+
+          expect(
+            repository.isClientPublishBackingOff(pending.single, inWindow),
+            isTrue,
+          );
+          expect(
+            repository.nextWakeIn(pending, inWindow),
+            const Duration(seconds: 30),
+          );
+        },
+      );
     });
 
     group('syncFromServer', () {

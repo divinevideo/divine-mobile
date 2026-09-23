@@ -163,9 +163,12 @@ class ScheduledPostCoordinator {
   Future<void> initialize() async {
     if (_isInitialized || _disposed) return;
     _isInitialized = true;
+    // Coming back or reconnecting is when an unconfirmed broadcast most
+    // likely goes through, so neither waits out its backoff.
     _foregroundSubscription = _appForegroundStream.listen((foreground) {
       _foreground = foreground;
       if (foreground) {
+        _repository.resetClientPublishBackoff();
         unawaited(sweep(force: true));
       } else {
         _timer?.cancel();
@@ -173,7 +176,9 @@ class ScheduledPostCoordinator {
       }
     });
     _retrySubscription = _retryTriggerStream?.listen((_) {
-      if (_foreground) unawaited(sweep(force: true));
+      if (!_foreground) return;
+      _repository.resetClientPublishBackoff();
+      unawaited(sweep(force: true));
     });
     _outboxSubscription = _outboxChangedStream?.listen(
       (_) => unawaited(sweep()),
@@ -243,7 +248,9 @@ class ScheduledPostCoordinator {
       if (post.status != ScheduledPostStatus.pendingSubmit) continue;
       if (_acting.contains(post.eventId)) continue;
       if (_repository.shouldPublishDirectly(post, now)) {
-        await _publishHeldPost(post);
+        if (!_repository.isClientPublishBackingOff(post, now)) {
+          await _publishHeldPost(post);
+        }
       } else if (_repository.isSubmitDue(post, now)) {
         await _repository.submit(post.eventId);
       }
@@ -347,6 +354,7 @@ class ScheduledPostCoordinator {
       return false;
     }
     if (outcome != EventPublishOutcome.published) {
+      _repository.recordClientPublishFailure(post.eventId);
       Log.info(
         'Scheduled event ${post.eventId} not published yet; will retry',
         name: _logName,
