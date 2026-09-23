@@ -4,8 +4,7 @@
 import 'package:analytics/analytics.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Records a crossposting CTA tap. [surface] is `settings`, `share_sheet`, or
-/// `post_publish`.
+/// Records a crossposting CTA tap. [surface] is `settings` or `share_sheet`.
 Future<void> logCrosspostCtaTapped(
   AnalyticsEventSink sink,
   String surface,
@@ -15,11 +14,12 @@ Future<void> logCrosspostCtaTapped(
       name: 'crosspost_cta_tapped',
       parameters: {'surface': surface},
     );
-  } catch (error) {
+  } catch (error, stackTrace) {
     Log.warning(
       'Crosspost CTA analytics failed: $error',
       name: 'CrosspostingAnalytics',
       category: LogCategory.ui,
+      stackTrace: stackTrace,
     );
   }
 }

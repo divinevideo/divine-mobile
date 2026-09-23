@@ -127,7 +127,7 @@ void main() {
     );
 
     testWidgets(
-      'shows the Integrations header when crossposting is eligible',
+      'shows the Integrations header when crossposting is available',
       (tester) async {
         final labels = l10n();
 

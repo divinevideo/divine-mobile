@@ -4504,6 +4504,13 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     return null;
   }
 
+  /// Resolves a cached addressable video by owner pubkey and `d` tag.
+  ///
+  /// [pubkey] and [dTag] are compared against the cached [VideoEvent]'s
+  /// lowercase `pubkey` and `d` tag, so callers must pass a lowercase pubkey.
+  VideoEvent? getVideoEventByAddressable(String pubkey, String dTag) =>
+      _findCachedVideoByAddressable(pubkey, dTag);
+
   /// Merges an incoming [updatedVideo] (parsed from a freshly published Nostr
   /// event) with the [existingVideo] already held in the service, carrying
   /// forward fields that are not stored in Nostr event tags and therefore
