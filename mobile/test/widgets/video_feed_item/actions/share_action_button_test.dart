@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,10 +17,13 @@ import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/video_sharing_service.dart';
@@ -379,12 +383,15 @@ void main() {
             authState: AuthState.authenticated,
             currentPublicKeyHex: ownPubkey,
           );
+          when(() => mockAuth.isRegistered).thenReturn(true);
           final app = testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
+              if (goRouter != null)
+                goRouterProvider.overrideWithValue(goRouter),
             ],
             mockAuthService: mockAuth,
             mockProfileRepository: mockProfileRepository,
@@ -396,6 +403,14 @@ void main() {
                 ? app
                 : MockGoRouterProvider(goRouter: goRouter, child: app),
           );
+
+          // Warm the OAuth-support lookup so the availability read on tap is
+          // settled (native) rather than resolving to the web fallback while
+          // the FutureProvider is still loading.
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(ShareActionButton)),
+          );
+          await container.read(appOAuthSupportProvider.future);
 
           await tester.tap(find.byType(ShareActionButton));
           await tester.pumpAndSettle();
@@ -470,6 +485,33 @@ void main() {
 
           expect(ownerCubit.isClosed, isTrue);
           expect(crosspostCubit.isClosed, isTrue);
+        });
+
+        testWidgets('offers Crosspost when nothing is connected', (
+          tester,
+        ) async {
+          await pumpOwnerSheet(tester);
+
+          expect(find.text(l10n.shareSheetCrosspost), findsOneWidget);
+        });
+
+        testWidgets('Crosspost routes to settings with no connections', (
+          tester,
+        ) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
+
+          await pumpOwnerSheet(tester, goRouter: goRouter);
+
+          await tester.tap(find.text(l10n.shareSheetCrosspost));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          verify(
+            () => goRouter.push<void>(RoutePaths.crosspostingSettings),
+          ).called(1);
         });
       });
 

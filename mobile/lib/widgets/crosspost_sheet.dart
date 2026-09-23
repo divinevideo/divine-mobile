@@ -1,6 +1,8 @@
 // ABOUTME: Bottom sheet for manually crossposting an own video
 // ABOUTME: Select connected platforms, submit jobs, watch progress to permalink
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +13,10 @@ import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/crosspost_models.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
+import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Shows the crosspost flow for the current user's own [video].
@@ -34,7 +39,25 @@ Future<void> showCrosspostSheet({
         eventId: video.id,
         initialConnections: connections,
       ),
-      child: const CrosspostSheetView(),
+      child: CrosspostSheetView(
+        onReconnect: () {
+          Navigator.of(context).pop();
+          if (ref.read(crosspostingAvailabilityProvider) ==
+              CrosspostingAvailability.webOnly) {
+            unawaited(
+              ref.read(crosspostingWebOpenerProvider)(
+                Uri.parse(AppConfig.crossposterBaseUrl),
+              ),
+            );
+            return;
+          }
+          unawaited(
+            ref
+                .read(goRouterProvider)
+                .push<void>(RoutePaths.crosspostingSettings),
+          );
+        },
+      ),
     ),
   );
 }
@@ -51,7 +74,9 @@ String crosspostPlatformDisplayName(String platform) => switch (platform) {
 @visibleForTesting
 class CrosspostSheetView extends StatelessWidget {
   @visibleForTesting
-  const CrosspostSheetView({super.key});
+  const CrosspostSheetView({this.onReconnect, super.key});
+
+  final VoidCallback? onReconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -125,7 +150,8 @@ class CrosspostSheetView extends StatelessWidget {
                 VideoCrosspostStatus.finished => [
                   const _SheetTitle(),
                   const SizedBox(height: 16),
-                  for (final job in state.jobs) _JobRow(job: job),
+                  for (final job in state.jobs)
+                    _JobRow(job: job, onReconnect: onReconnect),
                   if (state.pollTimedOut) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -262,9 +288,10 @@ class _PlatformRow extends StatelessWidget {
 }
 
 class _JobRow extends StatelessWidget {
-  const _JobRow({required this.job});
+  const _JobRow({required this.job, required this.onReconnect});
 
   final CrosspostJob job;
+  final VoidCallback? onReconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -326,7 +353,7 @@ class _JobRow extends StatelessWidget {
               style: VineTheme.bodySmallFont(color: VineTheme.error),
             ),
           if (job.status == CrosspostJobStatus.needsReauth)
-            _ReconnectPrompt(platformName: name),
+            _ReconnectPrompt(platformName: name, onReconnect: onReconnect),
         ],
       ),
     );
@@ -398,9 +425,13 @@ class _ViewPostLink extends StatelessWidget {
 }
 
 class _ReconnectPrompt extends StatelessWidget {
-  const _ReconnectPrompt({required this.platformName});
+  const _ReconnectPrompt({
+    required this.platformName,
+    required this.onReconnect,
+  });
 
   final String platformName;
+  final VoidCallback? onReconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -418,10 +449,7 @@ class _ReconnectPrompt extends StatelessWidget {
           label: context.l10n.crosspostReconnect,
           type: DivineButtonType.secondary,
           size: DivineButtonSize.small,
-          onPressed: () => launchUrl(
-            Uri.parse(AppConfig.crossposterBaseUrl),
-            mode: LaunchMode.externalApplication,
-          ),
+          onPressed: onReconnect,
         ),
       ],
     );
