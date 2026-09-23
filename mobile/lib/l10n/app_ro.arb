@@ -4764,5 +4764,17 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Lasă cel puțin {minutes} minut.} few{Lasă cel puțin {minutes} minute.} other{Lasă cel puțin {minutes} de minute.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{E la mai mult de {days} zi. Alege ceva mai apropiat.} few{E la mai mult de {days} zile. Alege ceva mai apropiat.} other{E la mai mult de {days} de zile. Alege ceva mai apropiat.}}",
     "videoMetadataScheduleButton": "Programează",
-    "videoMetadataScheduleVideoHint": "Programează videoclipul pentru {time}"
+    "videoMetadataScheduleVideoHint": "Programează videoclipul pentru {time}",
+  "crosspostingBenefitTitle": "Du-ți buclele peste tot",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Postează o dată pe Divine, distribuie direct pe Instagram. Oamenii tăi sunt deja acolo — du-te și cunoaște-i. Fiecare buclă pe care o trimiți poartă un mic link acasă, ca următorul creator să ne găsească și el.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Conectează {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Setează o dată",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Fiecare buclă nouă pe care o postezi merge la {platform} pentru tine — fără atingere extra. Se aplică doar buclelor pe care le publici după ce activezi asta.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Activează automat",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

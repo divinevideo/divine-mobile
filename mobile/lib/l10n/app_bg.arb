@@ -4888,5 +4888,17 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Остави поне {minutes} минута.} other{Остави поне {minutes} минути.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Това е след повече от {days} ден. Избери по-близък момент.} other{Това е след повече от {days} дни. Избери по-близък момент.}}",
     "videoMetadataScheduleButton": "Насрочи",
-    "videoMetadataScheduleVideoHint": "Насрочва това видео за {time}"
+    "videoMetadataScheduleVideoHint": "Насрочва това видео за {time}",
+  "crosspostingBenefitTitle": "Отнеси лууповете си навсякъде",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Публикувай веднъж в Divine и сподели директно в Instagram. Хората ти вече са там — отиди да се запознаете. Всеки луп, който изпратиш, носи малка връзка обратно, за да ни намери и следващият творец.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Свържи {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Настрой веднъж",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Всеки нов луп, който публикуваш, се изпраща към {platform} вместо теб — без допълнителни докосвания. Важи само за луповете, които публикуваш, след като го включиш.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Включи автоматичното",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

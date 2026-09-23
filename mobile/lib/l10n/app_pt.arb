@@ -4764,5 +4764,17 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Deixe pelo menos {minutes} minuto.} other{Deixe pelo menos {minutes} minutos.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Isso é a mais de {days} dia. Escolha algo mais perto.} other{Isso é a mais de {days} dias. Escolha algo mais perto.}}",
     "videoMetadataScheduleButton": "Agendar",
-    "videoMetadataScheduleVideoHint": "Agenda este vídeo para {time}"
+    "videoMetadataScheduleVideoHint": "Agenda este vídeo para {time}",
+  "crosspostingBenefitTitle": "Leve seus loops para todo lugar",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Publique uma vez no Divine e compartilhe direto no Instagram. Sua galera já está lá fora — vá encontrá-los. Cada loop que você envia carrega um pequeno link para casa, para que o próximo criador também nos encontre.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Conectar {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Configure uma vez",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Cada loop novo que você publica vai para {platform} por você — sem toques extras. Só vale para loops que você publicar depois de ativar isso.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Ativar automático",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

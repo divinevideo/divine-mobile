@@ -4764,5 +4764,17 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, =1{Lämna minst {minutes} minut.} other{Lämna minst {minutes} minuter.}}",
     "videoMetadataScheduleTooFar": "{days, plural, =1{Det är mer än {days} dag bort. Välj något tidigare.} other{Det är mer än {days} dagar bort. Välj något tidigare.}}",
     "videoMetadataScheduleButton": "Schemalägg",
-    "videoMetadataScheduleVideoHint": "Schemalägger videon till {time}"
+    "videoMetadataScheduleVideoHint": "Schemalägger videon till {time}",
+  "crosspostingBenefitTitle": "Ta med dina loopar överallt",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Publicera en gång på Divine, dela direkt till Instagram. Dina människor är redan där — gå och möt dem. Varje loop du skickar bär med sig en liten länk hem, så nästa kreatör också hittar oss.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Anslut {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Ställ in en gång",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Varje ny loop du publicerar går till {platform} åt dig — utan extra tryck. Gäller bara loopar du publicerar efter att du slår på det här.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Slå på automatiskt",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

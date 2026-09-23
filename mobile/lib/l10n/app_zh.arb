@@ -6531,5 +6531,17 @@
     "videoMetadataScheduleTooSoon": "{minutes, plural, other{至少留 {minutes} 分钟。}}",
     "videoMetadataScheduleTooFar": "{days, plural, other{这超过 {days} 天了，选个近一点的时间。}}",
     "videoMetadataScheduleButton": "定时发布",
-    "videoMetadataScheduleVideoHint": "把这条视频定时到 {time}"
+    "videoMetadataScheduleVideoHint": "把这条视频定时到 {time}",
+  "crosspostingBenefitTitle": "把你的循环带到各处",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "在 Divine 发一次，直接分享到 Instagram。你的人早就在那儿了 —— 去和他们见面吧。你发出的每个循环都带着一个小小的链接回家，让下一位创作者也能找到我们。",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "连接 {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "设置一次即可",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "你发布的每个新循环都会替你发到 {platform} —— 无需额外点击。仅适用于你开启之后发布的循环。",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "开启自动",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }
