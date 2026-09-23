@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -39,6 +40,34 @@ class _StubPagerNostr extends Mock implements Nostr {
   }) async {
     seenDeadline = deadline;
     return walk;
+  }
+}
+
+/// Answers each one-shot read with the next scripted [QueryResult], so the
+/// client's settlement of a read can be tested without a relay pool. Records
+/// the deadline each read was given, and lets a test spend clock time inside a
+/// read through [onRead].
+class _ScriptedReadsNostr extends Mock implements Nostr {
+  _ScriptedReadsNostr(this.results, {this.onRead});
+
+  final List<QueryResult> results;
+  final void Function()? onRead;
+  final List<DateTime?> deadlines = [];
+
+  @override
+  Future<QueryResult> readEvents(
+    List<Map<String, dynamic>> filters, {
+    String? id,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+    bool sendAfterAuth = false,
+    Duration timeout = const Duration(seconds: 5),
+    DateTime? deadline,
+    bool requireAllRelaysSettled = false,
+  }) async {
+    deadlines.add(deadline);
+    onRead?.call();
+    return results[deadlines.length - 1];
   }
 }
 
@@ -538,57 +567,217 @@ void main() {
       expect(result.events, hasLength(1));
     });
 
-    test(
-      'accepts a CLOSED relay when another relay answered only by opt-in',
-      () async {
-        final nostr = _newNostr();
-        final answering = _ScriptedRelay('wss://answers.example');
-        final refusing = _ScriptedRelay('wss://refuses.example');
+    group('with acceptRelayClosedWhenOthersAnswered', () {
+      late Nostr nostr;
+      late _ScriptedRelay answering;
+      late _ScriptedRelay refusing;
+      late NostrClient client;
+
+      setUp(() async {
+        nostr = _newNostr();
+        answering = _ScriptedRelay('wss://answers.example');
+        refusing = _ScriptedRelay('wss://refuses.example');
         expect(await nostr.relayPool.add(answering), isTrue);
         expect(await nostr.relayPool.add(refusing), isTrue);
-        final client = _clientOver(
+        client = _clientOver(
           nostr,
           connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
         );
+      });
 
-        var reqIndex = 0;
-        Future<bool> run({
-          required bool optIn,
-        }) async {
-          final pending = client.queryEventsDetailed(
+      Future<({List<Event> events, bool timedOut, bool noRelays})> read({
+        bool optIn = true,
+        Duration timeout = const Duration(seconds: 3),
+      }) => client.queryEventsDetailed(
+        [_textNotes()],
+        useCache: false,
+        timeout: timeout,
+        requireAllRelaysSettled: true,
+        acceptRelayClosedWhenOthersAnswered: optIn,
+      );
+
+      /// Has the answering relay send EOSE and the refusing relay [reason] for
+      /// the [reqIndex]th REQ each of them was sent.
+      Future<void> answerAndRefuse(int reqIndex, String reason) async {
+        final answeringSub = await answering.awaitReq(reqIndex);
+        final refusingSub = await refusing.awaitReq(reqIndex);
+        await answering.deliver(['EOSE', answeringSub]);
+        await refusing.deliver(['CLOSED', refusingSub, reason]);
+      }
+
+      test('keeps a CLOSED refusal timed out without the opt-in', () async {
+        final pending = read(optIn: false);
+        await answerAndRefuse(0, 'error: unsupported request');
+
+        expect((await pending).timedOut, isTrue);
+      });
+
+      test('settles once the same relay repeats an error: refusal', () async {
+        final pending = read();
+        await answerAndRefuse(0, 'error: unsupported request');
+        await answerAndRefuse(1, 'error: unsupported request');
+
+        expect((await pending).timedOut, isFalse);
+        expect(answering.reqSubIds, hasLength(2));
+        expect(refusing.reqSubIds, hasLength(2));
+      });
+
+      test(
+        'settles once a relay repeats the strfry-style ERROR: auth-required '
+        'refusal',
+        () async {
+          // strfry prefixes every CLOSED reason with "ERROR: ", so its NIP-42
+          // refusal is categorised `error`, not `auth-required`.
+          const reason =
+              'ERROR: auth-required: requested filter requires authentication';
+          final pending = read();
+          await answerAndRefuse(0, reason);
+          await answerAndRefuse(1, reason);
+
+          expect((await pending).timedOut, isFalse);
+          expect(refusing.reqSubIds, hasLength(2));
+        },
+      );
+
+      for (final reason in const [
+        'restricted: members only',
+        'blocked: not accepting reads',
+        'unsupported: filter contains unknown elements',
+      ]) {
+        test(
+          'settles on the first read when the other relay refuses with '
+          '"$reason"',
+          () async {
+            final pending = read();
+            await answerAndRefuse(0, reason);
+
+            expect((await pending).timedOut, isFalse);
+            expect(answering.reqSubIds, hasLength(1));
+            expect(refusing.reqSubIds, hasLength(1));
+          },
+        );
+      }
+
+      test('keeps an auth-required refusal timed out', () async {
+        // The pool parks the query for its post-AUTH replay, so the read
+        // runs to its deadline rather than settling on the refusal.
+        final pending = read(timeout: const Duration(milliseconds: 800));
+        await answerAndRefuse(0, 'auth-required: authenticate first');
+
+        expect((await pending).timedOut, isTrue);
+        expect(refusing.reqSubIds, hasLength(1));
+      });
+
+      test(
+        'keeps the read timed out when another relay newly refuses with '
+        'error: on the confirmation read',
+        () async {
+          final third = _ScriptedRelay('wss://third.example');
+          expect(await nostr.relayPool.add(third), isTrue);
+          client = _clientOver(
+            nostr,
+            connectedRelays: [
+              'wss://answers.example',
+              'wss://refuses.example',
+              'wss://third.example',
+            ],
+          );
+
+          final pending = read();
+          for (final reqIndex in [0, 1]) {
+            final thirdSub = await third.awaitReq(reqIndex);
+            await answerAndRefuse(reqIndex, 'error: temporary failure');
+            await third.deliver(
+              reqIndex == 0
+                  ? ['EOSE', thirdSub]
+                  : ['CLOSED', thirdSub, 'error: temporary failure'],
+            );
+          }
+
+          expect((await pending).timedOut, isTrue);
+        },
+      );
+    });
+
+    group('with acceptRelayClosedWhenOthersAnswered and a scripted pool', () {
+      final start = DateTime.utc(2026, 9, 23, 12);
+      const refusedWithError = QueryResult(
+        events: [],
+        endedBy: QueryEnd.relayClosed,
+        answeredNetworkRelayCount: 1,
+        closedRelayReasons: {'wss://refuses.example': 'error'},
+      );
+
+      Future<({List<Event> events, bool timedOut, bool noRelays})> readWith(
+        _ScriptedReadsNostr nostr,
+      ) =>
+          _clientOver(
+            nostr,
+            connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+          ).queryEventsDetailed(
             [_textNotes()],
             useCache: false,
-            timeout: const Duration(seconds: 3),
             requireAllRelaysSettled: true,
-            acceptRelayClosedWhenOthersAnswered: optIn,
+            acceptRelayClosedWhenOthersAnswered: true,
           );
-          final answeringSub = await answering.awaitReq(reqIndex);
-          final refusingSub = await refusing.awaitReq(reqIndex);
-          reqIndex++;
-          await answering.deliver(['EOSE', answeringSub]);
-          await refusing.deliver([
-            'CLOSED',
-            refusingSub,
-            'error: unsupported request',
-          ]);
-          if (optIn) {
-            final retryAnsweringSub = await answering.awaitReq(reqIndex);
-            final retryRefusingSub = await refusing.awaitReq(reqIndex);
-            reqIndex++;
-            await answering.deliver(['EOSE', retryAnsweringSub]);
-            await refusing.deliver([
-              'CLOSED',
-              retryRefusingSub,
-              'error: unsupported request',
-            ]);
-          }
-          return (await pending).timedOut;
-        }
 
-        expect(await run(optIn: false), isTrue);
-        expect(await run(optIn: true), isFalse);
-      },
-    );
+      test('spends one deadline across the confirmation read', () async {
+        var now = start;
+        final nostr = _ScriptedReadsNostr(
+          [refusedWithError, refusedWithError],
+          onRead: () => now = now.add(const Duration(seconds: 2)),
+        );
+
+        final result = await withClock(
+          Clock(() => now),
+          () => readWith(nostr),
+        );
+
+        expect(result.timedOut, isFalse);
+        expect(nostr.deadlines, hasLength(2));
+        expect(nostr.deadlines[1], equals(nostr.deadlines[0]));
+      });
+
+      test(
+        'keeps an unconfirmed error: refusal timed out once the first read '
+        'spent the budget',
+        () async {
+          var now = start;
+          final nostr = _ScriptedReadsNostr(
+            [refusedWithError, refusedWithError],
+            onRead: () => now = now.add(const Duration(seconds: 5)),
+          );
+
+          final result = await withClock(
+            Clock(() => now),
+            () => readWith(nostr),
+          );
+
+          expect(result.timedOut, isTrue);
+          expect(nostr.deadlines, hasLength(1));
+        },
+      );
+
+      test('keeps a read with an unanswered relay timed out', () async {
+        final nostr = _ScriptedReadsNostr([
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            unansweredRelayCount: 1,
+            closedRelayReasons: {'wss://refuses.example': 'restricted'},
+          ),
+        ]);
+
+        final result = await withClock(
+          Clock(() => start),
+          () => readWith(nostr),
+        );
+
+        expect(result.timedOut, isTrue);
+        expect(nostr.deadlines, hasLength(1));
+      });
+    });
 
     test(
       'keeps a full page of distinct events across the confirmation read',
@@ -777,6 +966,10 @@ void main() {
         ]);
 
         expect(await read.timedOut, isTrue);
+        // Settled on the first read's own refusals, not on an unanswered
+        // confirmation read running out the deadline.
+        expect(first.reqSubIds, hasLength(1));
+        expect(second.reqSubIds, hasLength(1));
       });
 
       test('when another relay dropped its socket', () async {
