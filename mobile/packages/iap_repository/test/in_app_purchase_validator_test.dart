@@ -238,7 +238,7 @@ void main() {
 
       test(
         'throws PurchaseFailedException with the store code when the store '
-        'fails to start the purchase',
+        'purchase call throws',
         () async {
           stubStoreRefusesPurchase(
             PlatformException(code: 'storekit2_failed_to_fetch_product'),

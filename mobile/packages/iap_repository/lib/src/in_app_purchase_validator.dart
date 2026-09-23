@@ -253,10 +253,11 @@ class InAppPurchaseValidator implements EntitlementValidator {
         ),
       );
     } on PlatformException catch (error) {
-      // The store refused before starting a purchase, so nothing for this
-      // attempt will arrive on the purchase stream.
+      // The store ended this attempt with an error instead of a result. Drop
+      // it, so a late delivery of the plan is handled as a background
+      // purchase rather than as this checkout.
       _pendingPurchases.remove(productId);
-      throw _purchaseStartFailure(error);
+      throw _purchaseFailure(error);
     }
     if (!initiated) {
       _pendingPurchases.remove(productId);
@@ -268,14 +269,11 @@ class InAppPurchaseValidator implements EntitlementValidator {
     return completer.future;
   }
 
-  EntitlementException _purchaseStartFailure(PlatformException error) {
+  EntitlementException _purchaseFailure(PlatformException error) {
     if (error.code == _unfinishedPurchaseCode) {
       return const PurchasePendingException();
     }
-    return PurchaseFailedException(
-      error.code,
-      'The store failed to start the purchase.',
-    );
+    return PurchaseFailedException(error.code, 'The store purchase failed.');
   }
 
   /// A fallback [ProductDetails] used only to satisfy [PurchaseParam] when the
