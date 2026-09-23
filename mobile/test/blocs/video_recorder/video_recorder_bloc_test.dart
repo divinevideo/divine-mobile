@@ -2558,6 +2558,59 @@ void main() {
         ).thenAnswer((_) async => true);
       });
 
+      group('remote record trigger', () {
+        void Function()? trigger;
+
+        setUp(() {
+          trigger = null;
+          when(() => cameraService.setOnRemoteRecordTrigger(any())).thenAnswer(
+            (invocation) => trigger =
+                invocation.positionalArguments.first as void Function()?,
+          );
+          when(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).thenAnswer((_) async => true);
+        });
+
+        test('starts a recording on a capture tab', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+
+          trigger!();
+          await pumpEventQueue();
+
+          verify(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          ).called(1);
+        });
+
+        test('is ignored on the Upload tab, which shows no preview', () async {
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          bloc.add(
+            const VideoRecorderInitializeRequested(
+              recorderMode: VideoRecorderMode.upload,
+            ),
+          );
+          await pumpEventQueue();
+
+          trigger!();
+          await pumpEventQueue();
+
+          verifyNever(
+            () => cameraService.startRecording(
+              maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+        });
+      });
+
       group('camera_startup trace', () {
         // Telemetry-only: a regression here mislabels a Firebase sample, not a
         // user-facing bug — a touch belt-and-suspenders, kept so the outcome

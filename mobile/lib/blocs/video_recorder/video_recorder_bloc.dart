@@ -1941,6 +1941,16 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
+    // The Upload tab shows no preview and pauses the camera, so a volume or
+    // Bluetooth press there must not start a recording the user cannot see.
+    if (state.recorderMode == VideoRecorderMode.upload) {
+      Log.debug(
+        '🎮 Remote record trigger ignored - Upload tab',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
     if (_remoteRecordPausedForSound) {
       Log.debug(
         '🎮 Remote record trigger ignored - sound is selected',
