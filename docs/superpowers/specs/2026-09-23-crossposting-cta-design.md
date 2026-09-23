@@ -97,21 +97,12 @@ the in-app share menu, where the Crosspost row above already lives.
 
 ## Architecture
 
-### One source of connection truth outside settings
+### No new connection-state provider
 
-Today two surfaces outside settings decide connection state independently: the
-share menu via `VideoCrosspostCubit`, and the post-publish path with none. Add a
-single cached provider for them:
-
-- `crosspostingStatusProvider` — an `AsyncNotifier<List<CrosspostingPlatformSettings>>`
-  over the existing `CrosspostingRepository`. The share menu CTA and the
-  post-publish path read it.
-
-The settings screen keeps its existing `CrosspostingSettingsCubit`, which
-already holds the list it needs for the benefit and automatic-mode cards.
-`CrosspostingSettingsCubit` and `VideoCrosspostCubit` remain the mutation
-owners; the provider is read-only state. Actions still flow through the cubits
-so operation serialization and error handling stay where they are.
+The settings screen's `CrosspostingSettingsCubit` and the share menu's
+`VideoCrosspostCubit` already own their connection state, and the post-publish
+path reaches connections through the share menu. No new provider is introduced;
+both cubits remain the read and mutation owners for their surfaces.
 
 ### Platform availability in the app
 
