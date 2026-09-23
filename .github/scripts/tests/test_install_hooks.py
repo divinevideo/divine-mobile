@@ -42,11 +42,21 @@ class InstallHooksTest(unittest.TestCase):
         mise = self.bin / "mise"
         mise.write_text("#!/bin/sh\nexit 0\n")
         mise.chmod(mise.stat().st_mode | stat.S_IEXEC)
-        self.env = {**os.environ, "PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}"}
+
+        # Git exports GIT_DIR and friends to hooks, `git rebase -x` and
+        # `git bisect run`. Inherited, they point `git init` and the installer
+        # at the enclosing repository, which then gets its real hooks
+        # overwritten, so drop them along with the caller's git config.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        env["PATH"] = f"{self.bin}{os.pathsep}{env['PATH']}"
+        env["GIT_CONFIG_GLOBAL"] = os.devnull
+        env["GIT_CONFIG_NOSYSTEM"] = "1"
+        self.env = env
 
         subprocess.run(
             ["git", "init", "-q", "-b", "main"],
             cwd=self.root,
+            env=self.env,
             check=True,
             capture_output=True,
         )
