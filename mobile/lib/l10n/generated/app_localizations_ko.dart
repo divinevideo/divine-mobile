@@ -10991,6 +10991,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'Divine 지원팀에 이메일 보내기';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Divine Greenlight 검토 문의 (13~15세)';
 
@@ -11051,6 +11054,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions => '보호자 지원 안내';
