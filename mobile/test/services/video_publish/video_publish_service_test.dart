@@ -2957,7 +2957,8 @@ void main() {
 
       /// Answers `publishVideoEvent` the way the real publisher does for a
       /// scheduled post: signs for the requested time and hands it back.
-      Event stubScheduledSigning() {
+      /// [handsOver] false breaks that contract: true, but no event.
+      Event stubScheduledSigning({bool handsOver = true}) {
         final signed = Event(
           'a' * 64,
           34236,
@@ -3001,7 +3002,7 @@ void main() {
           final onSigned =
               invocation.namedArguments[#onScheduledEventSigned]
                   as void Function(Event)?;
-          onSigned?.call(signed);
+          if (handsOver) onSigned?.call(signed);
           return true;
         });
         return signed;
@@ -3208,6 +3209,43 @@ void main() {
             ),
           );
           verifyNever(() => repository.submit(any()));
+        },
+      );
+
+      test(
+        'keeps the draft when the publisher returns without the signed event',
+        () async {
+          stubScheduledSigning(handsOver: false);
+          final draft = _createTestDraft(
+            collaboratorPubkeys: {'b' * 64},
+          ).copyWith(scheduledAt: publishAt, skipUpdateLastModified: true);
+
+          final result = await scheduledService().publishVideo(draft: draft);
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (e) => e.rawFallback,
+              'no raw text for the user',
+              isNull,
+            ),
+          );
+          verifyNever(
+            () => mockCollaboratorInviteService.sendInvites(
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              creatorPubkey: any(named: 'creatorPubkey'),
+              videoAddress: any(named: 'videoAddress'),
+              title: any(named: 'title'),
+              thumbnailUrl: any(named: 'thumbnailUrl'),
+              relayHint: any(named: 'relayHint'),
+            ),
+          );
+          final saved =
+              verify(
+                    () => mockDraftService.saveDraft(captureAny()),
+                  ).captured.last
+                  as DivineVideoDraft;
+          expect(saved.publishStatus, PublishStatus.failed);
         },
       );
 

@@ -554,8 +554,12 @@ class VideoPublishService {
 
       onProgressChanged(draftId: draft.id, progress: _progressAfterNostr);
 
-      final signedForLater = scheduledEvent;
-      if (scheduledAt != null && signedForLater != null) {
+      if (scheduledAt != null) {
+        // The publisher hands a scheduled event over before it returns true.
+        // Without it nothing was broadcast or queued, and carrying on would
+        // report the post live and let the caller delete its draft; failing
+        // keeps the draft for a retry.
+        final signedForLater = scheduledEvent!;
         // Collaborator invites link to the live video, so they go out when
         // the post does, from the scheduled-post coordinator.
         final result = await timeline.measure(
