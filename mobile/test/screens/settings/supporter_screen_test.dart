@@ -195,6 +195,48 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'returns to purchase options when checkout fails unexpectedly',
+      (
+        tester,
+      ) async {
+        final controller = StreamController<SupporterEntitlement>.broadcast();
+        addTearDown(controller.close);
+        final purchase = Completer<SupporterEntitlement>();
+        final repo = _FakeRepository(controller, tiers: const [tier])
+          ..purchaseCompleter = purchase;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+            child: buildLocalizedWidget(const SupporterScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.textContaining('Monthly Supporter'));
+        await tester.pump();
+        expect(find.text(l10n.supporterPreparingCheckout), findsOneWidget);
+
+        purchase.completeError(StateError('store channel closed'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+        expect(find.text(l10n.supporterPreparingCheckout), findsNothing);
+        final button = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.textContaining('Monthly Supporter'),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(button.onPressed, isNotNull);
+        final restore = tester.widget<DivineButton>(
+          find.widgetWithText(DivineButton, l10n.supporterRestorePurchases),
+        );
+        expect(restore.onPressed, isNotNull);
+        expect(find.textContaining(l10n.supporterErrorUnknown), findsOneWidget);
+      },
+    );
   });
 
   group('renders', () {

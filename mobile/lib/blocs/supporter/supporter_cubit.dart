@@ -6,7 +6,9 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/supporter/supporter_reportable_sites.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -89,6 +91,17 @@ class SupporterCubit extends Cubit<SupporterState> {
           failure: SupporterFailure.fromMessage(e.message),
         ),
       );
+    } on Object catch (error, stackTrace) {
+      addError(
+        Reportable(error, context: SupporterReportableSites.loadTiers),
+        stackTrace,
+      );
+      _emit(
+        state.copyWith(
+          status: SupporterStatus.error,
+          failure: SupporterFailure.unknown,
+        ),
+      );
     }
   }
 
@@ -134,6 +147,21 @@ class SupporterCubit extends Cubit<SupporterState> {
     } on SupporterApiException catch (error) {
       _finishPurchaseAnalytics(succeeded: false);
       _emitApiFailure(error);
+    } on Object catch (error, stackTrace) {
+      // A failure outside the typed contract must still end checkout, or the
+      // plan buttons stay disabled behind the progress indicator.
+      _finishPurchaseAnalytics(succeeded: false);
+      addError(
+        Reportable(error, context: SupporterReportableSites.subscribe),
+        stackTrace,
+      );
+      _emit(
+        state.copyWith(
+          awaitingPurchaseConfirmation: false,
+          status: SupporterStatus.idle,
+          failure: SupporterFailure.unknown,
+        ),
+      );
     }
   }
 
@@ -157,6 +185,18 @@ class SupporterCubit extends Cubit<SupporterState> {
         state.copyWith(
           status: SupporterStatus.idle,
           failure: SupporterFailure.fromMessage(e.message),
+        ),
+      );
+      _recordEvent('supporter_restore_failed');
+    } on Object catch (error, stackTrace) {
+      addError(
+        Reportable(error, context: SupporterReportableSites.restore),
+        stackTrace,
+      );
+      _emit(
+        state.copyWith(
+          status: SupporterStatus.idle,
+          failure: SupporterFailure.unknown,
         ),
       );
       _recordEvent('supporter_restore_failed');
@@ -206,6 +246,18 @@ class SupporterCubit extends Cubit<SupporterState> {
           awaitingPurchaseConfirmation: false,
           status: SupporterStatus.error,
           failure: SupporterFailure.fromMessage(error.message),
+        ),
+      );
+    } else {
+      addError(
+        Reportable(error, context: SupporterReportableSites.purchaseUpdate),
+        stackTrace,
+      );
+      _emit(
+        state.copyWith(
+          awaitingPurchaseConfirmation: false,
+          status: SupporterStatus.error,
+          failure: SupporterFailure.unknown,
         ),
       );
     }

@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -189,6 +190,24 @@ void main() {
     });
 
     group('purchase', () {
+      void stubStoreRefusesPurchase(PlatformException refusal) {
+        when(store.isAvailable).thenAnswer((_) async => true);
+        when(() => store.queryProductDetails(any())).thenAnswer(
+          (_) async => ProductDetailsResponse(
+            productDetails: [_product('divine.supporter.monthly')],
+            notFoundIDs: const [],
+          ),
+        );
+        when(
+          () => store.purchaseStream,
+        ).thenAnswer((_) => const Stream<List<PurchaseDetails>>.empty());
+        when(
+          () => store.buyNonConsumable(
+            purchaseParam: any(named: 'purchaseParam'),
+          ),
+        ).thenAnswer((_) async => throw refusal);
+      }
+
       test('throws StoreUnavailableException when store unavailable', () async {
         when(store.isAvailable).thenAnswer((_) async => false);
         await expectLater(
@@ -196,6 +215,46 @@ void main() {
           throwsA(isA<StoreUnavailableException>()),
         );
       });
+
+      test(
+        'throws PurchasePendingException when the store still holds an '
+        'unfinished purchase of the plan',
+        () async {
+          stubStoreRefusesPurchase(
+            PlatformException(
+              code: 'storekit_duplicate_product_object',
+              message:
+                  'There is a pending transaction for the same product '
+                  'identifier.',
+              details: 'divine.supporter.monthly',
+            ),
+          );
+          await expectLater(
+            validator.purchase('divine.supporter.monthly'),
+            throwsA(isA<PurchasePendingException>()),
+          );
+        },
+      );
+
+      test(
+        'throws PurchaseFailedException with the store code when the store '
+        'purchase call throws',
+        () async {
+          stubStoreRefusesPurchase(
+            PlatformException(code: 'storekit2_failed_to_fetch_product'),
+          );
+          await expectLater(
+            validator.purchase('divine.supporter.monthly'),
+            throwsA(
+              isA<PurchaseFailedException>().having(
+                (error) => error.responseCode,
+                'responseCode',
+                'storekit2_failed_to_fetch_product',
+              ),
+            ),
+          );
+        },
+      );
 
       test(
         'throws PurchaseFailedException when store fails to start',
@@ -319,6 +378,38 @@ void main() {
         expect(result, SupporterEntitlement.inactive);
       });
 
+      test(
+        'a purchase the store refused does not claim later deliveries of '
+        'the plan',
+        () async {
+          when(
+            () => store.buyNonConsumable(
+              purchaseParam: any(named: 'purchaseParam'),
+            ),
+          ).thenAnswer(
+            (_) async => throw PlatformException(
+              code: 'storekit_duplicate_product_object',
+            ),
+          );
+          final lifecycle = <EntitlementLifecycle>[];
+          validator.lifecycleChanges.listen(lifecycle.add);
+          await expectLater(
+            validator.purchase(
+              'divine.supporter.monthly',
+              capturedPubkey: 'captured-pubkey',
+            ),
+            throwsException,
+          );
+
+          final proofFuture = validator.purchaseProofChanges.first;
+          streamController.add([_purchase('divine.supporter.monthly')]);
+          final proof = await proofFuture;
+
+          expect(proof.capturedPubkey, isNull);
+          expect(lifecycle, isEmpty);
+        },
+      );
+
       test('error status rejects with PurchaseFailedException', () async {
         final future = validator.purchase('divine.supporter.monthly');
         await pumpMicrotasks();
@@ -348,6 +439,44 @@ void main() {
           ),
         );
       });
+
+      test(
+        'a Google Play cancel without a product id ends the purchase in '
+        'flight',
+        () async {
+          final future = validator.purchase('divine.supporter.monthly');
+          await pumpMicrotasks();
+          streamController.add([
+            _purchase('', status: PurchaseStatus.canceled),
+          ]);
+
+          await expectLater(
+            future.timeout(const Duration(seconds: 1)),
+            throwsA(
+              isA<PurchaseFailedException>().having(
+                (error) => error.responseCode,
+                'responseCode',
+                'cancelled',
+              ),
+            ),
+          );
+        },
+      );
+
+      test(
+        'a Google Play failure without a product id fails the purchase in '
+        'flight',
+        () async {
+          final future = validator.purchase('divine.supporter.monthly');
+          await pumpMicrotasks();
+          streamController.add([_purchase('', status: PurchaseStatus.error)]);
+
+          await expectLater(
+            future.timeout(const Duration(seconds: 1)),
+            throwsA(isA<PurchaseFailedException>()),
+          );
+        },
+      );
 
       test(
         'pending status keeps the purchase unresolved until purchased',
@@ -634,6 +763,34 @@ void main() {
           throwsA(isA<StoreUnavailableException>()),
         );
       });
+
+      final storeRestoreFailures = <String, Exception>{
+        'StoreKit': PlatformException(code: 'storekit2_restore_failed'),
+        'Google Play': InAppPurchaseException(
+          source: 'google_play',
+          code: 'restore_transactions_failed',
+        ),
+      };
+      for (final MapEntry(key: storeName, value: failure)
+          in storeRestoreFailures.entries) {
+        test(
+          'throws RestoreFailedException when $storeName fails to restore',
+          () async {
+            when(store.isAvailable).thenAnswer((_) async => true);
+            when(
+              () => store.purchaseStream,
+            ).thenAnswer((_) => const Stream<List<PurchaseDetails>>.empty());
+            when(
+              () => store.restorePurchases(),
+            ).thenAnswer((_) async => throw failure);
+
+            await expectLater(
+              validator.restorePurchases(),
+              throwsA(isA<RestoreFailedException>()),
+            );
+          },
+        );
+      }
 
       test(
         'resolves inactive and calls restorePurchases on the store',

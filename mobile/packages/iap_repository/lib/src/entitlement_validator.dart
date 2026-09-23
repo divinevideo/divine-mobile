@@ -91,7 +91,9 @@ abstract class EntitlementValidator {
   /// canonical Worker verifies the emitted proof.
   ///
   /// Throws StoreUnavailableException, PurchaseFailedException, or
-  /// PurchasePendingException.
+  /// PurchasePendingException. PurchasePendingException means the store
+  /// already holds an unfinished purchase of [productId] and did not start
+  /// another one.
   Future<SupporterEntitlement> purchase(
     String productId, {
     String? capturedPubkey,
@@ -102,6 +104,9 @@ abstract class EntitlementValidator {
   ///
   /// Starts restore delivery. Store results are emitted as proofs and remain
   /// inactive until the canonical Worker verifies them.
+  ///
+  /// Throws StoreUnavailableException, or RestoreFailedException when the
+  /// store fails the restore.
   Future<SupporterEntitlement> restorePurchases({
     String? capturedPubkey,
     String? attemptId,

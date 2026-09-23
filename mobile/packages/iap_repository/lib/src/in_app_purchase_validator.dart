@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:iap_repository/src/entitlement_validator.dart';
 import 'package:iap_repository/src/exceptions.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -33,6 +34,14 @@ const Map<String, SupporterBillingPeriod> supporterProducts =
 /// The product ids in [supporterProducts], in display order.
 @visibleForTesting
 Set<String> get supporterProductIds => supporterProducts.keys.toSet();
+
+/// The error StoreKit raises, instead of opening checkout, while the same
+/// product still has an unfinished transaction.
+const _unfinishedPurchaseCode = 'storekit_duplicate_product_object';
+
+/// Reported when the store itself fails a restore (StoreKit finds an
+/// entitlement it cannot verify, or Google Play cannot query purchases).
+const _storeRestoreFailure = 'The store could not restore purchases.';
 
 /// [EntitlementValidator] backed by the `in_app_purchase` plugin.
 ///
@@ -101,7 +110,9 @@ class InAppPurchaseValidator implements EntitlementValidator {
   }
 
   Future<void> _processPurchase(PurchaseDetails purchase) async {
-    final pending = _pendingPurchases.remove(purchase.productID);
+    final pending =
+        _pendingPurchases.remove(purchase.productID) ??
+        _takeUnnamedCheckoutResult(purchase);
     final context = pending == null && _restoreContext != null
         ? _PurchaseContext(
             capturedPubkey: _restoreContext!.capturedPubkey,
@@ -146,6 +157,20 @@ class InAppPurchaseValidator implements EntitlementValidator {
           _lifecycleController.add(EntitlementLifecycle.pending);
         }
     }
+  }
+
+  /// Google Play reports a checkout that ended without a purchase (cancelled,
+  /// or failed before one existed) with an empty product id, so it can only
+  /// belong to the one purchase in flight.
+  _PendingPurchase? _takeUnnamedCheckoutResult(PurchaseDetails purchase) {
+    if (purchase.productID.isNotEmpty || _pendingPurchases.length != 1) {
+      return null;
+    }
+    return switch (purchase.status) {
+      PurchaseStatus.canceled || PurchaseStatus.error =>
+        _pendingPurchases.remove(_pendingPurchases.keys.single),
+      _ => null,
+    };
   }
 
   SupporterPurchaseProof _proofFromPurchase(
@@ -215,16 +240,25 @@ class InAppPurchaseValidator implements EntitlementValidator {
       attemptId: attemptId ?? 'store-${DateTime.now().microsecondsSinceEpoch}',
     );
 
-    final productDetails = await _store.queryProductDetails({productId});
-    final product = productDetails.productDetails.isEmpty
-        ? null
-        : productDetails.productDetails.first;
+    final bool initiated;
+    try {
+      final productDetails = await _store.queryProductDetails({productId});
+      final product = productDetails.productDetails.isEmpty
+          ? null
+          : productDetails.productDetails.first;
 
-    final initiated = await _store.buyNonConsumable(
-      purchaseParam: PurchaseParam(
-        productDetails: product ?? _placeholderProduct(productId),
-      ),
-    );
+      initiated = await _store.buyNonConsumable(
+        purchaseParam: PurchaseParam(
+          productDetails: product ?? _placeholderProduct(productId),
+        ),
+      );
+    } on PlatformException catch (error) {
+      // The store ended this attempt with an error instead of a result. Drop
+      // it, so a late delivery of the plan is handled as a background
+      // purchase rather than as this checkout.
+      _pendingPurchases.remove(productId);
+      throw _purchaseFailure(error);
+    }
     if (!initiated) {
       _pendingPurchases.remove(productId);
       throw const PurchaseFailedException(
@@ -233,6 +267,13 @@ class InAppPurchaseValidator implements EntitlementValidator {
       );
     }
     return completer.future;
+  }
+
+  EntitlementException _purchaseFailure(PlatformException error) {
+    if (error.code == _unfinishedPurchaseCode) {
+      return const PurchasePendingException();
+    }
+    return PurchaseFailedException(error.code, 'The store purchase failed.');
   }
 
   /// A fallback [ProductDetails] used only to satisfy [PurchaseParam] when the
@@ -267,6 +308,10 @@ class InAppPurchaseValidator implements EntitlementValidator {
     );
     try {
       await _store.restorePurchases();
+    } on PlatformException {
+      throw const RestoreFailedException(_storeRestoreFailure);
+    } on InAppPurchaseException {
+      throw const RestoreFailedException(_storeRestoreFailure);
     } finally {
       _restoreContext = null;
     }
