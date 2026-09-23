@@ -2288,7 +2288,6 @@
   "peopleListsNoVideosSubtitle": "జాబితా సభ్యుల నుండి వీడియోలు ఇక్కడ కనిపిస్తాయి",
   "peopleListsFailedToLoadVideos": "వీడియోలను లోడ్ చేయడంలో విఫలమైంది",
   "peopleListsVideoNotAvailable": "వీడియో అందుబాటులో లేదు",
-  "peopleListsBackToGridTooltip": "తిరిగి గ్రిడ్‌కి",
   "peopleListsErrorLoadingVideos": "వీడియోలను లోడ్ చేయడంలో లోపం",
   "peopleListsNoPeopleToAdd": "జోడించడానికి వ్యక్తులు ఎవరూ అందుబాటులో లేరు.",
   "peopleListsAddToListName": "దీనికి జోడించండి {name}",

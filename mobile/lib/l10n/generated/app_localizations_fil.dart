@@ -3842,9 +3842,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Hindi available ang video';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Bumalik sa grid';
-
-  @override
   String get peopleListsErrorLoadingVideos =>
       'May error sa pag-load ng mga video';
 

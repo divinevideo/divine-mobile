@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Video's van lijstleden verschijnen hier",
     "peopleListsFailedToLoadVideos": "Video's laden mislukt",
     "peopleListsVideoNotAvailable": "Video niet beschikbaar",
-    "peopleListsBackToGridTooltip": "Terug naar raster",
     "peopleListsErrorLoadingVideos": "Fout bij laden van video's",
     "peopleListsNoPeopleToAdd": "Geen mensen beschikbaar om toe te voegen.",
     "peopleListsAddToListName": "Toevoegen aan {name}",

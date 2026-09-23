@@ -3937,9 +3937,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Videoclip indisponibil';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Înapoi la grilă';
-
-  @override
   String get peopleListsErrorLoadingVideos =>
       'Eroare la încărcarea videoclipurilor';
 

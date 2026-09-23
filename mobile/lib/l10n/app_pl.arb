@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Filmy od członków listy pojawią się tutaj",
     "peopleListsFailedToLoadVideos": "Nie udało się załadować filmów",
     "peopleListsVideoNotAvailable": "Film niedostępny",
-    "peopleListsBackToGridTooltip": "Powrót do siatki",
     "peopleListsErrorLoadingVideos": "Błąd podczas ładowania filmów",
     "peopleListsNoPeopleToAdd": "Brak osób dostępnych do dodania.",
     "peopleListsAddToListName": "Dodaj do {name}",

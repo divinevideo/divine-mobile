@@ -3574,9 +3574,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get peopleListsVideoNotAvailable => '视频不可用';
 
   @override
-  String get peopleListsBackToGridTooltip => '返回网格';
-
-  @override
   String get peopleListsErrorLoadingVideos => '加载视频出错';
 
   @override

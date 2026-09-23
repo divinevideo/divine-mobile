@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Video dari anggota daftar akan muncul di sini",
     "peopleListsFailedToLoadVideos": "Gagal memuat video",
     "peopleListsVideoNotAvailable": "Video tidak tersedia",
-    "peopleListsBackToGridTooltip": "Kembali ke tampilan kisi",
     "peopleListsErrorLoadingVideos": "Kesalahan saat memuat video",
     "peopleListsNoPeopleToAdd": "Tidak ada orang yang tersedia untuk ditambahkan.",
     "peopleListsAddToListName": "Tambahkan ke {name}",

@@ -6580,12 +6580,6 @@ abstract class AppLocalizations {
   /// **'Video not available'**
   String get peopleListsVideoNotAvailable;
 
-  /// No description provided for @peopleListsBackToGridTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Back to grid'**
-  String get peopleListsBackToGridTooltip;
-
   /// No description provided for @peopleListsErrorLoadingVideos.
   ///
   /// In en, this message translates to:

@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Videos von Listenmitgliedern erscheinen hier",
     "peopleListsFailedToLoadVideos": "Videos konnten nicht geladen werden",
     "peopleListsVideoNotAvailable": "Video nicht verfügbar",
-    "peopleListsBackToGridTooltip": "Zurück zum Raster",
     "peopleListsErrorLoadingVideos": "Fehler beim Laden der Videos",
     "peopleListsNoPeopleToAdd": "Keine Personen zum Hinzufügen verfügbar.",
     "peopleListsAddToListName": "Zu {name} hinzufügen",

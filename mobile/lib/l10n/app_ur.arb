@@ -1909,7 +1909,6 @@
   "peopleListsNoVideosSubtitle": "فہرست کے ممبران کی ویڈیوز یہاں نظر آئیں گی",
   "peopleListsFailedToLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
   "peopleListsVideoNotAvailable": "ویڈیو دستیاب نہیں",
-  "peopleListsBackToGridTooltip": "گرڈ پر واپس",
   "peopleListsErrorLoadingVideos": "ویڈیوز لوڈ کرنے میں خرابی",
   "peopleListsNoPeopleToAdd": "شامل کرنے کے لیے کوئی لوگ دستیاب نہیں۔",
   "peopleListsAddToListName": "{name} میں شامل کریں",

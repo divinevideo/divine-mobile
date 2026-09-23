@@ -1644,7 +1644,6 @@
     "peopleListsNoVideosSubtitle": "ከዝርዝር አባላት የመጡ ቪዲዮዎች እዚህ ይታያሉ",
     "peopleListsFailedToLoadVideos": "ቪዲዮዎችን መጫን አልተሳካም።",
     "peopleListsVideoNotAvailable": "ቪዲዮ አይገኝም",
-    "peopleListsBackToGridTooltip": "ወደ ፍርግርግ ተመለስ",
     "peopleListsErrorLoadingVideos": "ቪዲዮዎችን መጫን ላይ ስህተት",
     "peopleListsNoPeopleToAdd": "ምንም የሚታከሉ ሰዎች የሉም።",
     "peopleListsAddToListName": "ወደ {name} ጨምር",

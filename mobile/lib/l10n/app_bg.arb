@@ -1457,7 +1457,6 @@
     "peopleListsNoVideosSubtitle": "Видеата от хората в списъка ще се появят тук",
     "peopleListsFailedToLoadVideos": "Не успяхме да заредим видеата",
     "peopleListsVideoNotAvailable": "Видеото не е налично",
-    "peopleListsBackToGridTooltip": "Обратно към мрежата",
     "peopleListsErrorLoadingVideos": "Грешка при зареждане на видеа",
     "peopleListsNoPeopleToAdd": "Няма налични хора за добавяне.",
     "peopleListsAddToListName": "Добави към {name}",

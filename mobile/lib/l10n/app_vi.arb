@@ -1909,7 +1909,6 @@
   "peopleListsNoVideosSubtitle": "Video từ các thành viên trong danh sách sẽ xuất hiện ở đây",
   "peopleListsFailedToLoadVideos": "Không tải được video",
   "peopleListsVideoNotAvailable": "Video không khả dụng",
-  "peopleListsBackToGridTooltip": "Quay lại lưới",
   "peopleListsErrorLoadingVideos": "Lỗi khi tải video",
   "peopleListsNoPeopleToAdd": "Không có ai để thêm.",
   "peopleListsAddToListName": "Thêm vào {name}",

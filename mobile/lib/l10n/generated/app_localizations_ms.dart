@@ -3814,9 +3814,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Video tidak tersedia';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Kembali ke grid';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Ralat memuatkan video';
 
   @override

@@ -3791,9 +3791,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Video không khả dụng';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Quay lại lưới';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Lỗi khi tải video';
 
   @override

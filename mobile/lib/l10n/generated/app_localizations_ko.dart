@@ -3591,9 +3591,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get peopleListsVideoNotAvailable => '동영상을 사용할 수 없습니다';
 
   @override
-  String get peopleListsBackToGridTooltip => '그리드로 돌아가기';
-
-  @override
   String get peopleListsErrorLoadingVideos => '동영상 불러오기 오류';
 
   @override

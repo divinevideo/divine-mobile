@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Videor från listmedlemmar visas här",
     "peopleListsFailedToLoadVideos": "Det gick inte att läsa in videor",
     "peopleListsVideoNotAvailable": "Video ej tillgänglig",
-    "peopleListsBackToGridTooltip": "Tillbaka till rutnät",
     "peopleListsErrorLoadingVideos": "Fel vid inläsning av videor",
     "peopleListsNoPeopleToAdd": "Inga personer tillgängliga att lägga till.",
     "peopleListsAddToListName": "Lägg till i {name}",

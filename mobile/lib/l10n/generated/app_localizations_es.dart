@@ -3862,9 +3862,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Video no disponible';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Volver a la cuadrícula';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Error al cargar los videos';
 
   @override

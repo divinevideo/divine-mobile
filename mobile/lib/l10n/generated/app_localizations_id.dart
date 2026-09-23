@@ -3751,9 +3751,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Video tidak tersedia';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Kembali ke tampilan kisi';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Kesalahan saat memuat video';
 
   @override

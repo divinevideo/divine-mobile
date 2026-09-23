@@ -3814,9 +3814,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Video ej tillgänglig';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Tillbaka till rutnät';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Fel vid inläsning av videor';
 
   @override

@@ -3834,9 +3834,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Video niet beschikbaar';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Terug naar raster';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Fout bij laden van video\'s';
 
   @override

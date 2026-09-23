@@ -4,7 +4,6 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,12 +19,12 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -220,6 +219,45 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Fullscreen playback of the members' videos, resolved from the provider
+/// the grid reads, so the tile tapped there is the video played here.
+class _MemberVideoPlayback extends ConsumerWidget {
+  const _MemberVideoPlayback({
+    required this.userList,
+    required this.activeIndex,
+    required this.onExit,
+  });
+
+  final UserList userList;
+  final int activeIndex;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return ref
+        .watch(userListMemberVideosProvider(userList.pubkeys))
+        .when(
+          data: (videos) => ListVideoPlayerMode(
+            videos: videos,
+            activeIndex: activeIndex,
+            listName: userList.name,
+            onExit: onExit,
+            unavailableMessage: l10n.peopleListsVideoNotAvailable,
+          ),
+          loading: () => const Center(
+            child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
+          ),
+          error: (_, _) => Center(
+            child: Text(
+              l10n.peopleListsErrorLoadingVideos,
+              style: VineTheme.bodyMediumFont(color: VineTheme.error),
+            ),
+          ),
+        );
   }
 }
 
@@ -466,7 +504,11 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       );
     } else {
       appBar = null;
-      body = _buildVideoPlayer(userList);
+      body = _MemberVideoPlayback(
+        userList: userList,
+        activeIndex: _activeVideoIndex!,
+        onExit: () => setState(() => _activeVideoIndex = null),
+      );
     }
     return BlocProvider<PeopleListMembersCubit>(
       key: ValueKey((profileRepository, Object.hashAll(userList.pubkeys))),
@@ -483,141 +525,6 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
         backgroundColor: context.vineColors.nav,
         appBar: appBar,
         body: body,
-      ),
-    );
-  }
-
-  Widget _buildVideoPlayer(UserList userList) {
-    final videosAsync = ref.watch(
-      userListMemberVideosProvider(userList.pubkeys),
-    );
-    final l10n = context.l10n;
-
-    return videosAsync.when(
-      data: (videos) {
-        if (videos.isEmpty || _activeVideoIndex! >= videos.length) {
-          return Center(
-            child: Text(
-              l10n.peopleListsVideoNotAvailable,
-              style: TextStyle(color: context.vineColors.secondaryText),
-            ),
-          );
-        }
-
-        return Stack(
-          children: [
-            PooledFullscreenVideoFeedScreen(
-              source: VideoListViewSource(videos),
-              feedRepository: StaticFeedRepository(),
-              initialIndex: _activeVideoIndex!,
-              contextTitle: userList.name,
-            ),
-            // Header bar showing list name and back button
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [VineTheme.scrim70, VineTheme.transparent],
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Back to grid button
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: VineTheme.scrim50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.grid_view,
-                            color: VineTheme.whiteText,
-                            size: 20,
-                          ),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _activeVideoIndex = null;
-                          });
-                        },
-                        tooltip: l10n.peopleListsBackToGridTooltip,
-                      ),
-                      const SizedBox(width: 8),
-                      // List name
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              userList.name,
-                              style: const TextStyle(
-                                color: VineTheme.whiteText,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (userList.description != null)
-                              Text(
-                                userList.description!,
-                                style: const TextStyle(
-                                  color: VineTheme.secondaryText,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                      // Video count indicator
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: VineTheme.scrim50,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          '${_activeVideoIndex! + 1}/${videos.length}',
-                          style: const TextStyle(
-                            color: VineTheme.whiteText,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Center(
-        child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
-      ),
-      error: (error, stack) => Center(
-        child: Text(
-          l10n.peopleListsErrorLoadingVideos,
-          style: const TextStyle(color: VineTheme.likeRed),
-        ),
       ),
     );
   }

@@ -1909,7 +1909,6 @@
   "peopleListsNoVideosSubtitle": "列表成员的视频会显示在这里",
   "peopleListsFailedToLoadVideos": "视频加载失败",
   "peopleListsVideoNotAvailable": "视频不可用",
-  "peopleListsBackToGridTooltip": "返回网格",
   "peopleListsErrorLoadingVideos": "加载视频出错",
   "peopleListsNoPeopleToAdd": "没有可添加的人。",
   "peopleListsAddToListName": "加入{name}",

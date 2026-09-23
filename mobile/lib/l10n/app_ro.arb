@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Videoclipurile membrilor listei vor apărea aici",
     "peopleListsFailedToLoadVideos": "Încărcarea videoclipurilor a eșuat",
     "peopleListsVideoNotAvailable": "Videoclip indisponibil",
-    "peopleListsBackToGridTooltip": "Înapoi la grilă",
     "peopleListsErrorLoadingVideos": "Eroare la încărcarea videoclipurilor",
     "peopleListsNoPeopleToAdd": "Nicio persoană disponibilă de adăugat.",
     "peopleListsAddToListName": "Adaugă la {name}",

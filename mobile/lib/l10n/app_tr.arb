@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Liste üyelerinin videoları burada görünecek",
     "peopleListsFailedToLoadVideos": "Videolar yüklenemedi",
     "peopleListsVideoNotAvailable": "Video kullanılamıyor",
-    "peopleListsBackToGridTooltip": "Izgaraya dön",
     "peopleListsErrorLoadingVideos": "Videolar yüklenirken hata oluştu",
     "peopleListsNoPeopleToAdd": "Eklenecek kişi bulunamadı.",
     "peopleListsAddToListName": "{name} listesine ekle",

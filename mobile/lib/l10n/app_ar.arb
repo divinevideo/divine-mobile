@@ -2892,7 +2892,6 @@
     "peopleListsNoVideosSubtitle": "ستظهر هنا مقاطع الفيديو من أعضاء القائمة",
     "peopleListsFailedToLoadVideos": "فشل تحميل مقاطع الفيديو",
     "peopleListsVideoNotAvailable": "الفيديو غير متاح",
-    "peopleListsBackToGridTooltip": "العودة إلى الشبكة",
     "peopleListsErrorLoadingVideos": "خطأ في تحميل مقاطع الفيديو",
     "peopleListsNoPeopleToAdd": "لا يوجد أشخاص متاحون للإضافة.",
     "peopleListsAddToListName": "أضف إلى {name}",

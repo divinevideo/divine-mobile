@@ -3967,9 +3967,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'వీడియో అందుబాటులో లేదు';
 
   @override
-  String get peopleListsBackToGridTooltip => 'తిరిగి గ్రిడ్‌కి';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'వీడియోలను లోడ్ చేయడంలో లోపం';
 
   @override

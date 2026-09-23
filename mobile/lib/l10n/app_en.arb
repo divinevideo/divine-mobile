@@ -2381,7 +2381,6 @@
   "peopleListsNoVideosSubtitle": "Videos from list members will appear here",
   "peopleListsFailedToLoadVideos": "Failed to load videos",
   "peopleListsVideoNotAvailable": "Video not available",
-  "peopleListsBackToGridTooltip": "Back to grid",
   "peopleListsErrorLoadingVideos": "Error loading videos",
   "peopleListsNoPeopleToAdd": "No people available to add.",
   "peopleListsAddToListName": "Add to {name}",

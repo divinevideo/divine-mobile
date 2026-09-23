@@ -2438,7 +2438,6 @@
     "peopleListsNoVideosSubtitle": "목록 구성원의 동영상이 여기에 표시됩니다",
     "peopleListsFailedToLoadVideos": "동영상을 불러오지 못했습니다",
     "peopleListsVideoNotAvailable": "동영상을 사용할 수 없습니다",
-    "peopleListsBackToGridTooltip": "그리드로 돌아가기",
     "peopleListsErrorLoadingVideos": "동영상 불러오기 오류",
     "peopleListsNoPeopleToAdd": "추가할 수 있는 사람이 없습니다.",
     "peopleListsAddToListName": "{name}에 추가",

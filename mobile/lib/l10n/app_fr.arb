@@ -2899,7 +2899,6 @@
     "peopleListsNoVideosSubtitle": "Les vidéos des membres de la liste apparaîtront ici",
     "peopleListsFailedToLoadVideos": "Impossible de charger les vidéos",
     "peopleListsVideoNotAvailable": "Vidéo non disponible",
-    "peopleListsBackToGridTooltip": "Retour à la grille",
     "peopleListsErrorLoadingVideos": "Erreur lors du chargement des vidéos",
     "peopleListsNoPeopleToAdd": "Aucune personne disponible à ajouter.",
     "peopleListsAddToListName": "Ajouter à {name}",

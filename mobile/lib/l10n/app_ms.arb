@@ -1909,7 +1909,6 @@
   "peopleListsNoVideosSubtitle": "Video daripada ahli senarai akan muncul di sini",
   "peopleListsFailedToLoadVideos": "Gagal memuatkan video",
   "peopleListsVideoNotAvailable": "Video tidak tersedia",
-  "peopleListsBackToGridTooltip": "Kembali ke grid",
   "peopleListsErrorLoadingVideos": "Ralat memuatkan video",
   "peopleListsNoPeopleToAdd": "Tiada orang tersedia untuk ditambah.",
   "peopleListsAddToListName": "Tambah ke {name}",
