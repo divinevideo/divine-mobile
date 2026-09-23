@@ -611,6 +611,69 @@ void main() {
       },
     );
 
+    ScheduledPost scheduledPostFor(String eventId, String pubkey) =>
+        ScheduledPost(
+          eventId: eventId,
+          ownerPubkey: pubkey,
+          draftId: 'draft-$eventId',
+          kind: 34236,
+          signedEventJson: '{}',
+          publishAt: 1790000000,
+          createdAt: DateTime.utc(2026),
+        );
+
+    test(
+      "destructive cleanup purges the departing user's scheduled posts",
+      () async {
+        await db.scheduledPostsDao.enqueue(scheduledPostFor('sa', _pubkeyA));
+        await db.scheduledPostsDao.enqueue(scheduledPostFor('sb', _pubkeyB));
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final service = subscription.read();
+
+        expect(service.onDatabaseCleanup, isNotNull);
+        await service.onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(
+          await db.scheduledPostsDao.getById('sa'),
+          isNull,
+          reason: "the removed account's signed events must not linger",
+        );
+        expect(
+          await db.scheduledPostsDao.getById('sb'),
+          isNotNull,
+          reason: "another account's scheduled posts are untouched",
+        );
+      },
+    );
+
+    test('non-destructive cleanup preserves scheduled posts', () async {
+      await db.scheduledPostsDao.enqueue(scheduledPostFor('sa', _pubkeyA));
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final service = subscription.read();
+
+      expect(service.onDatabaseCleanup, isNotNull);
+      await service.onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+      expect(
+        await db.scheduledPostsDao.getById('sa'),
+        isNotNull,
+        reason: 'the relay still holds the post; signing back in shows it',
+      );
+    });
+
     Future<void> saveCaptionStyleFor(String id, String? pubkey) =>
         db.savedCaptionStylesDao.upsertStyle(
           id: id,

@@ -975,6 +975,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             'pendingReports',
             () => db.pendingReportsDao.deleteAllForUser(userPubkey),
           );
+          // Each row holds a fully signed future-dated video event. A plain
+          // switch keeps them, since the relay still holds the posts; a
+          // removed account's must not outlive it (#3538).
+          await requiredDelete(
+            'scheduledPosts',
+            () => db.scheduledPostsDao.deleteAllForUser(userPubkey),
+          );
         }
       };
 
