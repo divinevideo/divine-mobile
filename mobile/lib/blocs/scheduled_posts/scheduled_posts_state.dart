@@ -89,7 +89,6 @@ class ScheduledPostItem extends Equatable {
   String get draftId => post.draftId;
   DateTime get publishAt => post.publishAtUtc;
   ScheduledPostStatus get status => post.status;
-  String? get failureReason => post.failureReason;
 
   String get title {
     final draftTitle = draft?.title;
