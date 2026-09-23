@@ -79,3 +79,16 @@ IOSOptions legacyDbCipherKeyIosSecureStorageOptions() =>
     // the package default, and this must keep naming what was written.
     // ignore: use_named_constants, avoid_redundant_argument_values
     const IOSOptions(accessibility: KeychainAccessibility.unlocked);
+
+/// The iOS options #9380 stored the key under, in the `db.cipher.key.v2` slot
+/// that internal builds shipped with before #9385 moved the key back.
+///
+/// Delete only. The bootstrap reads that slot through its usual instance,
+/// because the iOS plugin leaves the accessibility out of its read query, but
+/// the plugin puts it into its delete query, so the item is only removed by a
+/// delete that names this class. Never write a key with it: a
+/// `this_device` item does not survive a restore onto a new iPhone (see
+/// [appDbCipherKeyIosSecureStorageOptions]).
+IOSOptions dbCipherKeyV2IosSecureStorageOptions() => const IOSOptions(
+  accessibility: KeychainAccessibility.first_unlock_this_device,
+);

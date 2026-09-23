@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openvine/database/sqlcipher_runtime.dart';
 import 'package:openvine/services/database_recovery_store.dart';
+import 'package:openvine/services/secure_storage_options.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Secure-storage key for the at-rest DB cipher key.
@@ -21,7 +22,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// baseline all reach that path. The iOS Keychain accessibility changed in
 /// #9343 and the slot deliberately did not: the item is rewritten in place
 /// instead, by [DatabaseEncryptionBootstrap._upgradeKeyAccessibility]. See
-/// #9385.
+/// #9385. Internal builds did move it once, to [dbCipherKeyV2StorageKey], and
+/// the bootstrap moves a key it finds there back.
 @visibleForTesting
 const dbCipherKeyStorageKey = 'db.cipher.key.v1';
 
@@ -30,6 +32,15 @@ const dbCipherKeyStorageKey = 'db.cipher.key.v1';
 @visibleForTesting
 const dbCipherKeyAccessibilityBackupStorageKey =
     'db.cipher.key.v1.accessibility_backup';
+
+/// The slot #9380 moved the key into, deleting [dbCipherKeyStorageKey] behind
+/// it, on every platform. Internal builds shipped with that design before
+/// #9385 moved the key back, so on those installs the primary reads back empty
+/// while the key that opens the database is here. Read only to adopt it into
+/// the primary; never written. On iOS the item carries the class named by
+/// `dbCipherKeyV2IosSecureStorageOptions`.
+@visibleForTesting
+const dbCipherKeyV2StorageKey = 'db.cipher.key.v2';
 
 /// Resolves the SQLite3MultipleCiphers key for the local database before the first
 /// `AppDatabase` open and performs the one-time plaintext→encrypted migration.
@@ -98,7 +109,8 @@ class DatabaseEncryptionBootstrap {
   ///
   /// A delete the *app* issues does carry the class, which is why
   /// [resetEncryptedDatabaseCache] still takes a second, legacy-options
-  /// instance.
+  /// instance, and why the [dbCipherKeyV2StorageKey] item is deleted with
+  /// per-call options naming its own class.
   final FlutterSecureStorage _secureStorage;
 
   /// Whether the platform can currently decrypt `unlocked`-class data — iOS's
@@ -333,8 +345,22 @@ class DatabaseEncryptionBootstrap {
       await _restorePrimaryKey(backup);
       return (backup, false);
     }
-    // The slot read back empty. Only a keystore that could have answered makes
-    // that a fresh install rather than a key it refused to hand over.
+    // An install that ran #9380 moved the key to `.v2` and deleted the
+    // primary, so an empty primary is not yet key loss there either. Checked
+    // after the recovery copy, which is this build's own record of its primary
+    // and so newer than anything an earlier build left behind.
+    final moved = await _readCipherKey(_secureStorage, dbCipherKeyV2StorageKey);
+    if (moved != null && _isValidCipherKey(moved)) {
+      Log.warning(
+        'Adopting the DB cipher key from the .v2 slot an earlier build moved '
+        'it to.',
+        name: _logName,
+      );
+      await _adoptV2Key(moved);
+      return (moved, false);
+    }
+    // Every slot read back empty. Only a keystore that could have answered
+    // makes that a fresh install rather than a key it refused to hand over.
     await _requireReadableKeystore();
     return (await _createKey(), true);
   }
@@ -343,6 +369,27 @@ class DatabaseEncryptionBootstrap {
     final key = generateCipherKeyHex();
     await _writeCipherKey(key);
     return key;
+  }
+
+  /// Moves a key an earlier build left in [dbCipherKeyV2StorageKey] back into
+  /// the primary slot, where every build before and after #9380 looks.
+  ///
+  /// The primary is written and verified first. If that fails, startup fails
+  /// closed and `.v2` stays where it was, so the next launch adopts it then.
+  /// Only a verified primary lets `.v2` go, and that removal is best-effort:
+  /// both slots then hold the same key, and the primary wins every later read.
+  Future<void> _adoptV2Key(String key) async {
+    await _restorePrimaryKey(key);
+    try {
+      await _deleteV2Slot(_secureStorage);
+    } on Object catch (error) {
+      Log.warning(
+        'Could not remove the DB cipher key from the .v2 slot; the verified '
+        'primary holds the same key.',
+        name: _logName,
+        error: error,
+      );
+    }
   }
 
   /// Rewrites [key] into the slot it already occupies so the stored item
@@ -495,11 +542,13 @@ class DatabaseEncryptionBootstrap {
 
   Future<void> _writeCipherKey(String key) async {
     try {
-      // Do not let an obsolete recovery copy resurrect a previous key after
-      // a later interrupted replacement.
+      // Do not let an obsolete recovery copy, or a key an earlier build left
+      // in `.v2`, resurrect a previous key after a later interrupted
+      // replacement.
       await _secureStorage.delete(
         key: dbCipherKeyAccessibilityBackupStorageKey,
       );
+      await _deleteV2Slot(_secureStorage);
       await _secureStorage.write(key: dbCipherKeyStorageKey, value: key);
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
@@ -607,8 +656,8 @@ class DatabaseCipherStorageUnavailableException implements Exception {
       'secure storage is unavailable ($cause)';
 }
 
-/// The [DatabaseCipherStorageUnavailableException.cause] recorded when both
-/// cipher-key slots read back empty while the device has not been unlocked
+/// The [DatabaseCipherStorageUnavailableException.cause] recorded when every
+/// cipher-key slot read back empty while the device has not been unlocked
 /// since boot, so the bootstrap refused to generate a replacement key.
 ///
 /// Not a platform error: the Keychain reported nothing wrong, it merely could
@@ -736,7 +785,10 @@ bool shouldRepairLocalDatabaseCacheAfterBootstrapError(Object error) {
 /// through [secureStorage] for the current class and once through
 /// [legacySecureStorage] for the pre-#9343 one, which an item still carries
 /// until [DatabaseEncryptionBootstrap] has rewritten it. Deleting a key that is
-/// already gone is a no-op, so the second call is free. Pass
+/// already gone is a no-op, so the second call is free. The recovery copy and
+/// the [dbCipherKeyV2StorageKey] slot go too, first: the bootstrap adopts
+/// either one when the primary is empty, so a reset that left one behind would
+/// hand the old key to the next launch. Pass
 /// `false` when the caller cannot prove the stored key is stale: the backup
 /// this call leaves behind is encrypted under that key, so deleting it makes
 /// the backup permanently unreadable — while a retained key opens a fresh
@@ -760,6 +812,7 @@ Future<void> resetEncryptedDatabaseCache({
     // Delete auxiliary/legacy copies before the primary. A failed cleanup
     // must not leave a stale fallback as the only surviving key (#9389).
     await secureStorage.delete(key: dbCipherKeyAccessibilityBackupStorageKey);
+    await _deleteV2Slot(secureStorage);
     await legacySecureStorage.delete(key: dbCipherKeyStorageKey);
     await secureStorage.delete(key: dbCipherKeyStorageKey);
   }
@@ -797,6 +850,18 @@ Future<void> resetUnreadablePlaintextDatabaseCache({
   onDatabaseReset: onDatabaseReset,
   recoveryOutcome: DatabaseRecoveryOutcome.recreatedUnreadable,
   persistRecoveryOutcome: persistRecoveryOutcome,
+);
+
+/// Deletes [dbCipherKeyV2StorageKey] from [storage].
+///
+/// On iOS the plugin puts the accessibility into its delete query, so the call
+/// names the class #9380 wrote the item under; the item survives a delete that
+/// names any other. The per-call iOS options are ignored elsewhere, where
+/// [storage]'s own options apply, and those are what #9380 used on Android and
+/// macOS.
+Future<void> _deleteV2Slot(FlutterSecureStorage storage) => storage.delete(
+  key: dbCipherKeyV2StorageKey,
+  iOptions: dbCipherKeyV2IosSecureStorageOptions(),
 );
 
 Future<void> _runPostDatabaseReset(

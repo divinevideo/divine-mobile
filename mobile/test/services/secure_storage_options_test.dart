@@ -86,4 +86,17 @@ void main() {
       );
     });
   });
+
+  group('dbCipherKeyV2IosSecureStorageOptions', () {
+    test('names the item #9380 wrote to the .v2 slot', () {
+      // The full map #9380 pinned for the options it stored the key under. A
+      // delete naming anything else leaves that item in the Keychain, and a
+      // reset that leaves it behind hands the old key to the next launch.
+      expect(dbCipherKeyV2IosSecureStorageOptions().toMap(), <String, String>{
+        'accessibility': 'first_unlock_this_device',
+        'accountName': 'flutter_secure_storage_service',
+        'synchronizable': 'false',
+      });
+    });
+  });
 }

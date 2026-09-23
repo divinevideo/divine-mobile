@@ -66,6 +66,18 @@ required before rolling back after such an interruption. The rewrite is skipped
 while protected data is unavailable.
 macOS keeps `unlocked` (#5563), so nothing is rewritten there.
 
+Internal builds briefly shipped the opposite design (#9380): the key moved to
+`db.cipher.key.v2` under `first_unlock_this_device`, on every platform, and
+`db.cipher.key.v1` was deleted behind it. So when the primary and its recovery
+copy both read back empty, the bootstrap checks `db.cipher.key.v2` before
+treating the empty primary as key loss. A key found there is written to the
+primary and read back, and only then is `.v2` deleted, by a delete that names
+`first_unlock_this_device`, since the plugin puts the class into its delete
+query. A failed primary write fails startup closed with `.v2` intact for the
+next launch. Every write of a different key, and an explicit key reset, deletes
+`.v2` before touching the primary, so it cannot bring back a key the database
+no longer opens.
+
 `first_unlock_this_device` is deliberately **not** used. It is readable at
 exactly the same times, so it fixes #9343 just as well, but `SecItem.h` says
 its items "will never migrate to a new device, so after a backup is restored to

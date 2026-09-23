@@ -25,6 +25,14 @@ Iterable<String> _loggedText(LogCaptureService logs) => logs
     .getRecentLogs()
     .map((entry) => '${entry.message} ${entry.error ?? ''}');
 
+/// Per-call iOS options naming [accessibility]. The plugin puts the class into
+/// its delete query, so this decides which Keychain item a delete removes.
+Matcher _iosClass(String accessibility) => isA<IOSOptions>().having(
+  (options) => options.toMap()['accessibility'],
+  'accessibility',
+  accessibility,
+);
+
 void main() {
   group('generateCipherKeyHex', () {
     test('returns 64 lower-case hex characters (a raw 32-byte key)', () {
@@ -60,7 +68,12 @@ void main() {
         map[inv.namedArguments[#key] as String] =
             inv.namedArguments[#value] as String;
       });
-      when(() => mock.delete(key: any(named: 'key'))).thenAnswer((inv) async {
+      when(
+        () => mock.delete(
+          key: any(named: 'key'),
+          iOptions: any(named: 'iOptions'),
+        ),
+      ).thenAnswer((inv) async {
         map.remove(inv.namedArguments[#key] as String);
       });
     }
@@ -677,6 +690,150 @@ void main() {
           expect(store[dbCipherKeyStorageKey], equals(key));
         },
       );
+    });
+
+    group('key an earlier build moved to the .v2 slot', () {
+      // #9380 moved the key to `.v2` on every platform and deleted the primary,
+      // and internal builds shipped with it before #9385 moved the key back. On
+      // those installs the primary reads back empty while the key that opens
+      // the database is still in `.v2`.
+      const moved =
+          '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
+      final other = 'ab' * 32;
+
+      test(
+        'is adopted into the primary instead of wiping the database',
+        () async {
+          final logs = await _clearedLogCapture();
+          store[dbCipherKeyV2StorageKey] = moved;
+          final bootstrap = buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => fail('must not reset the database'),
+            isProtectedDataAvailable: () async => true,
+          );
+
+          expect(await bootstrap.resolveCipherKey(), moved);
+          expect(store, {dbCipherKeyStorageKey: moved});
+          // Removed under the class #9380 wrote it with. The plugin puts the
+          // class into its delete query, so a delete naming any other one would
+          // leave the item behind.
+          verify(
+            () => storage.delete(
+              key: dbCipherKeyV2StorageKey,
+              iOptions: any(
+                named: 'iOptions',
+                that: _iosClass('first_unlock_this_device'),
+              ),
+            ),
+          ).called(1);
+          expect(
+            _bootstrapWarnings(logs),
+            hasLength(1),
+            reason:
+                'an adoption is the only field evidence of an install that '
+                'ran the .v2 design',
+          );
+          expect(_loggedText(logs), everyElement(isNot(contains(moved))));
+        },
+      );
+
+      test('stays in place when the primary cannot be written', () async {
+        store[dbCipherKeyV2StorageKey] = moved;
+        when(
+          () => storage.write(key: dbCipherKeyStorageKey, value: moved),
+        ).thenThrow(PlatformException(code: 'Keychain unavailable'));
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        await expectLater(
+          bootstrap.resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        // The next launch finds it where it was and adopts it then.
+        expect(store, {dbCipherKeyV2StorageKey: moved});
+      });
+
+      test('does not fail the launch when it cannot be removed', () async {
+        store[dbCipherKeyV2StorageKey] = moved;
+        when(
+          () => storage.delete(
+            key: dbCipherKeyV2StorageKey,
+            iOptions: any(named: 'iOptions'),
+          ),
+        ).thenThrow(PlatformException(code: 'Keychain unavailable'));
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        // Both slots now hold the same key, and the primary wins every read.
+        expect(await bootstrap.resolveCipherKey(), moved);
+        expect(store, {
+          dbCipherKeyStorageKey: moved,
+          dbCipherKeyV2StorageKey: moved,
+        });
+      });
+
+      test('loses to the primary', () async {
+        store[dbCipherKeyStorageKey] = moved;
+        store[dbCipherKeyV2StorageKey] = other;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), moved);
+        expect(store[dbCipherKeyStorageKey], moved);
+      });
+
+      test('loses to the recovery copy of an interrupted rewrite', () async {
+        // The copy is this build's own record of the primary it was rewriting,
+        // so it is newer than anything an earlier build left in `.v2`.
+        store[dbCipherKeyAccessibilityBackupStorageKey] = moved;
+        store[dbCipherKeyV2StorageKey] = other;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), moved);
+        expect(store[dbCipherKeyStorageKey], moved);
+      });
+
+      test('is removed before a replacement key is written', () async {
+        // Rotation on genuine key loss. Every write of a different key clears
+        // the auxiliary slots first, so none of them can bring back a key the
+        // database no longer opens.
+        store[dbCipherKeyStorageKey] = moved;
+        store[dbCipherKeyV2StorageKey] = other;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () {},
+          isProtectedDataAvailable: () async => null,
+          canOpenEncryptedDatabase: (_) => false,
+        );
+
+        final key = await bootstrap.resolveCipherKey();
+
+        expect(key, isNot(anyOf(moved, other)));
+        expect(store, {dbCipherKeyStorageKey: key});
+        verifyInOrder([
+          () => storage.delete(
+            key: dbCipherKeyV2StorageKey,
+            iOptions: any(
+              named: 'iOptions',
+              that: _iosClass('first_unlock_this_device'),
+            ),
+          ),
+          () => storage.write(key: dbCipherKeyStorageKey, value: key),
+        ]);
+      });
     });
 
     test(
@@ -1311,7 +1468,10 @@ void main() {
         'auth_key': 'must-stay',
       };
       when(
-        () => storage.delete(key: any(named: 'key')),
+        () => storage.delete(
+          key: any(named: 'key'),
+          iOptions: any(named: 'iOptions'),
+        ),
       ).thenAnswer((inv) async {
         store.remove(inv.namedArguments[#key] as String);
       });
@@ -1358,6 +1518,33 @@ void main() {
         );
         expect(store, {'auth_key': 'must-stay'});
         expect(legacyStore, isEmpty);
+      },
+    );
+
+    test(
+      'removes the .v2 slot under its own class, before the primary',
+      () async {
+        // Left behind, it outlives the reset: the next launch finds the primary
+        // empty, adopts the key from `.v2`, and the reset rotated nothing.
+        store[dbCipherKeyV2StorageKey] = 'ab' * 32;
+
+        await resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        );
+
+        expect(store, {'auth_key': 'must-stay'});
+        verifyInOrder([
+          () => storage.delete(
+            key: dbCipherKeyV2StorageKey,
+            iOptions: any(
+              named: 'iOptions',
+              that: _iosClass('first_unlock_this_device'),
+            ),
+          ),
+          () => storage.delete(key: dbCipherKeyStorageKey),
+        ]);
       },
     );
 
