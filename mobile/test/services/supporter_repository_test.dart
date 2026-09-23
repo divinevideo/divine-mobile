@@ -323,6 +323,53 @@ void main() {
       });
     }
 
+    test(
+      'a refused repeat checkout keeps the earlier checkout ownership',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final clientA = buildApiClient();
+        final clientB = buildApiClient(pubkey: pubkeyB);
+        addTearDown(clientA.dispose);
+        addTearDown(clientB.dispose);
+        // A's first checkout reaches the store, so its purchase may still be
+        // unfinished there when A taps the plan again.
+        final repoA = SupporterRepository(
+          pubkey: pubkeyA,
+          validator: validator,
+          prefs: prefs,
+          apiClient: clientA,
+        );
+        await repoA.purchase('divine.supporter.monthly');
+        validator.purchaseError = const PurchasePendingException();
+        await expectLater(
+          repoA.purchase('divine.supporter.monthly'),
+          throwsA(isA<PurchasePendingException>()),
+        );
+        repoA.dispose();
+        validator.purchaseError = null;
+        final purchasesBefore = validator.purchaseCallCount;
+
+        final repoB = SupporterRepository(
+          pubkey: pubkeyB,
+          validator: validator,
+          prefs: prefs,
+          apiClient: clientB,
+        );
+        addTearDown(repoB.dispose);
+        await expectLater(
+          repoB.purchase('divine.supporter.monthly'),
+          throwsA(
+            isA<SupporterApiException>().having(
+              (error) => error.kind,
+              'kind',
+              SupporterApiFailureKind.ownershipConflict,
+            ),
+          ),
+        );
+        expect(validator.purchaseCallCount, purchasesBefore);
+      },
+    );
+
     test('rejected legacy restore does not block the rightful owner', () async {
       final prefs = await SharedPreferences.getInstance();
       final clientB = buildApiClient(
