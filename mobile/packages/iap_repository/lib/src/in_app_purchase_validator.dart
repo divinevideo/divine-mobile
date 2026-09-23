@@ -106,7 +106,9 @@ class InAppPurchaseValidator implements EntitlementValidator {
   }
 
   Future<void> _processPurchase(PurchaseDetails purchase) async {
-    final pending = _pendingPurchases.remove(purchase.productID);
+    final pending =
+        _pendingPurchases.remove(purchase.productID) ??
+        _takeUnnamedCheckoutResult(purchase);
     final context = pending == null && _restoreContext != null
         ? _PurchaseContext(
             capturedPubkey: _restoreContext!.capturedPubkey,
@@ -151,6 +153,20 @@ class InAppPurchaseValidator implements EntitlementValidator {
           _lifecycleController.add(EntitlementLifecycle.pending);
         }
     }
+  }
+
+  /// Google Play reports a checkout that ended without a purchase (cancelled,
+  /// or failed before one existed) with an empty product id, so it can only
+  /// belong to the one purchase in flight.
+  _PendingPurchase? _takeUnnamedCheckoutResult(PurchaseDetails purchase) {
+    if (purchase.productID.isNotEmpty || _pendingPurchases.length != 1) {
+      return null;
+    }
+    return switch (purchase.status) {
+      PurchaseStatus.canceled || PurchaseStatus.error =>
+        _pendingPurchases.remove(_pendingPurchases.keys.single),
+      _ => null,
+    };
   }
 
   SupporterPurchaseProof _proofFromPurchase(

@@ -441,6 +441,44 @@ void main() {
       });
 
       test(
+        'a Google Play cancel without a product id ends the purchase in '
+        'flight',
+        () async {
+          final future = validator.purchase('divine.supporter.monthly');
+          await pumpMicrotasks();
+          streamController.add([
+            _purchase('', status: PurchaseStatus.canceled),
+          ]);
+
+          await expectLater(
+            future.timeout(const Duration(seconds: 1)),
+            throwsA(
+              isA<PurchaseFailedException>().having(
+                (error) => error.responseCode,
+                'responseCode',
+                'cancelled',
+              ),
+            ),
+          );
+        },
+      );
+
+      test(
+        'a Google Play failure without a product id fails the purchase in '
+        'flight',
+        () async {
+          final future = validator.purchase('divine.supporter.monthly');
+          await pumpMicrotasks();
+          streamController.add([_purchase('', status: PurchaseStatus.error)]);
+
+          await expectLater(
+            future.timeout(const Duration(seconds: 1)),
+            throwsA(isA<PurchaseFailedException>()),
+          );
+        },
+      );
+
+      test(
         'pending status keeps the purchase unresolved until purchased',
         () async {
           final future = validator.purchase('divine.supporter.monthly');
