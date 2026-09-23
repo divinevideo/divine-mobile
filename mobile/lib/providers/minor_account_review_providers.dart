@@ -80,11 +80,16 @@ final currentMinorAccountReviewStatusProvider =
 /// container-teardown backstop, and disposal is idempotent.
 final Provider<MinorConsentRecorder> minorConsentRecorderProvider =
     Provider.autoDispose<MinorConsentRecorder>((ref) {
+      late final CameraMinorConsentRecorder recorder;
+      // The platform camera calls back with an `EditorVideo?`; forward its path
+      // to whatever auto-stop listener the capture cubit has attached.
       final camera = CameraService.create(
         onUpdateState: ({bool? forceCameraRebuild}) {},
-        onAutoStopped: (EditorVideo? video) {},
+        onAutoStopped: (EditorVideo? video) => recorder.onAutoStopped?.call(
+          minorConsentAutoStoppedPath(video),
+        ),
       );
-      final recorder = CameraMinorConsentRecorder(camera: camera);
+      recorder = CameraMinorConsentRecorder(camera: camera);
       ref.onDispose(() => recorder.dispose().ignore());
       return recorder;
     });
