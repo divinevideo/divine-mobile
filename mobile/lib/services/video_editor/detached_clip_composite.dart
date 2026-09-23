@@ -2,9 +2,11 @@
 // ABOUTME: composites over the finished timeline track
 
 import 'dart:math' as math;
-import 'dart:ui' show Offset, Size;
+import 'dart:ui' show Size;
 
 import 'package:meta/meta.dart';
+import 'package:openvine/extensions/layer_animation_storage.dart'
+    show exportedLayerTopLeft;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -109,7 +111,8 @@ PartitionedLayers partitionDetachedClipLayers(
 /// rotated too. A detached clip throws that raster away and re-places the
 /// video itself, and `SegmentTransform.rotation` wants the box *before* the
 /// turn — so the growth has to be undone, or a rotated clip would be scaled up
-/// to its own bounding box and drift off its anchor.
+/// to its own bounding box. Its centre stays put either way, since placement
+/// is anchored on the layer's centre.
 ///
 /// With `w`/`h` the unrotated size and `c`/`s` the absolute cosine and sine:
 ///
@@ -118,7 +121,7 @@ PartitionedLayers partitionDetachedClipLayers(
 /// bounding.height = w * s + h * c
 /// ```
 ///
-/// Two equations, three unknowns — and adding them is singular at 45°, where
+/// Two equations in two unknowns, but the system is singular at 45°, where
 /// every box with the same `w + h` shares one bounding square. [aspectRatio]
 /// supplies the missing constraint (`w == aspectRatio * h`), which collapses
 /// the sum to a single division that is well conditioned at every angle:
@@ -189,9 +192,11 @@ VideoLayer buildDetachedClipVideoLayer({
     aspectRatio: clip.originalAspectRatio,
   );
 
-  final offset = Offset(
-    (bodySize.width / 2 + layer.offset.dx - box.width / 2) * scale,
-    (bodySize.height / 2 + layer.offset.dy - box.height / 2) * scale,
+  final offset = exportedLayerTopLeft(
+    anchor: layer.offset,
+    bodySize: bodySize,
+    logicalSize: box,
+    scale: scale,
   );
   final size = Size(box.width * scale, box.height * scale);
 
