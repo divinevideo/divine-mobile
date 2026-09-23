@@ -204,11 +204,10 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
 
     /// Runs inside `-[FlutterEngine dealloc]`, which the engine delivers
     /// only because `register` published the plugin. It is the last
-    /// backstop, not a hook to rely on: an app can keep the engine alive
-    /// past its shell — Divine's `NostrBridgeAttestationPlugin` holds the
-    /// plugin registry, which is the engine, in a static until the next
-    /// engine replaces it — so the shell-destroying events above are what
-    /// tear the players down in time.
+    /// backstop, not a hook to rely on: anything in the app that strongly
+    /// holds the engine, or the plugin registry that on iOS is the engine,
+    /// keeps it alive past its shell, so the shell-destroying events above
+    /// are what tear the players down in time.
     public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
         tearDownEngine()
     }

@@ -31,10 +31,17 @@ final class NostrBridgeAttestationPlugin: NSObject, FlutterStreamHandler {
   static let bridgeChannelName = "divineSandboxBridge"
   private static let logTag = "[NostrBridgeAttestation]"
 
-  // Retained for the lifetime of the engine.
+  // Process-lifetime, not engine-lifetime: nothing ever clears this. Anything
+  // it transitively holds must stay weak or engine-free (see pluginRegistry).
   private static var shared: NostrBridgeAttestationPlugin?
 
-  private let pluginRegistry: FlutterPluginRegistry
+  /// Weak on purpose: on iOS this registry *is* the `FlutterEngine`
+  /// (`FlutterImplicitEngineBridgeImpl.pluginRegistry` returns `_engine`).
+  /// Held strongly from the `shared` static above it pinned the engine for the
+  /// process lifetime, and `-[FlutterEngine dealloc]` is the only non-test
+  /// place Flutter dispatches `detachFromEngineForRegistrar:` — so the pin
+  /// disabled `detachFromEngine(for:)` for every plugin in the app (#9393).
+  private weak var pluginRegistry: FlutterPluginRegistry?
   private let policy = NostrBridgeAttestationPolicy()
   private var handler: FrameAttestingScriptMessageHandler?
   private var eventSink: FlutterEventSink?
@@ -116,6 +123,18 @@ final class NostrBridgeAttestationPlugin: NSObject, FlutterStreamHandler {
 
   // MARK: - Private
 
+  /// Resolves webview-flutter's `WKWebView` for [webViewId], or nil once the
+  /// engine is gone — `pluginRegistry` is weak, so a torn-down engine reads
+  /// nil here. Both callers already treat a missing WebView as a recoverable
+  /// miss, so a dead engine takes the same path as a stale identifier.
+  private func resolveWebView(webViewId: Int64) -> WKWebView? {
+    guard let pluginRegistry else { return nil }
+    return FWFWebViewFlutterWKWebViewExternalAPI.webView(
+      forIdentifier: webViewId,
+      withPluginRegistry: pluginRegistry
+    )
+  }
+
   private func attachHandler(
     webViewId: Int64,
     bootstrapScript: String?,
@@ -139,10 +158,7 @@ final class NostrBridgeAttestationPlugin: NSObject, FlutterStreamHandler {
       break
     }
 
-    guard let webView = FWFWebViewFlutterWKWebViewExternalAPI.webView(
-      forIdentifier: webViewId,
-      withPluginRegistry: pluginRegistry
-    ) else {
+    guard let webView = resolveWebView(webViewId: webViewId) else {
       // Roll back the policy state since the actual attach failed.
       _ = policy.detach(webViewId: webViewId)
       NSLog(
@@ -193,10 +209,7 @@ final class NostrBridgeAttestationPlugin: NSObject, FlutterStreamHandler {
 
     // The WKWebView may already be deallocated by the time Dart tears down,
     // so a missing lookup here is expected and not an error worth logging.
-    if let webView = FWFWebViewFlutterWKWebViewExternalAPI.webView(
-      forIdentifier: webViewId,
-      withPluginRegistry: pluginRegistry
-    ) {
+    if let webView = resolveWebView(webViewId: webViewId) {
       webView.configuration.userContentController
         .removeScriptMessageHandler(forName: NostrBridgeAttestationPlugin.bridgeChannelName)
     }
