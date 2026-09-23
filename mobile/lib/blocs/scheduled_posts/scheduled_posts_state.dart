@@ -50,10 +50,40 @@ class RemoteScheduledPost extends Equatable {
 /// copy that still holds the video (absent when the draft's local files
 /// were reclaimed, in which case the event's own tags carry the display).
 class ScheduledPostItem extends Equatable {
-  const ScheduledPostItem({required this.post, required this.draft});
+  /// Reads the signed event's display tags once, not on every build.
+  factory ScheduledPostItem({
+    required ScheduledPost post,
+    required DivineVideoDraft? draft,
+  }) {
+    final tags = ScheduledPostsRepository.decodeEvent(post).tags;
+    String? tag(String name) {
+      for (final tag in tags) {
+        if (tag.length >= 2 && tag[0] == name) return tag[1];
+      }
+      return null;
+    }
+
+    return ScheduledPostItem._(
+      post: post,
+      draft: draft,
+      eventTitle: tag('title'),
+      thumbnailUrl: tag('image'),
+    );
+  }
+
+  const ScheduledPostItem._({
+    required this.post,
+    required this.draft,
+    required String? eventTitle,
+    required this.thumbnailUrl,
+  }) : _eventTitle = eventTitle;
 
   final ScheduledPost post;
   final DivineVideoDraft? draft;
+  final String? _eventTitle;
+
+  /// The published thumbnail, from the event's `image` tag.
+  final String? thumbnailUrl;
 
   String get eventId => post.eventId;
   String get draftId => post.draftId;
@@ -61,22 +91,10 @@ class ScheduledPostItem extends Equatable {
   ScheduledPostStatus get status => post.status;
   String? get failureReason => post.failureReason;
 
-  Event get event => ScheduledPostsRepository.decodeEvent(post);
-
   String get title {
     final draftTitle = draft?.title;
     if (draftTitle != null && draftTitle.trim().isNotEmpty) return draftTitle;
-    return _tag('title') ?? '';
-  }
-
-  /// The published thumbnail, from the event's `image` tag.
-  String? get thumbnailUrl => _tag('image');
-
-  String? _tag(String name) {
-    for (final tag in event.tags) {
-      if (tag.length >= 2 && tag[0] == name) return tag[1];
-    }
-    return null;
+    return _eventTitle ?? '';
   }
 
   @override

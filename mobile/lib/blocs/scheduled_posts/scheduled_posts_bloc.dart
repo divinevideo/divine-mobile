@@ -8,7 +8,6 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:db_client/db_client.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/observability/reportable_error.dart';
