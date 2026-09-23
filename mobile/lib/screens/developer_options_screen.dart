@@ -687,6 +687,7 @@ class _DeveloperOptionsScreenState
     if (isSelected) return;
 
     // Show confirmation dialog
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -713,14 +714,14 @@ class _DeveloperOptionsScreenState
                   label: context.l10n.devOptionsCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
                 child: DivineButton(
                   label: context.l10n.devOptionsSwitch,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],

@@ -234,6 +234,7 @@ class _CacheSection extends StatelessWidget {
   Future<void> _confirmClear(BuildContext context, int bytes) async {
     final l10n = context.l10n;
     final cubit = context.read<StorageCubit>();
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -258,7 +259,7 @@ class _CacheSection extends StatelessWidget {
                   label: l10n.settingsCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
@@ -266,7 +267,7 @@ class _CacheSection extends StatelessWidget {
                   label: l10n.settingsStorageClearConfirmAction,
                   type: DivineButtonType.error,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],
@@ -418,6 +419,7 @@ class _ContentSection extends StatelessWidget {
   }) async {
     final l10n = context.l10n;
     final cubit = context.read<StorageCubit>();
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -445,7 +447,7 @@ class _ContentSection extends StatelessWidget {
                   label: l10n.settingsCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
@@ -453,7 +455,7 @@ class _ContentSection extends StatelessWidget {
                   label: l10n.commonDelete,
                   type: DivineButtonType.error,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],
@@ -530,6 +532,7 @@ class _LibrarySection extends StatelessWidget {
   Future<void> _confirmRemoveBroken(BuildContext context) async {
     final l10n = context.l10n;
     final cubit = context.read<StorageCubit>();
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -545,7 +548,7 @@ class _LibrarySection extends StatelessWidget {
                   label: l10n.settingsCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
@@ -553,7 +556,7 @@ class _LibrarySection extends StatelessWidget {
                   label: l10n.commonDelete,
                   type: DivineButtonType.error,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],
@@ -629,6 +632,7 @@ class _RepairSection extends StatelessWidget {
     // Application Support is too slow to pay for on every visit, and the
     // number only informs this one decision.
     unawaited(cubit.loadRecoveryFootprint());
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -661,7 +665,7 @@ class _RepairSection extends StatelessWidget {
                   label: l10n.settingsCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
@@ -669,7 +673,7 @@ class _RepairSection extends StatelessWidget {
                   label: l10n.settingsStorageRepairConfirmAction,
                   type: DivineButtonType.error,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],

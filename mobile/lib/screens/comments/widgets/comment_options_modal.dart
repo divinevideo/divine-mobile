@@ -211,6 +211,7 @@ class _FlagContentSheet extends StatefulWidget {
   final void Function(CommentReportResult result) onSubmit;
 
   static Future<CommentReportResult?> show(BuildContext context) {
+    final navigator = Navigator.of(context);
     return VineBottomSheet.show<CommentReportResult>(
       context: context,
       scrollable: false,
@@ -221,7 +222,7 @@ class _FlagContentSheet extends StatefulWidget {
         style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
       ),
       body: _FlagContentSheet(
-        onSubmit: (result) => Navigator.pop(context, result),
+        onSubmit: navigator.pop,
       ),
     );
   }

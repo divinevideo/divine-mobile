@@ -263,6 +263,7 @@ class _VerifyContent extends StatelessWidget {
   Future<void> _confirmRemove(BuildContext context, IdentityClaim claim) async {
     final cubit = context.read<VerifyCubit>();
     final l10n = context.l10n;
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheetPrompt.show<bool>(
       context: context,
       sticker: .alert,
@@ -270,9 +271,9 @@ class _VerifyContent extends StatelessWidget {
       subtitle: l10n.verifyUnlinkConfirmSubtitle(claim.identity),
       primaryButtonText: l10n.verifyUnlinkConfirmCta,
       primaryButtonType: DivineButtonType.error,
-      onPrimaryPressed: () => Navigator.of(context).pop(true),
+      onPrimaryPressed: () => navigator.pop(true),
       secondaryButtonText: l10n.commonCancel,
-      onSecondaryPressed: () => Navigator.of(context).pop(false),
+      onSecondaryPressed: () => navigator.pop(false),
     );
     if (confirmed != true) return;
     await cubit.removeClaim(claim);

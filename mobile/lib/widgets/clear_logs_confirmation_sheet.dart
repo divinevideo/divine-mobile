@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 /// (including tapping outside the sheet).
 Future<bool?> showClearLogsConfirmation(BuildContext context) {
   final l10n = context.l10n;
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<bool>(
     context: context,
     scrollable: false,
@@ -25,14 +26,14 @@ Future<bool?> showClearLogsConfirmation(BuildContext context) {
               child: DivineButton(
                 label: l10n.commonCancel,
                 type: DivineButtonType.secondary,
-                onPressed: () => Navigator.of(context).pop(false),
+                onPressed: () => navigator.pop(false),
               ),
             ),
             Expanded(
               child: DivineButton(
                 label: l10n.supportClearLogsConfirmButton,
                 type: DivineButtonType.error,
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () => navigator.pop(true),
               ),
             ),
           ],

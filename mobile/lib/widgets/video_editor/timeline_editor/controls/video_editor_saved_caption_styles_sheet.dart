@@ -476,6 +476,7 @@ Future<bool> _confirmDelete(
   BuildContext context,
   SavedCaptionStyle saved,
 ) async {
+  final navigator = Navigator.of(context);
   final confirmed = await VineBottomSheetPrompt.show<bool>(
     context: context,
     sticker: DivineStickerName.alert,
@@ -485,8 +486,8 @@ Future<bool> _confirmDelete(
     subtitle: context.l10n.videoEditorCaptionsSavedStyleDeleteConfirmMessage,
     primaryButtonText: context.l10n.commonDelete,
     secondaryButtonText: context.l10n.commonCancel,
-    onPrimaryPressed: () => Navigator.of(context).pop(true),
-    onSecondaryPressed: () => Navigator.of(context).pop(false),
+    onPrimaryPressed: () => navigator.pop(true),
+    onSecondaryPressed: () => navigator.pop(false),
   );
   return confirmed ?? false;
 }

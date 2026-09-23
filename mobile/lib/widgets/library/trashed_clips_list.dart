@@ -144,6 +144,7 @@ class _TrashedClipTile extends StatelessWidget {
   }
 
   Future<void> _confirmHardDelete(BuildContext context) async {
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheetPrompt.show<bool>(
       context: context,
       sticker: .alert,
@@ -152,8 +153,8 @@ class _TrashedClipTile extends StatelessWidget {
       additionalText: context.l10n.libraryDeleteClipsWarning,
       primaryButtonText: context.l10n.libraryDeleteConfirm,
       secondaryButtonText: context.l10n.commonCancel,
-      onPrimaryPressed: () => Navigator.of(context).pop(true),
-      onSecondaryPressed: () => Navigator.of(context).pop(false),
+      onPrimaryPressed: () => navigator.pop(true),
+      onSecondaryPressed: () => navigator.pop(false),
     );
 
     if (confirmed != true || !context.mounted) return;

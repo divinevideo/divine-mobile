@@ -275,15 +275,16 @@ class _ReactorRow extends ConsumerWidget {
   }) async {
     final cubit = context.read<ConversationReactionsCubit>();
     if (isRemovalRefused) {
+      final navigator = Navigator.of(context);
       final retry = await VineBottomSheetPrompt.show<bool>(
         context: context,
         sticker: DivineStickerName.alert,
         title: context.l10n.dmReactionRemovalRefusedTitle,
         subtitle: context.l10n.dmReactionRemovalRefusedDetails,
         primaryButtonText: context.l10n.authTryAgain,
-        onPrimaryPressed: () => Navigator.of(context).pop(true),
+        onPrimaryPressed: () => navigator.pop(true),
         secondaryButtonText: context.l10n.commonCancel,
-        onSecondaryPressed: () => Navigator.of(context).pop(false),
+        onSecondaryPressed: () => navigator.pop(false),
       );
       if (retry != true || cubit.isClosed) return;
       if (context.mounted) {

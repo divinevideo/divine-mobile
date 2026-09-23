@@ -233,6 +233,7 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
     }
 
     // Show confirmation dialog
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -257,14 +258,14 @@ class _KeyManagementScreenState extends ConsumerState<KeyManagementScreen> {
                   label: context.l10n.reportCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
                 child: DivineButton(
                   label: context.l10n.keyManagementImportConfirm,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],

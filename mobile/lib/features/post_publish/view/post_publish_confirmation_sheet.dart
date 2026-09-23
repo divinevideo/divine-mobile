@@ -43,6 +43,7 @@ class PostPublishConfirmationSheet extends StatelessWidget {
     required VoidCallback onShare,
     Uint8List? thumbnailBytes,
   }) {
+    final navigator = Navigator.of(context);
     return VineBottomSheet.show<void>(
       context: context,
       scrollable: false,
@@ -57,16 +58,16 @@ class PostPublishConfirmationSheet extends StatelessWidget {
         type: .secondary,
         size: .small,
         semanticLabel: context.l10n.commonClose,
-        onPressed: () => Navigator.of(context).pop(),
+        onPressed: navigator.pop,
       ),
       body: PostPublishConfirmationSheet(
         thumbnailBytes: thumbnailBytes,
         onView: () {
-          Navigator.of(context).pop();
+          navigator.pop();
           onView();
         },
         onShare: () {
-          Navigator.of(context).pop();
+          navigator.pop();
           onShare();
         },
       ),

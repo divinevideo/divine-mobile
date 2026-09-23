@@ -63,6 +63,7 @@ Future<ProfileImageAction?> showProfileImageActionsSheet(
   // holds focus rather than at this context's scope, so it works no matter
   // which field the user was in when they reached for the pencil.
   FocusManager.instance.primaryFocus?.unfocus();
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<ProfileImageAction>(
     context: context,
     scrollable: false,
@@ -112,7 +113,7 @@ Future<ProfileImageAction?> showProfileImageActionsSheet(
             label: context.l10n.profileSetupBannerChangeColor,
             value: colorValue,
             trailingColor: VineTheme.primary,
-            onTap: () => Navigator.of(context).pop(ProfileImageAction.color),
+            onTap: () => navigator.pop(ProfileImageAction.color),
           ),
         ),
       const SizedBox(height: 16),

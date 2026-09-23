@@ -53,6 +53,13 @@ Future<GalleryPermissionChoice> showGalleryPermissionSheet(
 
   final requiresSettings = status == PermissionStatus.requiresSettings;
 
+  // Resolved while the caller is still mounted, then held: every button here
+  // answers after an await — a round trip through Settings, a platform
+  // permission prompt, a preferences write — by which point the opening
+  // widget may be gone. A `context.mounted` check would keep that from
+  // crashing but at the price of never popping, so this future and every
+  // caller awaiting it would hang instead.
+  final navigator = Navigator.of(context);
   final result = await VineBottomSheetPrompt.show<GalleryPermissionChoice>(
     context: context,
     sticker: DivineStickerName.alert,
@@ -66,32 +73,26 @@ Future<GalleryPermissionChoice> showGalleryPermissionSheet(
     onPrimaryPressed: requiresSettings
         ? () async {
             await permissionsService.openAppSettings();
-            if (context.mounted) {
-              Navigator.of(context).pop(GalleryPermissionChoice.openedSettings);
-            }
+            navigator.pop(GalleryPermissionChoice.openedSettings);
           }
         : () async {
             final requested = await permissionsService
                 .requestGalleryPermission();
-            if (context.mounted) {
-              Navigator.of(context).pop(
-                requested == PermissionStatus.granted
-                    ? GalleryPermissionChoice.granted
-                    : GalleryPermissionChoice.skipped,
-              );
-            }
+            navigator.pop(
+              requested == PermissionStatus.granted
+                  ? GalleryPermissionChoice.granted
+                  : GalleryPermissionChoice.skipped,
+            );
           },
     secondaryButtonText: 'Not Now',
     onSecondaryPressed: () {
-      Navigator.of(context).pop(GalleryPermissionChoice.skipped);
+      navigator.pop(GalleryPermissionChoice.skipped);
     },
     tertiaryButtonText: "Don't Ask Again",
     onTertiaryPressed: () async {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_kGalleryPermissionDismissedKey, true);
-      if (context.mounted) {
-        Navigator.of(context).pop(GalleryPermissionChoice.dismissedForever);
-      }
+      navigator.pop(GalleryPermissionChoice.dismissedForever);
     },
   );
 
