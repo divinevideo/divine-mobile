@@ -145,5 +145,33 @@ void main() {
       expect(recorder.stopCount, 0);
       expect(recorder.disposed, isTrue);
     });
+
+    test(
+      'releaseRecorder disposes the recorder and makes close a no-op',
+      () async {
+        final recorder = _FakeRecorder();
+        final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+        await cubit.start(outputDirectory: '/tmp');
+        await cubit.stop();
+
+        await cubit.releaseRecorder();
+        expect(recorder.disposed, isTrue);
+
+        await cubit.close();
+        expect(recorder.stopCount, 1);
+        expect(recorder.disposed, isTrue);
+      },
+    );
+
+    test('releaseRecorder is idempotent', () async {
+      final recorder = _FakeRecorder();
+      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+      await cubit.releaseRecorder();
+      await cubit.releaseRecorder();
+
+      expect(recorder.disposed, isTrue);
+    });
   });
 }
