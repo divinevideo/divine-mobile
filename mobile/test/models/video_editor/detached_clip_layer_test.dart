@@ -4,6 +4,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:pro_image_editor/core/models/layers/layer_interaction.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorLayerImage, EditorVideo;
@@ -720,6 +721,43 @@ void main() {
             ],
           },
         ]);
+      });
+
+      test('lifts the lock from a serialized WidgetLayer on import', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+        final layer = WidgetLayer(
+          id: 'layer-1',
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          interaction: LayerInteraction(enableRotate: false),
+          exportConfigs: WidgetLayerExportConfigs(id: 'detached-1', meta: meta),
+        );
+        final history = <String, dynamic>{
+          'version': '6.5.0',
+          'position': 0,
+          'references': {'layer-1': layer.toMap()},
+          'history': [
+            {
+              'layers': [
+                {'id': 'layer-1'},
+              ],
+            },
+          ],
+        };
+
+        final imported = ImportStateHistory.fromMap(
+          DetachedClipLayerData.withRotatableDetachedClips(history),
+          configs: ImportEditorConfigs(
+            widgetLoader: (_, {meta}) => const SizedBox.shrink(),
+          ),
+        );
+
+        final restored = imported.stateHistory.single.layers.single;
+        expect(restored, isA<WidgetLayer>());
+        expect((restored as WidgetLayer).interaction.enableRotate, isTrue);
       });
 
       test('returns an already rotatable draft as it came', () {
