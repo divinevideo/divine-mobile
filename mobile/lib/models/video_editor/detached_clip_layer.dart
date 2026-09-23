@@ -336,6 +336,73 @@ class DetachedClipLayerData {
     return paths;
   }
 
+  /// Key under which a layer's interaction policy is serialized.
+  static const String _layerInteractionKey = 'interaction';
+
+  /// Key under which the rotate permission is serialized.
+  static const String _enableRotateKey = 'enableRotate';
+
+  /// Re-enables rotation on every detached clip in serialized editor state.
+  ///
+  /// Detaching used to build its layer with `enableRotate: false`, because
+  /// `SegmentTransform` carried no angle and a turned layer would have looked
+  /// right in the editor and landed upright in the file. That is fixed, and
+  /// new layers are built rotatable — but the flag is *persisted*:
+  /// `Layer.toMap` writes the whole interaction map on every entry, so every
+  /// draft saved under the old behaviour carries the restriction forever and
+  /// its clips stay stuck no matter how many times the app is updated.
+  ///
+  /// So the policy is re-applied on the way in rather than trusted from the
+  /// draft. Only [detachedClipLayerKind] layers are touched, and only the
+  /// rotate flag: anything else a layer stored stays exactly as it was.
+  ///
+  /// The whole history is walked, not just its active entry, or undo would
+  /// step back onto a layer that cannot be turned again.
+  ///
+  /// Returns a new structure; [history] is left untouched.
+  static Map<String, dynamic> withRotatableDetachedClips(
+    Map<String, dynamic> history,
+  ) {
+    // Long-form keys only: `exportStateHistory` writes drafts with
+    // `enableMinify: false`, so a minified interaction map cannot reach here.
+    Object? visit(Object? value) {
+      if (value is Map) {
+        final map = <String, dynamic>{
+          for (final entry in value.entries)
+            entry.key.toString(): visit(entry.value),
+        };
+        if (_isDetachedClipLayerMap(map)) {
+          final interaction = map[_layerInteractionKey];
+          // An absent policy already means "everything allowed", so writing
+          // one would invent a restriction rather than lift one.
+          if (interaction is Map) {
+            map[_layerInteractionKey] = <String, dynamic>{
+              ...Map<String, dynamic>.from(interaction),
+              _enableRotateKey: true,
+            };
+          }
+        }
+        return map;
+      }
+      if (value is Iterable) return value.map(visit).toList();
+      return value;
+    }
+
+    return visit(history)! as Map<String, dynamic>;
+  }
+
+  /// Whether [map] is a serialized *layer* carrying a detached clip — as
+  /// opposed to the clip meta nested inside it, which has no interaction of
+  /// its own.
+  static bool _isDetachedClipLayerMap(Map<String, dynamic> map) {
+    if (isDetachedClipMeta(_asMap(map['meta']))) return true;
+    final exportConfigs = _asMap(map['exportConfigs']);
+    return isDetachedClipMeta(_asMap(exportConfigs?['meta']));
+  }
+
+  static Map<String, dynamic>? _asMap(Object? value) =>
+      value is Map ? Map<String, dynamic>.from(value) : null;
+
   /// Whether serialized editor state contains at least one detached clip.
   static bool historyContainsDetachedClip(Map<String, dynamic> history) {
     var found = false;

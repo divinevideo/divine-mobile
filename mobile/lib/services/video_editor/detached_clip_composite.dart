@@ -1,8 +1,10 @@
 // ABOUTME: Turns detached-clip layers into the composition the export
 // ABOUTME: composites over the finished timeline track
 
+import 'dart:math' as math;
 import 'dart:ui' show Offset, Size;
 
+import 'package:meta/meta.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -99,6 +101,52 @@ PartitionedLayers partitionDetachedClipLayers(
   return (below: below, detached: detached, above: above);
 }
 
+/// The layer's **unrotated** layout box, recovered from the rotated bounding
+/// box `pro_image_editor` reports as `ExportedLayer.logicalSize`.
+///
+/// `Layer.captureAllLayers` grows a rotated layer's reported size to the box
+/// that contains the turned content, because the raster it ships alongside is
+/// rotated too. A detached clip throws that raster away and re-places the
+/// video itself, and `SegmentTransform.rotation` wants the box *before* the
+/// turn — so the growth has to be undone, or a rotated clip would be scaled up
+/// to its own bounding box and drift off its anchor.
+///
+/// With `w`/`h` the unrotated size and `c`/`s` the absolute cosine and sine:
+///
+/// ```text
+/// bounding.width  = w * c + h * s
+/// bounding.height = w * s + h * c
+/// ```
+///
+/// Two equations, three unknowns — and adding them is singular at 45°, where
+/// every box with the same `w + h` shares one bounding square. [aspectRatio]
+/// supplies the missing constraint (`w == aspectRatio * h`), which collapses
+/// the sum to a single division that is well conditioned at every angle:
+/// `(1 + aspectRatio) * (c + s)` never drops below `1 + aspectRatio`.
+///
+/// Both measured dimensions feed the result rather than just one, so a pixel
+/// of layout rounding in either is halved instead of carried through whole.
+@visibleForTesting
+Size unrotatedLayerBox({
+  required Size boundingBox,
+  required double rotation,
+  required double aspectRatio,
+}) {
+  // An unrotated layer is already its own box; an unusable ratio leaves the
+  // box alone rather than scaling the clip by a nonsense factor.
+  if (rotation == 0 ||
+      !rotation.isFinite ||
+      !aspectRatio.isFinite ||
+      aspectRatio <= 0) {
+    return boundingBox;
+  }
+  final denominator =
+      (1 + aspectRatio) * (math.cos(rotation).abs() + math.sin(rotation).abs());
+  if (denominator <= 0) return boundingBox;
+  final height = (boundingBox.width + boundingBox.height) / denominator;
+  return Size(height * aspectRatio, height);
+}
+
 /// Builds the composition layer that places [item] over the base track.
 ///
 /// Geometry mirrors `VideoEditorRenderService.buildImageLayers` exactly, so a
@@ -132,15 +180,20 @@ VideoLayer buildDetachedClipVideoLayer({
   final layer = item.layer;
   final clip = item.clip;
 
+  // `logicalSize` is the layer's *rotated* bounding box, while the transform
+  // below wants the box before the turn — see [unrotatedLayerBox]. The anchor
+  // is the layer's centre either way, since the turn is around that centre.
+  final box = unrotatedLayerBox(
+    boundingBox: item.logicalSize,
+    rotation: layer.rotation,
+    aspectRatio: clip.originalAspectRatio,
+  );
+
   final offset = Offset(
-    (bodySize.width / 2 + layer.offset.dx - item.logicalSize.width / 2) * scale,
-    (bodySize.height / 2 + layer.offset.dy - item.logicalSize.height / 2) *
-        scale,
+    (bodySize.width / 2 + layer.offset.dx - box.width / 2) * scale,
+    (bodySize.height / 2 + layer.offset.dy - box.height / 2) * scale,
   );
-  final size = Size(
-    item.logicalSize.width * scale,
-    item.logicalSize.height * scale,
-  );
+  final size = Size(box.width * scale, box.height * scale);
 
   final start = timelineMap.editorToOutputOrNull(layer.startTime);
   final end = timelineMap.editorToOutputOrNull(layer.endTime);
@@ -182,6 +235,9 @@ VideoLayer buildDetachedClipVideoLayer({
           // and cover agree — contain is the one that cannot crop if rounding
           // pulls them a pixel apart.
           fit: SegmentFit.contain,
+          // Forwarded straight through: both sides mean a clockwise turn in
+          // radians around the box's own centre.
+          rotation: layer.rotation,
         ),
       ),
     ],

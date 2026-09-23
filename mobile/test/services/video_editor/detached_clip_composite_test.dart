@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -19,13 +20,14 @@ DivineVideoClip _clip({
   Duration trimEnd = Duration.zero,
   double? playbackSpeed,
   double volume = 1,
+  double originalAspectRatio = 1,
 }) => DivineVideoClip(
   id: id,
   video: EditorVideo.file('/docs/$id.mp4'),
   duration: duration,
   recordedAt: DateTime(2026),
   targetAspectRatio: model.AspectRatio.square,
-  originalAspectRatio: 1,
+  originalAspectRatio: originalAspectRatio,
   trimStart: trimStart,
   trimEnd: trimEnd,
   playbackSpeed: playbackSpeed,
@@ -41,6 +43,7 @@ WidgetLayer _detachedLayer(
   Duration? startTime,
   Duration? endTime,
   ClipChromaKey? chromaKey,
+  double rotation = 0,
 }) {
   final meta = DetachedClipLayerData(
     clip: clip,
@@ -50,10 +53,23 @@ WidgetLayer _detachedLayer(
   return WidgetLayer(
     widget: const SizedBox.shrink(),
     offset: offset,
+    rotation: rotation,
     startTime: startTime,
     endTime: endTime,
     meta: meta,
     exportConfigs: WidgetLayerExportConfigs(id: 'l-${clip.id}', meta: meta),
+  );
+}
+
+/// The bounding box `pro_image_editor` reports for a [size] layer turned by
+/// [rotation] — `Layer.captureAllLayers`' own formula, so the tests feed the
+/// production code the same numbers the editor would.
+Size _boundingBoxOf(Size size, double rotation) {
+  final c = math.cos(rotation).abs();
+  final s = math.sin(rotation).abs();
+  return Size(
+    size.width * c + size.height * s,
+    size.width * s + size.height * c,
   );
 }
 
@@ -163,6 +179,8 @@ void main() {
     const videoSize = Size(1080, 1920);
     // Editor body → video pixels.
     const scale = 3.0;
+    // What pro_image_editor reports for a 90x90 layer turned 45 degrees.
+    final rotatedSquare = _boundingBoxOf(const Size(90, 90), math.pi / 4);
 
     DetachedClipExportLayer item(
       DivineVideoClip clip, {
@@ -172,6 +190,7 @@ void main() {
       Duration? endTime,
       Duration sourceOffset = Duration.zero,
       ClipChromaKey? chromaKey,
+      double rotation = 0,
     }) => DetachedClipExportLayer(
       clip: clip,
       layer: _detachedLayer(
@@ -180,6 +199,7 @@ void main() {
         startTime: startTime,
         endTime: endTime,
         chromaKey: chromaKey,
+        rotation: rotation,
       ),
       logicalSize: logicalSize,
       sourceOffset: sourceOffset,
@@ -262,6 +282,103 @@ void main() {
       );
       expect(transform.size, const Size(90 * scale, 90 * scale));
       expect(transform.fit, SegmentFit.contain);
+    });
+
+    test('forwards an unrotated layer as a square placement', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip()),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      expect(layer.clips.single.transform!.rotation, 0);
+    });
+
+    test('forwards the layer rotation to the segment transform', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip(), rotation: math.pi / 4, logicalSize: rotatedSquare),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // Both sides mean a clockwise turn in radians, so it travels verbatim.
+      expect(layer.clips.single.transform!.rotation, math.pi / 4);
+    });
+
+    test('sizes a turned layer by its unrotated box, not its bounds', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(_clip(), rotation: math.pi / 4, logicalSize: rotatedSquare),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // `logicalSize` grew to the box that contains the turned layer. Handing
+      // that to the renderer would scale the clip up by root two, because the
+      // transform turns the box it is given rather than being given the turn
+      // already baked in.
+      final size = layer.clips.single.transform!.size!;
+      expect(size.width, closeTo(90 * scale, 0.001));
+      expect(size.height, closeTo(90 * scale, 0.001));
+    });
+
+    test('keeps a turned layer anchored on its own centre', () {
+      final layer = buildDetachedClipVideoLayer(
+        item: item(
+          _clip(),
+          offset: const Offset(20, -30),
+          rotation: math.pi / 4,
+          logicalSize: rotatedSquare,
+        ),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      // The turn is around the centre, so the centre is where an unturned
+      // layer of the same offset sits — and the top-left corner is that
+      // centre less HALF THE UNROTATED box. Subtracting half the bounds
+      // instead would shift the clip up and left as it turns.
+      final offset = layer.clips.single.transform!.offset!;
+      expect(offset.dx, closeTo((360 / 2 + 20 - 45) * scale, 0.001));
+      expect(offset.dy, closeTo((640 / 2 - 30 - 45) * scale, 0.001));
+    });
+
+    test('recovers a non-square turned layer from its bounds', () {
+      // A 16:9 clip laid out 160x90 and turned 30 degrees.
+      const aspect = 160 / 90;
+      const turn = math.pi / 6;
+      final bounds = _boundingBoxOf(
+        const Size(160, 90),
+        turn,
+      );
+
+      final layer = buildDetachedClipVideoLayer(
+        item: item(
+          _clip(originalAspectRatio: aspect),
+          rotation: turn,
+          logicalSize: bounds,
+        ),
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      final size = layer.clips.single.transform!.size!;
+      expect(size.width, closeTo(160 * scale, 0.001));
+      expect(size.height, closeTo(90 * scale, 0.001));
     });
 
     test('carries the layer offset into video pixel space', () {
@@ -434,6 +551,85 @@ void main() {
       // in release with a bare assertion instead of a render.
       expect(layer.clips.single.playbackSpeed, isNull);
       expect(layer.clips.single.reverseVideo, isFalse);
+    });
+  });
+
+  group('unrotatedLayerBox', () {
+    test('returns the bounds untouched when the layer is upright', () {
+      expect(
+        unrotatedLayerBox(
+          boundingBox: const Size(90, 160),
+          rotation: 0,
+          aspectRatio: 90 / 160,
+        ),
+        const Size(90, 160),
+      );
+    });
+
+    test('recovers a square box at 45 degrees', () {
+      // The angle where the two bounding equations collapse into one: every
+      // box with the same width plus height shares this bounding square, so
+      // only the aspect ratio can tell them apart.
+      final recovered = unrotatedLayerBox(
+        boundingBox: _boundingBoxOf(const Size(90, 90), math.pi / 4),
+        rotation: math.pi / 4,
+        aspectRatio: 1,
+      );
+
+      expect(recovered.width, closeTo(90, 0.001));
+      expect(recovered.height, closeTo(90, 0.001));
+    });
+
+    test('round-trips every quarter of the circle', () {
+      const original = Size(160, 90);
+      const aspectRatio = 160 / 90;
+
+      for (var degrees = -180; degrees <= 180; degrees += 15) {
+        final rotation = degrees * math.pi / 180;
+        final recovered = unrotatedLayerBox(
+          boundingBox: _boundingBoxOf(original, rotation),
+          rotation: rotation,
+          aspectRatio: aspectRatio,
+        );
+
+        expect(
+          recovered.width,
+          closeTo(original.width, 0.001),
+          reason: 'width at $degrees degrees',
+        );
+        expect(
+          recovered.height,
+          closeTo(original.height, 0.001),
+          reason: 'height at $degrees degrees',
+        );
+      }
+    });
+
+    test('falls back to the bounds when the aspect ratio is unusable', () {
+      // A clip with no readable display size must still place somewhere; its
+      // own bounding box is the closest thing to the truth available.
+      for (final aspectRatio in [0.0, -1.0, double.nan, double.infinity]) {
+        expect(
+          unrotatedLayerBox(
+            boundingBox: const Size(120, 120),
+            rotation: math.pi / 4,
+            aspectRatio: aspectRatio,
+          ),
+          const Size(120, 120),
+          reason: 'aspect ratio $aspectRatio',
+        );
+      }
+    });
+
+    test('falls back to the bounds when the rotation is not a number', () {
+      expect(
+        unrotatedLayerBox(
+          boundingBox: const Size(120, 120),
+          rotation: double.nan,
+          aspectRatio: 1,
+        ),
+        const Size(120, 120),
+      );
     });
   });
 }
