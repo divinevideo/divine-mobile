@@ -10,7 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
 import 'package:openvine/config/app_config.dart';
+import 'package:openvine/features/crossposting/crossposting_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 
@@ -38,6 +40,12 @@ class CrosspostingBenefitCard extends ConsumerWidget {
   }
 
   void _connect(BuildContext context, WidgetRef ref) {
+    unawaited(
+      logCrosspostCtaTapped(
+        ref.read(analyticsEventSinkProvider),
+        'settings',
+      ),
+    );
     if (ref.read(crosspostingAvailabilityProvider) ==
         CrosspostingAvailability.webOnly) {
       unawaited(
