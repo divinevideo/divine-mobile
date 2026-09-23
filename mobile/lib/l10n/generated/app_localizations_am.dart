@@ -3825,9 +3825,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'ቪዲዮ አይገኝም';
 
   @override
-  String get peopleListsBackToGridTooltip => 'ወደ ፍርግርግ ተመለስ';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'ቪዲዮዎችን መጫን ላይ ስህተት';
 
   @override

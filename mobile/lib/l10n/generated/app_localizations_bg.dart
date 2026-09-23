@@ -3962,9 +3962,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'Видеото не е налично';
 
   @override
-  String get peopleListsBackToGridTooltip => 'Обратно към мрежата';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'Грешка при зареждане на видеа';
 
   @override

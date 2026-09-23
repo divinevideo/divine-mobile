@@ -3888,9 +3888,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get peopleListsVideoNotAvailable => 'الفيديو غير متاح';
 
   @override
-  String get peopleListsBackToGridTooltip => 'العودة إلى الشبكة';
-
-  @override
   String get peopleListsErrorLoadingVideos => 'خطأ في تحميل مقاطع الفيديو';
 
   @override
