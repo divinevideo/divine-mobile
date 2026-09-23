@@ -18,6 +18,7 @@ class _FakeRecorder implements MinorConsentRecorder {
   String? lastOutputDirectory;
   bool initialized = false;
   bool disposed = false;
+  int stopCount = 0;
 
   @override
   Future<void> initialize() async {
@@ -35,7 +36,10 @@ class _FakeRecorder implements MinorConsentRecorder {
   }
 
   @override
-  Future<String?> stop() async => stopResult;
+  Future<String?> stop() async {
+    stopCount++;
+    return stopResult;
+  }
 
   @override
   Future<void> dispose() async {
@@ -104,6 +108,42 @@ void main() {
       cubit.retake();
 
       expect(cubit.state, isA<MinorConsentCaptureIdle>());
+    });
+
+    test('initialize prepares the camera behind the recorder', () async {
+      final recorder = _FakeRecorder();
+      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+      await cubit.initialize();
+
+      expect(recorder.initialized, isTrue);
+    });
+
+    test(
+      'close stops a recording in progress and disposes the recorder',
+      () async {
+        final recorder = _FakeRecorder();
+        final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+        await cubit.start(outputDirectory: '/tmp');
+        expect(cubit.state, isA<MinorConsentCaptureRecording>());
+
+        await cubit.close();
+
+        expect(recorder.stopCount, 1);
+        expect(recorder.disposed, isTrue);
+      },
+    );
+
+    test('close is idempotent and disposes an idle recorder', () async {
+      final recorder = _FakeRecorder();
+      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+      await cubit.close();
+      await cubit.close();
+
+      expect(recorder.stopCount, 0);
+      expect(recorder.disposed, isTrue);
     });
   });
 }

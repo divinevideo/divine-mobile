@@ -73,12 +73,18 @@ final currentMinorAccountReviewStatusProvider =
     }, retry: (_, error) => null);
 
 /// Recorder used by the in-app parent-consent capture flow.
-final minorConsentRecorderProvider = Provider<MinorConsentRecorder>((ref) {
-  final camera = CameraService.create(
-    onUpdateState: ({bool? forceCameraRebuild}) {},
-    onAutoStopped: (EditorVideo? video) {},
-  );
-  final recorder = CameraMinorConsentRecorder(camera: camera);
-  ref.onDispose(() => recorder.dispose().ignore());
-  return recorder;
-});
+///
+/// Auto-disposed so leaving the capture screen releases the camera and the next
+/// visit opens a fresh recorder. The capture cubit stops an in-flight recording
+/// and disposes the recorder in its own `close()`; this onDispose is the
+/// container-teardown backstop, and disposal is idempotent.
+final Provider<MinorConsentRecorder> minorConsentRecorderProvider =
+    Provider.autoDispose<MinorConsentRecorder>((ref) {
+      final camera = CameraService.create(
+        onUpdateState: ({bool? forceCameraRebuild}) {},
+        onAutoStopped: (EditorVideo? video) {},
+      );
+      final recorder = CameraMinorConsentRecorder(camera: camera);
+      ref.onDispose(() => recorder.dispose().ignore());
+      return recorder;
+    });
