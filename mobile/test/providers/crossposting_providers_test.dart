@@ -140,4 +140,59 @@ void main() {
       );
     });
   });
+
+  group('resolveCrosspostingAvailability', () {
+    ProviderContainer buildContainer({
+      Future<bool>? support,
+      bool authenticated = true,
+      bool registered = true,
+    }) {
+      final auth = _MockAuthService();
+      when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+      when(() => auth.isRegistered).thenReturn(registered);
+      return ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(
+            authenticated ? AuthState.authenticated : AuthState.unauthenticated,
+          ),
+          authServiceProvider.overrideWithValue(auth),
+          appOAuthSupportProvider.overrideWith((ref) async {
+            if (support != null) return support;
+            return true;
+          }),
+        ],
+      );
+    }
+
+    test('is unavailable when signed out', () async {
+      final container = buildContainer(authenticated: false);
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('waits for an unresolved support lookup that resolves true', () async {
+      final completer = Completer<bool>();
+      final container = buildContainer(support: completer.future);
+      addTearDown(container.dispose);
+
+      final pending = resolveCrosspostingAvailability(container);
+      completer.complete(true);
+
+      expect(await pending, CrosspostingAvailability.native);
+    });
+
+    test('is webOnly when support resolves false', () async {
+      final container = buildContainer(support: Future.value(false));
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.webOnly,
+      );
+    });
+  });
 }

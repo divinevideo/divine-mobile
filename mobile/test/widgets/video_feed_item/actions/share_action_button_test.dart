@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -30,6 +29,7 @@ import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -378,6 +378,7 @@ void main() {
         Future<void> pumpOwnerSheet(
           WidgetTester tester, {
           MockGoRouter? goRouter,
+          List<Override>? additionalOverrides,
         }) async {
           final mockAuth = createMockAuthService(
             authState: AuthState.authenticated,
@@ -392,6 +393,7 @@ void main() {
               ),
               if (goRouter != null)
                 goRouterProvider.overrideWithValue(goRouter),
+              ...?additionalOverrides,
             ],
             mockAuthService: mockAuth,
             mockProfileRepository: mockProfileRepository,
@@ -403,14 +405,6 @@ void main() {
                 ? app
                 : MockGoRouterProvider(goRouter: goRouter, child: app),
           );
-
-          // Warm the OAuth-support lookup so the availability read on tap is
-          // settled (native) rather than resolving to the web fallback while
-          // the FutureProvider is still loading.
-          final container = ProviderScope.containerOf(
-            tester.element(find.byType(ShareActionButton)),
-          );
-          await container.read(appOAuthSupportProvider.future);
 
           await tester.tap(find.byType(ShareActionButton));
           await tester.pumpAndSettle();
@@ -503,7 +497,15 @@ void main() {
             () => goRouter.push<void>(any(), extra: any(named: 'extra')),
           ).thenAnswer((_) async {});
 
-          await pumpOwnerSheet(tester, goRouter: goRouter);
+          // Deliberately not pre-warmed: the async resolver must await the
+          // support lookup and still route native on a cold read.
+          await pumpOwnerSheet(
+            tester,
+            goRouter: goRouter,
+            additionalOverrides: [
+              appOAuthSupportProvider.overrideWith((ref) async => true),
+            ],
+          );
 
           await tester.tap(find.text(l10n.shareSheetCrosspost));
           await tester.pump();

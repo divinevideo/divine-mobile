@@ -73,3 +73,22 @@ final crosspostingApiClientProvider = Provider<CrosspostingApiClient>((ref) {
 final crosspostingRepositoryProvider = Provider<CrosspostingRepository>((ref) {
   return CrosspostingRepository(ref.watch(crosspostingApiClientProvider));
 });
+
+/// Resolves availability, waiting for the OAuth-support lookup if it has not
+/// settled. Use this for routing decisions so a cold provider read cannot send
+/// a native-capable device to the web fallback.
+Future<CrosspostingAvailability> resolveCrosspostingAvailability(
+  ProviderContainer container,
+) async {
+  final authState = container.read(currentAuthStateProvider);
+  final authService = container.read(authServiceProvider);
+  final registered =
+      authState == AuthState.authenticated &&
+      authService.currentPublicKeyHex != null &&
+      authService.isRegistered;
+  if (!registered) return CrosspostingAvailability.unavailable;
+  final supported = await container.read(appOAuthSupportProvider.future);
+  return supported
+      ? CrosspostingAvailability.native
+      : CrosspostingAvailability.webOnly;
+}
