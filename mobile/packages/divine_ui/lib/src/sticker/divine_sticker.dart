@@ -87,6 +87,8 @@ enum DivineStickerName {
   /// Legacy exception. Figma has no counterpart, so this keeps its original
   /// OpenMoji SVG until design decides. It backs the recorder's six-second
   /// explainer.
+  // TODO(realmeylisdev): Replace with Figma artwork or keep the SVG on
+  // purpose, https://github.com/divinevideo/divine-mobile/issues/9471.
   grandfather.legacySvg('grandfather'),
 
   handGrip('hand_grip'),
