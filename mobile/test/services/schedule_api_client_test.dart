@@ -13,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/schedule_api_client.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNip98AuthService extends Mock implements Nip98AuthService {}
 
@@ -626,6 +627,52 @@ void main() {
           await client.cancel(eventId),
           isA<ScheduleCancelTransientFailure>(),
         );
+      });
+
+      group('logs why a cancel went nowhere', () {
+        String logsFor(String id) => LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .where((message) => message.contains(id))
+            .join('\n');
+
+        test('without a NIP-98 token', () async {
+          final id = '1' * 64;
+          stubToken(null);
+
+          await buildClient(respondWith(200, '')).cancel(id);
+
+          expect(logsFor(id), contains('NIP-98'));
+        });
+
+        test('on a network error', () async {
+          final id = '2' * 64;
+          stubToken(buildToken());
+
+          await buildClient(
+            MockClient((_) async => throw http.ClientException('offline')),
+          ).cancel(id);
+
+          expect(logsFor(id), contains('offline'));
+        });
+
+        test('on a timeout', () {
+          fakeAsync((async) {
+            final id = '3' * 64;
+            stubToken(buildToken());
+            final client = ScheduleApiClient(
+              httpClient: MockClient((_) => Future.any([])),
+              nip98AuthService: mockNip98,
+              apiBaseUrl: () => 'https://relay.divine.video',
+              timeout: const Duration(seconds: 1),
+            );
+
+            unawaited(client.cancel(id));
+            async.elapse(const Duration(seconds: 2));
+
+            expect(logsFor(id), contains('timed out'));
+          });
+        });
       });
     });
   });

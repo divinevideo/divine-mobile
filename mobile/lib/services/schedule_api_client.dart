@@ -448,6 +448,12 @@ class ScheduleApiClient {
       method: HttpMethod.delete,
     );
     if (token == null) {
+      Log.error(
+        'Cannot cancel scheduled event $eventId — NIP-98 token unavailable '
+        '(not authenticated?)',
+        name: _logName,
+        category: LogCategory.video,
+      );
       return const ScheduleCancelTransientFailure('nip98_token_unavailable');
     }
 
@@ -463,8 +469,18 @@ class ScheduleApiClient {
           )
           .timeout(_timeout);
     } on TimeoutException {
+      Log.warning(
+        'Schedule cancel timed out after ${_timeout.inSeconds}s for $eventId',
+        name: _logName,
+        category: LogCategory.video,
+      );
       return const ScheduleCancelTransientFailure('timeout');
     } catch (e) {
+      Log.warning(
+        'Schedule cancel network error for $eventId: $e',
+        name: _logName,
+        category: LogCategory.video,
+      );
       return ScheduleCancelTransientFailure('network_error: $e');
     }
 
