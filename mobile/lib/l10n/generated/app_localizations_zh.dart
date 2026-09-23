@@ -11610,25 +11610,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundUploadRetrySaveAction => '重新保存到声音库';
 
   @override
-  String get crosspostingBenefitTitle => 'Take your loops everywhere';
+  String get crosspostingBenefitTitle => '把你的循环带到各处';
 
   @override
   String get crosspostingBenefitBody =>
-      'Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.';
+      '在 Divine 发一次，直接分享到 Instagram。你的人早就在那儿了 —— 去和他们见面吧。你发出的每个循环都带着一个小小的链接回家，让下一位创作者也能找到我们。';
 
   @override
   String crosspostingBenefitConnect(String platform) {
-    return 'Connect $platform';
+    return '连接 $platform';
   }
 
   @override
-  String get crosspostingAutoTitle => 'Set it once';
+  String get crosspostingAutoTitle => '设置一次即可';
 
   @override
   String crosspostingAutoBody(String platform) {
-    return 'Every new loop you post goes out to $platform for you — no extra taps. Only applies to loops you publish after you turn it on.';
+    return '你发布的每个新循环都会替你发到 $platform —— 无需额外点击。仅适用于你开启之后发布的循环。';
   }
 
   @override
-  String get crosspostingAutoEnable => 'Turn on automatic';
+  String get crosspostingAutoEnable => '开启自动';
 }

@@ -6443,5 +6443,17 @@
   "savedSoundDeleteFailed": "Không xóa được âm thanh đó. Thử lại nhé.",
   "savedSoundDeleteFailedNotOwner": "Bạn chỉ có thể xóa những âm thanh do chính bạn chia sẻ.",
   "audioPickerTypeGroup": "Âm thanh",
-  "soundUploadRetrySaveAction": "Thử lưu lại vào Âm thanh"
+  "soundUploadRetrySaveAction": "Thử lưu lại vào Âm thanh",
+  "crosspostingBenefitTitle": "Mang loop của bạn đi khắp nơi",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Đăng một lần trên Divine, chia sẻ thẳng lên Instagram. Người của bạn đã ở đó rồi — đến gặp họ đi. Mỗi loop bạn gửi đều mang theo một liên kết nhỏ về nhà, để nhà sáng tạo tiếp theo cũng tìm thấy chúng ta.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Kết nối {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Thiết lập một lần",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Mỗi loop mới bạn đăng sẽ tự động đến {platform} thay bạn — không cần thêm thao tác. Chỉ áp dụng cho những loop bạn đăng sau khi bật tính năng này.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Bật tự động",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

@@ -4684,5 +4684,17 @@
   "savedSoundDeleteFailed": "Dat geluid kon niet worden verwijderd. Probeer het opnieuw.",
   "savedSoundDeleteFailedNotOwner": "Je kunt alleen sounds verwijderen die je zelf hebt gedeeld.",
   "audioPickerTypeGroup": "Audio",
-  "soundUploadRetrySaveAction": "Opnieuw in Sounds opslaan"
+  "soundUploadRetrySaveAction": "Opnieuw in Sounds opslaan",
+  "crosspostingBenefitTitle": "Neem je loops overal mee naartoe",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Post één keer op Divine, deel direct naar Instagram. Je mensen zijn er al — ga ze ontmoeten. Elke loop die je stuurt draagt een kleine link naar huis, zodat de volgende creator ons ook vindt.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "{platform} verbinden",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Eén keer instellen",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Elke nieuwe loop die je post gaat voor jou naar {platform} — zonder extra tikken. Geldt alleen voor loops die je publiceert nadat je dit aanzet.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Automatisch aanzetten",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

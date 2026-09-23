@@ -12607,25 +12607,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Încearcă din nou să salvezi în Sunete';
 
   @override
-  String get crosspostingBenefitTitle => 'Take your loops everywhere';
+  String get crosspostingBenefitTitle => 'Du-ți buclele peste tot';
 
   @override
   String get crosspostingBenefitBody =>
-      'Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.';
+      'Postează o dată pe Divine, distribuie direct pe Instagram. Oamenii tăi sunt deja acolo — du-te și cunoaște-i. Fiecare buclă pe care o trimiți poartă un mic link acasă, ca următorul creator să ne găsească și el.';
 
   @override
   String crosspostingBenefitConnect(String platform) {
-    return 'Connect $platform';
+    return 'Conectează $platform';
   }
 
   @override
-  String get crosspostingAutoTitle => 'Set it once';
+  String get crosspostingAutoTitle => 'Setează o dată';
 
   @override
   String crosspostingAutoBody(String platform) {
-    return 'Every new loop you post goes out to $platform for you — no extra taps. Only applies to loops you publish after you turn it on.';
+    return 'Fiecare buclă nouă pe care o postezi merge la $platform pentru tine — fără atingere extra. Se aplică doar buclelor pe care le publici după ce activezi asta.';
   }
 
   @override
-  String get crosspostingAutoEnable => 'Turn on automatic';
+  String get crosspostingAutoEnable => 'Activează automat';
 }

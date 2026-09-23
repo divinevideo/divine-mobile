@@ -4684,5 +4684,17 @@
   "savedSoundDeleteFailed": "そのサウンドを削除できませんでした。もう一度お試しください。",
   "savedSoundDeleteFailedNotOwner": "削除できるのは自分が共有したサウンドだけです。",
   "audioPickerTypeGroup": "音声",
-  "soundUploadRetrySaveAction": "サウンドへの保存を再試行"
+  "soundUploadRetrySaveAction": "サウンドへの保存を再試行",
+  "crosspostingBenefitTitle": "ループをどこへでも",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Divine に一度投稿すれば、そのまま Instagram へシェア。みんなはもう向こうにいるよ — 会いに行こう。送るループには小さなリンクがついてくるから、次のクリエイターにも Divine が見つけてもらえるよ。",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "{platform} に接続",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "一度設定するだけ",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "新しく投稿するループは自動で {platform} にも届くよ — 余計なタップなし。オンにしたあとに公開したループだけが対象だよ。",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "自動をオンにする",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

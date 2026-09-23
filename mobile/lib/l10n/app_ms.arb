@@ -6443,5 +6443,17 @@
   "savedSoundDeleteFailed": "Bunyi itu tidak dapat dipadam. Cuba lagi.",
   "savedSoundDeleteFailedNotOwner": "Anda hanya boleh memadam bunyi yang anda kongsi sendiri.",
   "audioPickerTypeGroup": "Audio",
-  "soundUploadRetrySaveAction": "Cuba simpan ke Bunyi sekali lagi"
+  "soundUploadRetrySaveAction": "Cuba simpan ke Bunyi sekali lagi",
+  "crosspostingBenefitTitle": "Bawa loop anda ke merata tempat",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Siarkan sekali di Divine, kongsi terus ke Instagram. Orang anda sudah ada di sana — pergi jumpa mereka. Setiap loop yang anda hantar membawa pautan kecil pulang, supaya pencipta seterusnya juga jumpa kami.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Sambung {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Tetapkan sekali sahaja",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Setiap loop baharu yang anda siarkan dihantar ke {platform} untuk anda — tanpa ketikan tambahan. Hanya terpakai untuk loop yang anda terbitkan selepas menghidupkannya.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Hidupkan automatik",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

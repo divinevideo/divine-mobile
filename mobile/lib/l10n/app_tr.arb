@@ -4684,5 +4684,17 @@
   "savedSoundDeleteFailed": "O ses silinemedi. Tekrar dene.",
   "savedSoundDeleteFailedNotOwner": "Sadece kendi paylaştığın sesleri silebilirsin.",
   "audioPickerTypeGroup": "Ses",
-  "soundUploadRetrySaveAction": "Seslere kaydetmeyi tekrar dene"
+  "soundUploadRetrySaveAction": "Seslere kaydetmeyi tekrar dene",
+  "crosspostingBenefitTitle": "Loop'larını her yere taşı",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Divine'da bir kez paylaş, doğrudan Instagram'a gönder. İnsanların zaten orada — git onlarla tanış. Gönderdiğin her loop eve küçük bir bağlantı taşır, böylece sıradaki yaratıcı da bizi bulur.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "{platform} bağla",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Bir kez ayarla",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Paylaştığın her yeni loop senin için {platform}'a gider — ekstra dokunuş yok. Yalnızca bunu açtıktan sonra yayımladığın loop'lar için geçerli.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Otomatiği aç",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

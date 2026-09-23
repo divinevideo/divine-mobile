@@ -11747,25 +11747,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundUploadRetrySaveAction => 'サウンドへの保存を再試行';
 
   @override
-  String get crosspostingBenefitTitle => 'Take your loops everywhere';
+  String get crosspostingBenefitTitle => 'ループをどこへでも';
 
   @override
   String get crosspostingBenefitBody =>
-      'Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.';
+      'Divine に一度投稿すれば、そのまま Instagram へシェア。みんなはもう向こうにいるよ — 会いに行こう。送るループには小さなリンクがついてくるから、次のクリエイターにも Divine が見つけてもらえるよ。';
 
   @override
   String crosspostingBenefitConnect(String platform) {
-    return 'Connect $platform';
+    return '$platform に接続';
   }
 
   @override
-  String get crosspostingAutoTitle => 'Set it once';
+  String get crosspostingAutoTitle => '一度設定するだけ';
 
   @override
   String crosspostingAutoBody(String platform) {
-    return 'Every new loop you post goes out to $platform for you — no extra taps. Only applies to loops you publish after you turn it on.';
+    return '新しく投稿するループは自動で $platform にも届くよ — 余計なタップなし。オンにしたあとに公開したループだけが対象だよ。';
   }
 
   @override
-  String get crosspostingAutoEnable => 'Turn on automatic';
+  String get crosspostingAutoEnable => '自動をオンにする';
 }

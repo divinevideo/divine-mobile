@@ -12279,25 +12279,25 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundUploadRetrySaveAction => 'Seslere kaydetmeyi tekrar dene';
 
   @override
-  String get crosspostingBenefitTitle => 'Take your loops everywhere';
+  String get crosspostingBenefitTitle => 'Loop\'larını her yere taşı';
 
   @override
   String get crosspostingBenefitBody =>
-      'Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.';
+      'Divine\'da bir kez paylaş, doğrudan Instagram\'a gönder. İnsanların zaten orada — git onlarla tanış. Gönderdiğin her loop eve küçük bir bağlantı taşır, böylece sıradaki yaratıcı da bizi bulur.';
 
   @override
   String crosspostingBenefitConnect(String platform) {
-    return 'Connect $platform';
+    return '$platform bağla';
   }
 
   @override
-  String get crosspostingAutoTitle => 'Set it once';
+  String get crosspostingAutoTitle => 'Bir kez ayarla';
 
   @override
   String crosspostingAutoBody(String platform) {
-    return 'Every new loop you post goes out to $platform for you — no extra taps. Only applies to loops you publish after you turn it on.';
+    return 'Paylaştığın her yeni loop senin için $platform\'a gider — ekstra dokunuş yok. Yalnızca bunu açtıktan sonra yayımladığın loop\'lar için geçerli.';
   }
 
   @override
-  String get crosspostingAutoEnable => 'Turn on automatic';
+  String get crosspostingAutoEnable => 'Otomatiği aç';
 }
