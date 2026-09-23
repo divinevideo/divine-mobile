@@ -149,6 +149,19 @@ class InstallHooksTest(unittest.TestCase):
     def test_stale_pre_push_reinstalls_itself_and_aborts(self):
         self.assert_stale_hook_heals("pre-push")
 
+    def test_failed_reinstall_reports_its_error_instead_of_success(self):
+        self.install()
+        self.installer.write_text(
+            '#!/bin/bash\necho "installer exploded" >&2\nexit 3\n'
+        )
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                result = self.run_hook(name)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("installer exploded", result.stdout)
+                self.assertNotIn("Hooks updated", result.stdout)
+
     def test_reinstall_leaves_a_running_hook_its_original_script(self):
         self.install()
         hook = self.hooks_dir() / "pre-push"

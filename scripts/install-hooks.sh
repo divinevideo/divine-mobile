@@ -118,7 +118,12 @@ CURRENT_INSTALLER_HASH="$(current_installer_hash)"
 if [ -n "$CURRENT_INSTALLER_HASH" ] && [ "$CURRENT_INSTALLER_HASH" != "$HOOKS_GENERATOR_HASH" ]; then
     echo "Git hooks are stale: scripts/install-hooks.sh changed since they were installed."
     echo "Re-installing hooks..."
-    bash "$REPO_ROOT/scripts/install-hooks.sh" >/dev/null 2>&1 || true
+    if ! reinstall_output="$(bash "$REPO_ROOT/scripts/install-hooks.sh" 2>&1)"; then
+        echo "$reinstall_output"
+        echo "Re-installing the hooks failed. Fix the error above, then run:"
+        echo "  cd mobile && mise run setup_hooks"
+        exit 1
+    fi
     echo "Hooks updated. Re-run your command."
     exit 1
 fi
@@ -235,7 +240,12 @@ CURRENT_INSTALLER_HASH="$(current_installer_hash)"
 if [ -n "$CURRENT_INSTALLER_HASH" ] && [ "$CURRENT_INSTALLER_HASH" != "$HOOKS_GENERATOR_HASH" ]; then
     echo "Git hooks are stale: scripts/install-hooks.sh changed since they were installed."
     echo "Re-installing hooks..."
-    bash "$REPO_ROOT/scripts/install-hooks.sh" >/dev/null 2>&1 || true
+    if ! reinstall_output="$(bash "$REPO_ROOT/scripts/install-hooks.sh" 2>&1)"; then
+        echo "$reinstall_output"
+        echo "Re-installing the hooks failed. Fix the error above, then run:"
+        echo "  cd mobile && mise run setup_hooks"
+        exit 1
+    fi
     echo "Hooks updated. Re-run your command."
     exit 1
 fi
