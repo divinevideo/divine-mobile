@@ -164,6 +164,45 @@ class InstallHooksTest(unittest.TestCase):
             with self.subTest(hook=name):
                 self.assert_runs_clean(self.run_hook(name, cwd=linked))
 
+    def test_installed_hooks_are_readable_and_runnable_by_everyone(self):
+        previous = os.umask(0o022)
+        self.addCleanup(os.umask, previous)
+
+        self.install()
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                mode = stat.S_IMODE((self.hooks_dir() / name).stat().st_mode)
+                self.assertEqual(mode, 0o755, oct(mode))
+
+    def test_install_leaves_nothing_behind_but_the_hooks(self):
+        self.install()
+
+        installed = sorted(
+            p.name
+            for p in self.hooks_dir().iterdir()
+            if not p.name.endswith(".sample")
+        )
+        self.assertEqual(installed, sorted(HOOKS))
+
+    def test_failed_install_leaves_no_staging_files(self):
+        # A chmod that fails stops the install after staging has started.
+        broken = Path(self._tmp.name) / "broken-bin"
+        broken.mkdir()
+        (broken / "chmod").write_text("#!/bin/sh\nexit 1\n")
+        (broken / "chmod").chmod(0o755)
+        env = {**self.env, "PATH": f"{broken}{os.pathsep}{self.env['PATH']}"}
+
+        result = run(["bash", "scripts/install-hooks.sh"], self.root, env)
+
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        staged = [
+            p.name
+            for p in self.hooks_dir().iterdir()
+            if p.name.startswith(".install-hooks.")
+        ]
+        self.assertEqual(staged, [])
+
 
 if __name__ == "__main__":
     unittest.main()

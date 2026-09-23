@@ -24,15 +24,15 @@ else
 fi
 
 # Substitute the @GENERATOR_HASH@ stamp and install by rename. A rename leaves
-# the inode a currently-running hook is reading untouched, so a hook that
-# re-installs itself mid-run cannot truncate the file bash is still executing.
+# the inode an already-running hook is reading untouched, so a pre-push still
+# running in another worktree finishes the script it started instead of
+# resuming at its old byte offset inside the new one.
 install_hook() {
-  local source_file="$1" target="$2" tmp
-  tmp="$(mktemp)"
-  awk -v hash="$GENERATOR_HASH" '{ gsub(/@GENERATOR_HASH@/, hash); print }' "$source_file" > "$tmp"
-  chmod +x "$tmp"
-  mv "$tmp" "$target"
-  rm -f "$source_file"
+  local source_file="$1" target="$2" staged
+  staged="$STAGING_DIR/$(basename "$target")"
+  awk -v hash="$GENERATOR_HASH" '{ gsub(/@GENERATOR_HASH@/, hash); print }' "$source_file" > "$staged"
+  chmod +x "$staged"
+  mv "$staged" "$target"
 }
 
 if ! command -v mise >/dev/null 2>&1; then
@@ -41,10 +41,16 @@ if ! command -v mise >/dev/null 2>&1; then
   exit 1
 fi
 
+# Stage inside the hooks directory: the rename then stays on one filesystem,
+# so it is atomic, and files created here get the umask's mode rather than
+# mktemp's 0600, which would leave other accounts unable to run the hooks.
+STAGING_DIR="$(mktemp -d "$HOOKS_DIR/.install-hooks.XXXXXX")"
+trap 'rm -rf "$STAGING_DIR"' EXIT
+
 echo "Installing git hooks..."
 
 # Create pre-commit hook
-PRECOMMIT_TMP="$(mktemp)"
+PRECOMMIT_TMP="$STAGING_DIR/pre-commit.in"
 cat > "$PRECOMMIT_TMP" << 'EOF'
 #!/bin/bash
 # Pre-commit hook for divine-mobile
@@ -164,7 +170,7 @@ EOF
 install_hook "$PRECOMMIT_TMP" "$HOOKS_DIR/pre-commit"
 
 # Create pre-push hook
-PREPUSH_TMP="$(mktemp)"
+PREPUSH_TMP="$STAGING_DIR/pre-push.in"
 cat > "$PREPUSH_TMP" << 'EOF'
 #!/bin/bash
 # Pre-push hook for divine-mobile
