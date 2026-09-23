@@ -6875,23 +6875,37 @@ void main() {
               requireAllRelaysSettled: captureAny(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: captureAny(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).captured;
 
-          // Pair each call's filters with the flag it passed, then keep the
+          // Pair each call's filters with the flags it passed, then keep the
           // drain's own reads. The memoized kind-10050 inbox resolve goes
           // through this same method and deliberately does NOT demand
           // settlement — a relay list is re-resolvable, a skipped page is not
-          // (#8212).
-          final demands = <Object?>[];
-          for (var i = 0; i + 1 < captured.length; i += 2) {
-            final filters = captured[i]! as List<nostr_filter.Filter>;
-            final kinds = filters.single.kinds ?? const <int>[];
+          // (#8212). Capturing the opt-in too keeps the outgoing NIP-04 pages
+          // in scope: a verify that omits a named argument matches only calls
+          // that passed its default.
+          final giftWrapPages = <(Object?, Object?)>[];
+          final nip04Pages = <(Object?, Object?)>[];
+          for (var i = 0; i + 2 < captured.length; i += 3) {
+            final filter = (captured[i]! as List<nostr_filter.Filter>).single;
+            final kinds = filter.kinds ?? const <int>[];
             if (kinds.contains(EventKind.dmRelaysList)) continue;
-            demands.add(captured[i + 1]);
+            final flags = (captured[i + 1], captured[i + 2]);
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              nip04Pages.add(flags);
+            } else {
+              giftWrapPages.add(flags);
+            }
           }
-          expect(demands, isNotEmpty);
-          expect(demands, everyElement(isTrue));
+          expect(giftWrapPages, isNotEmpty);
+          expect(nip04Pages, isNotEmpty);
+          // Only the supplementary NIP-04 pass may settle on a refusal.
+          expect(giftWrapPages, everyElement(equals((true, false))));
+          expect(nip04Pages, everyElement(equals((true, true))));
         },
       );
 
@@ -7357,13 +7371,6 @@ void main() {
             final isNip04Recovery =
                 filter.authors != null && (filter.p?.isEmpty ?? true);
             if (!isNip04Recovery) return answeredPage(const <Event>[]);
-            expect(
-              inv.namedArguments[#acceptRelayClosedWhenOthersAnswered],
-              isTrue,
-              reason:
-                  'legacy outgoing recovery opts into '
-                  'terminal refusal handling',
-            );
             authorsUntils.add(filter.until);
             nip04Pages++;
             return answeredPage(nip04Pages == 1 ? [outgoing] : const <Event>[]);
