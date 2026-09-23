@@ -292,20 +292,25 @@ void main() {
         'OK',
         authEventId,
         false,
-        'invalid: token=auth-secret',
+        'invalid: token=auth-secret via 203.0.113.9 and 2001:db8::4',
       ]);
       await pending;
 
       final authDiagnostic = diagnostics.singleWhere(
         (entry) =>
             entry.site == RelayDiagnosticSite.authentication &&
-            entry.message.startsWith('Relay authentication failed:'),
+            entry.message.startsWith('Relay authentication failed (reason='),
       );
-      expect(authDiagnostic.message, contains('invalid: token=[REDACTED]'));
+      expect(
+        authDiagnostic.message,
+        'Relay authentication failed (reason=invalid)',
+      );
       expect(
         diagnostics.map((entry) => entry.message),
         everyElement(isNot(contains('auth-secret'))),
       );
+      expect(authDiagnostic.message, isNot(contains('203.0.113.9')));
+      expect(authDiagnostic.message, isNot(contains('2001:db8::4')));
     });
 
     test('categorizes a CLOSED reason by its NIP-01 prefix', () async {

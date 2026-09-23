@@ -119,6 +119,31 @@ String relayNoticeForDiagnostics(String message) {
   return '$sanitized … [truncated]';
 }
 
+/// Returns only a recognized relay refusal category, never relay-controlled
+/// detail that could contain identifying data such as an IP address.
+String relayRefusalCategoryForDiagnostics(String message) {
+  final match = RegExp(
+    r'^\s*([a-z][a-z0-9-]{0,31})\s*:',
+    caseSensitive: false,
+  ).firstMatch(message);
+  final category = match?.group(1)?.toLowerCase();
+  const knownCategories = {
+    'auth-required',
+    'blocked',
+    'duplicate',
+    'error',
+    'invalid',
+    'mute',
+    'pow',
+    'rate-limited',
+    'restricted',
+    'unsupported',
+  };
+  return category != null && knownCategories.contains(category)
+      ? category
+      : 'other';
+}
+
 /// Emits [diagnostic] to [sink] without allowing observability failures to
 /// affect relay I/O.
 void emitRelayDiagnostic(
