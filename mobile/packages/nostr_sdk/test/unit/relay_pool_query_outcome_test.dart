@@ -508,6 +508,93 @@ void main() {
       });
     });
 
+    group('relay counts', () {
+      test('count answers, silence and refusals by relay', () async {
+        final answering = await addRelay('wss://answers.example');
+        final refusing = await addRelay('wss://refuses.example');
+        await addRelay('wss://never-answers.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 10,
+          },
+        ]);
+
+        await answering.deliver(['EOSE', _queryId]);
+        await refusing.deliver([
+          'CLOSED',
+          _queryId,
+          'error: token=abc could not complete query',
+        ]);
+        final concluded = await outcome.future;
+
+        expect(concluded.endedBy, QueryEnd.relayClosed);
+        expect(concluded.answeredNetworkRelayCount, 1);
+        expect(concluded.unansweredRelayCount, 1);
+        expect(concluded.rateLimitedRelayCount, 0);
+        expect(
+          concluded.closedRelayReasons,
+          equals({'wss://refuses.example': 'error'}),
+          reason: 'only the NIP-01 category is kept, never the relay text',
+        );
+      });
+
+      test('counts a rate-limited refusal', () async {
+        final answering = await addRelay('wss://answers.example');
+        final limiting = await addRelay('wss://limits.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 10,
+          },
+        ]);
+
+        await answering.deliver(['EOSE', _queryId]);
+        await limiting.deliver(['CLOSED', _queryId, 'rate-limited: slow down']);
+        final concluded = await outcome.future;
+
+        expect(concluded.rateLimitedRelayCount, 1);
+        expect(
+          concluded.closedRelayReasons,
+          equals({'wss://limits.example': 'rate-limited'}),
+        );
+      });
+
+      test('leaves a cache relay out of answers and refusals', () async {
+        final cache = _ScriptedRelay('wss://cache.example')
+          ..relayStatus.relayType = RelayType.cache;
+        expect(
+          await nostr.relayPool.add(cache, relayType: RelayType.cache),
+          isTrue,
+        );
+        final refusing = await addRelay('wss://refuses.example');
+        final outcome = await startQuery([
+          {
+            'kinds': [1],
+            'limit': 10,
+          },
+        ]);
+
+        await cache.deliver(['EOSE', _queryId]);
+        await refusing.deliver([
+          'CLOSED',
+          _queryId,
+          'restricted: members only',
+        ]);
+        final concluded = await outcome.future;
+
+        expect(
+          concluded.answeredNetworkRelayCount,
+          0,
+          reason: "the pool's own cache answering is not another relay",
+        );
+        expect(
+          concluded.closedRelayReasons,
+          equals({'wss://refuses.example': 'restricted'}),
+        );
+      });
+    });
+
     group('possiblyCapped', () {
       test('is set when a relay returns as many events as the filter '
           'limit', () async {
