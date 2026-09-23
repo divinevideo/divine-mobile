@@ -89,6 +89,7 @@ class RouteContext {
     this.videoId,
     this.draftId,
     this.conversationId,
+    this.isUnavailablePins = false,
   });
 
   final RouteType type;
@@ -102,6 +103,7 @@ class RouteContext {
   final String? videoId;
   final String? draftId;
   final String? conversationId;
+  final bool isUnavailablePins;
 
   /// What this route is *about*, with [videoIndex] deliberately left out.
   ///
@@ -126,6 +128,7 @@ class RouteContext {
     videoId,
     draftId,
     conversationId,
+    isUnavailablePins,
   );
 }
 
@@ -339,6 +342,13 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
         return knownOnly ? null : const RouteContext(type: RouteType.home);
       }
       final npub = _safeDecode(segments[1]); // Decode URL encoding
+      if (segments.length == 3 && segments[2] == 'unavailable-pins') {
+        return RouteContext(
+          type: RouteType.profile,
+          npub: npub,
+          isUnavailablePins: true,
+        );
+      }
       // Grid mode (no index) vs feed mode (with index)
       if (segments.length > 2) {
         final rawIndex = int.tryParse(segments[2]) ?? 0;
@@ -689,6 +699,9 @@ String buildRoute(RouteContext context) {
 
     case RouteType.profile:
       final npub = Uri.encodeComponent(context.npub ?? '');
+      if (context.isUnavailablePins) {
+        return RoutePaths.profileUnavailablePinsForNpub(npub);
+      }
       if (context.videoIndex != null) {
         final rawIndex = context.videoIndex!;
         final index = rawIndex < 0 ? 0 : rawIndex;

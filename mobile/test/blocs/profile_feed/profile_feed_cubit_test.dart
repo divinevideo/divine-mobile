@@ -1287,6 +1287,7 @@ void main() {
           _coordinate('gone'),
           _coordinate('b'),
         ]);
+        expect(cubit.state.unavailablePinnedCoordinates, [_coordinate('gone')]);
         verify(
           () => h.repo.getVideosByAddressableIds([
             _coordinate('gone'),
@@ -1522,6 +1523,94 @@ void main() {
         expect(cubit.state.pinnedCoordinates, isEmpty);
         expect(cubit.state.pinFeedback, ProfileFeedPinFeedback.unpinned);
       });
+
+      test('removes an unavailable pin directly by coordinate', () async {
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone'), _coordinate('b')]);
+        when(
+          () => h.pins.unpin(_coordinate('gone')),
+        ).thenAnswer(
+          (_) async => ProfilePinMutation.succeeded([_coordinate('b')]),
+        );
+        final cubit = await buildReady(
+          _result([_video('b', dTag: 'b')], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.unavailablePinnedCoordinates, [_coordinate('gone')]);
+
+        cubit.add(
+          ProfileFeedPinnedCoordinateRemoveRequested(_coordinate('gone')),
+        );
+        await pumpEventQueue();
+
+        verify(() => h.pins.unpin(_coordinate('gone'))).called(1);
+        expect(cubit.state.pinnedCoordinates, [_coordinate('b')]);
+        expect(cubit.state.unavailablePinnedCoordinates, isEmpty);
+        expect(
+          cubit.state.unavailablePinFeedback,
+          ProfileFeedUnavailablePinFeedback.removed,
+        );
+        expect(cubit.state.isPinMutationInFlight, isFalse);
+      });
+
+      test('a pins reload adopts a list another route changed and clears '
+          'the unavailable pin it removed', () async {
+        when(
+          () => h.pins.fetch(_author),
+        ).thenAnswer((_) async => [_coordinate('gone'), _coordinate('b')]);
+        final cubit = await buildReady(
+          _result([_video('b', dTag: 'b')], hasMore: false),
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.unavailablePinnedCoordinates, [_coordinate('gone')]);
+
+        // The recovery page removed the coordinate through the shared
+        // repository, which cached the accepted list.
+        when(
+          () => h.pins.readCached(_author),
+        ).thenAnswer((_) async => [_coordinate('b')]);
+        cubit.add(const ProfileFeedPinsReloadRequested());
+        await pumpEventQueue();
+
+        expect(cubit.state.pinnedCoordinates, [_coordinate('b')]);
+        expect(cubit.state.unavailablePinnedCoordinates, isEmpty);
+        verifyNever(() => h.pins.unpin(any()));
+      });
+
+      test(
+        'reports connection and publish failures without changing pins',
+        () async {
+          for (final failure in [
+            ProfilePinFailure.couldNotReachRelays,
+            ProfilePinFailure.publishDidNotComplete,
+          ]) {
+            when(
+              () => h.pins.fetch(_author),
+            ).thenAnswer((_) async => [_coordinate('gone')]);
+            when(() => h.pins.unpin(_coordinate('gone'))).thenAnswer(
+              (_) async => ProfilePinMutation.failed(failure),
+            );
+            final cubit = await buildReady(_result(const [], hasMore: false));
+            addTearDown(cubit.close);
+            cubit.add(
+              ProfileFeedPinnedCoordinateRemoveRequested(_coordinate('gone')),
+            );
+            await pumpEventQueue();
+
+            expect(cubit.state.pinnedCoordinates, [_coordinate('gone')]);
+            expect(cubit.state.unavailablePinnedCoordinates, [
+              _coordinate('gone'),
+            ]);
+            expect(
+              cubit.state.unavailablePinFeedback,
+              failure == ProfilePinFailure.couldNotReachRelays
+                  ? ProfileFeedUnavailablePinFeedback.connectionFailed
+                  : ProfileFeedUnavailablePinFeedback.failed,
+            );
+          }
+        },
+      );
 
       test('a quiet unpin adopts the accepted list and leaves the last '
           'feedback in place', () async {

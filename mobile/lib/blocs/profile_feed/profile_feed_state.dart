@@ -28,6 +28,14 @@ enum ProfileFeedPinFeedback {
   unpinFailed,
 }
 
+/// Outcome of a creator removing an unavailable pinned coordinate.
+enum ProfileFeedUnavailablePinFeedback {
+  none,
+  removed,
+  connectionFailed,
+  failed,
+}
+
 /// State for [ProfileFeedCubit].
 ///
 /// [videos] is the **filtered** list the UI renders. Errors are NOT stored as
@@ -47,8 +55,10 @@ class ProfileFeedState extends Equatable {
     this.nextOffset,
     this.lastUpdated,
     this.pinnedCoordinates = const [],
+    this.unavailablePinnedCoordinates = const [],
     this.isPinMutationInFlight = false,
     this.pinFeedback = ProfileFeedPinFeedback.none,
+    this.unavailablePinFeedback = ProfileFeedUnavailablePinFeedback.none,
   });
 
   /// Lifecycle status.
@@ -92,11 +102,17 @@ class ProfileFeedState extends Equatable {
   /// tile to show the badge and the owner's sheet whether to offer Unpin.
   final List<String> pinnedCoordinates;
 
+  /// Stored coordinates that could not be resolved to a visible video.
+  final List<String> unavailablePinnedCoordinates;
+
   /// A pin or unpin publish is in flight; the sheet disables the action.
   final bool isPinMutationInFlight;
 
   /// Outcome of the most recent pin mutation, for the feedback snackbar.
   final ProfileFeedPinFeedback pinFeedback;
+
+  /// Outcome of the last coordinate removal from unavailable pins.
+  final ProfileFeedUnavailablePinFeedback unavailablePinFeedback;
 
   /// How many videos the owner may pin.
   static const int maxPinnedVideos = ProfilePinsRepository.maxPins;
@@ -125,8 +141,10 @@ class ProfileFeedState extends Equatable {
     Object? nextOffset = _unset,
     Object? lastUpdated = _unset,
     List<String>? pinnedCoordinates,
+    List<String>? unavailablePinnedCoordinates,
     bool? isPinMutationInFlight,
     ProfileFeedPinFeedback? pinFeedback,
+    ProfileFeedUnavailablePinFeedback? unavailablePinFeedback,
   }) {
     return ProfileFeedState(
       status: status ?? this.status,
@@ -147,9 +165,13 @@ class ProfileFeedState extends Equatable {
           ? this.lastUpdated
           : lastUpdated as DateTime?,
       pinnedCoordinates: pinnedCoordinates ?? this.pinnedCoordinates,
+      unavailablePinnedCoordinates:
+          unavailablePinnedCoordinates ?? this.unavailablePinnedCoordinates,
       isPinMutationInFlight:
           isPinMutationInFlight ?? this.isPinMutationInFlight,
       pinFeedback: pinFeedback ?? this.pinFeedback,
+      unavailablePinFeedback:
+          unavailablePinFeedback ?? this.unavailablePinFeedback,
     );
   }
 
@@ -167,7 +189,9 @@ class ProfileFeedState extends Equatable {
     nextOffset,
     lastUpdated,
     pinnedCoordinates,
+    unavailablePinnedCoordinates,
     isPinMutationInFlight,
     pinFeedback,
+    unavailablePinFeedback,
   ];
 }

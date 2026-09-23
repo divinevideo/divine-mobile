@@ -21,6 +21,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -290,6 +291,78 @@ void main() {
           expect(args.initialVideoId, videos[2].id);
           expect(args.initialStableId, videos[2].stableId);
           expect(args.seedVideos, videos);
+        },
+      );
+
+      testWidgets(
+        'reloads pins after returning from unavailable-pin recovery',
+        (tester) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final videos = _createTestVideos(pubkey: _ownPubkey);
+          final profileFeedCubit = _stubbedProfileFeedCubit(
+            state: const ProfileFeedState(
+              status: ProfileFeedStatus.ready,
+              unavailablePinnedCoordinates: ['34236:$_ownPubkey:gone'],
+            ),
+          );
+          when(() => profileFeedCubit.isClosed).thenReturn(false);
+          String? recoveryLocation;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => testProviderScope(
+                  mockAuthService: mockAuth,
+                  child: BlocProvider<BackgroundPublishBloc>.value(
+                    value: mockBloc,
+                    child: Scaffold(
+                      body: BlocProvider<ProfileFeedCubit>.value(
+                        value: profileFeedCubit,
+                        child: ProfileVideosGrid(
+                          videos: videos,
+                          userIdHex: _ownPubkey,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: RoutePaths.profileUnavailablePins,
+                builder: (context, state) {
+                  recoveryLocation = state.uri.path;
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          );
+
+          await tester.pumpWidget(
+            MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          );
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.profilePinReviewUnavailable));
+          await tester.pumpAndSettle();
+
+          expect(
+            recoveryLocation,
+            RoutePaths.profileUnavailablePinsForNpub(_ownPubkey),
+          );
+          verifyNever(
+            () => profileFeedCubit.add(const ProfileFeedPinsReloadRequested()),
+          );
+
+          router.pop();
+          await tester.pumpAndSettle();
+
+          verify(
+            () => profileFeedCubit.add(const ProfileFeedPinsReloadRequested()),
+          ).called(1);
         },
       );
 

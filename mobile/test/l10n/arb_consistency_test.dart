@@ -486,6 +486,19 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Unavailable pinned-video recovery (#9443). These keys remain English in
+  // all 21 non-English locales until a human translation pass.
+  'profilePinReviewUnavailable',
+  'profilePinRecoveryTitle',
+  'profilePinRecoveryOwnerOnly',
+  'profilePinRecoveryLoadFailed',
+  'profilePinRecoveryEmpty',
+  'profilePinUnavailableLabel',
+  'profilePinUnavailableCoordinate',
+  'profilePinRemoveUnavailable',
+  'profilePinUnavailableRemoved',
+  'profilePinUnavailableConnectionFailed',
+  'profilePinUnavailableRemoveFailed',
   // Explicit campaign-consent copy (#6745 / divine-push-service#40). Keep the
   // opt-in wording in English until a human translation pass can preserve the
   // distinction between product updates and social notifications.

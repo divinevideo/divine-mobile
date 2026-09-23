@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/mixins/grid_prefetch_mixin.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/utils/video_identity.dart';
@@ -343,22 +345,25 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
       ...filteredVideos.map(_GridVideoEventEntry.new),
     ];
 
+    final feedState = context.watch<ProfileFeedCubit>().state;
+
     if (allVideos.isEmpty) {
       if (widget.isLoading) {
         return const ProfileVideosGridSkeleton();
       }
-      return ProfileTabEmptyState(
-        title: context.l10n.profileNoVideosTitle,
-        subtitle: isOwnProfile
-            ? context.l10n.profileNoVideosOwnSubtitle
-            : context.l10n.profileNoVideosOtherSubtitle,
-      );
+      if (!isOwnProfile || feedState.unavailablePinnedCoordinates.isEmpty) {
+        return ProfileTabEmptyState(
+          title: context.l10n.profileNoVideosTitle,
+          subtitle: isOwnProfile
+              ? context.l10n.profileNoVideosOwnSubtitle
+              : context.l10n.profileNoVideosOtherSubtitle,
+        );
+      }
     }
 
     // Count uploading videos to offset indices for published videos
     final uploadingCount = activeUploads.length;
 
-    final feedState = context.watch<ProfileFeedCubit>().state;
     final isLoadingMore = feedState.isLoadingMore;
     final pendingInviteGroups = isOwnProfile
         ? ref
@@ -384,6 +389,27 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                       child: _PendingCollaboratorInviteBanner(group: group),
                     ),
                 ],
+              ),
+            ),
+          ),
+        if (isOwnProfile && feedState.unavailablePinnedCoordinates.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: DivineButton(
+                label: context.l10n.profilePinReviewUnavailable,
+                type: DivineButtonType.secondary,
+                expanded: true,
+                leadingIcon: DivineIconName.warningCircle,
+                onPressed: () async {
+                  final feedCubit = context.read<ProfileFeedCubit>();
+                  await context.push(
+                    RoutePaths.profileUnavailablePinsForNpub(widget.userIdHex),
+                  );
+                  // The recovery page runs its own cubit over the shared
+                  // repository; pick up whatever it removed.
+                  feedCubit.addIfOpen(const ProfileFeedPinsReloadRequested());
+                },
               ),
             ),
           ),
