@@ -132,8 +132,9 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
   /// deliberately the same guard. `setClip` reaches `AudioPlayer.load`, and a
   /// clip the platform cannot open (an evicted cache file, a CDN that served
   /// no playable body) raises a `PlatformException` there. That is an
-  /// expected failure of loading remote media, not a defect; unguarded it
-  /// escaped to the uncaught-zone reporter on every drag-to-resume.
+  /// expected failure of loading remote media, not a defect. Before the
+  /// timing screen ran this through `runDetached` (#9227), it escaped to the
+  /// uncaught-zone reporter on every drag-to-resume.
   Future<void> resumePlayback() => _loadAndPlayAudio();
 
   /// Stops audio playback completely.
