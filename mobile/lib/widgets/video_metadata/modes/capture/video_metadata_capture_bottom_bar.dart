@@ -237,7 +237,10 @@ class _PostButton extends ConsumerWidget {
       opacity: isValidToPost ? 1 : 0.32,
       child: Semantics(
         identifier: 'post_button',
-        label: l10n.videoMetadataPostSemanticLabel,
+        // The child's text is excluded below, so the name has to follow it.
+        label: scheduledAt == null
+            ? l10n.videoMetadataPostSemanticLabel
+            : l10n.videoMetadataScheduleButton,
         hint: hint,
         button: true,
         enabled: enabled,

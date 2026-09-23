@@ -130,6 +130,9 @@ void main() {
       final semantics = tester.getSemantics(
         find.bySemanticsIdentifier('post_button'),
       );
+      // The spoken name carries the visible word, so "tap Schedule" in
+      // Voice Control finds the button.
+      expect(semantics.label, l10n.videoMetadataScheduleButton);
       expect(semantics.hint, contains('Oct 1'));
       expect(semantics.hint, contains('9:30'));
     });
