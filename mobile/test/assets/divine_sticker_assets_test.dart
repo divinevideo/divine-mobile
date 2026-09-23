@@ -26,22 +26,33 @@ typedef _WebpHeader = ({
   List<String> chunks,
 });
 
-/// Reads the container without decoding pixels.
+/// Reads the container at [path] without decoding pixels.
 ///
 /// A simple lossless file is one `VP8L` chunk, whose 5-byte header carries
-/// the size and an alpha flag. An extended file starts with `VP8X`, which
-/// carries the canvas size and the flags, followed by the image chunks; the
-/// image is lossless only when it is a `VP8L` chunk rather than a lossy
-/// `VP8 ` one.
-_WebpHeader _readWebpHeader(Uint8List bytes) {
+/// the size and an alpha flag. A simple lossy file is one `VP8 ` chunk, whose
+/// frame header carries the size, and has no alpha. An extended file starts
+/// with `VP8X`, which carries the canvas size and the flags, followed by the
+/// image chunks; the image is lossless only when it is a `VP8L` chunk rather
+/// than a lossy `VP8 ` one.
+_WebpHeader _readWebpHeader(String path) {
+  final bytes = File(path).readAsBytesSync();
   final data = ByteData.sublistView(bytes);
-  expect(ascii.decode(bytes.sublist(0, 4)), equals('RIFF'));
-  expect(ascii.decode(bytes.sublist(8, 12)), equals('WEBP'));
+  // latin1, not ascii: a renamed PNG must fail the expect, not throw first.
+  expect(
+    latin1.decode(bytes.sublist(0, 4)),
+    equals('RIFF'),
+    reason: '$path is not a WebP file.',
+  );
+  expect(
+    latin1.decode(bytes.sublist(8, 12)),
+    equals('WEBP'),
+    reason: '$path is not a WebP file.',
+  );
 
   final chunks = <String, int>{};
   var offset = 12;
   while (offset + 8 <= bytes.length) {
-    final fourCc = ascii.decode(bytes.sublist(offset, offset + 4));
+    final fourCc = latin1.decode(bytes.sublist(offset, offset + 4));
     final size = data.getUint32(offset + 4, Endian.little);
     chunks.putIfAbsent(fourCc, () => offset + 8);
     offset += 8 + size + (size.isOdd ? 1 : 0);
@@ -59,14 +70,32 @@ _WebpHeader _readWebpHeader(Uint8List bytes) {
     );
   }
 
-  final payload = chunks['VP8L']!;
-  expect(data.getUint8(payload), equals(0x2f), reason: 'VP8L signature');
-  final bits = data.getUint32(payload + 1, Endian.little);
+  if (chunks.containsKey('VP8L')) {
+    final payload = chunks['VP8L']!;
+    expect(
+      data.getUint8(payload),
+      equals(0x2f),
+      reason: '$path has no VP8L signature.',
+    );
+    final bits = data.getUint32(payload + 1, Endian.little);
+    return (
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+      lossless: lossless,
+      alpha: (bits >> 28) & 0x1 != 0,
+      chunks: chunks.keys.toList(),
+    );
+  }
+
+  final payload = chunks['VP8 '];
+  if (payload == null) {
+    fail('$path carries no image chunk: ${chunks.keys.toList()}.');
+  }
   return (
-    width: (bits & 0x3fff) + 1,
-    height: ((bits >> 14) & 0x3fff) + 1,
-    lossless: lossless,
-    alpha: (bits >> 28) & 0x1 != 0,
+    width: data.getUint16(payload + 6, Endian.little) & 0x3fff,
+    height: data.getUint16(payload + 8, Endian.little) & 0x3fff,
+    lossless: false,
+    alpha: false,
     chunks: chunks.keys.toList(),
   );
 }
@@ -110,9 +139,7 @@ void main() {
 
     test('every artwork file is a lossless WebP', () {
       for (final sticker in figmaBacked) {
-        final header = _readWebpHeader(
-          File(sticker.assetPath).readAsBytesSync(),
-        );
+        final header = _readWebpHeader(sticker.assetPath);
 
         expect(
           header.lossless,
@@ -123,19 +150,16 @@ void main() {
     });
 
     test('every artwork file keeps its transparency', () {
-      final withoutAlpha = figmaBacked.where((sticker) {
-        final bytes = File(sticker.assetPath).readAsBytesSync();
-        return !_readWebpHeader(bytes).alpha;
-      }).toSet();
+      final withoutAlpha = figmaBacked
+          .where((sticker) => !_readWebpHeader(sticker.assetPath).alpha)
+          .toSet();
 
       expect(withoutAlpha, equals(_opaqueStickers));
     });
 
     test('no artwork file exceeds $_maxLongEdge px on its long edge', () {
       for (final sticker in figmaBacked) {
-        final header = _readWebpHeader(
-          File(sticker.assetPath).readAsBytesSync(),
-        );
+        final header = _readWebpHeader(sticker.assetPath);
         final longEdge = header.width > header.height
             ? header.width
             : header.height;
