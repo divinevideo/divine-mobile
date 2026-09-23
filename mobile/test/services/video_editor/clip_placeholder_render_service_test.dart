@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -117,6 +118,29 @@ void main() {
         // A still carries no sound; leaving it at full volume would add a
         // silent-but-present track to the mix.
         expect(placeholder.volume, 0);
+      });
+
+      test('records the fill it was rendered from', () async {
+        ClipPlaceholderRenderService.assembleOverride = ({
+          required frames,
+          required aspectRatio,
+          taskId,
+        }) async => '${tempDir.path}/out.mp4';
+
+        final placeholder = await ClipPlaceholderRenderService.render(
+          fill: ClipPlaceholderImageFill(imageFile.path),
+          source: _source(),
+        );
+
+        // The mp4 is the same flat frames whichever fill made it, and a
+        // re-compressed colour is not the colour that was picked — so without
+        // this the backdrop can never be reopened on what it holds. (A colour
+        // fill takes the same branch but writes its source PNG through
+        // path_provider, which a unit test has no plugin for.)
+        expect(
+          placeholder!.placeholderFill,
+          ClipPlaceholderImageFill(imageFile.path),
+        );
       });
 
       test('gives the placeholder its own id, not the detached clip', () async {

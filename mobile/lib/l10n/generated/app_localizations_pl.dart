@@ -9028,6 +9028,35 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się wczytać tego zdjęcia.';
 
   @override
+  String get videoEditorBackdropLabel => 'Tło';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Zmień tło, które trzyma to miejsce';
+
+  @override
+  String get videoEditorBackdropTitle => 'Zmień tło';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'To miejsce trzyma nieruchomy kadr tak długo, jak trwał odłączony klip. Co ma pokazywać?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Wybierz jednolity kolor albo popraw ten, który jest.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Zrób nowe zdjęcie, które zajmie to miejsce.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Zmienianie tła…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Nie udało się zmienić tła. Miejsce zostaje z poprzednim.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Zielone tło';
 
   @override

@@ -51,6 +51,10 @@ class ClipEditorState extends Equatable {
     this.detachingRenderId,
     this.lastDetachResult,
     this.lastDetachedClipTransformResult,
+    this.isRefillingPlaceholder = false,
+    this.refillingPlaceholderClipId,
+    this.refillingPlaceholderRenderId,
+    this.lastPlaceholderFillResult,
     this.isImportingLibraryClips = false,
     this.libraryImportRenderId,
     this.libraryImportProgress,
@@ -255,6 +259,29 @@ class ClipEditorState extends Equatable {
   /// list plus that layer to editor history as one undoable entry.
   final ClipDetachResult? lastDetachResult;
 
+  /// Whether a placeholder's backdrop is currently being re-rendered.
+  ///
+  /// Distinct from [isDetaching] even though both encode the same kind of
+  /// still: this one changes a slot that is already filled, so nothing leaves
+  /// the timeline and the wait is labelled differently.
+  final bool isRefillingPlaceholder;
+
+  /// Id of the placeholder clip whose backdrop is being re-rendered.
+  /// Non-`null` while [isRefillingPlaceholder] is `true`.
+  final String? refillingPlaceholderClipId;
+
+  /// Render id keying the backdrop encoder's progress stream, namespaced from
+  /// the clip id (`<clipId>_placeholder`) so it cannot collide with another
+  /// render on the same clip.
+  final String? refillingPlaceholderRenderId;
+
+  /// Last completed backdrop change.
+  ///
+  /// Consumed by the widget layer to surface a failure snackbar; success needs
+  /// nothing there, because the swapped clip file drives the canvas through
+  /// the same player-sync listener a transform goes through.
+  final ClipPlaceholderFillResult? lastPlaceholderFillResult;
+
   /// Whether library clips are being rendered so they can join the timeline.
   ///
   /// Only true while a stop-motion set picked into a video composition is
@@ -355,6 +382,11 @@ class ClipEditorState extends Equatable {
     bool clearDetachingClipId = false,
     ClipDetachResult? lastDetachResult,
     DetachedClipTransformResult? lastDetachedClipTransformResult,
+    bool? isRefillingPlaceholder,
+    String? refillingPlaceholderClipId,
+    String? refillingPlaceholderRenderId,
+    bool clearRefillingPlaceholderClipId = false,
+    ClipPlaceholderFillResult? lastPlaceholderFillResult,
     int? selectedFrameIndex,
     bool clearSelectedFrameIndex = false,
     Set<int>? selectedFrameIndexes,
@@ -439,6 +471,16 @@ class ClipEditorState extends Equatable {
       lastDetachedClipTransformResult:
           lastDetachedClipTransformResult ??
           this.lastDetachedClipTransformResult,
+      isRefillingPlaceholder:
+          isRefillingPlaceholder ?? this.isRefillingPlaceholder,
+      refillingPlaceholderClipId: clearRefillingPlaceholderClipId
+          ? null
+          : (refillingPlaceholderClipId ?? this.refillingPlaceholderClipId),
+      refillingPlaceholderRenderId: clearRefillingPlaceholderClipId
+          ? null
+          : (refillingPlaceholderRenderId ?? this.refillingPlaceholderRenderId),
+      lastPlaceholderFillResult:
+          lastPlaceholderFillResult ?? this.lastPlaceholderFillResult,
       isImportingLibraryClips:
           isImportingLibraryClips ?? this.isImportingLibraryClips,
       libraryImportRenderId: clearLibraryImportRenderId
@@ -504,6 +546,11 @@ class ClipEditorState extends Equatable {
     identityHashCode(lastDetachResult),
     // Identity-only, for the same reason.
     identityHashCode(lastDetachedClipTransformResult),
+    isRefillingPlaceholder,
+    refillingPlaceholderClipId,
+    refillingPlaceholderRenderId,
+    // Identity-only: each ClipPlaceholderFillResult is a fresh instance.
+    identityHashCode(lastPlaceholderFillResult),
     isImportingLibraryClips,
     libraryImportRenderId,
     libraryImportProgress,
@@ -776,6 +823,31 @@ final class ClipDetachFailure extends ClipDetachResult {}
 ///
 /// Silent by design: the user deleted the clip they asked to detach.
 final class ClipDetachDiscarded extends ClipDetachResult {}
+
+// === PLACEHOLDER FILL RESULT ===
+
+/// One-shot signal describing the outcome of changing the backdrop a
+/// placeholder clip holds.
+///
+/// Emitted into [ClipEditorState.lastPlaceholderFillResult] after each
+/// attempt, and identity-compared like every other one-shot result here.
+sealed class ClipPlaceholderFillResult {}
+
+/// The new backdrop was rendered and swapped onto the clip, which kept its id,
+/// its length and its place on the timeline.
+///
+/// Nothing for the widget layer to do: the clip list is already committed to
+/// editor history, and the canvas reloads off the swapped file.
+final class ClipPlaceholderFillSuccess extends ClipPlaceholderFillResult {}
+
+/// The render failed; the slot still holds the backdrop it had.
+final class ClipPlaceholderFillFailure extends ClipPlaceholderFillResult {}
+
+/// The render finished but the placeholder had been removed from the timeline
+/// meanwhile, so the result was dropped.
+///
+/// Silent by design: the user deleted the slot they asked to refill.
+final class ClipPlaceholderFillDiscarded extends ClipPlaceholderFillResult {}
 
 // === DETACHED-CLIP TRANSFORM RESULT ===
 

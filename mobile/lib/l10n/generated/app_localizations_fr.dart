@@ -8981,6 +8981,36 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de charger cette photo.';
 
   @override
+  String get videoEditorBackdropLabel => 'Arrière-plan';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Changer l\'arrière-plan qui occupe cette place';
+
+  @override
+  String get videoEditorBackdropTitle => 'Changer l\'arrière-plan';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Cette place tient une image fixe aussi longtemps que durait le clip détaché. Qu\'est-ce qu\'elle doit montrer ?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Choisis une couleur unie, ou ajuste celle qui est là.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Prends une nouvelle photo pour tenir la place.';
+
+  @override
+  String get videoEditorBackdropProgressLabel =>
+      'Changement de l\'arrière-plan…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Impossible de changer cet arrière-plan. La place garde le précédent.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Fond vert';
 
   @override

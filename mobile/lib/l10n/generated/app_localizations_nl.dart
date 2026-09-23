@@ -8890,6 +8890,35 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Kon die foto niet laden.';
 
   @override
+  String get videoEditorBackdropLabel => 'Achtergrond';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'De achtergrond van deze plek wijzigen';
+
+  @override
+  String get videoEditorBackdropTitle => 'Achtergrond wijzigen';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Deze plek houdt een stilstaand beeld vast zolang de losgemaakte clip duurde. Wat moet het laten zien?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Kies een effen kleur, of pas de huidige aan.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Maak een nieuwe foto die de plek vasthoudt.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Achtergrond wordt gewijzigd…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Kon die achtergrond niet wijzigen. De plek houdt de vorige.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Greenscreen';
 
   @override

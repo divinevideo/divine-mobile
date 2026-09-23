@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 void main() {
@@ -310,6 +312,75 @@ void main() {
       final restored = DivineVideoClip.fromJson(json, '/videos');
 
       expect(restored.chromaKey, isNull);
+      expect(restored.id, 'c1');
+    });
+  });
+
+  group('DivineVideoClip.placeholderFill', () {
+    test('round-trips a colour through JSON', () {
+      final filled = clip('/videos/clip.mp4').copyWith(
+        isPlaceholder: true,
+        placeholderFill: const ClipPlaceholderColorFill(Color(0xFF112233)),
+      );
+
+      final restored = DivineVideoClip.fromJson(filled.toJson(), '/videos');
+
+      // The rendered mp4 answers neither question, so losing this is losing
+      // the ability to change the backdrop at all.
+      expect(restored.isPlaceholder, isTrue);
+      expect(
+        restored.placeholderFill,
+        const ClipPlaceholderColorFill(Color(0xFF112233)),
+      );
+    });
+
+    test('re-anchors an image fill under the documents path', () {
+      final filled = clip('/videos/clip.mp4').copyWith(
+        isPlaceholder: true,
+        placeholderFill: const ClipPlaceholderImageFill('/old/still.png'),
+      );
+
+      final restored = DivineVideoClip.fromJson(filled.toJson(), '/videos');
+
+      // iOS rewrites the container path on app update, so the stored basename
+      // is re-joined onto wherever the documents directory is now.
+      expect(
+        restored.placeholderFill,
+        const ClipPlaceholderImageFill('/videos/still.png'),
+      );
+    });
+
+    test('is absent from JSON and null on legacy drafts', () {
+      final json = clip('/videos/clip.mp4').toJson();
+      expect(json.containsKey('placeholderFill'), isFalse);
+
+      final restored = DivineVideoClip.fromJson(json, '/videos');
+      expect(restored.placeholderFill, isNull);
+    });
+
+    test('follows a duplicate of the slot', () {
+      final filled = clip('/videos/clip.mp4').copyWith(
+        isPlaceholder: true,
+        placeholderFill: const ClipPlaceholderColorFill(Color(0xFF112233)),
+      );
+
+      // A duplicated placeholder shows the same backdrop, so the copy has to
+      // stay editable too — unlike a chroma key, which describes footage the
+      // copy no longer shares.
+      expect(filled.copyWith(id: 'c2').placeholderFill, isNotNull);
+    });
+
+    test('drops an unparseable fill instead of failing the whole clip', () {
+      final json = clip('/videos/clip.mp4').toJson()
+        ..['isPlaceholder'] = true
+        ..['placeholderFill'] = {'type': 'hologram'};
+
+      final restored = DivineVideoClip.fromJson(json, '/videos');
+
+      // A draft loads every clip through fromJson; one unreadable field must
+      // not take the draft down with it.
+      expect(restored.placeholderFill, isNull);
+      expect(restored.isPlaceholder, isTrue);
       expect(restored.id, 'c1');
     });
   });

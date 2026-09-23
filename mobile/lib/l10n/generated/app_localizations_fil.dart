@@ -8919,6 +8919,35 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-load ang larawang iyon.';
 
   @override
+  String get videoEditorBackdropLabel => 'Background';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Palitan ang background na humahawak sa puwestong ito';
+
+  @override
+  String get videoEditorBackdropTitle => 'Palitan ang background';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Humahawak ng nakapirming larawan ang puwestong ito hangga\'t tumagal ang clip na na-detach mo. Ano ang dapat nitong ipakita?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Pumili ng solidong kulay, o ayusin ang nandiyan na.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Kumuha ng bagong larawan para hawakan ang puwesto.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Pinapalitan ang background…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Hindi mapalitan ang background na iyon. Nanatili sa puwesto ang dati.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

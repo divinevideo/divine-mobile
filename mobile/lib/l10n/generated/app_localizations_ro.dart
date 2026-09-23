@@ -9052,6 +9052,35 @@ class AppLocalizationsRo extends AppLocalizations {
       'Fotografia nu a putut fi încărcată.';
 
   @override
+  String get videoEditorBackdropLabel => 'Fundal';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Schimbă fundalul care ține acest loc';
+
+  @override
+  String get videoEditorBackdropTitle => 'Schimbă fundalul';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Locul acesta ține un cadru fix cât a durat clipul desprins. Ce să arate?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Alege o culoare plină sau ajusteaz-o pe cea de acum.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Fă o fotografie nouă care să țină locul.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Se schimbă fundalul…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Fundalul nu a putut fi schimbat. Locul rămâne cu cel dinainte.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Ecran verde';
 
   @override

@@ -9,6 +9,7 @@ import 'package:divine_camera/divine_camera.dart'
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -38,6 +39,7 @@ class DivineVideoClip {
     this.playbackSpeed,
     this.reversed = false,
     this.isPlaceholder = false,
+    this.placeholderFill,
     this.forwardVideoPath,
     this.reversedVideoPath,
     this.proofManifestJson,
@@ -148,6 +150,19 @@ class DivineVideoClip {
   /// put a frozen frame on the canvas and ask for a second placeholder to fill
   /// the slot it just vacated.
   final bool isPlaceholder;
+
+  /// What the placeholder still was rendered from — a solid colour or a
+  /// photographed image — or `null` when this is not a placeholder.
+  ///
+  /// Kept so the backdrop stays editable: the action bar reopens the colour
+  /// picker on the shade that is already there, and the sheet can show which
+  /// of the two the slot currently holds. The rendered mp4 records neither —
+  /// a photo and a flat colour are the same frames once encoded.
+  ///
+  /// `null` on a placeholder written by a draft from before this was
+  /// recorded; the backdrop is still changeable then, just without the
+  /// current choice pre-selected.
+  final ClipPlaceholderFill? placeholderFill;
 
   /// Cached forward file path used to restore the clip after a reverse toggle.
   final String? forwardVideoPath;
@@ -435,6 +450,7 @@ class DivineVideoClip {
     bool clearPlaybackSpeed = false,
     bool? reversed,
     bool? isPlaceholder,
+    ClipPlaceholderFill? placeholderFill,
     String? forwardVideoPath,
     bool clearForwardVideoPath = false,
     String? reversedVideoPath,
@@ -490,6 +506,7 @@ class DivineVideoClip {
           : (playbackSpeed ?? this.playbackSpeed),
       reversed: reversed ?? this.reversed,
       isPlaceholder: isPlaceholder ?? this.isPlaceholder,
+      placeholderFill: placeholderFill ?? this.placeholderFill,
       forwardVideoPath: isNewLogicalClip
           ? null
           : clearForwardVideoPath
@@ -552,6 +569,7 @@ class DivineVideoClip {
       if (playbackSpeed != null) 'playbackSpeed': playbackSpeed,
       if (reversed) 'reversed': true,
       if (isPlaceholder) 'isPlaceholder': true,
+      if (placeholderFill case final fill?) 'placeholderFill': fill.toJson(),
       if (forwardVideoPath != null)
         'forwardVideoPath': p.basename(forwardVideoPath!),
       if (reversedVideoPath != null)
@@ -674,6 +692,11 @@ class DivineVideoClip {
       playbackSpeed: (json['playbackSpeed'] as num?)?.toDouble(),
       reversed: (json['reversed'] as bool?) ?? false,
       isPlaceholder: (json['isPlaceholder'] as bool?) ?? false,
+      placeholderFill: _placeholderFillFromJson(
+        json['placeholderFill'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
       forwardVideoPath: resolvePath(
         json['forwardVideoPath'] as String?,
         documentsPath,
@@ -750,6 +773,35 @@ class DivineVideoClip {
     } catch (error, stackTrace) {
       Log.error(
         'Dropping unparseable clip transition; falling back to a hard cut',
+        name: 'DivineVideoClip',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
+  /// Parses the persisted placeholder fill, degrading to `null` when the
+  /// stored shape can't be read. Same rationale as [_transitionFromJson]: one
+  /// unreadable field must not abort a whole draft load. The still is already
+  /// rendered, so losing this costs the pre-selected colour in the picker, not
+  /// the backdrop itself.
+  static ClipPlaceholderFill? _placeholderFillFromJson(
+    Object? raw,
+    String documentsPath, {
+    required bool useOriginalPath,
+  }) {
+    if (raw is! Map) return null;
+    try {
+      return ClipPlaceholderFill.fromJson(
+        raw.cast<String, dynamic>(),
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      );
+    } catch (error, stackTrace) {
+      Log.error(
+        'Dropping unparseable placeholder fill; the rendered still is '
+        'unaffected',
         name: 'DivineVideoClip',
         error: error,
         stackTrace: stackTrace,

@@ -8948,6 +8948,35 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile caricare quella foto.';
 
   @override
+  String get videoEditorBackdropLabel => 'Sfondo';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Cambia lo sfondo che tiene questo posto';
+
+  @override
+  String get videoEditorBackdropTitle => 'Cambia sfondo';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Questo posto tiene un fermo immagine per quanto durava la clip che hai staccato. Cosa deve mostrare?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Scegli un colore pieno, o ritocca quello che c\'è.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Scatta una nuova foto per tenere il posto.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Sto cambiando lo sfondo…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Non è stato possibile cambiare quello sfondo. Il posto tiene ancora quello di prima.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

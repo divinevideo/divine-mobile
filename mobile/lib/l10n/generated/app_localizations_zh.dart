@@ -8349,6 +8349,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => '这张照片加载不了。';
 
   @override
+  String get videoEditorBackdropLabel => '背景';
+
+  @override
+  String get videoEditorBackdropSemanticLabel => '更换占住这个位置的背景';
+
+  @override
+  String get videoEditorBackdropTitle => '更换背景';
+
+  @override
+  String get videoEditorBackdropDescription => '这个位置会按你分离的片段的时长显示一张静止画面。要显示什么？';
+
+  @override
+  String get videoEditorBackdropColorDetail => '选一块纯色，或者调整现在这块。';
+
+  @override
+  String get videoEditorBackdropImageDetail => '重新拍一张照片来占住位置。';
+
+  @override
+  String get videoEditorBackdropProgressLabel => '正在更换背景…';
+
+  @override
+  String get videoEditorBackdropFailed => '没能更换那个背景。这个位置还是原来的背景。';
+
+  @override
   String get videoEditorChromaKeyLabel => '绿幕';
 
   @override

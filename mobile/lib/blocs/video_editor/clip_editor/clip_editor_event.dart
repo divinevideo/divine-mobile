@@ -431,6 +431,27 @@ class ClipEditorClipDetachRequested extends ClipEditorEvent {
   List<Object?> get props => [clipId, replacement];
 }
 
+/// Re-render the backdrop the placeholder clip with [clipId] holds, filling it
+/// with [fill] instead.
+///
+/// Changes an existing slot rather than creating one: the clip keeps its id,
+/// its length and its position, so nothing on the timeline moves and no marker
+/// needs rebasing — only the still it shows is replaced. That is what lets a
+/// colour be re-picked, or a colour swapped for a photo, after the detach that
+/// created the slot.
+class ClipEditorPlaceholderFillRequested extends ClipEditorEvent {
+  const ClipEditorPlaceholderFillRequested({
+    required this.clipId,
+    required this.fill,
+  });
+
+  final String clipId;
+  final ClipPlaceholderFill fill;
+
+  @override
+  List<Object?> get props => [clipId, fill];
+}
+
 /// Bake [transform] into [clip], which already left the timeline and now lives
 /// in the canvas layer [layerId].
 ///

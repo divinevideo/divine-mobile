@@ -8942,6 +8942,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Couldn\'t load that photo.';
 
   @override
+  String get videoEditorBackdropLabel => 'Backdrop';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Change the backdrop filling this slot';
+
+  @override
+  String get videoEditorBackdropTitle => 'Change backdrop';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'This slot holds a still for as long as the clip you detached ran. What should it show?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Pick a solid color, or adjust the one that\'s there.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Shoot a new still to hold the slot.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Changing the backdrop…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Couldn\'t change that backdrop. The slot still holds the one it had.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

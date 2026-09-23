@@ -8804,6 +8804,34 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'تعذّر تحميل هذه الصورة.';
 
   @override
+  String get videoEditorBackdropLabel => 'الخلفية';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'تغيير الخلفية التي تشغل هذا المكان';
+
+  @override
+  String get videoEditorBackdropTitle => 'تغيير الخلفية';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'يحتفظ هذا المكان بصورة ثابتة طوال مدة المقطع الذي فصلته. ماذا تريد أن يعرض؟';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'اختر لونًا ثابتًا، أو عدّل اللون الحالي.';
+
+  @override
+  String get videoEditorBackdropImageDetail => 'التقط صورة جديدة تشغل المكان.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'جارٍ تغيير الخلفية…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'تعذّر تغيير هذه الخلفية. المكان ما زال يحتفظ بالخلفية السابقة.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'الشاشة الخضراء';
 
   @override
