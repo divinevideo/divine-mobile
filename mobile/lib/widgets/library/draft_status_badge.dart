@@ -35,6 +35,15 @@ class DraftStatusBadge extends StatelessWidget {
       DraftStatusBadgeTone.warning => colors.accentWarning,
       DraftStatusBadgeTone.muted => colors.onSurfaceMuted,
     };
+    // The border may be quiet; the label may not. onSurfaceMuted on its own
+    // 16% fill measures 4.36:1 in dark and 2.81:1 in light, both under the
+    // 4.5:1 body text needs, so the muted tone keeps its faint outline and
+    // borrows secondaryText for the word itself (8.08:1 / 7.37:1). The other
+    // two tones already clear the bar on their own accents.
+    final foreground = switch (tone) {
+      DraftStatusBadgeTone.positive || DraftStatusBadgeTone.warning => accent,
+      DraftStatusBadgeTone.muted => colors.secondaryText,
+    };
     final fill = switch (tone) {
       DraftStatusBadgeTone.positive => VineTheme.vineGreen,
       DraftStatusBadgeTone.warning => VineTheme.accentOrange,
@@ -50,7 +59,7 @@ class DraftStatusBadge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         child: Text(
           label,
-          style: VineTheme.labelSmallFont(color: accent),
+          style: VineTheme.labelSmallFont(color: foreground),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
