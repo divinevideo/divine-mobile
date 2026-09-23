@@ -595,6 +595,58 @@ void main() {
         expect(outcome, ScheduledPostActionOutcome.failed);
         expect((await repository.list()).single.eventId, event.id);
       });
+
+      test('keeps the post when moved to the time it already has', () async {
+        stubAccepted();
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(
+          () => client.cancel(any()),
+        ).thenAnswer((_) async => const ScheduleCancelled());
+        final newTime = publishAt.add(const Duration(days: 1));
+        // The first move re-signs the body with `published_at` last, so
+        // re-signing the result for the same time yields the same event id.
+        await coordinator.reschedule(event.id, newTime);
+        final held = (await repository.list()).single;
+        expect(held.status, ScheduledPostStatus.scheduled);
+
+        final outcome = await coordinator.reschedule(held.eventId, newTime);
+
+        expect(outcome, ScheduledPostActionOutcome.done);
+        final kept = await repository.getById(held.eventId);
+        expect(kept?.status, ScheduledPostStatus.scheduled);
+        verifyNever(() => client.cancel(held.eventId));
+        verifyNever(
+          () => draftService.updatePublishStatus(
+            draftId: any(named: 'draftId'),
+            status: any(named: 'status'),
+          ),
+        );
+      });
+
+      test(
+        'hands a failed post back to the relay when moved to its own time',
+        () async {
+          stubAccepted();
+          final event = buildEvent();
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          when(
+            () => client.cancel(any()),
+          ).thenAnswer((_) async => const ScheduleCancelled());
+          final newTime = publishAt.add(const Duration(days: 1));
+          await coordinator.reschedule(event.id, newTime);
+          final held = (await repository.list()).single;
+          await repository.markFailed(held.eventId, 'rate-limited');
+
+          final outcome = await coordinator.reschedule(held.eventId, newTime);
+
+          expect(outcome, ScheduledPostActionOutcome.done);
+          final resubmitted = await repository.getById(held.eventId);
+          expect(resubmitted?.status, ScheduledPostStatus.scheduled);
+          expect(resubmitted?.failureReason, isNull);
+          verifyNever(() => client.cancel(held.eventId));
+        },
+      );
     });
 
     group('publishNow', () {
@@ -633,6 +685,52 @@ void main() {
           expect(replacement.publishAt, now.millisecondsSinceEpoch ~/ 1000);
         },
       );
+
+      group('when the held event is already dated now', () {
+        late Event event;
+
+        setUp(() async {
+          // A body restamped for exactly `now`, so re-signing it for now
+          // reproduces the held event and its id.
+          final nowSecs = now.millisecondsSinceEpoch ~/ 1000;
+          event = Event(
+            owner,
+            34236,
+            [
+              ['d', 'video-1'],
+              ['title', 'Plants'],
+              ['published_at', '$nowSecs'],
+              ['expiration', '${nowSecs + 86400}'],
+            ],
+            'A plant video',
+            createdAt: nowSecs,
+          );
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          when(
+            () => client.cancel(any()),
+          ).thenAnswer((_) async => const ScheduleCancelled());
+        });
+
+        test('broadcasts the held event itself', () async {
+          final outcome = await coordinator.publishNow(event.id);
+
+          expect(outcome, ScheduledPostActionOutcome.done);
+          expect(broadcasts.single.id, event.id);
+          verify(() => draftService.deleteDraft('draft-1')).called(1);
+          verifyNever(() => client.cancel(any()));
+        });
+
+        test('keeps the only copy when the broadcast fails', () async {
+          broadcastOutcome = EventPublishOutcome.transientFailure;
+
+          final outcome = await coordinator.publishNow(event.id);
+
+          expect(outcome, ScheduledPostActionOutcome.unavailable);
+          final kept = await repository.getById(event.id);
+          expect(kept?.status, ScheduledPostStatus.scheduled);
+          verifyNever(() => client.cancel(any()));
+        });
+      });
     });
 
     group('retry', () {

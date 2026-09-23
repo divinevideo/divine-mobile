@@ -454,6 +454,14 @@ class ScheduledPostCoordinator {
       createdAt: newPublishAt.toUtc().millisecondsSinceEpoch ~/ 1000,
     );
     if (signed == null) return ScheduledPostActionOutcome.failed;
+    // The time it already has, over a body an earlier move restamped, signs
+    // the held event again: replacing it would withdraw and delete the only
+    // copy. A failed one goes back to the relay as it is.
+    if (signed.id == post.eventId) {
+      return post.status == ScheduledPostStatus.failed
+          ? retry(eventId)
+          : ScheduledPostActionOutcome.done;
+    }
 
     final withdrawn = await _withdrawBeforeReplacing(post);
     if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
@@ -480,6 +488,13 @@ class ScheduledPostCoordinator {
       createdAt: _now().toUtc().millisecondsSinceEpoch ~/ 1000,
     );
     if (signed == null) return ScheduledPostActionOutcome.failed;
+    // Already dated now: broadcast the held event rather than replace it with
+    // itself, which would delete the only copy before the broadcast.
+    if (signed.id == post.eventId) {
+      return await _publishHeldPost(post)
+          ? ScheduledPostActionOutcome.done
+          : ScheduledPostActionOutcome.unavailable;
+    }
 
     final withdrawn = await _withdrawBeforeReplacing(post);
     if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
