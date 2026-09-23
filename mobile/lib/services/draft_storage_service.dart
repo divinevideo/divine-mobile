@@ -197,24 +197,23 @@ class DraftStorageService {
     // so an owner-scoped read here would skip the cleanup for the very files
     // it just orphaned.
     final documentsPath = await getDocumentsPath();
-    final existingDraft = await _loadDraftAcrossAccounts(draft.id);
+    final previouslyOwnedFilePaths = await _previouslyOwnedFilePaths(
+      draft.id,
+      documentsPath,
+    );
     final newOwnedFilePaths = _ownedFilePaths(draft, documentsPath);
     final detachedOwnedFilePaths = _detachedOwnedFilePaths(
       draft,
       documentsPath,
     );
-    var orphanedFiles = const <String?>[];
-    if (existingDraft != null) {
-      // Both halves diff [DivineVideoClip.ownedFilePaths]. The local list this
-      // replaced had fallen behind the model — no reverse caches, no ghost
-      // frame — so a render a transform dropped was invisible to this sweep.
-      orphanedFiles = <String?>[
-        ..._ownedFilePaths(
-          existingDraft,
-          documentsPath,
-        ).where((path) => !newOwnedFilePaths.contains(path)),
-      ];
-    }
+    // Both halves diff [DivineVideoClip.ownedFilePaths]. The local list this
+    // replaced had fallen behind the model — no reverse caches, no ghost
+    // frame — so a render a transform dropped was invisible to this sweep.
+    final orphanedFiles = <String?>[
+      ...?previouslyOwnedFilePaths?.where(
+        (path) => !newOwnedFilePaths.contains(path),
+      ),
+    ];
 
     // Upsert draft and clips atomically in a single transaction
     final draftJson = draft.toJson();
@@ -228,6 +227,7 @@ class DraftStorageService {
         .toList();
     // Remove clips from JSON blob – they live in their own table
     draftJson.remove('clips');
+    final draftData = await _encodeDraftData(draftJson);
 
     final clipDataList = <DraftClipData>[];
     for (var i = 0; i < draft.clips.length; i++) {
@@ -260,7 +260,7 @@ class DraftStorageService {
       lastModified: draft.lastModified,
       publishAttempts: draft.publishAttempts,
       publishError: draft.publishError,
-      data: json.encode(draftJson),
+      data: draftData,
       renderedFilePath: draft.finalRenderedClip?.video?.file?.path != null
           ? p.basename(draft.finalRenderedClip!.video!.file!.path)
           : null,
@@ -289,7 +289,77 @@ class DraftStorageService {
     }
   }
 
-  Set<String> _ownedFilePaths(DivineVideoDraft draft, String documentsPath) => {
+  /// The files the stored row of draft [id] owns, or `null` when there is no
+  /// readable row. Read across accounts — see [saveDraft].
+  ///
+  /// Decoding the row means parsing its whole editor history, and the editor
+  /// autosaves after every change, so the parse and the ownership walk run off
+  /// the UI isolate.
+  Future<Set<String>?> _previouslyOwnedFilePaths(
+    String id,
+    String documentsPath,
+  ) async {
+    final row = await _draftsDao.getDraftById(id);
+    if (row == null) return null;
+    final clipRows = await _clipsDao.getClipsByDraftId(id);
+    final result = await _runOffMain(_ownedFilePathsOfRow, (
+      row: row,
+      clipRows: clipRows,
+      documentsPath: documentsPath,
+    ));
+    if (result.parseError case final error?) {
+      Log.error(
+        '🧹 Skipping corrupt draft ${row.id}: $error',
+        name: 'DraftStorageService',
+        category: LogCategory.video,
+      );
+    }
+    return result.ownedFilePaths;
+  }
+
+  static ({Set<String>? ownedFilePaths, String? parseError})
+  _ownedFilePathsOfRow(
+    ({DraftRow row, List<ClipRow> clipRows, String documentsPath}) input,
+  ) {
+    try {
+      final draft = DivineVideoDraft.fromDriftRow(
+        row: input.row,
+        clipRows: input.clipRows,
+        documentsPath: input.documentsPath,
+      );
+      return (
+        ownedFilePaths: _ownedFilePaths(draft, input.documentsPath),
+        parseError: null,
+      );
+    } catch (e) {
+      return (ownedFilePaths: null, parseError: '$e');
+    }
+  }
+
+  /// Encodes the draft `data` column off the UI isolate: with a long editor
+  /// history it is large, and every autosave re-encodes it.
+  static Future<String> _encodeDraftData(Map<String, dynamic> draftJson) =>
+      _runOffMain(_encodeJson, draftJson);
+
+  static String _encodeJson(Map<String, dynamic> value) => json.encode(value);
+
+  /// Runs [callback] on a background isolate, or here when [message] cannot
+  /// cross an isolate boundary — the move is an optimization, never a reason
+  /// for a save to fail.
+  static Future<R> _runOffMain<Q, R>(R Function(Q) callback, Q message) async {
+    try {
+      return await compute(callback, message);
+    } catch (_) {
+      // Running it here either succeeds (the message could not be sent) or
+      // throws the callback's own error to the caller, as it did before.
+      return callback(message);
+    }
+  }
+
+  static Set<String> _ownedFilePaths(
+    DivineVideoDraft draft,
+    String documentsPath,
+  ) => {
     for (final clip in draft.clips)
       ...clip.ownedFilePaths.whereType<String>().where(
         (path) => path.isNotEmpty,

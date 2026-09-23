@@ -43,9 +43,14 @@ DivineVideoClip _clip(
 /// Seam service whose renders complete only when the test releases them.
 class _GatedSeamService extends TransitionSeamRenderService {
   final pending = <String, Completer<TransitionSeam?>>{};
+
+  /// Renders [cancelRendersExcept] dropped, still waiting to settle — a
+  /// native encode does not stop the instant it is cancelled.
+  final cancelled = <String, Completer<TransitionSeam?>>{};
   int renderCalls = 0;
 
-  String _id(DivineVideoClip a, DivineVideoClip b) => '${a.id}->${b.id}';
+  String _id(DivineVideoClip a, DivineVideoClip b) =>
+      seamKey(a, b, a.transition!);
 
   @override
   bool isRendering(
@@ -65,13 +70,21 @@ class _GatedSeamService extends TransitionSeamRenderService {
     return pending.putIfAbsent(id, Completer.new).future;
   }
 
+  @override
+  void cancelRendersExcept(Set<String> keep) {
+    for (final key in pending.keys.toList()) {
+      if (!keep.contains(key)) cancelled[key] = pending.remove(key)!;
+    }
+  }
+
   /// Lands the render for [a]→[b] with [seam] (`null` = failed render).
   Future<void> land(
     DivineVideoClip a,
     DivineVideoClip b, {
     TransitionSeam? seam = _seam,
   }) async {
-    final completer = pending.remove(_id(a, b))!;
+    final id = _id(a, b);
+    final completer = pending.remove(id) ?? cancelled.remove(id)!;
     if (seam != null) cacheSeamForTest(a, b, a.transition!, seam);
     completer.complete(seam);
     await completer.future;
@@ -168,6 +181,48 @@ void main() {
           expect(seamLandings, 0);
         },
       );
+      test('cancels the render for a boundary a later edit replaced, and '
+          'neither counts it nor resyncs when it lands anyway', () async {
+        final a = _clip('a', transition: _dissolve);
+        final b = _clip('b');
+        clips = [a, b];
+        composition.ensureSeamsRendered(clips);
+        expect(composition.pendingSeamRenders.value, 1);
+
+        // A committed trim on clip a mints a new seam key for the boundary.
+        final trimmed = a.copyWith(trimEnd: const Duration(milliseconds: 200));
+        clips = [trimmed, b];
+        composition.ensureSeamsRendered(clips);
+
+        expect(seams.cancelled.keys, [seams.seamKey(a, b, _dissolve)]);
+        expect(seams.pending.keys, [seams.seamKey(trimmed, b, _dissolve)]);
+        expect(composition.pendingSeamRenders.value, 1);
+
+        // The superseded encode still finishes natively: it must not reload
+        // the player for a seam the timeline no longer contains.
+        await seams.land(a, b);
+        expect(seamLandings, 0);
+        expect(composition.pendingSeamRenders.value, 1);
+
+        await seams.land(trimmed, b);
+        expect(seamLandings, 1);
+        expect(composition.pendingSeamRenders.value, 0);
+      });
+
+      test('does not resync for a seam the clips stopped needing without a '
+          'new render pass', () async {
+        final a = _clip('a', transition: _dissolve);
+        final b = _clip('b');
+        clips = [a, b];
+        composition.ensureSeamsRendered(clips);
+
+        // The transition is removed before the render lands.
+        clips = [_clip('a'), b];
+        await seams.land(a, b);
+
+        expect(seamLandings, 0);
+        expect(composition.pendingSeamRenders.value, 0);
+      });
     });
 
     group('ensureSpeedClipsRendered', () {

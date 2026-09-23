@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
+import 'package:openvine/services/video_editor/render_slot_pool.dart';
 import 'package:openvine/services/video_editor/transition_seam_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ClipTransition;
 
@@ -21,7 +22,10 @@ import 'package:pro_video_editor/pro_video_editor.dart' show ClipTransition;
 /// [SeamTimeline] that always describes the composition last handed to the
 /// player.
 class PreviewComposition {
-  PreviewComposition({
+  /// Seam and speed renders share one [RenderSlotPool] unless a service is
+  /// injected, so together they never open more native encoder sessions than
+  /// the pool allows.
+  factory PreviewComposition({
     required List<DivineVideoClip> Function() readClips,
     required void Function(Future<void> operation, String description)
     runDetached,
@@ -29,12 +33,35 @@ class PreviewComposition {
     required VoidCallback onSpeedClipRendered,
     TransitionSeamRenderService? seamService,
     ClipSpeedRenderService? speedRenderService,
+  }) {
+    final renderSlots = RenderSlotPool();
+    return PreviewComposition._(
+      readClips: readClips,
+      runDetached: runDetached,
+      onSeamRendered: onSeamRendered,
+      onSpeedClipRendered: onSpeedClipRendered,
+      seamService:
+          seamService ?? TransitionSeamRenderService(renderSlots: renderSlots),
+      speedRenderService:
+          speedRenderService ??
+          ClipSpeedRenderService(renderSlots: renderSlots),
+    );
+  }
+
+  PreviewComposition._({
+    required List<DivineVideoClip> Function() readClips,
+    required void Function(Future<void> operation, String description)
+    runDetached,
+    required VoidCallback onSeamRendered,
+    required VoidCallback onSpeedClipRendered,
+    required TransitionSeamRenderService seamService,
+    required ClipSpeedRenderService speedRenderService,
   }) : _readClips = readClips,
        _runDetached = runDetached,
        _onSeamRendered = onSeamRendered,
        _onSpeedClipRendered = onSpeedClipRendered,
-       _seamService = seamService ?? TransitionSeamRenderService(),
-       _speedRenderService = speedRenderService ?? ClipSpeedRenderService();
+       _seamService = seamService,
+       _speedRenderService = speedRenderService;
 
   final List<DivineVideoClip> Function() _readClips;
   final void Function(Future<void> operation, String description) _runDetached;
@@ -54,9 +81,45 @@ class PreviewComposition {
   final _pendingSeamRenders = ValueNotifier<int>(0);
   bool _disposed = false;
 
-  /// Number of transition seams currently rendering. Drives the preview's
-  /// "rendering transition" overlay so the wait isn't silent.
+  /// Seam renders this composition started and that have not finished yet,
+  /// keyed by [TransitionSeamRenderService.seamKey]. The value identifies the
+  /// attempt, so a cancelled attempt finishing late cannot clear the entry of
+  /// a newer attempt for the same key.
+  final _seamRendersInFlight = <String, Object>{};
+
+  /// Number of transition seams the current clips need that are still
+  /// rendering. Drives the preview's "rendering transition" overlay so the
+  /// wait isn't silent; a superseded render never holds it up.
   ValueListenable<int> get pendingSeamRenders => _pendingSeamRenders;
+
+  /// The seam keys [clips] need, including the loop-restart wrap, each paired
+  /// with the boundary it renders.
+  Map<String, ({DivineVideoClip a, DivineVideoClip b, ClipTransition t})>
+  _neededSeams(List<DivineVideoClip> clips) {
+    final clamped = clampTransitions(clips);
+    final needed =
+        <String, ({DivineVideoClip a, DivineVideoClip b, ClipTransition t})>{};
+    void add(DivineVideoClip a, DivineVideoClip b, ClipTransition? t) {
+      if (t == null) return;
+      needed[_seamService.seamKey(a, b, t)] = (a: a, b: b, t: t);
+    }
+
+    for (var i = 0; i < clips.length - 1; i++) {
+      add(clips[i], clips[i + 1], clamped[clips[i].id]);
+    }
+    // Loop-restart wrap: the last clip's transition blends its tail into the
+    // first clip's head (the same clip on a single-clip timeline) so the
+    // looping preview restarts through the blend instead of a hard cut.
+    if (clips.isNotEmpty) add(clips.last, clips.first, clamped[clips.last.id]);
+    return needed;
+  }
+
+  void _updatePendingSeamRenders(Set<String> neededKeys) {
+    if (_disposed) return;
+    _pendingSeamRenders.value = _seamRendersInFlight.keys
+        .where(neededKeys.contains)
+        .length;
+  }
 
   /// Kicks off (once) the seam render for every transition boundary in
   /// [clips], including the loop-restart wrap. Idempotent — cached seams are
@@ -66,41 +129,43 @@ class PreviewComposition {
   /// preview consumes exactly what the export will, and a clip touched by
   /// transitions on both sides is split between them rather than
   /// over-consumed.
+  ///
+  /// Renders a seam the timeline no longer needs — a trim, speed or transition
+  /// change since it started — are cancelled, so they neither hold a render
+  /// slot nor reload the player when they would have landed.
   void ensureSeamsRendered(List<DivineVideoClip> clips) {
-    final clamped = clampTransitions(clips);
-    for (var i = 0; i < clips.length - 1; i++) {
-      final transition = clamped[clips[i].id];
-      if (transition == null) continue;
-      _renderSeam(clips[i], clips[i + 1], transition);
+    if (_disposed) return;
+    final needed = _neededSeams(clips);
+    final neededKeys = needed.keys.toSet();
+    _seamService.cancelRendersExcept(neededKeys);
+    _seamRendersInFlight.removeWhere((key, _) => !neededKeys.contains(key));
+    for (final MapEntry(:key, value: (:a, :b, :t)) in needed.entries) {
+      _renderSeam(key, a, b, t);
     }
-
-    // Loop-restart wrap: the last clip's transition blends its tail into the
-    // first clip's head (the same clip on a single-clip timeline) so the looping
-    // preview restarts through the blend instead of a hard cut.
-    if (clips.isNotEmpty) {
-      final wrap = clamped[clips.last.id];
-      if (wrap != null) _renderSeam(clips.last, clips.first, wrap);
-    }
+    _updatePendingSeamRenders(neededKeys);
   }
 
   /// Renders (once) the transition seam blending [clipA]'s tail into [clipB]'s
-  /// head, resyncing the preview when it lands. Idempotent — cached / in-flight
-  /// seams are skipped so the pending counter isn't double-incremented.
+  /// head. Idempotent — cached / in-flight seams are skipped.
   void _renderSeam(
+    String key,
     DivineVideoClip clipA,
     DivineVideoClip clipB,
     ClipTransition transition,
   ) {
     if (_seamService.cached(clipA, clipB, transition) != null) return;
     if (_seamService.isRendering(clipA, clipB, transition)) return;
-    _pendingSeamRenders.value++;
+    final attempt = Object();
+    _seamRendersInFlight[key] = attempt;
     _runDetached(
-      _renderSeamAndResync(clipA, clipB, transition),
+      _renderSeamAndResync(key, attempt, clipA, clipB, transition),
       'render transition seam',
     );
   }
 
   Future<void> _renderSeamAndResync(
+    String key,
+    Object attempt,
     DivineVideoClip clipA,
     DivineVideoClip clipB,
     ClipTransition transition,
@@ -111,8 +176,15 @@ class PreviewComposition {
       transition: transition,
     );
     if (_disposed) return;
-    _pendingSeamRenders.value--;
-    if (seam != null) _onSeamRendered();
+    if (identical(_seamRendersInFlight[key], attempt)) {
+      final _ = _seamRendersInFlight.remove(key);
+    }
+    // Checked against the clips as they are now, not as they were when the
+    // render started: a seam for a boundary that has since changed is never
+    // spliced in, and reloading the player for it only hitches playback.
+    final neededKeys = _neededSeams(_readClips()).keys.toSet();
+    _updatePendingSeamRenders(neededKeys);
+    if (seam != null && neededKeys.contains(key)) _onSeamRendered();
   }
 
   /// Kicks off background renders of the normal-rate body for any non-1× clip,

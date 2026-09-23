@@ -2,7 +2,6 @@
 // ABOUTME: normal-rate file so the preview plays it at 1× instead of retiming live.
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,6 +9,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/services/video_editor/render_slot_pool.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider/path_provider.dart';
@@ -40,6 +40,16 @@ class RenderedSpeedClip {
 /// background, and the canvas swaps it in when ready. Volume is **not** baked in
 /// (the player applies it per clip), so a mute toggle never re-renders.
 class ClipSpeedRenderService {
+  /// [renderSlots] caps concurrent native renders; pass a pool shared with the
+  /// seam renderer so the two together stay under the encoder's ceiling.
+  ClipSpeedRenderService({RenderSlotPool? renderSlots})
+    : _renderSlots = renderSlots ?? RenderSlotPool();
+
+  /// The canvas asks for a render per non-1× clip on every timeline change, so
+  /// a 28-clip draft would otherwise open 28 export sessions at once — see
+  /// [RenderSlotPool] for why that stalls the encoder.
+  final RenderSlotPool _renderSlots;
+
   final _cache = <String, RenderedSpeedClip>{};
   final _inFlight = <String, Future<RenderedSpeedClip?>>{};
   int _clearGeneration = 0;
@@ -102,42 +112,6 @@ class ClipSpeedRenderService {
     return speed > 0 && speed != 1.0 && clip.video?.file != null;
   }
 
-  /// How many speed bodies may encode natively at the same time.
-  ///
-  /// The canvas asks for a render per non-1× clip on every timeline change, so
-  /// a 28-clip draft would otherwise open 28 export sessions at once. Past a
-  /// couple of concurrent sessions the platform encoder stops making progress
-  /// and `pro_video_editor` fails them with a stall (`progress=0.00` after
-  /// 20s), which is slower *and* lossier than encoding them a few at a time.
-  static const _maxConcurrentRenders = 2;
-
-  int _activeRenders = 0;
-  final _waitingForSlot = Queue<Completer<void>>();
-
-  /// Resolves once a render slot is free. Slots are handed out FIFO so the
-  /// clips at the head of the timeline — the ones the user is most likely to
-  /// play first — finish first.
-  Future<void> _acquireRenderSlot() {
-    if (_activeRenders < _maxConcurrentRenders) {
-      _activeRenders++;
-      return Future<void>.value();
-    }
-    final waiter = Completer<void>();
-    _waitingForSlot.add(waiter);
-    return waiter.future;
-  }
-
-  /// Hands this slot straight to the next waiter, or gives it back to the pool
-  /// when nobody is queued. Passing it on keeps [_activeRenders] at the cap
-  /// instead of dipping below it between renders.
-  void _releaseRenderSlot() {
-    if (_waitingForSlot.isNotEmpty) {
-      _waitingForSlot.removeFirst().complete();
-      return;
-    }
-    _activeRenders--;
-  }
-
   Future<RenderedSpeedClip?> _render(DivineVideoClip clip, String key) async {
     // Reachable only via [render], which gates on [_needsRender] (video
     // non-null). Re-checked here so the type is provably non-null below.
@@ -176,7 +150,7 @@ class ClipSpeedRenderService {
       // Render only the trimmed body at the target speed, with no crop/transform
       // — the preview player crops the texture itself, exactly as it does for
       // the raw live-retimed clip, so nothing is double-cropped.
-      await _acquireRenderSlot();
+      await _renderSlots.acquire();
       try {
         // The editor may have closed, or this clip may have been edited again,
         // while the request waited for a slot. Bailing here keeps a queued
@@ -186,7 +160,7 @@ class ClipSpeedRenderService {
         // Bounded while it holds the slot: a render that stalls inside
         // `pro_video_editor`'s setup stage never settles on its own
         // (hm21/pro_video_editor#201), and an unbounded await here kept one of
-        // the [_maxConcurrentRenders] slots for the rest of the session
+        // the shared render slots for the rest of the session
         // (#9347). The timeout throws through `finally`, which hands the slot
         // on, and the outer catch drops the key so the clip is retried on the
         // next timeline change.
@@ -215,7 +189,7 @@ class ClipSpeedRenderService {
           reason: 'clip speed render timed out',
         );
       } finally {
-        _releaseRenderSlot();
+        _renderSlots.release();
       }
       if (_isStale(renderGeneration)) {
         await _deleteQuietly(tempOutput);
