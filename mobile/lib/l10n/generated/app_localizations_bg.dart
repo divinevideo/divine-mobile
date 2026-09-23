@@ -6123,6 +6123,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get commonBack => 'Назад';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Затвори';
 
   @override

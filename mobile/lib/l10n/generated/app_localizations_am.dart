@@ -5929,6 +5929,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commonBack => 'ተመለስ';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'ዝጋ';
 
   @override

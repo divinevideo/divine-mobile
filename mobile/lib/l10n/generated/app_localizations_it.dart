@@ -6130,6 +6130,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get commonBack => 'Indietro';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Chiudi';
 
   @override

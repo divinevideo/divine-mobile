@@ -66,7 +66,6 @@ discarded_futures|lib/widgets/feed_tuning/feed_tuning_swipe_overlay.dart	1
 discarded_futures|lib/widgets/find_people_sheet.dart	1
 discarded_futures|lib/widgets/for_you_tab.dart	2
 discarded_futures|lib/widgets/geo_blocking_gate.dart	1
-discarded_futures|lib/widgets/global_error_widget.dart	1
 discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/linkified_text/linkified_text_navigation.dart	4

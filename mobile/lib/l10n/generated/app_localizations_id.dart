@@ -5999,6 +5999,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get commonBack => 'Kembali';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Tutup';
 
   @override

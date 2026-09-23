@@ -5748,6 +5748,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonBack => '戻る';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => '閉じる';
 
   @override
