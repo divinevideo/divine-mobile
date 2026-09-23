@@ -677,11 +677,13 @@ class ScheduledPostCoordinator {
     try {
       final pending = await _repository.pending();
       delay = _repository.nextWakeIn(pending, _now());
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.warning(
         'Could not schedule the next scheduled-post sweep: $e',
         name: _logName,
         category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
       );
       delay = _maxTimerDelay;
     }
