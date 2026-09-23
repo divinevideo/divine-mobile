@@ -916,11 +916,12 @@ class NostrClient {
   /// read settle on relay refusals once a non-cache relay sent `EOSE` and no
   /// relay is still unanswered. It never settles on silence, a dropped socket,
   /// a deadline, or a `rate-limited` refusal, all of which a retry may change.
-  /// An `error:` refusal settles only when one confirmation read, within what
-  /// is left of [timeout], draws no `error:` refusal from a relay that did not
-  /// already send one. Any other category, `other` included, settles on the
-  /// first read, except the NIP-42 refusals the pool parks for its post-AUTH
-  /// replay, which hold the read to its deadline.
+  /// Transient `error:` and unclassified (`other`) refusals remain incomplete.
+  /// A caller with a deferred retry policy may confirm those refusals on a
+  /// later attempt. This method never issues an immediate confirmation read:
+  /// a relay may still be completing AUTH or recovering from a transient
+  /// failure. Other terminal refusal categories may settle on the first read,
+  /// except NIP-42 refusals parked for post-AUTH replay.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -954,10 +955,7 @@ class NostrClient {
     bool requireAllRelaysSettled = false,
     bool acceptRelayClosedWhenOthersAnswered = false,
   }) async {
-    final startedAt = clock.now();
-    Future<({QueryResult result, bool timedOut, bool noRelays})> readWithin(
-      Duration budget,
-    ) => _read(
+    final first = await _read(
       filters,
       subscriptionId: subscriptionId,
       tempRelays: tempRelays,
@@ -965,11 +963,9 @@ class NostrClient {
       sendAfterAuth: sendAfterAuth,
       useCache: useCache,
       useQueryPool: useQueryPool,
-      timeout: budget,
+      timeout: timeout,
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
-
-    final first = await readWithin(timeout);
     // Only a read that would otherwise report `timedOut` has anything for
     // the refusals to settle.
     if (!acceptRelayClosedWhenOthersAnswered ||
@@ -981,40 +977,12 @@ class NostrClient {
         noRelays: first.noRelays,
       );
     }
-    final errorRefusers = _errorRefusers(first.result);
-    if (errorRefusers.isEmpty) {
-      return (
-        events: first.result.events,
-        timedOut: false,
-        noRelays: first.noRelays,
-      );
-    }
-    // NIP-01's own `error:` examples ("could not connect to the database",
-    // "shutting down idle subscription") are transient, so confirm before
-    // settling on one. The retry spends only what is left of [timeout].
-    final remaining = timeout - clock.now().difference(startedAt);
-    if (remaining <= Duration.zero) {
-      return (
-        events: first.result.events,
-        timedOut: true,
-        noRelays: first.noRelays,
-      );
-    }
-    final confirmation = await readWithin(remaining);
-    final limit = filters.length == 1 ? filters.first.limit : null;
+    final needsDeferredConfirmation = first.result.closedRelayReasons.values
+        .any((category) => category == 'error' || category == 'other');
     return (
-      events: _mergeEvents(
-        first.result.events,
-        confirmation.result.events,
-        limit: limit,
-      ),
-      timedOut:
-          confirmation.timedOut &&
-          !(_othersAnsweredDespiteRefusals(confirmation.result) &&
-              _errorRefusers(
-                confirmation.result,
-              ).every(errorRefusers.contains)),
-      noRelays: confirmation.noRelays,
+      events: first.result.events,
+      timedOut: needsDeferredConfirmation,
+      noRelays: first.noRelays,
     );
   }
 
@@ -1025,13 +993,6 @@ class NostrClient {
       result.answeredNetworkRelayCount > 0 &&
       result.unansweredRelayCount == 0 &&
       result.rateLimitedRelayCount == 0;
-
-  /// The relays that refused [result] with an `error:` `CLOSED`.
-  static Set<String> _errorRefusers(QueryResult result) => {
-    for (final MapEntry(key: url, value: category)
-        in result.closedRelayReasons.entries)
-      if (category == 'error') url,
-  };
 
   /// Reads the events [filters] match and reports how the read ended.
   ///

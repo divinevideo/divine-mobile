@@ -40,6 +40,7 @@ import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -645,6 +646,11 @@ class DmRepository {
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
 
+  /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
+  /// sweep. A matching refusal must recur after a deferred drain retry before
+  /// it can count as an exhausted relay for history completion.
+  Set<String> _previousNip04Refusals = {};
+
   /// Replenishes deferred retries only after the drain durably made progress.
   ///
   /// An authoritative empty gift-wrap page is not enough on its own: outgoing
@@ -1039,6 +1045,7 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
+    _previousNip04Refusals = {};
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -1509,17 +1516,18 @@ class DmRepository {
   /// walk ended on an empty page, at the epoch, or at the page budget. Returns
   /// `false` when a page was not, the query threw, or the ingest session
   /// ended; a `false` result MUST NOT mark the drain complete, so a momentary
-  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). Unlike
-  /// the gift-wrap drain, this pass opts into `queryEventsDetailed`'s
-  /// `acceptRelayClosedWhenOthersAnswered`, which documents the refusals it
-  /// settles on.
+  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). Ambiguous
+  /// refusals are confirmed only when the same relay and page return the same
+  /// category on a later deferred drain retry.
   Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
+    final priorRefusals = _previousNip04Refusals;
+    final currentRefusals = <String>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       var sawUnansweredPage = false;
       for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
         if (_ingestSessionEnded(pubkey, generation)) return false;
-        final result = await _nostrClient.queryEventsDetailed(
+        final result = await _nostrClient.readEvents(
           [
             nostr_filter.Filter(
               authors: [pubkey],
@@ -1531,14 +1539,25 @@ class DmRepository {
           subscriptionId: dmNip04DrainSubscriptionId(pubkey, page),
           useCache: false,
           requireAllRelaysSettled: true,
-          // Supplementary to the gift-wrap drain, so a refusal a retry would
-          // not change need not hold this pass open once another relay
-          // answered.
-          acceptRelayClosedWhenOthersAnswered: true,
         );
         final events = result.events;
+        final ambiguousRefusals = <String>{
+          for (final entry in result.closedRelayReasons.entries)
+            if (entry.value == 'error' || entry.value == 'other')
+              '$page|${entry.key}|${entry.value}',
+        };
+        currentRefusals.addAll(ambiguousRefusals);
+        final refusalOnly =
+            result.endedBy == QueryEnd.relayClosed &&
+            result.answeredNetworkRelayCount > 0 &&
+            result.unansweredRelayCount == 0 &&
+            result.rateLimitedRelayCount == 0;
+        final confirmedRefusals =
+            result.closedRelayReasons.isNotEmpty &&
+            ambiguousRefusals.every(priorRefusals.contains);
+        final authoritative =
+            result.isComplete || (refusalOnly && confirmedRefusals);
         if (_ingestSessionEnded(pubkey, generation)) return false;
-        final authoritative = !result.noRelays && !result.timedOut;
         if (events.isEmpty) {
           // An empty page is genuine exhaustion only if a relay actually
           // ANSWERED it. Nothing answering — no relay took the REQ, every
@@ -1578,6 +1597,8 @@ class DmRepository {
         category: LogCategory.system,
       );
       return false;
+    } finally {
+      _previousNip04Refusals = currentRefusals;
     }
   }
 
@@ -2349,6 +2370,7 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
+    _previousNip04Refusals = {};
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass

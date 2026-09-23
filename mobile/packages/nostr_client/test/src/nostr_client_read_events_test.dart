@@ -612,14 +612,13 @@ void main() {
         expect((await pending).timedOut, isTrue);
       });
 
-      test('settles once the same relay repeats an error: refusal', () async {
+      test('leaves an error refusal for the caller deferred retry', () async {
         final pending = read();
         await answerAndRefuse(0, 'error: unsupported request');
-        await answerAndRefuse(1, 'error: unsupported request');
 
-        expect((await pending).timedOut, isFalse);
-        expect(answering.reqSubIds, hasLength(2));
-        expect(refusing.reqSubIds, hasLength(2));
+        expect((await pending).timedOut, isTrue);
+        expect(answering.reqSubIds, hasLength(1));
+        expect(refusing.reqSubIds, hasLength(1));
       });
 
       test(
@@ -632,10 +631,9 @@ void main() {
               'ERROR: auth-required: requested filter requires authentication';
           final pending = read();
           await answerAndRefuse(0, reason);
-          await answerAndRefuse(1, reason);
 
-          expect((await pending).timedOut, isFalse);
-          expect(refusing.reqSubIds, hasLength(2));
+          expect((await pending).timedOut, isTrue);
+          expect(refusing.reqSubIds, hasLength(1));
         },
       );
 
@@ -669,8 +667,7 @@ void main() {
       });
 
       test(
-        'keeps the read timed out when another relay newly refuses with '
-        'error: on the confirmation read',
+        'keeps a new ambiguous refusal incomplete without a confirmation read',
         () async {
           final third = _ScriptedRelay('wss://third.example');
           expect(await nostr.relayPool.add(third), isTrue);
@@ -684,17 +681,14 @@ void main() {
           );
 
           final pending = read();
-          for (final reqIndex in [0, 1]) {
-            final thirdSub = await third.awaitReq(reqIndex);
-            await answerAndRefuse(reqIndex, 'error: temporary failure');
-            await third.deliver(
-              reqIndex == 0
-                  ? ['EOSE', thirdSub]
-                  : ['CLOSED', thirdSub, 'error: temporary failure'],
-            );
-          }
+          final thirdSub = await third.awaitReq(0);
+          await answerAndRefuse(0, 'error: temporary failure');
+          await third.deliver(['EOSE', thirdSub]);
 
           expect((await pending).timedOut, isTrue);
+          expect(answering.reqSubIds, hasLength(1));
+          expect(refusing.reqSubIds, hasLength(1));
+          expect(third.reqSubIds, hasLength(1));
         },
       );
     });
@@ -721,22 +715,24 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: true,
           );
 
-      test('spends one deadline across the confirmation read', () async {
-        var now = start;
-        final nostr = _ScriptedReadsNostr(
-          [refusedWithError, refusedWithError],
-          onRead: () => now = now.add(const Duration(seconds: 2)),
-        );
+      test(
+        'does not spend its deadline on an immediate confirmation',
+        () async {
+          var now = start;
+          final nostr = _ScriptedReadsNostr(
+            [refusedWithError, refusedWithError],
+            onRead: () => now = now.add(const Duration(seconds: 2)),
+          );
 
-        final result = await withClock(
-          Clock(() => now),
-          () => readWith(nostr),
-        );
+          final result = await withClock(
+            Clock(() => now),
+            () => readWith(nostr),
+          );
 
-        expect(result.timedOut, isFalse);
-        expect(nostr.deadlines, hasLength(2));
-        expect(nostr.deadlines[1], equals(nostr.deadlines[0]));
-      });
+          expect(result.timedOut, isTrue);
+          expect(nostr.deadlines, hasLength(1));
+        },
+      );
 
       test(
         'keeps an unconfirmed error: refusal timed out once the first read '
@@ -780,7 +776,7 @@ void main() {
     });
 
     test(
-      'keeps a full page of distinct events across the confirmation read',
+      'keeps a full page of distinct events without an immediate retry',
       () async {
         final nostr = _newNostr();
         final answering = _ScriptedRelay('wss://answers.example');
@@ -802,24 +798,22 @@ void main() {
           requireAllRelaysSettled: true,
           acceptRelayClosedWhenOthersAnswered: true,
         );
-        // Both reads draw the same page from the answering relay: the
-        // confirmation re-asks every relay, not only the one that refused.
-        for (final reqIndex in [0, 1]) {
-          final answeringSub = await answering.awaitReq(reqIndex);
-          final refusingSub = await refusing.awaitReq(reqIndex);
-          for (final note in notes) {
-            await answering.deliver(['EVENT', answeringSub, note.toJson()]);
-          }
-          await answering.deliver(['EOSE', answeringSub]);
-          await refusing.deliver([
-            'CLOSED',
-            refusingSub,
-            'error: unsupported request',
-          ]);
+        final answeringSub = await answering.awaitReq(0);
+        final refusingSub = await refusing.awaitReq(0);
+        for (final note in notes) {
+          await answering.deliver(['EVENT', answeringSub, note.toJson()]);
         }
+        await answering.deliver(['EOSE', answeringSub]);
+        await refusing.deliver([
+          'CLOSED',
+          refusingSub,
+          'error: unsupported request',
+        ]);
         final result = await pending;
 
-        expect(result.timedOut, isFalse);
+        expect(result.timedOut, isTrue);
+        expect(answering.reqSubIds, hasLength(1));
+        expect(refusing.reqSubIds, hasLength(1));
         expect(
           result.events.map((event) => event.id),
           unorderedEquals(notes.map((note) => note.id)),
@@ -866,7 +860,7 @@ void main() {
       },
     );
 
-    test('keeps the events of both reads when they differ', () async {
+    test('returns events collected before an ambiguous refusal', () async {
       final nostr = _newNostr();
       final answering = _ScriptedRelay('wss://answers.example');
       final refusing = _ScriptedRelay('wss://refuses.example');
@@ -885,20 +879,22 @@ void main() {
         requireAllRelaysSettled: true,
         acceptRelayClosedWhenOthersAnswered: true,
       );
-      for (final (reqIndex, note) in notes.indexed) {
-        final answeringSub = await answering.awaitReq(reqIndex);
-        final refusingSub = await refusing.awaitReq(reqIndex);
+      final answeringSub = await answering.awaitReq(0);
+      final refusingSub = await refusing.awaitReq(0);
+      for (final note in notes) {
         await answering.deliver(['EVENT', answeringSub, note.toJson()]);
-        await answering.deliver(['EOSE', answeringSub]);
-        await refusing.deliver([
-          'CLOSED',
-          refusingSub,
-          'error: unsupported request',
-        ]);
       }
+      await answering.deliver(['EOSE', answeringSub]);
+      await refusing.deliver([
+        'CLOSED',
+        refusingSub,
+        'error: unsupported request',
+      ]);
       final result = await pending;
 
-      expect(result.timedOut, isFalse);
+      expect(result.timedOut, isTrue);
+      expect(answering.reqSubIds, hasLength(1));
+      expect(refusing.reqSubIds, hasLength(1));
       expect(
         result.events.map((event) => event.id),
         unorderedEquals(notes.map((note) => note.id)),
@@ -982,29 +978,19 @@ void main() {
         expect(await read.timedOut, isTrue);
       });
 
-      test(
-        'when a different relay returns error on the confirmation read',
-        () async {
-          final read = await optedInRead();
-          await first.deliver([
-            'CLOSED',
-            first.reqSubIds[0],
-            'error: temporary failure',
-          ]);
-          await second.deliver(['EOSE', second.reqSubIds[0]]);
+      test('does not issue an immediate confirmation REQ', () async {
+        final read = await optedInRead();
+        await first.deliver([
+          'CLOSED',
+          first.reqSubIds.single,
+          'error: temporary failure',
+        ]);
+        await second.deliver(['EOSE', second.reqSubIds.single]);
 
-          await first.awaitReq(1);
-          await second.awaitReq(1);
-          await first.deliver(['EOSE', first.reqSubIds[1]]);
-          await second.deliver([
-            'CLOSED',
-            second.reqSubIds[1],
-            'error: temporary failure',
-          ]);
-
-          expect(await read.timedOut, isTrue);
-        },
-      );
+        expect(await read.timedOut, isTrue);
+        expect(first.reqSubIds, hasLength(1));
+        expect(second.reqSubIds, hasLength(1));
+      });
 
       test('when another relay stayed silent', () async {
         final read = await optedInRead(

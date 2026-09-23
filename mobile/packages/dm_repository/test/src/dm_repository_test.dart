@@ -21,6 +21,7 @@ import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
@@ -717,6 +718,20 @@ void main() {
       when(() => mockNostrClient.connectedRelayCount).thenReturn(3);
       when(() => mockNostrClient.configuredRelayCount).thenReturn(3);
       when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(true);
+      when(
+        () => mockNostrClient.readEvents(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => const QueryResult(
+          events: [],
+          endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 3,
+        ),
+      );
 
       // Default conversation-list read for tests that trigger maintenance.
       when(
@@ -6852,8 +6867,8 @@ void main() {
       );
 
       test(
-        'demands full relay settlement on every drain page, so a refusal '
-        'cannot arrive as an ordinary empty answer (#8209)',
+        'demands full relay settlement for both gift-wrap and NIP-04 pages '
+        '(#8209)',
         () async {
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
           final capturedUntil = <int?>[];
@@ -6866,46 +6881,26 @@ void main() {
 
           await repository.backfillHistoryIfNeeded();
 
-          final captured = verify(
+          verify(
             () => mockNostrClient.queryEventsDetailed(
-              captureAny(),
+              any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
-              requireAllRelaysSettled: captureAny(
-                named: 'requireAllRelaysSettled',
-              ),
-              acceptRelayClosedWhenOthersAnswered: captureAny(
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
-          ).captured;
-
-          // Pair each call's filters with the flags it passed, then keep the
-          // drain's own reads. The memoized kind-10050 inbox resolve goes
-          // through this same method and deliberately does NOT demand
-          // settlement — a relay list is re-resolvable, a skipped page is not
-          // (#8212). Capturing the opt-in too keeps the outgoing NIP-04 pages
-          // in scope: a verify that omits a named argument matches only calls
-          // that passed its default.
-          final giftWrapPages = <(Object?, Object?)>[];
-          final nip04Pages = <(Object?, Object?)>[];
-          for (var i = 0; i + 2 < captured.length; i += 3) {
-            final filter = (captured[i]! as List<nostr_filter.Filter>).single;
-            final kinds = filter.kinds ?? const <int>[];
-            if (kinds.contains(EventKind.dmRelaysList)) continue;
-            final flags = (captured[i + 1], captured[i + 2]);
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
-              nip04Pages.add(flags);
-            } else {
-              giftWrapPages.add(flags);
-            }
-          }
-          expect(giftWrapPages, isNotEmpty);
-          expect(nip04Pages, isNotEmpty);
-          // Only the supplementary NIP-04 pass may settle on a refusal.
-          expect(giftWrapPages, everyElement(equals((true, false))));
-          expect(nip04Pages, everyElement(equals((true, true))));
+          ).called(greaterThan(0));
+          verify(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: true,
+            ),
+          ).called(1);
         },
       );
 
@@ -7150,15 +7145,11 @@ void main() {
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
           final capturedFilters = <nostr_filter.Filter>[];
           when(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
-              tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
             ),
           ).thenAnswer((inv) async {
             capturedFilters.addAll(
@@ -7166,7 +7157,11 @@ void main() {
             );
             // Gift-wrap drain exhausts immediately; the NIP-04 recovery query
             // also returns empty — we only assert that it was issued.
-            return answeredPage(const <Event>[]);
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 3,
+            );
           });
 
           final syncState = _FakeDmSyncState()
@@ -7348,6 +7343,25 @@ void main() {
           final authorsUntils = <int?>[];
           var nip04Pages = 0;
           when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            authorsUntils.add(filter.until);
+            nip04Pages++;
+            return QueryResult(
+              events: nip04Pages == 1 ? [outgoing] : const <Event>[],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 3,
+            );
+          });
+          when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
@@ -7482,6 +7496,26 @@ void main() {
         'relay (no silent skip) (#5304)',
         () async {
           final capturedUntil = <int?>[];
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+              return const QueryResult(events: [], endedBy: QueryEnd.noRelay);
+            }
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 3,
+            );
+          });
           // Gift-wrap drain reaches the end with relays connected, but the
           // relay drops before the NIP-04 recovery pass: its first page comes
           // back empty with 0 connected relays. Recovery must NOT be treated
@@ -7546,6 +7580,32 @@ void main() {
             'sig': '',
           });
           var nip04Pages = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            if (filter.authors == null || (filter.p?.isNotEmpty ?? false)) {
+              return const QueryResult(
+                events: [],
+                endedBy: QueryEnd.complete,
+                answeredNetworkRelayCount: 3,
+              );
+            }
+            nip04Pages++;
+            return QueryResult(
+              events: nip04Pages == 1 ? [partialNip04] : const <Event>[],
+              endedBy: QueryEnd.deadline,
+              answeredNetworkRelayCount: 1,
+              unansweredRelayCount: 1,
+            );
+          });
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -8981,12 +9041,64 @@ void main() {
         });
       });
 
+      test('confirms an ambiguous NIP-04 refusal on a deferred retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('failed NIP-04 recovery cannot replenish retries forever', () {
         fakeAsync((async) {
           stubRelayStatus(
             connectedNow: connected(['wss://silent.example']),
           );
           var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const QueryResult(events: [], endedBy: QueryEnd.noRelay),
+          );
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -9236,6 +9348,23 @@ void main() {
         () async {
           final relayStatus = stubRelayStatus();
           var nip04Pages = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Pages++;
+            return nip04Pages == 1
+                ? const QueryResult(events: [], endedBy: QueryEnd.noRelay)
+                : const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.complete,
+                    answeredNetworkRelayCount: 1,
+                  );
+          });
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
