@@ -8,12 +8,14 @@ import 'package:material_ui/material_ui.dart';
 /// The `DivineSticker` collection in Figma is the source of truth for the
 /// catalog, the names and the artwork. Each value maps to a photographic
 /// cutout exported from its Figma component into `assets/divine_stickers/`: a
-/// lossless WebP with transparency, at most 512 px on its long edge, in its
-/// original proportions.
+/// lossless WebP, at most 512 px on its long edge, in its original
+/// proportions. Every file has transparency except [polaroid], a rectangular
+/// print with no transparent pixel.
 ///
-/// The OpenMoji SVGs in `assets/stickers/` belong to the video editor's sticker
-/// picker and are a separate set. [grandfather] is the only variant still drawn
-/// from them.
+/// The OpenMoji SVGs in `assets/stickers/` are a separate set. The video
+/// editor's sticker picker draws from them, and some auth, account and upload
+/// screens still load them by path. [grandfather] is the only variant still
+/// drawn from them.
 ///
 /// Figma's `bobRoss` component is deliberately left out because it depicts a
 /// real person.
