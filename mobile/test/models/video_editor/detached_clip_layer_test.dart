@@ -722,6 +722,19 @@ void main() {
         ]);
       });
 
+      test('returns an already rotatable draft as it came', () {
+        // Runs on every build of the editor; a draft saved under this build
+        // has nothing to lift and must not be copied each time.
+        final history = historyWith(
+          detachedLayerMap(interaction: {'enableRotate': true}),
+        );
+
+        expect(
+          DetachedClipLayerData.withRotatableDetachedClips(history),
+          same(history),
+        );
+      });
+
       test("leaves the caller's history untouched", () {
         final original = historyWith(
           detachedLayerMap(interaction: {'enableRotate': false}),
