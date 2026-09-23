@@ -2562,11 +2562,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             stateHistory: StateHistoryConfigs(
               initStateHistory: editorStateHistory.isNotEmpty
                   ? .fromMap(
-                      // Lifts the rotation lock older drafts baked into their
-                      // detached clips — see [withRotatableDetachedClips].
-                      DetachedClipLayerData.withRotatableDetachedClips(
-                        editorStateHistory,
-                      ),
+                      editorStateHistory,
                       configs: const ImportEditorConfigs(
                         widgetLoader: videoEditorWidgetLayerLoader,
                       ),
