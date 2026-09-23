@@ -10,13 +10,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
-import 'package:openvine/config/app_config.dart';
+import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/crosspost_models.dart';
-import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
-import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/router/router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Shows the crosspost flow for the current user's own [video].
@@ -30,6 +27,7 @@ Future<void> showCrosspostSheet({
   required List<CrosspostingConnection> connections,
 }) {
   final client = ref.read(crossposterApiClientProvider);
+  final container = ProviderScope.containerOf(context, listen: false);
   return VineBottomSheet.show<void>(
     context: context,
     showHeaderDivider: false,
@@ -42,20 +40,7 @@ Future<void> showCrosspostSheet({
       child: CrosspostSheetView(
         onReconnect: () {
           Navigator.of(context).pop();
-          if (ref.read(crosspostingAvailabilityProvider) ==
-              CrosspostingAvailability.webOnly) {
-            unawaited(
-              ref.read(crosspostingWebOpenerProvider)(
-                Uri.parse(AppConfig.crossposterBaseUrl),
-              ),
-            );
-            return;
-          }
-          unawaited(
-            ref
-                .read(goRouterProvider)
-                .push<void>(RoutePaths.crosspostingSettings),
-          );
+          unawaited(openCrosspostingSetup(container));
         },
       ),
     ),
