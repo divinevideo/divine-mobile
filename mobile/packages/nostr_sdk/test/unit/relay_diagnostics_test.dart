@@ -278,7 +278,7 @@ void main() {
             'kinds': [1],
           },
         ],
-        timeout: const Duration(seconds: 2),
+        timeout: const Duration(milliseconds: 200),
         requireAllRelaysSettled: true,
       );
 
@@ -302,7 +302,10 @@ void main() {
             entry.message.startsWith('Relay authentication failed:'),
       );
       expect(authDiagnostic.message, contains('invalid: token=[REDACTED]'));
-      expect(authDiagnostic.message, isNot(contains('auth-secret')));
+      expect(
+        diagnostics.map((entry) => entry.message),
+        everyElement(isNot(contains('auth-secret'))),
+      );
     });
 
     test('categorizes a CLOSED reason by its NIP-01 prefix', () async {
