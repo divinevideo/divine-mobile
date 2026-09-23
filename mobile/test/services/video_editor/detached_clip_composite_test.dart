@@ -294,7 +294,12 @@ void main() {
         speedFlattened: false,
       );
 
-      expect(layer.clips.single.transform!.rotation, 0);
+      // An unturned layer's bounds are its box: the 90×90 layer lands
+      // centred in the body, scaled from 360 wide to 1080.
+      final transform = layer.clips.single.transform!;
+      expect(transform.rotation, 0);
+      expect(transform.size, const Size(270, 270));
+      expect(transform.offset, const Offset(405, 825));
     });
 
     test('forwards the layer rotation to the segment transform', () {
