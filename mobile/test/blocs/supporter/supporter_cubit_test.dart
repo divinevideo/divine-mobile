@@ -3,11 +3,13 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 
@@ -159,9 +161,83 @@ void main() {
             ),
       ],
     );
+
+    blocTest<SupporterCubit, SupporterState>(
+      'loadTiers stops loading when the store fails outside the typed '
+      'contract',
+      build: () {
+        final repo = _FakeRepository(controller);
+        repo.validator.fetchError = StateError('store channel closed');
+        return SupporterCubit(repository: repo);
+      },
+      act: (cubit) => cubit.loadTiers(),
+      skip: 1,
+      expect: () => [
+        isA<SupporterState>()
+            .having((s) => s.status, 'status', SupporterStatus.error)
+            .having((s) => s.failure, 'failure', SupporterFailure.unknown)
+            .having((s) => s.isBusy, 'isBusy', isFalse),
+      ],
+      errors: () => [
+        isA<Reportable<Object>>().having(
+          (error) => error.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      ],
+    );
   });
 
   group('subscribe', () {
+    blocTest<SupporterCubit, SupporterState>(
+      'ends checkout when the purchase fails outside the typed contract',
+      build: () => SupporterCubit(
+        repository: _FakeRepository(controller)
+          ..purchaseError = StateError('store channel closed'),
+      ),
+      act: (cubit) => cubit.subscribe('divine.supporter.monthly'),
+      skip: 1,
+      expect: () => [
+        isA<SupporterState>()
+            .having((s) => s.status, 'status', SupporterStatus.idle)
+            .having((s) => s.failure, 'failure', SupporterFailure.unknown)
+            .having((s) => s.isBusy, 'isBusy', isFalse)
+            .having(
+              (s) => s.awaitingPurchaseConfirmation,
+              'awaitingPurchaseConfirmation',
+              isFalse,
+            ),
+      ],
+      errors: () => [
+        isA<Reportable<Object>>().having(
+          (error) => error.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      ],
+    );
+
+    blocTest<SupporterCubit, SupporterState>(
+      'maps a plan the store already holds unfinished to a pending failure',
+      build: () {
+        final repo = _FakeRepository(controller);
+        repo.validator.purchaseError = const PurchasePendingException();
+        return SupporterCubit(repository: repo);
+      },
+      act: (cubit) => cubit.subscribe('divine.supporter.annual'),
+      skip: 1,
+      expect: () => [
+        isA<SupporterState>()
+            .having((s) => s.status, 'status', SupporterStatus.idle)
+            .having(
+              (s) => s.failure,
+              'failure',
+              SupporterFailure.purchasePending,
+            )
+            .having((s) => s.isBusy, 'isBusy', isFalse),
+      ],
+    );
+
     blocTest<SupporterCubit, SupporterState>(
       'maps unavailable verification to a non-busy error',
       build: () {
@@ -277,6 +353,32 @@ void main() {
               'failure',
               SupporterFailure.restoreFailed,
             ),
+      ],
+    );
+
+    blocTest<SupporterCubit, SupporterState>(
+      'ends restore when the store fails outside the typed contract',
+      build: () {
+        final repo = _FakeRepository(controller);
+        repo.validator.restoreError = PlatformException(
+          code: 'storekit2_restore_failed',
+        );
+        return SupporterCubit(repository: repo);
+      },
+      act: (cubit) => cubit.restore(),
+      skip: 1,
+      expect: () => [
+        isA<SupporterState>()
+            .having((s) => s.status, 'status', SupporterStatus.idle)
+            .having((s) => s.failure, 'failure', SupporterFailure.unknown)
+            .having((s) => s.isBusy, 'isBusy', isFalse),
+      ],
+      errors: () => [
+        isA<Reportable<Object>>().having(
+          (error) => error.unwrap(),
+          'unwrap',
+          isA<PlatformException>(),
+        ),
       ],
     );
   });
