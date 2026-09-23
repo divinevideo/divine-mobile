@@ -7570,6 +7570,16 @@
       }
     }
   },
+  "supporterMembershipBody": "Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.",
+  "supporterRecognitionDisclaimer": "Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.",
+  "supporterBadgeLabel": "Supporter",
+  "supporterJoinLabel": "Become a supporter",
+  "supporterPublicRecognition": "Show my Supporter badge publicly",
+  "supporterPublicRecognitionBody": "Let others see that you support Divine. This is optional and is not a verification badge.",
+  "supporterVerificationJoin": "Become a supporter to apply for verification",
+  "supporterVerificationEligible": "Your support makes you eligible to apply for verification",
+  "supporterVerificationBody": "Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.",
+  "supporterExploreVerification": "Explore verification",
   "supporterTitle": "Divine Supporters",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
@@ -7581,10 +7591,6 @@
   "supporterHeroTitle": "Keep Divine running",
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
-  },
-  "supporterHeroBody": "Divine is free and always will be. If you want to help us keep the loops going, become a monthly supporter. Nothing is locked — it just keeps the lights on and earns our thanks.",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
   },
   "supporterActiveBadge": "You're a Divine Supporter. Thank you for keeping this going.",
   "@supporterActiveBadge": {
@@ -7645,10 +7651,6 @@
   "supporterErrorUnknown": "Something went wrong. Please try again.",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "Divine confirms supporter status after the store verifies your purchase. Recognition is optional, and the halo is not verification.",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "Get notified about new vines",
   "@profileNotifyBellOff": {

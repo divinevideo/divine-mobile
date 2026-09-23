@@ -27,6 +27,11 @@ class _FakeRepository extends Fake implements SupporterRepository {
   @override
   bool get hasServerClient => refreshCompleter != null;
 
+  @override
+  SupporterAccountSnapshot? get snapshot => accountSnapshot;
+
+  SupporterAccountSnapshot? accountSnapshot;
+  Object? updateRecognitionError;
   Object? purchaseError;
   Completer<SupporterEntitlement>? purchaseCompleter;
   Completer<SupporterAccountSnapshot>? refreshCompleter;
@@ -41,6 +46,15 @@ class _FakeRepository extends Fake implements SupporterRepository {
 
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
+
+  @override
+  Future<SupporterAccountSnapshot> updateRecognition({
+    required bool haloVisible,
+    required bool discoveryVisible,
+    required bool foundingHistoryVisible,
+  }) async {
+    throw updateRecognitionError!;
+  }
 
   @override
   Future<SupporterEntitlement> purchase(String productId) async {
@@ -369,6 +383,38 @@ void main() {
             .having((s) => s.status, 'status', SupporterStatus.idle)
             .having((s) => s.failure, 'failure', SupporterFailure.unknown)
             .having((s) => s.isBusy, 'isBusy', isFalse),
+      ],
+      errors: () => [
+        isA<Reportable<Object>>().having(
+          (error) => error.unwrap(),
+          'unwrap',
+          isA<StateError>(),
+        ),
+      ],
+    );
+  });
+
+  group('setPublicRecognition', () {
+    blocTest<SupporterCubit, SupporterState>(
+      'stops saving when the save fails outside the typed contract',
+      build: () {
+        final repo = _FakeRepository(controller)
+          ..accountSnapshot = const SupporterAccountSnapshot(
+            entitlement: SupporterEntitlement(
+              productId: 'divine.supporter.monthly',
+              source: EntitlementSource.server,
+            ),
+            status: SupporterServerStatus.active,
+          )
+          ..updateRecognitionError = StateError('signer unavailable');
+        return SupporterCubit(repository: repo);
+      },
+      act: (cubit) => cubit.setPublicRecognition(true),
+      skip: 1,
+      expect: () => [
+        isA<SupporterState>()
+            .having((s) => s.savingRecognition, 'savingRecognition', isFalse)
+            .having((s) => s.failure, 'failure', SupporterFailure.unknown),
       ],
       errors: () => [
         isA<Reportable<Object>>().having(

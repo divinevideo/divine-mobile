@@ -211,6 +211,38 @@ class SupporterApiClient {
   final http.Client _httpClient;
   final Duration _timeout;
 
+  /// Looks up only active accounts that explicitly opted into public recognition.
+  /// This endpoint never signs or returns private membership information.
+  Future<bool> fetchPublicRecognition(String pubkey) async {
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(pubkey)) return false;
+    final uri = _baseUri
+        .resolve('v1/public/supporters')
+        .replace(
+          queryParameters: {'pubkeys': pubkey},
+        );
+    try {
+      final response = await _httpClient
+          .get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(_timeout);
+      if (response.statusCode != 200) return false;
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final supporters = body['supporters'] as List<dynamic>;
+      return supporters.any(
+        (dynamic item) =>
+            item is Map<String, dynamic> &&
+            item['pubkey'] == pubkey.toLowerCase() &&
+            item['haloVisible'] == true,
+      );
+    } on Object {
+      return false;
+    }
+  }
+
   /// Fetches canonical private state for the authenticated Divine account.
   Future<SupporterAccountSnapshot> fetchMe({
     required String expectedPubkey,

@@ -6148,10 +6148,6 @@
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
-  "supporterHeroBody": "Divine مفت ہے اور ہمیشہ رہے گا۔ اگر آپ لوپ چلتے رکھنے میں ہماری مدد کرنا چاہتے ہیں تو ماہانہ سپورٹر بنیں۔ کچھ بھی مقفل نہیں — یہ بس چراغ جلائے رکھتا ہے اور ہمارا شکریہ کما لیتا ہے۔",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
-  },
   "supporterActiveBadge": "آپ Divine سپورٹر ہیں۔ اسے چلتے رکھنے کے لیے شکریہ۔",
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
@@ -6208,10 +6204,6 @@
   "supporterErrorUnknown": "کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "اسٹور آپ کی خریداری کی تصدیق کرنے کے بعد Divine سپورٹر اسٹیٹس کی تصدیق کرتا ہے۔ پہچان اختیاری ہے، اور ہالہ تصدیق نہیں ہے۔",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "نئی ویڈیوز کی اطلاع دیں",
   "profileNotifyBellOn": "نئی ویڈیوز کی اطلاعات بند کریں",

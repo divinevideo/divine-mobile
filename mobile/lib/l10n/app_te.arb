@@ -7286,10 +7286,6 @@
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
-  "supporterHeroBody": "Divine ఉచితం మరియు ఎల్లప్పుడూ ఉంటుంది. మీరు లూప్‌లను కొనసాగించడంలో మాకు సహాయం చేయాలనుకుంటే, నెలవారీ మద్దతుదారుగా అవ్వండి. ఏదీ లాక్ చేయబడలేదు - ఇది కేవలం లైట్లను ఆన్ చేస్తుంది మరియు మా కృతజ్ఞతలు పొందుతుంది.",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
-  },
   "supporterActiveBadge": "మీరు Divine మద్దతుదారు. దీన్ని కొనసాగించినందుకు ధన్యవాదాలు.",
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
@@ -7346,10 +7342,6 @@
   "supporterErrorUnknown": "ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.\nస్టోర్ మీ కొనుగోలును ధృవీకరించిన తర్వాత ",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "Divine మద్దతుదారు స్థితిని నిర్ధారిస్తుంది. గుర్తింపు అనేది ఐచ్ఛికం మరియు హాలో అనేది ధృవీకరణ కాదు.",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "కొత్త తీగల గురించి తెలియజేయండి",
   "@profileNotifyBellOff": {

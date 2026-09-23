@@ -1,9 +1,10 @@
 // ABOUTME: Settings screen for the Divine supporter subscription.
-// ABOUTME: Signal-style: optional monthly support, nothing gated, recognition only.
+// ABOUTME: Acknowledges membership, manages recognition, and explains verification eligibility.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/screens/verify/verify_screen.dart';
 
 class SupporterScreen extends ConsumerWidget {
   static const routeName = 'supporter';
@@ -26,6 +28,7 @@ class SupporterScreen extends ConsumerWidget {
     final repository = ref.watch(supporterRepositoryProvider);
     final analytics = ref.watch(analyticsEventSinkProvider);
     return BlocProvider(
+      key: ValueKey((repository, analytics)),
       create: (_) => SupporterCubit(
         repository: repository,
         trackEvent: (event) =>
@@ -86,6 +89,39 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                     _TierList(state: state)
                   else if (!showPurchaseStatus)
                     _UnavailableNote(loading: state.isBusy),
+                  if (state.isSupporter) ...[
+                    const SizedBox(height: 16),
+                    SwitchListTile.adaptive(
+                      title: Text(context.l10n.supporterPublicRecognition),
+                      subtitle: Text(
+                        context.l10n.supporterPublicRecognitionBody,
+                      ),
+                      value: state.snapshot?.haloVisible ?? false,
+                      onChanged:
+                          state.snapshot == null || state.savingRecognition
+                          ? null
+                          : context.read<SupporterCubit>().setPublicRecognition,
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  Text(
+                    state.isSupporter
+                        ? context.l10n.supporterVerificationEligible
+                        : context.l10n.supporterVerificationJoin,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    context.l10n.supporterVerificationBody,
+                    textAlign: TextAlign.center,
+                  ),
+                  if (state.isSupporter)
+                    DivineButton(
+                      label: context.l10n.supporterExploreVerification,
+                      type: DivineButtonType.link,
+                      onPressed: () => context.push(VerifyPage.path),
+                    ),
                   const SizedBox(height: 16),
                   if (!state.isSupporter) _RestoreButton(state: state),
                   if (state.failure != null)
@@ -131,7 +167,7 @@ class _Hero extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          context.l10n.supporterHeroBody,
+          context.l10n.supporterMembershipBody,
           style: Theme.of(context).textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -330,7 +366,7 @@ class _Disclaimer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      context.l10n.supporterDisclaimer,
+      context.l10n.supporterRecognitionDisclaimer,
       style: Theme.of(context).textTheme.bodySmall,
       textAlign: TextAlign.center,
     );

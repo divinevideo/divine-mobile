@@ -10729,6 +10729,42 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Divine サポーター';
 
   @override
@@ -10736,10 +10772,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Divine を走らせ続けよう';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine は無料だよ。これからもずっと。ループを回し続ける手伝いがしたかったら、月額サポーターになってね。ロックされるものは何もないよ — ただ灯りを灯し続けるだけ。そして私たちの感謝付き。';
 
   @override
   String get supporterActiveBadge => 'あなたは Divine サポーターだよ。続けてくれてありがとう。';
@@ -10786,10 +10818,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => '問題が発生したよ。もう一回試してみて。';
-
-  @override
-  String get supporterDisclaimer =>
-      'ストアが購入を確認した後、Divine がサポーター状態を確定するよ。表示は任意だし、ハローは認証マークじゃないよ。';
 
   @override
   String get profileNotifyBellOff => '新しい動画を通知する';

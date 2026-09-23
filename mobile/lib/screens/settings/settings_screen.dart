@@ -48,7 +48,6 @@ import 'package:openvine/screens/settings/monetization_links_settings_screen.dar
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
 import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
-import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -56,6 +55,7 @@ import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/user_identifier_line_resolver.dart';
+import 'package:openvine/widgets/supporter_membership.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -425,13 +425,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onTap: () =>
                         context.push(MonetizationLinksSettingsScreen.path),
                   ),
-                if (supporterVerificationAvailable)
-                  DivineListTile(
-                    title: context.l10n.supporterTitle,
-                    icon: DivineIconName.heart,
-                    subtitle: context.l10n.supporterTileSubtitle,
-                    onTap: () => context.push(SupporterScreen.path),
-                  ),
+                if (supporterVerificationAvailable) const SupporterMembership(),
                 DivineListTile(
                   title: context.l10n.settingsSupportCenter,
                   leading: const Icon(Icons.support_agent),

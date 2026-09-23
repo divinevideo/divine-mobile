@@ -28,6 +28,7 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -216,6 +217,7 @@ void main() {
   Widget wrap(Widget child) {
     return ProviderScope(
       overrides: [
+        supporterApiConfiguredProvider.overrideWithValue(false),
         sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         authServiceProvider.overrideWithValue(authService),
         deviceScopeProvider.overrideWithValue(deviceScope),

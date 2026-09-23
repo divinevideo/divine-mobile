@@ -6148,10 +6148,6 @@
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
-  "supporterHeroBody": "Divine adalah percuma dan akan sentiasa percuma. Jika anda mahu membantu kami memastikan loop terus berjalan, jadilah penyokong bulanan. Tiada apa yang dikunci — ia hanya memastikan lampu terus menyala dan mendapatkan penghargaan kami.",
-  "@supporterHeroBody": {
-    "description": "Introductory copy on the supporter subscription screen explaining the optional monthly support."
-  },
   "supporterActiveBadge": "Anda ialah Penyokong Divine. Terima kasih kerana memastikan ini terus berjalan.",
   "@supporterActiveBadge": {
     "description": "Confirmation shown to users with an active supporter subscription."
@@ -6208,10 +6204,6 @@
   "supporterErrorUnknown": "Sesuatu telah berlaku. Sila cuba lagi.",
   "@supporterErrorUnknown": {
     "description": "Generic supporter flow error shown when no more specific message applies."
-  },
-  "supporterDisclaimer": "Divine mengesahkan status penyokong selepas kedai mengesahkan pembelian anda. Pengiktirafan adalah pilihan, dan halo itu bukan pengesahan.",
-  "@supporterDisclaimer": {
-    "description": "Footnote on the supporter screen explaining server-side confirmation and that recognition is optional."
   },
   "profileNotifyBellOff": "Beritahu saya tentang vine baharu",
   "profileNotifyBellOn": "Berhenti beritahu saya tentang vine baharu",

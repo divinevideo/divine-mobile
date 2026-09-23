@@ -11391,6 +11391,42 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Mga Divine Supporter';
 
   @override
@@ -11399,10 +11435,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Panatilihing tumatakbo ang Divine';
-
-  @override
-  String get supporterHeroBody =>
-      'Libre ang Divine at laging magiging libre. Kung gusto mo kaming tulungang panatilihing umaandar ang mga loop, maging monthly supporter ka. Walang naka-lock — pinapanatili lang nitong bukas ang ilaw at taos-puso kaming nagpapasalamat.';
 
   @override
   String get supporterActiveBadge =>
@@ -11458,10 +11490,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'May nangyaring problema. Pakisubukan ulit.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Kinukumpirma ng Divine ang supporter status pagkatapos i-verify ng store ang purchase mo. Optional ang recognition, at hindi verification ang halo.';
 
   @override
   String get profileNotifyBellOff => 'Ipaalam ang mga bagong vine';

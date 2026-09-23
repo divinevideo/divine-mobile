@@ -10747,6 +10747,42 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Divine 서포터';
 
   @override
@@ -10754,10 +10790,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Divine이 계속 돌아가게 해주세요';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine은 무료이고 앞으로도 그럴 거예요. 루프가 계속 돌아가는 걸 돕고 싶다면 월간 서포터가 되어주세요. 잠기는 건 아무것도 없어요 — 그냥 불을 켜두는 데 보탬이 되고, 저희의 감사를 받아요.';
 
   @override
   String get supporterActiveBadge => 'Divine 서포터예요. 계속 이어가 주셔서 고마워요.';
@@ -10804,10 +10836,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => '문제가 생겼어요. 다시 시도해주세요.';
-
-  @override
-  String get supporterDisclaimer =>
-      '스토어에서 구매를 확인한 후 Divine이 서포터 상태를 확정해요. 표시는 선택 사항이고, 후광은 인증 표시가 아니에요.';
 
   @override
   String get profileNotifyBellOff => '새 영상 알림 받기';

@@ -14,6 +14,7 @@ import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -53,6 +54,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            supporterApiConfiguredProvider.overrideWithValue(false),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
@@ -88,6 +90,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            supporterApiConfiguredProvider.overrideWithValue(false),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
@@ -121,6 +124,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            supporterApiConfiguredProvider.overrideWithValue(false),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
@@ -167,6 +171,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            supporterApiConfiguredProvider.overrideWithValue(false),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             notificationRepositoryProvider.overrideWithValue(null),
@@ -199,6 +204,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            supporterApiConfiguredProvider.overrideWithValue(false),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             notificationRepositoryProvider.overrideWithValue(null),

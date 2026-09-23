@@ -11609,6 +11609,42 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle =>
       'Divine మద్దతుదారులు\nఐచ్ఛిక నెలవారీ సభ్యత్వంతో ';
 
@@ -11617,10 +11653,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Divine రన్ చేస్తూ ఉండండి';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine ఉచితం మరియు ఎల్లప్పుడూ ఉంటుంది. మీరు లూప్‌లను కొనసాగించడంలో మాకు సహాయం చేయాలనుకుంటే, నెలవారీ మద్దతుదారుగా అవ్వండి. ఏదీ లాక్ చేయబడలేదు - ఇది కేవలం లైట్లను ఆన్ చేస్తుంది మరియు మా కృతజ్ఞతలు పొందుతుంది.';
 
   @override
   String get supporterActiveBadge =>
@@ -11675,10 +11707,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.\nస్టోర్ మీ కొనుగోలును ధృవీకరించిన తర్వాత ';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine మద్దతుదారు స్థితిని నిర్ధారిస్తుంది. గుర్తింపు అనేది ఐచ్ఛికం మరియు హాలో అనేది ధృవీకరణ కాదు.';
 
   @override
   String get profileNotifyBellOff => 'కొత్త తీగల గురించి తెలియజేయండి';

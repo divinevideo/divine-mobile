@@ -11413,6 +11413,42 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Supporters de Divine';
 
   @override
@@ -11421,10 +11457,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Mantené Divine en marcha';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine es gratis y siempre lo será. Si querés ayudarnos a que los loops sigan girando, hacete supporter mensual. Nada se bloquea — solo mantiene las luces prendidas y te ganás nuestro agradecimiento.';
 
   @override
   String get supporterActiveBadge =>
@@ -11479,10 +11511,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Algo salió mal. Intentá de nuevo.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine confirma el estado de supporter después de que la tienda verifica tu compra. El reconocimiento es opcional, y el halo no es una verificación.';
 
   @override
   String get profileNotifyBellOff => 'Avisarme de nuevos vines';

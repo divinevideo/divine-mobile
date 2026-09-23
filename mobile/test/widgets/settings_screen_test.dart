@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
@@ -18,12 +19,14 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
+import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
 import 'package:openvine/screens/apps/apps_permissions_screen.dart';
@@ -35,6 +38,7 @@ import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/environment_service.dart';
+import 'package:openvine/services/supporter_repository.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,6 +78,7 @@ void main() {
     late _MockDraftStorageService mockDraftStorageService;
     late _MockLocaleCubit mockLocaleCubit;
     late SharedPreferences sharedPreferences;
+    late SupporterRepository supporterRepository;
     final l10n = lookupAppLocalizations(const Locale('en'));
     const currentPubkey =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -97,6 +102,12 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       sharedPreferences = await SharedPreferences.getInstance();
+      supporterRepository = SupporterRepository(
+        pubkey: currentPubkey,
+        validator: StubEntitlementValidator(),
+        prefs: sharedPreferences,
+      );
+      addTearDown(supporterRepository.dispose);
       mockAuthService = _MockAuthService();
       mockDraftStorageService = _MockDraftStorageService();
       mockLocaleCubit = _MockLocaleCubit();
@@ -118,6 +129,16 @@ void main() {
       ).thenAnswer((_) async => 0);
     });
 
+    void stubReadOnlySupporterEntry() {
+      // This subject renders a read-only supporter entry; dedicated supporter
+      // widget tests supply real canonical responses and signing capabilities.
+      when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(false);
+      when(() => mockAuthService.authRpcCapability)
+          .thenReturn(AuthRpcCapability.unavailable);
+      when(() => mockAuthService.authRpcCapabilityStream)
+          .thenAnswer((_) => const Stream.empty());
+    }
+
     Widget buildSubject({
       AuthState authState = AuthState.authenticated,
       MockGoRouter? goRouter,
@@ -126,6 +147,7 @@ void main() {
       bool developerMode = false,
       AccountEnforcementKind? enforcement,
     }) {
+      stubReadOnlySupporterEntry();
       when(
         () => mockAuthService.getKnownAccounts(),
       ).thenAnswer((_) async => knownAccounts);
@@ -146,6 +168,7 @@ void main() {
       final app = ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          supporterRepositoryProvider.overrideWithValue(supporterRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
@@ -229,10 +252,12 @@ void main() {
     testWidgets('account header keeps the npub over the own follower count', (
       tester,
     ) async {
+      stubReadOnlySupporterEntry();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+            supporterRepositoryProvider.overrideWithValue(supporterRepository),
             authServiceProvider.overrideWithValue(mockAuthService),
             draftStorageServiceProvider.overrideWithValue(
               mockDraftStorageService,
@@ -345,10 +370,14 @@ void main() {
           initialState: const BackgroundPublishState(),
         );
 
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              supporterRepositoryProvider.overrideWithValue(
+                supporterRepository,
+              ),
               authServiceProvider.overrideWithValue(mockAuthService),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
@@ -494,6 +523,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+          supporterRepositoryProvider.overrideWithValue(supporterRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
           draftStorageServiceProvider.overrideWithValue(
             mockDraftStorageService,
@@ -506,6 +536,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      stubReadOnlySupporterEntry();
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -600,10 +631,14 @@ void main() {
         when(() => mockAuthService.isAnonymous).thenReturn(true);
         when(() => mockAuthService.hasExpiredOAuthSession).thenReturn(true);
 
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              supporterRepositoryProvider.overrideWithValue(
+                supporterRepository,
+              ),
               authServiceProvider.overrideWithValue(mockAuthService),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
@@ -678,10 +713,14 @@ void main() {
     testWidgets(
       'keeps Bluesky Publishing off the hub when feature flag is on',
       (tester) async {
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              supporterRepositoryProvider.overrideWithValue(
+                supporterRepository,
+              ),
               authServiceProvider.overrideWithValue(mockAuthService),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,
@@ -947,10 +986,14 @@ void main() {
           sharedPreferences: sharedPreferences,
         );
 
+        stubReadOnlySupporterEntry();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              supporterRepositoryProvider.overrideWithValue(
+                supporterRepository,
+              ),
               authServiceProvider.overrideWithValue(mockAuthService),
               draftStorageServiceProvider.overrideWithValue(
                 mockDraftStorageService,

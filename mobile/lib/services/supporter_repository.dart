@@ -61,12 +61,35 @@ class SupporterRepository {
   static const _proofOwnerPrefix = 'divine_supporter_proof_owner:';
   final String _cacheKey;
 
+  SupporterAccountSnapshot? _snapshot;
+  int _snapshotRevision = 0;
+  Future<SupporterAccountSnapshot>? _refreshInFlight;
+  DateTime? _lastRefreshAttempt;
+
+  /// Latest canonical preferences, scoped to this account.
+  SupporterAccountSnapshot? get snapshot => _snapshot;
+
+  /// Refresh status without asking the store to restore purchases. Coalesces
+  /// profile/settings/foreground entry and limits signing to once per 5 minutes.
+  Future<void> refreshIfStale() async {
+    if (!hasServerClient ||
+        (_lastRefreshAttempt != null &&
+            DateTime.now().difference(_lastRefreshAttempt!) <
+                const Duration(minutes: 5))) {
+      return;
+    }
+    _lastRefreshAttempt = DateTime.now();
+    try {
+      await refreshFromServer();
+    } on Object {
+      // A transient read failure must not erase the last known entitlement.
+    }
+  }
+
   late SupporterEntitlement _current;
   StreamSubscription<SupporterEntitlement>? _subscription;
   StreamSubscription<SupporterPurchaseProof>? _proofSubscription;
   Future<void>? _recoveryInFlight;
-  Future<SupporterAccountSnapshot>? _refreshInFlight;
-  SupporterAccountSnapshot? _latestServerSnapshot;
   bool _recoveryCompleted = false;
   int _claimFailureRevision = 0;
   final StreamController<SupporterEntitlement> _controller =
@@ -85,10 +108,11 @@ class SupporterRepository {
   /// trip, and a remote-signer network call for NIP-46 identities — plus a
   /// store restore. For an account that has never bought anything there is
   /// nothing for that work to find, so recovery waits until either a cached
-  /// entitlement or an interrupted claim says otherwise. Both are written by
-  /// the purchase path, so this turns itself on the moment a purchase happens.
+  /// purchased product or an interrupted claim says otherwise. A cached
+  /// non-member status lookup is not evidence of a purchase. Purchase markers
+  /// enable recovery as soon as the purchase starts.
   bool get hasRecoverableEvidence =>
-      _prefs.getString(_cacheKey) != null ||
+      _current.productId.isNotEmpty ||
       _prefs.getKeys().any(
         (key) =>
             key.startsWith(_pendingOwnerPrefix) &&
@@ -118,8 +142,8 @@ class SupporterRepository {
         'Supporter verification is not configured.',
       );
     }
-    final snapshot = await refreshFromServer();
-    if (snapshot.entitlement.isSupporter) return snapshot.entitlement;
+    await refreshFromServer();
+    if (current.isSupporter) return current;
 
     final pendingKey = '$_pendingOwnerPrefix$productId';
     final pendingOwner = _prefs.getString(pendingKey);
@@ -229,19 +253,20 @@ class SupporterRepository {
 
   /// Refreshes the account from canonical Worker state when configured.
   Future<SupporterAccountSnapshot> refreshFromServer() {
+    _lastRefreshAttempt = DateTime.now();
     // Screen initialization and checkout both need the same account state.
     // Share the request, including its signer round trip, while it is pending.
     final inFlight = _refreshInFlight;
     if (inFlight != null) return inFlight;
     late final Future<SupporterAccountSnapshot> refresh;
-    refresh = _fetchFromServer().whenComplete(() {
+    refresh = _fetchSnapshot().whenComplete(() {
       if (identical(_refreshInFlight, refresh)) _refreshInFlight = null;
     });
     _refreshInFlight = refresh;
     return refresh;
   }
 
-  Future<SupporterAccountSnapshot> _fetchFromServer() async {
+  Future<SupporterAccountSnapshot> _fetchSnapshot() async {
     final client = _apiClient;
     if (client == null) {
       throw const SupporterApiException(
@@ -249,13 +274,12 @@ class SupporterRepository {
         'Supporter verification is not configured.',
       );
     }
-    final beforeRefresh = _latestServerSnapshot;
+    final revision = _snapshotRevision;
     final snapshot = await client.fetchMe(expectedPubkey: _pubkey);
-    final latest = _latestServerSnapshot;
-    // A purchase may be verified while this earlier read is in flight. Do not
-    // publish the older response over that result, including to the cache.
-    if (latest != null && !identical(latest, beforeRefresh)) return latest;
-    _applyServerSnapshot(snapshot);
+    // A purchase or recognition update may finish while this read is in flight.
+    // Keep that newer canonical result both in the repository and for callers.
+    if (revision != _snapshotRevision && _snapshot != null) return _snapshot!;
+    _handleSnapshot(snapshot);
     return snapshot;
   }
 
@@ -271,7 +295,7 @@ class SupporterRepository {
       );
     }
     final snapshot = await client.claimPurchase(claim, expectedPubkey: _pubkey);
-    _applyServerSnapshot(snapshot);
+    _handleSnapshot(snapshot);
     return snapshot;
   }
 
@@ -294,7 +318,7 @@ class SupporterRepository {
       discoveryVisible: discoveryVisible,
       foundingHistoryVisible: foundingHistoryVisible,
     );
-    _applyServerSnapshot(snapshot);
+    _handleSnapshot(snapshot);
     return snapshot;
   }
 
@@ -302,9 +326,16 @@ class SupporterRepository {
     final raw = _prefs.getString(_cacheKey);
     if (raw == null) return SupporterEntitlement.inactive;
     try {
-      final decoded = SupporterEntitlement.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final decoded = SupporterEntitlement.fromJson(json);
+      final recognition = json['recognition'];
+      if (recognition is Map<String, dynamic>) {
+        _snapshot = SupporterAccountSnapshot.fromJson({
+          'entitlement': json,
+          'recognition': recognition,
+          'status': json['status'],
+        });
+      }
       // Recompute active against the current clock in case expiry passed while
       // the app was closed.
       return decoded.refreshed();
@@ -315,10 +346,40 @@ class SupporterRepository {
 
   Future<void> _persist(SupporterEntitlement entitlement) async {
     try {
-      await _prefs.setString(_cacheKey, jsonEncode(entitlement.toJson()));
+      await _prefs.setString(
+        _cacheKey,
+        jsonEncode({
+          ...entitlement.toJson(),
+          if (_snapshot case final snapshot?) ...{
+            'status': snapshot.status.name,
+            'recognition': {
+              'haloVisible': snapshot.haloVisible,
+              'discoveryVisible': snapshot.discoveryVisible,
+              'foundingHistoryVisible': snapshot.foundingHistoryVisible,
+            },
+          },
+        }),
+      );
     } on Object {
       // Swallow: persistence is best-effort; the in-memory value is still
       // authoritative for this session.
+    }
+  }
+
+  void _handleSnapshot(SupporterAccountSnapshot snapshot) {
+    if (_controller.isClosed) return;
+    _snapshotRevision++;
+    _snapshot = snapshot;
+    // Unknown verification never revokes previously verified benefits.
+    final entitlement =
+        snapshot.status == SupporterServerStatus.unknown && _current.isSupporter
+        ? _current
+        : snapshot.entitlement;
+    if (entitlement == _current) {
+      _controller.add(entitlement); // Recognition may have changed on its own.
+      unawaited(_persist(entitlement));
+    } else {
+      _handleChange(entitlement);
     }
   }
 
@@ -332,11 +393,6 @@ class SupporterRepository {
       logName: 'SupporterRepository',
       category: LogCategory.system,
     );
-  }
-
-  void _applyServerSnapshot(SupporterAccountSnapshot snapshot) {
-    _latestServerSnapshot = snapshot;
-    _handleChange(snapshot.entitlement);
   }
 
   void _handleValidatorError(Object error, StackTrace stackTrace) {
@@ -415,7 +471,7 @@ class SupporterRepository {
         existingOwnerOnly: existingOwnerOnly,
       );
       await _rememberOwner(proofOwnerKey);
-      _applyServerSnapshot(snapshot);
+      _handleSnapshot(snapshot);
       await _validator.completePurchase(proof);
       if (_prefs.getString(pendingKey) == _pubkey) {
         await _prefs.remove(pendingKey);

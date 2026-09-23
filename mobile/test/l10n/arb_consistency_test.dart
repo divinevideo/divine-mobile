@@ -499,6 +499,19 @@ const _knownUntranslatedDebt = <String>{
   'profilePinUnavailableRemoved',
   'profilePinUnavailableConnectionFailed',
   'profilePinUnavailableRemoveFailed',
+
+  // Supporter acknowledgement and optional public recognition.
+  'supporterMembershipBody',
+  'supporterRecognitionDisclaimer',
+  'supporterBadgeLabel',
+  'supporterJoinLabel',
+  'supporterPublicRecognition',
+  'supporterPublicRecognitionBody',
+  'supporterVerificationJoin',
+  'supporterVerificationEligible',
+  'supporterVerificationBody',
+  'supporterExploreVerification',
+
   // Explicit campaign-consent copy (#6745 / divine-push-service#40). Keep the
   // opt-in wording in English until a human translation pass can preserve the
   // distinction between product updates and social notifications.

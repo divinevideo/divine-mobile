@@ -11276,6 +11276,42 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Divine سپورٹرز';
 
   @override
@@ -11284,10 +11320,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Divine کو چلتے رکھیں';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine مفت ہے اور ہمیشہ رہے گا۔ اگر آپ لوپ چلتے رکھنے میں ہماری مدد کرنا چاہتے ہیں تو ماہانہ سپورٹر بنیں۔ کچھ بھی مقفل نہیں — یہ بس چراغ جلائے رکھتا ہے اور ہمارا شکریہ کما لیتا ہے۔';
 
   @override
   String get supporterActiveBadge =>
@@ -11342,10 +11374,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get supporterErrorUnknown =>
       'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔';
-
-  @override
-  String get supporterDisclaimer =>
-      'اسٹور آپ کی خریداری کی تصدیق کرنے کے بعد Divine سپورٹر اسٹیٹس کی تصدیق کرتا ہے۔ پہچان اختیاری ہے، اور ہالہ تصدیق نہیں ہے۔';
 
   @override
   String get profileNotifyBellOff => 'نئی ویڈیوز کی اطلاع دیں';

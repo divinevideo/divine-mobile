@@ -11243,6 +11243,42 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Người ủng hộ Divine';
 
   @override
@@ -11251,10 +11287,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Giữ Divine hoạt động';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine miễn phí và sẽ luôn như vậy. Nếu bạn muốn giúp bọn mình giữ những vòng loop chạy tiếp, hãy trở thành người ủng hộ hàng tháng. Không có gì bị khóa — chỉ là giúp duy trì hoạt động và nhận lời cảm ơn của bọn mình.';
 
   @override
   String get supporterActiveBadge =>
@@ -11309,10 +11341,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Có gì đó không ổn. Vui lòng thử lại.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine xác nhận trạng thái người ủng hộ sau khi cửa hàng xác minh giao dịch mua của bạn. Việc ghi nhận là tùy chọn, và vòng hào quang không phải là xác minh danh tính.';
 
   @override
   String get profileNotifyBellOff => 'Nhận thông báo về vine mới';

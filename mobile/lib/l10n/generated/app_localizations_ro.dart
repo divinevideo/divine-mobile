@@ -11535,6 +11535,42 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'Susținătorii Divine';
 
   @override
@@ -11543,10 +11579,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Ține Divine pe picioare';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine e gratuit și așa va rămâne. Dacă vrei să ne ajuți să menținem buclele în mișcare, devino susținător lunar. Nimic nu e blocat — pur și simplu ține luminile aprinse și îți câștigă mulțumirile noastre.';
 
   @override
   String get supporterActiveBadge =>
@@ -11600,10 +11632,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'Ceva nu a mers bine. Încearcă din nou.';
-
-  @override
-  String get supporterDisclaimer =>
-      'Divine confirmă statutul de susținător după ce magazinul îți verifică cumpărătura. Recunoașterea e opțională, iar haloul nu e o verificare.';
 
   @override
   String get profileNotifyBellOff => 'Anunță-mă despre videoclipuri noi';

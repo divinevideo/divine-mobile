@@ -12,6 +12,7 @@ import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:package_info_plus_platform_interface/package_info_data.dart';
@@ -61,6 +62,8 @@ void main() {
     ) async {
       Widget app(Widget home) => ProviderScope(
         overrides: [
+          // Membership has separate account/lifecycle coverage.
+          supporterApiConfiguredProvider.overrideWithValue(false),
           sharedPreferencesProvider.overrideWithValue(preferences),
           authServiceProvider.overrideWithValue(authService),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),

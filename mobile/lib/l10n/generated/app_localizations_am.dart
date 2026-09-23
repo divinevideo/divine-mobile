@@ -11001,6 +11001,42 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get supporterMembershipBody =>
+      'Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.';
+
+  @override
+  String get supporterRecognitionDisclaimer =>
+      'Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.';
+
+  @override
+  String get supporterBadgeLabel => 'Supporter';
+
+  @override
+  String get supporterJoinLabel => 'Become a supporter';
+
+  @override
+  String get supporterPublicRecognition => 'Show my Supporter badge publicly';
+
+  @override
+  String get supporterPublicRecognitionBody =>
+      'Let others see that you support Divine. This is optional and is not a verification badge.';
+
+  @override
+  String get supporterVerificationJoin =>
+      'Become a supporter to apply for verification';
+
+  @override
+  String get supporterVerificationEligible =>
+      'Your support makes you eligible to apply for verification';
+
+  @override
+  String get supporterVerificationBody =>
+      'Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.';
+
+  @override
+  String get supporterExploreVerification => 'Explore verification';
+
+  @override
   String get supporterTitle => 'የDivine ደጋፊዎች';
 
   @override
@@ -11008,10 +11044,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get supporterHeroTitle => 'Divineን እንዲቀጥል ያድርጉ';
-
-  @override
-  String get supporterHeroBody =>
-      'Divine ነፃ ነው እና ሁልጊዜም ይሆናል። ሉፖቹ እንዲቀጥሉ ለመርዳት ከፈለጉ፣ ወርሃዊ ደጋፊ ይሁኑ። ምንም አይታገድም — መብራቱን የሚያቆይ እና ምስጋናችንን የሚያገኝ ብቻ ነው።';
 
   @override
   String get supporterActiveBadge => 'የDivine ደጋፊ ነዎት። ይህንን ስላስቀጠሉ እናመሰግናለን።';
@@ -11059,10 +11091,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get supporterErrorUnknown => 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።';
-
-  @override
-  String get supporterDisclaimer =>
-      'መደብሩ ግዢዎን ካረጋገጠ በኋላ Divine የደጋፊ ሁኔታን ያረጋግጣል። እውቅናው አማራጭ ነው፣ እና ሄሎው ማረጋገጫ አይደለም።';
 
   @override
   String get profileNotifyBellOff => 'ስለ አዲስ ቫይኖች አሳውቀኝ';
