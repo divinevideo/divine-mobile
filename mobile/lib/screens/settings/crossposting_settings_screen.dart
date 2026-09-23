@@ -34,7 +34,8 @@ class CrosspostingSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(crosspostingEligibleProvider)) {
+    if (ref.watch(crosspostingAvailabilityProvider) ==
+        CrosspostingAvailability.unavailable) {
       return _CrosspostingScaffold(
         child: Center(
           child: Text(

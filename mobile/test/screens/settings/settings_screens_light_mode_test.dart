@@ -156,7 +156,9 @@ void main() {
             feedAspectRatioPreferenceServiceProvider.overrideWithValue(
               FeedAspectRatioPreferenceService(preferences),
             ),
-            crosspostingEligibleProvider.overrideWithValue(true),
+            crosspostingAvailabilityProvider.overrideWithValue(
+              CrosspostingAvailability.native,
+            ),
           ],
           child: MaterialApp(
             theme: VineTheme.lightTheme,
@@ -199,7 +201,9 @@ void main() {
           overrides: [
             authServiceProvider.overrideWithValue(authService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-            crosspostingEligibleProvider.overrideWithValue(true),
+            crosspostingAvailabilityProvider.overrideWithValue(
+              CrosspostingAvailability.native,
+            ),
             crosspostingRepositoryProvider.overrideWithValue(
               crosspostingRepository,
             ),
@@ -279,7 +283,9 @@ void main() {
           overrides: [
             authServiceProvider.overrideWithValue(authService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-            crosspostingEligibleProvider.overrideWithValue(false),
+            crosspostingAvailabilityProvider.overrideWithValue(
+              CrosspostingAvailability.unavailable,
+            ),
           ],
           child: MaterialApp(
             theme: VineTheme.lightTheme,

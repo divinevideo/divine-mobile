@@ -130,7 +130,9 @@ void main() {
           wrap(
             const GeneralSettingsScreen(),
             overrides: [
-              crosspostingEligibleProvider.overrideWithValue(true),
+              crosspostingAvailabilityProvider.overrideWithValue(
+                CrosspostingAvailability.native,
+              ),
             ],
           ),
         );
