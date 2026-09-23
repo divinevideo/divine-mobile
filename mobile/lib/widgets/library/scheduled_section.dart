@@ -179,6 +179,26 @@ class ScheduledSectionSliver extends StatelessWidget {
   }
 }
 
+/// Asks before a scheduled post is withdrawn.
+///
+/// Shared by the local row and the one the relay holds from another device,
+/// so both destructive paths ask the same question.
+@visibleForTesting
+Future<bool> confirmScheduledCancel(BuildContext context) async {
+  final l10n = context.l10n;
+  final confirmed = await VineBottomSheetPrompt.show<bool>(
+    context: context,
+    sticker: DivineStickerName.alert,
+    title: l10n.libraryScheduledCancelTitle,
+    subtitle: l10n.libraryScheduledCancelMessage,
+    primaryButtonText: l10n.libraryScheduledCancelConfirm,
+    secondaryButtonText: l10n.libraryScheduledCancelKeep,
+    onPrimaryPressed: () => Navigator.of(context).pop(true),
+    onSecondaryPressed: () => Navigator.of(context).pop(false),
+  );
+  return confirmed ?? false;
+}
+
 enum _SectionHeaderKind { scheduled, drafts }
 
 /// The small label that names a run of rows, with a rule under the last
@@ -381,18 +401,7 @@ class _ScheduledPostTile extends StatelessWidget {
     BuildContext context,
     ScheduledPostsBloc bloc,
   ) async {
-    final l10n = context.l10n;
-    final confirmed = await VineBottomSheetPrompt.show<bool>(
-      context: context,
-      sticker: DivineStickerName.alert,
-      title: l10n.libraryScheduledCancelTitle,
-      subtitle: l10n.libraryScheduledCancelMessage,
-      primaryButtonText: l10n.libraryScheduledCancelConfirm,
-      secondaryButtonText: l10n.libraryScheduledCancelKeep,
-      onPrimaryPressed: () => Navigator.of(context).pop(true),
-      onSecondaryPressed: () => Navigator.of(context).pop(false),
-    );
-    if (confirmed != true) return;
+    if (!await confirmScheduledCancel(context)) return;
     bloc.add(ScheduledPostsCancelRequested(item.eventId));
   }
 }
@@ -448,8 +457,13 @@ class _RemotePostTile extends StatelessWidget {
           iconPath: DivineIconName.x.assetPath,
           label: l10n.libraryScheduledActionCancel,
           isDestructive: true,
-          onTap: () =>
-              bloc.add(ScheduledPostsCancelRemoteRequested(entry.eventId)),
+          onTap: () async {
+            // Withdrawing is as final here as it is for a local row, and the
+            // creator cannot see what they are withdrawing — the relay gives
+            // no title. It asks the same question.
+            if (!await confirmScheduledCancel(context)) return;
+            bloc.add(ScheduledPostsCancelRemoteRequested(entry.eventId));
+          },
         ),
       ],
     );

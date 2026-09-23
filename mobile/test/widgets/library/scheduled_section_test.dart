@@ -289,6 +289,22 @@ void main() {
         // Only cancelling is possible for a post this device cannot re-sign.
         expect(find.text(en.libraryScheduledActionCancel), findsOneWidget);
         expect(find.text(en.libraryScheduledActionReschedule), findsNothing);
+
+        // Withdrawing it is as final as withdrawing a local row, and the
+        // relay gives no title to recognise it by, so it asks first.
+        await tester.tap(find.text(en.libraryScheduledActionCancel));
+        await tester.pumpAndSettle();
+        expect(find.text(en.libraryScheduledCancelTitle), findsOneWidget);
+        verifyNever(
+          () => bloc.add(any(that: isA<ScheduledPostsCancelRemoteRequested>())),
+        );
+
+        await tester.tap(find.text(en.libraryScheduledCancelConfirm));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => bloc.add(any(that: isA<ScheduledPostsCancelRemoteRequested>())),
+        ).called(1);
       });
     });
 
