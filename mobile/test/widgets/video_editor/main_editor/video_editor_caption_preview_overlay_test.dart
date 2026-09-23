@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for VideoEditorCaptionPreviewOverlay — the CC pill that
 // ABOUTME: follows the per-frame play time without rebuilding every frame.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,16 +38,18 @@ void main() {
   group(VideoEditorCaptionPreviewOverlay, () {
     late _MockVideoEditorMainBloc mainBloc;
     late _MockTimelineOverlayBloc overlayBloc;
+    late StreamController<VideoEditorMainState> mainStateChanges;
     late ValueNotifier<Duration> playTime;
 
     setUp(() {
       mainBloc = _MockVideoEditorMainBloc();
       overlayBloc = _MockTimelineOverlayBloc();
+      mainStateChanges = StreamController<VideoEditorMainState>.broadcast();
       playTime = ValueNotifier(Duration.zero);
       when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
       when(
         () => mainBloc.stream,
-      ).thenAnswer((_) => const Stream<VideoEditorMainState>.empty());
+      ).thenAnswer((_) => mainStateChanges.stream);
       when(() => overlayBloc.state).thenReturn(
         TimelineOverlayState(
           items: [
@@ -59,7 +63,10 @@ void main() {
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
     });
 
-    tearDown(() => playTime.dispose());
+    tearDown(() async {
+      await mainStateChanges.close();
+      playTime.dispose();
+    });
 
     Widget buildWidget() => MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
@@ -120,6 +127,26 @@ void main() {
         await tester.pumpWidget(buildWidget());
 
         expect(find.text('Second line'), findsOneWidget);
+      });
+
+      testWidgets('updates the fallback cue when the bloc position changes '
+          'while play time is zero', (tester) async {
+        when(() => mainBloc.state).thenReturn(
+          const VideoEditorMainState(
+            currentPosition: Duration(milliseconds: 2000),
+          ),
+        );
+
+        await tester.pumpWidget(buildWidget());
+        expect(find.text('Second line'), findsOneWidget);
+
+        const correctedState = VideoEditorMainState();
+        when(() => mainBloc.state).thenReturn(correctedState);
+        mainStateChanges.add(correctedState);
+        await tester.pump();
+
+        expect(find.text('Second line'), findsNothing);
+        expect(find.text('Hello there'), findsOneWidget);
       });
     });
 

@@ -118,8 +118,14 @@ class _ActiveCuePillState extends State<_ActiveCuePill> {
   @override
   Widget build(BuildContext context) {
     final text = _text;
-    if (text == null || text.isEmpty) return const SizedBox.shrink();
-    return CaptionPill(text: text);
+    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+      listenWhen: (previous, current) =>
+          previous.currentPosition != current.currentPosition,
+      listener: (context, state) => _onPlayTime(),
+      child: text == null || text.isEmpty
+          ? const SizedBox.shrink()
+          : CaptionPill(text: text),
+    );
   }
 
   /// The text of the CC-overlay cue (layer-less caption item) active at
