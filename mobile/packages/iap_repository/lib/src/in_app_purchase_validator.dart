@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:iap_repository/src/entitlement_validator.dart';
 import 'package:iap_repository/src/exceptions.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -33,6 +34,10 @@ const Map<String, SupporterBillingPeriod> supporterProducts =
 /// The product ids in [supporterProducts], in display order.
 @visibleForTesting
 Set<String> get supporterProductIds => supporterProducts.keys.toSet();
+
+/// The error StoreKit raises, instead of opening checkout, while the same
+/// product still has an unfinished transaction.
+const _unfinishedPurchaseCode = 'storekit_duplicate_product_object';
 
 /// [EntitlementValidator] backed by the `in_app_purchase` plugin.
 ///
@@ -215,16 +220,24 @@ class InAppPurchaseValidator implements EntitlementValidator {
       attemptId: attemptId ?? 'store-${DateTime.now().microsecondsSinceEpoch}',
     );
 
-    final productDetails = await _store.queryProductDetails({productId});
-    final product = productDetails.productDetails.isEmpty
-        ? null
-        : productDetails.productDetails.first;
+    final bool initiated;
+    try {
+      final productDetails = await _store.queryProductDetails({productId});
+      final product = productDetails.productDetails.isEmpty
+          ? null
+          : productDetails.productDetails.first;
 
-    final initiated = await _store.buyNonConsumable(
-      purchaseParam: PurchaseParam(
-        productDetails: product ?? _placeholderProduct(productId),
-      ),
-    );
+      initiated = await _store.buyNonConsumable(
+        purchaseParam: PurchaseParam(
+          productDetails: product ?? _placeholderProduct(productId),
+        ),
+      );
+    } on PlatformException catch (error) {
+      // The store refused before starting a purchase, so nothing for this
+      // attempt will arrive on the purchase stream.
+      _pendingPurchases.remove(productId);
+      throw _purchaseStartFailure(error);
+    }
     if (!initiated) {
       _pendingPurchases.remove(productId);
       throw const PurchaseFailedException(
@@ -233,6 +246,16 @@ class InAppPurchaseValidator implements EntitlementValidator {
       );
     }
     return completer.future;
+  }
+
+  EntitlementException _purchaseStartFailure(PlatformException error) {
+    if (error.code == _unfinishedPurchaseCode) {
+      return const PurchasePendingException();
+    }
+    return PurchaseFailedException(
+      error.code,
+      'The store failed to start the purchase.',
+    );
   }
 
   /// A fallback [ProductDetails] used only to satisfy [PurchaseParam] when the
