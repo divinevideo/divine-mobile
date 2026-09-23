@@ -294,10 +294,18 @@ void _onConfirmationShare(
   // The in-app share menu needs a hydrated VideoEvent, which a relay usually
   // cannot serve seconds after publish. The publisher already wrote the signed
   // event into VideoEventService (video_event_publisher.dart), so resolve it
-  // locally and fall back to the OS sheet only when it is genuinely absent.
-  final video = container
-      .read(videoEventServiceProvider)
-      .getVideoEventByVineId(stableId);
+  // locally — scoped to the current pubkey so a colliding `d` tag on another
+  // account cannot resolve — and fall back to the OS sheet only when it is
+  // genuinely absent.
+  final pubkey = container
+      .read(authServiceProvider)
+      .currentPublicKeyHex
+      ?.toLowerCase();
+  final video = pubkey == null
+      ? null
+      : container
+            .read(videoEventServiceProvider)
+            .getVideoEventByAddressable(pubkey, stableId);
   if (video != null) {
     ShareActionButton.showShareSheet(context, video);
     return;

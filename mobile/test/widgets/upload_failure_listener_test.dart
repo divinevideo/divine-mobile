@@ -502,7 +502,7 @@ void main() {
       final experiment = await _treatmentExperiment('draft-treatment');
       final videoEventService = createMockVideoEventService();
       when(
-        () => videoEventService.getVideoEventByVineId(any()),
+        () => videoEventService.getVideoEventByAddressable(any(), any()),
       ).thenReturn(_resolvedVideoEvent());
 
       await tester.pumpWidget(
@@ -545,7 +545,10 @@ void main() {
 
       expect(find.text(l10n.shareSheetMoreActions), findsOneWidget);
       verify(
-        () => videoEventService.getVideoEventByVineId(_publishedStableId),
+        () => videoEventService.getVideoEventByAddressable(
+          _ownHex,
+          _publishedStableId,
+        ),
       ).called(1);
     });
 
@@ -558,7 +561,7 @@ void main() {
       final experiment = await _treatmentExperiment('draft-treatment');
       final videoEventService = createMockVideoEventService();
       when(
-        () => videoEventService.getVideoEventByVineId(any()),
+        () => videoEventService.getVideoEventByAddressable(any(), any()),
       ).thenReturn(null);
 
       await tester.pumpWidget(
