@@ -736,8 +736,8 @@ final class DivineVideoPlayerEngineTeardownTests: XCTestCase {
   /// the engine's own observer answers it with `destroyContext`. It is the
   /// one shell teardown with no delegate callback ahead of it, and the
   /// engine dealloc that would otherwise back it up can be held off
-  /// indefinitely by the app (`NostrBridgeAttestationPlugin.shared` keeps
-  /// the engine). Every weak reference to the controller already reads nil
+  /// indefinitely by anything in the app that strongly holds the engine.
+  /// Every weak reference to the controller already reads nil
   /// inside its dealloc, so the plugin must match the notification's object
   /// against an identity it captured earlier.
   func testViewControllerDeallocReleasesPlayersWithoutTouchingTheEngine() throws {
