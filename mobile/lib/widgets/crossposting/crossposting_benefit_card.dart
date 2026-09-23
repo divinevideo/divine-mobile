@@ -7,7 +7,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/features/crossposting/crossposting_analytics.dart';
@@ -33,21 +32,23 @@ class CrosspostingBenefitCard extends ConsumerWidget {
         footer: DivineButton(
           label: context.l10n.crosspostingBenefitConnect(platform.displayName),
           expanded: true,
-          onPressed: () => _connect(context, ref),
+          onPressed: () => unawaited(_connect(context, ref)),
         ),
       ),
     );
   }
 
-  void _connect(BuildContext context, WidgetRef ref) {
+  Future<void> _connect(BuildContext context, WidgetRef ref) async {
     unawaited(
       logCrosspostCtaTapped(
         ref.read(analyticsEventSinkProvider),
         'settings',
       ),
     );
-    if (ref.read(crosspostingAvailabilityProvider) ==
-        CrosspostingAvailability.webOnly) {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final availability = await resolveCrosspostingAvailability(container);
+    if (!context.mounted) return;
+    if (availability == CrosspostingAvailability.webOnly) {
       unawaited(
         ref.read(crosspostingWebOpenerProvider)(
           Uri.parse(AppConfig.crossposterBaseUrl),
