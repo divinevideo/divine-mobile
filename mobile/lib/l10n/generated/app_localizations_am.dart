@@ -10319,6 +10319,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'ለDivine ድጋፍ ኢሜይል ላክ';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'የDivine Greenlight ግምገማ እርዳታ (ከ13 እስከ 15 ዓመት)';
 
@@ -10379,6 +10382,17 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions => 'የወላጅ ድጋፍ መመሪያዎች';

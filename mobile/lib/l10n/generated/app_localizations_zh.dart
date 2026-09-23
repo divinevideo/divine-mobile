@@ -9955,6 +9955,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => '发邮件给 Divine 客服';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Divine Greenlight 审核协助（13-15 岁）';
 
@@ -10015,6 +10018,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions => '家长协助指引';

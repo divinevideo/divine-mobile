@@ -1,9 +1,11 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 
 class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
@@ -78,7 +80,16 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 DivineButton(
+                  label: context.l10n.minorAccountReviewParentConsentRecordCta,
+                  leadingIcon: DivineIconName.videoCamera,
+                  expanded: true,
+                  onPressed: () =>
+                      context.push(MinorAccountReviewRecordConsentScreen.path),
+                ),
+                const SizedBox(height: 12),
+                DivineButton(
                   label: context.l10n.minorAccountReviewParentConsentEmailCta,
+                  type: DivineButtonType.secondary,
                   expanded: true,
                   onPressed: () => _emailSupport(context, ref),
                 ),

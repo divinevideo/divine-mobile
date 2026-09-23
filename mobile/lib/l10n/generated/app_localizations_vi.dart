@@ -10539,6 +10539,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'Email hỗ trợ Divine';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Trợ giúp xem xét Divine Greenlight (13-15 tuổi)';
 
@@ -10599,6 +10602,17 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>

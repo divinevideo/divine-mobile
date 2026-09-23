@@ -17886,6 +17886,12 @@ abstract class AppLocalizations {
   /// **'Email Divine support'**
   String get minorAccountReviewParentConsentEmailCta;
 
+  /// No description provided for @minorAccountReviewParentConsentRecordCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Record consent video'**
+  String get minorAccountReviewParentConsentRecordCta;
+
   /// No description provided for @minorAccountReviewParentConsentEmailSubject.
   ///
   /// In en, this message translates to:
@@ -17993,6 +17999,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try again'**
   String get minorAccountReviewRecordConsentTryAgainCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentConfirmEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email'**
+  String get minorAccountReviewRecordConsentConfirmEmailTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentSubmitCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit video'**
+  String get minorAccountReviewRecordConsentSubmitCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentSubmitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not submit your video. Please try again.'**
+  String get minorAccountReviewRecordConsentSubmitError;
 
   /// No description provided for @minorAccountReviewParentSupportInstructions.
   ///
