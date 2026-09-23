@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/schedule_api_client.dart';
@@ -99,23 +100,31 @@ class ScheduledPostsBloc
     Emitter<ScheduledPostsState> emit,
   ) async {
     emit(state.copyWith(busyEventId: event.eventId));
-    final outcome = switch (event) {
-      ScheduledPostsCancelRequested(:final eventId) =>
-        await _coordinator.cancel(eventId),
-      ScheduledPostsRescheduleRequested(:final eventId, :final publishAt) =>
-        await _coordinator.reschedule(eventId, publishAt),
-      ScheduledPostsPublishNowRequested(:final eventId) =>
-        await _coordinator.publishNow(eventId),
-      ScheduledPostsRetryRequested(:final eventId) => await _coordinator.retry(
-        eventId,
-      ),
-      ScheduledPostsCancelRemoteRequested(:final eventId) =>
-        await _coordinator.cancelRemote(eventId),
-    };
+    ScheduledPostsActionOutcome result;
+    try {
+      final outcome = switch (event) {
+        ScheduledPostsCancelRequested(:final eventId) =>
+          await _coordinator.cancel(eventId),
+        ScheduledPostsRescheduleRequested(:final eventId, :final publishAt) =>
+          await _coordinator.reschedule(eventId, publishAt),
+        ScheduledPostsPublishNowRequested(:final eventId) =>
+          await _coordinator.publishNow(eventId),
+        ScheduledPostsRetryRequested(:final eventId) =>
+          await _coordinator.retry(eventId),
+        ScheduledPostsCancelRemoteRequested(:final eventId) =>
+          await _coordinator.cancelRemote(eventId),
+      };
+      result = _outcomeFor(event, outcome);
+    } catch (e, stackTrace) {
+      // Every expected failure comes back as an outcome; a throw is a local
+      // write or invariant failing. Free the row either way.
+      addError(Reportable(e, context: '_onAction'), stackTrace);
+      result = ScheduledPostsActionOutcome.failed;
+    }
     emit(
       state.copyWith(
         clearBusyEventId: true,
-        lastAction: _outcomeFor(event, outcome),
+        lastAction: result,
         actionCount: state.actionCount + 1,
         remotePosts: _remotePosts(),
       ),

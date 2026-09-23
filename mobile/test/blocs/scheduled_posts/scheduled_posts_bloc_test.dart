@@ -11,6 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/scheduled_posts/scheduled_posts_bloc.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/schedule_api_client.dart';
@@ -261,6 +262,31 @@ void main() {
           ],
         );
       }
+
+      blocTest<ScheduledPostsBloc, ScheduledPostsState>(
+        'an action that throws frees the row and reports failed',
+        setUp: () {
+          when(
+            () => coordinator.cancel(any()),
+          ).thenThrow(StateError('database closed'));
+        },
+        build: build,
+        act: (bloc) => bloc.add(ScheduledPostsCancelRequested(event.id)),
+        expect: () => [
+          ScheduledPostsState(busyEventId: event.id),
+          const ScheduledPostsState(
+            lastAction: ScheduledPostsActionOutcome.failed,
+            actionCount: 1,
+          ),
+        ],
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+      );
 
       blocTest<ScheduledPostsBloc, ScheduledPostsState>(
         'reschedule hands the new time to the coordinator',
