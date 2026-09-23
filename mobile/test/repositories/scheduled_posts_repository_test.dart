@@ -570,6 +570,38 @@ void main() {
     });
 
     group('cancelOnServer', () {
+      test(
+        'withdraws what a hand-off still in flight leaves on the relay',
+        () async {
+          final event = buildEvent();
+          await repository.enqueue(event: event, draftId: 'draft-1');
+          final answer = Completer<ScheduleSubmitResult>();
+          when(() => client.schedule(any())).thenAnswer((_) => answer.future);
+          when(
+            () => client.cancel(event.id),
+          ).thenAnswer((_) async => const ScheduleCancelled());
+
+          final handingOff = repository.submit(event.id);
+          await pumpEventQueue();
+          final cancelling = repository.cancelOnServer(event.id);
+          await pumpEventQueue();
+          answer.complete(
+            ScheduleSubmitAccepted(
+              eventId: event.id,
+              publishAt: event.createdAt,
+            ),
+          );
+
+          expect(await cancelling, ScheduledPostCancelOutcome.cancelled);
+          await handingOff;
+          verify(() => client.cancel(event.id)).called(1);
+          expect(
+            (await repository.getById(event.id))!.status,
+            ScheduledPostStatus.cancelled,
+          );
+        },
+      );
+
       test('cancels a never-handed-off row without a round trip', () async {
         final event = buildEvent();
         await repository.enqueue(event: event, draftId: 'draft-1');

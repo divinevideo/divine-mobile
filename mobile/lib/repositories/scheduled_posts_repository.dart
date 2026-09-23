@@ -194,17 +194,22 @@ class ScheduledPostsRepository {
   /// submitting — without this both POST it, and the relay answers the second
   /// with a 409 it never needed to see.
   Future<ScheduledPostSubmitResult> submit(String eventId) async {
-    if (!_submitting.add(eventId)) {
+    if (_handOffs.containsKey(eventId)) {
       return const ScheduledPostSubmitResult.retryLater('already_submitting');
     }
+    final settled = Completer<void>();
+    _handOffs[eventId] = settled;
     try {
       return await _submit(eventId);
     } finally {
-      _submitting.remove(eventId);
+      _handOffs.remove(eventId);
+      settled.complete();
     }
   }
 
-  final Set<String> _submitting = <String>{};
+  /// Hand-offs in flight, each completed once it settles, so a cancel can
+  /// wait out the one it races.
+  final Map<String, Completer<void>> _handOffs = {};
 
   Future<ScheduledPostSubmitResult> _submit(String eventId) async {
     final post = await _dao.getById(eventId);
@@ -446,6 +451,9 @@ class ScheduledPostsRepository {
   /// was never handed off and a `failed` row is terminal there, so both are
   /// cancelled locally without a round trip (as is a relay 404).
   Future<ScheduledPostCancelOutcome> cancelOnServer(String eventId) async {
+    // A hand-off still in flight can yet leave the relay holding the post,
+    // after this read had cancelled it locally without a round trip.
+    await _handOffs[eventId]?.future;
     final post = await _dao.getById(eventId);
     if (post == null) return ScheduledPostCancelOutcome.cancelled;
 
