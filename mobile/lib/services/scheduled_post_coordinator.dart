@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:db_client/db_client.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
@@ -434,7 +435,7 @@ class ScheduledPostCoordinator {
     }
     if (collaborators.isEmpty || dTag == null || dTag.isEmpty) return;
     try {
-      await inviteService.sendInvites(
+      final result = await inviteService.sendInvites(
         collaboratorPubkeys: collaborators,
         creatorPubkey: event.pubkey,
         videoAddress: '${event.kind}:${event.pubkey}:$dTag',
@@ -442,6 +443,22 @@ class ScheduledPostCoordinator {
         thumbnailUrl: thumbnailUrl,
         relayHint: collaboratorInviteRelayHint,
       );
+      // Nobody is watching when a scheduled post goes live, so a refused
+      // invite has no warning to surface: the log is its only trace.
+      if (result.hasFailures) {
+        final failed = [
+          for (final MapEntry(key: pubkey, value: invite)
+              in result.results.entries)
+            if (!invite.success && !invite.retryablePending)
+              '${pubkeyForLogs(pubkey)}: ${invite.error ?? 'unknown'}',
+        ];
+        Log.warning(
+          'Collaborator invites for scheduled event ${event.id} did not all '
+          'go out: ${failed.join('; ')}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
     } catch (e, stackTrace) {
       Log.warning(
         'Collaborator invites for scheduled event ${event.id} failed: $e',

@@ -17,6 +17,7 @@ import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/schedule_api_client.dart';
 import 'package:openvine/services/scheduled_post_coordinator.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockScheduleApiClient extends Mock implements ScheduleApiClient {}
 
@@ -258,6 +259,45 @@ void main() {
         ).called(1);
         verify(() => draftService.deleteDraft('draft-1')).called(1);
         expect(await repository.getById(event.id), isNull);
+      });
+
+      test('logs a collaborator invite that did not go out', () async {
+        final event = buildEvent(collab: true);
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(() => client.list()).thenAnswer(
+          (_) async => ScheduleListLoaded([
+            serverEntry(event, ScheduledPostServerState.published),
+          ]),
+        );
+        when(
+          () => inviteService.sendInvites(
+            collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+            creatorPubkey: any(named: 'creatorPubkey'),
+            videoAddress: any(named: 'videoAddress'),
+            title: any(named: 'title'),
+            thumbnailUrl: any(named: 'thumbnailUrl'),
+            relayHint: any(named: 'relayHint'),
+          ),
+        ).thenAnswer(
+          (_) async => const CollaboratorInviteBatchResult(
+            results: {
+              collaborator: CollaboratorInviteResult(
+                success: false,
+                error: 'dm relay refused',
+              ),
+            },
+          ),
+        );
+
+        await coordinator.sweep(force: true);
+
+        final logged = LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .where((message) => message.contains(event.id))
+            .join('\n');
+        expect(logged, contains('dm relay refused'));
+        expect(logged, contains(collaborator));
       });
 
       test('returns a post cancelled elsewhere to the drafts', () async {
