@@ -27,7 +27,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Uses [DraftsLibraryBloc] for state management and handles draft actions
 /// (post, edit, delete) internally.
-class DraftsTab extends ConsumerWidget {
+class DraftsTab extends StatelessWidget {
   /// Creates a drafts tab.
   const DraftsTab({
     required this.showRecordButton,
@@ -44,18 +44,29 @@ class DraftsTab extends ConsumerWidget {
   final bool showScheduledSection;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!showScheduledSection) return _buildList(context, ref, null);
+  Widget build(BuildContext context) {
+    if (!showScheduledSection) {
+      return _DraftsList(showRecordButton: showRecordButton);
+    }
     return ScheduledPostsScope(
-      builder: (context, {required available}) => _buildList(
-        context,
-        ref,
-        available ? const ScheduledSectionSliver() : null,
+      builder: (context, {required available}) => _DraftsList(
+        showRecordButton: showRecordButton,
+        scheduled: available ? const ScheduledSectionSliver() : null,
       ),
     );
   }
+}
 
-  Widget _buildList(BuildContext context, WidgetRef ref, Widget? scheduled) {
+class _DraftsList extends ConsumerWidget {
+  const _DraftsList({required this.showRecordButton, this.scheduled});
+
+  final bool showRecordButton;
+
+  /// Sliver shown above the drafts, if any.
+  final Widget? scheduled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return BlocConsumer<DraftsLibraryBloc, DraftsLibraryState>(
       listenWhen: (previous, current) =>
           current is DraftsLibraryDraftDeleted ||
