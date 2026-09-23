@@ -10,7 +10,9 @@ import 'package:openvine/blocs/badges/badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_status_pill.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Pushes [path] and reloads the badge dashboard once it pops.
 ///
@@ -47,7 +49,14 @@ Future<void> hideAwardWithUndo(
       // The snackbar lives on the app-level messenger, so it outlives this
       // route; undoing into a closed cubit would throw.
       onActionPressed: () {
-        if (!cubit.isClosed) cubit.unhideAward(award);
+        if (!cubit.isClosed) {
+          runDetached(
+            cubit.unhideAward(award),
+            'restore hidden badge award',
+            logName: 'AwardedBadgeCard',
+            category: LogCategory.ui,
+          );
+        }
       },
     ),
   );

@@ -24,7 +24,7 @@ void main() {
       return NotificationBadgeCubit(repository: repository);
     }
 
-    test('initial state is 0', () {
+    test('initial state is 0', () async {
       when(
         () => repository.watchUnreadCount(),
       ).thenAnswer((_) => const Stream<int>.empty());
@@ -33,7 +33,7 @@ void main() {
 
       expect(cubit.state, equals(0));
 
-      cubit.close();
+      await cubit.close();
     });
 
     blocTest<NotificationBadgeCubit, int>(
@@ -58,12 +58,12 @@ void main() {
       errors: () => [isA<StateError>()],
     );
 
-    test('emits zero with no subscription when repository is null', () {
+    test('emits zero with no subscription when repository is null', () async {
       final cubit = NotificationBadgeCubit();
 
       expect(cubit.state, equals(0));
 
-      cubit.close();
+      await cubit.close();
     });
 
     test('cancels subscription on close', () async {

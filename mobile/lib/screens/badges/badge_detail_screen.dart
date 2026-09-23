@@ -18,10 +18,12 @@ import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badge_revoke_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Shows one badge, its awardees, and the actions available on it.
 class BadgeDetailScreen extends ConsumerWidget {
@@ -49,11 +51,20 @@ class BadgeDetailScreen extends ConsumerWidget {
     );
     return BlocProvider(
       key: ValueKey((repository, coordinate)),
-      create: (_) => BadgeDetailCubit(
-        repository: repository,
-        contentBlocklistRepository: contentBlocklistRepository,
-        coordinate: coordinate,
-      )..load(),
+      create: (_) {
+        final cubit = BadgeDetailCubit(
+          repository: repository,
+          contentBlocklistRepository: contentBlocklistRepository,
+          coordinate: coordinate,
+        );
+        runDetached(
+          cubit.load(),
+          'load badge detail',
+          logName: 'BadgeDetailScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const BadgeDetailView(),
     );
   }
@@ -83,10 +94,15 @@ class BadgeDetailView extends StatelessWidget {
         // reader a row that is simply gone is no feedback at all.
         if (state.actionStatus == BadgeDetailActionStatus.revoked) {
           final message = l10n.badgeDetailRevokeSuccess;
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            message,
-            Directionality.of(context),
+          runDetached(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              message,
+              Directionality.of(context),
+            ),
+            'announce badge revocation',
+            logName: 'BadgeDetailScreen',
+            category: LogCategory.ui,
           );
           ScaffoldMessenger.of(
             context,
@@ -488,10 +504,15 @@ class _BlockClaimantsConfirmationScreenState
       listener: (context, state) {
         if (state.actionStatus == BadgeDetailActionStatus.completed) {
           final message = l10n.badgeDetailBlockClaimantsSuccess;
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            message,
-            Directionality.of(context),
+          runDetached(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              message,
+              Directionality.of(context),
+            ),
+            'announce blocked claimants success',
+            logName: 'BlockClaimantsConfirmationScreen',
+            category: LogCategory.ui,
           );
           ScaffoldMessenger.of(
             context,
@@ -499,10 +520,15 @@ class _BlockClaimantsConfirmationScreenState
           context.safePop(result: true);
         } else if (state.actionStatus == BadgeDetailActionStatus.failure) {
           final message = l10n.badgeDetailBlockClaimantsFailure;
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            message,
-            Directionality.of(context),
+          runDetached(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              message,
+              Directionality.of(context),
+            ),
+            'announce blocked claimants failure',
+            logName: 'BlockClaimantsConfirmationScreen',
+            category: LogCategory.ui,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             DivineSnackbarContainer.snackBar(message, error: true),

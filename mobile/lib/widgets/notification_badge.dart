@@ -3,6 +3,8 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class NotificationBadge extends StatelessWidget {
   const NotificationBadge({
@@ -124,11 +126,20 @@ class _AnimatedNotificationBadgeState extends State<AnimatedNotificationBadge>
     super.didUpdateWidget(oldWidget);
 
     if (widget.count > _previousCount && widget.pulseOnNewNotification) {
-      _animationController.forward().then((_) {
-        _animationController.reverse();
-      });
+      runDetached(
+        _pulse(),
+        'pulse notification badge',
+        logName: 'AnimatedNotificationBadge',
+        category: LogCategory.ui,
+      );
     }
     _previousCount = widget.count;
+  }
+
+  Future<void> _pulse() async {
+    await _animationController.forward();
+    if (!mounted) return;
+    await _animationController.reverse();
   }
 
   @override
