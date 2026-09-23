@@ -1,4 +1,4 @@
-// ABOUTME: BLoC behind the Library's Scheduled tab (#3538): lists the
+// ABOUTME: BLoC behind the Library's Scheduled section (#3538): lists the
 // ABOUTME: account's scheduled posts and runs cancel / reschedule / publish
 // ABOUTME: now / retry through the coordinator.
 

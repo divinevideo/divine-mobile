@@ -131,7 +131,7 @@ String _$scheduledPostsRepositoryHash() =>
 /// Drives the outbox: hand-off retries, relay-state sync, the client-side
 /// publish of posts the relay is late on, and the confirmed-publish side
 /// effects. Activated from the app root so it runs whether or not the
-/// Scheduled tab is open.
+/// Scheduled section is on screen.
 
 @ProviderFor(scheduledPostCoordinator)
 final scheduledPostCoordinatorProvider = ScheduledPostCoordinatorProvider._();
@@ -139,7 +139,7 @@ final scheduledPostCoordinatorProvider = ScheduledPostCoordinatorProvider._();
 /// Drives the outbox: hand-off retries, relay-state sync, the client-side
 /// publish of posts the relay is late on, and the confirmed-publish side
 /// effects. Activated from the app root so it runs whether or not the
-/// Scheduled tab is open.
+/// Scheduled section is on screen.
 
 final class ScheduledPostCoordinatorProvider
     extends
@@ -152,7 +152,7 @@ final class ScheduledPostCoordinatorProvider
   /// Drives the outbox: hand-off retries, relay-state sync, the client-side
   /// publish of posts the relay is late on, and the confirmed-publish side
   /// effects. Activated from the app root so it runs whether or not the
-  /// Scheduled tab is open.
+  /// Scheduled section is on screen.
   ScheduledPostCoordinatorProvider._()
     : super(
         from: null,

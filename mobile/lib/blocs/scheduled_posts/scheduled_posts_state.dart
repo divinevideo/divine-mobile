@@ -24,7 +24,7 @@ enum ScheduledPostsActionOutcome {
 }
 
 /// A post the relay holds for this account that this device has no row for —
-/// scheduled from another device. Only its time and id are known, so the tab
+/// scheduled from another device. Only its time and id are known, so the section
 /// can show it and withdraw it, nothing else.
 class RemoteScheduledPost extends Equatable {
   const RemoteScheduledPost({required this.eventId, required this.publishAt});
@@ -46,7 +46,7 @@ class RemoteScheduledPost extends Equatable {
   List<Object?> get props => [eventId, publishAt];
 }
 
-/// One scheduled post as the tab shows it: the outbox row plus the draft
+/// One scheduled post as the section shows it: the outbox row plus the draft
 /// copy that still holds the video (absent when the draft's local files
 /// were reclaimed, in which case the event's own tags carry the display).
 class ScheduledPostItem extends Equatable {

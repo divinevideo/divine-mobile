@@ -44,7 +44,6 @@ class AudioReuseNotPermittedException implements Exception {
       'reuse consent (audio: $audioEventId)';
 }
 
-/// The authoritative Divine publish surface rejected the signed-in account.
 /// A signer returned a scheduled event stamped with a different
 /// `created_at` than the publish time it was asked for (#3538).
 ///
@@ -70,6 +69,7 @@ class ScheduledSignatureTimestampException implements Exception {
       'instead of $requestedCreatedAt';
 }
 
+/// The authoritative Divine publish surface rejected the signed-in account.
 class AccountRestrictedPublishException implements Exception {
   const AccountRestrictedPublishException({
     required this.reason,

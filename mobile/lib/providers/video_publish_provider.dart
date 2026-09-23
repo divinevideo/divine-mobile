@@ -619,7 +619,8 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
       if (context.mounted && publishDraft.scheduledAt != null) {
         // The post is not live yet, so the profile has nothing to show; the
-        // Scheduled tab is where it can be watched, moved or withdrawn.
+        // Scheduled section above the drafts is where it can be watched,
+        // moved or withdrawn.
         context.go(RoutePaths.libraryDrafts);
         didNavigate = true;
       } else if (context.mounted && videoReplyContext != null) {

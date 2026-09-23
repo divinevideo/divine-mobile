@@ -32,7 +32,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
   final bool enableExpiration;
 
   /// Whether the "Post time" tile is offered. Off when editing a published
-  /// video and for video replies; the feature flag gates it on top.
+  /// video; a video reply hides it too.
   final bool enableSchedule;
   final bool enableContentWarning;
   final bool enableCollaborators;
@@ -151,9 +151,9 @@ class _VideoMetadataFormFieldsState
   }
 }
 
-/// Shows the "Post time" tile only when scheduling is enabled and the
-/// recording is not a video reply — a reply belongs to its thread now, and
-/// scheduled replies are out of scope (#3538).
+/// Shows the "Post time" tile unless the recording is a video reply — a
+/// reply belongs to its thread now, and scheduled replies are out of scope
+/// (#3538).
 class _ScheduleSelectorGate extends ConsumerWidget {
   const _ScheduleSelectorGate();
 

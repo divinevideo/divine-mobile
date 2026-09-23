@@ -69,7 +69,7 @@ ScheduledPostsRepository? scheduledPostsRepository(Ref ref) {
 /// Drives the outbox: hand-off retries, relay-state sync, the client-side
 /// publish of posts the relay is late on, and the confirmed-publish side
 /// effects. Activated from the app root so it runs whether or not the
-/// Scheduled tab is open.
+/// Scheduled section is on screen.
 @Riverpod(keepAlive: true)
 ScheduledPostCoordinator? scheduledPostCoordinator(Ref ref) {
   final repository = ref.watch(scheduledPostsRepositoryProvider);

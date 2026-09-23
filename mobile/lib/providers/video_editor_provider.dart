@@ -1674,10 +1674,6 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
   }
 
-  /// Publish the video to the Nostr network.
-  ///
-  /// Requires [finalRenderedClip] to be available. Throws [StateError] if
-  /// no rendered clip exists.
   /// Marks a post handoff as in flight so the button can show it.
   ///
   /// Set around the whole handoff by the caller, because the slow part — the
@@ -1689,6 +1685,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     state = state.copyWith(isPosting: value);
   }
 
+  /// Publish the video to the Nostr network.
+  ///
+  /// Requires [finalRenderedClip] to be available. Throws [StateError] if
+  /// no rendered clip exists.
   Future<void> postVideo(BuildContext context) async {
     if (state.finalRenderedClip == null) {
       Log.error(

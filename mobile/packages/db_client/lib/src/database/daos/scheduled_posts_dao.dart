@@ -276,8 +276,9 @@ class ScheduledPostsDao extends DatabaseAccessor<AppDatabase>
   /// Deletes every row belonging to [ownerPubkey].
   ///
   /// Called on the destructive account-wipe path, like the sibling outboxes.
-  /// A plain account switch preserves the rows: the relay still holds the
-  /// posts, and the account sees them again when it signs back in.
+  /// A plain account switch preserves the rows: the relay publishes the held
+  /// ones regardless, and a row not yet handed off waits here for its account
+  /// to sign back in.
   Future<int> deleteAllForUser(String ownerPubkey) {
     return (delete(
       scheduledPosts,

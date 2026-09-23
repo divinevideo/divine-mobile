@@ -90,10 +90,8 @@ class ScheduledPostsDraftsRefresher extends StatelessWidget {
 /// sees that the feature exists from here.
 ///
 /// Requires a [ScheduledPostsBloc] above it — [ScheduledPostsScope] only
-/// provides one when the account can schedule, so callers pass
-/// [SliverToBoxAdapter] with nothing in it instead of this widget when it
-/// cannot.
-@visibleForTesting
+/// provides one when the account can schedule, so callers leave this widget
+/// out when it cannot.
 class ScheduledSectionSliver extends StatelessWidget {
   const ScheduledSectionSliver({super.key});
 

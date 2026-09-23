@@ -1,4 +1,4 @@
-// ABOUTME: Events for ScheduledPostsBloc: the Scheduled tab's lifecycle and
+// ABOUTME: Events for ScheduledPostsBloc: the Scheduled section's lifecycle and
 // ABOUTME: the actions a user can take on a scheduled post.
 
 part of 'scheduled_posts_bloc.dart';

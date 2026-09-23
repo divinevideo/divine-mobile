@@ -112,7 +112,9 @@ own rather than a status on `drafts`: the future-dated event must never reach
 the regular publish-retry channel, which would broadcast it as "now", and the
 submission backoff, server-state mirror and failure reason are queue state,
 not draft content. Rows are owner-scoped and deleted on destructive sign-out;
-a plain account switch keeps them, since the relay still holds the posts. The
+a plain account switch keeps them: the relay publishes the held ones
+regardless, and a row not yet handed off waits on this device for its account
+to sign back in. The
 `from < 18` step creates the `(owner_pubkey, status)` index by hand for the
 same reason v13, v16 and v17 do.
 
