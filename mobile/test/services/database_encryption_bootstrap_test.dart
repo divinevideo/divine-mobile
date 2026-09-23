@@ -6,8 +6,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/services/database_recovery_store.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
+
+Future<LogCaptureService> _clearedLogCapture() async {
+  final logs = LogCaptureService();
+  await logs.clearAllLogs();
+  addTearDown(logs.clearAllLogs);
+  return logs;
+}
+
+Iterable<LogEntry> _bootstrapWarnings(LogCaptureService logs) => logs
+    .getRecentLogs(minLevel: LogLevel.warning)
+    .where((entry) => entry.name == 'DatabaseEncryptionBootstrap');
+
+Iterable<String> _loggedText(LogCaptureService logs) => logs
+    .getRecentLogs()
+    .map((entry) => '${entry.message} ${entry.error ?? ''}');
 
 void main() {
   group('generateCipherKeyHex', () {
@@ -500,6 +516,32 @@ void main() {
         );
         expect(store, {dbCipherKeyAccessibilityBackupStorageKey: existing});
       });
+
+      test(
+        'a recovery copy that cannot be removed does not fail a launch whose '
+        'primary is verified',
+        () async {
+          final logs = await _clearedLogCapture();
+          store[dbCipherKeyStorageKey] = existing;
+          when(
+            () => storage.delete(key: dbCipherKeyAccessibilityBackupStorageKey),
+          ).thenThrow(PlatformException(code: 'Keychain unavailable'));
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => fail('must not reset the database'),
+            isProtectedDataAvailable: () async => true,
+          );
+
+          expect(await launch().resolveCipherKey(), existing);
+          expect(await launch().resolveCipherKey(), existing);
+          expect(store, {
+            dbCipherKeyStorageKey: existing,
+            dbCipherKeyAccessibilityBackupStorageKey: existing,
+          });
+          expect(_bootstrapWarnings(logs), hasLength(2));
+          expect(_loggedText(logs), everyElement(isNot(contains(existing))));
+        },
+      );
 
       test('prefers the primary to an obsolete recovery copy', () async {
         store[dbCipherKeyStorageKey] = existing;

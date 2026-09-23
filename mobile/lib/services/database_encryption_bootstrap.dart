@@ -399,13 +399,25 @@ class DatabaseEncryptionBootstrap {
       if (await _readCipherKey(_secureStorage, dbCipherKeyStorageKey) != key) {
         throw StateError('DB cipher key restoration did not persist');
       }
-      await _secureStorage.delete(
-        key: dbCipherKeyAccessibilityBackupStorageKey,
-      );
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
         DatabaseCipherStorageUnavailableException(error),
         stack,
+      );
+    }
+    try {
+      await _secureStorage.delete(
+        key: dbCipherKeyAccessibilityBackupStorageKey,
+      );
+    } on Object catch (error) {
+      // The copy holds the verified primary's key, and every write of a
+      // different key deletes it first, so a leftover is harmless. Failing
+      // startup over it would lock the user out of a key that works.
+      Log.warning(
+        'Could not remove the DB cipher key recovery copy; the verified '
+        'primary is in use.',
+        name: _logName,
+        error: error,
       );
     }
   }
