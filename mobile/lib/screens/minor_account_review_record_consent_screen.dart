@@ -6,16 +6,20 @@ import 'dart:async';
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_capture_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
+import 'package:openvine/utils/validators.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permissions_service/permissions_service.dart';
 
@@ -63,6 +67,7 @@ class _RecordConsentView extends ConsumerStatefulWidget {
 class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   bool _cameraReady = false;
   bool _accessDenied = false;
+  String? _pendingVideoPath;
 
   @override
   void initState() {
@@ -119,7 +124,16 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
 
   void _onRetake() => context.read<MinorConsentCaptureCubit>().retake();
 
-  void _onUseVideo(String filePath) => widget.onUseVideo?.call(filePath);
+  void _onUseVideo(String filePath) {
+    final callback = widget.onUseVideo;
+    if (callback != null) {
+      callback(filePath);
+      return;
+    }
+    // No injected seam: this screen owns the confirm-and-submit step, so keep
+    // the accepted clip here and swap the view for the email confirmation.
+    setState(() => _pendingVideoPath = filePath);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,36 +148,240 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child:
-                BlocBuilder<MinorConsentCaptureCubit, MinorConsentCaptureState>(
-                  builder: (context, state) {
-                    return switch (state) {
-                      MinorConsentCaptureIdle() =>
-                        _accessDenied
-                            ? const _DeniedPane()
-                            : _CapturePane(
-                                cameraReady: _cameraReady,
-                                onRecord: _onRecord,
-                              ),
-                      MinorConsentCaptureRecording() => _RecordingPane(
-                        cameraReady: _cameraReady,
-                        onStop: _onStop,
-                      ),
-                      MinorConsentCaptureReview(:final filePath) => _ReviewPane(
-                        filePath: filePath,
-                        onRetake: _onRetake,
-                        onUseVideo: () => _onUseVideo(filePath),
-                      ),
-                      MinorConsentCaptureDenied() => const _DeniedPane(),
-                      MinorConsentCaptureError() => _ErrorPane(
-                        onRetry: _onRetake,
-                      ),
-                    };
-                  },
-                ),
+            child: _pendingVideoPath != null
+                ? MinorConsentSubmitView(
+                    videoPath: _pendingVideoPath!,
+                    onUseEmailFallback: () => context.push(
+                      MinorAccountReviewParentConsentScreen.path,
+                    ),
+                  )
+                : BlocBuilder<
+                    MinorConsentCaptureCubit,
+                    MinorConsentCaptureState
+                  >(
+                    builder: (context, state) {
+                      return switch (state) {
+                        MinorConsentCaptureIdle() =>
+                          _accessDenied
+                              ? const _DeniedPane()
+                              : _CapturePane(
+                                  cameraReady: _cameraReady,
+                                  onRecord: _onRecord,
+                                ),
+                        MinorConsentCaptureRecording() => _RecordingPane(
+                          cameraReady: _cameraReady,
+                          onStop: _onStop,
+                        ),
+                        MinorConsentCaptureReview(:final filePath) =>
+                          _ReviewPane(
+                            filePath: filePath,
+                            onRetake: _onRetake,
+                            onUseVideo: () => _onUseVideo(filePath),
+                          ),
+                        MinorConsentCaptureDenied() => const _DeniedPane(),
+                        MinorConsentCaptureError() => _ErrorPane(
+                          onRetry: _onRetake,
+                        ),
+                      };
+                    },
+                  ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Confirm-and-submit step for the in-app parent-consent flow.
+///
+/// Shows the accepted clip's parent email field, submits it with the local
+/// video via [MinorAccountReviewRepository.submitParentConsent], and swaps to
+/// the receipt view on success. A failure keeps [videoPath] intact, leaves the
+/// submit control in place as a retry, and keeps the email fallback visible.
+class MinorConsentSubmitView extends ConsumerStatefulWidget {
+  /// Creates the confirm-and-submit step for [videoPath].
+  const MinorConsentSubmitView({
+    required this.videoPath,
+    required this.onUseEmailFallback,
+    super.key,
+  });
+
+  /// Local path of the accepted consent clip.
+  final String videoPath;
+
+  /// Invoked when the parent chooses the email / private-link fallback.
+  final VoidCallback onUseEmailFallback;
+
+  @override
+  ConsumerState<MinorConsentSubmitView> createState() =>
+      _MinorConsentSubmitViewState();
+}
+
+class _MinorConsentSubmitViewState
+    extends ConsumerState<MinorConsentSubmitView> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  bool _isSubmitting = false;
+  String? _errorMessage;
+  String? _submittedEmail;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(String caseId) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final email = _emailController.text.trim();
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      if (kDebugMode) {
+        final overrideService = ref.read(
+          minorAccountReviewOverrideServiceProvider,
+        );
+        final localOverride = overrideService.getOverride();
+        if (localOverride?.currentCase?.id == caseId) {
+          await overrideService.setOverride(
+            localOverride!.copyWith(
+              currentCase: localOverride.currentCase!.copyWith(
+                state: MinorReviewCaseState.submittedForReview,
+                instructions: MinorReviewInstructions(
+                  title: context.l10n.minorAccountReviewSubmissionReceivedTitle,
+                  body: context
+                      .l10n
+                      .minorAccountReviewSubmissionReceivedLocalBody,
+                ),
+              ),
+            ),
+          );
+        } else {
+          await ref
+              .read(minorAccountReviewRepositoryProvider)
+              .submitParentConsent(
+                caseId: caseId,
+                email: email,
+                videoPath: widget.videoPath,
+              );
+        }
+      } else {
+        await ref
+            .read(minorAccountReviewRepositoryProvider)
+            .submitParentConsent(
+              caseId: caseId,
+              email: email,
+              videoPath: widget.videoPath,
+            );
+      }
+      ref.invalidate(currentMinorAccountReviewStatusProvider);
+      ref.invalidate(protectedMinorStatusProvider);
+      if (!mounted) return;
+      setState(() => _submittedEmail = email);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = context.l10n.minorAccountReviewRecordConsentSubmitError;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final submittedEmail = _submittedEmail;
+    if (submittedEmail != null) {
+      return _SubmitSuccessPane(email: submittedEmail);
+    }
+
+    final caseId = ref
+        .watch(currentMinorAccountReviewStatusProvider)
+        .value
+        ?.currentCase
+        ?.id;
+    final validationMessages = AuthValidationMessages.fromL10n(l10n);
+
+    return _Pane(
+      children: [
+        Text(
+          l10n.minorAccountReviewRecordConsentConfirmEmailTitle,
+          style: VineTheme.headlineSmallFont(
+            color: context.vineColors.primaryText,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Form(
+          key: _formKey,
+          child: DivineAuthTextField(
+            label: l10n.minorAccountReviewParentContactFieldLabel,
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            validator: (value) => Validators.validateEmail(
+              value,
+              messages: validationMessages,
+            ),
+          ),
+        ),
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _errorMessage!,
+            style: VineTheme.bodyMediumFont(color: VineTheme.error),
+          ),
+        ],
+        const SizedBox(height: 24),
+        DivineButton(
+          label: _isSubmitting
+              ? l10n.minorAccountReviewSubmitting
+              : l10n.minorAccountReviewRecordConsentSubmitCta,
+          expanded: true,
+          onPressed: (_isSubmitting || caseId == null)
+              ? null
+              : () => _submit(caseId),
+        ),
+        const SizedBox(height: 12),
+        DivineButton(
+          label: l10n.minorAccountReviewRecordConsentEmailInsteadCta,
+          type: DivineButtonType.secondary,
+          expanded: true,
+          onPressed: _isSubmitting ? null : widget.onUseEmailFallback,
+        ),
+      ],
+    );
+  }
+}
+
+/// Receipt shown once the consent video has been submitted.
+class _SubmitSuccessPane extends StatelessWidget {
+  const _SubmitSuccessPane({required this.email});
+
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Pane(
+      children: [
+        Text(
+          context.l10n.minorAccountReviewSubmissionReceivedTitle,
+          style: VineTheme.headlineMediumFont(
+            color: context.vineColors.primaryText,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          context.l10n.minorAccountReviewSubmissionReceivedBody(email),
+          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
+        ),
+      ],
     );
   }
 }
