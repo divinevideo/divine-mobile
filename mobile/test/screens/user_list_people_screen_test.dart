@@ -21,9 +21,11 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../helpers/finders.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
@@ -498,6 +500,34 @@ void main() {
         expect(find.text(l10n.listFollowButton), findsOneWidget);
       });
 
+      testWidgets("shows Share after the follow pill on someone else's list", (
+        tester,
+      ) async {
+        await pumpDiscovered(tester);
+        await tester.pump();
+        await tester.pump();
+
+        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        // Share is the rightmost control in the row, after the follow pill,
+        // as on a video list.
+        final followRight = tester
+            .getTopRight(find.text(l10n.listFollowButton))
+            .dx;
+        final shareLeft = tester
+            .getTopLeft(findByTooltip(l10n.listShareAction))
+            .dx;
+        expect(shareLeft, greaterThan(followRight));
+      });
+
+      testWidgets('offers Share to a signed-out viewer', (tester) async {
+        // Sharing needs no identity; only following does.
+        await pumpDiscovered(tester, viewerPubkey: null);
+        await tester.pump();
+
+        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        expect(find.text(l10n.listFollowButton), findsNothing);
+      });
+
       testWidgets('offers no Follow to a signed-out viewer', (tester) async {
         await pumpDiscovered(tester, viewerPubkey: null);
 
@@ -538,6 +568,7 @@ void main() {
 
         expect(find.text('Mine'), findsOneWidget);
         expect(find.byType(FollowListButton), findsNothing);
+        expect(find.byType(ShareListButton), findsNothing);
         verifyNever(
           () => repository.watchFollowedLists(
             viewerPubkey: any(named: 'viewerPubkey'),

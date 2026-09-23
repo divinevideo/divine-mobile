@@ -18,6 +18,7 @@ enum DeepLinkType {
   hashtag,
   search,
   list,
+  peopleList,
   savedVideos,
   signerCallback,
   unknown,
@@ -77,6 +78,9 @@ class DeepLink {
         return 'DeepLink(type: search, searchTerm: $searchTerm$indexStr)';
       case DeepLinkType.list:
         return 'DeepLink(type: list, listPubkey: $listPubkey, '
+            'listId: $listId)';
+      case DeepLinkType.peopleList:
+        return 'DeepLink(type: peopleList, listPubkey: $listPubkey, '
             'listId: $listId)';
       case DeepLinkType.savedVideos:
         return 'DeepLink(type: savedVideos)';
@@ -330,6 +334,39 @@ class DeepLinkService {
         );
         return DeepLink(
           type: DeepLinkType.list,
+          listPubkey: listPubkey,
+          listId: listId,
+        );
+      }
+
+      // Handle /people-lists/{listId}?owner={pubkey} — NIP-51 kind 30000
+      // people lists, addressed by author + d-tag like the video lists above;
+      // the author rides in the query because the in-app route carries it
+      // there. Without an owner the path names the viewer's own list, which
+      // nobody else can open, so it is not a link worth following.
+      if (pathSegments.length == 2 && pathSegments[0] == 'people-lists') {
+        final listId = pathSegments[1];
+        final owner = uri.queryParameters['owner'];
+        final listPubkey = owner == null
+            ? null
+            : normalizePublicIdentifier(owner)?.hexPubkey.toLowerCase();
+        if (listId.isEmpty || listPubkey == null) {
+          Log.warning(
+            'Ignoring people list deep link with invalid owner or id: '
+            '${_describeUriForLogs(uri)}',
+            name: 'DeepLinkService',
+            category: LogCategory.ui,
+          );
+          return const DeepLink(type: DeepLinkType.unknown);
+        }
+        Log.info(
+          '📱 Parsed people list deep link: '
+          '${pubkeyForLogs(listPubkey)}/$listId',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
+        return DeepLink(
+          type: DeepLinkType.peopleList,
           listPubkey: listPubkey,
           listId: listId,
         );

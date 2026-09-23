@@ -47,6 +47,10 @@ class AppConstants {
   /// Divine download page that selects stores for the visitor's platform.
   static const String downloadUrl = 'https://divine.video/download';
 
+  /// Origin of the web app, under which every in-app path is a shareable
+  /// link.
+  static const String webOrigin = 'https://divine.video';
+
   // ============================================================================
   // FEED CONFIGURATION
   // ============================================================================

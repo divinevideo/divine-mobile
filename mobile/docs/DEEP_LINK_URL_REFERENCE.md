@@ -247,6 +247,31 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 
 ---
 
+### 9. People List Links
+
+Opens someone else's people list, read-only, as the Share action on the
+people-list screen produces it.
+
+**Patterns**:
+- `https://divine.video/people-lists/{listId}?owner={pubkey}`
+
+**Parameters**:
+- `listId` (required): People list d-tag
+- `owner` (required): List author public key (hex, npub, or nprofile). Without
+  it the path names the viewer's own list, which nobody else can open, so the
+  link is ignored.
+
+**Examples**:
+```
+https://divine.video/people-lists/crew?owner=a1b2c3d4e5f6...
+```
+
+**Mobile Behavior**:
+- Navigates to `/people-lists/{listId}?owner={pubkey}`, resolved from relays
+  by author + d-tag
+
+---
+
 ## URL Patterns Summary
 
 | URL Pattern | View | Mobile Route | Purpose |
@@ -260,6 +285,7 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 | `/search/{term}/{i}` | Feed | `/search/{term}/{i}` | Search results (feed) |
 | `/list/{listId}` | Grid | `/list/{listId}` | Curated video list |
 | `/list/{pubkey}/{listId}` | Grid | `/list/{pubkey}/{listId}` | Authored curated video list |
+| `/people-lists/{listId}?owner={pubkey}` | Grid | `/people-lists/{listId}?owner={pubkey}` | Shared people list |
 
 ## Special Characters in URLs
 
