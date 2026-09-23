@@ -44,7 +44,6 @@ discarded_futures|lib/screens/profile_screen_router.dart	1
 discarded_futures|lib/screens/profile_setup/view/profile_setup_view.dart	2
 discarded_futures|lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
 discarded_futures|lib/screens/relay_diagnostic_screen.dart	1
-discarded_futures|lib/screens/sound_detail_screen.dart	4
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
 discarded_futures|lib/screens/verify/verify_screen.dart	1
 discarded_futures|lib/screens/video_metadata/video_metadata_cover_screen.dart	2
@@ -70,7 +69,6 @@ discarded_futures|lib/widgets/geo_blocking_gate.dart	1
 discarded_futures|lib/widgets/global_error_widget.dart	1
 discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
-discarded_futures|lib/widgets/library/sounds_tab.dart	2
 discarded_futures|lib/widgets/linkified_text/linkified_text_navigation.dart	4
 discarded_futures|lib/widgets/new_videos_tab.dart	1
 discarded_futures|lib/widgets/notification_badge.dart	1
@@ -109,7 +107,6 @@ discarded_futures|test/blocs/comments/comment_composer/comment_composer_bloc_tes
 discarded_futures|test/blocs/comments/comment_reactions/comment_reactions_bloc_test.dart	1
 discarded_futures|test/blocs/comments/comments_list/comments_list_bloc_test.dart	2
 discarded_futures|test/blocs/community_suggest/community_suggest_cubit_test.dart	2
-discarded_futures|test/blocs/creator_sync/sound_sync_cubit_test.dart	1
 discarded_futures|test/blocs/divine_auth/divine_auth_cubit_test.dart	1
 discarded_futures|test/blocs/drafts_library/drafts_library_bloc_test.dart	1
 discarded_futures|test/blocs/explore_tabs/explore_tabs_cubit_test.dart	1
@@ -130,7 +127,6 @@ discarded_futures|test/blocs/profile_reposted_videos/profile_reposted_videos_blo
 discarded_futures|test/blocs/profile_saved_videos/profile_saved_videos_bloc_test.dart	1
 discarded_futures|test/blocs/search_results_filter/search_results_filter_cubit_test.dart	1
 discarded_futures|test/blocs/share_sheet/share_sheet_bloc_test.dart	1
-discarded_futures|test/blocs/sound_waveform/sound_waveform_bloc_test.dart	1
 discarded_futures|test/blocs/tags_picker/tags_picker_bloc_test.dart	1
 discarded_futures|test/blocs/upload_progress/upload_progress_cubit_test.dart	1
 discarded_futures|test/blocs/user_search/user_search_bloc_test.dart	1
@@ -147,7 +143,6 @@ discarded_futures|test/infrastructure/drift_setup_test.dart	1
 discarded_futures|test/mocks/mock_subscription_manager.dart	1
 discarded_futures|test/notifications/view/pending_badge_awards_view_test.dart	1
 discarded_futures|test/providers/deep_link_provider_test.dart	2
-discarded_futures|test/providers/sounds_providers_test.dart	1
 discarded_futures|test/providers/subtitle_visibility_test.dart	1
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1
 discarded_futures|test/router/providers/last_tab_position_provider_test.dart	1
@@ -185,7 +180,6 @@ unawaited_futures|lib/screens/video_recorder_screen.dart	1
 unawaited_futures|lib/screens/web_auth_screen.dart	3
 unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1
 unawaited_futures|lib/widgets/image_attachment_picker.dart	1
-unawaited_futures|lib/widgets/library/sounds_tab.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
 unawaited_futures|lib/widgets/video_recorder/video_recorder_library_button.dart	1
 unawaited_futures|lib/widgets/video_recorder/video_recorder_navigation.dart	1
@@ -209,4 +203,3 @@ unawaited_futures|test/services/profile_editing_test.dart	1
 unawaited_futures|test/services/support/auth_service_test_harness.dart	1
 unawaited_futures|test/widgets/community_suggest/community_suggest_sheet_test.dart	1
 unawaited_futures|test/widgets/composable_video_grid_test.dart	1
-unawaited_futures|test/widgets/metadata_sounds_section_test.dart	1

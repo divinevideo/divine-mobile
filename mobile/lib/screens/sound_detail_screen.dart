@@ -22,6 +22,7 @@ import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/saved_sound_context_builder.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -137,7 +138,12 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   void dispose() {
     // Stop any playing preview when leaving the screen
     if (_isPlayingPreview && _audioService != null) {
-      _audioService!.stop();
+      runDetached(
+        _audioService!.stop(),
+        'stop sound preview during disposal',
+        logName: 'SoundDetailScreen',
+        category: LogCategory.ui,
+      );
     }
     super.dispose();
   }
@@ -312,7 +318,12 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
 
     // Stop preview if playing before showing video feed
     if (_isPlayingPreview && _audioService != null) {
-      _audioService!.stop();
+      runDetached(
+        _audioService!.stop(),
+        'stop sound preview before opening video feed',
+        logName: 'SoundDetailScreen',
+        category: LogCategory.ui,
+      );
       setState(() {
         _isPlayingPreview = false;
       });
@@ -1104,14 +1115,24 @@ class _VideosGridContentState extends ConsumerState<_VideosGridContent> {
   @override
   void initState() {
     super.initState();
-    _fetchVideoEvents();
+    runDetached(
+      _fetchVideoEvents(),
+      'load sound videos',
+      logName: 'VideosGridContent',
+      category: LogCategory.ui,
+    );
   }
 
   @override
   void didUpdateWidget(_VideosGridContent oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.videoIds != oldWidget.videoIds) {
-      _fetchVideoEvents();
+      runDetached(
+        _fetchVideoEvents(),
+        'refresh sound videos',
+        logName: 'VideosGridContent',
+        category: LogCategory.ui,
+      );
     }
   }
 

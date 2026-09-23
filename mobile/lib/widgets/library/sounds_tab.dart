@@ -20,6 +20,7 @@ import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/sound_upload/sound_upload_screen.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/library/saved_sound_card.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
@@ -102,7 +103,12 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     _previewSession++;
     _playEpoch++;
     if (_previewingSoundId != null && _audioService != null) {
-      _audioService!.stop();
+      runDetached(
+        _audioService!.stop(),
+        'stop sound preview during disposal',
+        logName: 'SoundsTab',
+        category: LogCategory.ui,
+      );
     }
     WidgetsBinding.instance.removeObserver(this);
     _searchFocusNode
@@ -422,7 +428,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   Future<void> _onOpenDetails(SavedSound sound) async {
     await _stopPreview();
     if (!mounted) return;
-    context.push(SoundDetailScreen.pathForId(sound.audio.id));
+    await context.push<void>(SoundDetailScreen.pathForId(sound.audio.id));
   }
 
   Future<void> _onEditTap(SavedSound sound) async {
@@ -484,7 +490,16 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     if (syncRepository == null) return scrollView;
     return BlocProvider<SoundSyncCubit>(
       key: ValueKey(syncRepository),
-      create: (_) => SoundSyncCubit(repository: syncRepository)..syncNow(),
+      create: (_) {
+        final cubit = SoundSyncCubit(repository: syncRepository);
+        runDetached(
+          cubit.syncNow(),
+          'sync saved sounds',
+          logName: 'SoundsTab',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: scrollView,
     );
   }
