@@ -112,6 +112,11 @@ class SearchResultsPage extends ConsumerWidget {
             curatedListRepository: curatedListRepository,
             peopleListsRepository: peopleListsRepository,
             peopleListSearchEnabled: peopleListSearchEnabled,
+            // The viewer's own lists survive the Divine author check even
+            // before they have posted anything. Read alongside the
+            // auth-sensitive repositories the key above tracks, so an account
+            // switch rebuilds the bloc with the new viewer.
+            viewerPubkey: ref.watch(authServiceProvider).currentPublicKeyHex,
           ),
         ),
       ],

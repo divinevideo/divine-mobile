@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -19,13 +20,21 @@ class _MockNostrClient extends Mock implements NostrClient {
     // Self-registered so the stub below works without each file needing its
     // own `setUpAll`. Idempotent.
     registerFallbackValue(Duration.zero);
+    registerFallbackValue(<String>[]);
+    registerFallbackValue(<int>[]);
     // The reconcile that precedes a publish goes through `queryEventsDetailed`
     // so it can tell a relay's "I hold nothing" apart from an answer nobody
     // gave (#8273). Mirror whatever `queryEvents` is stubbed to return, as a
     // *settled* answer — the state every existing test describes. Tests about
     // the inconclusive read override this with `timedOut` or `noRelays`.
     when(
-      () => queryEvents(any(), timeout: any(named: 'timeout')),
+      () => queryEvents(
+        any(),
+        tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
+        useCache: any(named: 'useCache'),
+        timeout: any(named: 'timeout'),
+      ),
     ).thenAnswer((_) async => <Event>[]);
     when(
       () => queryEventsDetailed(
@@ -45,6 +54,8 @@ class _MockNostrClient extends Mock implements NostrClient {
 }
 
 class _FakeEvent extends Fake implements Event {}
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _FakeFilter extends Fake implements Filter {}
 
@@ -135,6 +146,8 @@ void main() {
       LocalPeopleListsCache? cache,
       FollowedPeopleListsStore? followedListsStore,
       BlockedPeopleListOwnerFilter? blockFilter,
+      FunnelcakeApiClient? funnelcakeApiClient,
+      List<String> discoveryRelayUrls = const [],
     }) {
       return PeopleListsRepositoryImpl(
         nostrClient: nostrClient,
@@ -142,8 +155,17 @@ void main() {
         followedListsStore:
             followedListsStore ?? InMemoryFollowedPeopleListsStore(),
         blockFilter: blockFilter,
+        funnelcakeApiClient: funnelcakeApiClient,
+        discoveryRelayUrls: discoveryRelayUrls,
       );
     }
+
+    /// A Funnelcake profile for [pubkey] with [videos] posted on Divine.
+    UserProfileFound divineProfile(String pubkey, {required int videos}) =>
+        UserProfileFound(
+          profile: UserProfileData(pubkey: pubkey),
+          stats: ProfileStatsData(videoCount: videos, reactionCount: 0),
+        );
 
     Event signedEvent({
       required int kind,
@@ -1344,6 +1366,224 @@ void main() {
         );
       }
 
+      const thirdOwner =
+          '5555555555555555555555555555555555555555555555555555555555555555';
+
+      test('reads the discovery relays alone, without the cache', () async {
+        final client = _MockNostrClient();
+        final repository = buildRepository(
+          nostrClient: client,
+          discoveryRelayUrls: const ['wss://relay.example'],
+        );
+
+        await repository.discoverPublicLists();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            tempRelays: ['wss://relay.example'],
+            relayTypes: const [RelayType.temp],
+            useCache: false,
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
+
+      test('reads the whole pool when no discovery relay is set', () async {
+        final client = _MockNostrClient();
+        final repository = buildRepository(nostrClient: client);
+
+        await repository.discoverPublicLists();
+
+        // No tempRelays, no relayTypes, the cache on: the defaults, which
+        // the mock only matches when the call passed exactly those.
+        verify(
+          () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).called(1);
+      });
+
+      test('keeps the lists whose author has posted on Divine', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'friends',
+              title: 'Friends',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: thirdOwner,
+              dTag: 'strangers',
+              title: 'Strangers',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getBulkProfiles(any())).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {
+              _ownerPubkey: divineProfile(_ownerPubkey, videos: 3),
+              // Known to Funnelcake, never posted here.
+              secondOwner: divineProfile(secondOwner, videos: 0),
+              // The third owner is unknown to Funnelcake: absent.
+            },
+          ),
+        );
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((result) => result.list.id), equals(['crew']));
+        verify(
+          () => api.getBulkProfiles(
+            any(
+              that: unorderedEquals([_ownerPubkey, secondOwner, thirdOwner]),
+            ),
+          ),
+        ).called(1);
+      });
+
+      test('asks about the authors a hundred at a time', () async {
+        final client = _MockNostrClient();
+        final owners = [
+          for (var i = 1; i <= 150; i++) i.toRadixString(16).padLeft(64, '0'),
+        ];
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            for (final owner in owners)
+              peopleEvent(
+                pubkey: owner,
+                dTag: 'crew',
+                title: 'Crew',
+                pubkeys: const [_memberA],
+              ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getBulkProfiles(any())).thenAnswer((invocation) async {
+          final asked = invocation.positionalArguments.first as List<String>;
+          return BulkProfilesResponse(
+            profiles: {
+              for (final pubkey in asked)
+                pubkey: divineProfile(pubkey, videos: 1),
+            },
+          );
+        });
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(150));
+        final pages = verify(
+          () => api.getBulkProfiles(captureAny()),
+        ).captured.cast<List<String>>();
+        expect(pages.map((page) => page.length), equals([100, 50]));
+      });
+
+      test('keeps every list when the author check fails', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'friends',
+              title: 'Friends',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getBulkProfiles(any())).thenThrow(
+          const FunnelcakeApiException(
+            message: 'Server error',
+            statusCode: 500,
+          ),
+        );
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(
+          results.map((result) => result.list.id),
+          unorderedEquals(['crew', 'friends']),
+        );
+      });
+
+      test('skips the author check without Funnelcake', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(false);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((result) => result.list.id), equals(['crew']));
+        verifyNever(() => api.getBulkProfiles(any()));
+      });
+
       test('reads with the shared public-lists budget', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
@@ -1545,6 +1785,43 @@ void main() {
         );
       }
 
+      test('reads every relay and skips the author check', () async {
+        // A list named by coordinate cannot be noise: a deep link or a shared
+        // link may name one only a public relay holds.
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: _ownerPubkey, dTag: 'crew', title: 'Crew'),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+          discoveryRelayUrls: const ['wss://relay.example'],
+        );
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list?.name, equals('Crew'));
+        // No tempRelays, no relayTypes, the cache on: the defaults, which
+        // the mock only matches when the call passed exactly those.
+        verify(
+          () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).called(1);
+        verifyNever(() => api.getBulkProfiles(any()));
+      });
+
       test('queries by author and d tag and returns the match', () async {
         final client = _MockNostrClient();
         when(
@@ -1655,6 +1932,73 @@ void main() {
           createdAt: createdAt,
         );
       }
+
+      test('reads the discovery relays alone', () async {
+        final client = _MockNostrClient();
+        final repository = buildRepository(
+          nostrClient: client,
+          discoveryRelayUrls: const ['wss://relay.example'],
+        );
+
+        await repository.searchPublicLists('crew').toList();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            tempRelays: ['wss://relay.example'],
+            relayTypes: const [RelayType.temp],
+            useCache: false,
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
+
+      test("keeps the viewer's own list whatever Funnelcake says", () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'crew',
+              title: 'Crew too',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        // Neither owner has posted; only the viewer's own list is kept, and
+        // the viewer is not even asked about.
+        when(
+          () => api.getBulkProfiles(any()),
+        ).thenAnswer((_) async => const BulkProfilesResponse(profiles: {}));
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository
+            .searchPublicLists('crew', viewerPubkey: _ownerPubkey)
+            .toList();
+
+        expect(
+          results.single.map((r) => r.ownerPubkey),
+          equals([_ownerPubkey]),
+        );
+        verify(() => api.getBulkProfiles([secondOwner])).called(1);
+      });
 
       test("skips other clients' machinery sets", () async {
         final client = _MockNostrClient();

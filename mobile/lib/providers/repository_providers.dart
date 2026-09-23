@@ -567,6 +567,10 @@ PeopleListsRepository peopleListsRepository(Ref ref) {
     cache: cache,
     followedListsStore: ref.watch(followedPeopleListsStoreProvider),
     blockFilter: createBlockedAuthorFilter(ref),
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    // Discovery reads the Divine relay alone: the rest of the pool is the
+    // NIP-65 indexers, which hold every client's follow sets.
+    discoveryRelayUrls: [ref.watch(currentEnvironmentProvider).relayUrl],
   );
 }
 

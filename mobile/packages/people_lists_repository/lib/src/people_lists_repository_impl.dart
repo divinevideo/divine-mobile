@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -27,6 +28,9 @@ const String _logName = 'people_lists_repository.impl';
 /// equal. Shared by discovery, search, a deep-linked list, and the refresh of
 /// followed lists at account attach, which runs inside that same window.
 const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
+
+/// How many authors one Funnelcake bulk-profile call answers for.
+const _bulkProfilesPageSize = 100;
 
 /// Filter callback for owner-authored people-list search results.
 ///
@@ -53,10 +57,14 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     required LocalPeopleListsCache cache,
     required FollowedPeopleListsStore followedListsStore,
     BlockedPeopleListOwnerFilter? blockFilter,
+    FunnelcakeApiClient? funnelcakeApiClient,
+    List<String> discoveryRelayUrls = const [],
   }) : _nostrClient = nostrClient,
        _cache = cache,
        _followedListsStore = followedListsStore,
-       _blockFilter = blockFilter;
+       _blockFilter = blockFilter,
+       _funnelcakeApiClient = funnelcakeApiClient,
+       _discoveryRelayUrls = discoveryRelayUrls;
 
   final NostrClient _nostrClient;
   final LocalPeopleListsCache _cache;
@@ -64,6 +72,19 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// Which lists each viewer follows. [_cache] only mirrors their contents.
   final FollowedPeopleListsStore _followedListsStore;
   final BlockedPeopleListOwnerFilter? _blockFilter;
+
+  /// Answers which list authors have posted on Divine. `null` skips the
+  /// check, which is how a build without Funnelcake still discovers lists.
+  final FunnelcakeApiClient? _funnelcakeApiClient;
+
+  /// Where public lists are discovered and searched. Empty reads the whole
+  /// pool, which for every account includes the NIP-65 indexer relays, and
+  /// those hold every client's follow sets: the newest kind-30000 events
+  /// there are mostly lists nobody on Divine is in. The Divine relay alone
+  /// holds what Divine's own clients publish. A list named by coordinate —
+  /// a deep link, a followed list's refresh — is still read from the whole
+  /// pool, since it cannot be noise.
+  final List<String> _discoveryRelayUrls;
 
   @override
   Stream<List<UserList>> watchLists({required String ownerPubkey}) {
@@ -301,6 +322,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   Stream<List<PeopleListSearchResult>> searchPublicLists(
     String query, {
     int limit = 50,
+    String? viewerPubkey,
   }) async* {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
@@ -309,6 +331,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     final results = await _queryPublicLists(
       limit: limit,
       logContext: 'for "$trimmed"',
+      discovery: true,
+      keepAuthor: viewerPubkey,
       where: (list) =>
           list.name.toLowerCase().contains(lowerQuery) ||
           (list.description?.toLowerCase().contains(lowerQuery) ?? false),
@@ -327,6 +351,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     final results = await _queryPublicLists(
       limit: limit,
       logContext: 'for discovery',
+      discovery: true,
       excludeAuthor: excludeAuthor,
     );
     results.sort((a, b) => b.list.updatedAt.compareTo(a.list.updatedAt));
@@ -556,14 +581,21 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
   /// Shared relay query + decode + filter + coordinate-dedup pipeline behind
   /// [searchPublicLists], [discoverPublicLists], and [fetchPublicList].
+  ///
+  /// A [discovery] read is an open one — no author, no `d` tag — so it goes
+  /// to the discovery relays alone, without the client's local cache, and
+  /// its results pass the Divine author check ([_keepDivineAuthors]).
   Future<List<PeopleListSearchResult>> _queryPublicLists({
     required int limit,
     required String logContext,
+    bool discovery = false,
     bool Function(UserList list)? where,
     String? excludeAuthor,
+    String? keepAuthor,
     String? author,
     String? dTag,
   }) async {
+    final scoped = discovery && _discoveryRelayUrls.isNotEmpty;
     final List<Event> events;
     try {
       events = await _nostrClient.queryEvents(
@@ -575,6 +607,11 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
             d: dTag == null ? null : [dTag],
           ),
         ],
+        tempRelays: scoped ? _discoveryRelayUrls : null,
+        relayTypes: scoped ? const [RelayType.temp] : RelayType.all,
+        // Cached rows came from whichever relays answered earlier reads, so
+        // they would bring the public relays' sets back in.
+        useCache: !scoped,
         timeout: kPublicPeopleListsRelayReadTimeout,
       );
     } on Object catch (error, stackTrace) {
@@ -611,7 +648,68 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       seen[result.addressableId] = result;
     }
 
-    return seen.values.toList();
+    final results = seen.values.toList();
+    if (!discovery) return results;
+    return _keepDivineAuthors(results, keepAuthor: keepAuthor);
+  }
+
+  /// Keeps the lists whose author has posted on Divine, and [keepAuthor]'s.
+  ///
+  /// Kind 30000 is every Nostr client's follow-set kind, so a list's members
+  /// say nothing about Divine; its author having posted here does. Authors
+  /// are asked about a page at a time. Without Funnelcake every list is
+  /// kept, and so is every list when the check itself fails, with a warning:
+  /// the unfiltered gallery is what shipped before this check, while an
+  /// empty one would claim there are no lists when the relay just listed
+  /// them.
+  Future<List<PeopleListSearchResult>> _keepDivineAuthors(
+    List<PeopleListSearchResult> lists, {
+    String? keepAuthor,
+  }) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable || lists.isEmpty) return lists;
+    final authors = {
+      for (final list in lists)
+        if (list.ownerPubkey != keepAuthor) list.ownerPubkey,
+    }.toList();
+    if (authors.isEmpty) return lists;
+
+    final Set<String> posted;
+    try {
+      final pages = await Future.wait([
+        for (
+          var start = 0;
+          start < authors.length;
+          start += _bulkProfilesPageSize
+        )
+          api.getBulkProfiles(
+            authors.skip(start).take(_bulkProfilesPageSize).toList(),
+          ),
+      ]);
+      posted = {
+        for (final page in pages)
+          for (final MapEntry(key: pubkey, value: profile)
+              in page.profiles.entries)
+            if ((profile.stats?.videoCount ?? 0) > 0) pubkey.toLowerCase(),
+      };
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Could not check which public people list authors have posted on '
+        'Divine; keeping every list',
+        name: _logName,
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return lists;
+    }
+
+    return [
+      for (final list in lists)
+        if (list.ownerPubkey == keepAuthor ||
+            posted.contains(list.ownerPubkey.toLowerCase()))
+          list,
+    ];
   }
 
   Future<PeopleListPublishResult> _publishListReplacement({

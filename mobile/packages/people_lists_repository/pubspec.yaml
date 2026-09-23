@@ -9,6 +9,7 @@ environment:
 
 dependencies:
   equatable: ^2.0.5
+  funnelcake_api_client:
   hive_ce:
   models:
   nostr_client:
