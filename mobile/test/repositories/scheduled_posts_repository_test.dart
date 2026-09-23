@@ -708,6 +708,35 @@ void main() {
       });
     });
 
+    group('requeue', () {
+      test('gives a failed post a fresh backoff', () async {
+        final event = buildEvent();
+        await repository.enqueue(event: event, draftId: 'draft-1');
+        for (var attempt = 0; attempt < 5; attempt++) {
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            attemptedAt: now,
+          );
+        }
+        await repository.markFailed(event.id, 'too many pending posts');
+        when(
+          () => client.schedule(any()),
+        ).thenAnswer(
+          (_) async => const ScheduleSubmitTransientFailure('timeout'),
+        );
+
+        await repository.requeue(event.id);
+        await repository.submit(event.id);
+
+        final post = (await repository.getById(event.id))!;
+        expect(post.attempts, 1);
+        expect(
+          repository.isSubmitDue(post, now.add(const Duration(seconds: 30))),
+          isTrue,
+        );
+      });
+    });
+
     group('row bookkeeping', () {
       test('markPublished, markFailed, requeue and delete', () async {
         final event = buildEvent();

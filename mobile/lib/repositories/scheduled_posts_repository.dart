@@ -512,12 +512,13 @@ class ScheduledPostsRepository {
     _notify();
   }
 
-  /// Returns a failed row to the queue for another hand-off attempt.
+  /// Returns a failed row to the queue for a fresh run of hand-off attempts.
   Future<void> requeue(String eventId) async {
     await _dao.updateStatus(
       eventId: eventId,
       status: ScheduledPostStatus.pendingSubmit,
       clearFailureReason: true,
+      resetAttempts: true,
     );
     _notify();
   }

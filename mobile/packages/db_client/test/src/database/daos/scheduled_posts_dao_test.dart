@@ -193,6 +193,25 @@ void main() {
         expect(stored.status, ScheduledPostStatus.scheduled);
       });
 
+      test('resetAttempts starts the attempt count over', () async {
+        await dao.enqueue(post(eventA));
+        await dao.updateStatus(
+          eventId: eventA,
+          attemptedAt: DateTime.utc(2026, 9, 22, 12),
+          failureReason: 'timeout',
+        );
+
+        await dao.updateStatus(
+          eventId: eventA,
+          status: ScheduledPostStatus.pendingSubmit,
+          resetAttempts: true,
+        );
+
+        final stored = await dao.getById(eventA);
+        expect(stored!.attempts, 0);
+        expect(stored.lastAttemptAt, isNull);
+      });
+
       test('returns false for an unknown row', () async {
         final changed = await dao.updateStatus(
           eventId: eventA,

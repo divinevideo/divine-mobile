@@ -231,13 +231,15 @@ class ScheduledPostsDao extends DatabaseAccessor<AppDatabase>
 
   /// Moves a row to [status]. [failureReason] replaces the stored reason
   /// (clear it with [clearFailureReason]); [attemptedAt] records a submission
-  /// attempt and increments the attempt count. Returns whether a row changed.
+  /// attempt and increments the attempt count, which [resetAttempts] instead
+  /// starts over. Returns whether a row changed.
   Future<bool> updateStatus({
     required String eventId,
     ScheduledPostStatus? status,
     String? failureReason,
     bool clearFailureReason = false,
     DateTime? attemptedAt,
+    bool resetAttempts = false,
   }) {
     return transaction(() async {
       final row = await (select(
@@ -252,10 +254,14 @@ class ScheduledPostsDao extends DatabaseAccessor<AppDatabase>
             : failureReason != null
             ? Value(failureReason)
             : const Value.absent(),
-        attempts: attemptedAt != null
+        attempts: resetAttempts
+            ? const Value(0)
+            : attemptedAt != null
             ? Value(row.attempts + 1)
             : const Value.absent(),
-        lastAttemptAt: attemptedAt != null
+        lastAttemptAt: resetAttempts
+            ? const Value(null)
+            : attemptedAt != null
             ? Value(attemptedAt)
             : const Value.absent(),
       );
