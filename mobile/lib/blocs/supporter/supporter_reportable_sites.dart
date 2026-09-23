@@ -16,4 +16,7 @@ abstract class SupporterReportableSites {
 
   /// Unexpected failure delivered with a store or verification update.
   static const String purchaseUpdate = 'purchaseUpdate';
+
+  /// Unexpected failure while saving public recognition consent.
+  static const String setRecognition = 'setPublicRecognition';
 }

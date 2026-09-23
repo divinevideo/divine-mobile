@@ -98,6 +98,20 @@ class SupporterCubit extends Cubit<SupporterState> {
     } on SupporterApiException catch (error) {
       _emitApiFailure(error);
       _emit(state.copyWith(savingRecognition: false));
+    } on Object catch (error, stackTrace) {
+      // A failure outside the typed contract, such as a signer error, must
+      // still end the save, or the recognition toggle stays disabled.
+      addError(
+        Reportable(error, context: SupporterReportableSites.setRecognition),
+        stackTrace,
+      );
+      _emit(
+        state.copyWith(
+          status: SupporterStatus.error,
+          failure: SupporterFailure.unknown,
+          savingRecognition: false,
+        ),
+      );
     }
   }
 
