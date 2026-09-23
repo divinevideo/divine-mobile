@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
@@ -59,6 +61,21 @@ MinorAccountReviewStatus _statusWithCase() {
       supportEmail: 'support@divine.video',
     ),
   );
+}
+
+/// Keeps both review-status providers listened so an invalidation re-reads
+/// them, which is what the post-submit refresh depends on.
+class _ProviderWatcher extends ConsumerWidget {
+  const _ProviderWatcher({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(currentMinorAccountReviewStatusProvider);
+    ref.watch(protectedMinorStatusProvider);
+    return child;
+  }
 }
 
 void main() {
@@ -178,5 +195,69 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets(
+      'invalidates both review status providers after a successful submit',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final repository = _FakeRepository();
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        var reviewStatusReads = 0;
+        var protectedStatusReads = 0;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              minorAccountReviewOverrideServiceProvider.overrideWithValue(
+                MinorAccountReviewOverrideService(prefs: prefs),
+              ),
+              currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+                reviewStatusReads++;
+                return _statusWithCase();
+              }),
+              protectedMinorStatusProvider.overrideWith((ref) async {
+                protectedStatusReads++;
+                return ProtectedMinorStatus.notProtected();
+              }),
+              minorAccountReviewRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: _ProviderWatcher(
+                  child: MinorConsentSubmitView(
+                    videoPath: '/tmp/consent.mp4',
+                    onUseEmailFallback: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final reviewReadsBefore = reviewStatusReads;
+        final protectedReadsBefore = protectedStatusReads;
+        expect(reviewReadsBefore, greaterThan(0));
+        expect(protectedReadsBefore, greaterThan(0));
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'parent@example.com',
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+        );
+        await tester.pumpAndSettle();
+
+        expect(reviewStatusReads, greaterThan(reviewReadsBefore));
+        expect(protectedStatusReads, greaterThan(protectedReadsBefore));
+      },
+    );
   });
 }

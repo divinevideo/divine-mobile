@@ -130,8 +130,15 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
       callback(filePath);
       return;
     }
-    // No injected seam: this screen owns the confirm-and-submit step, so keep
-    // the accepted clip here and swap the view for the email confirmation.
+    // No injected seam: this screen owns the confirm-and-submit step. Release
+    // the camera as soon as the clip is accepted — the file stays usable for
+    // upload while the parent confirms their email — then swap the view.
+    unawaited(_acceptVideo(filePath));
+  }
+
+  Future<void> _acceptVideo(String filePath) async {
+    await context.read<MinorConsentCaptureCubit>().releaseRecorder();
+    if (!mounted) return;
     setState(() => _pendingVideoPath = filePath);
   }
 
