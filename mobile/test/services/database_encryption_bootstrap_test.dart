@@ -472,6 +472,7 @@ void main() {
       test(
         'recovers an interrupted rewrite before generating a new key',
         () async {
+          final logs = await _clearedLogCapture();
           store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
           var resets = 0;
           final bootstrap = buildBootstrap(
@@ -482,6 +483,14 @@ void main() {
           expect(await bootstrap.resolveCipherKey(), existing);
           expect(store, {dbCipherKeyStorageKey: existing});
           expect(resets, 0);
+          expect(
+            _bootstrapWarnings(logs),
+            hasLength(1),
+            reason:
+                'an interrupted rewrite is the only field evidence that '
+                'the delete-then-add window was hit',
+          );
+          expect(_loggedText(logs), everyElement(isNot(contains(existing))));
         },
       );
 
@@ -613,6 +622,7 @@ void main() {
       });
 
       test('a failed rewrite does not fail the launch', () async {
+        final logs = await _clearedLogCapture();
         store[dbCipherKeyStorageKey] = existing;
         when(
           () => storage.write(
@@ -638,6 +648,14 @@ void main() {
               'the caller already holds a key that opens the database; a '
               'failed backup write leaves the primary intact',
         );
+        expect(
+          _bootstrapWarnings(logs),
+          hasLength(1),
+          reason:
+              'a deferred rewrite leaves the locked-launch fix unapplied, '
+              'and support cannot see that without a log line',
+        );
+        expect(_loggedText(logs), everyElement(isNot(contains(existing))));
       });
 
       test(

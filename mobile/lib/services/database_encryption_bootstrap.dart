@@ -325,6 +325,11 @@ class DatabaseEncryptionBootstrap {
       dbCipherKeyAccessibilityBackupStorageKey,
     );
     if (backup != null && _isValidCipherKey(backup)) {
+      Log.warning(
+        'Restoring the DB cipher key from its recovery copy: an earlier '
+        'accessibility rewrite did not finish.',
+        name: _logName,
+      );
       await _restorePrimaryKey(backup);
       return (backup, false);
     }
@@ -374,10 +379,17 @@ class DatabaseEncryptionBootstrap {
             dbCipherKeyAccessibilityBackupStorageKey,
           ) !=
           key) {
-        return;
+        throw StateError('the recovery copy did not read back');
       }
-    } on Object {
-      // The primary has not been touched: defer the accessibility upgrade.
+    } on Object catch (error) {
+      // The primary has not been touched, so deferring is safe.
+      Log.warning(
+        'Deferred the DB cipher key accessibility rewrite: its recovery copy '
+        'could not be verified. A launch while the device is locked may '
+        'still fail until the rewrite succeeds.',
+        name: _logName,
+        error: error,
+      );
       return;
     }
     await _restorePrimaryKey(key);
