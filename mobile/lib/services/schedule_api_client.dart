@@ -33,9 +33,6 @@ enum ScheduleRejectionKind {
 
   /// The account already has the maximum number of pending posts (429).
   overCap,
-
-  /// Too many scheduling requests from this account (429).
-  rateLimited,
 }
 
 /// Outcome of `POST /api/schedule`.
@@ -318,10 +315,9 @@ class ScheduleApiClient {
       401 => ScheduleRejectionKind.unauthorized,
       403 => ScheduleRejectionKind.forbidden,
       402 => ScheduleRejectionKind.notEntitled,
-      429 =>
-        message.contains('pending')
-            ? ScheduleRejectionKind.overCap
-            : ScheduleRejectionKind.rateLimited,
+      // The pending-post cap is a verdict; a rate limit clears on its own and
+      // falls through as transient, so the post is retried with backoff.
+      429 when message.contains('pending') => ScheduleRejectionKind.overCap,
       _ => null,
     };
     if (kind != null) {

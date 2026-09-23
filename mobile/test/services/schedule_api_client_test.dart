@@ -264,11 +264,6 @@ void main() {
           'author already has 100 posts pending',
           ScheduleRejectionKind.overCap,
         ),
-        (
-          429,
-          'rate-limited: too many events from this pubkey, slow down',
-          ScheduleRejectionKind.rateLimited,
-        ),
       ]) {
         test('maps $status "$message" to ${kind.name}', () async {
           stubToken(buildToken());
@@ -291,6 +286,27 @@ void main() {
           );
         });
       }
+
+      test('treats a 429 rate limit as a transient failure', () async {
+        stubToken(buildToken());
+        final client = buildClient(
+          respondWith(429, {
+            'event_id': '',
+            'accepted': false,
+            'message':
+                'rate-limited: too many events from this pubkey, slow down',
+          }),
+        );
+
+        final result = await client.schedule(buildVideoEvent());
+
+        expect(
+          result,
+          isA<ScheduleSubmitTransientFailure>()
+              .having((r) => r.reason, 'reason', 'http_429')
+              .having((r) => r.unavailable, 'unavailable', isFalse),
+        );
+      });
 
       test('a relay 503 is transient and unavailable', () async {
         stubToken(buildToken());
