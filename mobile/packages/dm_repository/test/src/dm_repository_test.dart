@@ -718,21 +718,6 @@ void main() {
       when(() => mockNostrClient.connectedRelayCount).thenReturn(3);
       when(() => mockNostrClient.configuredRelayCount).thenReturn(3);
       when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(true);
-      when(
-        () => mockNostrClient.readEvents(
-          any(),
-          subscriptionId: any(named: 'subscriptionId'),
-          useCache: any(named: 'useCache'),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-        ),
-      ).thenAnswer(
-        (_) async => const QueryResult(
-          events: [],
-          endedBy: QueryEnd.complete,
-          answeredNetworkRelayCount: 3,
-        ),
-      );
-
       // Default conversation-list read for tests that trigger maintenance.
       when(
         () => mockConversationsDao.getAllConversations(
@@ -6694,6 +6679,22 @@ void main() {
 
     group('backfillHistoryIfNeeded', () {
       setUp(stubReadCursorRowMatched);
+      setUp(() {
+        when(
+          () => mockNostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            answeredNetworkRelayCount: 3,
+          ),
+        );
+      });
       // A deferred drain arms a relay-status listener (#8550). Default to a
       // pool with nothing connected and a stream that never speaks, so the
       // deferral tests below exercise the deferral itself; the resume tests
@@ -9452,6 +9453,22 @@ void main() {
 
     group('history drain batch decryption (#5391)', () {
       setUp(stubNoCrossProtocolTwinAvailable);
+      setUp(() {
+        when(
+          () => mockNostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            answeredNetworkRelayCount: 3,
+          ),
+        );
+      });
 
       // A new recipient keypair per test so the real NIP-44 unwrap in the
       // batched decrypt worker succeeds (the shared _validPubkey* constants
