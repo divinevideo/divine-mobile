@@ -70,4 +70,17 @@ void main() {
       expect(camera.isInitialized, isFalse);
     });
   });
+
+  group('minorConsentAutoStoppedPath', () {
+    test('returns the recorded path from an EditorVideo', () {
+      expect(
+        minorConsentAutoStoppedPath(EditorVideo.file('/tmp/consent.mp4')),
+        '/tmp/consent.mp4',
+      );
+    });
+
+    test('returns null when the camera captured nothing', () {
+      expect(minorConsentAutoStoppedPath(null), isNull);
+    });
+  });
 }
