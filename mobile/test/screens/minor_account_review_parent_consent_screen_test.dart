@@ -15,6 +15,9 @@ import '../helpers/scroll.dart';
 
 class _FakeRecorder implements MinorConsentRecorder {
   @override
+  void Function(String? path)? onAutoStopped;
+
+  @override
   Future<void> initialize() async {}
 
   @override
