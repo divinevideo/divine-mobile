@@ -98,6 +98,8 @@ void main() {
           .listSync()
           .whereType<File>()
           .map((file) => file.uri.pathSegments.last)
+          // Finder writes a gitignored .DS_Store into folders it opens.
+          .where((name) => !name.startsWith('.'))
           .toSet();
       final expected = figmaBacked
           .map((sticker) => '${sticker.fileName}.webp')
