@@ -1,6 +1,6 @@
-// ABOUTME: Tests for ScheduledPostCoordinator: the sweep order (hand-off,
-// ABOUTME: sync, client fallback, finalize), owner scoping, and the user
-// ABOUTME: actions cancel / reschedule / publish now / retry.
+// ABOUTME: Tests for ScheduledPostCoordinator: the sweep order (settled rows,
+// ABOUTME: hand-off, sync, client fallback, finalize), owner scoping, and the
+// ABOUTME: user actions cancel / reschedule / publish now / retry.
 
 import 'dart:async';
 
@@ -771,6 +771,139 @@ void main() {
         );
         verifyNever(() => client.schedule(any()));
         expect(broadcasts, isEmpty);
+      });
+    });
+
+    group('settled rows', () {
+      test('finishes a withdrawal a backgrounded sweep left behind', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        final listed = Completer<ScheduleListResult>();
+        when(() => client.list()).thenAnswer((_) => listed.future);
+        await coordinator.initialize();
+        await pumpEventQueue();
+
+        // The app leaves while the relay's list is still on its way.
+        foreground.add(false);
+        await pumpEventQueue();
+        listed.complete(
+          ScheduleListLoaded([
+            serverEntry(event, ScheduledPostServerState.cancel),
+          ]),
+        );
+        await pumpEventQueue();
+        expect(
+          (await repository.getById(event.id))?.status,
+          ScheduledPostStatus.cancelled,
+        );
+        verifyNever(
+          () => draftService.updatePublishStatus(
+            draftId: any(named: 'draftId'),
+            status: any(named: 'status'),
+          ),
+        );
+
+        when(
+          () => client.list(),
+        ).thenAnswer((_) async => const ScheduleListLoaded([]));
+        foreground.add(true);
+        await pumpEventQueue();
+
+        verify(
+          () => draftService.updatePublishStatus(
+            draftId: 'draft-1',
+            status: PublishStatus.draft,
+          ),
+        ).called(1);
+        expect(await repository.getById(event.id), isNull);
+      });
+
+      test('keeps a draft held while another live row still owns it', () async {
+        final withdrawn = buildEvent();
+        final live = buildEvent(d: 'video-2');
+        await enqueue(withdrawn, status: ScheduledPostStatus.cancelled);
+        await enqueue(live, status: ScheduledPostStatus.scheduled);
+
+        await coordinator.sweep(force: true);
+
+        expect(await repository.getById(withdrawn.id), isNull);
+        expect(await repository.getById(live.id), isNotNull);
+        verifyNever(
+          () => draftService.updatePublishStatus(
+            draftId: any(named: 'draftId'),
+            status: any(named: 'status'),
+          ),
+        );
+      });
+    });
+
+    group('an action racing a sweep', () {
+      test(
+        'post now publishes and finishes once while the coordinator runs',
+        () async {
+          final event = buildEvent(collab: true);
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          when(
+            () => client.cancel(event.id),
+          ).thenAnswer((_) async => const ScheduleCancelled());
+          await coordinator.initialize();
+          await pumpEventQueue();
+          // Keeps the live row in the outbox while the sweeps its writes wake
+          // look at it.
+          final draftDeleted = Completer<void>();
+          when(
+            () => draftService.deleteDraft(any()),
+          ).thenAnswer((_) => draftDeleted.future);
+
+          final publishing = coordinator.publishNow(event.id);
+          await pumpEventQueue();
+          draftDeleted.complete();
+
+          expect(await publishing, ScheduledPostActionOutcome.done);
+          await pumpEventQueue();
+          expect(broadcasts, hasLength(1));
+          expect(recorded, hasLength(1));
+          verify(
+            () => inviteService.sendInvites(
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              creatorPubkey: any(named: 'creatorPubkey'),
+              videoAddress: any(named: 'videoAddress'),
+              title: any(named: 'title'),
+              thumbnailUrl: any(named: 'thumbnailUrl'),
+              relayHint: any(named: 'relayHint'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => draftService.updatePublishStatus(
+              draftId: any(named: 'draftId'),
+              status: any(named: 'status'),
+            ),
+          );
+        },
+      );
+
+      test('a cancel keeps a late post from going live while the relay '
+          'answers', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        final answer = Completer<ScheduleCancelResult>();
+        when(() => client.cancel(event.id)).thenAnswer((_) => answer.future);
+        now = publishAt.add(const Duration(minutes: 6));
+
+        final cancelling = coordinator.cancel(event.id);
+        await pumpEventQueue();
+        await coordinator.sweep();
+        answer.complete(const ScheduleCancelled());
+
+        expect(await cancelling, ScheduledPostActionOutcome.done);
+        expect(broadcasts, isEmpty);
+        verify(
+          () => draftService.updatePublishStatus(
+            draftId: 'draft-1',
+            status: PublishStatus.draft,
+          ),
+        ).called(1);
+        expect(await repository.getById(event.id), isNull);
       });
     });
   });

@@ -61,11 +61,13 @@ enum ScheduledPostActionOutcome {
 ///
 /// Lifecycle mirrors `ReportRetryService`: a sweep runs on foreground, on
 /// reconnect, after every outbox write, and from one held timer armed to the
-/// next moment a row needs attention. A sweep (1) hands pending rows to the
+/// next moment a row needs attention. A sweep (1) finishes rows an earlier
+/// sweep settled but never followed up, (2) hands pending rows to the
 /// relay — or publishes them directly when their time is too close for the
-/// relay to accept — (2) mirrors the relay's queue state, (3) publishes held
-/// posts the relay is late on, and (4) runs the confirmed-publish side
-/// effects for anything that went live.
+/// relay to accept — (3) mirrors the relay's queue state, (4) publishes held
+/// posts the relay is late on, and (5) runs the confirmed-publish side
+/// effects for anything that went live. It leaves the rows a user action is
+/// working on to that action.
 ///
 /// Owner-scoped: every step re-checks that the signed-in account still owns
 /// the outbox, so an account switch mid-sweep publishes nothing for the
@@ -130,6 +132,10 @@ class ScheduledPostCoordinator {
   bool _sweepAgain = false;
   bool _forceNext = false;
   DateTime? _lastSyncAt;
+
+  /// Rows a user action is working on. A sweep leaves them to it, so the two
+  /// never broadcast, finalize or park the same row twice.
+  final Set<String> _acting = <String>{};
   List<ScheduledPostServerEntry> _serverOnly = const [];
   final _serverOnlyChanges = StreamController<void>.broadcast();
 
@@ -225,6 +231,8 @@ class ScheduledPostCoordinator {
 
   Future<void> _sweepOnce({required bool force}) async {
     final now = _now();
+    await _finalizeSettled();
+    if (_stop) return;
     var pending = await _repository.pending();
     // A forced sweep syncs even with nothing local, so posts scheduled from
     // another device show up.
@@ -233,6 +241,7 @@ class ScheduledPostCoordinator {
     for (final post in pending) {
       if (_stop) return;
       if (post.status != ScheduledPostStatus.pendingSubmit) continue;
+      if (_acting.contains(post.eventId)) continue;
       if (_repository.shouldPublishDirectly(post, now)) {
         await _publishHeldPost(post);
       } else if (_repository.isSubmitDue(post, now)) {
@@ -268,7 +277,29 @@ class ScheduledPostCoordinator {
 
     for (final post in _repository.dueForClientPublish(pending, _now())) {
       if (_stop) return;
+      if (_acting.contains(post.eventId)) continue;
       await _publishHeldPost(post);
+    }
+  }
+
+  /// Finishes rows a relay verdict or a publish already settled whose
+  /// follow-up never ran: the sweep that wrote them stopped (backgrounded,
+  /// disposed, account switched) or the app died in between. Nothing else
+  /// reads a terminal row again, and the follow-ups are safe to repeat.
+  Future<void> _finalizeSettled() async {
+    for (final post in await _repository.list()) {
+      if (_stop) return;
+      if (_acting.contains(post.eventId)) continue;
+      switch (post.status) {
+        case ScheduledPostStatus.published:
+          await _finalizePublished(post);
+        case ScheduledPostStatus.cancelled:
+          await _finalizeCancelled(post);
+        case ScheduledPostStatus.pendingSubmit:
+        case ScheduledPostStatus.scheduled:
+        case ScheduledPostStatus.failed:
+          break;
+      }
     }
   }
 
@@ -354,13 +385,22 @@ class ScheduledPostCoordinator {
     );
   }
 
-  /// The relay dropped the post (cancelled elsewhere): the draft copy
-  /// becomes an ordinary draft again.
+  /// The post was withdrawn: its draft copy becomes an ordinary draft again,
+  /// unless another row still holds it — a move hands the draft to its
+  /// replacement before the old row goes.
   Future<void> _finalizeCancelled(ScheduledPost post) async {
-    await _draftService.updatePublishStatus(
-      draftId: post.draftId,
-      status: PublishStatus.draft,
+    final stillHeld = (await _repository.list()).any(
+      (other) =>
+          other.draftId == post.draftId &&
+          other.eventId != post.eventId &&
+          (other.isPending || other.status == ScheduledPostStatus.failed),
     );
+    if (!stillHeld) {
+      await _draftService.updatePublishStatus(
+        draftId: post.draftId,
+        status: PublishStatus.draft,
+      );
+    }
     await _repository.delete(post.eventId);
   }
 
@@ -419,24 +459,47 @@ class ScheduledPostCoordinator {
     }
   }
 
+  /// Runs a user [action] while sweeps leave [eventId] alone. The action
+  /// passes any replacement row to `hold` before creating it. A nested
+  /// action releases only the rows it took, never its caller's.
+  Future<ScheduledPostActionOutcome> _whileHolding(
+    String eventId,
+    Future<ScheduledPostActionOutcome> Function(void Function(String) hold)
+    action,
+  ) async {
+    final held = <String>[];
+    void hold(String id) {
+      if (_acting.add(id)) held.add(id);
+    }
+
+    hold(eventId);
+    try {
+      return await action(hold);
+    } finally {
+      held.forEach(_acting.remove);
+    }
+  }
+
   /// Withdraws [eventId] and returns its draft to the Drafts list.
   Future<ScheduledPostActionOutcome> cancel(String eventId) async {
     if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
-    final post = await _repository.getById(eventId);
-    if (post == null) return ScheduledPostActionOutcome.done;
+    return _whileHolding(eventId, (_) async {
+      final post = await _repository.getById(eventId);
+      if (post == null) return ScheduledPostActionOutcome.done;
 
-    switch (await _repository.cancelOnServer(eventId)) {
-      case ScheduledPostCancelOutcome.cancelled:
-        await _finalizeCancelled(post);
-        return ScheduledPostActionOutcome.done;
-      case ScheduledPostCancelOutcome.alreadyPublished:
-        await _finalizePublished(post);
-        return ScheduledPostActionOutcome.alreadyPublished;
-      case ScheduledPostCancelOutcome.unavailable:
-        return ScheduledPostActionOutcome.unavailable;
-      case ScheduledPostCancelOutcome.failure:
-        return ScheduledPostActionOutcome.failed;
-    }
+      switch (await _repository.cancelOnServer(eventId)) {
+        case ScheduledPostCancelOutcome.cancelled:
+          await _finalizeCancelled(post);
+          return ScheduledPostActionOutcome.done;
+        case ScheduledPostCancelOutcome.alreadyPublished:
+          await _finalizePublished(post);
+          return ScheduledPostActionOutcome.alreadyPublished;
+        case ScheduledPostCancelOutcome.unavailable:
+          return ScheduledPostActionOutcome.unavailable;
+        case ScheduledPostCancelOutcome.failure:
+          return ScheduledPostActionOutcome.failed;
+      }
+    });
   }
 
   /// Moves [eventId] to [newPublishAt]: a newly signed event replaces the
@@ -446,91 +509,100 @@ class ScheduledPostCoordinator {
     DateTime newPublishAt,
   ) async {
     if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
-    final post = await _repository.getById(eventId);
-    if (post == null) return ScheduledPostActionOutcome.failed;
+    return _whileHolding(eventId, (_) async {
+      final post = await _repository.getById(eventId);
+      if (post == null) return ScheduledPostActionOutcome.failed;
 
-    final signed = await _resign(
-      post,
-      createdAt: newPublishAt.toUtc().millisecondsSinceEpoch ~/ 1000,
-    );
-    if (signed == null) return ScheduledPostActionOutcome.failed;
-    // The time it already has, over a body an earlier move restamped, signs
-    // the held event again: replacing it would withdraw and delete the only
-    // copy. A failed one goes back to the relay as it is.
-    if (signed.id == post.eventId) {
-      return post.status == ScheduledPostStatus.failed
-          ? retry(eventId)
-          : ScheduledPostActionOutcome.done;
-    }
+      final signed = await _resign(
+        post,
+        createdAt: newPublishAt.toUtc().millisecondsSinceEpoch ~/ 1000,
+      );
+      if (signed == null) return ScheduledPostActionOutcome.failed;
+      // The time it already has, over a body an earlier move restamped,
+      // signs the held event again: replacing it would withdraw and delete
+      // the only copy. A failed one goes back to the relay as it is.
+      if (signed.id == post.eventId) {
+        return post.status == ScheduledPostStatus.failed
+            ? retry(eventId)
+            : ScheduledPostActionOutcome.done;
+      }
 
-    final withdrawn = await _withdrawBeforeReplacing(post);
-    if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
+      final withdrawn = await _withdrawBeforeReplacing(post);
+      if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
 
-    await _repository.enqueue(
-      event: signed,
-      draftId: post.draftId,
-      uploadId: post.uploadId,
-      expireAfterSecs: post.expireAfterSecs,
-    );
-    await _repository.delete(post.eventId);
-    await _repository.submit(signed.id);
-    return ScheduledPostActionOutcome.done;
+      // The replacement is only handed off here, and the repository already
+      // keeps a waking sweep from submitting it a second time.
+      await _repository.enqueue(
+        event: signed,
+        draftId: post.draftId,
+        uploadId: post.uploadId,
+        expireAfterSecs: post.expireAfterSecs,
+      );
+      await _repository.delete(post.eventId);
+      await _repository.submit(signed.id);
+      return ScheduledPostActionOutcome.done;
+    });
   }
 
   /// Publishes [eventId] right away, as a newly signed event dated now.
   Future<ScheduledPostActionOutcome> publishNow(String eventId) async {
     if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
-    final post = await _repository.getById(eventId);
-    if (post == null) return ScheduledPostActionOutcome.failed;
+    return _whileHolding(eventId, (hold) async {
+      final post = await _repository.getById(eventId);
+      if (post == null) return ScheduledPostActionOutcome.failed;
 
-    final signed = await _resign(
-      post,
-      createdAt: _now().toUtc().millisecondsSinceEpoch ~/ 1000,
-    );
-    if (signed == null) return ScheduledPostActionOutcome.failed;
-    // Already dated now: broadcast the held event rather than replace it with
-    // itself, which would delete the only copy before the broadcast.
-    if (signed.id == post.eventId) {
-      return await _publishHeldPost(post)
+      final signed = await _resign(
+        post,
+        createdAt: _now().toUtc().millisecondsSinceEpoch ~/ 1000,
+      );
+      if (signed == null) return ScheduledPostActionOutcome.failed;
+      // Already dated now: broadcast the held event rather than replace it
+      // with itself, which would delete the only copy before the broadcast.
+      if (signed.id == post.eventId) {
+        return await _publishHeldPost(post)
+            ? ScheduledPostActionOutcome.done
+            : ScheduledPostActionOutcome.unavailable;
+      }
+
+      final withdrawn = await _withdrawBeforeReplacing(post);
+      if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
+
+      hold(signed.id);
+      final replacement = await _repository.enqueue(
+        event: signed,
+        draftId: post.draftId,
+        uploadId: post.uploadId,
+        expireAfterSecs: post.expireAfterSecs,
+      );
+      await _repository.delete(post.eventId);
+      final published = await _publishHeldPost(replacement);
+      return published
           ? ScheduledPostActionOutcome.done
           : ScheduledPostActionOutcome.unavailable;
-    }
-
-    final withdrawn = await _withdrawBeforeReplacing(post);
-    if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
-
-    final replacement = await _repository.enqueue(
-      event: signed,
-      draftId: post.draftId,
-      uploadId: post.uploadId,
-      expireAfterSecs: post.expireAfterSecs,
-    );
-    await _repository.delete(post.eventId);
-    final published = await _publishHeldPost(replacement);
-    return published
-        ? ScheduledPostActionOutcome.done
-        : ScheduledPostActionOutcome.unavailable;
+    });
   }
 
   /// Gives a failed post another go: back to the relay when its time is
   /// still ahead, otherwise published now.
   Future<ScheduledPostActionOutcome> retry(String eventId) async {
     if (!_ownsOutbox) return ScheduledPostActionOutcome.failed;
-    final post = await _repository.getById(eventId);
-    if (post == null) return ScheduledPostActionOutcome.failed;
-    if (post.status != ScheduledPostStatus.failed) {
-      return ScheduledPostActionOutcome.done;
-    }
+    return _whileHolding(eventId, (_) async {
+      final post = await _repository.getById(eventId);
+      if (post == null) return ScheduledPostActionOutcome.failed;
+      if (post.status != ScheduledPostStatus.failed) {
+        return ScheduledPostActionOutcome.done;
+      }
 
-    final now = _now();
-    if (post.publishAtUtc.isAfter(
-      now.add(_repository.config.directPublishLead),
-    )) {
-      await _repository.requeue(eventId);
-      await _repository.submit(eventId);
-      return ScheduledPostActionOutcome.done;
-    }
-    return publishNow(eventId);
+      final now = _now();
+      if (post.publishAtUtc.isAfter(
+        now.add(_repository.config.directPublishLead),
+      )) {
+        await _repository.requeue(eventId);
+        await _repository.submit(eventId);
+        return ScheduledPostActionOutcome.done;
+      }
+      return publishNow(eventId);
+    });
   }
 
   Future<Event?> _resign(ScheduledPost post, {required int createdAt}) async {
