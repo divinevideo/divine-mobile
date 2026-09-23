@@ -891,6 +891,61 @@ void main() {
 
       verify(repository.loadSettings).called(2);
     });
+
+    testWidgets('shows the benefit card when nothing is connected', (
+      tester,
+    ) async {
+      when(repository.loadSettings).thenAnswer(
+        (_) async => const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.disabled,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingBenefitTitle), findsOneWidget);
+      expect(
+        find.text(l10n.crosspostingBenefitConnect('Instagram')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('encourages automatic mode for a connected manual platform', (
+      tester,
+    ) async {
+      when(repository.loadSettings).thenAnswer(
+        (_) async => const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.manual,
+            connection: CrosspostingConnection(
+              id: 'ig',
+              platform: CrosspostingPlatform.instagram,
+              status: CrosspostingConnectionStatus.connected,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingAutoTitle), findsOneWidget);
+      await tester.tap(find.text(l10n.crosspostingAutoEnable));
+      await tester.pump();
+      verify(
+        () => repository.setMode(
+          CrosspostingPlatform.instagram,
+          CrosspostingMode.automatic,
+        ),
+      ).called(1);
+    });
   });
 
   group(GeneralSettingsScreen, () {

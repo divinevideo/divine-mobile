@@ -12301,4 +12301,27 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'Thử lưu lại vào Âm thanh';
+
+  @override
+  String get crosspostingBenefitTitle => 'Take your loops everywhere';
+
+  @override
+  String get crosspostingBenefitBody =>
+      'Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.';
+
+  @override
+  String crosspostingBenefitConnect(String platform) {
+    return 'Connect $platform';
+  }
+
+  @override
+  String get crosspostingAutoTitle => 'Set it once';
+
+  @override
+  String crosspostingAutoBody(String platform) {
+    return 'Every new loop you post goes out to $platform for you — no extra taps. Only applies to loops you publish after you turn it on.';
+  }
+
+  @override
+  String get crosspostingAutoEnable => 'Turn on automatic';
 }
