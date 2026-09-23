@@ -555,6 +555,59 @@ void main() {
         );
       });
 
+      test('a conflict the relay cannot confirm leaves the row', () async {
+        final event = buildEvent();
+        await repository.enqueue(event: event, draftId: 'draft-1');
+        await database.scheduledPostsDao.updateStatus(
+          eventId: event.id,
+          status: ScheduledPostStatus.scheduled,
+        );
+        when(() => client.cancel(event.id)).thenAnswer(
+          (_) async => const ScheduleCancelConflict('no longer pending'),
+        );
+        when(
+          () => client.list(),
+        ).thenAnswer((_) async => const ScheduleListFailure('timeout'));
+
+        final outcome = await repository.cancelOnServer(event.id);
+
+        expect(outcome, ScheduledPostCancelOutcome.failure);
+        expect(
+          (await repository.getById(event.id))!.status,
+          ScheduledPostStatus.scheduled,
+          reason: 'the post may be live; only the relay can say',
+        );
+      });
+
+      test(
+        'a conflict the list still reports as held leaves the row',
+        () async {
+          final event = buildEvent();
+          await repository.enqueue(event: event, draftId: 'draft-1');
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            status: ScheduledPostStatus.scheduled,
+          );
+          when(() => client.cancel(event.id)).thenAnswer(
+            (_) async => const ScheduleCancelConflict('no longer pending'),
+          );
+          when(() => client.list()).thenAnswer(
+            (_) async => ScheduleListLoaded([
+              entry(event.id, ScheduledPostServerState.schedule),
+            ]),
+          );
+
+          expect(
+            await repository.cancelOnServer(event.id),
+            ScheduledPostCancelOutcome.failure,
+          );
+          expect(
+            (await repository.getById(event.id))!.status,
+            ScheduledPostStatus.scheduled,
+          );
+        },
+      );
+
       test('a transient failure leaves the row as it was', () async {
         final event = buildEvent();
         await repository.enqueue(event: event, draftId: 'draft-1');
@@ -588,6 +641,22 @@ void main() {
     });
 
     group('cancelRemote', () {
+      test('a conflict the relay cannot confirm is a failure', () async {
+        const eventId =
+            '8888888888888888888888888888888888888888888888888888888888888888';
+        when(
+          () => client.cancel(eventId),
+        ).thenAnswer((_) async => const ScheduleCancelConflict('gone'));
+        when(
+          () => client.list(),
+        ).thenAnswer((_) async => const ScheduleListFailure('timeout'));
+
+        expect(
+          await repository.cancelRemote(eventId),
+          ScheduledPostCancelOutcome.failure,
+        );
+      });
+
       test('maps the relay answers without a local row', () async {
         const eventId =
             '7777777777777777777777777777777777777777777777777777777777777777';

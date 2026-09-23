@@ -417,10 +417,18 @@ class ScheduledPostsRepository {
         case ScheduleCancelNotFound():
           break;
         case ScheduleCancelConflict():
-          final published = await _isPublishedOnServer(eventId);
-          if (published) {
-            await markPublished(eventId);
-            return ScheduledPostCancelOutcome.alreadyPublished;
+          // The relay no longer holds it as pending; only the state it
+          // reports says whether that means published or withdrawn.
+          switch (await _serverState(eventId)) {
+            case ScheduledPostServerState.published:
+              await markPublished(eventId);
+              return ScheduledPostCancelOutcome.alreadyPublished;
+            case ScheduledPostServerState.cancel:
+            case ScheduledPostServerState.failed:
+              break;
+            case ScheduledPostServerState.schedule:
+            case null:
+              return ScheduledPostCancelOutcome.failure;
           }
         case ScheduleCancelTransientFailure(:final unavailable):
           return unavailable
@@ -445,9 +453,14 @@ class ScheduledPostsRepository {
       case ScheduleCancelNotFound():
         return ScheduledPostCancelOutcome.cancelled;
       case ScheduleCancelConflict():
-        return await _isPublishedOnServer(eventId)
-            ? ScheduledPostCancelOutcome.alreadyPublished
-            : ScheduledPostCancelOutcome.cancelled;
+        return switch (await _serverState(eventId)) {
+          ScheduledPostServerState.published =>
+            ScheduledPostCancelOutcome.alreadyPublished,
+          ScheduledPostServerState.cancel || ScheduledPostServerState.failed =>
+            ScheduledPostCancelOutcome.cancelled,
+          ScheduledPostServerState.schedule ||
+          null => ScheduledPostCancelOutcome.failure,
+        };
       case ScheduleCancelTransientFailure(:final unavailable):
         return unavailable
             ? ScheduledPostCancelOutcome.unavailable
@@ -455,15 +468,26 @@ class ScheduledPostsRepository {
     }
   }
 
-  Future<bool> _isPublishedOnServer(String eventId) async {
+  /// What the relay's list says became of [eventId] after a cancel answered
+  /// 409, or null when it cannot say: the list failed, still reports the
+  /// post as held, or no longer carries it (it is capped).
+  Future<ScheduledPostServerState?> _serverState(String eventId) async {
     final result = await _client.list();
-    if (result is! ScheduleListLoaded) return false;
-    for (final entry in result.entries) {
-      if (entry.eventId == eventId) {
-        return entry.state == ScheduledPostServerState.published;
+    ScheduledPostServerState? state;
+    if (result is ScheduleListLoaded) {
+      for (final entry in result.entries) {
+        if (entry.eventId == eventId) state = entry.state;
       }
     }
-    return false;
+    if (state == null || state == ScheduledPostServerState.schedule) {
+      Log.warning(
+        'Cancel of scheduled event $eventId answered 409 but the relay state '
+        'is unconfirmed (${state?.name ?? 'not listed'}); leaving it',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+    return state;
   }
 
   Future<void> markPublished(String eventId) async {
