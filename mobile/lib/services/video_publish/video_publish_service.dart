@@ -231,7 +231,8 @@ class VideoPublishService {
   final CollaboratorInviteService? collaboratorInviteService;
 
   /// Holds pre-signed events for a later publish time (#3538). Without it a
-  /// draft with a `scheduledAt` is posted immediately.
+  /// draft with a `scheduledAt` fails as [PublishErrorKind.scheduleRejected]
+  /// rather than posting now.
   final ScheduledPostsRepository? scheduledPostsRepository;
 
   /// Callback when upload progress changes.
@@ -480,6 +481,18 @@ class VideoPublishService {
           : const <String>[];
 
       onProgressChanged(draftId: draft.id, progress: _progressAfterMetadata);
+
+      if (draft.scheduledAt != null && scheduledPostsRepository == null) {
+        // No outbox to hold the signed event: the session cannot schedule
+        // yet. Posting now would publish something the creator timed for
+        // later, so refuse and leave the choice to them.
+        Log.warning(
+          'Draft ${draft.id} has a publish time but no scheduled-post outbox; '
+          'refusing to post it now',
+          category: .video,
+        );
+        return const PublishError(PublishErrorKind.scheduleRejected);
+      }
 
       var audioReuseDegraded = false;
       final scheduledAt = _effectiveScheduledAt(draft);

@@ -3228,18 +3228,58 @@ void main() {
         },
       );
 
-      test('posts now when no outbox is wired', () async {
-        stubScheduledSigning();
-        final draft = _createTestDraft().copyWith(
-          scheduledAt: publishAt,
-          skipUpdateLastModified: true,
-        );
+      test(
+        'refuses to post a timed draft now when no outbox is wired',
+        () async {
+          stubScheduledSigning();
+          final draft = _createTestDraft().copyWith(
+            scheduledAt: publishAt,
+            skipUpdateLastModified: true,
+          );
 
-        final result = await service.publishVideo(draft: draft);
+          final result = await service.publishVideo(draft: draft);
 
-        expect(result, isA<PublishSuccess>());
-        expect(capturedPublishArguments()[#scheduledAt], isNull);
-      });
+          expect(
+            result,
+            isA<PublishError>().having(
+              (e) => e.kind,
+              'kind',
+              PublishErrorKind.scheduleRejected,
+            ),
+          );
+          verifyNever(
+            () => mockVideoEventPublisher.publishVideoEvent(
+              upload: any(named: 'upload'),
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+              hashtags: any(named: 'hashtags'),
+              expirationTimestamp: any(named: 'expirationTimestamp'),
+              allowAudioReuse: any(named: 'allowAudioReuse'),
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              mentionedPubkeys: any(named: 'mentionedPubkeys'),
+              inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+              inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+              inspiredByNpubs: any(named: 'inspiredByNpubs'),
+              clipSourceCredits: any(named: 'clipSourceCredits'),
+              selectedAudio: any(named: 'selectedAudio'),
+              audioShareAttribution: any(named: 'audioShareAttribution'),
+              selectedAudioEventId: any(named: 'selectedAudioEventId'),
+              selectedAudioRelay: any(named: 'selectedAudioRelay'),
+              language: any(named: 'language'),
+              contentWarning: any(named: 'contentWarning'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              replyContext: any(named: 'replyContext'),
+              addReplyToFeed: any(named: 'addReplyToFeed'),
+              textTrackRefs: any(named: 'textTrackRefs'),
+              textTrackLang: any(named: 'textTrackLang'),
+              onEventSigned: any(named: 'onEventSigned'),
+              onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+              scheduledAt: any(named: 'scheduledAt'),
+              onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
+            ),
+          );
+        },
+      );
     });
 
     group('content language self-labelling', () {
