@@ -15,8 +15,10 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/badges/awarded_badge_card.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Shows the current user's Nostr badge dashboard.
 class BadgesScreen extends ConsumerWidget {
@@ -34,7 +36,16 @@ class BadgesScreen extends ConsumerWidget {
     final repository = ref.watch(badgeRepositoryProvider);
     return BlocProvider(
       key: ObjectKey(repository),
-      create: (_) => BadgesCubit(repository: repository)..load(),
+      create: (_) {
+        final cubit = BadgesCubit(repository: repository);
+        runDetached(
+          cubit.load(),
+          'load badges dashboard',
+          logName: 'BadgesScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const BadgesView(),
     );
   }

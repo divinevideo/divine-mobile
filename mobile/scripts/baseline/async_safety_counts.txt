@@ -22,9 +22,6 @@ discarded_futures|lib/screens/auth/login_options_screen.dart	2
 discarded_futures|lib/screens/auth/nostr_connect_screen.dart	3
 discarded_futures|lib/screens/auth/secure_account_screen.dart	2
 discarded_futures|lib/screens/auth/welcome_screen.dart	3
-discarded_futures|lib/screens/badges/badge_detail_screen.dart	4
-discarded_futures|lib/screens/badges/badge_editor_screen.dart	1
-discarded_futures|lib/screens/badges/badges_screen.dart	1
 discarded_futures|lib/screens/category_gallery_screen.dart	2
 discarded_futures|lib/screens/comments/comments_screen.dart	1
 discarded_futures|lib/screens/comments/widgets/pending_video_reply_tile.dart	1
@@ -53,7 +50,6 @@ discarded_futures|lib/screens/web_auth_screen.dart	1
 discarded_futures|lib/utils/deferred_login_options_navigator.dart	3
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
 discarded_futures|lib/widgets/auth/forgot_password_dialog.dart	1
-discarded_futures|lib/widgets/badges/awarded_badge_card.dart	1
 discarded_futures|lib/widgets/bug_report_dialog.dart	1
 discarded_futures|lib/widgets/categories_tab.dart	1
 discarded_futures|lib/widgets/classic_vines_tab.dart	1
@@ -71,7 +67,6 @@ discarded_futures|lib/widgets/image_attachment_picker.dart	1
 discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/linkified_text/linkified_text_navigation.dart	4
 discarded_futures|lib/widgets/new_videos_tab.dart	1
-discarded_futures|lib/widgets/notification_badge.dart	1
 discarded_futures|lib/widgets/popular_videos_tab.dart	1
 discarded_futures|lib/widgets/profile/profile_action_buttons_widget.dart	2
 discarded_futures|lib/widgets/profile/profile_actions_sheet/profile_actions_sheet_content.dart	1
@@ -115,7 +110,6 @@ discarded_futures|test/blocs/locale/locale_cubit_test.dart	2
 discarded_futures|test/blocs/my_followers/my_followers_bloc_test.dart	1
 discarded_futures|test/blocs/my_following/my_following_bloc_test.dart	2
 discarded_futures|test/blocs/my_profile/my_profile_bloc_test.dart	3
-discarded_futures|test/blocs/notifications/badge/notification_badge_cubit_test.dart	2
 discarded_futures|test/blocs/others_followers/others_followers_bloc_test.dart	1
 discarded_futures|test/blocs/others_following/others_following_bloc_test.dart	1
 discarded_futures|test/blocs/profile_collab_videos/profile_collab_videos_bloc_test.dart	1
@@ -141,7 +135,6 @@ discarded_futures|test/helpers/video_feed_builder_test.dart	1
 discarded_futures|test/in_memory/in_memory_auth_service.dart	1
 discarded_futures|test/infrastructure/drift_setup_test.dart	1
 discarded_futures|test/mocks/mock_subscription_manager.dart	1
-discarded_futures|test/notifications/view/pending_badge_awards_view_test.dart	1
 discarded_futures|test/providers/deep_link_provider_test.dart	2
 discarded_futures|test/providers/subtitle_visibility_test.dart	1
 discarded_futures|test/repositories/community_content_label_repository_test.dart	1

@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for the inbox Badges tab — only undecided awards are
 // ABOUTME: listed, and accepting one publishes through the repository.
 
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,7 +43,11 @@ void main() {
     Widget buildSubject() {
       return testMaterialApp(
         home: BlocProvider(
-          create: (_) => BadgesCubit(repository: repository)..load(),
+          create: (_) {
+            final cubit = BadgesCubit(repository: repository);
+            unawaited(cubit.load());
+            return cubit;
+          },
           child: const PendingBadgeAwardsView(),
         ),
       );

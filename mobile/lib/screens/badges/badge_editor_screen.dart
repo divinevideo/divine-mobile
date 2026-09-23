@@ -16,8 +16,10 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/image_crop_editor/image_crop_editor.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_image_actions_sheet.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_image_picker.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Creates a new badge, or edits the badge at [coordinate].
 class BadgeEditorScreen extends ConsumerWidget {
@@ -52,12 +54,21 @@ class BadgeEditorScreen extends ConsumerWidget {
       // Re-create the cubit when the signer identity or its repositories flip,
       // so an account switch cannot publish through the previous account.
       key: ValueKey((repository, uploadService, pubkey, coordinate)),
-      create: (_) => BadgeEditorCubit(
-        repository: repository,
-        uploadService: uploadService,
-        pubkey: pubkey,
-        coordinate: coordinate,
-      )..load(),
+      create: (_) {
+        final cubit = BadgeEditorCubit(
+          repository: repository,
+          uploadService: uploadService,
+          pubkey: pubkey,
+          coordinate: coordinate,
+        );
+        runDetached(
+          cubit.load(),
+          'load badge editor',
+          logName: 'BadgeEditorScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const BadgeEditorView(),
     );
   }
