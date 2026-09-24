@@ -2289,7 +2289,8 @@
     "description": "SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.",
     "placeholders": {
       "maxMegabytes": {
-        "type": "int"
+        "type": "String",
+        "example": "100"
       }
     }
   },

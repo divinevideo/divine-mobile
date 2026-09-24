@@ -3607,7 +3607,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get dmVideoSendFailed => 'Det gick inte att skicka videon';
 
   @override
-  String dmVideoTooLarge(int maxMegabytes) {
+  String dmVideoTooLarge(String maxMegabytes) {
     return 'Den här videon är för stor för att skickas. Välj en under $maxMegabytes MB';
   }
 

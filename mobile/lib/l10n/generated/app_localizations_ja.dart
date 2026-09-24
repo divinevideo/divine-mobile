@@ -3380,7 +3380,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmVideoSendFailed => '動画を送信できませんでした';
 
   @override
-  String dmVideoTooLarge(int maxMegabytes) {
+  String dmVideoTooLarge(String maxMegabytes) {
     return 'この動画は大きすぎて送信できません。$maxMegabytes MB未満の動画を選んでください';
   }
 

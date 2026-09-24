@@ -3606,7 +3606,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get dmVideoSendFailed => 'Tidak dapat menghantar video';
 
   @override
-  String dmVideoTooLarge(int maxMegabytes) {
+  String dmVideoTooLarge(String maxMegabytes) {
     return 'Video ini terlalu besar untuk dihantar. Pilih yang kurang daripada $maxMegabytes MB';
   }
 

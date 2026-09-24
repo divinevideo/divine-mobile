@@ -85,6 +85,10 @@ class DmVideoPlaybackCubit extends Cubit<DmVideoPlaybackState>
   final DmVideoDecryptor _decryptor;
   final GallerySaveService _gallerySaveService;
 
+  /// Platform-aware name of the gallery destination, for user-facing save
+  /// copy. Exposed here so the view reaches no service directly.
+  String get galleryDestinationName => GallerySaveService.destinationName;
+
   /// Downloads and decrypts the video into a temp clip.
   Future<void> load() async {
     try {

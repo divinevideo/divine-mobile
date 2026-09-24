@@ -3710,7 +3710,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get dmVideoSendFailed => 'Nie udało się wysłać filmu';
 
   @override
-  String dmVideoTooLarge(int maxMegabytes) {
+  String dmVideoTooLarge(String maxMegabytes) {
     return 'Ten film jest za duży, żeby go wysłać. Wybierz film poniżej $maxMegabytes MB';
   }
 

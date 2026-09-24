@@ -824,7 +824,7 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
       VideoDmSendStatus.sent => (l10n.dmVideoSent, false),
       VideoDmSendStatus.failed => (l10n.dmVideoSendFailed, true),
       VideoDmSendStatus.tooLarge => (
-        l10n.dmVideoTooLarge(videoDmMaxMegabytes),
+        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
         true,
       ),
       VideoDmSendStatus.idle ||

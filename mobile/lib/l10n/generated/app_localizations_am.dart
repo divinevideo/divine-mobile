@@ -3533,7 +3533,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmVideoSendFailed => 'ቪዲዮ መልክ አልተቸልም';
 
   @override
-  String dmVideoTooLarge(int maxMegabytes) {
+  String dmVideoTooLarge(String maxMegabytes) {
     return 'ይህ ቪዲዮ ለመላክ በጣም ትልቅ ነው። ከ$maxMegabytes MB በታች የሆነ ይምረጡ';
   }
 

@@ -6206,7 +6206,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
-  String dmVideoTooLarge(int maxMegabytes);
+  String dmVideoTooLarge(String maxMegabytes);
 
   /// No description provided for @shareSheetSaveVideo.
   ///

@@ -13,7 +13,6 @@ import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
-import 'package:openvine/services/gallery_save_service.dart';
 
 /// Plays a received encrypted video DM.
 ///
@@ -94,7 +93,9 @@ class DmVideoPlayView extends StatelessWidget {
 
   void _onSaveStatus(BuildContext context, DmVideoPlaybackState state) {
     final l10n = context.l10n;
-    final destination = GallerySaveService.destinationName;
+    final destination = context
+        .read<DmVideoPlaybackCubit>()
+        .galleryDestinationName;
     final (message, isError) = switch (state.saveStatus) {
       DmVideoSaveStatus.idle || DmVideoSaveStatus.saving => (null, false),
       DmVideoSaveStatus.saved => (
