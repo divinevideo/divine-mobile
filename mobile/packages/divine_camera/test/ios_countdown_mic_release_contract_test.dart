@@ -7,8 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 String _readNativeSource(String fileName) {
   final file = [
-    File('ios/Classes/$fileName'),
-    File('packages/divine_camera/ios/Classes/$fileName'),
+    File('darwin/divine_camera/Sources/divine_camera/$fileName'),
+    File(
+      'packages/divine_camera/darwin/divine_camera/Sources/divine_camera/$fileName',
+    ),
   ].firstWhere((file) => file.existsSync());
 
   return file.readAsStringSync();

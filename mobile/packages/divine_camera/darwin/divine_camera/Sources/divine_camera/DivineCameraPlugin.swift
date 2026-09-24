@@ -1,22 +1,35 @@
-// ABOUTME: Main Flutter plugin entry point for iOS camera operations
+// ABOUTME: Main Flutter plugin entry point for iOS and macOS camera operations
 // ABOUTME: Handles method channel communication and delegates to CameraController
 
+import AVFoundation
+#if os(iOS)
 import Flutter
 import UIKit
-import AVFoundation
+#elseif os(macOS)
+import FlutterMacOS
+#endif
 
 public class DivineCameraPlugin: NSObject, FlutterPlugin {
     private var cameraController: CameraController?
     private var textureRegistry: FlutterTextureRegistry?
     private var messenger: FlutterBinaryMessenger?
     private var methodChannel: FlutterMethodChannel?
+    #if os(iOS)
     private var volumeKeyHandler: VolumeKeyHandler?
-    
+    #endif
+
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "divine_camera", binaryMessenger: registrar.messenger())
+        #if os(iOS)
+        let messenger = registrar.messenger()
+        let textures = registrar.textures()
+        #else
+        let messenger = registrar.messenger
+        let textures = registrar.textures
+        #endif
+        let channel = FlutterMethodChannel(name: "divine_camera", binaryMessenger: messenger)
         let instance = DivineCameraPlugin()
-        instance.textureRegistry = registrar.textures()
-        instance.messenger = registrar.messenger()
+        instance.textureRegistry = textures
+        instance.messenger = messenger
         instance.methodChannel = channel
         registrar.addMethodCallDelegate(instance, channel: channel)
 
@@ -54,6 +67,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     /// once per process.
     private static func preWarmFrameworks() {
         DispatchQueue.global(qos: .utility).async {
+            #if os(iOS)
             // 1. AudioToolbox + AVAudioSession + mediaserverd XPC roundtrip.
             let audioSession = AVAudioSession.sharedInstance()
             do {
@@ -81,6 +95,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             } catch {
                 DivineCameraLog.shared.warning("AVAudioSession pre-warm config failed: \(error.localizedDescription)", name: "DivineCamera.Prewarm")
             }
+            #endif
             _ = AVCaptureDevice.default(for: .audio)
 
             // 2. VideoToolbox via a throwaway AVAssetWriter.
@@ -180,7 +195,11 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         DivineCameraPlugin.logLifecycleCall(call)
         switch call.method {
         case "getPlatformVersion":
+            #if os(iOS)
             result("iOS " + UIDevice.current.systemVersion)
+            #else
+            result("macOS " + ProcessInfo.processInfo.operatingSystemVersionString)
+            #endif
             
         case "initializeCamera":
             let args = call.arguments as? [String: Any] ?? [:]
@@ -325,8 +344,10 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     }
     
     private func disposeCamera(result: @escaping FlutterResult) {
+        #if os(iOS)
         volumeKeyHandler?.release()
         volumeKeyHandler = nil
+        #endif
 
         guard let controller = cameraController else {
             result(nil)
@@ -345,6 +366,10 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     }
     
     private func setRemoteRecordControlEnabled(enabled: Bool, result: @escaping FlutterResult) {
+        #if os(macOS)
+        // Volume keys and Bluetooth remote triggers are iPhone features.
+        result(false)
+        #else
         if enabled {
             if volumeKeyHandler == nil {
                 volumeKeyHandler = VolumeKeyHandler(
@@ -362,11 +387,16 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             volumeKeyHandler?.disable()
             result(true)
         }
+        #endif
     }
-    
+
     private func setVolumeKeysEnabled(enabled: Bool, result: @escaping FlutterResult) {
+        #if os(macOS)
+        result(false)
+        #else
         volumeKeyHandler?.setVolumeKeysEnabled(enabled)
         result(true)
+        #endif
     }
     
     private func setFlashMode(mode: String, result: @escaping FlutterResult) {
@@ -429,12 +459,14 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             return
         }
         
+        #if os(iOS)
         // Suppress Bluetooth triggers during camera switch.
         // iOS re-evaluates audio routing on AVCaptureSession reconfiguration,
         // which can cause connected Bluetooth devices (Apple Watch, AirPods)
         // to send spurious play/pause events that would restart recording.
         volumeKeyHandler?.suppressTemporarily(forSeconds: 3.0)
-        
+        #endif
+
         controller.switchCamera(lens: lens) { state, error in
             DispatchQueue.main.async {
                 if let error = error {
@@ -550,8 +582,19 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     }
     
     private func listAudioDevices(result: @escaping FlutterResult) {
+        #if os(macOS)
+        // Macs commonly record through USB or other external microphones.
+        let deviceTypes: [AVCaptureDevice.DeviceType]
+        if #available(macOS 14.0, *) {
+            deviceTypes = [.microphone, .external]
+        } else {
+            deviceTypes = [.builtInMicrophone, .externalUnknown]
+        }
+        #else
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInMicrophone]
+        #endif
         let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInMicrophone],
+            deviceTypes: deviceTypes,
             mediaType: .audio,
             position: .unspecified
         )

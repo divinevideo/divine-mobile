@@ -12,11 +12,11 @@ void main() {
 
     setUpAll(() {
       disposeCamera = declarationAt(
-        readIosNativeSource('DivineCameraPlugin.swift'),
+        readDarwinNativeSource('DivineCameraPlugin.swift'),
         'private func disposeCamera(',
       );
       release = declarationAt(
-        readIosNativeSource('CameraController.swift'),
+        readDarwinNativeSource('CameraController.swift'),
         'func release(',
       );
     });

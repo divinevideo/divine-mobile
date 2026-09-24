@@ -30,5 +30,7 @@ flutter:
         pluginClass: DivineCameraPlugin
       ios:
         pluginClass: DivineCameraPlugin
+        sharedDarwinSource: true
       macos:
         pluginClass: DivineCameraPlugin
+        sharedDarwinSource: true

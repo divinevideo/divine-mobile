@@ -3,19 +3,13 @@
 
 import 'dart:io';
 
-String readIosNativeSource(String fileName) {
+/// Reads a Swift source shared by the iOS and macOS implementations.
+String readDarwinNativeSource(String fileName) {
   final file = [
-    File('ios/Classes/$fileName'),
-    File('packages/divine_camera/ios/Classes/$fileName'),
-  ].firstWhere((file) => file.existsSync());
-
-  return file.readAsStringSync();
-}
-
-String readMacosNativeSource(String fileName) {
-  final file = [
-    File('macos/Classes/$fileName'),
-    File('packages/divine_camera/macos/Classes/$fileName'),
+    File('darwin/divine_camera/Sources/divine_camera/$fileName'),
+    File(
+      'packages/divine_camera/darwin/divine_camera/Sources/divine_camera/$fileName',
+    ),
   ].firstWhere((file) => file.existsSync());
 
   return file.readAsStringSync();

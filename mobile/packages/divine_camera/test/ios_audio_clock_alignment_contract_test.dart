@@ -12,7 +12,7 @@ void main() {
     late final String retime;
 
     setUpAll(() {
-      source = readIosNativeSource('CameraController.swift');
+      source = readDarwinNativeSource('CameraController.swift');
       audioBranch = declarationAt(source, 'else if output == audioOutput {');
       retime = declarationAt(
         source,

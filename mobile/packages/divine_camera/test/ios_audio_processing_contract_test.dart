@@ -13,8 +13,8 @@ void main() {
     late final String attachAudioToSession;
 
     setUpAll(() {
-      controllerSource = readIosNativeSource('CameraController.swift');
-      pluginSource = readIosNativeSource('DivineCameraPlugin.swift');
+      controllerSource = readDarwinNativeSource('CameraController.swift');
+      pluginSource = readDarwinNativeSource('DivineCameraPlugin.swift');
       configureAudioSession = declarationAt(
         controllerSource,
         'private func configureAudioSessionForRecording(',

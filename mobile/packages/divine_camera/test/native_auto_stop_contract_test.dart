@@ -19,11 +19,12 @@ void main() {
   // keeps showing a recording that no longer exists. The signal is a payload
   // with no filePath; a nil `userInfo` would be dropped by the plugin's guard.
   group('native auto-stop contract', () {
-    group('iOS', () {
+    // iOS and macOS share one controller, so this group pins both.
+    group('iOS and macOS', () {
       late final String controllerSource;
 
       setUpAll(() {
-        controllerSource = readIosNativeSource('CameraController.swift');
+        controllerSource = readDarwinNativeSource('CameraController.swift');
       });
 
       test('sends an empty payload when there is no result', () {
@@ -57,20 +58,6 @@ void main() {
         _expectSwiftSendsEveryResult(
           declarationAt(salvage, 'stopRecording { [weak self] result, error'),
           send: 'self?.sendAutoStopEvent(result: result)',
-        );
-      });
-    });
-
-    group('macOS', () {
-      test('the max-duration auto-stop reports every outcome', () {
-        final autoStop = declarationAt(
-          readMacosNativeSource('CameraController+Recording.swift'),
-          'func autoStopRecording()',
-        );
-
-        _expectSwiftSendsEveryResult(
-          declarationAt(autoStop, 'stopRecording { result, error'),
-          send: 'userInfo: result ?? [:]',
         );
       });
     });
