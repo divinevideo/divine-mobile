@@ -40,6 +40,7 @@ import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -83,6 +84,22 @@ typedef DmRepositoryErrorReporter =
 const Set<int> _supportedDmKinds = {
   EventKind.privateDirectMessage, // 14
   EventKind.fileMessage, // 15
+};
+
+/// `CLOSED` reason categories one sighting of which proves nothing about what
+/// a relay holds, so the same relay and page must repeat it on a later
+/// deferred retry before the page counts as exhausted.
+///
+/// `error` and `other` cover a transient relay failure. `auth-required` is
+/// here because the refusal is the relay asking for NIP-42, not an answer:
+/// the pool parks the `REQ` for a post-AUTH replay, and a remote signer that
+/// has not produced the signature yet leaves the read settling on a gate that
+/// opens moments later. Only a relay that sent `CLOSED` carries a category: a
+/// relay whose gate shut before it sent a frame has none to repeat.
+const Set<String> _unconfirmedRefusalCategories = {
+  'auth-required',
+  'error',
+  'other',
 };
 
 /// Process-local key for support-only DM content correlation tokens.
@@ -645,6 +662,11 @@ class DmRepository {
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
 
+  /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
+  /// sweep. A matching refusal must recur after a deferred drain retry before
+  /// it can count as an exhausted relay for history completion.
+  Set<String> _previousNip04Refusals = {};
+
   /// Replenishes deferred retries only after the drain durably made progress.
   ///
   /// An authoritative empty gift-wrap page is not enough on its own: outgoing
@@ -1039,6 +1061,7 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
+    _previousNip04Refusals = {};
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -1505,20 +1528,27 @@ class DmRepository {
   /// already sets `currentUserHasSent` for self-authored messages. Bounded by
   /// [DmHistoryDrainConfig.maxPages].
   ///
-  /// Returns `true` when the pass completed against a relay that actually
-  /// answered — genuine exhaustion or the page budget — and `false` when it
-  /// could not run: nothing answered the page, the repository was torn down /
-  /// the user switched, or a relay error. A `false` result MUST NOT mark the
-  /// drain complete, mirroring the gift-wrap drain's authoritative-page guard
-  /// so a momentary outage in this window doesn't silently skip recovery *and*
-  /// permanently strand the user's outgoing NIP-04 history. See #5304, #8209.
-  Future<bool> _recoverOutgoingNip04(String pubkey, int generation) async {
+  /// Returns `true` only when every page it read was authoritative and the
+  /// walk ended on an empty page, at the epoch, or at the page budget. Returns
+  /// `false` when a page was not, the query threw, or the ingest session
+  /// ended; a `false` result MUST NOT mark the drain complete, so a momentary
+  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). A page
+  /// that ended on terminal refusals counts as exhausted on first sight.
+  /// Ambiguous refusals are confirmed only when the same relay and page return
+  /// the same category on a later deferred drain retry.
+  Future<bool> _recoverOutgoingNip04(
+    String pubkey,
+    int generation, {
+    required bool allowRefusalConfirmation,
+  }) async {
+    final priorRefusals = _previousNip04Refusals;
+    final currentRefusals = <String>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       var sawUnansweredPage = false;
       for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
         if (_ingestSessionEnded(pubkey, generation)) return false;
-        final result = await _nostrClient.queryEventsDetailed(
+        final result = await _nostrClient.readEvents(
           [
             nostr_filter.Filter(
               authors: [pubkey],
@@ -1532,15 +1562,49 @@ class DmRepository {
           requireAllRelaysSettled: true,
         );
         final events = result.events;
+        final ambiguousRefusals = <String>{
+          for (final entry in result.closedRelayReasons.entries)
+            if (_unconfirmedRefusalCategories.contains(entry.value))
+              '$page|${entry.key}|${entry.value}',
+        };
+        currentRefusals.addAll(ambiguousRefusals);
+        final refusalOnly =
+            result.endedBy == QueryEnd.relayClosed &&
+            result.answeredNetworkRelayCount > 0 &&
+            result.unansweredRelayCount == 0 &&
+            result.rateLimitedRelayCount == 0;
+        // A terminal refusal says what the relay holds on first sight. Only an
+        // ambiguous one has to recur, and only a deferred retry may confirm it.
+        final confirmedRefusals =
+            result.closedRelayReasons.isNotEmpty &&
+            (ambiguousRefusals.isEmpty ||
+                (allowRefusalConfirmation &&
+                    ambiguousRefusals.every(priorRefusals.contains)));
+        final authoritative =
+            result.isComplete || (refusalOnly && confirmedRefusals);
         if (_ingestSessionEnded(pubkey, generation)) return false;
-        final authoritative = !result.noRelays && !result.timedOut;
+        if (authoritative && !result.isComplete) {
+          // A settled refusal can be what lets restore finish for good, so
+          // record which relays refused and why.
+          final refusals = [
+            for (final entry in result.closedRelayReasons.entries)
+              '${entry.key} ${entry.value}',
+          ];
+          Log.info(
+            'Outgoing NIP-04 recovery for ${pubkeyForLogs(pubkey)} counts '
+            'page $page as answered despite relay refusals: '
+            '${refusals.join(', ')}',
+            category: LogCategory.system,
+          );
+        }
         if (events.isEmpty) {
-          // An empty page is genuine exhaustion only if a relay actually
-          // ANSWERED it. Nothing answering — no relay took the REQ, a relay
-          // refused it with `CLOSED`, or only some answered — arrives as an
-          // ordinary empty list, and concluding "nothing to recover" would let
-          // the caller mark the drain complete and permanently strand the
-          // user's outgoing NIP-04 (the #5202 failure mode, mirrored here).
+          // An empty page is genuine exhaustion only if every relay answered
+          // it: with EOSE, a terminal refusal, or an ambiguous refusal a
+          // deferred retry confirmed. No relay taking the REQ, a silent relay,
+          // or a refusal not yet confirmed arrives as an ordinary empty list,
+          // and concluding "nothing to recover" would let the caller mark the
+          // drain complete and permanently strand the user's outgoing NIP-04
+          // (the #5202 failure mode, mirrored here).
           return authoritative && !sawUnansweredPage;
         }
         if (!authoritative) sawUnansweredPage = true;
@@ -1563,16 +1627,34 @@ class DmRepository {
       // drain already reached the end, so treat this as done rather than
       // looping a re-drain for a pathologically long kind-4 history.
       return !sawUnansweredPage;
-    } on Object catch (e) {
+    } on Object catch (e, stackTrace) {
       // Relay/IO failures are expected on flaky networks. Returning false
-      // defers drain completion so recovery retries on the next inbox open
-      // rather than silently skipping it and marking complete. See #5304.
+      // defers drain completion so recovery retries later rather than
+      // silently skipping it and marking complete. See #5304.
       Log.warning(
         'Outgoing NIP-04 recovery did not finish for ${pubkeyForLogs(pubkey)}: '
         '$e',
         category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
       );
+      // A programming-invariant failure would otherwise defer the drain on
+      // every retry while reading like an ordinary relay failure.
+      if (e is StateError || e is TypeError || e is RangeError) {
+        _errorReporter?.call(
+          e,
+          stackTrace,
+          site: DmRepositoryReportableSites.historyDrainUnexpectedFailure,
+        );
+      }
       return false;
+    } finally {
+      // A pending read can finish after logout, account switch, or teardown.
+      // _resetState clears this memory for the next session; do not let the
+      // stale sweep repopulate it with another account's refusal signatures.
+      if (!_ingestSessionEnded(pubkey, generation)) {
+        _previousNip04Refusals = currentRefusals;
+      }
     }
   }
 
@@ -1666,9 +1748,30 @@ class DmRepository {
   /// isolate — so it is safe to fire-and-forget from the inbox BLoC on
   /// every open.
   Future<void> backfillHistoryIfNeeded() {
+    return _backfillHistoryIfNeeded();
+  }
+
+  /// [allowNip04RefusalConfirmation] is passed only by the bounded retry
+  /// timer, whose delay is what separates two sightings of an ambiguous
+  /// refusal. An inbox open or a relay reconnect can follow the first sighting
+  /// within moments, so neither may confirm one.
+  Future<void> _backfillHistoryIfNeeded({
+    bool allowNip04RefusalConfirmation = false,
+  }) {
     final existing = _historyDrain;
-    if (existing != null) return existing;
-    final drain = _runHistoryDrain();
+    if (existing != null) {
+      if (allowNip04RefusalConfirmation) {
+        Log.info(
+          'DM history retry for ${pubkeyForLogs(_userPubkey)} joined a drain '
+          'already in flight; that run cannot confirm a relay refusal',
+          category: LogCategory.system,
+        );
+      }
+      return existing;
+    }
+    final drain = _runHistoryDrain(
+      allowNip04RefusalConfirmation: allowNip04RefusalConfirmation,
+    );
     _historyDrain = drain;
     unawaited(
       drain.whenComplete(() {
@@ -1834,7 +1937,9 @@ class DmRepository {
     }
   }
 
-  Future<void> _runHistoryDrain() async {
+  Future<void> _runHistoryDrain({
+    required bool allowNip04RefusalConfirmation,
+  }) async {
     // Ahead of isInitialized, which stopListening() deliberately leaves true so
     // a restart can re-open: the preamble below writes before reaching the
     // first session guard. upgradeDrainVersionIfNeeded re-stamps the drain
@@ -2135,10 +2240,16 @@ class DmRepository {
         // "Message requests". See #5304.
         //
         // Defer completion if this pass couldn't run against a live relay
-        // (e.g. a momentary disconnect in this window) so a flaky network
-        // never silently skips recovery AND marks the drain complete — it
-        // resumes on the next inbox open instead.
-        final nip04Recovered = await _recoverOutgoingNip04(pubkey, gen);
+        // (e.g. a momentary disconnect in this window) or a relay refused it
+        // ambiguously, so a flaky network never silently skips recovery AND
+        // marks the drain complete. It resumes on the bounded delayed retry,
+        // a relay reconnect or the next inbox open; only the delayed retry can
+        // confirm an ambiguous refusal.
+        final nip04Recovered = await _recoverOutgoingNip04(
+          pubkey,
+          gen,
+          allowRefusalConfirmation: allowNip04RefusalConfirmation,
+        );
         if (nip04Recovered) {
           // This run reached a conclusive answer about the account's own
           // inbox relays — completion is only reachable when it did — so a
@@ -2157,9 +2268,9 @@ class DmRepository {
         } else {
           Log.warning(
             'DM history drain reached the end for ${pubkeyForLogs(pubkey)} but '
-            'outgoing '
-            'NIP-04 recovery could not complete (no live relay); deferring '
-            'completion to the next inbox open.',
+            'outgoing NIP-04 recovery could not complete (a relay did not '
+            'settle the read, or refused it and the refusal is not confirmed '
+            'yet); deferring completion.',
             category: LogCategory.system,
           );
           _resumeDrainWhenRelayConnects(pubkey, gen);
@@ -2250,11 +2361,13 @@ class DmRepository {
   /// deliberately does not arm one: that budget resumes on the next inbox
   /// open by design. See #8550.
   void _resumeDrainWhenRelayConnects(String pubkey, int generation) {
+    // A drain that outlived its session must not cancel the retry the current
+    // session armed; _resetState already cancelled the stale session's own.
+    if (_ingestSessionEnded(pubkey, generation)) return;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
-    if (_ingestSessionEnded(pubkey, generation)) return;
     if (_automaticDrainRetryCount >=
         DmHistoryDrainConfig.deferredRetryDelays.length) {
       Log.warning(
@@ -2313,7 +2426,9 @@ class DmRepository {
         'bounded retry delay',
         category: LogCategory.system,
       );
-      unawaited(backfillHistoryIfNeeded());
+      unawaited(
+        _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
+      );
     });
   }
 
@@ -2343,6 +2458,7 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
+    _previousNip04Refusals = {};
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass

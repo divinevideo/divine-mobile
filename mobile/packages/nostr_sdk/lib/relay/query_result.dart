@@ -69,6 +69,10 @@ class QueryResult {
   const QueryResult({
     required this.events,
     required this.endedBy,
+    this.answeredNetworkRelayCount = 0,
+    this.unansweredRelayCount = 0,
+    this.rateLimitedRelayCount = 0,
+    this.closedRelayReasons = const {},
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
   });
@@ -91,6 +95,28 @@ class QueryResult {
   /// before every relay has been asked is [QueryEnd.deadline], since whether
   /// any relay took the `REQ` is still unknown.
   final QueryEnd endedBy;
+
+  /// Number of non-cache relays that sent `EOSE`, including relays with no
+  /// matching events.
+  final int answeredNetworkRelayCount;
+
+  /// Number of participating relays, cache relays included, that sent no
+  /// terminal frame and could still have answered: those serving the query on
+  /// a live socket, plus any whose `REQ` was still being written when a
+  /// deadline ended the read. A dropped relay, or one behind a shut NIP-42
+  /// gate, is not counted.
+  final int unansweredRelayCount;
+
+  /// Number of relays that refused the read with a `rate-limited` `CLOSED`.
+  /// A rate limit throttles the client rather than describing what the relay
+  /// holds, so a retry may still succeed.
+  final int rateLimitedRelayCount;
+
+  /// The `CLOSED` reason category of each non-cache relay whose last frame for
+  /// this query was `CLOSED`, keyed by relay url: a NIP-01 prefix, NIP-42's
+  /// `auth-required`, `unsupported`, or `other` when the reason carries none
+  /// of them. Only the category is kept, never the relay's own text.
+  final Map<String, String> closedRelayReasons;
 
   /// `true` when a relay may have withheld matching events because the read
   /// reached that relay's own result-size limit, rather than the relay

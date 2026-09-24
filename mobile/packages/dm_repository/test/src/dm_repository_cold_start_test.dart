@@ -104,6 +104,9 @@ void main() {
             sendAfterAuth: any(named: 'sendAfterAuth'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         );

@@ -13,6 +13,10 @@ class QueryOutcome {
   /// Creates a query outcome.
   const QueryOutcome({
     required this.endedBy,
+    this.answeredNetworkRelayCount = 0,
+    this.unansweredRelayCount = 0,
+    this.rateLimitedRelayCount = 0,
+    this.closedRelayReasons = const {},
     this.possiblyCapped = false,
     this.confirmedExhaustive = false,
     this.relays = const [],
@@ -28,6 +32,22 @@ class QueryOutcome {
   /// reaches [QueryEnd.deadline] on its own, because it does not own the
   /// caller's deadline; only `RelayPool.reportQueryDeadline` reports it.
   final QueryEnd endedBy;
+
+  /// Number of non-cache relays that sent `EOSE`; see
+  /// [QueryResult.answeredNetworkRelayCount].
+  final int answeredNetworkRelayCount;
+
+  /// Number of relays that sent no terminal frame and could still have
+  /// answered; see [QueryResult.unansweredRelayCount].
+  final int unansweredRelayCount;
+
+  /// Number of relays that refused with a `rate-limited` `CLOSED`; see
+  /// [QueryResult.rateLimitedRelayCount].
+  final int rateLimitedRelayCount;
+
+  /// Each non-cache relay's `CLOSED` reason category, keyed by url; see
+  /// [QueryResult.closedRelayReasons].
+  final Map<String, String> closedRelayReasons;
 
   /// Whether a relay may have withheld matching events because the query
   /// reached that relay's result-size limit; see [QueryResult.possiblyCapped].

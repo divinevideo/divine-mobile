@@ -218,6 +218,30 @@ class QueryOutcomeTracker {
     };
     final outcome = QueryOutcome(
       endedBy: _endedBy(judgements, atDeadline: atDeadline),
+      answeredNetworkRelayCount: judgements.entries
+          .where(
+            (entry) =>
+                entry.value.standing == _Standing.answered &&
+                entry.key.relay.relayStatus.relayType != RelayType.cache,
+          )
+          .length,
+      unansweredRelayCount: judgements.values
+          .where((judgement) => judgement.standing == _Standing.noAnswer)
+          .length,
+      rateLimitedRelayCount: judgements.entries
+          .where(
+            (entry) =>
+                entry.value.standing == _Standing.closed &&
+                entry.key.closedReason == 'rate-limited',
+          )
+          .length,
+      closedRelayReasons: {
+        for (final tally in _tallies.values)
+          if (tally.terminalFrame == _TerminalFrame.closed &&
+              tally.closedReason != null &&
+              tally.relay.relayStatus.relayType != RelayType.cache)
+            tally.relay.url: tally.closedReason!,
+      },
       possiblyCapped: judgements.keys.any(_isCapped),
       confirmedExhaustive: _confirmedExhaustive(judgements),
       relays: [

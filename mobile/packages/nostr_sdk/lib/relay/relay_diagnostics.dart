@@ -88,7 +88,9 @@ final RegExp _relayNoticeCredential = RegExp(
   caseSensitive: false,
 );
 
-/// Makes a relay-controlled NOTICE body safe and bounded for support logs.
+/// Makes relay-controlled text, such as a NOTICE body, safe and bounded for
+/// support logs. An AUTH `OK` rejection is reduced to its category instead;
+/// see [relayRefusalCategoryForDiagnostics].
 ///
 /// Public Nostr identifiers are deliberately retained in full. When the
 /// length boundary lands inside the final token, that whole token is omitted
@@ -116,6 +118,46 @@ String relayNoticeForDiagnostics(String message) {
   if (lastBoundary < 0) return _omittedRelayNotice;
   sanitized = prefix.substring(0, lastBoundary).trimRight();
   return '$sanitized … [truncated]';
+}
+
+/// NIP-01's machine-readable `OK` / `CLOSED` prefixes, plus NIP-42's
+/// `auth-required` and the `unsupported` prefix NIP-01 uses in its own
+/// `CLOSED` examples.
+///
+/// One vocabulary for every path that reduces a relay refusal to a category:
+/// `CLOSED` settlement, `QueryResult.closedRelayReasons`, and the NIP-42 `OK`
+/// rejection diagnostic. A second copy drifts silently, and a prefix missing
+/// from one of them reads as `other` — which callers treat as an unclassified
+/// refusal.
+const Set<String> relayRefusalPrefixes = {
+  'auth-required',
+  'blocked',
+  'duplicate',
+  'error',
+  'invalid',
+  'mute',
+  'pow',
+  'rate-limited',
+  'restricted',
+  'unsupported',
+};
+
+/// Returns only a recognized relay refusal category, never relay-controlled
+/// detail that could contain identifying data such as an IP address.
+///
+/// Matches the prefix rather than searching the whole message. Searching
+/// mislabels the human-readable half: `blocked: too many failed auth
+/// attempts` is not an auth problem, and sends triage after NIP-42 when the
+/// account is blocked. Only the fixed prefixes above are ever returned, so
+/// relay-supplied text still cannot reach a support export.
+String relayRefusalCategoryForDiagnostics(String message) {
+  final normalized = message.trim().toLowerCase();
+  for (final prefix in relayRefusalPrefixes) {
+    if (!normalized.startsWith(prefix)) continue;
+    final rest = normalized.substring(prefix.length);
+    if (rest.isEmpty || rest.startsWith(':')) return prefix;
+  }
+  return 'other';
 }
 
 /// Emits [diagnostic] to [sink] without allowing observability failures to
