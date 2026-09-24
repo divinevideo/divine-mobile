@@ -209,8 +209,8 @@ class _LikedGridTile extends ConsumerWidget {
           category: LogCategory.ui,
         );
         Log.info(
-          '✅ ProfileLikedGrid: Called pushVideoFeed with '
-          'LikedVideosFeedSource at index $index',
+          '✅ ProfileLikedGrid: Pushed the fullscreen feed with '
+          'LikedViewSource at index $index',
           category: LogCategory.video,
         );
       },

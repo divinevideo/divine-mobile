@@ -199,8 +199,8 @@ class _RepostGridTile extends ConsumerWidget {
         );
 
         Log.info(
-          '✅ ProfileRepostsGrid: Called pushVideoFeed with StaticFeedSource '
-          'at index $index',
+          '✅ ProfileRepostsGrid: Pushed the fullscreen feed with '
+          'RepostsViewSource at index $index',
           category: LogCategory.video,
         );
       },
