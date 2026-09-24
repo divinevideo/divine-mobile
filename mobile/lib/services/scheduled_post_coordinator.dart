@@ -126,6 +126,7 @@ class ScheduledPostCoordinator {
   StreamSubscription<void>? _retrySubscription;
   StreamSubscription<void>? _outboxSubscription;
   Timer? _timer;
+  Duration? _armedDelay;
   bool _isInitialized = false;
   bool _isSweeping = false;
   bool _foreground = true;
@@ -149,6 +150,9 @@ class ScheduledPostCoordinator {
 
   @visibleForTesting
   bool get hasTimer => _timer != null;
+
+  @visibleForTesting
+  Duration? get armedDelay => _armedDelay;
 
   String get ownerPubkey => _repository.ownerPubkey;
 
@@ -375,10 +379,11 @@ class ScheduledPostCoordinator {
     // the relay would publish, and broadcasting a differently-dated copy
     // would put the same video out twice.
     if (post.status == ScheduledPostStatus.pendingSubmit) {
-      // A signer that cannot re-date it leaves the event as signed: the relay
-      // still takes it inside its drift window, and a refusal before then
-      // backs off below like any other unconfirmed broadcast.
-      row = await _redateForImmediateBroadcast(post) ?? post;
+      final plan = await _planImmediateBroadcast(post);
+      if (plan == null) return false;
+      row = plan.redate
+          ? await _redateForImmediateBroadcast(plan.post) ?? plan.post
+          : plan.post;
     }
     final event = ScheduledPostsRepository.decodeEvent(row);
     final EventPublishOutcome outcome;
@@ -401,6 +406,45 @@ class ScheduledPostCoordinator {
     await _repository.markPublished(row.eventId);
     await _finalizePublished(row);
     return true;
+  }
+
+  /// A POST the client recorded as a failure may still have been queued.
+  /// Re-signing that row mints a second id the relay will also publish.
+  static const _relayFutureDrift = Duration(seconds: 60);
+
+  /// Whether [post] may be broadcast, and whether it must be re-dated first.
+  ///
+  /// A row that was never submitted can be re-dated: the relay has no copy.
+  /// A row that was submitted is listed first. If the relay holds it, the
+  /// caller leaves that id alone. If the list cannot be read, the original
+  /// id is broadcast only inside the relay's drift window.
+  Future<({ScheduledPost post, bool redate})?> _planImmediateBroadcast(
+    ScheduledPost post,
+  ) async {
+    if (post.attempts == 0) return (post: post, redate: true);
+    final sync = await _repository.syncFromServer();
+    if (_stop) return null;
+    if (!sync.succeeded) {
+      if (post.publishAtUtc.difference(_now()) > _relayFutureDrift) {
+        return null;
+      }
+      return (post: post, redate: false);
+    }
+    _lastSyncAt = _now();
+    _publishServerOnly(sync.serverOnly);
+    for (final published in sync.published) {
+      await _finalizePublished(published);
+    }
+    if (_stop) return null;
+    for (final cancelled in sync.cancelled) {
+      await _finalizeCancelled(cancelled);
+    }
+    if (_stop) return null;
+    final fresh = await _repository.getById(post.eventId);
+    if (fresh == null || fresh.status != ScheduledPostStatus.pendingSubmit) {
+      return null;
+    }
+    return (post: fresh, redate: true);
   }
 
   /// Replaces a never-handed-off row with one dated now, so the broadcast
@@ -626,7 +670,7 @@ class ScheduledPostCoordinator {
         post,
         createdAt: newPublishAt.toUtc().millisecondsSinceEpoch ~/ 1000,
       );
-      if (signed == null) return ScheduledPostActionOutcome.failed;
+      if (_stop || signed == null) return ScheduledPostActionOutcome.failed;
       // The time it already has, over a body an earlier move restamped,
       // signs the held event again: replacing it would withdraw and delete
       // the only copy. A failed one goes back to the relay as it is.
@@ -677,7 +721,7 @@ class ScheduledPostCoordinator {
         post,
         createdAt: _now().toUtc().millisecondsSinceEpoch ~/ 1000,
       );
-      if (signed == null) return ScheduledPostActionOutcome.failed;
+      if (_stop || signed == null) return ScheduledPostActionOutcome.failed;
       // Already dated now: broadcast the held event rather than replace it
       // with itself, which would delete the only copy before the broadcast.
       if (signed.id == post.eventId) {
@@ -739,7 +783,10 @@ class ScheduledPostCoordinator {
       tags: body.tags,
       createdAt: createdAt,
     );
-    if (signed == null || signed.createdAt != createdAt) {
+    if (_stop ||
+        signed == null ||
+        signed.createdAt != createdAt ||
+        signed.pubkey != ownerPubkey) {
       Log.error(
         'Could not re-sign scheduled event ${post.eventId} for $createdAt',
         name: _logName,
@@ -770,8 +817,9 @@ class ScheduledPostCoordinator {
   Future<void> _scheduleNext() async {
     if (!_isInitialized || _disposed || !_foreground || _isSweeping) return;
     Duration? delay;
+    var pending = const <ScheduledPost>[];
     try {
-      final pending = await _repository.pending();
+      pending = await _repository.pending();
       delay = _repository.nextWakeIn(pending, _now());
     } catch (e, stackTrace) {
       Log.warning(
@@ -784,9 +832,18 @@ class ScheduledPostCoordinator {
       delay = _maxTimerDelay;
     }
     if (!_isInitialized || _disposed || !_foreground || _isSweeping) return;
+    if (pending.isNotEmpty || _serverOnly.isNotEmpty) {
+      final elapsed = _lastSyncAt == null
+          ? _syncInterval
+          : _now().difference(_lastSyncAt!);
+      final untilSync = _syncInterval - elapsed;
+      final syncWait = untilSync.isNegative ? Duration.zero : untilSync;
+      if (delay == null || syncWait < delay) delay = syncWait;
+    }
     if (delay == null) return;
     if (delay < _minTimerDelay) delay = _minTimerDelay;
     if (delay > _maxTimerDelay) delay = _maxTimerDelay;
+    _armedDelay = delay;
     _timer?.cancel();
     _timer = Timer(delay, () => unawaited(sweep()));
   }

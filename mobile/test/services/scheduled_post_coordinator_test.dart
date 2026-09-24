@@ -51,6 +51,8 @@ void main() {
   late Object? broadcastError;
   late List<(Event, String?)> recorded;
   late bool signerFails;
+  late String signingPubkey;
+  late bool dropOwnershipDuringSign;
 
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
@@ -71,6 +73,8 @@ void main() {
     broadcastError = null;
     recorded = [];
     signerFails = false;
+    signingPubkey = owner;
+    dropOwnershipDuringSign = false;
 
     repository = ScheduledPostsRepository(
       dao: database.scheduledPostsDao,
@@ -97,8 +101,9 @@ void main() {
             int? createdAt,
           }) async {
             if (signerFails) return null;
+            if (dropOwnershipDuringSign) currentPubkey = collaborator;
             return Event(
-              owner,
+              signingPubkey,
               kind,
               tags ?? [],
               content,
@@ -244,6 +249,58 @@ void main() {
         // Neither the original row nor its replacement outlives the publish.
         expect(await repository.list(), isEmpty);
       });
+
+      test(
+        'does not mint a second id when a lost hand-off is already held',
+        () async {
+          final event = buildEvent();
+          await enqueue(event);
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            failureReason: 'timeout',
+            attemptedAt: now,
+          );
+          when(() => client.list()).thenAnswer(
+            (_) async => ScheduleListLoaded([
+              serverEntry(event, ScheduledPostServerState.schedule),
+            ]),
+          );
+          now = publishAt.subtract(const Duration(minutes: 1));
+
+          await coordinator.sweep();
+
+          expect(broadcasts, isEmpty);
+          expect(
+            (await repository.getById(event.id))!.status,
+            ScheduledPostStatus.scheduled,
+          );
+        },
+      );
+
+      test(
+        'does not mint a second id when a submitted hand-off cannot be listed',
+        () async {
+          final event = buildEvent();
+          await enqueue(event);
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            failureReason: 'timeout',
+            attemptedAt: now,
+          );
+          when(
+            () => client.list(),
+          ).thenAnswer((_) async => const ScheduleListFailure('timeout'));
+          now = publishAt.subtract(const Duration(seconds: 90));
+
+          await coordinator.sweep();
+
+          expect(broadcasts, isEmpty);
+          expect(
+            (await repository.getById(event.id))!.status,
+            ScheduledPostStatus.pendingSubmit,
+          );
+        },
+      );
 
       test('broadcasts a post it cannot re-date as it was signed', () async {
         final event = buildEvent();
@@ -597,6 +654,10 @@ void main() {
           await coordinator.initialize();
           await pumpEventQueue();
           expect(coordinator.hasTimer, isTrue);
+          expect(
+            coordinator.armedDelay,
+            lessThanOrEqualTo(const Duration(minutes: 5)),
+          );
 
           await coordinator.dispose();
           expect(coordinator.hasTimer, isFalse);
@@ -845,6 +906,24 @@ void main() {
           ScheduledPostStatus.pendingSubmit,
         );
       });
+
+      test(
+        'keeps the held event when the account changes while signing',
+        () async {
+          final event = buildEvent();
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          dropOwnershipDuringSign = true;
+
+          final outcome = await coordinator.reschedule(
+            event.id,
+            publishAt.add(const Duration(hours: 1)),
+          );
+
+          expect(outcome, ScheduledPostActionOutcome.failed);
+          expect((await repository.getById(event.id))!.eventId, event.id);
+          expect(await repository.list(), hasLength(1));
+        },
+      );
 
       test('keeps the held event when signing fails', () async {
         final event = buildEvent();
