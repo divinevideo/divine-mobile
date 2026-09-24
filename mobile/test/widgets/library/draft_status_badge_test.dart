@@ -35,7 +35,7 @@ void main() {
   group(DraftStatusBadge, () {
     /// The label a row reads must clear WCAG AA body text against the pill it
     /// sits on. The muted tone used to borrow its own faint colour for the
-    /// word and measured 2.81:1 in light mode.
+    /// word and measured 2.98:1 in light mode.
     Future<void> expectReadable(
       WidgetTester tester,
       DraftStatusBadgeTone tone, {

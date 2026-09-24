@@ -36,9 +36,9 @@ class DraftStatusBadge extends StatelessWidget {
       DraftStatusBadgeTone.muted => colors.onSurfaceMuted,
     };
     // The border may be quiet; the label may not. onSurfaceMuted on its own
-    // 16% fill measures 4.36:1 in dark and 2.81:1 in light, both under the
+    // 16% fill measures 4.30:1 in dark and 2.98:1 in light, both under the
     // 4.5:1 body text needs, so the muted tone keeps its faint outline and
-    // borrows secondaryText for the word itself (8.08:1 / 7.37:1). The other
+    // borrows secondaryText for the word itself (6.23:1 / 6.39:1). The other
     // two tones already clear the bar on their own accents.
     final foreground = switch (tone) {
       DraftStatusBadgeTone.positive || DraftStatusBadgeTone.warning => accent,
