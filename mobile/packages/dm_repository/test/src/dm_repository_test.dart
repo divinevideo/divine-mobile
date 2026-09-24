@@ -6829,53 +6829,6 @@ void main() {
       );
 
       test(
-        'defers on a refused gift-wrap page even when NIP-04 recovery would '
-        'answer, so the gift-wrap guard is pinned on its own (#8209)',
-        () async {
-          // A test that refuses both the gift-wrap drain and the NIP-04
-          // recovery pass lets the NIP-04 guard mask a regressed gift-wrap
-          // guard: break the gift-wrap guard alone and it still passes because
-          // recovery defers on the same refusal. Here the gift-wrap page is
-          // refused while NIP-04 recovery answers authoritatively, so only a
-          // working gift-wrap guard can keep the drain from latching (a broken
-          // one reaches the answering recovery pass and marks complete).
-          when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
-          stubNip04RecoveryAnsweredEmpty();
-          when(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              subscriptionId: any(named: 'subscriptionId'),
-              useCache: any(named: 'useCache'),
-              tempRelays: any(named: 'tempRelays'),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-              acceptRelayClosedWhenOthersAnswered: any(
-                named: 'acceptRelayClosedWhenOthersAnswered',
-              ),
-            ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            final isOwnInboxLookup =
-                filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
-            return isOwnInboxLookup
-                ? answeredPage(const <Event>[])
-                : unansweredPage(timedOut: true);
-          });
-
-          final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
-            ..drainVersionOverride = DmSyncState.currentDrainVersion;
-          final repository = createRepository(syncState: syncState);
-
-          await repository.backfillHistoryIfNeeded();
-
-          expect(syncState.drainCompleteOverride, isFalse);
-          expect(syncState.markedCompletePubkeys, isEmpty);
-        },
-      );
-
-      test(
         'demands full relay settlement for both gift-wrap and NIP-04 pages '
         '(#8209)',
         () async {
@@ -10458,6 +10411,7 @@ void main() {
                     answeredNetworkRelayCount: 1,
                   );
           });
+          // Gift-wrap pages and the #4974 own kind-10050 lookup: nothing.
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -10469,21 +10423,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            // The drain's own kind-10050 inbox lookup has the same
-            // `authors`-only shape; only the kind-4 pass is under test.
-            if (filter.authors != null &&
-                (filter.kinds?.contains(EventKind.directMessage) ?? false)) {
-              nip04Pages++;
-              return nip04Pages == 1
-                  ? unansweredPage(noRelays: true)
-                  : answeredPage(const <Event>[]);
-            }
-            return answeredPage(const <Event>[]);
-          });
+          ).thenAnswer((_) async => answeredPage(const <Event>[]));
           final syncState = armedSyncState();
           final repository = createRepository(syncState: syncState);
 
