@@ -19,6 +19,7 @@ import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/auth/auth_hero_section.dart';
 import 'package:openvine/widgets/error_message.dart';
@@ -126,9 +127,19 @@ class _WelcomeView extends ConsumerWidget {
       listener: (context, state) {
         switch (state.status) {
           case WelcomeStatus.navigatingToCreateAccount:
-            context.push(WelcomeScreen.createAccountPath);
+            runDetached(
+              context.push<void>(WelcomeScreen.createAccountPath),
+              'open account creation',
+              logName: 'WelcomeScreen',
+              category: LogCategory.auth,
+            );
           case WelcomeStatus.navigatingToLoginOptions:
-            context.push(WelcomeScreen.loginOptionsPath);
+            runDetached(
+              context.push<void>(WelcomeScreen.loginOptionsPath),
+              'open sign-in options',
+              logName: 'WelcomeScreen',
+              category: LogCategory.auth,
+            );
           case WelcomeStatus.navigatingToAccountDeletionRecovery:
             context.go(RoutePaths.accountDeletionRecovery);
           case WelcomeStatus.sessionExpired:
@@ -392,10 +403,15 @@ class _CrossAccountRecoveryBannerState
     _announcedMessage = message;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
+      runDetached(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          message,
+          Directionality.of(context),
+        ),
+        'announce account recovery state',
+        logName: 'WelcomeScreen',
+        category: LogCategory.auth,
       );
     });
   }

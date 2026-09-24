@@ -21,11 +21,13 @@ import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/auth/auth_error_box.dart';
 import 'package:openvine/widgets/auth/forgot_password_dialog.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
 import 'package:openvine/widgets/rounded_icon_button.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Sign-in screen — Page that provides [DivineAuthCubit].
 class LoginOptionsScreen extends ConsumerWidget {
@@ -151,10 +153,15 @@ class _LoginOptionsView extends StatelessWidget {
       listener: (context, state) {
         if (state is DivineAuthFormState && state.signInFailureReason != null) {
           // Announce the failure to screen readers as it appears.
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            _signInErrorMessage(context, state.signInFailureReason!),
-            Directionality.of(context),
+          runDetached(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              _signInErrorMessage(context, state.signInFailureReason!),
+              Directionality.of(context),
+            ),
+            'announce sign-in failure',
+            logName: 'LoginOptionsScreen',
+            category: LogCategory.auth,
           );
           return;
         }
@@ -616,51 +623,56 @@ class _SignInOptionsHint extends ConsumerWidget {
 }
 
 void _showInfoSheet(BuildContext context, {required bool showNip07}) {
-  VineBottomSheet.show<void>(
-    context: context,
-    title: Text(context.l10n.authSignInOptionsTitle),
-    buildScrollBody: (scrollController) => Builder(
-      builder: (sheetContext) => ListView(
-        controller: scrollController,
-        padding: EdgeInsets.fromLTRB(
-          24,
-          16,
-          24,
-          32 + MediaQuery.viewPaddingOf(sheetContext).bottom,
+  runDetached(
+    VineBottomSheet.show<void>(
+      context: context,
+      title: Text(context.l10n.authSignInOptionsTitle),
+      buildScrollBody: (scrollController) => Builder(
+        builder: (sheetContext) => ListView(
+          controller: scrollController,
+          padding: EdgeInsets.fromLTRB(
+            24,
+            16,
+            24,
+            32 + MediaQuery.viewPaddingOf(sheetContext).bottom,
+          ),
+          children: [
+            _InfoItem(
+              title: sheetContext.l10n.authInfoEmailPasswordTitle,
+              description: sheetContext.l10n.authInfoEmailPasswordDescription,
+            ),
+            const SizedBox(height: 16),
+            _InfoItem(
+              title: sheetContext.l10n.authImportNostrKey,
+              description: sheetContext.l10n.authInfoImportNostrKeyDescription,
+            ),
+            const SizedBox(height: 16),
+            _InfoItem(
+              title: sheetContext.l10n.authInfoSignerAppTitle,
+              description: sheetContext.l10n.authInfoSignerAppDescription,
+            ),
+            if (showNip07) ...[
+              const SizedBox(height: 16),
+              _InfoItem(
+                title: sheetContext.l10n.authInfoBrowserExtensionTitle,
+                description:
+                    sheetContext.l10n.authInfoBrowserExtensionDescription,
+              ),
+            ],
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+              const SizedBox(height: 16),
+              _InfoItem(
+                title: sheetContext.l10n.authInfoAmberTitle,
+                description: sheetContext.l10n.authInfoAmberDescription,
+              ),
+            ],
+          ],
         ),
-        children: [
-          _InfoItem(
-            title: sheetContext.l10n.authInfoEmailPasswordTitle,
-            description: sheetContext.l10n.authInfoEmailPasswordDescription,
-          ),
-          const SizedBox(height: 16),
-          _InfoItem(
-            title: sheetContext.l10n.authImportNostrKey,
-            description: sheetContext.l10n.authInfoImportNostrKeyDescription,
-          ),
-          const SizedBox(height: 16),
-          _InfoItem(
-            title: sheetContext.l10n.authInfoSignerAppTitle,
-            description: sheetContext.l10n.authInfoSignerAppDescription,
-          ),
-          if (showNip07) ...[
-            const SizedBox(height: 16),
-            _InfoItem(
-              title: sheetContext.l10n.authInfoBrowserExtensionTitle,
-              description:
-                  sheetContext.l10n.authInfoBrowserExtensionDescription,
-            ),
-          ],
-          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
-            const SizedBox(height: 16),
-            _InfoItem(
-              title: sheetContext.l10n.authInfoAmberTitle,
-              description: sheetContext.l10n.authInfoAmberDescription,
-            ),
-          ],
-        ],
       ),
     ),
+    'show sign-in information',
+    logName: 'LoginOptionsScreen',
+    category: LogCategory.ui,
   );
 }
 

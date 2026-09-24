@@ -19,9 +19,11 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/auth/auth_error_box.dart';
 import 'package:openvine/widgets/auth/auth_form_scaffold.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Create account screen — Page that provides [DivineAuthCubit] in sign-up
 /// mode.
@@ -175,7 +177,12 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
   }
 
   void _submit() {
-    context.read<DivineAuthCubit>().submit();
+    runDetached(
+      context.read<DivineAuthCubit>().submit(),
+      'submit account creation',
+      logName: 'CreateAccountScreen',
+      category: LogCategory.auth,
+    );
   }
 
   Future<void> _skip() async {
@@ -191,7 +198,12 @@ class _CreateAccountBodyState extends State<_CreateAccountBody> {
 
     if (confirmed != true || !mounted) return;
 
-    context.read<DivineAuthCubit>().skipWithAnonymousAccount();
+    runDetached(
+      context.read<DivineAuthCubit>().skipWithAnonymousAccount(),
+      'continue with an anonymous account',
+      logName: 'CreateAccountScreen',
+      category: LogCategory.auth,
+    );
   }
 
   @override

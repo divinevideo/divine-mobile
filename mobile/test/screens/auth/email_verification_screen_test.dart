@@ -72,8 +72,8 @@ void main() {
     ).thenAnswer((_) async => const EmailTokenVerificationResult.success());
   });
 
-  tearDown(() {
-    authStateController.close();
+  tearDown(() async {
+    await authStateController.close();
   });
 
   Widget createTestWidget({
