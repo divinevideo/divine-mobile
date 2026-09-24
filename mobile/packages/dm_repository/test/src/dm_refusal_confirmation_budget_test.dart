@@ -193,6 +193,98 @@ void main() {
     });
 
     test(
+      'a flapping relay does not re-drive the armed confirmation window',
+      () {
+        fakeAsync((async) {
+          stubAnsweredHistory();
+          var reads = 0;
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            return refusal();
+          });
+          final repository = makeRepository();
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          relayStatus.add({
+            'wss://new.example': RelayConnectionStatus.connected(
+              'wss://new.example',
+            ),
+          });
+          async.flushMicrotasks();
+          expect(reads, 2);
+
+          relayStatus.add({
+            'wss://new.example': RelayConnectionStatus.disconnected(
+              'wss://new.example',
+            ),
+            'wss://flap.example': RelayConnectionStatus.connected(
+              'wss://flap.example',
+            ),
+          });
+          async.flushMicrotasks();
+          expect(reads, 2);
+          expect(syncState.historyDrainComplete(_pubkey), isFalse);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(reads, 3);
+          expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        });
+      },
+    );
+
+    test('an inbox open still leaves one reconnect sweep in the window', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return refusal();
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        expect(reads, 2);
+
+        relayStatus.add({
+          'wss://new.example': RelayConnectionStatus.connected(
+            'wss://new.example',
+          ),
+        });
+        async.flushMicrotasks();
+        expect(reads, 3);
+        expect(syncState.historyDrainComplete(_pubkey), isFalse);
+
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+
+        expect(reads, 4);
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+      });
+    });
+
+    test(
       'timer firing during a non-confirming drain queues a confirming pass',
       () {
         fakeAsync((async) {

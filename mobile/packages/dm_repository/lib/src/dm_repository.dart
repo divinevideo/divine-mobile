@@ -664,6 +664,7 @@ class DmRepository {
   int _automaticDrainRetryCount = 0;
   bool _historyDrainCanConfirmNip04Refusal = false;
   bool _pendingNip04RefusalConfirmation = false;
+  bool _confirmationWindowRelayEdgeUsed = false;
 
   /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
   /// sweep. A matching refusal must recur after a deferred drain retry before
@@ -1066,6 +1067,7 @@ class DmRepository {
     _automaticDrainRetryCount = 0;
     _historyDrainCanConfirmNip04Refusal = false;
     _pendingNip04RefusalConfirmation = false;
+    _confirmationWindowRelayEdgeUsed = false;
     _previousNip04Refusals = {};
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
@@ -2384,9 +2386,13 @@ class DmRepository {
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     // A non-confirming sweep can defer while the delayed confirmation remains
-    // pending. Keep its deadline and slot; refresh only the reconnect listener.
+    // pending. Keep its deadline and slot. Refresh the reconnect listener only
+    // until that window has already spent its one rising edge, so a flapping
+    // relay cannot re-drive the drain until the confirmation timer fires.
     if (_drainRetryTimer != null || _pendingNip04RefusalConfirmation) {
-      _listenForDrainRelayReconnect(pubkey, generation);
+      if (!_confirmationWindowRelayEdgeUsed) {
+        _listenForDrainRelayReconnect(pubkey, generation);
+      }
       return;
     }
     if (_automaticDrainRetryCount >=
@@ -2399,6 +2405,7 @@ class DmRepository {
       );
       return;
     }
+    _confirmationWindowRelayEdgeUsed = false;
     _listenForDrainRelayReconnect(pubkey, generation);
     final delay =
         DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
@@ -2444,6 +2451,9 @@ class DmRepository {
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
+      if (_drainRetryTimer != null || _pendingNip04RefusalConfirmation) {
+        _confirmationWindowRelayEdgeUsed = true;
+      }
       Log.info(
         'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after a relay '
         'connected',
@@ -2481,6 +2491,7 @@ class DmRepository {
     _automaticDrainRetryCount = 0;
     _historyDrainCanConfirmNip04Refusal = false;
     _pendingNip04RefusalConfirmation = false;
+    _confirmationWindowRelayEdgeUsed = false;
     _previousNip04Refusals = {};
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
