@@ -272,5 +272,111 @@ void main() {
 
       expect(deleted, isEmpty);
     });
+
+    group('shutdown clip cleanup', () {
+      test('close deletes the clip it stops mid-recording', () async {
+        final deleted = <String>[];
+        final cubit = MinorConsentCaptureCubit(
+          recorder: _FakeRecorder(stopResult: '/tmp/mid-recording.mp4'),
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        expect(cubit.state, isA<MinorConsentCaptureRecording>());
+
+        await cubit.close();
+
+        expect(deleted, ['/tmp/mid-recording.mp4']);
+      });
+
+      test('releaseRecorder deletes a clip it stops mid-recording', () async {
+        final deleted = <String>[];
+        final cubit = MinorConsentCaptureCubit(
+          recorder: _FakeRecorder(stopResult: '/tmp/mid-recording.mp4'),
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        await cubit.releaseRecorder();
+
+        expect(deleted, ['/tmp/mid-recording.mp4']);
+        await cubit.close();
+      });
+
+      test('an accepted clip survives releaseRecorder and close', () async {
+        final deleted = <String>[];
+        final cubit = MinorConsentCaptureCubit(
+          recorder: _FakeRecorder(stopResult: '/tmp/accepted.mp4'),
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        await cubit.stop();
+        expect(cubit.state, isA<MinorConsentCaptureReview>());
+
+        await cubit.releaseRecorder();
+        await cubit.close();
+
+        expect(deleted, isEmpty);
+      });
+
+      test('a late auto-stop after close deletes the orphaned clip', () async {
+        final deleted = <String>[];
+        final recorder = _FakeRecorder(stopResult: '/tmp/stopped-on-close.mp4');
+        final cubit = MinorConsentCaptureCubit(
+          recorder: recorder,
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        // close() unsubscribes, so hold the callback the way the platform
+        // already holds one that is in flight when the screen is left.
+        final inFlight = recorder.onAutoStopped!;
+        await cubit.close();
+
+        inFlight('/tmp/late-auto-stop.mp4');
+        await pumpEventQueue();
+
+        expect(deleted, [
+          '/tmp/stopped-on-close.mp4',
+          '/tmp/late-auto-stop.mp4',
+        ]);
+      });
+
+      test('a late auto-stop carrying the accepted clip keeps it', () async {
+        final deleted = <String>[];
+        final recorder = _FakeRecorder(stopResult: '/tmp/accepted.mp4');
+        final cubit = MinorConsentCaptureCubit(
+          recorder: recorder,
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        await cubit.stop();
+        final inFlight = recorder.onAutoStopped!;
+        await cubit.releaseRecorder();
+
+        inFlight('/tmp/accepted.mp4');
+        await pumpEventQueue();
+
+        expect(deleted, isEmpty);
+        await cubit.close();
+      });
+
+      test('leaving while the camera starts deletes what it wrote', () async {
+        final deleted = <String>[];
+        final recorder = _FakeRecorder(stopResult: '/tmp/aborted.mp4');
+        final cubit = MinorConsentCaptureCubit(
+          recorder: recorder,
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        final starting = cubit.start(outputDirectory: '/tmp');
+        await cubit.close();
+        await starting;
+
+        expect(deleted, ['/tmp/aborted.mp4']);
+      });
+    });
   });
 }
