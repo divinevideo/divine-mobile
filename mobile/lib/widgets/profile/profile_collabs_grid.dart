@@ -16,6 +16,7 @@ import 'package:openvine/mixins/grid_prefetch_mixin.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
@@ -100,22 +101,29 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
     prefetchAroundIndex(index, allVideos);
 
     final bloc = context.read<ProfileCollabVideosBloc>();
-    context.push(
-      PooledFullscreenVideoFeedScreen.pathForVideoId(allVideos[index].id),
-      extra: PooledFullscreenVideoFeedArgs(
-        source: CollabsViewSource(widget.userIdHex),
-        feedRepository: StreamFeedRepository(
-          videos: bloc.stream.map((state) => state.videos).startWith(allVideos),
-          hasMore: bloc.stream
-              .map((state) => state.hasMoreContent)
-              .startWith(bloc.state.hasMoreContent),
-          onLoadMore: () async =>
-              bloc.add(const ProfileCollabVideosLoadMoreRequested()),
+    runDetached(
+      context.push<void>(
+        PooledFullscreenVideoFeedScreen.pathForVideoId(allVideos[index].id),
+        extra: PooledFullscreenVideoFeedArgs(
+          source: CollabsViewSource(widget.userIdHex),
+          feedRepository: StreamFeedRepository(
+            videos: bloc.stream
+                .map((state) => state.videos)
+                .startWith(allVideos),
+            hasMore: bloc.stream
+                .map((state) => state.hasMoreContent)
+                .startWith(bloc.state.hasMoreContent),
+            onLoadMore: () async =>
+                bloc.add(const ProfileCollabVideosLoadMoreRequested()),
+          ),
+          initialIndex: index,
+          initialVideoId: allVideos[index].id,
+          trafficSource: ViewTrafficSource.profile,
         ),
-        initialIndex: index,
-        initialVideoId: allVideos[index].id,
-        trafficSource: ViewTrafficSource.profile,
       ),
+      'open collaborator video',
+      logName: 'ProfileCollabsGrid',
+      category: LogCategory.ui,
     );
   }
 

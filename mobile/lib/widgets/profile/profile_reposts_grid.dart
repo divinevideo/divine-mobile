@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
@@ -172,24 +173,29 @@ class _RepostGridTile extends ConsumerWidget {
         );
 
         final bloc = context.read<ProfileRepostedVideosBloc>();
-        context.push(
-          PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
-          extra: PooledFullscreenVideoFeedArgs(
-            source: RepostsViewSource(userIdHex),
-            feedRepository: StreamFeedRepository(
-              videos: bloc.stream
-                  .map((state) => state.videos)
-                  .startWith(allVideos),
-              hasMore: bloc.stream
-                  .map((state) => state.hasMoreContent)
-                  .startWith(bloc.state.hasMoreContent),
-              onLoadMore: () async =>
-                  bloc.add(const ProfileRepostedVideosLoadMoreRequested()),
+        runDetached(
+          context.push<void>(
+            PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
+            extra: PooledFullscreenVideoFeedArgs(
+              source: RepostsViewSource(userIdHex),
+              feedRepository: StreamFeedRepository(
+                videos: bloc.stream
+                    .map((state) => state.videos)
+                    .startWith(allVideos),
+                hasMore: bloc.stream
+                    .map((state) => state.hasMoreContent)
+                    .startWith(bloc.state.hasMoreContent),
+                onLoadMore: () async =>
+                    bloc.add(const ProfileRepostedVideosLoadMoreRequested()),
+              ),
+              initialIndex: index,
+              initialVideoId: videoEvent.id,
+              trafficSource: ViewTrafficSource.profile,
             ),
-            initialIndex: index,
-            initialVideoId: videoEvent.id,
-            trafficSource: ViewTrafficSource.profile,
           ),
+          'open reposted video',
+          logName: 'ProfileRepostsGrid',
+          category: LogCategory.ui,
         );
 
         Log.info(

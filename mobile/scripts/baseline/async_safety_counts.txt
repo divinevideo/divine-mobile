@@ -63,14 +63,6 @@ discarded_futures|lib/widgets/library/clips_tab.dart	2
 discarded_futures|lib/widgets/linkified_text/linkified_text_navigation.dart	4
 discarded_futures|lib/widgets/new_videos_tab.dart	1
 discarded_futures|lib/widgets/popular_videos_tab.dart	1
-discarded_futures|lib/widgets/profile/profile_action_buttons_widget.dart	2
-discarded_futures|lib/widgets/profile/profile_actions_sheet/profile_actions_sheet_content.dart	1
-discarded_futures|lib/widgets/profile/profile_collabs_grid.dart	1
-discarded_futures|lib/widgets/profile/profile_liked_grid.dart	1
-discarded_futures|lib/widgets/profile/profile_reposts_grid.dart	1
-discarded_futures|lib/widgets/profile/profile_saved_grid.dart	1
-discarded_futures|lib/widgets/profile/profile_videos_grid.dart	3
-discarded_futures|lib/widgets/profile/searchable_follow_list.dart	1
 discarded_futures|lib/widgets/profile_editor/username_status_indicator.dart	1
 discarded_futures|lib/widgets/report_content_confirmation.dart	1
 discarded_futures|lib/widgets/report_content_dialog.dart	2
@@ -147,7 +139,6 @@ discarded_futures|test/services/supporter_repository_test.dart	1
 discarded_futures|test/services/upload_manager_recovery_test.dart	1
 discarded_futures|test/services/video_event_service_home_feed_streaming_test.dart	3
 discarded_futures|test/widgets/find_people_sheet_test.dart	1
-discarded_futures|test/widgets/profile/profile_actions_sheet/profile_actions_sheet_content_test.dart	1
 discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
 discarded_futures|test/widgets/upload_failure_listener_test.dart	1
 discarded_futures|test/widgets/upload_progress_dialog_test.dart	1
