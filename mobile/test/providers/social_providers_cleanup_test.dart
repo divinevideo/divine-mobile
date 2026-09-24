@@ -17,6 +17,7 @@ import 'package:models/models.dart' as model;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
@@ -33,6 +34,7 @@ import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upload_repository/upload_repository.dart' as hive_model;
 
@@ -120,6 +122,9 @@ void main() {
       // UserDataCleanupService clears push preferences through the Hive-backed
       // store, so this suite also owns the notifications box it opens.
       await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
+      // Account deletion clears the departing account's followed people
+      // lists, which opens their box as well.
+      await TestHelpers.cleanupHiveBox(HiveBoxNames.peopleLists);
 
       uploadManager = UploadManager(
         backgroundActivityManager: BackgroundActivityManager(),
@@ -153,11 +158,93 @@ void main() {
       try {
         await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
         await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.peopleLists);
       } finally {
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
         }
       }
+    });
+
+    test(
+      'destructive cleanup removes only the departing account people-list '
+      'follows, and the copies held for them',
+      () async {
+        final store = container.read(followedPeopleListsStoreProvider);
+        final cache = LocalPeopleListsCache(
+          openBox: () => Hive.openBox<dynamic>(HiveBoxNames.peopleLists),
+        );
+        final stamp = DateTime.utc(2026);
+        model.UserList listOf(String id) => model.UserList(
+          id: id,
+          name: id,
+          pubkeys: const [_pubkeyB],
+          createdAt: stamp,
+          updatedAt: stamp,
+        );
+        await store.add(
+          viewerPubkey: _pubkeyA,
+          ref: const FollowedPeopleListRef(
+            ownerPubkey: _pubkeyB,
+            listId: 'leaving',
+          ),
+        );
+        await cache.putFollowedCopy(
+          viewerPubkey: _pubkeyA,
+          ownerPubkey: _pubkeyB,
+          list: listOf('leaving'),
+        );
+        await store.add(
+          viewerPubkey: _pubkeyB,
+          ref: const FollowedPeopleListRef(
+            ownerPubkey: _pubkeyA,
+            listId: 'staying',
+          ),
+        );
+        await cache.putFollowedCopy(
+          viewerPubkey: _pubkeyB,
+          ownerPubkey: _pubkeyA,
+          list: listOf('staying'),
+        );
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(await store.read(viewerPubkey: _pubkeyA), isEmpty);
+        expect(await cache.readFollowedCopies(viewerPubkey: _pubkeyA), isEmpty);
+        expect(await store.read(viewerPubkey: _pubkeyB), hasLength(1));
+        expect(
+          (await cache.readFollowedCopies(
+            viewerPubkey: _pubkeyB,
+          )).map((followed) => followed.list.id),
+          equals(['staying']),
+        );
+      },
+    );
+
+    test('an account switch keeps the people-list follows', () async {
+      final store = container.read(followedPeopleListsStoreProvider);
+      const followed = FollowedPeopleListRef(
+        ownerPubkey: _pubkeyB,
+        listId: 'kept',
+      );
+      await store.add(viewerPubkey: _pubkeyA, ref: followed);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+      expect(await store.read(viewerPubkey: _pubkeyA), equals([followed]));
     });
 
     test(

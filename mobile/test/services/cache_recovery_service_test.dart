@@ -6,15 +6,24 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show UserList;
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/services/cache_recovery_service.dart';
+import 'package:openvine/services/people_lists/prefs_followed_people_lists_store.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upload_repository/upload_repository.dart';
 
 import '../helpers/test_helpers.dart';
 import '../mocks/mock_path_provider_platform.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
   group(CacheRecoveryService, () {
@@ -40,6 +49,7 @@ void main() {
         );
         await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
         await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.peopleLists);
       });
 
       tearDown(() async {
@@ -50,6 +60,7 @@ void main() {
           );
           await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
           await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
+          await TestHelpers.cleanupHiveBox(HiveBoxNames.peopleLists);
         } finally {
           if (tmp.existsSync()) tmp.deleteSync(recursive: true);
         }
@@ -146,6 +157,90 @@ void main() {
           expect(reopenedHashtagStats.get('popular_hashtags'), isNull);
         },
       );
+
+      test('keeps the people lists an account follows while clearing the '
+          'copies of them, and the next sync brings the copies back', () async {
+        const viewer =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        const owner =
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+        const member =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        registerFallbackValue(<Filter>[]);
+        registerFallbackValue(Duration.zero);
+        SharedPreferences.setMockInitialValues({});
+        final store = PrefsFollowedPeopleListsStore(
+          await SharedPreferences.getInstance(),
+        );
+        addTearDown(store.dispose);
+        final nostrClient = _MockNostrClient();
+        when(
+          () => nostrClient.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
+          (_) async => [
+            Event(
+              owner,
+              Nip51PeopleListCodec.kind,
+              [
+                ['d', 'crew'],
+                ['title', 'Crew'],
+                ['p', member],
+              ],
+              '',
+              createdAt: 1800000000,
+            ),
+          ],
+        );
+        final repository = PeopleListsRepositoryImpl(
+          nostrClient: nostrClient,
+          cache: LocalPeopleListsCache(
+            openBox: () => Hive.openBox<dynamic>(HiveBoxNames.peopleLists),
+          ),
+          followedListsStore: store,
+        );
+        final stamp = DateTime.utc(2026);
+        await repository.followList(
+          viewerPubkey: viewer,
+          ownerPubkey: owner,
+          list: UserList(
+            id: 'crew',
+            name: 'Crew',
+            pubkeys: const [member],
+            createdAt: stamp,
+            updatedAt: stamp,
+          ),
+        );
+
+        await CacheRecoveryService.clearHiveBoxesForTesting();
+
+        expect(
+          await store.read(viewerPubkey: viewer),
+          equals([
+            const FollowedPeopleListRef(ownerPubkey: owner, listId: 'crew'),
+          ]),
+        );
+
+        // A repository opened after the reset, as the restarted app has.
+        final restarted = PeopleListsRepositoryImpl(
+          nostrClient: nostrClient,
+          cache: LocalPeopleListsCache(
+            openBox: () => Hive.openBox<dynamic>(HiveBoxNames.peopleLists),
+          ),
+          followedListsStore: store,
+        );
+        expect(
+          await restarted.readFollowedLists(viewerPubkey: viewer),
+          isEmpty,
+        );
+
+        await restarted.syncFollowedLists(viewerPubkey: viewer);
+
+        final followed = await restarted.readFollowedLists(
+          viewerPubkey: viewer,
+        );
+        expect(followed.single.list.id, equals('crew'));
+        expect(followed.single.list.pubkeys, equals([member]));
+      });
     });
 
     group('full cache recovery', () {

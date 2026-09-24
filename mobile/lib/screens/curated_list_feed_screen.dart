@@ -2,7 +2,6 @@
 // ABOUTME: Hero header + masonry grid, owner actions sheet, manage-posts mode
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,15 +17,18 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
-import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
-import 'package:openvine/utils/share_sheet.dart';
+import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_video_player_mode.dart';
+import 'package:openvine/widgets/rounded_grid_viewport.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -172,28 +174,12 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         ],
         customActions: [
           if (!isOwned)
-            _FollowListButton(
-              isSubscribed: isSubscribed,
+            FollowListButton(
+              isFollowing: isSubscribed,
               isBusy: _isTogglingSubscription,
               onPressed: _toggleSubscription,
             ),
-          if (!isOwned && isShareable)
-            DivineAppBarIconButton(
-              icon: SvgIconSource(DivineIconName.shareFat.assetPath),
-              onPressed: _shareList,
-              tooltip: context.l10n.listShareAction,
-              semanticLabel: context.l10n.listShareAction,
-              // Match the bar's own action chrome (the back button): green
-              // glyph on the bordered surface container.
-              backgroundColor: context.vineColors.surfaceContainer,
-              borderSide: BorderSide(
-                color: context.vineColors.outlineMuted,
-                width: 2,
-              ),
-              iconColor: context.vineColors.isLight
-                  ? VineTheme.primaryAccessible
-                  : VineTheme.primary,
-            ),
+          if (!isOwned && isShareable) ShareListButton(onPressed: _shareList),
         ],
       );
     }
@@ -219,11 +205,13 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 
           // If in video mode, show fullscreen video player
           if (_activeVideoIndex != null) {
-            return _ListVideoPlayerMode(
+            return ListVideoPlayerMode(
               videos: videos,
               activeIndex: _activeVideoIndex!,
               listName: widget.listName,
               onExit: _exitVideoMode,
+              unavailableMessage: context.l10n.curatedListVideoNotAvailable,
+              trafficSource: ViewTrafficSource.search,
             );
           }
 
@@ -235,7 +223,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             >(
               bloc: cubit,
               selector: (state) => state.selectedVideoIds,
-              builder: (context, selectedVideoIds) => _RoundedGridViewport(
+              builder: (context, selectedVideoIds) => RoundedGridViewport(
                 child: ComposableVideoGrid(
                   videos: videos,
                   useMasonryLayout: true,
@@ -256,7 +244,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
             );
           }
 
-          return _RoundedGridViewport(
+          return RoundedGridViewport(
             child: ComposableVideoGrid(
               videos: videos,
               useMasonryLayout: true,
@@ -505,27 +493,14 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final authorPubkey = list?.pubkey;
     if (list == null || !list.isPublic || authorPubkey == null) return;
 
-    final path = CuratedListByAuthorScreen.pathFor(
-      pubkey: authorPubkey,
-      listId: list.id,
+    await shareListLink(
+      context,
+      name: list.name,
+      path: CuratedListByAuthorScreen.pathFor(
+        pubkey: authorPubkey,
+        listId: list.id,
+      ),
     );
-    final url = 'https://divine.video$path';
-    try {
-      await showShareSheet(
-        context,
-        ShareParams(
-          text: context.l10n.listShareText(list.name, url),
-          subject: context.l10n.listShareSubject(list.name),
-        ),
-      );
-    } catch (e) {
-      Log.error('Failed to share list: $e', category: LogCategory.ui);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(context.l10n.listShareFailed)));
-      }
-    }
   }
 
   Future<void> _confirmDeleteList() async {
@@ -672,56 +647,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         });
       }
     }
-  }
-}
-
-/// Clips the scrolling grid region's top corners, so content sliding under
-/// the app bar keeps the same rounded seam the design's radius cap draws.
-///
-/// Complements [ComposableVideoGrid.topOuterRadius]: that rounds the grid
-/// block itself at rest, this rounds the viewport while scrolled.
-class _RoundedGridViewport extends StatelessWidget {
-  const _RoundedGridViewport({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(VineTheme.shellInnerCornerRadius),
-      ),
-      child: child,
-    );
-  }
-}
-
-/// Follow/Following pill shown to non-owners in the app bar.
-class _FollowListButton extends StatelessWidget {
-  const _FollowListButton({
-    required this.isSubscribed,
-    required this.isBusy,
-    required this.onPressed,
-  });
-
-  final bool isSubscribed;
-  final bool isBusy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DivineButton(
-      label: isSubscribed
-          ? context.l10n.listFollowingButton
-          : context.l10n.listFollowButton,
-      size: DivineButtonSize.small,
-      type: isSubscribed
-          ? DivineButtonType.secondary
-          : DivineButtonType.primary,
-      leadingIcon: isSubscribed ? DivineIconName.check : DivineIconName.plus,
-      isLoading: isBusy,
-      onPressed: isBusy ? null : onPressed,
-    );
   }
 }
 
@@ -938,55 +863,6 @@ class _ManageRemoveBar extends StatelessWidget {
               );
             },
           ),
-    );
-  }
-}
-
-/// Fullscreen playback mode for a tapped grid tile.
-class _ListVideoPlayerMode extends StatelessWidget {
-  const _ListVideoPlayerMode({
-    required this.videos,
-    required this.activeIndex,
-    required this.listName,
-    required this.onExit,
-  });
-
-  final List<VideoEvent> videos;
-  final int activeIndex;
-  final String listName;
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) {
-    if (videos.isEmpty || activeIndex >= videos.length) {
-      return Center(
-        child: Text(
-          context.l10n.curatedListVideoNotAvailable,
-          style: VineTheme.bodyMediumFont(
-            color: context.vineColors.secondaryText,
-          ),
-        ),
-      );
-    }
-
-    // Embedded as this screen's "video mode": both the feed's own app-bar back
-    // button ([onBack]) and the system back gesture ([PopScope]) return to the
-    // grid instead of popping the whole route, so the user sees a single back
-    // button and hardware back stays consistent with it.
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        onExit();
-      },
-      child: PooledFullscreenVideoFeedScreen(
-        source: VideoListViewSource(videos),
-        feedRepository: StaticFeedRepository(),
-        initialIndex: activeIndex,
-        contextTitle: listName,
-        trafficSource: ViewTrafficSource.search,
-        onBack: onExit,
-      ),
     );
   }
 }

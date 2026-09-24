@@ -1330,36 +1330,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tidak ada video tersedia';
 
   @override
-  String get exploreDiscoverLists => 'Temukan Daftar';
-
-  @override
-  String get exploreAboutLists => 'Tentang Daftar';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Daftar membantumu mengorganisir dan mengkurasi konten Divine dengan dua cara:';
-
-  @override
-  String get explorePeopleLists => 'Daftar Orang';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Ikuti grup kreator dan lihat video terbaru mereka';
-
-  @override
-  String get exploreVideoLists => 'Daftar Video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Buat playlist video favoritmu untuk ditonton nanti';
-
-  @override
-  String get exploreMyLists => 'Daftarku';
-
-  @override
-  String get exploreSubscribedLists => 'Daftar yang Dilanggan';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Gagal memuat daftar. Silakan coba lagi.';
 
@@ -3792,16 +3762,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Video dari anggota daftar akan muncul di sini';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Tidak ada video tersedia';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Gagal memuat video';
 
   @override
   String get peopleListsVideoNotAvailable => 'Video tidak tersedia';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Kembali ke tampilan kisi';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Kesalahan saat memuat video';
@@ -3824,6 +3788,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Coba lagi';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Tambah';
@@ -4758,12 +4725,12 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count orang',
-      one: '1 orang',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4880,6 +4847,56 @@ class AppLocalizationsId extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Private, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Bagikan daftar';
@@ -5984,31 +6001,6 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Gagal memperbarui langganan. Silakan coba lagi.';
-
-  @override
-  String get discoverListsTitle => 'Jelajahi Daftar';
-
-  @override
-  String get discoverListsFailedToLoad => 'Gagal memuat daftar';
-
-  @override
-  String get discoverListsLoading => 'Mencari daftar publik...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay tidak mengembalikan daftar tepat waktu. Coba lagi.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Layanan tidak tersedia.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Tidak ada daftar publik';
-
-  @override
-  String get discoverListsEmptySubtitle => 'Cek lagi nanti untuk daftar baru';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'oleh';
 
   @override
   String get curatedListEmptyTitle => 'Belum ada video di daftar ini';

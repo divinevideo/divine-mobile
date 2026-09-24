@@ -68,7 +68,7 @@ abstract interface class PeopleListsRepository {
     required String listId,
   });
 
-  /// Searches public kind `30000` people lists on connected relays whose
+  /// Searches public kind `30000` people lists on the discovery relays whose
   /// decoded name or description contains [query] (case-insensitive).
   ///
   /// The stream emits **at most one** list of [PeopleListSearchResult], after
@@ -78,7 +78,11 @@ abstract interface class PeopleListsRepository {
   ///
   /// Results are filtered so that:
   /// * lists with no `p` tag members are excluded,
-  /// * app-managed lists (`d=block`, `d=notify`) are excluded,
+  /// * app-managed lists (`d=block`, `d=notify`) and other clients'
+  ///   machinery sets are excluded,
+  /// * lists whose author has never posted on Divine are excluded, except
+  ///   [viewerPubkey]'s own — kind `30000` is every client's follow-set kind,
+  ///   so the author having posted here is what ties a list to Divine,
   /// * duplicates sharing the addressable coordinate
   ///   (`kind:ownerPubkey:d-tag`) keep the newest by `updatedAt`.
   ///
@@ -87,5 +91,93 @@ abstract interface class PeopleListsRepository {
   Stream<List<PeopleListSearchResult>> searchPublicLists(
     String query, {
     int limit = 50,
+    String? viewerPubkey,
+  });
+
+  /// Discovers public kind `30000` people lists on the discovery relays.
+  ///
+  /// The same relay query, decoding, filtering, author check, and
+  /// addressable-coordinate dedup as [searchPublicLists], without the text
+  /// match. Results come newest first by `updatedAt`. Lists authored by
+  /// [excludeAuthor] are dropped, so a discovery surface can keep the
+  /// viewer's own lists on their profile instead.
+  ///
+  /// Returns an empty list when the relay returns no events or none survive
+  /// the filters.
+  Future<List<PeopleListSearchResult>> discoverPublicLists({
+    int limit = 50,
+    String? excludeAuthor,
+  });
+
+  /// Emits the public lists [viewerPubkey] follows, oldest follow first,
+  /// then re-emits on every follow, unfollow or refreshed copy.
+  ///
+  /// Following is local to this device, like following a video list: nothing
+  /// is published. Lists whose owner the viewer has blocked are left out, and
+  /// so is a follow whose copy is not held at the moment, until
+  /// [syncFollowedLists] brings it back.
+  Stream<List<PeopleListSearchResult>> watchFollowedLists({
+    required String viewerPubkey,
+  });
+
+  /// Reads the public lists [viewerPubkey] follows, oldest follow first,
+  /// under the same rules as [watchFollowedLists].
+  Future<List<PeopleListSearchResult>> readFollowedLists({
+    required String viewerPubkey,
+  });
+
+  /// Whether [viewerPubkey] follows the list [ownerPubkey] published as
+  /// [listId].
+  ///
+  /// This is the follow itself, so it holds while the copy is not held —
+  /// after a cache reset, until [syncFollowedLists] brings it back — and
+  /// while the owner is blocked, both of which leave the list out of
+  /// [readFollowedLists].
+  Future<bool> isFollowingList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  });
+
+  /// Follows [list], published by [ownerPubkey], on behalf of [viewerPubkey],
+  /// keeping a read-only copy so its members are known offline.
+  ///
+  /// Following a list that is already followed keeps its place.
+  Future<void> followList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  });
+
+  /// Stops [viewerPubkey] following the list [ownerPubkey] published as
+  /// [listId]. A no-op when it is not followed.
+  Future<void> unfollowList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  });
+
+  /// Re-reads every list [viewerPubkey] follows from relays, replacing the
+  /// copies that have a newer revision and restoring the ones a cache reset
+  /// removed, so a followed list keeps up with the members its owner adds and
+  /// removes.
+  ///
+  /// A relay failure is logged and leaves the stored copies as they are; a
+  /// list relays no longer hold keeps its last copy. Never throws for a relay
+  /// failure.
+  Future<void> syncFollowedLists({required String viewerPubkey});
+
+  /// Removes every list [viewerPubkey] follows, and the copies held for them,
+  /// for when that account's data is deleted from the device.
+  Future<void> clearFollowedLists({required String viewerPubkey});
+
+  /// Fetches one public kind `30000` list addressed by author + `d` tag.
+  ///
+  /// Re-checks both against each result because relay/cache filter support
+  /// can be loose, and dedup keeps the newest replaceable version. Returns
+  /// `null` when relays hold no matching decodable list.
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
   });
 }

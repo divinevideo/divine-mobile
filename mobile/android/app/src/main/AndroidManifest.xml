@@ -231,6 +231,8 @@
                      claim the web's /lists browse page (prefix matching is a
                      raw string prefix, not segment-aware). -->
                 <data android:pathPattern="/list/.*"/>
+                <!-- Shared people lists: /people-lists/{listId}?owner=... -->
+                <data android:pathPattern="/people-lists/.*"/>
                 <data android:pathPrefix="/reset-password"/>
                 <data android:pathPrefix="/verify-email"/>
             </intent-filter>

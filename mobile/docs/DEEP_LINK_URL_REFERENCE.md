@@ -247,6 +247,36 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 
 ---
 
+### 9. People List Links
+
+Opens someone else's people list, read-only. The Share action on the
+people-list screen sends the first shape, which is also the address
+`divine.video` routes beside `/list/{pubkey}/{listId}`; the second is the
+in-app route's own shape and is accepted as well.
+
+**Patterns**:
+- `https://divine.video/people-lists/{pubkey}/{listId}`
+- `https://divine.video/people-lists/{listId}?owner={pubkey}`
+
+**Parameters**:
+- `pubkey` / `owner` (required): List author public key (hex, npub, or
+  nprofile; the web page accepts hex only, which is what Share sends). Without
+  an author the path names the viewer's own list, which nobody else can open,
+  so the link is ignored.
+- `listId` (required): People list d-tag
+
+**Examples**:
+```
+https://divine.video/people-lists/a1b2c3d4e5f6.../crew
+https://divine.video/people-lists/crew?owner=a1b2c3d4e5f6...
+```
+
+**Mobile Behavior**:
+- Both shapes navigate to `/people-lists/{listId}?owner={pubkey}`, resolved
+  from relays by author + d-tag
+
+---
+
 ## URL Patterns Summary
 
 | URL Pattern | View | Mobile Route | Purpose |
@@ -260,6 +290,8 @@ https://divine.video/list/a1b2c3d4e5f6.../my-vines
 | `/search/{term}/{i}` | Feed | `/search/{term}/{i}` | Search results (feed) |
 | `/list/{listId}` | Grid | `/list/{listId}` | Curated video list |
 | `/list/{pubkey}/{listId}` | Grid | `/list/{pubkey}/{listId}` | Authored curated video list |
+| `/people-lists/{pubkey}/{listId}` | Grid | `/people-lists/{listId}?owner={pubkey}` | Shared people list (web address) |
+| `/people-lists/{listId}?owner={pubkey}` | Grid | `/people-lists/{listId}?owner={pubkey}` | Shared people list (in-app shape) |
 
 ## Special Characters in URLs
 

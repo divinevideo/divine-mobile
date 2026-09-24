@@ -17,6 +17,16 @@ int parseIntSafe(dynamic value) {
   return 0;
 }
 
+/// Parses [value] as an [int] like [parseIntSafe], but leaves an absent or
+/// unrecognised value `null`, so a count the server did not send is not
+/// mistaken for a count of zero.
+int? parseIntOrNull(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
+
 /// Parses [value] as a [double], accepting double, num, or String
 /// representations. Returns 0 for null or unrecognised types.
 double parseDoubleSafe(dynamic value) {
@@ -178,33 +188,48 @@ class ProfileStatsData {
   const ProfileStatsData({
     required this.videoCount,
     required this.reactionCount,
+    this.verticalVideos,
   });
 
   factory ProfileStatsData.fromJson(Map<String, dynamic> json) {
     return ProfileStatsData(
       videoCount: parseIntSafe(json['video_count']),
       reactionCount: parseIntSafe(json['reaction_count']),
+      verticalVideos: parseIntOrNull(json['vertical_videos']),
     );
   }
 
+  /// Every video the author has posted, whatever its orientation.
+  ///
+  /// Divine only ever renders the vertical ones, so prefer
+  /// [verticalVideos] for anything a viewer can count on screen.
   final int videoCount;
+
   final int reactionCount;
+
+  /// The subset of [videoCount] that Divine can show, or `null` when the
+  /// API did not send it. A count the server omits is unknown, not zero: a
+  /// zero here would rank the author last and count as "no videos" in a
+  /// list's total, which is a claim the response never made.
+  final int? verticalVideos;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is ProfileStatsData &&
         other.videoCount == videoCount &&
-        other.reactionCount == reactionCount;
+        other.reactionCount == reactionCount &&
+        other.verticalVideos == verticalVideos;
   }
 
   @override
-  int get hashCode => Object.hash(videoCount, reactionCount);
+  int get hashCode => Object.hash(videoCount, reactionCount, verticalVideos);
 
   @override
   String toString() =>
       'ProfileStatsData(videoCount: $videoCount, '
-      'reactionCount: $reactionCount)';
+      'reactionCount: $reactionCount, '
+      'verticalVideos: $verticalVideos)';
 }
 
 /// Engagement totals from the `engagement` sub-object.

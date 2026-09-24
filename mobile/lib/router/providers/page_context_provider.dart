@@ -50,6 +50,7 @@ enum RouteType {
   discoverLists, // Discover public lists screen
   peopleListCreate, // Create NIP-51 kind 30000 people list screen
   peopleListMembers, // People list members and videos screen
+  peopleListRoster, // Full member roster of a people list
   peopleListAddPeople, // Full-screen picker for adding people to a list
   creatorAnalytics, // Creator analytics dashboard (profile owner)
   sound, // Sound detail screen for audio reuse
@@ -210,7 +211,9 @@ bool _isKnownRouteShape(List<String> segments) {
     case 'list':
       return length == 2 || length == 3;
     case 'people-lists':
-      return length == 2 || (length == 3 && segments[2] == 'add-people');
+      return length == 2 ||
+          (length == 3 &&
+              (segments[2] == 'add-people' || segments[2] == 'members'));
     case 'nostr-settings':
       return length == 1 ||
           (length == 2 && segments[1] == RoutePaths.nip05SettingsSubpath);
@@ -612,6 +615,12 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
           listId: peopleListId,
         );
       }
+      if (segments.length > 2 && segments[2] == 'members') {
+        return RouteContext(
+          type: RouteType.peopleListRoster,
+          listId: peopleListId,
+        );
+      }
       return RouteContext(
         type: RouteType.peopleListMembers,
         listId: peopleListId,
@@ -882,6 +891,9 @@ String buildRoute(RouteContext context) {
     case RouteType.peopleListMembers:
       final listId = Uri.encodeComponent(context.listId ?? '');
       return '/people-lists/$listId';
+
+    case RouteType.peopleListRoster:
+      return RoutePaths.peopleListMembersForId(context.listId ?? '');
 
     case RouteType.peopleListAddPeople:
       final listId = Uri.encodeComponent(context.listId ?? '');

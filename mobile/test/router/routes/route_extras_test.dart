@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 
 void main() {
@@ -43,6 +44,20 @@ void main() {
 
     test('returns null for a null payload', () {
       expect(extraAs<CuratedListRouteExtra>(null), isNull);
+    });
+
+    test('keeps the discovered record on a typed list extra', () {
+      final list = CuratedList(
+        id: 'skate',
+        name: 'Skate',
+        pubkey: 'a' * 64,
+        videoEventIds: const ['v1'],
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      final extra = CuratedListRouteExtra(listName: list.name, list: list);
+
+      expect(extraAs<CuratedListRouteExtra>(extra)?.list, same(list));
     });
   });
 

@@ -23,7 +23,6 @@ enum UnsealItemTagsStatus { notSealed, unsealed, failed }
 
 // Keeps the read alive past nostr_sdk's 8s subscription silence probe and 10s
 // teardown repair floor so a repaired relay can still answer this request.
-const Duration kPublicCuratedListsRelayReadTimeout = Duration(seconds: 12);
 
 final class UnsealedItemTags {
   const UnsealedItemTags._(this.status, [this.tags]);
@@ -131,13 +130,16 @@ class CuratedListRelayGateway {
   /// Yields lists immediately as they arrive, completes on EOSE, and times out
   /// after [timeout] so a silent subscription can trigger relay repair before
   /// the caller gives up.
-  /// Handles deduplication by 'd' tag (keeps newest version)
+  /// Deduplicates per author and d-tag (keeps the newest version): every
+  /// account owns a `my_vine_list`, so the d-tag alone would collapse them.
   /// Use [until] to paginate backwards (set to oldest createdAt from previous batch)
-  /// Use [limit] to control how many events to request (default: 500)
-  /// Use [excludeIds] to skip lists already known (for pagination)
+  /// Use [limit] to control how many events to request (default:
+  /// [kPublicListsRelayWindow], the window search reads too)
+  /// Use [excludeIds] to skip lists already known (for pagination), keyed by
+  /// [CuratedList.authorScopedId]
   Stream<List<CuratedList>> streamPublicListsFromRelays({
     DateTime? until,
-    int limit = 500,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
   }) {
@@ -148,8 +150,8 @@ class CuratedListRelayGateway {
       category: LogCategory.system,
     );
 
-    // Track lists by d-tag for deduplication (keep newest)
-    final listsByDTag = <String, CuratedList>{};
+    // Track lists per author and d-tag for deduplication (keep newest)
+    final listsByAuthorScopedId = <String, CuratedList>{};
     final skipIds = excludeIds ?? <String>{};
     var totalEventsReceived = 0;
     var listsWithVideos = 0;
@@ -213,28 +215,28 @@ class CuratedListRelayGateway {
       final curatedList = _eventToCuratedList(event);
 
       // Track rejected lists for summary (don't log each one)
-      if (curatedList == null || curatedList.videoEventIds.isEmpty) {
+      if (curatedList == null || !curatedList.hasVideos) {
         rejectedCount++;
       }
 
-      if (curatedList != null && curatedList.videoEventIds.isNotEmpty) {
+      if (curatedList != null && curatedList.hasVideos) {
         listsWithVideos++;
-        final dTag = curatedList.id;
+        final key = curatedList.authorScopedId;
 
         // Skip lists we already know about (for pagination)
-        if (skipIds.contains(dTag)) {
+        if (skipIds.contains(key)) {
           return;
         }
 
-        final existing = listsByDTag[dTag];
+        final existing = listsByAuthorScopedId[key];
 
         // Keep newest version
         if (existing == null ||
             curatedList.updatedAt.isAfter(existing.updatedAt)) {
-          listsByDTag[dTag] = curatedList;
+          listsByAuthorScopedId[key] = curatedList;
 
           // Yield current accumulated list sorted by video count
-          final sortedLists = listsByDTag.values.toList()
+          final sortedLists = listsByAuthorScopedId.values.toList()
             ..sort(
               (a, b) =>
                   b.videoEventIds.length.compareTo(a.videoEventIds.length),
@@ -252,7 +254,7 @@ class CuratedListRelayGateway {
               '${timeout.inSeconds}s';
           Log.warning(
             '📋 $message: received $totalEventsReceived events, '
-            '$listsWithVideos had videos, ${listsByDTag.length} unique lists',
+            '$listsWithVideos had videos, ${listsByAuthorScopedId.length} unique lists',
             name: 'CuratedListRelayGateway',
             category: LogCategory.system,
           );
@@ -267,7 +269,7 @@ class CuratedListRelayGateway {
               Log.info(
                 '📋 EOSE received for public curated lists: '
                 '$totalEventsReceived events, $listsWithVideos had videos, '
-                '${listsByDTag.length} unique lists',
+                '${listsByAuthorScopedId.length} unique lists',
                 name: 'CuratedListRelayGateway',
                 category: LogCategory.system,
               );
@@ -292,7 +294,7 @@ class CuratedListRelayGateway {
               Log.info(
                 '📋 Public curated lists relay stream closed: '
                 '$totalEventsReceived events, $listsWithVideos had videos, '
-                '${listsByDTag.length} unique lists',
+                '${listsByAuthorScopedId.length} unique lists',
                 name: 'CuratedListRelayGateway',
                 category: LogCategory.system,
               );
@@ -319,7 +321,7 @@ class CuratedListRelayGateway {
           Log.info(
             '📋 Public curated lists relay read cancelled: '
             '$totalEventsReceived events, $listsWithVideos had videos, '
-            '${listsByDTag.length} unique lists',
+            '${listsByAuthorScopedId.length} unique lists',
             name: 'CuratedListRelayGateway',
             category: LogCategory.system,
           );

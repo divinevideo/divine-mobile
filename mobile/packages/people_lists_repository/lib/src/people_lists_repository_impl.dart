@@ -3,18 +3,34 @@
 
 import 'dart:async';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:people_lists_repository/src/followed_people_lists_store.dart';
 import 'package:people_lists_repository/src/local_people_lists_cache.dart';
 import 'package:people_lists_repository/src/nip51_people_list_codec.dart';
 import 'package:people_lists_repository/src/people_list_publish_result.dart';
 import 'package:people_lists_repository/src/people_list_search_result.dart';
 import 'package:people_lists_repository/src/people_lists_repository.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Logger name for repository-level diagnostics.
 const String _logName = 'people_lists_repository.impl';
+
+/// How long a read of public people lists waits before giving up.
+///
+/// Above the relay client's default 5-second query budget, which the startup
+/// syncs exhaust on the first read after launch, and equal to the video-list
+/// discovery budget (`kPublicCuratedListsRelayReadTimeout`), so the two
+/// columns of the Explore Lists tab wait the same; the app pins the two
+/// equal. Shared by discovery, search, a deep-linked list, and the refresh of
+/// followed lists at account attach, which runs inside that same window.
+const kPublicPeopleListsRelayReadTimeout = Duration(seconds: 12);
+
+/// How many authors one Funnelcake bulk-profile call answers for.
+const _bulkProfilesPageSize = 100;
 
 /// Filter callback for owner-authored people-list search results.
 ///
@@ -31,21 +47,44 @@ typedef BlockedPeopleListOwnerFilter = bool Function(String ownerPubkey);
 /// no optimistic cache write is performed.
 ///
 /// Constructor injection only — the repository never resolves dependencies
-/// implicitly. All mutable state lives in the injected cache; the repository
-/// itself is effectively stateless.
+/// implicitly. All mutable state lives in the injected cache and follow store;
+/// the repository itself is effectively stateless.
 class PeopleListsRepositoryImpl implements PeopleListsRepository {
-  /// Creates a repository bound to [nostrClient] and [cache].
+  /// Creates a repository bound to [nostrClient], [cache] and
+  /// [followedListsStore].
   PeopleListsRepositoryImpl({
     required NostrClient nostrClient,
     required LocalPeopleListsCache cache,
+    required FollowedPeopleListsStore followedListsStore,
     BlockedPeopleListOwnerFilter? blockFilter,
+    FunnelcakeApiClient? funnelcakeApiClient,
+    List<String> discoveryRelayUrls = const [],
   }) : _nostrClient = nostrClient,
        _cache = cache,
-       _blockFilter = blockFilter;
+       _followedListsStore = followedListsStore,
+       _blockFilter = blockFilter,
+       _funnelcakeApiClient = funnelcakeApiClient,
+       _discoveryRelayUrls = discoveryRelayUrls;
 
   final NostrClient _nostrClient;
   final LocalPeopleListsCache _cache;
+
+  /// Which lists each viewer follows. [_cache] only mirrors their contents.
+  final FollowedPeopleListsStore _followedListsStore;
   final BlockedPeopleListOwnerFilter? _blockFilter;
+
+  /// Answers which list authors have posted on Divine. `null` skips the
+  /// check, which is how a build without Funnelcake still discovers lists.
+  final FunnelcakeApiClient? _funnelcakeApiClient;
+
+  /// Where public lists are discovered and searched. Empty reads the whole
+  /// pool, which for every account includes the NIP-65 indexer relays, and
+  /// those hold every client's follow sets: the newest kind-30000 events
+  /// there are mostly lists nobody on Divine is in. The Divine relay alone
+  /// holds what Divine's own clients publish. A list named by coordinate —
+  /// a deep link, a followed list's refresh — is still read from the whole
+  /// pool, since it cannot be noise.
+  final List<String> _discoveryRelayUrls;
 
   @override
   Stream<List<UserList>> watchLists({required String ownerPubkey}) {
@@ -283,20 +322,301 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   Stream<List<PeopleListSearchResult>> searchPublicLists(
     String query, {
     int limit = 50,
+    String? viewerPubkey,
   }) async* {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
 
     final lowerQuery = trimmed.toLowerCase();
+    final results = await _queryPublicLists(
+      limit: limit,
+      logContext: 'for "$trimmed"',
+      discovery: true,
+      keepAuthor: viewerPubkey,
+      where: (list) =>
+          list.name.toLowerCase().contains(lowerQuery) ||
+          (list.description?.toLowerCase().contains(lowerQuery) ?? false),
+    );
+
+    if (results.isNotEmpty) {
+      yield List.unmodifiable(results);
+    }
+  }
+
+  @override
+  Future<List<PeopleListSearchResult>> discoverPublicLists({
+    int limit = 50,
+    String? excludeAuthor,
+  }) async {
+    final results = await _queryPublicLists(
+      limit: limit,
+      logContext: 'for discovery',
+      discovery: true,
+      excludeAuthor: excludeAuthor,
+    );
+    results.sort((a, b) => b.list.updatedAt.compareTo(a.list.updatedAt));
+    return List.unmodifiable(results);
+  }
+
+  @override
+  Future<UserList?> fetchPublicList({
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final results = await _queryPublicLists(
+      limit: 10,
+      logContext: 'for ${pubkeyForLogs(ownerPubkey)}/$listId',
+      author: ownerPubkey,
+      dTag: listId,
+    );
+    for (final result in results) {
+      if (result.ownerPubkey == ownerPubkey && result.list.id == listId) {
+        // Someone else's list: the members render, the owner affordances
+        // (add people, delete) must not.
+        return result.list.copyWith(isEditable: false);
+      }
+    }
+    return null;
+  }
+
+  @override
+  Stream<List<PeopleListSearchResult>> watchFollowedLists({
+    required String viewerPubkey,
+  }) {
+    return Rx.combineLatest2(
+      _followedListsStore.watch(viewerPubkey: viewerPubkey),
+      _cache.watchFollowedCopies(viewerPubkey: viewerPubkey),
+      _followedInOrder,
+    ).map(_withoutBlockedOwners);
+  }
+
+  @override
+  Future<List<PeopleListSearchResult>> readFollowedLists({
+    required String viewerPubkey,
+  }) async {
+    final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
+    if (refs.isEmpty) return const [];
+    final copies = await _cache.readFollowedCopies(viewerPubkey: viewerPubkey);
+    return _withoutBlockedOwners(_followedInOrder(refs, copies));
+  }
+
+  @override
+  Future<bool> isFollowingList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
+    return refs.contains(
+      FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
+    );
+  }
+
+  /// The copies of the lists [refs] names, in follow order.
+  ///
+  /// A follow whose copy is not held yet is left out until a sync brings it
+  /// back: after a cache reset there is no name or member to show for it. A
+  /// copy no follow names is ignored, so an unfollow holds even when a late
+  /// relay refresh rewrites the copy behind it.
+  static List<PeopleListSearchResult> _followedInOrder(
+    List<FollowedPeopleListRef> refs,
+    List<PeopleListSearchResult> copies,
+  ) {
+    final copyByRef = {
+      for (final copy in copies)
+        FollowedPeopleListRef(
+          ownerPubkey: copy.ownerPubkey,
+          listId: copy.list.id,
+        ): copy,
+    };
+    return List.unmodifiable([for (final ref in refs) ?copyByRef[ref]]);
+  }
+
+  List<PeopleListSearchResult> _withoutBlockedOwners(
+    List<PeopleListSearchResult> lists,
+  ) {
+    final blockFilter = _blockFilter;
+    if (blockFilter == null) return lists;
+    return List.unmodifiable(
+      lists.where((followed) => !blockFilter(followed.ownerPubkey)),
+    );
+  }
+
+  @override
+  Future<void> followList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  }) async {
+    // The copy first, so the follow never shows up with nothing to show.
+    await _cache.putFollowedCopy(
+      viewerPubkey: viewerPubkey,
+      ownerPubkey: ownerPubkey,
+      // Someone else's list: the copy must never offer the owner's
+      // affordances, whatever the caller resolved it as.
+      list: list.copyWith(isEditable: false),
+    );
+    try {
+      await _followedListsStore.add(
+        viewerPubkey: viewerPubkey,
+        ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: list.id),
+      );
+    } on Object {
+      // The follow was not recorded, so the copy is nobody's: take it back
+      // out rather than leave it in the box until account cleanup.
+      await _removeCopyQuietly(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ownerPubkey,
+        listId: list.id,
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> unfollowList({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    await _followedListsStore.remove(
+      viewerPubkey: viewerPubkey,
+      ref: FollowedPeopleListRef(ownerPubkey: ownerPubkey, listId: listId),
+    );
+    await _removeCopyQuietly(
+      viewerPubkey: viewerPubkey,
+      ownerPubkey: ownerPubkey,
+      listId: listId,
+    );
+  }
+
+  /// Removes the copy of a list no follow names.
+  ///
+  /// A copy that cannot be removed is left where it is: it is never shown,
+  /// and the next follow of the same list replaces it. Failing the caller
+  /// over it would report a failed unfollow that in fact held, or hide why
+  /// a follow failed behind why its cleanup did.
+  Future<void> _removeCopyQuietly({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    try {
+      await _cache.removeFollowedCopy(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ownerPubkey,
+        listId: listId,
+      );
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'Failed to remove the copy of a people list that is not followed',
+        name: _logName,
+        category: LogCategory.storage,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  Future<void> syncFollowedLists({required String viewerPubkey}) async {
+    final refs = await _followedListsStore.read(viewerPubkey: viewerPubkey);
+    if (refs.isEmpty) return;
 
     final List<Event> events;
     try {
-      events = await _nostrClient.queryEvents([
-        Filter(kinds: const [Nip51PeopleListCodec.kind], limit: limit),
-      ]);
+      // One filter for the whole set. Authors and `d` tags combine as AND, so
+      // it can also match an owner's other list that shares a followed
+      // list's `d` tag; the lookup below drops those.
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: const [Nip51PeopleListCodec.kind],
+            authors: {for (final ref in refs) ref.ownerPubkey}.toList(),
+            d: {for (final ref in refs) ref.listId}.toList(),
+          ),
+        ],
+        timeout: kPublicPeopleListsRelayReadTimeout,
+      );
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Failed to refresh followed people lists; keeping the stored copies',
+        name: _logName,
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+
+    final followed = refs.toSet();
+    final newest = <FollowedPeopleListRef, UserList>{};
+    for (final event in events) {
+      final list = Nip51PeopleListCodec.decode(event);
+      if (list == null) continue;
+      final ref = FollowedPeopleListRef(
+        ownerPubkey: event.pubkey,
+        listId: list.id,
+      );
+      if (!followed.contains(ref)) continue;
+      final existing = newest[ref];
+      if (existing != null && !_supersedes(list, existing)) continue;
+      newest[ref] = list;
+    }
+
+    for (final MapEntry(key: ref, value: list) in newest.entries) {
+      await _cache.refreshFollowedCopy(
+        viewerPubkey: viewerPubkey,
+        ownerPubkey: ref.ownerPubkey,
+        list: list.copyWith(isEditable: false),
+      );
+    }
+  }
+
+  @override
+  Future<void> clearFollowedLists({required String viewerPubkey}) async {
+    await _followedListsStore.clear(viewerPubkey: viewerPubkey);
+    await _cache.clearFollowedCopies(viewerPubkey: viewerPubkey);
+  }
+
+  /// Shared relay query + decode + filter + coordinate-dedup pipeline behind
+  /// [searchPublicLists], [discoverPublicLists], and [fetchPublicList].
+  ///
+  /// A [discovery] read is an open one — no author, no `d` tag — so it goes
+  /// to the discovery relays alone, without the client's local cache, and
+  /// its results pass the Divine author check ([_keepDivineAuthors]).
+  Future<List<PeopleListSearchResult>> _queryPublicLists({
+    required int limit,
+    required String logContext,
+    bool discovery = false,
+    bool Function(UserList list)? where,
+    String? excludeAuthor,
+    String? keepAuthor,
+    String? author,
+    String? dTag,
+  }) async {
+    final scoped = discovery && _discoveryRelayUrls.isNotEmpty;
+    final List<Event> events;
+    try {
+      events = await _nostrClient.queryEvents(
+        [
+          Filter(
+            kinds: const [Nip51PeopleListCodec.kind],
+            limit: limit,
+            authors: author == null ? null : [author],
+            d: dTag == null ? null : [dTag],
+          ),
+        ],
+        tempRelays: scoped ? _discoveryRelayUrls : null,
+        relayTypes: scoped ? const [RelayType.temp] : RelayType.all,
+        // Cached rows came from whichever relays answered earlier reads, so
+        // they would bring the public relays' sets back in.
+        useCache: !scoped,
+        timeout: kPublicPeopleListsRelayReadTimeout,
+      );
     } on Object catch (error, stackTrace) {
       Log.error(
-        'Failed to query public people lists for "$trimmed"',
+        'Failed to query public people lists $logContext',
         name: _logName,
         category: LogCategory.relay,
         error: error,
@@ -307,17 +627,15 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
     final seen = <String, PeopleListSearchResult>{};
     for (final event in events) {
+      if (excludeAuthor != null && event.pubkey == excludeAuthor) continue;
       final blockFilter = _blockFilter;
       if (blockFilter != null && blockFilter(event.pubkey)) continue;
 
       final list = Nip51PeopleListCodec.decode(event);
       if (list == null) continue;
       if (list.pubkeys.isEmpty) continue;
-
-      final nameMatches = list.name.toLowerCase().contains(lowerQuery);
-      final descriptionMatches =
-          list.description?.toLowerCase().contains(lowerQuery) ?? false;
-      if (!nameMatches && !descriptionMatches) continue;
+      if (Nip51PeopleListCodec.machineryDTags.contains(list.id)) continue;
+      if (where != null && !where(list)) continue;
 
       final result = PeopleListSearchResult(
         ownerPubkey: event.pubkey,
@@ -330,9 +648,68 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       seen[result.addressableId] = result;
     }
 
-    if (seen.isNotEmpty) {
-      yield List.unmodifiable(seen.values.toList());
+    final results = seen.values.toList();
+    if (!discovery) return results;
+    return _keepDivineAuthors(results, keepAuthor: keepAuthor);
+  }
+
+  /// Keeps the lists whose author has posted on Divine, and [keepAuthor]'s.
+  ///
+  /// Kind 30000 is every Nostr client's follow-set kind, so a list's members
+  /// say nothing about Divine; its author having posted here does. Authors
+  /// are asked about a page at a time. Without Funnelcake every list is
+  /// kept, and so is every list when the check itself fails, with a warning:
+  /// the unfiltered gallery is what shipped before this check, while an
+  /// empty one would claim there are no lists when the relay just listed
+  /// them.
+  Future<List<PeopleListSearchResult>> _keepDivineAuthors(
+    List<PeopleListSearchResult> lists, {
+    String? keepAuthor,
+  }) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable || lists.isEmpty) return lists;
+    final authors = {
+      for (final list in lists)
+        if (list.ownerPubkey != keepAuthor) list.ownerPubkey,
+    }.toList();
+    if (authors.isEmpty) return lists;
+
+    final Set<String> posted;
+    try {
+      final pages = await Future.wait([
+        for (
+          var start = 0;
+          start < authors.length;
+          start += _bulkProfilesPageSize
+        )
+          api.getBulkProfiles(
+            authors.skip(start).take(_bulkProfilesPageSize).toList(),
+          ),
+      ]);
+      posted = {
+        for (final page in pages)
+          for (final MapEntry(key: pubkey, value: profile)
+              in page.profiles.entries)
+            if ((profile.stats?.videoCount ?? 0) > 0) pubkey.toLowerCase(),
+      };
+    } on Exception catch (error, stackTrace) {
+      Log.warning(
+        'Could not check which public people list authors have posted on '
+        'Divine; keeping every list',
+        name: _logName,
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return lists;
     }
+
+    return [
+      for (final list in lists)
+        if (list.ownerPubkey == keepAuthor ||
+            posted.contains(list.ownerPubkey.toLowerCase()))
+          list,
+    ];
   }
 
   Future<PeopleListPublishResult> _publishListReplacement({

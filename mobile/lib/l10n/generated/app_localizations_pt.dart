@@ -1402,36 +1402,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Nenhum vídeo disponível';
 
   @override
-  String get exploreDiscoverLists => 'Descobrir listas';
-
-  @override
-  String get exploreAboutLists => 'Sobre listas';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Listas te ajudam a organizar e curar conteúdo do Divine de duas formas:';
-
-  @override
-  String get explorePeopleLists => 'Listas de pessoas';
-
-  @override
-  String get explorePeopleListsDescription =>
-      'Siga grupos de criadores e veja os últimos vídeos deles';
-
-  @override
-  String get exploreVideoLists => 'Listas de vídeos';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Crie playlists dos seus vídeos favoritos para assistir depois';
-
-  @override
-  String get exploreMyLists => 'Minhas listas';
-
-  @override
-  String get exploreSubscribedLists => 'Listas inscritas';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Erro ao carregar listas. Por favor, tente novamente.';
 
@@ -3890,16 +3860,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Os vídeos dos membros da lista aparecerão aqui';
 
   @override
-  String get peopleListsNoVideosAvailable => 'Nenhum vídeo disponível';
-
-  @override
   String get peopleListsFailedToLoadVideos => 'Falha ao carregar vídeos';
 
   @override
   String get peopleListsVideoNotAvailable => 'Vídeo não disponível';
-
-  @override
-  String get peopleListsBackToGridTooltip => 'Voltar à grelha';
 
   @override
   String get peopleListsErrorLoadingVideos => 'Erro ao carregar vídeos';
@@ -3922,6 +3886,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Tentar novamente';
+
+  @override
+  String get peopleListsLoadFailed => 'Couldn\'t load this list.';
 
   @override
   String get peopleListsAddButton => 'Adicionar';
@@ -4859,12 +4826,12 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String listPersonCount(int count) {
+  String listMemberCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count pessoas',
-      one: '$count pessoa',
+      other: '$count members',
+      one: '$count member',
     );
     return '$_temp0';
   }
@@ -4981,6 +4948,56 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get listMemberNamesSeparator => ', ';
+
+  @override
+  String listCardSemanticLabel(String name, String visibility, String count) {
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Private, $count',
+        'other': '$name, $count',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Loading lists';
+
+  @override
+  String listLoopsCount(int count, String formatted) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$formatted loops',
+      one: '$formatted loop',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listStatsSeparator => ' ∙ ';
+
+  @override
+  String get peopleListsViewAllMembers => 'View all';
+
+  @override
+  String peopleListsPeopleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people',
+      one: '$count person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'No lists turned up this time. Pull to refresh.';
 
   @override
   String get listShareAction => 'Compartilhar lista';
@@ -6095,32 +6112,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Falha ao atualizar assinatura. Por favor, tente novamente.';
-
-  @override
-  String get discoverListsTitle => 'Descobrir listas';
-
-  @override
-  String get discoverListsFailedToLoad => 'Falha ao carregar listas';
-
-  @override
-  String get discoverListsLoading => 'Descobrindo listas públicas...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'O relay não devolveu listas a tempo. Tente de novo.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Serviço indisponível.';
-
-  @override
-  String get discoverListsEmptyTitle => 'Nenhuma lista pública encontrada';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Volte mais tarde para ver novas listas';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'por';
 
   @override
   String get curatedListEmptyTitle => 'Sem vídeos nesta lista';

@@ -53,6 +53,14 @@ class PeopleListsState extends Equatable {
   /// Editable people lists owned by [ownerPubkey], latest snapshot.
   final List<UserList> lists;
 
+  /// Whether [lists] is the owner's lists yet. Until the first snapshot
+  /// arrives a list that is not in [lists] is unknown, not absent; with the
+  /// feature off no snapshot is coming, so absent is the settled answer.
+  bool get listsKnown =>
+      !enabled ||
+      (status != PeopleListsStatus.initial &&
+          status != PeopleListsStatus.loading);
+
   /// Reverse membership index — full pubkey → set of list IDs that
   /// currently contain that pubkey. Pubkeys are never truncated.
   final Map<String, Set<String>> listIdsByPubkey;

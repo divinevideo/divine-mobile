@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 
 part 'people_lists_event.dart';
@@ -338,6 +339,15 @@ class PeopleListsBloc extends Bloc<PeopleListsEvent, PeopleListsState> {
     // queryEvents returns an empty list, so the owner's lists silently stopped
     // syncing from relays (#6480).
     unawaited(_repository.syncOwner(ownerPubkey: newOwner));
+
+    // The lists this viewer follows go stale the same way, as their owners
+    // add and remove members, and they feed Home's feed selector.
+    runDetached(
+      _repository.syncFollowedLists(viewerPubkey: newOwner),
+      'sync followed people lists',
+      logName: 'PeopleListsBloc',
+      category: LogCategory.relay,
+    );
   }
 
   void _onRepositoryListsChanged(

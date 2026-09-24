@@ -61,6 +61,8 @@ class FeedModeSwitch extends StatelessWidget {
                       buildWhen: (prev, curr) =>
                           prev.source != curr.source ||
                           prev.subscribedLists != curr.subscribedLists ||
+                          prev.followedPeopleLists !=
+                              curr.followedPeopleLists ||
                           prev.currentIndex != curr.currentIndex ||
                           prev.videos != curr.videos,
                       builder: (context, state) {
@@ -88,81 +90,73 @@ class FeedModeSwitch extends StatelessWidget {
     VideoFeedBlocState state,
   ) async {
     final l10n = context.l10n;
+    final sources = _selectableSources(state);
     final selected = await context.showVideoPausingSelectionMenu(
       selectedValue: state.source.persistenceValue,
       options: [
-        VineBottomSheetSelectionOptionData(
-          label: l10n.feedModeForYou,
-          value: 'forYou',
-        ),
-        VineBottomSheetSelectionOptionData(
-          label: l10n.feedModeFollowing,
-          value: 'following',
-        ),
-        VineBottomSheetSelectionOptionData(
-          label: l10n.feedModeNew,
-          value: 'latest',
-        ),
-        VineBottomSheetSelectionOptionData(
-          label: l10n.feedModeClassics,
-          value: 'classic',
-        ),
-        ...state.subscribedLists.map(
-          (list) => VineBottomSheetSelectionOptionData(
-            label: list.name,
-            value: 'list:${list.id}',
+        for (final source in sources)
+          VineBottomSheetSelectionOptionData(
+            label: _labelFor(source, state, l10n),
+            value: source.persistenceValue,
           ),
-        ),
       ],
     );
+    if (selected == null || !context.mounted) return;
 
-    if (selected != null && context.mounted) {
-      context.read<VideoFeedBloc>().add(
-        VideoFeedSourceChanged(_sourceForSelection(selected, state)),
-      );
+    // The sheet hands back the option's value, not the source: resolve it
+    // against the sources the options were built from, so nothing is parsed
+    // and a value no option carried is a no-op rather than For You.
+    for (final source in sources) {
+      if (source.persistenceValue == selected) {
+        context.read<VideoFeedBloc>().add(VideoFeedSourceChanged(source));
+        return;
+      }
     }
   }
 }
 
-VideoFeedSource _sourceForSelection(String selected, VideoFeedBlocState state) {
-  if (selected == 'forYou') {
-    return const VideoFeedSource.forYou();
-  }
-  if (selected == 'following') {
-    return const VideoFeedSource.following();
-  }
-  if (selected == 'latest') {
-    return const VideoFeedSource.newVideos();
-  }
-  if (selected == 'classic') {
-    return const VideoFeedSource.classic();
-  }
-  if (selected.startsWith('list:')) {
-    final listId = selected.substring('list:'.length);
-    final list = state.subscribedLists.firstWhere((list) => list.id == listId);
-    return VideoFeedSource.subscribedList(listId: list.id, listName: list.name);
-  }
+/// The sources the selector offers, in menu order.
+List<VideoFeedSource> _selectableSources(VideoFeedBlocState state) => [
+  const VideoFeedSource.forYou(),
+  const VideoFeedSource.following(),
+  const VideoFeedSource.newVideos(),
+  const VideoFeedSource.classic(),
+  for (final list in state.subscribedLists)
+    VideoFeedSource.subscribedList(listId: list.id, listName: list.name),
+  for (final followed in state.followedPeopleLists)
+    VideoFeedSource.peopleList(
+      listId: followed.list.id,
+      listName: followed.list.name,
+      listOwnerPubkey: followed.ownerPubkey,
+    ),
+];
 
-  return const VideoFeedSource.forYou();
-}
+String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) =>
+    _labelFor(state.source, state, l10n);
 
-String _labelForSource(VideoFeedBlocState state, AppLocalizations l10n) {
-  final source = state.source;
+String _labelFor(
+  VideoFeedSource source,
+  VideoFeedBlocState state,
+  AppLocalizations l10n,
+) {
   return switch (source.type) {
     VideoFeedSourceType.forYou => l10n.feedModeForYou,
     VideoFeedSourceType.following => l10n.feedModeFollowing,
     VideoFeedSourceType.newVideos => l10n.feedModeNew,
     VideoFeedSourceType.classic => l10n.feedModeClassics,
     VideoFeedSourceType.subscribedList =>
-      _listNameForSource(state) ?? source.listName ?? source.labelFallback,
+      _subscribedListName(state, source) ??
+          source.listName ??
+          source.labelFallback,
+    // The followed copy first: it follows a rename, the source does not.
+    VideoFeedSourceType.peopleList =>
+      state.followedPeopleListFor(source)?.list.name ?? source.labelFallback,
   };
 }
 
-String? _listNameForSource(VideoFeedBlocState state) {
+String? _subscribedListName(VideoFeedBlocState state, VideoFeedSource source) {
   for (final list in state.subscribedLists) {
-    if (list.id == state.source.listId) {
-      return list.name;
-    }
+    if (list.id == source.listId) return list.name;
   }
   return null;
 }
