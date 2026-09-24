@@ -332,6 +332,45 @@ void main() {
         expect(result.type, equals(DeepLinkType.unknown));
       });
 
+      test('parses /people-lists/{pubkey}/{listId}, the web address', () {
+        // The shape the Share action sends and divine.video routes.
+        const url = 'https://divine.video/people-lists/$authorPubkey/crew';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.peopleList));
+        expect(result.listPubkey, equals(authorPubkey));
+        expect(result.listId, equals('crew'));
+      });
+
+      test('normalizes an npub author in the web people list address', () {
+        final npub = NostrKeyUtils.encodePubKey(authorPubkey);
+        final url = 'https://divine.video/people-lists/$npub/crew';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.peopleList));
+        expect(result.listPubkey, equals(authorPubkey));
+        expect(result.listId, equals('crew'));
+      });
+
+      test('decodes a URL-encoded people list identifier', () {
+        const url = 'https://divine.video/people-lists/$authorPubkey/my%20crew';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.peopleList));
+        expect(result.listId, equals('my crew'));
+      });
+
+      test('ignores a people list address whose author is not a key', () {
+        const url = 'https://divine.video/people-lists/not-a-key/crew';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.unknown));
+      });
+
       test('decodes URL-encoded list identifiers', () {
         const url =
             'https://divine.video/list/$authorPubkey/my%20favorite%20vines';

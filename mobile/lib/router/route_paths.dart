@@ -106,6 +106,19 @@ abstract final class RoutePaths {
         '/${Uri.encodeComponent(listId)}';
   }
 
+  /// A people list at the web's address, `/people-lists/{pubkey}/{listId}`,
+  /// beside [curatedListByAuthorFor]: the shape `divine.video` routes and the
+  /// one the Share action sends. It is not an in-app location; the deep-link
+  /// service maps a link in this shape onto [peopleListForId] with the author
+  /// as its `owner` query.
+  static String peopleListByAuthorFor({
+    required String pubkey,
+    required String listId,
+  }) {
+    return '/people-lists/${Uri.encodeComponent(pubkey)}'
+        '/${Uri.encodeComponent(listId)}';
+  }
+
   /// Members view of a people list. [ownerPubkey] (lowercase hex) rides as
   /// a query param so a discovered list — one the viewer does not own — can
   /// be resolved from relays instead of the owner-scoped local state.

@@ -340,10 +340,10 @@ class DeepLinkService {
       }
 
       // Handle /people-lists/{listId}?owner={pubkey} — NIP-51 kind 30000
-      // people lists, addressed by author + d-tag like the video lists above;
-      // the author rides in the query because the in-app route carries it
-      // there. Without an owner the path names the viewer's own list, which
-      // nobody else can open, so it is not a link worth following.
+      // people lists in the in-app route's own shape, addressed by author +
+      // d-tag like the video lists above, with the author in the query.
+      // Without an owner the path names the viewer's own list, which nobody
+      // else can open, so it is not a link worth following.
       if (pathSegments.length == 2 && pathSegments[0] == 'people-lists') {
         final listId = pathSegments[1];
         final owner = uri.queryParameters['owner'];
@@ -353,6 +353,37 @@ class DeepLinkService {
         if (listId.isEmpty || listPubkey == null) {
           Log.warning(
             'Ignoring people list deep link with invalid owner or id: '
+            '${_describeUriForLogs(uri)}',
+            name: 'DeepLinkService',
+            category: LogCategory.ui,
+          );
+          return const DeepLink(type: DeepLinkType.unknown);
+        }
+        Log.info(
+          '📱 Parsed people list deep link: '
+          '${pubkeyForLogs(listPubkey)}/$listId',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
+        return DeepLink(
+          type: DeepLinkType.peopleList,
+          listPubkey: listPubkey,
+          listId: listId,
+        );
+      }
+
+      // Handle /people-lists/{pubkey}/{listId} — the same list at the web's
+      // address, mirroring /list/{pubkey}/{listId}: the shape the Share
+      // action sends and divine.video routes. It lands on the in-app route
+      // above with the author moved into the query.
+      if (pathSegments.length == 3 && pathSegments[0] == 'people-lists') {
+        final listPubkey = normalizePublicIdentifier(
+          pathSegments[1],
+        )?.hexPubkey.toLowerCase();
+        final listId = pathSegments[2];
+        if (listPubkey == null || listId.isEmpty) {
+          Log.warning(
+            'Ignoring people list deep link with invalid author or id: '
             '${_describeUriForLogs(uri)}',
             name: 'DeepLinkService',
             category: LogCategory.ui,

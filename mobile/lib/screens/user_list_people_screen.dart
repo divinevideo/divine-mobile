@@ -484,16 +484,17 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
           if (widget.ownerPubkey case final owner? when !userList.isEditable)
             _FollowPeopleListAction(ownerPubkey: owner, userList: userList),
           // Someone else's list is shareable by construction: it reached
-          // this screen as a public list with a known author.
+          // this screen as a public list with a known author. The link is
+          // the list's web address, which the app resolves as well.
           if (widget.ownerPubkey case final owner? when !userList.isEditable)
             ShareListButton(
               onPressed: () => runDetached(
                 shareListLink(
                   context,
                   name: userList.name,
-                  path: RoutePaths.peopleListForId(
-                    userList.id,
-                    ownerPubkey: owner,
+                  path: RoutePaths.peopleListByAuthorFor(
+                    pubkey: owner,
+                    listId: userList.id,
                   ),
                 ),
                 'share people list',
