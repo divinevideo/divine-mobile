@@ -142,8 +142,8 @@ AudioPlaybackService defaultAudioPlaybackServiceFactory() =>
 ///    dispose the camera mid-transition without owning the
 ///    navigation contract.
 /// 4. Sibling Riverpod providers are reached via typedef accessors
-///    ([ReadClipManager], [ReadVideoEditor], [ReadSharedPreferences])
-///    so the bloc remains pure Dart.
+///    ([ReadClipManager], [ReadVideoEditor], [ReadVideoEditorState],
+///    [ReadSharedPreferences]) so the bloc remains pure Dart.
 class VideoRecorderBloc
     extends Bloc<VideoRecorderEvent, VideoRecorderBlocState> {
   /// Creates a video recorder bloc.

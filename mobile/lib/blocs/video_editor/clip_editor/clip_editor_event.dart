@@ -77,7 +77,8 @@ class ClipEditorClipThumbnailUpdated extends ClipEditorEvent {
 
 /// Select a clip by its index in the clip list.
 ///
-/// Updates the selected clip index and resets split position.
+/// Updates the selected clip index, resets split position, and clears the
+/// selected frame.
 class ClipEditorClipSelected extends ClipEditorEvent {
   const ClipEditorClipSelected(this.index);
 

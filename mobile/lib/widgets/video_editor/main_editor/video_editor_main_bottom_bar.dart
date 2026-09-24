@@ -14,7 +14,7 @@ import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart'
 /// Bottom action bar for the video editor.
 ///
 /// Displays buttons to open sub-editors (library, text, draw, filter, tune)
-/// and dispatches [VideoEditorMainOpenSubEditor] events to the BLoC.
+/// through the [VideoEditorScope] callbacks and the editor state.
 class VideoEditorMainBottomBar extends StatelessWidget {
   const VideoEditorMainBottomBar({super.key});
 

@@ -609,7 +609,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
   }
 
-  /// Create a VineDraft from the rendered clip with metadata.
+  /// Builds a [DivineVideoDraft] from the current clips, rendered clip and
+  /// metadata.
   ///
   /// Carries the selected sound ([VideoEditorProviderState.selectedSound], or
   /// outside autosave the first attributable editor audio track) for the

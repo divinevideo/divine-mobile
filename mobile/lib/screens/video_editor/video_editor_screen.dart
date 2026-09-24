@@ -804,8 +804,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// new takes play back in place.
   ///
   /// Takes are laid back-to-back: the first starts at the beginning and each
-  /// subsequent take starts where the previous one ended, clamped to the
-  /// clip length (at most [VideoEditorConstants.maxDuration]). All takes are
+  /// subsequent take starts where the previous one ended, or back at the
+  /// beginning once the previous one reached the end, clamped to the clip
+  /// length (at most [VideoEditorConstants.maxDuration]). All takes are
   /// committed in a single history entry so one undo removes them together.
   Future<void> _openVoiceOver({required VideoEditorMainBloc mainBloc}) async {
     final availableDuration = resolveVoiceOverAvailableDuration(

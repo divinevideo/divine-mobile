@@ -1564,8 +1564,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// sound items.
   ///
   /// Reads timeline positions (`startTime` / `endTime`) from the BLoC
-  /// state and combines them with the source [AudioEvent] from its
-  /// `audioTracks` (URL, asset path, start offset).
+  /// state and combines them with the source `AudioEvent` from its
+  /// `audioTracks` (URL, asset path or local file path, start offset).
   Future<void> _syncAudioTracks() async {
     // Frames-only composition: no native player exists to carry the tracks —
     // schedule them on the stop-motion audio engine instead.

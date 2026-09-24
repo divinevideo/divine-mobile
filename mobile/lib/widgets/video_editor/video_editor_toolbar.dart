@@ -1,5 +1,5 @@
 // ABOUTME: Reusable top toolbar for video editor sub-editors.
-// ABOUTME: Provides close/done buttons with optional center widgets.
+// ABOUTME: Provides close/done buttons with an optional center widget.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';

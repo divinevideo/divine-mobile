@@ -84,7 +84,8 @@ class VideoEditorScope extends InheritedWidget {
   /// Target crop aspect ratio of the clip being edited.
   final double? targetClipAspectRatio;
 
-  /// Whether the editor was opened from the clip library.
+  /// Whether the editor was opened from the Library screen (its clips or
+  /// drafts tab).
   final bool fromLibrary;
 
   /// Notifier for the body size, updated by [_CanvasFitter].

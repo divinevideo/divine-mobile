@@ -1,5 +1,5 @@
 // ABOUTME: Screen-local cubit for the captions editor.
-// ABOUTME: Runs on-device generation and manages the editable cue list.
+// ABOUTME: Runs caption generation and manages the editable cue list.
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:equatable/equatable.dart';

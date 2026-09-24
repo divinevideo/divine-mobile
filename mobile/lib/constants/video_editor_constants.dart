@@ -35,7 +35,8 @@ class VideoEditorConstants {
   /// Unique history key for timeline marker positions.
   static const String timelineMarkersStateHistoryKey = 'timelineMarkers';
 
-  /// Unique history key for the caption track (burn-in flag, preset, cues).
+  /// Unique history key for the caption track (burn-in flag, preset,
+  /// language, custom style, cues).
   static const String captionsStateHistoryKey = 'captions';
 
   /// `Layer.meta` key marking a layer as a burned-in caption cue.

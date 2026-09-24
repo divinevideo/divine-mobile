@@ -735,7 +735,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   }
 
   /// Returns the list index at which the dragged item should be
-  /// inserted so that [TimelineOverlayRowLayout.assignRows] places it on
+  /// inserted so that `TimelineOverlayRowLayout.assignRows` places it on
   /// [targetRow].
   ///
   /// The BLoC items of the same [type] are in the same order as the
