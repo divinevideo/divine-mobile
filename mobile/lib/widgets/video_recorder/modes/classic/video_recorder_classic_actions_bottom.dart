@@ -1,3 +1,4 @@
+import 'package:divine_camera/divine_camera.dart' show DivineCameraLens;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
@@ -37,7 +38,9 @@ class VideoRecorderClassicActionsBottom extends StatelessWidget {
             icon: .arrowsCounterClockwise,
             semanticLabel: l10n.videoRecorderSwitchCameraLabel,
             semanticIdentifier: SemanticIds.cameraSwitchCameraButton,
-            semanticValue: state.isFrontCamera
+            semanticValue: DivineCameraLens.allCamerasFaceUser
+                ? null
+                : state.isFrontCamera
                 ? l10n.videoRecorderCameraValueFront
                 : l10n.videoRecorderCameraValueBack,
             size: .small,

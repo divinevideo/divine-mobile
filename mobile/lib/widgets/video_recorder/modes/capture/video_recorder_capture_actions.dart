@@ -1,5 +1,5 @@
 import 'package:divine_camera/divine_camera.dart'
-    show DivineVideoStabilizationMode;
+    show DivineCameraLens, DivineVideoStabilizationMode;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,7 +104,9 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
                   icon: .arrowsClockwise,
                   label: l10n.videoRecorderSwitchCameraLabel,
                   identifier: SemanticIds.cameraSwitchCameraButton,
-                  value: state.isFrontCamera
+                  value: DivineCameraLens.allCamerasFaceUser
+                      ? null
+                      : state.isFrontCamera
                       ? l10n.videoRecorderCameraValueFront
                       : l10n.videoRecorderCameraValueBack,
                   onTap: state.canSwitchCamera
