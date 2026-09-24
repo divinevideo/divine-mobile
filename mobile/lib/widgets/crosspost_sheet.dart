@@ -28,6 +28,9 @@ Future<void> showCrosspostSheet({
 }) {
   final client = ref.read(crossposterApiClientProvider);
   final container = ProviderScope.containerOf(context, listen: false);
+  // Resolved while the opener is mounted: it may be gone by the time the
+  // reconnect button is tapped, and Navigator.of on a defunct element throws.
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<void>(
     context: context,
     showHeaderDivider: false,
@@ -39,7 +42,7 @@ Future<void> showCrosspostSheet({
       ),
       child: CrosspostSheetView(
         onReconnect: () {
-          Navigator.of(context).pop();
+          navigator.pop();
           unawaited(openCrosspostingSetup(container));
         },
       ),
