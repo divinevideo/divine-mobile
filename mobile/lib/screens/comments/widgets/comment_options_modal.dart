@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -60,6 +59,7 @@ class CommentOptionsModal {
     required String commentId,
     required String commentContent,
   }) {
+    final navigator = Navigator.of(modalContext);
     return VineBottomSheet.show<CommentOptionResult>(
       context: modalContext,
       scrollable: false,
@@ -78,7 +78,7 @@ class CommentOptionsModal {
             label: modalContext.l10n.profileEditLabel,
             semanticLabel: modalContext.l10n.commentOptionsEditSemanticLabel,
             iconPath: DivineIconName.pencilSimple.assetPath,
-            onTap: () => modalContext.pop(
+            onTap: () => navigator.pop(
               CommentEditResult(commentId: commentId, content: commentContent),
             ),
           ),
@@ -88,7 +88,7 @@ class CommentOptionsModal {
             semanticLabel: modalContext.l10n.commentOptionsDeleteSemanticLabel,
             iconPath: DivineIconName.trash.assetPath,
             isDestructive: true,
-            onTap: () => modalContext.pop(const CommentDeleteResult()),
+            onTap: () => navigator.pop(const CommentDeleteResult()),
           ),
         ],
       ),
