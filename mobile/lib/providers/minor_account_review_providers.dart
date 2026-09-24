@@ -37,7 +37,10 @@ final minorAccountReviewSupportEmailComposerProvider =
 final minorAccountReviewRepositoryProvider =
     Provider<MinorAccountReviewRepository>((ref) {
       final apiService = ref.watch(apiServiceProvider);
-      return MinorAccountReviewRepository(apiService: apiService);
+      return MinorAccountReviewRepository(
+        apiService: apiService,
+        overrideService: ref.watch(minorAccountReviewOverrideServiceProvider),
+      );
     });
 
 /// Developer-only local override service for simulating minor-account review

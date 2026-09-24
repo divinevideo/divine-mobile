@@ -7,12 +7,12 @@ import 'dart:io';
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_capture_cubit.dart';
+import 'package:openvine/blocs/minor_consent_capture/minor_consent_submit_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
@@ -178,6 +178,21 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
     setState(() => _pendingVideoPath = filePath);
   }
 
+  /// Returns to the email / private-link consent screen without stacking a
+  /// second copy of it.
+  ///
+  /// This screen is normally pushed from that one, so popping lands back on
+  /// the screen already in the stack; repeated attempts would otherwise grow a
+  /// ParentConsent → Record → ParentConsent → … stack. A direct entry (deep
+  /// link) has nothing to pop and replaces this route instead.
+  void _onUseEmailFallback() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.pushReplacement(MinorAccountReviewParentConsentScreen.path);
+  }
+
   void _onUploadStarted() => _uploadInFlight = true;
 
   void _onUploadFinished() {
@@ -220,9 +235,7 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
             child: _pendingVideoPath != null
                 ? MinorConsentSubmitView(
                     videoPath: _pendingVideoPath!,
-                    onUseEmailFallback: () => context.push(
-                      MinorAccountReviewParentConsentScreen.path,
-                    ),
+                    onUseEmailFallback: _onUseEmailFallback,
                     onUploadStarted: _onUploadStarted,
                     onUploadFinished: _onUploadFinished,
                   )
@@ -246,7 +259,9 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
                             return switch (state) {
                               MinorConsentCaptureIdle() =>
                                 _accessDenied
-                                    ? const _DeniedPane()
+                                    ? _DeniedPane(
+                                        onUseEmailFallback: _onUseEmailFallback,
+                                      )
                                     : _CapturePane(
                                         cameraReady: _cameraReady,
                                         onRecord: _onRecord,
@@ -261,8 +276,9 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
                                   onRetake: _onRetake,
                                   onUseVideo: () => _onUseVideo(filePath),
                                 ),
-                              MinorConsentCaptureDenied() =>
-                                const _DeniedPane(),
+                              MinorConsentCaptureDenied() => _DeniedPane(
+                                onUseEmailFallback: _onUseEmailFallback,
+                              ),
                               MinorConsentCaptureError() => _ErrorPane(
                                 onRetry: _onRetake,
                               ),
@@ -279,11 +295,10 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
 
 /// Confirm-and-submit step for the in-app parent-consent flow.
 ///
-/// Shows the accepted clip's parent email field, submits it with the local
-/// video via [MinorAccountReviewRepository.submitParentConsent], and swaps to
-/// the receipt view on success. A failure keeps [videoPath] intact, leaves the
+/// Owns the [MinorConsentSubmitCubit] that performs the upload; the form below
+/// only renders its state. A failure keeps [videoPath] intact, leaves the
 /// submit control in place as a retry, and keeps the email fallback visible.
-class MinorConsentSubmitView extends ConsumerStatefulWidget {
+class MinorConsentSubmitView extends ConsumerWidget {
   /// Creates the confirm-and-submit step for [videoPath].
   const MinorConsentSubmitView({
     required this.videoPath,
@@ -306,17 +321,48 @@ class MinorConsentSubmitView extends ConsumerStatefulWidget {
   final VoidCallback? onUploadFinished;
 
   @override
-  ConsumerState<MinorConsentSubmitView> createState() =>
-      _MinorConsentSubmitViewState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watched, and keyed on identity, so an account switch that rebuilds the
+    // repository replaces the cubit rather than leaving it on the old one.
+    final repository = ref.watch(minorAccountReviewRepositoryProvider);
+    return BlocProvider<MinorConsentSubmitCubit>(
+      key: ValueKey(repository),
+      create: (_) => MinorConsentSubmitCubit(
+        repository: repository,
+        onSubmitted: () {
+          ref
+            ..invalidate(currentMinorAccountReviewStatusProvider)
+            ..invalidate(protectedMinorStatusProvider);
+        },
+        onUploadStarted: onUploadStarted,
+        onUploadFinished: onUploadFinished,
+      ),
+      child: _MinorConsentSubmitForm(
+        videoPath: videoPath,
+        onUseEmailFallback: onUseEmailFallback,
+      ),
+    );
+  }
 }
 
-class _MinorConsentSubmitViewState
-    extends ConsumerState<MinorConsentSubmitView> {
+class _MinorConsentSubmitForm extends ConsumerStatefulWidget {
+  const _MinorConsentSubmitForm({
+    required this.videoPath,
+    required this.onUseEmailFallback,
+  });
+
+  final String videoPath;
+  final VoidCallback onUseEmailFallback;
+
+  @override
+  ConsumerState<_MinorConsentSubmitForm> createState() =>
+      _MinorConsentSubmitFormState();
+}
+
+class _MinorConsentSubmitFormState
+    extends ConsumerState<_MinorConsentSubmitForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  bool _isSubmitting = false;
-  String? _errorMessage;
-  String? _submittedEmail;
 
   @override
   void dispose() {
@@ -324,81 +370,33 @@ class _MinorConsentSubmitViewState
     super.dispose();
   }
 
-  Future<void> _submit(String caseId) async {
+  void _submit(String caseId) {
     if (!_formKey.currentState!.validate()) return;
-
-    final email = _emailController.text.trim();
-    setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
-    });
-    widget.onUploadStarted?.call();
-
-    try {
-      if (kDebugMode) {
-        final overrideService = ref.read(
-          minorAccountReviewOverrideServiceProvider,
-        );
-        final localOverride = overrideService.getOverride();
-        if (localOverride?.currentCase?.id == caseId) {
-          await overrideService.setOverride(
-            localOverride!.copyWith(
-              currentCase: localOverride.currentCase!.copyWith(
-                state: MinorReviewCaseState.submittedForReview,
-                instructions: MinorReviewInstructions(
-                  title: context.l10n.minorAccountReviewSubmissionReceivedTitle,
-                  body: context
-                      .l10n
-                      .minorAccountReviewSubmissionReceivedLocalBody,
-                ),
-              ),
-            ),
-          );
-        } else {
-          await ref
-              .read(minorAccountReviewRepositoryProvider)
-              .submitParentConsent(
-                caseId: caseId,
-                email: email,
-                videoPath: widget.videoPath,
-              );
-        }
-      } else {
-        await ref
-            .read(minorAccountReviewRepositoryProvider)
-            .submitParentConsent(
-              caseId: caseId,
-              email: email,
-              videoPath: widget.videoPath,
-            );
-      }
-      ref.invalidate(currentMinorAccountReviewStatusProvider);
-      ref.invalidate(protectedMinorStatusProvider);
-      if (!mounted) return;
-      setState(() => _submittedEmail = email);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = context.l10n.minorAccountReviewRecordConsentSubmitError;
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
-      // Called even if the screen unmounted mid-upload so the owner can discard
-      // the retained clip once the upload has returned.
-      widget.onUploadFinished?.call();
-    }
+    unawaited(
+      context.read<MinorConsentSubmitCubit>().submit(
+        caseId: caseId,
+        email: _emailController.text.trim(),
+        videoPath: widget.videoPath,
+        // Only read when a developer override is simulating this case; the
+        // repository decides, so the copy is resolved here where l10n lives.
+        localReceipt: MinorReviewInstructions(
+          title: context.l10n.minorAccountReviewSubmissionReceivedTitle,
+          body: context.l10n.minorAccountReviewSubmissionReceivedLocalBody,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final submittedEmail = _submittedEmail;
+    final state = context.watch<MinorConsentSubmitCubit>().state;
+    final submittedEmail = state.submittedEmail;
     if (submittedEmail != null) {
       return _SubmitSuccessPane(email: submittedEmail);
     }
 
+    final isSubmitting = state.status == MinorConsentSubmitStatus.submitting;
     final caseId = ref
         .watch(currentMinorAccountReviewStatusProvider)
         .value
@@ -428,20 +426,20 @@ class _MinorConsentSubmitViewState
             ),
           ),
         ),
-        if (_errorMessage != null) ...[
+        if (state.status == MinorConsentSubmitStatus.failure) ...[
           const SizedBox(height: 12),
           Text(
-            _errorMessage!,
+            l10n.minorAccountReviewRecordConsentSubmitError,
             style: VineTheme.bodyMediumFont(color: VineTheme.error),
           ),
         ],
         const SizedBox(height: 24),
         DivineButton(
-          label: _isSubmitting
+          label: isSubmitting
               ? l10n.minorAccountReviewSubmitting
               : l10n.minorAccountReviewRecordConsentSubmitCta,
           expanded: true,
-          onPressed: (_isSubmitting || caseId == null)
+          onPressed: (isSubmitting || caseId == null)
               ? null
               : () => _submit(caseId),
         ),
@@ -450,7 +448,7 @@ class _MinorConsentSubmitViewState
           label: l10n.minorAccountReviewRecordConsentEmailInsteadCta,
           type: DivineButtonType.secondary,
           expanded: true,
-          onPressed: _isSubmitting ? null : widget.onUseEmailFallback,
+          onPressed: isSubmitting ? null : widget.onUseEmailFallback,
         ),
       ],
     );
@@ -609,7 +607,9 @@ class _ReviewPane extends StatelessWidget {
 
 /// Camera unavailable or refused: explain and route to the email fallback.
 class _DeniedPane extends StatelessWidget {
-  const _DeniedPane();
+  const _DeniedPane({required this.onUseEmailFallback});
+
+  final VoidCallback onUseEmailFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -624,8 +624,7 @@ class _DeniedPane extends StatelessWidget {
           label: context.l10n.minorAccountReviewRecordConsentEmailInsteadCta,
           leadingIcon: DivineIconName.envelope,
           expanded: true,
-          onPressed: () =>
-              context.push(MinorAccountReviewParentConsentScreen.path),
+          onPressed: onUseEmailFallback,
         ),
       ],
     );
