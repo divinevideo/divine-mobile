@@ -95,9 +95,11 @@ class VideoEditorConstants {
   ///
   /// Also a liveness bound, and one that has to clear a whole fan-out rather
   /// than one render. A seam's ≤ 6.3 s bounds only its output: before the
-  /// trims apply, `pro_video_editor` re-encodes each HDR source *file* in
-  /// full, so a seam between two minute-long 4K HDR gallery clips pays two
-  /// whole transcodes (the plugin measured a 4K re-encode at ~19 s alone).
+  /// trims apply, `pro_video_editor` re-encodes each HDR source — only the
+  /// window it plays when that is under 90% of the file, otherwise the whole
+  /// *file* — so in the worst case a seam between two minute-long 4K HDR
+  /// gallery clips pays two whole transcodes (the plugin measured a 4K
+  /// re-encode at ~19 s alone).
   /// The preview asks for every seam and every retimed clip at once on each
   /// timeline change, all queued one at a time through the plugin's single
   /// encoder slot, so the last render of a six-clip HDR timeline on a
