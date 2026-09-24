@@ -233,12 +233,32 @@ void main() {
         await coordinator.sweep();
 
         verifyNever(() => client.schedule(any()));
-        expect(broadcasts.single.id, event.id);
-        expect(recorded.single.$1.id, event.id);
+        // Re-dated to now: the stored event was a minute in the future, and
+        // the relay refuses anything more than 60 s ahead of its clock.
+        final broadcast = broadcasts.single;
+        expect(broadcast.createdAt, now.millisecondsSinceEpoch ~/ 1000);
+        expect(broadcast.id, isNot(event.id));
+        expect(recorded.single.$1.id, broadcast.id);
         expect(recorded.single.$2, 'upload-1');
         verify(() => draftService.deleteDraft('draft-1')).called(1);
-        expect(await repository.getById(event.id), isNull);
+        // Neither the original row nor its replacement outlives the publish.
+        expect(await repository.list(), isEmpty);
       });
+
+      test(
+        'leaves a post the relay holds dated as the relay holds it',
+        () async {
+          final event = buildEvent();
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          now = publishAt.add(const Duration(minutes: 7));
+
+          await coordinator.sweep();
+
+          // Re-dating this one would put a second copy of the same video out
+          // if the relay ever publishes the event it is holding.
+          expect(broadcasts.single.id, event.id);
+        },
+      );
 
       test('finalizes a held post the relay reports as published', () async {
         final event = buildEvent(collab: true);
@@ -265,6 +285,38 @@ void main() {
         ).called(1);
         verify(() => draftService.deleteDraft('draft-1')).called(1);
         expect(await repository.getById(event.id), isNull);
+      });
+
+      test('claims the row before the invite goes out', () async {
+        final event = buildEvent(collab: true);
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        when(() => client.list()).thenAnswer(
+          (_) async => ScheduleListLoaded([
+            serverEntry(event, ScheduledPostServerState.published),
+          ]),
+        );
+        // _finalizeSettled re-runs every published row each sweep, and an
+        // invite is a DM that cannot be taken back. Whatever kills the app
+        // between the two, the row must already be gone by the time the
+        // invite is attempted, or the next sweep sends it again.
+        ScheduledPost? rowAtInviteTime;
+        when(
+          () => inviteService.sendInvites(
+            collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+            creatorPubkey: any(named: 'creatorPubkey'),
+            videoAddress: any(named: 'videoAddress'),
+            title: any(named: 'title'),
+            thumbnailUrl: any(named: 'thumbnailUrl'),
+            relayHint: any(named: 'relayHint'),
+          ),
+        ).thenAnswer((_) async {
+          rowAtInviteTime = await repository.getById(event.id);
+          return const CollaboratorInviteBatchResult(results: {});
+        });
+
+        await coordinator.sweep(force: true);
+
+        expect(rowAtInviteTime, isNull);
       });
 
       test('logs a collaborator invite that did not go out', () async {

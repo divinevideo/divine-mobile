@@ -309,7 +309,8 @@ class ScheduledPostCoordinator {
   /// Finishes rows a relay verdict or a publish already settled whose
   /// follow-up never ran: the sweep that wrote them stopped (backgrounded,
   /// disposed, account switched) or the app died in between. Nothing else
-  /// reads a terminal row again, and the follow-ups are safe to repeat.
+  /// reads a terminal row again, and every follow-up that runs before the
+  /// row is claimed is safe to repeat — the outward-facing ones run after.
   Future<void> _finalizeSettled() async {
     for (final post in await _repository.list()) {
       if (_stop) return;
@@ -362,27 +363,64 @@ class ScheduledPostCoordinator {
   /// Broadcasts a held [post] from this device. A transient failure leaves
   /// the row for the next sweep; the relay may still publish it meanwhile.
   Future<bool> _publishHeldPost(ScheduledPost post) async {
-    final event = ScheduledPostsRepository.decodeEvent(post);
+    var row = post;
+    // A row that was never handed off is broadcast from here up to
+    // directPublishLead before its time, and it carries created_at ==
+    // publishAt. The relay refuses an event more than 60 s ahead of its own
+    // clock, so that first attempt is thrown away for nothing. Re-date it to
+    // now — there is no relay hold to withdraw, this device owns the only
+    // copy, so the new id simply replaces the row.
+    //
+    // A row the relay already holds is left exactly as it is: its id is what
+    // the relay would publish, and broadcasting a differently-dated copy
+    // would put the same video out twice.
+    if (post.status == ScheduledPostStatus.pendingSubmit) {
+      final redated = await _redateForImmediateBroadcast(post);
+      if (redated == null) return false;
+      row = redated;
+    }
+    final event = ScheduledPostsRepository.decodeEvent(row);
     final EventPublishOutcome outcome;
     try {
       outcome = await _broadcast(event, isRetry: true);
     } on AccountRestrictedPublishException catch (e) {
-      await _repository.markFailed(post.eventId, e.reason);
+      await _repository.markFailed(row.eventId, e.reason);
       return false;
     }
     if (outcome != EventPublishOutcome.published) {
-      _repository.recordClientPublishFailure(post.eventId);
+      _repository.recordClientPublishFailure(row.eventId);
       Log.info(
-        'Scheduled event ${post.eventId} not published yet; will retry',
+        'Scheduled event ${row.eventId} not published yet; will retry',
         name: _logName,
         category: LogCategory.video,
       );
       return false;
     }
     if (_disposed) return true;
-    await _repository.markPublished(post.eventId);
-    await _finalizePublished(post);
+    await _repository.markPublished(row.eventId);
+    await _finalizePublished(row);
     return true;
+  }
+
+  /// Replaces a never-handed-off row with one dated now, so the broadcast
+  /// below it is inside the relay's drift window. Returns null when the
+  /// signer refuses, leaving the original row for the next sweep.
+  Future<ScheduledPost?> _redateForImmediateBroadcast(
+    ScheduledPost post,
+  ) async {
+    final now = _now().toUtc().millisecondsSinceEpoch ~/ 1000;
+    if (post.publishAt <= now) return post;
+    final signed = await _resign(post, createdAt: now);
+    if (signed == null) return null;
+    if (signed.id == post.eventId) return post;
+    final replacement = await _repository.enqueue(
+      event: signed,
+      draftId: post.draftId,
+      uploadId: post.uploadId,
+      expireAfterSecs: post.expireAfterSecs,
+    );
+    await _repository.delete(post.eventId);
+    return replacement;
   }
 
   /// The post is live: echo it locally, send the collaborator invites that
@@ -401,9 +439,15 @@ class ScheduledPostCoordinator {
         stackTrace: stackTrace,
       );
     }
-    await _sendCollaboratorInvites(event);
     await _deleteDraft(post.draftId);
+    // Claim the row before the one follow-up that is not safe to repeat.
+    // _finalizeSettled re-runs every published row each sweep, so an invite
+    // sent before the delete goes out again whenever the app dies in
+    // between — as duplicate DMs to a collaborator, with nothing to dedupe
+    // them. Losing them to a crash after the claim is what an immediate
+    // publish already does.
     await _repository.delete(post.eventId);
+    await _sendCollaboratorInvites(event);
     Log.info(
       'Scheduled event ${post.eventId} is live',
       name: _logName,
@@ -532,7 +576,12 @@ class ScheduledPostCoordinator {
   /// The relay may still publish them, so the row is left alone and the
   /// DELETE retried; this only stops *this* device's fallback from
   /// broadcasting a post its owner already asked to take back. In memory
-  /// only: after a restart the retried DELETE is the sole line of defence.
+  /// only, and deliberately so: the relay still holds the post, so nothing
+  /// this device remembers keeps it from going live. Only the DELETE landing
+  /// does, and the sweep retries it for as long as the app runs. After a
+  /// restart the intent is gone and this device's fallback may broadcast a
+  /// post whose withdrawal never reached the relay — which is the same
+  /// outcome the relay would have produced on its own.
   final Set<String> _withdrawing = <String>{};
 
   Future<ScheduledPostActionOutcome> cancel(String eventId) async {
