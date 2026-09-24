@@ -245,6 +245,34 @@ void main() {
         expect(await repository.list(), isEmpty);
       });
 
+      test('broadcasts a post it cannot re-date as it was signed', () async {
+        final event = buildEvent();
+        await enqueue(event);
+        // Inside the relay's 60 s window the signed event is still accepted.
+        now = publishAt.subtract(const Duration(seconds: 30));
+        signerFails = true;
+
+        await coordinator.sweep();
+
+        expect(broadcasts.single.id, event.id);
+        expect(await repository.list(), isEmpty);
+      });
+
+      test('backs off a post it can neither re-date nor publish', () async {
+        final event = buildEvent();
+        await enqueue(event);
+        now = publishAt.subtract(const Duration(seconds: 90));
+        signerFails = true;
+        broadcastOutcome = EventPublishOutcome.transientFailure;
+
+        await coordinator.sweep();
+        // Still inside the backoff: the signer is not asked again, and the
+        // relay is not sent the same refused event a second time.
+        await coordinator.sweep();
+
+        expect(broadcasts.single.id, event.id);
+      });
+
       test(
         'leaves a post the relay holds dated as the relay holds it',
         () async {

@@ -375,9 +375,10 @@ class ScheduledPostCoordinator {
     // the relay would publish, and broadcasting a differently-dated copy
     // would put the same video out twice.
     if (post.status == ScheduledPostStatus.pendingSubmit) {
-      final redated = await _redateForImmediateBroadcast(post);
-      if (redated == null) return false;
-      row = redated;
+      // A signer that cannot re-date it leaves the event as signed: the relay
+      // still takes it inside its drift window, and a refusal before then
+      // backs off below like any other unconfirmed broadcast.
+      row = await _redateForImmediateBroadcast(post) ?? post;
     }
     final event = ScheduledPostsRepository.decodeEvent(row);
     final EventPublishOutcome outcome;
@@ -404,7 +405,7 @@ class ScheduledPostCoordinator {
 
   /// Replaces a never-handed-off row with one dated now, so the broadcast
   /// below it is inside the relay's drift window. Returns null when the
-  /// signer refuses, leaving the original row for the next sweep.
+  /// signer refuses, leaving the original row in place.
   Future<ScheduledPost?> _redateForImmediateBroadcast(
     ScheduledPost post,
   ) async {
