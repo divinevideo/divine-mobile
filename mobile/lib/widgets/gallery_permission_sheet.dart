@@ -53,46 +53,66 @@ Future<GalleryPermissionChoice> showGalleryPermissionSheet(
 
   final requiresSettings = status == PermissionStatus.requiresSettings;
 
-  final result = await VineBottomSheetPrompt.show<GalleryPermissionChoice>(
+  // Resolved while the caller is still mounted, then held: every button here
+  // answers after an await — a round trip through Settings, a platform
+  // permission prompt, a preferences write — by which point the opening
+  // widget may be gone while this sheet remains open. Only pop if this exact
+  // sheet is still the active route, so a late response cannot pop a new page.
+  final navigator = Navigator.of(context);
+  Route<dynamic>? sheetRoute;
+
+  void popSheet(GalleryPermissionChoice choice) {
+    final route = sheetRoute;
+    if (route != null && route.isActive && route.isCurrent) {
+      navigator.pop(choice);
+    }
+  }
+
+  final result = await VineBottomSheet.show<GalleryPermissionChoice>(
     context: context,
-    sticker: DivineStickerName.alert,
-    // TODO(l10n): Replace with context.l10n when localization is added.
-    title: 'Let us save your videos',
-    subtitle: requiresSettings
-        ? 'Flip on $destination access in Settings so we can save your videos.'
-        : 'To keep a copy of your videos on your device, '
-              'we need $destination access.',
-    primaryButtonText: requiresSettings ? 'Open Settings' : 'Allow Access',
-    onPrimaryPressed: requiresSettings
-        ? () async {
-            await permissionsService.openAppSettings();
-            if (context.mounted) {
-              Navigator.of(context).pop(GalleryPermissionChoice.openedSettings);
-            }
-          }
-        : () async {
-            final requested = await permissionsService
-                .requestGalleryPermission();
-            if (context.mounted) {
-              Navigator.of(context).pop(
-                requested == PermissionStatus.granted
-                    ? GalleryPermissionChoice.granted
-                    : GalleryPermissionChoice.skipped,
-              );
-            }
+    scrollable: false,
+    showHeaderDivider: false,
+    body: Builder(
+      builder: (sheetContext) {
+        sheetRoute = ModalRoute.of(sheetContext);
+        return VineBottomSheetPrompt(
+          sticker: DivineStickerName.alert,
+          // TODO(l10n): Replace with context.l10n when localization is added.
+          title: 'Let us save your videos',
+          subtitle: requiresSettings
+              ? 'Flip on $destination access in Settings so we can save your videos.'
+              : 'To keep a copy of your videos on your device, '
+                    'we need $destination access.',
+          primaryButtonText: requiresSettings
+              ? 'Open Settings'
+              : 'Allow Access',
+          onPrimaryPressed: requiresSettings
+              ? () async {
+                  await permissionsService.openAppSettings();
+                  popSheet(GalleryPermissionChoice.openedSettings);
+                }
+              : () async {
+                  final requested = await permissionsService
+                      .requestGalleryPermission();
+                  popSheet(
+                    requested == PermissionStatus.granted
+                        ? GalleryPermissionChoice.granted
+                        : GalleryPermissionChoice.skipped,
+                  );
+                },
+          secondaryButtonText: 'Not Now',
+          onSecondaryPressed: () {
+            popSheet(GalleryPermissionChoice.skipped);
           },
-    secondaryButtonText: 'Not Now',
-    onSecondaryPressed: () {
-      Navigator.of(context).pop(GalleryPermissionChoice.skipped);
-    },
-    tertiaryButtonText: "Don't Ask Again",
-    onTertiaryPressed: () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_kGalleryPermissionDismissedKey, true);
-      if (context.mounted) {
-        Navigator.of(context).pop(GalleryPermissionChoice.dismissedForever);
-      }
-    },
+          tertiaryButtonText: "Don't Ask Again",
+          onTertiaryPressed: () async {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool(_kGalleryPermissionDismissedKey, true);
+            popSheet(GalleryPermissionChoice.dismissedForever);
+          },
+        );
+      },
+    ),
   );
 
   return result ?? GalleryPermissionChoice.skipped;

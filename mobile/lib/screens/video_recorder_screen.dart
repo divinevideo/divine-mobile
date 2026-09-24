@@ -7,7 +7,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/sound_waveform/sound_waveform_bloc.dart';
@@ -296,13 +295,14 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         .setBool(_kWhySixSecondsShownKey, true);
     if (!mounted) return;
 
+    final navigator = Navigator.of(context);
     await VineBottomSheetPrompt.show(
       context: context,
       sticker: .grandfather,
       title: context.l10n.videoRecorderWhySixSecondsTitle,
       subtitle: context.l10n.videoRecorderWhySixSecondsSubtitle,
       secondaryButtonText: context.l10n.videoRecorderWhySixSecondsButton,
-      onSecondaryPressed: context.pop,
+      onSecondaryPressed: navigator.pop,
     );
   }
 

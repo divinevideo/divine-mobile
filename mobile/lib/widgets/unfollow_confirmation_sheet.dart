@@ -13,6 +13,7 @@ Future<bool?> showUnfollowConfirmation(
   BuildContext context, {
   required String displayName,
 }) {
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<bool>(
     context: context,
     scrollable: false,
@@ -24,7 +25,7 @@ Future<bool?> showUnfollowConfirmation(
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(false),
+                onPressed: () => navigator.pop(false),
                 style: OutlinedButton.styleFrom(
                   backgroundColor: context.vineColors.surfaceContainer,
                   foregroundColor: context.vineColors.accentPositive,
@@ -53,7 +54,7 @@ Future<bool?> showUnfollowConfirmation(
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () => navigator.pop(true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: VineTheme.vineGreen,
                   foregroundColor: VineTheme.onPrimary,

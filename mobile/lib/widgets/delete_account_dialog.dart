@@ -25,6 +25,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Returns true when the user confirmed. Dismissing the sheet — barrier tap
 /// or swipe — counts as cancelling, so backing out is never destructive.
 Future<bool> showRemoveKeysWarningSheet(BuildContext context) async {
+  final navigator = Navigator.of(context);
   final confirmed = await VineBottomSheetPrompt.show<bool>(
     context: context,
     sticker: DivineStickerName.skeletonKey,
@@ -32,9 +33,9 @@ Future<bool> showRemoveKeysWarningSheet(BuildContext context) async {
     subtitle: context.l10n.deleteAccountRemoveKeysBody,
     primaryButtonText: context.l10n.deleteAccountRemoveKeysConfirm,
     primaryButtonType: DivineButtonType.error,
-    onPrimaryPressed: () => Navigator.of(context).pop(true),
+    onPrimaryPressed: () => navigator.pop(true),
     secondaryButtonText: context.l10n.commonCancel,
-    onSecondaryPressed: () => Navigator.of(context).pop(false),
+    onSecondaryPressed: () => navigator.pop(false),
   );
   return confirmed ?? false;
 }

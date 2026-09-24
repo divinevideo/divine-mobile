@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -27,6 +26,7 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
     VideoEditorDrawState state,
   ) async {
     final scope = VideoEditorScope.of(context);
+    final navigator = Navigator.of(context);
 
     await VineBottomSheet.show<void>(
       context: context,
@@ -38,7 +38,7 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
         onColorSelected: (color) {
           bloc.add(VideoEditorDrawColorSelected(color));
           scope.paintEditor?.setColor(color);
-          context.pop();
+          navigator.pop();
         },
       ),
     );

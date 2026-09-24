@@ -152,6 +152,7 @@ class _VideoMetadataEditBottomBarState
 
   Future<void> _confirmDelete() async {
     if (_isBusy) return;
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheetPrompt.show<bool>(
       context: context,
       sticker: DivineStickerName.alert,
@@ -159,9 +160,9 @@ class _VideoMetadataEditBottomBarState
       subtitle: context.l10n.shareMenuDeleteConfirmation,
       primaryButtonText: context.l10n.shareMenuDelete,
       primaryButtonType: DivineButtonType.error,
-      onPrimaryPressed: () => Navigator.of(context).pop(true),
+      onPrimaryPressed: () => navigator.pop(true),
       secondaryButtonText: context.l10n.shareMenuCancel,
-      onSecondaryPressed: () => Navigator.of(context).pop(false),
+      onSecondaryPressed: () => navigator.pop(false),
     );
 
     // Guard against the edit surface being unmounted while the confirm sheet

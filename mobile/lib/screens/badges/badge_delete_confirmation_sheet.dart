@@ -10,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 /// Resolves to `true` only when the user confirms; dismissing the sheet
 /// resolves to `null`.
 Future<bool?> showBadgeDeleteConfirmation(BuildContext context) {
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<bool>(
     context: context,
     scrollable: false,
@@ -34,14 +35,14 @@ Future<bool?> showBadgeDeleteConfirmation(BuildContext context) {
                   child: DivineButton(
                     label: context.l10n.commonCancel,
                     type: DivineButtonType.secondary,
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: () => navigator.pop(false),
                   ),
                 ),
                 Expanded(
                   child: DivineButton(
                     label: context.l10n.badgeDetailDeleteConfirm,
                     type: DivineButtonType.error,
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () => navigator.pop(true),
                   ),
                 ),
               ],

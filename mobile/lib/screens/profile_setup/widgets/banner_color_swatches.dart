@@ -77,6 +77,7 @@ Future<bool?> showBannerColorSheet(
   BuildContext context,
   ProfileEditorBloc editorBloc,
 ) {
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<bool>(
     context: context,
     scrollable: false,
@@ -92,7 +93,7 @@ Future<bool?> showBannerColorSheet(
       size: DivineIconButtonSize.small,
       tooltip: context.l10n.commonBack,
       semanticLabel: context.l10n.commonBack,
-      onPressed: () => Navigator.of(context).pop(true),
+      onPressed: () => navigator.pop(true),
     ),
     children: [
       BlocProvider<ProfileEditorBloc>.value(

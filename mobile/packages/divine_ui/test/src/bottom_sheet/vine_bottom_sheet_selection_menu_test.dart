@@ -270,6 +270,50 @@ void main() {
 
       expect(selectedValue, isNull);
     });
+
+    testWidgets('returns the tapped value after its opener unmounts', (
+      tester,
+    ) async {
+      // The sheet outlives the widget that opened it whenever that widget is
+      // torn down while the sheet is up — a route redirect, a recycled feed
+      // item, a memory-pressure rebuild. Resolving the navigator from the
+      // opener's context at tap time then throws on a defunct element, which
+      // shipped as a fatal crash on 1.0.22.
+      String? selectedValue;
+      final openerVisible = ValueNotifier<bool>(true);
+      addTearDown(openerVisible.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ValueListenableBuilder<bool>(
+              valueListenable: openerVisible,
+              builder: (context, visible, _) => visible
+                  ? _SelectionMenuOpener(
+                      options: testOptions,
+                      onResult: (value) => selectedValue = value,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Menu'));
+      await tester.pumpAndSettle();
+
+      openerVisible.value = false;
+      await tester.pumpAndSettle();
+      expect(find.text('Show Menu'), findsNothing);
+      expect(find.text('Popular'), findsOneWidget);
+
+      await tester.tap(find.text('Popular'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(selectedValue, 'popular');
+      expect(find.text('Popular'), findsNothing);
+    });
   });
 
   group('VineBottomSheetSelectionOptionData', () {
@@ -295,4 +339,36 @@ void main() {
       expect(data.leadingIcon, DivineIconName.arrowUp);
     });
   });
+}
+
+/// Opens the selection menu from its own [State.context].
+///
+/// A `StatefulWidget` on purpose: `Navigator.of` reads `StatefulElement.state`
+/// before it walks ancestors, so only a stateful opener reproduces the defunct
+/// lookup this file guards against.
+class _SelectionMenuOpener extends StatefulWidget {
+  const _SelectionMenuOpener({required this.options, required this.onResult});
+
+  final List<VineBottomSheetSelectionOptionData> options;
+  final ValueChanged<String?> onResult;
+
+  @override
+  State<_SelectionMenuOpener> createState() => _SelectionMenuOpenerState();
+}
+
+class _SelectionMenuOpenerState extends State<_SelectionMenuOpener> {
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () async {
+        widget.onResult(
+          await VineBottomSheetSelectionMenu.show(
+            context: context,
+            options: widget.options,
+          ),
+        );
+      },
+      child: const Text('Show Menu'),
+    );
+  }
 }

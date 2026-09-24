@@ -128,6 +128,7 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
     // Non-dismissible: forfeiting the content credential is a provenance
     // decision, so require an explicit button rather than letting an accidental
     // barrier tap / swipe silently post without it (#6058).
+    final navigator = Navigator.of(context);
     final choice = await VineBottomSheetPrompt.show<_C2paMissingChoice>(
       context: context,
       sticker: .alert,
@@ -135,11 +136,9 @@ class _VideoMetadataScreenState extends ConsumerState<VideoMetadataScreen> {
       subtitle: l10n.videoMetadataC2paMissingBody,
       additionalText: note,
       primaryButtonText: l10n.videoMetadataC2paMissingRegenerate,
-      onPrimaryPressed: () =>
-          Navigator.of(context).pop(_C2paMissingChoice.regenerate),
+      onPrimaryPressed: () => navigator.pop(_C2paMissingChoice.regenerate),
       secondaryButtonText: l10n.videoMetadataC2paMissingSkip,
-      onSecondaryPressed: () =>
-          Navigator.of(context).pop(_C2paMissingChoice.skip),
+      onSecondaryPressed: () => navigator.pop(_C2paMissingChoice.skip),
       isDismissible: false,
       enableDrag: false,
     );

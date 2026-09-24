@@ -32,6 +32,7 @@ Future<void> showUploadFailureSheet(
   BuildContext context,
   BackgroundUpload upload,
 ) async {
+  final navigator = Navigator.of(context);
   final result = await VineBottomSheet.show<String>(
     context: context,
     scrollable: false,
@@ -40,9 +41,9 @@ Future<void> showUploadFailureSheet(
     children: [
       _UploadFailureSheetContent(
         upload: upload,
-        onRetry: () => Navigator.of(context).pop('retry'),
-        onAccountStatus: () => Navigator.of(context).pop('account_status'),
-        onSaveToDrafts: () => Navigator.of(context).pop('save_drafts'),
+        onRetry: () => navigator.pop('retry'),
+        onAccountStatus: () => navigator.pop('account_status'),
+        onSaveToDrafts: () => navigator.pop('save_drafts'),
       ),
     ],
   );

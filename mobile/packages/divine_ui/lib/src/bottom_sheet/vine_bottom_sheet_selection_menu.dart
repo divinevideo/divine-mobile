@@ -56,6 +56,7 @@ class VineBottomSheetSelectionMenu {
     DivineIconButton? headerLeadingAction,
     DivineIconButton? headerTrailingAction,
   }) {
+    final navigator = Navigator.of(context);
     return VineBottomSheet.show<String>(
       context: context,
       title: title,
@@ -74,7 +75,7 @@ class VineBottomSheetSelectionMenu {
                 label: option.label,
                 leadingIcon: option.leadingIcon,
                 isSelected: option.value == selectedValue,
-                onTap: () => Navigator.of(context).pop(option.value),
+                onTap: () => navigator.pop(option.value),
               ),
           ],
         ),

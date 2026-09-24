@@ -1,8 +1,10 @@
 // ABOUTME: Pins the comment options sheet's destructive row to a colour that
-// ABOUTME: survives the light sheet surface once light mode is on.
+// ABOUTME: survives the light sheet surface once light mode is on, and its
+// ABOUTME: dismissal once the opener has unmounted.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/comments/widgets/comment_options_modal.dart';
@@ -68,5 +70,83 @@ void main() {
       expect(color, VineTheme.darkColors.onErrorContainer);
       expect(color, isNot(VineTheme.likeRed));
     });
+
+    // A recycled comment row can unmount while its own options sheet is up.
+    // Dismissing through the opener's context at tap time then throws, since
+    // a deactivated element can no longer find the router.
+    testWidgets('returns the tapped option after its opener unmounts', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      CommentOptionResult? result;
+      final openerVisible = ValueNotifier<bool>(true);
+      addTearDown(openerVisible.dispose);
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: ValueListenableBuilder<bool>(
+                valueListenable: openerVisible,
+                builder: (_, visible, _) => visible
+                    ? _OwnCommentOpener(onResult: (value) => result = value)
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          theme: VineTheme.theme,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      openerVisible.value = false;
+      await tester.pumpAndSettle();
+      expect(find.text('open'), findsNothing);
+
+      await tester.tap(find.text(l10n.commonDelete));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(result, isA<CommentDeleteResult>());
+      expect(find.text(l10n.commonDelete), findsNothing);
+    });
   });
+}
+
+/// Opens the own-comment sheet from its own [State.context], so unmounting it
+/// leaves the sheet open above a defunct opener.
+class _OwnCommentOpener extends StatefulWidget {
+  const _OwnCommentOpener({required this.onResult});
+
+  final ValueChanged<CommentOptionResult?> onResult;
+
+  @override
+  State<_OwnCommentOpener> createState() => _OwnCommentOpenerState();
+}
+
+class _OwnCommentOpenerState extends State<_OwnCommentOpener> {
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () async {
+        widget.onResult(
+          await CommentOptionsModal.showForOwnComment(
+            context,
+            commentId: 'c1',
+            commentContent: 'hi',
+          ),
+        );
+      },
+      child: const Text('open'),
+    );
+  }
 }

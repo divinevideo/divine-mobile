@@ -289,6 +289,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     if (!mounted) return;
     if (_isOwnPublishedSound(sound)) return _onRemoveOwnSoundTap(sound);
 
+    final navigator = Navigator.of(context);
     final confirmed = await VineBottomSheetPrompt.show<bool>(
       context: context,
       sticker: .alert,
@@ -296,9 +297,9 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
       subtitle: context.l10n.savedSoundRemoveConfirmMessage,
       primaryButtonText: context.l10n.soundsRemoveSavedSound,
       primaryButtonType: DivineButtonType.error,
-      onPrimaryPressed: () => Navigator.of(context).pop(true),
+      onPrimaryPressed: () => navigator.pop(true),
       secondaryButtonText: context.l10n.commonCancel,
-      onSecondaryPressed: () => Navigator.of(context).pop(false),
+      onSecondaryPressed: () => navigator.pop(false),
     );
     if (confirmed != true || !mounted) return;
     await _removeSavedSound(sound);
@@ -307,6 +308,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   /// The trash action on a sound the user published: retract it from relays,
   /// or only drop it from this library and leave it public.
   Future<void> _onRemoveOwnSoundTap(SavedSound sound) async {
+    final navigator = Navigator.of(context);
     final choice = await VineBottomSheetPrompt.show<_OwnSoundRemoval>(
       context: context,
       sticker: .alert,
@@ -314,13 +316,11 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
       subtitle: context.l10n.savedSoundDeleteConfirmMessage,
       primaryButtonText: context.l10n.savedSoundDeleteForEveryone,
       primaryButtonType: DivineButtonType.error,
-      onPrimaryPressed: () =>
-          Navigator.of(context).pop(_OwnSoundRemoval.deleteEverywhere),
+      onPrimaryPressed: () => navigator.pop(_OwnSoundRemoval.deleteEverywhere),
       secondaryButtonText: context.l10n.savedSoundRemoveLocallyOnly,
-      onSecondaryPressed: () =>
-          Navigator.of(context).pop(_OwnSoundRemoval.removeLocally),
+      onSecondaryPressed: () => navigator.pop(_OwnSoundRemoval.removeLocally),
       tertiaryButtonText: context.l10n.commonCancel,
-      onTertiaryPressed: () => Navigator.of(context).pop(),
+      onTertiaryPressed: navigator.pop,
     );
     if (!mounted) return;
     switch (choice) {

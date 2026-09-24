@@ -1142,6 +1142,7 @@ class _MessageList extends StatelessWidget {
     DmMessage message,
   ) async {
     final bloc = context.read<ConversationBloc>();
+    final navigator = Navigator.of(context);
     final retry = await VineBottomSheetPrompt.show<bool>(
       context: context,
       sticker: DivineStickerName.alert,
@@ -1150,9 +1151,9 @@ class _MessageList extends StatelessWidget {
           : context.l10n.dmDeleteRefusedMessage,
       subtitle: context.l10n.dmDeleteRefusedDetails,
       primaryButtonText: context.l10n.authTryAgain,
-      onPrimaryPressed: () => Navigator.of(context).pop(true),
+      onPrimaryPressed: () => navigator.pop(true),
       secondaryButtonText: context.l10n.commonCancel,
-      onSecondaryPressed: () => Navigator.of(context).pop(false),
+      onSecondaryPressed: () => navigator.pop(false),
     );
     if (retry != true || bloc.isClosed) return;
     bloc.add(ConversationMessageDeletionRetryRequested(rumorId: message.id));
@@ -1198,6 +1199,7 @@ class _MessageList extends StatelessWidget {
     // The prompt must stay open until the user picks resend or stop-trying
     // (#6092): block both barrier-tap and drag-to-dismiss so a stray gesture
     // can't return null and silently leave the failed send untouched.
+    final navigator = Navigator.of(context);
     final action = await VineBottomSheetPrompt.show<_FailedMessageAction>(
       context: context,
       sticker: DivineStickerName.alert,
@@ -1206,11 +1208,9 @@ class _MessageList extends StatelessWidget {
       isDismissible: false,
       enableDrag: false,
       primaryButtonText: l10n.dmMessageActionRetrySend,
-      onPrimaryPressed: () =>
-          Navigator.of(context).pop(_FailedMessageAction.resend),
+      onPrimaryPressed: () => navigator.pop(_FailedMessageAction.resend),
       secondaryButtonText: l10n.dmMessageActionCancelSend,
-      onSecondaryPressed: () =>
-          Navigator.of(context).pop(_FailedMessageAction.delete),
+      onSecondaryPressed: () => navigator.pop(_FailedMessageAction.delete),
     );
 
     if (bloc.isClosed) return;

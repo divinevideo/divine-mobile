@@ -133,6 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String confirmLabel,
     DivineButtonType confirmType = DivineButtonType.error,
   }) async {
+    final navigator = Navigator.of(context);
     final proceed = await VineBottomSheet.show<bool>(
       context: context,
       scrollable: false,
@@ -157,7 +158,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: context.l10n.settingsCancel,
                   type: DivineButtonType.secondary,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => navigator.pop(false),
                 ),
               ),
               Expanded(
@@ -165,7 +166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: confirmLabel,
                   type: confirmType,
                   expanded: true,
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => navigator.pop(true),
                 ),
               ),
             ],
@@ -270,6 +271,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (!mounted) return;
 
+    final navigator = Navigator.of(context);
     await VineBottomSheet.show<void>(
       context: context,
       children: [
@@ -278,7 +280,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             account: account,
             isCurrentAccount: account.pubkeyHex == accountState.currentPubkey,
             onTap: () async {
-              Navigator.of(context).pop();
+              navigator.pop();
               if (account.pubkeyHex == accountState.currentPubkey) return;
 
               // Park now that a switch is actually committed, and await it:
@@ -324,7 +326,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         _AddAccountTile(
           onTap: () async {
-            Navigator.of(context).pop();
+            navigator.pop();
 
             // Adding an account ends this session too — `addNewAccount` signs
             // out to reach the sign-in flow. It keeps the local rows, but an

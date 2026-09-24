@@ -18,6 +18,7 @@ Future<bool?> showBadgeRevokeConfirmation(
   required bool isViewer,
 }) {
   final l10n = context.l10n;
+  final navigator = Navigator.of(context);
   return VineBottomSheet.show<bool>(
     context: context,
     scrollable: false,
@@ -44,14 +45,14 @@ Future<bool?> showBadgeRevokeConfirmation(
                   child: DivineButton(
                     label: l10n.commonCancel,
                     type: DivineButtonType.secondary,
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: () => navigator.pop(false),
                   ),
                 ),
                 Expanded(
                   child: DivineButton(
                     label: l10n.badgeDetailRevokeConfirm,
                     type: DivineButtonType.error,
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () => navigator.pop(true),
                   ),
                 ),
               ],

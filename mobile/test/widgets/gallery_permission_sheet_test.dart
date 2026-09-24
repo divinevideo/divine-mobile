@@ -3,6 +3,8 @@
 // ABOUTME: Don't Ask Again actions for both canRequest and
 // ABOUTME: requiresSettings permission states.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -31,8 +33,9 @@ void main() {
     ).thenAnswer((_) async => PermissionStatus.granted);
   });
 
-  Widget buildSubject() {
+  Widget buildSubject({GlobalKey<NavigatorState>? navigatorKey}) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
@@ -111,6 +114,35 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('does not pop a new route when settings returns after the '
+          'sheet route was removed', (tester) async {
+        final navigatorKey = GlobalKey<NavigatorState>();
+        final settingsCompleter = Completer<bool>();
+        when(
+          () => mockPermissionsService.openAppSettings(),
+        ).thenAnswer((_) => settingsCompleter.future);
+
+        await tester.pumpWidget(buildSubject(navigatorKey: navigatorKey));
+        await tester.tap(find.text('Open Sheet'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Open Settings'));
+        await tester.pump();
+
+        navigatorKey.currentState!.pushAndRemoveUntil<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('Replacement screen')),
+          ),
+          (_) => false,
+        );
+        await tester.pumpAndSettle();
+
+        settingsCompleter.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Replacement screen'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('tapping Open Settings calls openAppSettings and returns '
           '$GalleryPermissionChoice.openedSettings', (tester) async {
         await tester.pumpWidget(buildSubject());

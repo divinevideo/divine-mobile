@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -60,6 +59,7 @@ class CommentOptionsModal {
     required String commentId,
     required String commentContent,
   }) {
+    final navigator = Navigator.of(modalContext);
     return VineBottomSheet.show<CommentOptionResult>(
       context: modalContext,
       scrollable: false,
@@ -78,7 +78,7 @@ class CommentOptionsModal {
             label: modalContext.l10n.profileEditLabel,
             semanticLabel: modalContext.l10n.commentOptionsEditSemanticLabel,
             iconPath: DivineIconName.pencilSimple.assetPath,
-            onTap: () => modalContext.pop(
+            onTap: () => navigator.pop(
               CommentEditResult(commentId: commentId, content: commentContent),
             ),
           ),
@@ -88,7 +88,7 @@ class CommentOptionsModal {
             semanticLabel: modalContext.l10n.commentOptionsDeleteSemanticLabel,
             iconPath: DivineIconName.trash.assetPath,
             isDestructive: true,
-            onTap: () => modalContext.pop(const CommentDeleteResult()),
+            onTap: () => navigator.pop(const CommentDeleteResult()),
           ),
         ],
       ),
@@ -101,6 +101,7 @@ class CommentOptionsModal {
     BuildContext context, {
     required String authorPubkey,
   }) async {
+    final navigator = Navigator.of(context);
     final action = await VineBottomSheet.show<String>(
       context: context,
       scrollable: false,
@@ -117,7 +118,7 @@ class CommentOptionsModal {
             label: context.l10n.commentOptionsFlagContentLabel,
             semanticLabel: context.l10n.commentOptionsFlagContentSemanticLabel,
             iconPath: DivineIconName.flag.assetPath,
-            onTap: () => context.pop('flag'),
+            onTap: () => navigator.pop('flag'),
           ),
           _OptionTile(
             identifier: 'block_user_option',
@@ -125,7 +126,7 @@ class CommentOptionsModal {
             semanticLabel: context.l10n.reportBlockUser,
             iconPath: DivineIconName.prohibit.assetPath,
             isDestructive: true,
-            onTap: () => context.pop('block'),
+            onTap: () => navigator.pop('block'),
           ),
         ],
       ),
@@ -211,6 +212,7 @@ class _FlagContentSheet extends StatefulWidget {
   final void Function(CommentReportResult result) onSubmit;
 
   static Future<CommentReportResult?> show(BuildContext context) {
+    final navigator = Navigator.of(context);
     return VineBottomSheet.show<CommentReportResult>(
       context: context,
       scrollable: false,
@@ -221,7 +223,7 @@ class _FlagContentSheet extends StatefulWidget {
         style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
       ),
       body: _FlagContentSheet(
-        onSubmit: (result) => Navigator.pop(context, result),
+        onSubmit: navigator.pop,
       ),
     );
   }
