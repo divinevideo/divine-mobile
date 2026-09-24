@@ -7473,7 +7473,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Ang isusulat mo rito ay ipo-post sa aming open-source repository sa GitHub para maasikaso ito ng mga developer, kasama ang basic na device info gaya ng model ng phone mo at app version. Mananatiling private sa aming support team ang account mo at ang diagnostic logs ng app. Huwag isama ang anumang ayaw mong maging public.';
+      'Ang isusulat mo rito, kasama ang basic na device info gaya ng model ng phone mo at app version, ay ipo-post sa GitHub para matrabaho ng team ang mga issue sa aming mga public repository. Mananatiling private sa aming support team ang account mo at ang diagnostic logs ng app. Huwag isama ang anumang ayaw mong maging public.';
 
   @override
   String get supportRequiredHelper => 'Kailangan';

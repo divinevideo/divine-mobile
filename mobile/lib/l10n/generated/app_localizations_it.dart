@@ -7498,7 +7498,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Quello che scrivi qui verrà pubblicato nel nostro repository open source su GitHub, così gli sviluppatori potranno occuparsene, insieme a informazioni di base sul dispositivo come il modello del telefono e la versione dell\'app. Il tuo account e i log diagnostici dell\'app restano privati presso il nostro team di supporto. Non includere nulla che non vorresti rendere pubblico.';
+      'Quello che scrivi qui, insieme a informazioni di base sul dispositivo come il modello del telefono e la versione dell\'app, verrà pubblicato su GitHub così il team potrà lavorare sui problemi nei nostri repository pubblici. Il tuo account e i log diagnostici dell\'app restano privati presso il nostro team di supporto. Non includere nulla che non vorresti rendere pubblico.';
 
   @override
   String get supportRequiredHelper => 'Obbligatorio';

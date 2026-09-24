@@ -7415,7 +7415,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Det du skriver här publiceras i vårt arkiv med öppen källkod på GitHub så att utvecklare kan ta hand om det, tillsammans med grundläggande enhetsinformation som din telefonmodell och appversion. Ditt konto och appens diagnostikloggar förblir privata hos vårt supportteam. Ta inte med något du inte vill ska bli offentligt.';
+      'Det du skriver här publiceras på GitHub tillsammans med grundläggande enhetsinformation som din telefonmodell och appversion, så att teamet kan jobba med ärenden i våra offentliga arkiv. Ditt konto och appens diagnostikloggar förblir privata hos vårt supportteam. Ta inte med något du inte vill ska bli offentligt.';
 
   @override
   String get supportRequiredHelper => 'Obligatoriskt';

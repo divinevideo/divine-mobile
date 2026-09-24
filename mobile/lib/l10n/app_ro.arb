@@ -3253,7 +3253,7 @@
     "bugReportSendReport": "Trimite raportul",
     "supportSubjectRequiredLabel": "Subiect *",
     "supportPublicSubmissionTitle": "Postare publică pe GitHub",
-    "supportPublicSubmissionMessage": "Ce scrii aici va fi publicat în depozitul nostru open-source de pe GitHub, ca dezvoltatorii să se poată ocupa de asta. Împreună cu textul se publică și informații de bază despre dispozitiv, precum modelul telefonului și versiunea aplicației. Contul tău și jurnalele de diagnosticare ale aplicației rămân private, la echipa noastră de asistență. Nu include nimic din ce nu vrei să fie public.",
+    "supportPublicSubmissionMessage": "Ce scrii aici, împreună cu informații de bază despre dispozitiv, precum modelul telefonului și versiunea aplicației, va fi publicat pe GitHub, ca echipa să poată lucra la probleme în depozitele noastre publice. Contul tău și jurnalele de diagnosticare ale aplicației rămân private, la echipa noastră de asistență. Nu include nimic din ce nu vrei să fie public.",
     "supportRequiredHelper": "Obligatoriu",
     "supportFieldLimitReached": "Aceasta e lungimea maximă. Ce depășește nu a fost adăugat.",
     "bugReportSubjectHint": "Scurt rezumat al problemei",

@@ -7395,7 +7395,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Nội dung bạn viết tại đây sẽ được đăng lên kho mã nguồn mở của chúng tôi trên GitHub để các nhà phát triển có thể xử lý, kèm theo thông tin cơ bản về thiết bị như mẫu điện thoại và phiên bản ứng dụng. Tài khoản của bạn và nhật ký chẩn đoán của ứng dụng vẫn được giữ riêng tư với đội hỗ trợ của chúng tôi. Đừng đưa vào bất cứ điều gì bạn không muốn công khai.';
+      'Nội dung bạn viết tại đây, kèm theo thông tin cơ bản về thiết bị như mẫu điện thoại và phiên bản ứng dụng, sẽ được đăng lên GitHub để đội ngũ có thể xử lý các vấn đề trong các kho mã công khai của chúng tôi. Tài khoản của bạn và nhật ký chẩn đoán của ứng dụng vẫn được giữ riêng tư với đội hỗ trợ của chúng tôi. Đừng đưa vào bất cứ điều gì bạn không muốn công khai.';
 
   @override
   String get supportRequiredHelper => 'Bắt buộc';

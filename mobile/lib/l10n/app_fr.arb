@@ -3253,7 +3253,7 @@
     "bugReportSendReport": "Envoyer le rapport",
     "supportSubjectRequiredLabel": "Sujet *",
     "supportPublicSubmissionTitle": "Publication GitHub publique",
-    "supportPublicSubmissionMessage": "Ce que tu écris ici sera publié dans notre dépôt open source sur GitHub afin que les développeurs puissent s'en charger, avec des infos de base sur ton appareil comme le modèle de ton téléphone et la version de l'app. Ton compte et les logs de diagnostic de l'app restent privés auprès de notre équipe d'assistance. N'inclus rien que tu ne voudrais pas rendre public.",
+    "supportPublicSubmissionMessage": "Ce que tu écris ici, avec des infos de base sur ton appareil comme le modèle de ton téléphone et la version de l'app, sera publié sur GitHub pour que l'équipe puisse traiter les problèmes dans nos dépôts publics. Ton compte et les logs de diagnostic de l'app restent privés auprès de notre équipe d'assistance. N'inclus rien que tu ne voudrais pas rendre public.",
     "supportRequiredHelper": "Requis",
     "supportFieldLimitReached": "C'est la longueur maximale. Tout ce qui dépasse n'a pas été ajouté.",
     "bugReportSubjectHint": "Bref résumé du problème",
