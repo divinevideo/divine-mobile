@@ -326,7 +326,11 @@ class DivineVideoDraft {
   /// v1: pro_video_editor 2.13.2 stops concurrent renders on iOS/macOS sharing
   /// one compositor config (#9338), so a final render from an earlier build
   /// can carry a preview render's crop, filters or overlays.
-  static const currentFinalRenderVersion = 1;
+  /// v2: pro_video_editor 2.14.1–2.15.0 fix an HDR color cast and upside-down
+  /// portrait clips in compositions on iOS/macOS, and a dip transition under a
+  /// letterbox on every platform, so an earlier final render can carry any of
+  /// them.
+  static const currentFinalRenderVersion = 2;
 
   /// Whether [finalRenderedClip] was cached by an older renderer and has to
   /// be rendered again before it is restored or published.
