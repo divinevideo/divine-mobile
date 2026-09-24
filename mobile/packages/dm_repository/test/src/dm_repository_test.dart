@@ -9060,6 +9060,88 @@ void main() {
         });
       });
 
+      test('settles a terminal NIP-04 refusal on first sight', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://restricted.example': 'restricted'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 1);
+          expect(
+            syncState.markedCompletePubkeys,
+            [_validPubkeyA],
+            reason:
+                'a terminal refusal already says what that relay holds, so '
+                'the inbox-open sweep may finish restore',
+          );
+        });
+      });
+
+      test('a terminal refusal does not settle an ambiguous one beside it', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://restricted.example': 'restricted',
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('does not confirm a refusal that a different relay repeats', () {
         fakeAsync((async) {
           stubRelayStatus(

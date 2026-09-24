@@ -1531,9 +1531,10 @@ class DmRepository {
   /// walk ended on an empty page, at the epoch, or at the page budget. Returns
   /// `false` when a page was not, the query threw, or the ingest session
   /// ended; a `false` result MUST NOT mark the drain complete, so a momentary
-  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). Ambiguous
-  /// refusals are confirmed only when the same relay and page return the same
-  /// category on a later deferred drain retry.
+  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). A page
+  /// that ended on terminal refusals counts as exhausted on first sight.
+  /// Ambiguous refusals are confirmed only when the same relay and page return
+  /// the same category on a later deferred drain retry.
   Future<bool> _recoverOutgoingNip04(
     String pubkey,
     int generation, {
@@ -1571,10 +1572,13 @@ class DmRepository {
             result.answeredNetworkRelayCount > 0 &&
             result.unansweredRelayCount == 0 &&
             result.rateLimitedRelayCount == 0;
+        // A terminal refusal says what the relay holds on first sight. Only an
+        // ambiguous one has to recur, and only a deferred retry may confirm it.
         final confirmedRefusals =
-            allowRefusalConfirmation &&
             result.closedRelayReasons.isNotEmpty &&
-            ambiguousRefusals.every(priorRefusals.contains);
+            (ambiguousRefusals.isEmpty ||
+                (allowRefusalConfirmation &&
+                    ambiguousRefusals.every(priorRefusals.contains)));
         final authoritative =
             result.isComplete || (refusalOnly && confirmedRefusals);
         if (_ingestSessionEnded(pubkey, generation)) return false;
