@@ -1064,6 +1064,21 @@ void main() {
         },
       );
 
+      test('refuses an event the signer made for another account', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        signingPubkey = collaborator;
+
+        final outcome = await coordinator.reschedule(
+          event.id,
+          publishAt.add(const Duration(hours: 1)),
+        );
+
+        expect(outcome, ScheduledPostActionOutcome.failed);
+        verifyNever(() => client.cancel(event.id));
+        expect((await repository.list()).single.eventId, event.id);
+      });
+
       test('keeps the held event when signing fails', () async {
         final event = buildEvent();
         await enqueue(event, status: ScheduledPostStatus.scheduled);
