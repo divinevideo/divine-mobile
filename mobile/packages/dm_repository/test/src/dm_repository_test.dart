@@ -9586,6 +9586,36 @@ void main() {
           stubRelayStatus(
             connectedNow: connected(['wss://answering.example']),
           );
+          // The session after the break defers on its gift-wrap pages before
+          // its NIP-04 pass, so its first NIP-04 sweep is the deferred retry:
+          // the one sweep that may confirm, which a kept memory would satisfy.
+          var accountBGiftWrapReads = -1;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            final isOwnInboxLookup =
+                filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
+            if (accountBGiftWrapReads < 0 || isOwnInboxLookup) {
+              return answeredPage(const <Event>[]);
+            }
+            accountBGiftWrapReads++;
+            return accountBGiftWrapReads <=
+                    DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
+                ? unansweredPage(noRelays: true)
+                : answeredPage(const <Event>[]);
+          });
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
@@ -9600,9 +9630,7 @@ void main() {
               events: [],
               endedBy: QueryEnd.relayClosed,
               answeredNetworkRelayCount: 1,
-              closedRelayReasons: {
-                'wss://unavailable.example': 'error',
-              },
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
             );
           });
           final syncState = armedSyncState();
@@ -9617,18 +9645,141 @@ void main() {
             signer: LocalNostrSigner(_validPrivateKey),
             messageService: mockMessageService,
           );
+          accountBGiftWrapReads = 0;
           unawaited(repository.backfillHistoryIfNeeded());
           async.flushMicrotasks();
-
-          expect(nip04Reads, 2);
-          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(
+            nip04Reads,
+            1,
+            reason: 'the first run after the break defers before NIP-04',
+          );
 
           async
-            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                "the new account's first sighting must not be confirmed by the "
+                "previous account's",
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
             ..flushMicrotasks();
 
           expect(nip04Reads, 3);
           expect(syncState.markedCompletePubkeys, [_validPubkeyB]);
+        });
+      });
+
+      test('a stop and restart forgets the refusals seen before it', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final subscription = StreamController<Event>();
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) => subscription.stream);
+          // The session after the break defers on its gift-wrap pages before
+          // its NIP-04 pass, so its first NIP-04 sweep is the deferred retry:
+          // the one sweep that may confirm, which a kept memory would satisfy.
+          var restartedGiftWrapReads = -1;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            final isOwnInboxLookup =
+                filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
+            if (restartedGiftWrapReads < 0 || isOwnInboxLookup) {
+              return answeredPage(const <Event>[]);
+            }
+            restartedGiftWrapReads++;
+            return restartedGiftWrapReads <=
+                    DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
+                ? unansweredPage(noRelays: true)
+                : answeredPage(const <Event>[]);
+          });
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          restartedGiftWrapReads = 0;
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(
+            nip04Reads,
+            1,
+            reason: 'the first run after the break defers before NIP-04',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                'a refusal seen before stopListening must not confirm the '
+                'first one seen after the restart',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+
+          unawaited(repository.stopListening());
+          unawaited(subscription.close());
+          async.flushMicrotasks();
         });
       });
 
