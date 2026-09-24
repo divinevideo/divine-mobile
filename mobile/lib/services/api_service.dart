@@ -97,14 +97,16 @@ class ApiService {
       final uri = Uri.parse(
         '$_relayManagerBaseUrl/v1/minor-review-cases/$caseId/parent-contact',
       );
+      final requestBody = jsonEncode({'email': email});
       final response = await _request(
         () async => _client.post(
           uri,
           headers: await _getHeaders(
             url: uri.toString(),
             method: HttpMethod.post,
+            payload: requestBody,
           ),
-          body: jsonEncode({'email': email}),
+          body: requestBody,
         ),
       );
 
@@ -134,6 +136,7 @@ class ApiService {
   Future<Map<String, String>> _getHeaders({
     String? url,
     HttpMethod method = HttpMethod.get,
+    String? payload,
   }) async {
     final headers = {
       'Content-Type': 'application/json',
@@ -146,6 +149,7 @@ class ApiService {
       final authToken = await _authService!.createAuthToken(
         url: url,
         method: method,
+        payload: payload,
       );
 
       if (authToken != null) {

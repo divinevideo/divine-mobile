@@ -4,16 +4,36 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart' as http_testing;
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 // Mock classes
 class MockHttpClient extends Mock implements http.Client {}
 
 class MockResponse extends Mock implements http.Response {}
+
+class MockAuthService extends Mock implements AuthService {}
+
+Event _createMockSignedEvent(List<List<String>> tags) {
+  final timestamp = (DateTime.now().millisecondsSinceEpoch / 1000).round();
+  return Event.fromJson({
+    'id': 'ab' * 32,
+    'kind': 27235,
+    'pubkey':
+        'aabbccdd0123456789abcdef0123456789abcdef0123456789abcdef01234567',
+    'created_at': timestamp,
+    'content': '',
+    'tags': tags,
+    'sig': 'cd' * 64,
+  });
+}
 
 class MockNip98AuthService extends Mock implements Nip98AuthService {}
 
@@ -243,6 +263,59 @@ void main() {
           );
         },
       );
+
+      test('signs the exact parent contact request bytes', () async {
+        final mockAuthService = MockAuthService();
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((invocation) async {
+          final tags = invocation.namedArguments[#tags] as List<List<String>>;
+          return _createMockSignedEvent(tags);
+        });
+
+        final nip98AuthService = Nip98AuthService(
+          authService: mockAuthService,
+        );
+        addTearDown(nip98AuthService.dispose);
+
+        List<int>? transmittedBodyBytes;
+        Map<String, String>? transmittedHeaders;
+        final capturingClient = http_testing.MockClient((request) async {
+          transmittedBodyBytes = request.bodyBytes;
+          transmittedHeaders = request.headers;
+          return http.Response('', 204);
+        });
+        final authenticatedApiService = ApiService(
+          client: capturingClient,
+          relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
+          appVersion: 'test',
+          authService: nip98AuthService,
+        );
+        addTearDown(authenticatedApiService.dispose);
+
+        await authenticatedApiService.submitMinorAccountReviewParentContact(
+          caseId: 'case-123',
+          email: 'parent@example.com',
+        );
+
+        final authorization = transmittedHeaders!['Authorization']!;
+        final eventJson = jsonDecode(
+          utf8.decode(base64Decode(authorization.substring('Nostr '.length))),
+        ) as Map<String, dynamic>;
+        final tags = (eventJson['tags'] as List<dynamic>).cast<List<dynamic>>();
+        final payloadTag = tags.firstWhere((tag) => tag[0] == 'payload');
+
+        expect(transmittedBodyBytes, isNotNull);
+        expect(
+          sha256.convert(transmittedBodyBytes!).toString(),
+          payloadTag[1],
+        );
+      });
     });
 
     group('client identity headers', () {
