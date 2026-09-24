@@ -7519,7 +7519,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Alles, was du hier sendest, wird in unserem Open-Source-Repository auf GitHub veröffentlicht, damit Entwickler den Task aufnehmen können. Der Beitrag und das Konto, mit dem du angemeldet bist, sind für alle öffentlich einsehbar.';
+      'Was du hier schreibst, wird in unserem Open-Source-Repository auf GitHub veröffentlicht, damit Entwickler sich darum kümmern können, zusammen mit grundlegenden Geräteinfos wie deinem Handymodell und der App-Version. Dein Konto und die Diagnose-Logs der App bleiben privat bei unserem Support-Team. Schreib nichts hinein, was nicht öffentlich sein soll.';
 
   @override
   String get supportRequiredHelper => 'Pflichtfeld';

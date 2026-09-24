@@ -7258,7 +7258,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'እዚህ የምታስገባው ሁሉ ገንቢዎች እንዲሰሩበት በGitHub ላይ ባለው ክፍት ምንጭ ማከማቻችን ውስጥ ይለጠፋል። ልጥፉንና የገባህበትን መለያ ማንኛውም ሰው በይፋ ማየት ይችላል።';
+      'እዚህ የሚጽፉት ገንቢዎች እንዲሰሩበት በGitHub ላይ ባለው ክፍት ምንጭ ማከማቻችን ውስጥ ይለጠፋል፤ ከእሱ ጋር እንደ የስልክዎ ሞዴልና የመተግበሪያው ስሪት ያሉ መሠረታዊ የመሣሪያ መረጃዎችም ይለጠፋሉ። መለያዎና የመተግበሪያው የምርመራ መዝገቦች በድጋፍ ቡድናችን ዘንድ በግል ይቆያሉ። በይፋ እንዲታይ የማይፈልጉትን ምንም ነገር አያካትቱ።';
 
   @override
   String get supportRequiredHelper => 'ያስፈልጋል';

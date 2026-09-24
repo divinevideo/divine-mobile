@@ -2799,7 +2799,7 @@
     "bugReportSendReport": "신고 보내기",
     "supportSubjectRequiredLabel": "제목 *",
     "supportPublicSubmissionTitle": "공개 GitHub 게시물",
-    "supportPublicSubmissionMessage": "여기에 제출하는 모든 내용은 개발자가 작업을 맡을 수 있도록 GitHub의 오픈 소스 저장소에 게시됩니다. 게시물과 로그인한 계정은 누구나 공개적으로 볼 수 있습니다.",
+    "supportPublicSubmissionMessage": "여기에 작성한 내용은 개발자가 작업할 수 있도록 GitHub의 오픈 소스 저장소에 게시되며, 휴대폰 모델과 앱 버전 같은 기본 기기 정보도 함께 게시돼요. 계정과 앱의 진단 로그는 공개되지 않고 지원팀만 볼 수 있어요. 공개되길 원하지 않는 내용은 포함하지 마세요.",
     "supportRequiredHelper": "필수",
     "supportFieldLimitReached": "최대 길이예요. 이후 내용은 추가되지 않았어요.",
     "bugReportSubjectHint": "문제를 짧게 요약해주세요",

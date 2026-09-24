@@ -6994,7 +6994,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      '你在这里提交的所有内容都会发布到我们在 GitHub 上的开源仓库中，以便开发者处理。该帖子和你登录使用的账号都会被所有人公开查看。';
+      '你在这里写的内容会发布到我们在 GitHub 上的开源仓库中，以便开发者处理，同时附上手机型号和应用版本等基本设备信息。你的账号和应用的诊断日志会保密，只有我们的支持团队可以查看。请不要填写任何你不希望公开的内容。';
 
   @override
   String get supportRequiredHelper => '必填';

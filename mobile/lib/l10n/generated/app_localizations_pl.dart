@@ -7590,7 +7590,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Wszystko, co tu prześlesz, zostanie opublikowane w naszym repozytorium open source na GitHubie, aby deweloperzy mogli się tym zająć. Wpis oraz konto, na które jesteś zalogowany, będą publicznie widoczne dla wszystkich.';
+      'To, co tu napiszesz, zostanie opublikowane w naszym repozytorium open source na GitHubie, aby deweloperzy mogli się tym zająć, razem z podstawowymi informacjami o urządzeniu, takimi jak model telefonu i wersja aplikacji. Twoje konto i logi diagnostyczne aplikacji pozostają prywatne u naszego zespołu wsparcia. Nie umieszczaj niczego, czego nie chcesz upubliczniać.';
 
   @override
   String get supportRequiredHelper => 'Wymagane';

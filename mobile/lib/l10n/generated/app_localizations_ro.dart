@@ -7599,7 +7599,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Tot ce trimiți aici va fi publicat în depozitul nostru open-source de pe GitHub, pentru ca dezvoltatorii să se poată ocupa. Postarea și contul cu care ești conectat vor fi vizibile public pentru toată lumea.';
+      'Ce scrii aici va fi publicat în depozitul nostru open-source de pe GitHub, pentru ca dezvoltatorii să se poată ocupa, împreună cu informații de bază despre dispozitiv, precum modelul telefonului și versiunea aplicației. Contul tău și jurnalele de diagnosticare ale aplicației rămân private, la echipa noastră de asistență. Nu include nimic din ce nu vrei să fie public.';
 
   @override
   String get supportRequiredHelper => 'Obligatoriu';

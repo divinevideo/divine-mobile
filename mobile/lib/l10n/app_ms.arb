@@ -3852,7 +3852,7 @@
   "bugReportSendReport": "Hantar Laporan",
   "supportSubjectRequiredLabel": "Subjek *",
   "supportPublicSubmissionTitle": "Siaran GitHub awam",
-  "supportPublicSubmissionMessage": "Semua yang anda hantar di sini akan disiarkan dalam repositori sumber terbuka kami di GitHub supaya pembangun boleh mengendalikannya. Siaran ini dan akaun yang anda log masuk boleh dilihat oleh semua orang.",
+  "supportPublicSubmissionMessage": "Apa yang anda tulis di sini akan disiarkan dalam repositori sumber terbuka kami di GitHub supaya pembangun boleh mengendalikannya, bersama maklumat asas peranti seperti model telefon dan versi aplikasi anda. Akaun anda dan log diagnostik aplikasi kekal peribadi dengan pasukan sokongan kami. Jangan masukkan apa-apa yang anda tidak mahu didedahkan kepada umum.",
   "supportRequiredHelper": "Diperlukan",
   "supportFieldLimitReached": "Itu panjang maksimum. Apa-apa selepas ini tidak ditambah.",
   "bugReportSubjectHint": "Ringkasan ringkas isu itu",
