@@ -154,7 +154,7 @@ List<Duration> rebaseTimelineMarkersForClipState({
 ///       - playbackDuration(clip.trimStart)
 ///       + audio.startOffset
 ///
-/// [clipTimelineStart] is accumulated in playback time so earlier clip speed
+/// `clipTimelineStart` is accumulated in playback time so earlier clip speed
 /// changes still ripple anchored audio correctly. [AudioEvent.startOffset] is
 /// measured in the extracted audio file's own time, so a source trim offset is
 /// converted through the anchor clip's [DivineVideoClip.playbackSpeed].

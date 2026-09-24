@@ -30,7 +30,7 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 import 'package:pro_video_editor/pro_video_editor.dart' show ExportTransform;
 import 'package:unified_logger/unified_logger.dart';
 
-/// Controls shown when a clip is in editing mode: Delete, Copy, Split, Done.
+/// Controls shown when a clip is in editing mode.
 class TimelineClipControls extends StatefulWidget {
   const TimelineClipControls({required this.playheadPosition, super.key});
 
@@ -654,9 +654,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
   }
 }
 
-/// Action bar for a selected still in a frames-only stop-motion clip: delete or
-/// duplicate the still and set how many output frames it is held for. Falls back
-/// to just Done when no still is selected.
+/// Action bar for a selected still in a frames-only stop-motion clip: delete,
+/// duplicate or transform the still and set how many output frames it is held
+/// for. With no still selected, only multi-select (two or more stills) and
+/// Done remain.
 class _StopMotionClipControls extends StatelessWidget {
   const _StopMotionClipControls();
 

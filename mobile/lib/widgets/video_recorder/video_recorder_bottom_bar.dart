@@ -7,7 +7,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_mode_selector.dart';
 
-/// Bottom bar with record button and camera controls.
+/// Bottom bar with the recorder mode selector wheel and library button.
 class VideoRecorderBottomBar extends StatelessWidget {
   /// Creates a video recorder bottom bar widget.
   const VideoRecorderBottomBar({super.key});

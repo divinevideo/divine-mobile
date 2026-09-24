@@ -13,8 +13,8 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 /// forwards every increase through [emit]. Out-of-order or late stream events
 /// never move the value backwards.
 ///
-/// [proofBudget] is the share of the axis reserved for the proof steps
-/// ([proofSteps] of them); the remainder is split between assembly and render.
+/// `proofBudget` is the share of the axis reserved for the proof steps
+/// (`proofSteps` of them); the remainder is split between assembly and render.
 class RenderProgressTracker {
   RenderProgressTracker({
     required this.taskId,

@@ -15,8 +15,8 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// Immutable state model for the video editor.
 ///
 /// Manages the complete editing state including:
-/// - Playback position and clip navigation
-/// - UI interaction states (editing, reordering, playing)
+/// - Post metadata (title, description, tags, credits)
+/// - The rendered clip and its cover
 /// - Audio settings
 /// - Processing status
 class VideoEditorProviderState {
@@ -199,7 +199,9 @@ class VideoEditorProviderState {
   ///
   /// Returns true if:
   /// - Metadata is within the 64KB limit
+  /// - No processing is in progress
   /// - Final rendered clip is available
+  /// - Required public audio attribution is valid
   bool get isValidToPost =>
       !metadataLimitReached &&
       !isProcessing &&

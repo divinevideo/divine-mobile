@@ -37,7 +37,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
   });
 
   /// Extra controls inserted before the Done button — used by the stop-motion
-  /// action bar to add the per-frame "frames per image" stepper.
+  /// action bar to add the per-frame "frames per image" button.
   final List<Widget> extraControls;
 
   final VoidCallback? onDelete;
@@ -80,7 +80,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// file. Shows the action as a spinner, matching the other render actions.
   final bool isChromaKeying;
 
-  /// Whether the active clip already carries a baked green screen, which
+  /// Whether the active clip already carries a green screen, which
   /// highlights the action so the effect is visible from the timeline.
   final bool hasChromaKey;
 

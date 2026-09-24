@@ -50,8 +50,6 @@ class VideoEditorMainState extends Equatable {
   final bool isPlayerReady;
 
   /// Whether an external component has requested playback pause.
-  ///
-  /// Used by audio selection to pause video while browsing sounds.
   final bool isExternalPauseRequested;
 
   /// Counter that increments when playback restart is requested.

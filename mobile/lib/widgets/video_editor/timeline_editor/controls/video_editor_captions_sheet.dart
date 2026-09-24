@@ -31,8 +31,7 @@ class CaptionsConfirmed extends CaptionsEditorResult {
   /// The caption track to store in editor history meta.
   final CaptionTrack track;
 
-  /// The full cue list of the session (also populated in burn-in mode,
-  /// where [CaptionTrack.cues] stays empty).
+  /// The full cue list of the session.
   final List<CaptionCue> cues;
 }
 

@@ -24,8 +24,8 @@ import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.
 /// Interactive timeline editor for composing video clips.
 ///
 /// Displays a scrollable ruler with time markers, clip thumbnail
-/// strips, and a fixed-center playhead. Reads playback position and
-/// duration from [VideoEditorMainBloc] and clip data from
+/// strips, and a fixed-center playhead. Reads playback position from
+/// [VideoEditorMainBloc] and clip data and duration from
 /// [ClipEditorBloc].
 class VideoEditorTimelineScaffold extends StatefulWidget {
   const VideoEditorTimelineScaffold({super.key});
@@ -667,8 +667,9 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         );
 
         // Reorder layers so the editor array matches the row order.
-        // _assignRows derives rows from list position, so moving a
-        // layer earlier/later in the list determines its row.
+        // TimelineOverlayRowLayout.assignRows derives rows from list
+        // position, so moving a layer earlier/later in the list determines
+        // its row.
         _reorderEditorList(layers, layerIdx, targetIdx);
 
       case .filter:
@@ -734,7 +735,8 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   }
 
   /// Returns the list index at which the dragged item should be
-  /// inserted so that [_assignRows] places it on [targetRow].
+  /// inserted so that [TimelineOverlayRowLayout.assignRows] places it on
+  /// [targetRow].
   ///
   /// The BLoC items of the same [type] are in the same order as the
   /// editor list. By looking at their current row assignments we can

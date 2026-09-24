@@ -173,7 +173,7 @@ class CameraPermissionBloc
         PermissionStatus.canRequest => CameraPermissionStatus.canRequest,
       };
 
-  /// Check the status of camera, microphone, and gallery permissions.
+  /// Check the status of camera and microphone permissions.
   Future<CameraPermissionStatus> checkPermissions() async {
     final (cameraStatus, micStatus) = await (
       _permissionsService.checkCameraStatus(),

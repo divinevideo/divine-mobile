@@ -18,11 +18,12 @@ part 'captions_editor_state.dart';
 ///
 /// Created per captions-sheet visit (`showCaptionsEditorSheet`), like
 /// `AudioTimingCubit`.
-/// A fresh session (no [initialCues]) starts with on-device generation; an
+/// A fresh session (no `initialCues`) starts with caption generation; an
 /// existing session starts ready with its cues.
 class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
   /// Creates the cubit. Omitting [generationService] uses the production
-  /// on-device recognition pipeline.
+  /// pipeline: server-side transcription through [blossomUploadService] when
+  /// given, falling back to on-device recognition.
   CaptionsEditorCubit({
     required List<DivineVideoClip> clips,
     required Duration totalDuration,
@@ -64,7 +65,7 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
 
   static const _uuid = Uuid();
 
-  /// Runs on-device generation for a fresh session. No-op when the session
+  /// Runs caption generation for a fresh session. No-op when the session
   /// started from existing cues.
   Future<void> initialize() async {
     if (state.status != CaptionsEditorStatus.generating) return;

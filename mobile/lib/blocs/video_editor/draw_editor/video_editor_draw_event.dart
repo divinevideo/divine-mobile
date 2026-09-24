@@ -45,7 +45,7 @@ class VideoEditorDrawColorSelected extends VideoEditorDrawEvent {
   List<Object?> get props => [color];
 }
 
-/// Triggered when the draw editor is closed to reset undo/redo capabilities.
+/// Triggered when the draw editor opens to reset undo/redo capabilities.
 class VideoEditorDrawReset extends VideoEditorDrawEvent {
   const VideoEditorDrawReset();
 }

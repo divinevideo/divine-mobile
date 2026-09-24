@@ -3,7 +3,7 @@
 
 /// Why the camera could not be initialized.
 ///
-/// `CameraBaseService.initializationError` and `VideoRecorderBlocState` carry
+/// `CameraService.initializationError` and `VideoRecorderBlocState` carry
 /// one of these instead of a message. Before #3591 they carried
 /// `'Camera initialization failed: $e'`, which rendered the platform
 /// exception's `toString()` full-screen in the camera placeholder — untranslated,

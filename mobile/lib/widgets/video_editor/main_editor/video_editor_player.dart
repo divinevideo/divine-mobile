@@ -12,9 +12,9 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_thumbnail
 /// clip's `originalAspectRatio`), and the native surface stretches to whatever
 /// box it gets — so the frames are laid out at [videoAspectRatio], covering the
 /// target rect that [targetAspectRatio] cuts out of the box. For a clip whose
-/// file still has the recording's shape that surface *is* the box, exactly as
-/// before; for one whose file a crop / rotate transform reshaped it is the
-/// target rect itself, rather than the file squeezed to the recording's shape.
+/// file still has the recording's shape that surface *is* the box; for one
+/// whose file a crop / rotate transform reshaped it is the target rect itself,
+/// rather than the file squeezed to the recording's shape.
 class VideoEditorPlayer extends StatelessWidget {
   const VideoEditorPlayer({
     required this.controller,
@@ -165,7 +165,7 @@ Size computeClipSize({
 ///
 /// When [videoAspectRatio] is the ratio of [widgetSize] itself — the canvas box
 /// shaped like the recording — this is [widgetSize], so an untransformed clip
-/// lays out exactly as it did before the surface followed the file's shape.
+/// fills the box exactly.
 ///
 /// Exposed for testing only.
 @visibleForTesting

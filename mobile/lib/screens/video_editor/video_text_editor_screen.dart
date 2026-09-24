@@ -362,7 +362,7 @@ class _KeyboardHeightPanelState extends State<_KeyboardHeightPanel>
     _lastInset = bottomInset;
   }
 
-  /// Schedules a pop callback with delay if not already popped.
+  /// Schedules a pop callback if not already popped.
   void _schedulePopIfNeeded() {
     if (_hasPopped) return;
     _hasPopped = true;

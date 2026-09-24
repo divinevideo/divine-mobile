@@ -8,11 +8,11 @@ import 'package:openvine/constants/video_editor_constants.dart';
 /// Reusable top bar for video editor sub-editors.
 ///
 /// Displays a close button on the left and a done button on the right.
-/// Optional [center] widgets are placed between the two buttons.
+/// An optional [center] widget is placed between the two buttons.
 ///
-/// When [center] is empty a single [Spacer] pushes the buttons to opposite
-/// ends. When non-empty the caller controls spacing (e.g. wrap items in
-/// [Spacer], [Flexible], or [SizedBox] as needed).
+/// The row spaces its children out, so the buttons always sit at opposite
+/// ends. The caller controls how [center] sizes itself (e.g. wrap it in
+/// [Flexible] as needed).
 class VideoEditorToolbar extends StatelessWidget {
   const VideoEditorToolbar({
     required this.onClose,
@@ -50,7 +50,7 @@ class VideoEditorToolbar extends StatelessWidget {
   /// Accessibility label for the done button.
   final String doneSemanticLabel;
 
-  /// Optional widgets displayed between the close and done buttons.
+  /// Optional widget displayed between the close and done buttons.
   final Widget? center;
 
   /// Outer padding around the toolbar row.

@@ -108,9 +108,6 @@ final StreamProvider<ProgressModel> videoEditorCompositeProgressProvider =
 ///
 /// Handles:
 /// - Draft loading and saving
-/// - Clip selection and navigation
-/// - Clip editing (splitting, trimming)
-/// - Playback control
 /// - Video rendering and export
 /// - Metadata management
 class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
@@ -331,10 +328,6 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   ///
   /// Validates and enforces the 64KB size limit. Rejects updates that exceed
   /// the limit and sets metadataLimitReached flag.
-  /// Update video metadata (title, description, tags).
-  ///
-  /// Validates and enforces the 64KB size limit. Rejects updates that exceed
-  /// the limit and sets metadataLimitReached flag.
   ///
   /// Automatically extracts hashtags from title and description.
   /// A hashtag is detected when followed by a non-alphanumeric character
@@ -484,7 +477,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   /// Add a collaborator pubkey to the video.
   ///
-  /// Enforces a maximum of [maxCollaborators] collaborators.
+  /// Enforces a maximum of [VideoEditorConstants.maxCollaborators]
+  /// collaborators.
   /// Silently ignores duplicates.
   void addCollaborator(String pubkey) {
     if (state.collaboratorPubkeys.length >=
@@ -617,12 +611,12 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   /// Create a VineDraft from the rendered clip with metadata.
   ///
-  /// When a sound is selected via [selectedSoundProvider], automatically
-  /// populates [selectedAudioEventId] and [selectedAudioRelay] for the
+  /// Carries the selected sound ([VideoEditorProviderState.selectedSound], or
+  /// outside autosave the first attributable editor audio track) for the
   /// publisher to add an `["e", ..., "audio"]` tag. Also auto-populates
-  /// [inspiredByVideo] from the sound's [sourceVideoReference] if not
-  /// already set, falling back to a single imported clip source when every
-  /// provenance-bearing clip agrees.
+  /// [DivineVideoDraft.inspiredByVideo] from the sound's
+  /// [AudioEvent.sourceVideoReference] if not already set, falling back to a
+  /// single imported clip source when every provenance-bearing clip agrees.
   DivineVideoDraft getActiveDraft({bool isAutosave = false, String? draftId}) {
     // Read selected sound from local state. The recorder flow sets
     // [selectedSound]; the editor's "add music" flow instead appends reused
@@ -774,10 +768,6 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
   }
 
-  /// Trigger autosave with debounce to prevent excessive saves.
-  ///
-  /// Can be called from other providers (e.g., ClipManager) to trigger
-  /// autosave after changes. Uses debouncing to batch rapid changes.
   /// Seed state from an already-published [VideoEvent] for editing.
   ///
   /// Autosave is suppressed (and remains suppressed for the lifetime of this
@@ -826,6 +816,10 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     return npubs;
   }
 
+  /// Trigger autosave with debounce to prevent excessive saves.
+  ///
+  /// Can be called from other providers (e.g., ClipManager) to trigger
+  /// autosave after changes. Uses debouncing to batch rapid changes.
   void triggerAutosave() {
     if (_suppressAutosave) return;
     _autosaveTimer?.cancel();
@@ -859,8 +853,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Automatically save the current video project state.
   ///
   /// This method is typically called periodically or on significant changes
-  /// to prevent data loss. Unlike [saveAsDraft], autosave uses a fixed
-  /// [autoSaveId] to maintain a single recovery point.
+  /// to prevent data loss. Unlike [saveAsDraft], autosave of an unsaved
+  /// session uses the fixed [VideoEditorConstants.autoSaveId] to maintain a
+  /// single recovery point.
   Future<bool> autosaveChanges() {
     final operation = _performAutosave();
     late final Future<void> completion;
@@ -1089,7 +1084,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Restore a draft from local storage.
   ///
   /// Loads clips and metadata from the specified draft. If [draftId] is null,
-  /// restores from [autoSaveId] to recover an autosaved session.
+  /// restores from [VideoEditorConstants.autoSaveId] to recover an autosaved
+  /// session.
   /// Invalid clips (missing video files) are automatically filtered out,
   /// and missing thumbnails are regenerated.
   ///
@@ -1646,8 +1642,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   /// Publish the video to the Nostr network.
   ///
-  /// Requires [finalRenderedClip] to be available. Throws [StateError] if
-  /// no rendered clip exists.
+  /// Requires [VideoEditorProviderState.finalRenderedClip] to be available.
+  /// Throws [StateError] if no rendered clip exists or the state is not
+  /// [VideoEditorProviderState.isValidToPost].
   Future<void> postVideo(BuildContext context) async {
     if (state.finalRenderedClip == null) {
       Log.error(
@@ -1682,7 +1679,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
 
   /// The reused sound to attribute when publishing a video assembled through
   /// the editor's "add music" flow, which appends sounds as timeline tracks
-  /// rather than setting the recorder's [selectedSound].
+  /// rather than setting the recorder's
+  /// [VideoEditorProviderState.selectedSound].
   ///
   /// Returns the first added track that references a real Nostr event — a
   /// published or imported Kind 1063 sound, or another video's original sound

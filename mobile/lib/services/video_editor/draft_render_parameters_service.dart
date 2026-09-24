@@ -89,8 +89,8 @@ class DraftRenderParametersService {
   /// `null` when the draft carries nothing to restore (a plain recording with
   /// no edits and no sound, which renders fine without parameters).
   ///
-  /// Rasterization needs a mounted `LayerRasterizerHost`, which `main.dart`
-  /// installs above every route.
+  /// Rasterization needs a mounted `LayerRasterizerHost`, which
+  /// `DivineMaterialApp` installs above every route.
   ///
   /// Throws [DraftOverlayRestoreException] when the draft has overlays that
   /// cannot be reproduced — an unreadable state history, layers with no body

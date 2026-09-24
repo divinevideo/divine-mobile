@@ -28,7 +28,8 @@ class VideoEditorTuneSessionStarted extends VideoEditorTuneEvent {
 ///
 /// Seeds the session values from the given adjustments (empty for a new set,
 /// the edited set's adjustments otherwise) and snapshots them so a cancel can
-/// restore the pre-open state. Preserves the session's [editingSetId].
+/// restore the pre-open state. Preserves the session's
+/// [VideoEditorTuneState.editingSetId].
 class VideoEditorTuneEditorInitialized extends VideoEditorTuneEvent {
   const VideoEditorTuneEditorInitialized(this.activeAdjustments);
 

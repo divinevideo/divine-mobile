@@ -18,7 +18,7 @@ import 'package:pro_video_editor/pro_video_editor.dart' show ClipTransition;
 /// different, usually shorter, timeline. This owner renders those files in the
 /// background (idempotently, so it is safe to call on every clip, trim, speed
 /// or transition change), tells the canvas when one lands through
-/// [onSeamRendered] / [onSpeedClipRendered], and keeps a memoized
+/// `onSeamRendered` / `onSpeedClipRendered`, and keeps a memoized
 /// [SeamTimeline] that always describes the composition last handed to the
 /// player.
 class PreviewComposition {

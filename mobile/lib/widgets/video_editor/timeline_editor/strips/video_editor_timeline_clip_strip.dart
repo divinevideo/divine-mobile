@@ -310,9 +310,8 @@ class _VideoEditorTimelineClipStripState
 
   /// Seeds the new clips' thumbnail notifiers from the source clip's
   /// already-loaded thumbnails when a split has just occurred. This
-  /// avoids a flash of placeholder/wrong-range frames while the
-  /// trimmed segment files are being rendered — the real
-  /// subscriptions kick in once the rendered file paths arrive.
+  /// avoids a flash of placeholder frames while the real subscriptions,
+  /// which extract from the same shared source file, catch up.
   void _maybeSeedSplit() {
     final bloc = context.read<ClipEditorBloc?>();
     if (bloc == null) return;
@@ -451,7 +450,7 @@ class _VideoEditorTimelineClipStripState
     return (localX / slotWidth).floor().clamp(0, _orderedClips.length - 1);
   }
 
-  /// Slot-center X for a given index in the reorder grid.
+  /// Left-edge X of the slot at [index] in the reorder grid.
   double _slotLeft(int index) {
     return index * (_reorderSize + TimelineConstants.clipGap);
   }

@@ -11,12 +11,11 @@ import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart'
 
 /// Top overlay controls for the text editor screen.
 ///
-/// Displays close and done buttons at the top, plus style controls
-/// (color, alignment, background) at the bottom.
-/// Includes a vertical slider for font size on the right side.
+/// Displays close and done buttons at the top, plus a vertical slider for
+/// font size on the right side.
 ///
-/// Note: Font selector and color picker panels are rendered outside
-/// the editor in the parent screen to maintain correct editor sizing.
+/// Note: The style bar, font selector and color picker panels are rendered
+/// outside the editor in the parent screen to maintain correct editor sizing.
 class VideoEditorTextOverlayControls extends StatelessWidget {
   const VideoEditorTextOverlayControls({super.key});
 

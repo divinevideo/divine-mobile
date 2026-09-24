@@ -211,8 +211,8 @@ class _VolumeArcState extends State<_VolumeArc> {
 
   /// Pixels of drag distance that cover the full 0..1 range.
   ///
-  /// Set once at pan-start to 90 % of the current screen width so the gesture
-  /// scales with the device rather than using a fixed pixel value.
+  /// Set once at pan-start to 90 % of the current screen width, capped at
+  /// [_maxDragRangePx].
   double _dragRangePx = _maxDragRangePx;
 
   /// Local position where the current pan gesture began.
@@ -275,8 +275,9 @@ class _VolumeArcState extends State<_VolumeArc> {
               widget.onChanged(next);
             },
             onLongPress: widget.onLongPress,
-            // Press-and-drag: relative gesture. Up = louder, down =
-            // quieter. The arc itself is not directly hit-tested.
+            // Press-and-drag: the distance from the press point sets the
+            // volume, full near the tile and quieter further away. The arc
+            // itself is not directly hit-tested.
             onPanStart: _onPanStart,
             onPanUpdate: _onPanUpdate,
             onPanEnd: (_) {

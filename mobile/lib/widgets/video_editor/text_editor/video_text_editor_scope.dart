@@ -11,7 +11,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 ///
 /// Usage:
 /// ```dart
-/// VideoTextEditorScope.of(context).toggleTextAlign();
+/// VideoTextEditorScope.of(context).editor.toggleTextAlign();
 /// ```
 class VideoTextEditorScope extends InheritedWidget {
   /// Creates a [VideoTextEditorScope].

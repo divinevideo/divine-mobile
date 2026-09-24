@@ -10,8 +10,8 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 /// Rehydrates a [VideoEditorSticker] from a serialized
 /// [StickerData] map produced during state-history export.
 ///
-/// Used as the `widgetLoader` for `ImportStateHistory.fromMap` and
-/// `WidgetLayer.fromMap` so sticker layers survive the editor's
+/// The fallback of `videoEditorWidgetLayerLoader`, the editor's
+/// `widgetLoader`, so sticker layers survive the editor's
 /// export/reopen round-trip. Returns an empty box when [meta] is
 /// `null` (legacy widget layers without sticker metadata).
 Widget videoEditorStickerWidgetLoader(

@@ -394,7 +394,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     }
   }
 
-  /// Opens the camera recorder as a modal overlay over the editor.
+  /// Opens the camera recorder in a full-screen route over the editor.
   ///
   /// Snapshots the current clip IDs before opening so that any newly recorded
   /// clips can be rolled back if the user cancels (`result != true`).
@@ -804,9 +804,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// new takes play back in place.
   ///
   /// Takes are laid back-to-back: the first starts at the beginning and each
-  /// subsequent take starts where the previous one ended, clamped to
-  /// [VideoEditorConstants.maxDuration]. All takes are committed in a single
-  /// history entry so one undo removes them together.
+  /// subsequent take starts where the previous one ended, clamped to the
+  /// clip length (at most [VideoEditorConstants.maxDuration]). All takes are
+  /// committed in a single history entry so one undo removes them together.
   Future<void> _openVoiceOver({required VideoEditorMainBloc mainBloc}) async {
     final availableDuration = resolveVoiceOverAvailableDuration(
       clipDuration: _clipEditorBloc.state.totalDuration,

@@ -10,8 +10,7 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 /// Displays a horizontal bar showing recording segments.
 ///
 /// Each segment represents a recorded clip, with dividers between them.
-/// Remaining space is shown as transparent, indicating available recording
-/// time.
+/// Remaining space is shown in grey, indicating available recording time.
 class VideoRecorderSegmentBar extends StatelessWidget {
   /// Creates a segment bar widget.
   const VideoRecorderSegmentBar({super.key});

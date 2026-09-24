@@ -63,11 +63,11 @@ class ClipEditorResultListeners extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastSplitFailure] and shows an error
-/// snackbar when a split rendering operation fails.
+/// Listens to [ClipEditorState.lastSplitFailure] and shows an error
+/// snackbar when a split fails.
 ///
 /// Kept at the scaffold level (always mounted) so the snackbar fires even
-/// if the timeline controls are hidden while the render is in flight.
+/// if the timeline controls are hidden.
 class _SplitFailureListener extends StatelessWidget {
   const _SplitFailureListener({required this.child});
 
@@ -89,7 +89,7 @@ class _SplitFailureListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastReverseResult] and surfaces a
+/// Listens to [ClipEditorState.lastReverseResult] and surfaces a
 /// snackbar when a reverse-render operation fails or the clip has no local
 /// file. Success is handled by the canvas player-sync listener; this listener
 /// only covers the failure outcomes so they aren't silent to the user.
@@ -147,7 +147,7 @@ class _ClipReverseResultListener extends StatelessWidget {
 // the message. A second listener at this level would queue the same snackbar on
 // the same root `ScaffoldMessenger` and show it twice.
 
-/// Listens to [ClipEditorBloc.state.lastTransformResult] and surfaces a
+/// Listens to [ClipEditorState.lastTransformResult] and surfaces a
 /// snackbar when a transform-render operation fails or the clip has no local
 /// file. Success is handled by the canvas player-sync listener that reacts to
 /// the swapped clip file; this listener only covers the failure outcomes so
@@ -206,7 +206,7 @@ class _ClipTransformResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastMergeResult] and commits a successful
+/// Listens to [ClipEditorState.lastMergeResult] and commits a successful
 /// merge to editor history (replacing the selected clips with the merged clip,
 /// with timeline markers rebased) or surfaces a snackbar on failure.
 ///
@@ -268,7 +268,7 @@ class _ClipMergeResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastDetachResult] and finishes a detach:
+/// Listens to [ClipEditorState.lastDetachResult] and finishes a detach:
 /// puts the clip on the canvas as a layer and commits both halves of the change
 /// to editor history as one entry.
 ///
@@ -383,7 +383,7 @@ class _ClipDetachResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastPlaceholderFillResult] and surfaces a
+/// Listens to [ClipEditorState.lastPlaceholderFillResult] and surfaces a
 /// snackbar when re-rendering a placeholder's backdrop fails.
 ///
 /// Success needs nothing here: the bloc has already swapped the clip and
@@ -509,7 +509,7 @@ class _DetachedClipTransformResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastClipsRemovedResult] and commits a
+/// Listens to [ClipEditorState.lastClipsRemovedResult] and commits a
 /// multi-select removal to editor history (the new clip list with timeline
 /// markers rebased).
 ///
@@ -553,7 +553,7 @@ class _ClipsRemovedResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastAudioExtraction] from a widget that
+/// Listens to [ClipEditorState.lastAudioExtraction] from a widget that
 /// stays mounted for the entire editor session, so the success/failure
 /// side effect (history write or snackbar) survives the user leaving edit
 /// mode, switching clips, or unmounting the timeline-level controls while
@@ -616,7 +616,7 @@ class _AudioExtractionResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastClipLibrarySave] from a widget that
+/// Listens to [ClipEditorState.lastClipLibrarySave] from a widget that
 /// stays mounted for the entire editor session, so the save's outcome still
 /// reaches the user after they leave edit mode or switch clips mid-render.
 ///
@@ -664,7 +664,7 @@ class _ClipLibrarySaveResultListener extends StatelessWidget {
   }
 }
 
-/// Listens to [ClipEditorBloc.state.lastLibraryImportResult] and commits a
+/// Listens to [ClipEditorState.lastLibraryImportResult] and commits a
 /// successful import — clips picked in the library, now on the timeline — to
 /// editor history, or surfaces a snackbar when a picked clip could not take
 /// the composition's shape (a set that would not render into a clip, a clip

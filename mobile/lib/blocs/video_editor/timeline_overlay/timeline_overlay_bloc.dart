@@ -277,11 +277,11 @@ class TimelineOverlayBloc
 
   /// Builds the timeline item for one audio [track].
   ///
-  /// [maxDuration] (remaining audio after [TimelineOverlayItem.startOffset])
-  /// is derived from the same full-source basis as
-  /// [TimelineOverlayItem.sourceDuration] so the two never drift — the same
-  /// `sourceDuration - startOffset` relationship [_onItemTrimmed] applies
-  /// live during a trim drag.
+  /// [TimelineOverlayItem.maxDuration] (remaining audio after
+  /// [TimelineOverlayItem.startOffset]) is derived from the same full-source
+  /// basis as [TimelineOverlayItem.sourceDuration] so the two never drift —
+  /// the same `sourceDuration - startOffset` relationship [_onItemTrimmed]
+  /// applies live during a trim drag.
   ///
   /// [measuredSourceDuration] is the basis the waveform extractor reported for
   /// this track (see [_onWaveformLoaded]). It only fills in for a track whose
@@ -728,9 +728,10 @@ class TimelineOverlayBloc
   /// A sound whose `AudioEvent.duration` never resolved reaches the painter
   /// without a way to map full-source samples to time, so the whole file gets
   /// squeezed into the visible bar. The extraction covers the whole source, so
-  /// its measured duration is exactly the missing basis. [maxDuration] moves
-  /// with it to keep the `sourceDuration - startOffset` relationship
-  /// [_onItemTrimmed] and [_soundItem] rely on.
+  /// its measured duration is exactly the missing basis.
+  /// [TimelineOverlayItem.maxDuration] moves with it to keep the
+  /// `sourceDuration - startOffset` relationship [_onItemTrimmed] and
+  /// [_soundItem] rely on.
   static TimelineOverlayItem _withMeasuredBasis(
     TimelineOverlayItem item,
     Duration? measured,

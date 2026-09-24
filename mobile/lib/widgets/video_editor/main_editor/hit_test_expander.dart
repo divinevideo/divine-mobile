@@ -9,7 +9,7 @@ import 'package:material_ui/material_ui.dart';
 ///
 /// Layout / paint are unchanged — [child] is laid out with the parent
 /// constraints and painted at offset zero, exactly like a passthrough
-/// wrapper. Only [hitTest] is customised: positions outside the
+/// wrapper. Only [RenderBox.hitTest] is customised: positions outside the
 /// centered [visibleSize] rect are clamped to its nearest edge so the
 /// downstream hit-test chain (which clips to `Center > SizedBox`) sees
 /// a position it accepts and forwards the down event normally.

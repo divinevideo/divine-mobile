@@ -29,7 +29,7 @@ abstract final class ClipNormalizationRender {
   ///
   /// Optimizes rendering by:
   /// - Using a single global transform if all clips have the same resolution
-  /// - Only pre-rendering clips that differ from the majority
+  /// - Only pre-rendering the clips that need a crop
   ///
   /// Returns video segments ready for concatenation and an optional global
   /// transform when all clips share the same crop parameters.

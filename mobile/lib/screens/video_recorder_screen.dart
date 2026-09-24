@@ -306,7 +306,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     );
   }
 
-  /// Initialize camera and free background video resources.
+  /// Initialize camera.
   ///
   /// [recorderMode] and [autoStartRecording] belong to the open only; a
   /// re-initialization (leaving the Upload tab, returning from the editor)
@@ -513,11 +513,12 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
                           fromEditor: widget.fromEditor,
                         ),
                         // Stop-motion reuses the capture stack — each shutter
-                        // tap captures a still that becomes a 1-frame video
-                        // clip, so the capture flow (clips, library, editor,
-                        // ghost) applies unchanged. It only fills the top
-                        // bar's center slot, which capture mode leaves empty,
-                        // with the session's remaining-shots budget.
+                        // tap adds a still to the session, which joins the
+                        // clip list as one frames-based clip, so the capture
+                        // flow (clips, library, editor, ghost) applies
+                        // unchanged. It only fills the top bar's center slot,
+                        // which capture mode leaves empty, with the session's
+                        // remaining-shots budget.
                         .stopMotion => VideoRecorderCaptureStack(
                           fromEditor: widget.fromEditor,
                           topBarCenter: const VideoRecorderStopMotionBudget(),

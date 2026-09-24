@@ -72,11 +72,12 @@ class TransitionSeamRenderService {
        _maxSeamCacheBytes = maxSeamCacheBytes,
        _renderSlots = renderSlots ?? RenderSlotPool();
 
-  /// Default upper bound on the total size of the persisted
+  final Future<Directory> Function() _documentsDirectoryProvider;
+
+  /// Upper bound on the total size of the persisted
   /// `transition_seams/` directory. Seam files are individually small, but
   /// every distinct trim/transition tweak mints a new one, so without a cap
   /// the directory grows without limit across editor sessions.
-  final Future<Directory> Function() _documentsDirectoryProvider;
   final int _maxSeamCacheBytes;
 
   /// Caps concurrent native renders. Seams take priority slots, so a seam
@@ -373,7 +374,7 @@ class TransitionSeamRenderService {
   /// seam. Everything here is in playback time so the math lines up with the
   /// picker ceiling and the export-side clamp (all keyed on
   /// [DivineVideoClip.playbackDuration] via [transitionConsumedPerSide]);
-  /// `_render` converts [consumed] back into each clip's own source time for
+  /// `_render` converts `consumed` back into each clip's own source time for
   /// trimming.
   ///
   /// For overlaps the blend is always half the consumed span, guaranteeing a
