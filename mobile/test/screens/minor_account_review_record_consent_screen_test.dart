@@ -38,6 +38,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
   Future<void> submitParentContact({
     required String caseId,
     required String email,
+    MinorReviewInstructions? localReceipt,
   }) async {}
 
   @override
@@ -45,6 +46,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
     required String caseId,
     required String email,
     required String videoPath,
+    MinorReviewInstructions? localReceipt,
   }) async {
     if (throwOnSubmit) {
       throw Exception('submit failed');
@@ -292,6 +294,128 @@ void main() {
       expect(
         find.text(l10n.minorAccountReviewRecordConsentEmailInsteadCta),
         findsOneWidget,
+      );
+    });
+  });
+
+  group('MinorAccountReviewRecordConsentScreen email fallback', () {
+    testWidgets(
+      'returns to the consent screen it was pushed from instead of stacking',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        _useTallSurface(tester);
+
+        final router = GoRouter(
+          initialLocation: MinorAccountReviewParentConsentScreen.path,
+          routes: [
+            GoRoute(
+              path: MinorAccountReviewParentConsentScreen.path,
+              builder: (context, state) =>
+                  const MinorAccountReviewParentConsentScreen(),
+            ),
+            GoRoute(
+              path: MinorAccountReviewRecordConsentScreen.path,
+              builder: (context, state) =>
+                  const MinorAccountReviewRecordConsentScreen(),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              minorConsentRecorderProvider.overrideWithValue(_FakeRecorder()),
+              permissionsServiceProvider.overrideWithValue(
+                _FakePermissions(
+                  cameraStatus: PermissionStatus.requiresSettings,
+                ),
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewParentConsentRecordCta),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text(l10n.minorAccountReviewRecordConsentDeniedTitle),
+          findsOneWidget,
+        );
+        expect(router.canPop(), isTrue);
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentEmailInsteadCta),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byType(MinorAccountReviewParentConsentScreen),
+          findsOneWidget,
+        );
+        // Popped back onto the existing consent screen rather than pushing a
+        // second one on top of it.
+        expect(router.canPop(), isFalse);
+      },
+    );
+
+    testWidgets('a direct entry replaces the record route', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      _useTallSurface(tester);
+
+      final router = GoRouter(
+        initialLocation: MinorAccountReviewRecordConsentScreen.path,
+        routes: [
+          GoRoute(
+            path: MinorAccountReviewParentConsentScreen.path,
+            builder: (context, state) =>
+                const MinorAccountReviewParentConsentScreen(),
+          ),
+          GoRoute(
+            path: MinorAccountReviewRecordConsentScreen.path,
+            builder: (context, state) =>
+                const MinorAccountReviewRecordConsentScreen(),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            minorConsentRecorderProvider.overrideWithValue(_FakeRecorder()),
+            permissionsServiceProvider.overrideWithValue(
+              _FakePermissions(cameraStatus: PermissionStatus.requiresSettings),
+            ),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(router.canPop(), isFalse);
+
+      await tester.tap(
+        find.text(l10n.minorAccountReviewRecordConsentEmailInsteadCta),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byType(MinorAccountReviewParentConsentScreen),
+        findsOneWidget,
+      );
+      expect(
+        find.byType(MinorAccountReviewRecordConsentScreen),
+        findsNothing,
       );
     });
   });
@@ -665,6 +789,9 @@ void main() {
           overrides: [
             currentMinorAccountReviewStatusProvider.overrideWith(
               (ref) async => _statusWithCase(),
+            ),
+            minorAccountReviewRepositoryProvider.overrideWithValue(
+              _FakeRepository(),
             ),
           ],
         );
