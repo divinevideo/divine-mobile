@@ -11,11 +11,10 @@ appId: co.openvine.app.staging
 # and falls back to Capture when the key is absent, so a first run after a
 # `clearState` never opens here on its own.
 #
-# Classic is the last entry on the wheel and sits three places from Capture,
-# which is further than any other mode has to travel. The wheel is a lazy
-# ListView that only builds entries near the armed one, so the hops below step
-# one entry at a time rather than betting on how many the viewport happens to
-# have built — openCaptureMode documents the same trap from the other end
+# Classic sits three places from Capture, which is further than any other mode
+# a flow has to travel. The wheel is a lazy ListView that only builds entries
+# near the armed one, so the hops below step one entry at a time rather than
+# betting on how many the viewport happens to have built — openCaptureMode documents the same trap from the other end
 # ("from Classic the Capture entry is not rendered at all").
 #
 # The hops are guarded on Classic not already being on screen, which is what
