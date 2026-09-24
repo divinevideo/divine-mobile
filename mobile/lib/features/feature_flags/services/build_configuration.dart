@@ -69,6 +69,10 @@ class BuildConfiguration {
         // Default OFF until receiving a group works too (#7338). Sending to
         // one already does, so the flag only gates the picker that starts it.
         return const bool.fromEnvironment('FF_GROUP_MESSAGES');
+      case FeatureFlag.minorConsentInAppRecording:
+        // Default OFF: the relay-manager parent-consent upload route does not
+        // exist yet, so a recorded clip could not be submitted.
+        return const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
     }
   }
 
@@ -117,6 +121,8 @@ class BuildConfiguration {
         return 'FF_POST_PUBLISH_CONFIRMATION_TREATMENT';
       case FeatureFlag.groupMessages:
         return 'FF_GROUP_MESSAGES';
+      case FeatureFlag.minorConsentInAppRecording:
+        return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
     }
   }
 }
