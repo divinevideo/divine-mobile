@@ -916,12 +916,12 @@ class NostrClient {
   /// read settle on relay refusals once a non-cache relay sent `EOSE` and no
   /// relay is still unanswered. It never settles on silence, a dropped socket,
   /// a deadline, or a `rate-limited` refusal, all of which a retry may change.
-  /// Transient `error:` and unclassified (`other`) refusals remain incomplete.
-  /// A caller with a deferred retry policy may confirm those refusals on a
-  /// later attempt. This method never issues an immediate confirmation read:
-  /// a relay may still be completing AUTH or recovering from a transient
-  /// failure. Other terminal refusal categories may settle on the first read,
-  /// except NIP-42 refusals parked for post-AUTH replay.
+  /// Transient `error:`, unclassified (`other`) and NIP-42 `auth-required`
+  /// refusals remain incomplete. A caller with a deferred retry policy may
+  /// confirm those refusals on a later attempt. This method never issues an
+  /// immediate confirmation read: a relay may still be completing AUTH or
+  /// recovering from a transient failure. Other terminal refusal categories
+  /// may settle on the first read.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -978,13 +978,23 @@ class NostrClient {
       );
     }
     final needsDeferredConfirmation = first.result.closedRelayReasons.values
-        .any((category) => category == 'error' || category == 'other');
+        .any(_deferredConfirmationRefusalCategories.contains);
     return (
       events: first.result.events,
       timedOut: needsDeferredConfirmation,
       noRelays: first.noRelays,
     );
   }
+
+  /// `CLOSED` categories [queryEventsDetailed] never settles on at the first
+  /// sighting: `error` and `other` may be transient, and `auth-required`
+  /// asks for NIP-42 rather than answering, so the gate may open moments
+  /// later once a remote signer produces the signature.
+  static const Set<String> _deferredConfirmationRefusalCategories = {
+    'auth-required',
+    'error',
+    'other',
+  };
 
   /// Whether [result] ended on refusals alone while a non-cache relay
   /// answered, with no relay still unanswered and none rate limited.

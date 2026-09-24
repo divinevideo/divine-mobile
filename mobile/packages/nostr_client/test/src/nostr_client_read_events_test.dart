@@ -754,6 +754,32 @@ void main() {
         },
       );
 
+      test(
+        'keeps an auth-required refusal settled by the auth gate timed out '
+        'for a later attempt to confirm',
+        () async {
+          // A relay with no live AUTH handshake has its gate closed and the
+          // read settles on `auth-required`, a gate that may open moments
+          // later once a remote signer produces the signature.
+          final nostr = _ScriptedReadsNostr([
+            const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://refuses.example': 'auth-required'},
+            ),
+          ]);
+
+          final result = await withClock(
+            Clock(() => start),
+            () => readWith(nostr),
+          );
+
+          expect(result.timedOut, isTrue);
+          expect(nostr.deadlines, hasLength(1));
+        },
+      );
+
       test('keeps a read with an unanswered relay timed out', () async {
         final nostr = _ScriptedReadsNostr([
           const QueryResult(
