@@ -3,6 +3,7 @@ export 'featured_tab_videos_response.dart';
 export 'notification_response.dart';
 export 'recent_videos_response.dart';
 export 'relay_notification.dart';
+export 'sound_stats.dart';
 export 'v2_popular_videos_response.dart';
 export 'video_comment.dart';
 export 'video_comments_response.dart';
