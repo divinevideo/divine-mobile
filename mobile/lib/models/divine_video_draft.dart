@@ -16,6 +16,7 @@ import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:openvine/utils/editor_state_history_compaction.dart';
@@ -186,12 +187,15 @@ class DivineVideoDraft {
       sourceDraftId: json['sourceDraftId'] as String?,
       proofManifestJson: json['proofManifestJson'] as String?,
       // Expanded after the paths resolve, so the resolver walks each shared
-      // meta once too.
+      // meta once too. The rotation lift runs here, where every draft is
+      // read, rather than where the editor mounts it.
       editorStateHistory: expandEditorStateHistory(
-        resolveAudioPaths(
-          (json['editorStateHistory'] as Map<String, dynamic>?) ?? const {},
-          documentsPath,
-          useOriginalPath: useOriginalPath,
+        DetachedClipLayerData.withRotatableDetachedClips(
+          resolveAudioPaths(
+            (json['editorStateHistory'] as Map<String, dynamic>?) ?? const {},
+            documentsPath,
+            useOriginalPath: useOriginalPath,
+          ),
         ),
       ),
       // Carries its own copy of every clip's manifest, interned the same way.

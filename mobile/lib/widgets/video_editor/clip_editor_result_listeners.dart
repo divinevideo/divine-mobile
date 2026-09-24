@@ -17,9 +17,6 @@ import 'package:openvine/models/video_editor/detached_clip_window.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
-// Not re-exported by the package barrel, unlike the layer types themselves.
-// It lives outside `lib/src/`, so this is a supported import path.
-import 'package:pro_image_editor/core/models/layers/layer_interaction.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show WidgetLayer, WidgetLayerExportConfigs;
 
@@ -371,11 +368,6 @@ class _ClipDetachResultListener extends StatelessWidget {
       width: width,
       widget: DetachedClipLayerView(meta: meta),
       meta: meta,
-      // Rotation is deliberately off. The export composites a detached clip
-      // through `SegmentTransform`, which carries offset, size and fit but no
-      // angle — so a rotated layer would look right in the editor and land
-      // square in the file.
-      interaction: LayerInteraction(enableRotate: false),
       exportConfigs: WidgetLayerExportConfigs(id: layerId, meta: meta),
     );
 

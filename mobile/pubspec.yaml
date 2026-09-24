@@ -389,6 +389,12 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
+  # 2.14.0 is the first release whose `SegmentTransform` carries a rotation,
+  # which is what lets a detached clip be turned on the canvas and land turned
+  # in the file (hm21/pro_video_editor#203). Unlike every floor below it, this
+  # one is self-enforcing: the call site passes `rotation:`, which simply does
+  # not exist on 2.13.x, so a relaxed floor is a compile error rather than a
+  # clip that silently exports upright.
   # 2.13.3 is the first release that runs the iOS/macOS HDR pre-transcode and
   # overlap-transition pre-render under the plugin's export gate and stall
   # watchdog; on 2.13.2 a stall in either setup stage never settles
@@ -406,7 +412,7 @@ dependencies:
   # is load-bearing and Android-only — no CI job builds Android, and a fallback
   # hard cut is indistinguishable from a working transition in the UI, so
   # relaxing it back to ^2.13.0 would reintroduce #9321 with no signal at all.
-  pro_video_editor: ^2.13.3
+  pro_video_editor: ^2.14.0
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.

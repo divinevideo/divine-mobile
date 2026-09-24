@@ -4,6 +4,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:pro_image_editor/core/models/layers/layer_interaction.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorLayerImage, EditorVideo;
@@ -543,6 +544,243 @@ void main() {
 
       test('returns null when neither slot carries the marker', () {
         expect(DetachedClipLayerData.metaOf(_widgetLayer()), isNull);
+      });
+    });
+
+    group('withRotatableDetachedClips', () {
+      Map<String, dynamic> historyWith(Map<String, dynamic> layer) => {
+        'history': [
+          {
+            'layers': [layer],
+          },
+        ],
+      };
+
+      Map<String, dynamic> detachedLayerMap({
+        Map<String, dynamic>? interaction,
+        bool metaInExportConfigs = false,
+      }) {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+        return {
+          'type': 'widget',
+          'x': 1.0,
+          'interaction': ?interaction,
+          if (metaInExportConfigs)
+            'exportConfigs': {'id': 'l1', 'meta': meta}
+          else
+            'meta': meta,
+        };
+      }
+
+      Map<String, dynamic>? interactionOf(Map<String, dynamic> history) {
+        final layers =
+            (history['history'] as List).first as Map<String, dynamic>;
+        final layer = (layers['layers'] as List).first as Map<String, dynamic>;
+        return layer['interaction'] as Map<String, dynamic>?;
+      }
+
+      test('lifts the rotation lock an older draft stored', () {
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips(
+          historyWith(
+            detachedLayerMap(
+              interaction: {'enableRotate': false, 'enableScale': true},
+            ),
+          ),
+        );
+
+        expect(interactionOf(migrated)!['enableRotate'], isTrue);
+      });
+
+      test('leaves every other permission the draft stored alone', () {
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips(
+          historyWith(
+            detachedLayerMap(
+              interaction: {
+                'enableRotate': false,
+                'enableScale': false,
+                'enableMove': false,
+                'enableSelection': true,
+                'enableEdit': false,
+              },
+            ),
+          ),
+        );
+
+        final interaction = interactionOf(migrated)!;
+        expect(interaction['enableScale'], isFalse);
+        expect(interaction['enableMove'], isFalse);
+        expect(interaction['enableSelection'], isTrue);
+        expect(interaction['enableEdit'], isFalse);
+      });
+
+      test('reaches a layer whose marker sits in exportConfigs', () {
+        // What a re-imported layer comes back as — the slot
+        // `WidgetLayer.fromMap` hands to the widget loader.
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips(
+          historyWith(
+            detachedLayerMap(
+              interaction: {'enableRotate': false},
+              metaInExportConfigs: true,
+            ),
+          ),
+        );
+
+        expect(interactionOf(migrated)!['enableRotate'], isTrue);
+      });
+
+      test('invents no policy for a layer that stored none', () {
+        // An absent interaction map already means "everything allowed";
+        // writing one would restrict the other four flags by omission.
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips(
+          historyWith(detachedLayerMap()),
+        );
+
+        expect(interactionOf(migrated), isNull);
+      });
+
+      test('leaves a layer that is not a detached clip untouched', () {
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips(
+          historyWith({
+            'type': 'widget',
+            'meta': {'kind': 'divine.sticker'},
+            'interaction': {'enableRotate': false},
+          }),
+        );
+
+        expect(interactionOf(migrated)!['enableRotate'], isFalse);
+      });
+
+      test('migrates undo entries too, not just the active one', () {
+        // Undo would otherwise step back onto a layer that cannot be turned.
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips({
+          'history': [
+            {
+              'layers': [
+                detachedLayerMap(interaction: {'enableRotate': false}),
+              ],
+            },
+            {
+              'layers': [
+                detachedLayerMap(interaction: {'enableRotate': false}),
+              ],
+            },
+          ],
+        });
+
+        for (final entry in migrated['history']! as List) {
+          final layer = ((entry as Map)['layers'] as List).first as Map;
+          expect(
+            (layer['interaction']! as Map)['enableRotate'],
+            isTrue,
+          );
+        }
+      });
+
+      test('lifts the lock where a real draft stores it, in references', () {
+        // A draft holds each layer's full map once, under `references`; its
+        // history entries carry only the layer id plus what changed, and
+        // import rebuilds each entry from that shared map. Undo entries
+        // become rotatable through the reference, not through their own copy.
+        final migrated = DetachedClipLayerData.withRotatableDetachedClips({
+          'position': 1,
+          'references': {
+            'layer-1': {
+              'id': 'layer-1',
+              ...detachedLayerMap(interaction: {'enableRotate': false}),
+            },
+          },
+          'history': [
+            {
+              'layers': [
+                {'id': 'layer-1'},
+              ],
+            },
+            {
+              'layers': [
+                {'id': 'layer-1', 'x': 2.0},
+              ],
+            },
+          ],
+        });
+
+        final reference = (migrated['references']! as Map)['layer-1']! as Map;
+        expect((reference['interaction']! as Map)['enableRotate'], isTrue);
+        expect(migrated['position'], 1);
+        expect(migrated['history'], [
+          {
+            'layers': [
+              {'id': 'layer-1'},
+            ],
+          },
+          {
+            'layers': [
+              {'id': 'layer-1', 'x': 2.0},
+            ],
+          },
+        ]);
+      });
+
+      test('lifts the lock from a serialized WidgetLayer on import', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+        final layer = WidgetLayer(
+          id: 'layer-1',
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          interaction: LayerInteraction(enableRotate: false),
+          exportConfigs: WidgetLayerExportConfigs(id: 'detached-1', meta: meta),
+        );
+        final history = <String, dynamic>{
+          'version': '6.5.0',
+          'position': 0,
+          'references': {'layer-1': layer.toMap()},
+          'history': [
+            {
+              'layers': [
+                {'id': 'layer-1'},
+              ],
+            },
+          ],
+        };
+
+        final imported = ImportStateHistory.fromMap(
+          DetachedClipLayerData.withRotatableDetachedClips(history),
+          configs: ImportEditorConfigs(
+            widgetLoader: (_, {meta}) => const SizedBox.shrink(),
+          ),
+        );
+
+        final restored = imported.stateHistory.single.layers.single;
+        expect(restored, isA<WidgetLayer>());
+        expect((restored as WidgetLayer).interaction.enableRotate, isTrue);
+      });
+
+      test('returns an already rotatable draft as it came', () {
+        // Runs on every build of the editor; a draft saved under this build
+        // has nothing to lift and must not be copied each time.
+        final history = historyWith(
+          detachedLayerMap(interaction: {'enableRotate': true}),
+        );
+
+        expect(
+          DetachedClipLayerData.withRotatableDetachedClips(history),
+          same(history),
+        );
+      });
+
+      test("leaves the caller's history untouched", () {
+        final original = historyWith(
+          detachedLayerMap(interaction: {'enableRotate': false}),
+        );
+
+        DetachedClipLayerData.withRotatableDetachedClips(original);
+
+        expect(interactionOf(original)!['enableRotate'], isFalse);
       });
     });
   });

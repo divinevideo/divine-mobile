@@ -3,6 +3,7 @@
 
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/utils/json_tree_rewrite.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Marks a [WidgetLayer]'s export meta as a clip that was detached from the
@@ -335,6 +336,68 @@ class DetachedClipLayerData {
     visit(history);
     return paths;
   }
+
+  /// Key under which a layer's interaction policy is serialized.
+  static const String _layerInteractionKey = 'interaction';
+
+  /// Key under which the rotate permission is serialized.
+  static const String _enableRotateKey = 'enableRotate';
+
+  /// Re-enables rotation on every detached clip in serialized editor state.
+  ///
+  /// Detaching used to build its layer with `enableRotate: false`, because
+  /// `SegmentTransform` carried no angle and a turned layer would have looked
+  /// right in the editor and landed upright in the file. That is fixed, and
+  /// new layers are built rotatable — but the flag is *persisted*: a draft
+  /// stores each layer's full map, interaction included, once under
+  /// `references`, and every history entry is rebuilt from it on import. So
+  /// every draft saved under the old behaviour carries the restriction forever
+  /// and its clips stay stuck no matter how many times the app is updated.
+  ///
+  /// So the policy is re-applied on the way in rather than trusted from the
+  /// draft. Only [detachedClipLayerKind] layers are touched, and only the
+  /// rotate flag: anything else a layer stored stays exactly as it was.
+  ///
+  /// The whole tree is walked, not just the active entry, or undo would step
+  /// back onto a layer that cannot be turned again.
+  ///
+  /// Never mutates [history]; returns it unchanged when there is nothing to
+  /// lift, which is every draft once it has been saved under this build.
+  static Map<String, dynamic> withRotatableDetachedClips(
+    Map<String, dynamic> history,
+  ) {
+    // Long-form keys only: `exportStateHistory` writes drafts with
+    // `enableMinify: false`, so a minified interaction map cannot reach here.
+    final rewritten = rewriteJsonMaps(history, (map) {
+      if (!_isDetachedClipLayerMap(Map<String, dynamic>.from(map))) {
+        return null;
+      }
+      final interaction = map[_layerInteractionKey];
+      // An absent policy already means "everything allowed", so writing one
+      // would invent a restriction rather than lift one.
+      if (interaction is! Map || interaction[_enableRotateKey] == true) {
+        return null;
+      }
+      return Map<String, dynamic>.from(map)
+        ..[_layerInteractionKey] = <String, dynamic>{
+          ...Map<String, dynamic>.from(interaction),
+          _enableRotateKey: true,
+        };
+    });
+    return rewritten! as Map<String, dynamic>;
+  }
+
+  /// Whether [map] is a serialized *layer* carrying a detached clip — as
+  /// opposed to the clip meta nested inside it, which has no interaction of
+  /// its own.
+  static bool _isDetachedClipLayerMap(Map<String, dynamic> map) {
+    if (isDetachedClipMeta(_asMap(map['meta']))) return true;
+    final exportConfigs = _asMap(map['exportConfigs']);
+    return isDetachedClipMeta(_asMap(exportConfigs?['meta']));
+  }
+
+  static Map<String, dynamic>? _asMap(Object? value) =>
+      value is Map ? Map<String, dynamic>.from(value) : null;
 
   /// Whether serialized editor state contains at least one detached clip.
   static bool historyContainsDetachedClip(Map<String, dynamic> history) {
