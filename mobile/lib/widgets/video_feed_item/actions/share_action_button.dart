@@ -570,9 +570,18 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   }
 
   Future<void> _handleCrosspost() async {
-    final connections =
-        _crosspostCubit?.state.connectedConnections ??
-        const <CrosspostingConnection>[];
+    final cubit = _crosspostCubit;
+    if (cubit == null) return;
+    // The row is offered before connections load; wait for them rather than
+    // sending a creator who is already connected to setup.
+    final state = cubit.state.status == VideoCrosspostStatus.loadingConnections
+        ? await cubit.stream.firstWhere(
+            (state) => state.status != VideoCrosspostStatus.loadingConnections,
+            orElse: () => cubit.state,
+          )
+        : cubit.state;
+    if (!mounted) return;
+    final connections = state.connectedConnections;
     if (connections.isNotEmpty) {
       await _presentAfterDismiss<void>((hostContext) {
         return showCrosspostSheet(

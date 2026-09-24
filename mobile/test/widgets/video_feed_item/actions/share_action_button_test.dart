@@ -25,8 +25,10 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
+import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -39,6 +41,9 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockVideoSharingService extends Mock implements VideoSharingService {}
+
+class _MockCrosspostingApiClient extends Mock
+    implements CrosspostingApiClient {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -497,6 +502,47 @@ void main() {
 
             expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
             expect(find.text(l10n.shareSheetCrosspost), findsNothing);
+          },
+        );
+
+        testWidgets(
+          'Crosspost waits for connections instead of routing to setup',
+          (tester) async {
+            final goRouter = MockGoRouter();
+            when(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            ).thenAnswer((_) async {});
+            final client = _MockCrosspostingApiClient();
+            final connections = Completer<List<CrosspostingConnection>>();
+            when(client.getConnections).thenAnswer((_) => connections.future);
+
+            await pumpOwnerSheet(
+              tester,
+              goRouter: goRouter,
+              additionalOverrides: [
+                crossposterApiClientProvider.overrideWithValue(client),
+              ],
+            );
+
+            await tester.tap(find.text(l10n.shareSheetCrosspost));
+            await tester.pump();
+            verifyNever(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            );
+
+            connections.complete(const [
+              CrosspostingConnection(
+                id: 'connection-1',
+                platform: CrosspostingPlatform.instagram,
+                status: CrosspostingConnectionStatus.connected,
+              ),
+            ]);
+            await tester.pumpAndSettle();
+
+            expect(find.byType(CrosspostSheetView), findsOneWidget);
+            verifyNever(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            );
           },
         );
 
