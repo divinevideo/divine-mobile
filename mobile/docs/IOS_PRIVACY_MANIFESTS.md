@@ -32,7 +32,7 @@ macOS is not listed, which is why `mobile/macos` carries no obligation here.
 | Bundle | Manifest | Reaches the archive via |
 |---|---|---|
 | App (`Runner`) | `mobile/ios/Runner/PrivacyInfo.xcprivacy` | `Copy Bundle Resources` in `Runner.xcodeproj` |
-| `divine_camera` | `mobile/packages/divine_camera/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` in its podspec |
+| `divine_camera` | `mobile/packages/divine_camera/darwin/divine_camera/Sources/divine_camera/Resources/PrivacyInfo.xcprivacy` | `resources` in its `Package.swift` (the app links it with Swift Package Manager); `s.resource_bundles` in its podspec under CocoaPods |
 | `divine_device_attestation` | `mobile/packages/divine_device_attestation/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` in its podspec |
 | `divine_quick_actions` | `mobile/packages/divine_quick_actions/ios/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` |
 | `LibProofMode` (vendored) | `mobile/ios/LocalPods/LibProofMode/Resources/PrivacyInfo.xcprivacy` | `s.resource_bundles` |
@@ -213,7 +213,8 @@ Reason codes:
 **Guards** job runs. Its manifest entry is not gated on the narrower native-file
 filter, so package-owned iOS sources are covered whenever Mobile CI is in app
 scope. It scans `mobile/ios/Runner`, both iOS extension targets,
-`mobile/ios/LocalPods/*` and `mobile/packages/*/ios`, and fails when a detected
+`mobile/ios/LocalPods/*`, `mobile/packages/*/ios` and the shared Apple sources
+under `mobile/packages/*/darwin`, and fails when a detected
 required-reason API is not declared in that bundle's own manifest. There is no
 baseline and no exemption list.
 
@@ -226,10 +227,14 @@ bash scripts/check_privacy_manifest_coverage.sh --archive build/ios/iphoneos/Run
 
 It also fails on an invalid reason code for a category, an unknown category
 string, and a manifest that exists but is not bundled by the selected podspec
-or subspec — a manifest nothing ships is a manifest Apple never reads.
+or subspec, or by a `darwin/` plugin's `Package.swift` target resources — a
+manifest nothing ships is a manifest Apple never reads.
 Archive mode derives its expected resource-bundle names from those same
-podspec declarations, so adding a first-party plugin manifest automatically
-adds a corresponding product check. Codemagic runs archive mode against the
+declarations, so adding a first-party plugin manifest automatically adds a
+corresponding product check. With `enable-swift-package-manager` set in
+`mobile/pubspec.yaml`, a plugin that ships a `Package.swift` is linked as a
+Swift package, and SwiftPM names its bundle `<package>_<target>.bundle`
+(`divine_camera_divine_camera.bundle`) rather than the podspec's name. Codemagic runs archive mode against the
 `.app` inside the Shorebird-produced release archive.
 Because Shorebird records the release before this check runs, a failure requires
 deleting that failed Shorebird release or advancing the store build number before
@@ -283,7 +288,9 @@ document still matches the catalogue.
    actually does — including its off-device restriction. If none fits, the code
    needs to change, not the manifest.
 3. Edit the owning bundle's manifest. For a pod, confirm its podspec has a
-   `s.resource_bundles` entry pointing at the file.
+   `s.resource_bundles` entry pointing at the file; for a `darwin/` plugin,
+   also confirm its `Package.swift` target lists the manifest's directory in
+   `resources`.
 4. Validate strictly. `plutil -lint` is lenient about XML that
    `plistlib`/`expat` rejects — notably a `--` inside an XML comment, which is
    illegal XML and which `plutil` accepts:

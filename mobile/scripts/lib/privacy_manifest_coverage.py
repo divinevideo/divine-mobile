@@ -235,6 +235,8 @@ class Unit:
         podspec: str | None,
         selected_subspec: str | None = None,
         xcodeproj: str | None = None,
+        swift_package: str | None = None,
+        swift_target: str | None = None,
     ):
         self.name = name
         self.roots = roots
@@ -242,6 +244,8 @@ class Unit:
         self.podspec = podspec
         self.selected_subspec = selected_subspec
         self.xcodeproj = xcodeproj
+        self.swift_package = swift_package
+        self.swift_target = swift_target
 
 
 def discover(mobile: str) -> list[Unit]:
@@ -297,16 +301,73 @@ def discover(mobile: str) -> list[Unit]:
     if os.path.isdir(packages):
         for pkg in sorted(os.listdir(packages)):
             pkg_ios = os.path.join(packages, pkg, "ios")
-            if not os.path.isdir(pkg_ios):
-                continue
-            specs = [f for f in os.listdir(pkg_ios) if f.endswith(".podspec")]
-            units.append(
-                Unit(f"package:{pkg}", [pkg_ios],
-                     os.path.join(pkg_ios, "Resources", "PrivacyInfo.xcprivacy"),
-                     os.path.join(pkg_ios, specs[0]) if specs else None,
-                     selected_subspec=selected_subspecs.get(pkg))
-            )
+            if os.path.isdir(pkg_ios):
+                specs = [f for f in os.listdir(pkg_ios) if f.endswith(".podspec")]
+                units.append(
+                    Unit(f"package:{pkg}", [pkg_ios],
+                         os.path.join(pkg_ios, "Resources", "PrivacyInfo.xcprivacy"),
+                         os.path.join(pkg_ios, specs[0]) if specs else None,
+                         selected_subspec=selected_subspecs.get(pkg))
+                )
+            # A plugin with `sharedDarwinSource: true` keeps its iOS code under
+            # darwin/, laid out as a Swift package whose target resources hold
+            # the manifest. Scanning only ios/ would drop it from the guard.
+            pkg_darwin = os.path.join(packages, pkg, "darwin")
+            if os.path.isdir(pkg_darwin):
+                specs = [f for f in os.listdir(pkg_darwin) if f.endswith(".podspec")]
+                target_dir = os.path.join(pkg_darwin, pkg, "Sources", pkg)
+                package_swift = os.path.join(pkg_darwin, pkg, "Package.swift")
+                units.append(
+                    Unit(f"package:{pkg}", [pkg_darwin],
+                         os.path.join(target_dir, "Resources", "PrivacyInfo.xcprivacy"),
+                         os.path.join(pkg_darwin, specs[0]) if specs else None,
+                         selected_subspec=selected_subspecs.get(pkg),
+                         swift_package=package_swift
+                         if os.path.exists(package_swift) else None,
+                         swift_target=pkg)
+                )
     return units
+
+
+def uses_swift_package_manager(mobile: str) -> bool:
+    """Return whether the app links plugins through Swift Package Manager.
+
+    With it enabled, Flutter links every plugin that ships a Package.swift as a
+    Swift package, and SwiftPM names the resource bundle it copies into the app
+    `<package>_<target>.bundle` -- not the podspec's resource_bundles name.
+    """
+    try:
+        with open(os.path.join(mobile, "pubspec.yaml"), "r", encoding="utf-8") as handle:
+            pubspec = handle.read()
+    except OSError:
+        return False
+    return re.search(r"^\s*enable-swift-package-manager:\s*true\b", pubspec, re.M) is not None
+
+
+def swift_package_name(package_swift: str) -> str | None:
+    """Return the `name:` a Package.swift declares for its package."""
+    match = re.search(r"\bPackage\s*\(\s*name:\s*\"([^\"]+)\"", package_swift)
+    return match.group(1) if match else None
+
+
+def swift_package_bundles_manifest(package_swift: str) -> bool:
+    """Return whether a Package.swift target resource covers the manifest.
+
+    Accepts the manifest itself or its `Resources` directory, processed or
+    copied. A mention in a comment ships nothing, so comments are ignored.
+    """
+    code = strip_noise_keep_strings(package_swift)
+    return re.search(
+        r"\.(?:process|copy)\(\s*\"(?:Resources(?:/PrivacyInfo\.xcprivacy)?"
+        r"|PrivacyInfo\.xcprivacy)/?\"",
+        code,
+    ) is not None
+
+
+def strip_noise_keep_strings(text: str) -> str:
+    """Blank out `//` and `/* */` comments, keeping string literals."""
+    text = re.sub(r"/\*.*?\*/", lambda m: re.sub(r"[^\n]", " ", m.group(0)), text, flags=re.S)
+    return re.sub(r"//[^\n]*", "", text)
 
 
 def scan_sources(roots: list[str]) -> tuple[dict, dict]:
@@ -316,7 +377,7 @@ def scan_sources(roots: list[str]) -> tuple[dict, dict]:
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [
                 d for d in dirnames
-                if d not in {"Pods", "build", ".symlinks", "DerivedData", ".git"}
+                if d not in {"Pods", "build", ".symlinks", "DerivedData", ".git", ".build", ".swiftpm"}
             ]
             for filename in sorted(filenames):
                 if not filename.endswith(SOURCE_SUFFIXES):
@@ -457,11 +518,24 @@ def podspec_bundles_manifest(spec: str, selected_subspec: str | None) -> bool:
 def expected_archive_manifests(mobile: str) -> dict[str, str]:
     """Derive archive expectations from manifests wired into source targets."""
     expected: dict[str, str] = {}
+    spm = uses_swift_package_manager(mobile)
     for unit in discover(mobile):
         if not os.path.exists(unit.manifest):
             continue
         if unit.xcodeproj:
             expected[unit.name] = os.path.basename(unit.manifest)
+            continue
+        if spm and unit.swift_package:
+            try:
+                with open(unit.swift_package, "r", encoding="utf-8") as handle:
+                    package_swift = handle.read()
+            except OSError:
+                continue
+            package = swift_package_name(package_swift)
+            if package and swift_package_bundles_manifest(package_swift):
+                expected[unit.name] = os.path.join(
+                    f"{package}_{unit.swift_target}.bundle", "PrivacyInfo.xcprivacy"
+                )
             continue
         if not unit.podspec:
             continue
@@ -534,6 +608,21 @@ def check_sources(mobile: str) -> int:
                     failures.append(
                         f"{unit.name}: {unit.manifest} exists but "
                         f"{unit.podspec} has no resource_bundles entry for it, "
+                        f"so it never reaches the archive"
+                    )
+            # The same plugin reaches the archive through its Package.swift
+            # when the app links it with Swift Package Manager, so that route
+            # must carry the manifest too.
+            if declared and unit.swift_package:
+                try:
+                    with open(unit.swift_package, "r", encoding="utf-8") as handle:
+                        package_swift = handle.read()
+                except OSError:
+                    package_swift = ""
+                if not swift_package_bundles_manifest(package_swift):
+                    failures.append(
+                        f"{unit.name}: {unit.manifest} exists but "
+                        f"{unit.swift_package} has no target resource for it, "
                         f"so it never reaches the archive"
                     )
 

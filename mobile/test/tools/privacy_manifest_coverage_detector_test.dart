@@ -67,6 +67,50 @@ void main() {
     return root;
   }
 
+  const bundlingPackageSwift = '''
+let package = Package(
+  name: "sample",
+  targets: [
+    .target(name: "sample", resources: [.process("Resources")]),
+  ]
+)
+''';
+
+  /// Builds a tree whose plugin shares its Apple code under `darwin/`, laid
+  /// out as the Swift package `sharedDarwinSource: true` expects.
+  Directory makeDarwinTree({
+    required String swift,
+    String? manifest,
+    String packageSwift = bundlingPackageSwift,
+    String podspec =
+        "s.resource_bundles = {'sample_privacy' => "
+        "['sample/Sources/sample/Resources/PrivacyInfo.xcprivacy']}",
+    bool swiftPackageManager = false,
+  }) {
+    final root = Directory.systemTemp.createTempSync('privacy_manifest_test');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final darwin = Directory('${root.path}/packages/sample/darwin')
+      ..createSync(recursive: true);
+    final target = Directory('${darwin.path}/sample/Sources/sample')
+      ..createSync(recursive: true);
+    File('${target.path}/Sample.swift').writeAsStringSync(swift);
+    File('${darwin.path}/sample/Package.swift').writeAsStringSync(packageSwift);
+    File('${darwin.path}/sample.podspec').writeAsStringSync(podspec);
+    Directory('${root.path}/ios/Runner').createSync(recursive: true);
+    if (swiftPackageManager) {
+      File('${root.path}/pubspec.yaml').writeAsStringSync(
+        'flutter:\n  config:\n    enable-swift-package-manager: true\n',
+      );
+    }
+    if (manifest != null) {
+      Directory('${target.path}/Resources').createSync(recursive: true);
+      File(
+        '${target.path}/Resources/PrivacyInfo.xcprivacy',
+      ).writeAsStringSync(manifest);
+    }
+    return root;
+  }
+
   String manifestFor(String category, String reason) =>
       '''
 <?xml version="1.0" encoding="UTF-8"?>
@@ -614,6 +658,102 @@ ABC123 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo
         result.output,
         contains('sample_privacy.bundle/PrivacyInfo.xcprivacy'),
       );
+    });
+
+    // A plugin with `sharedDarwinSource: true` has no ios/ directory, so a
+    // guard that scanned only ios/ would silently stop covering it.
+    group('shared darwin sources', () {
+      test('fails when a darwin plugin uses a category with no manifest', () {
+        final root = makeDarwinTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+        );
+
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(result.output, contains('package:sample'));
+        expect(result.output, contains('NO manifest'));
+      });
+
+      test('passes when the target resources carry the manifest', () {
+        final root = makeDarwinTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+        );
+
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+      });
+
+      test('rejects a manifest the Package.swift never bundles', () {
+        final root = makeDarwinTree(
+          swift: 'let t = ProcessInfo.processInfo.systemUptime\n',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+          packageSwift:
+              'let package = Package(\n'
+              '  name: "sample",\n'
+              '  // resources: [.process("Resources")]\n'
+              '  targets: [.target(name: "sample")]\n'
+              ')\n',
+        );
+
+        final result = run(root: root);
+
+        expect(result.exitCode, equals(1));
+        expect(result.output, contains('has no target resource for it'));
+      });
+
+      test('archive mode expects the SwiftPM bundle when SwiftPM links it', () {
+        final plist = manifestFor(
+          'NSPrivacyAccessedAPICategorySystemBootTime',
+          '35F9.1',
+        );
+        final root = makeDarwinTree(
+          swift: '',
+          manifest: plist,
+          swiftPackageManager: true,
+        );
+        final app = Directory('${root.path}/Runner.app')..createSync();
+        final bundled = File(
+          '${app.path}/sample_sample.bundle/PrivacyInfo.xcprivacy',
+        );
+        bundled.parent.createSync(recursive: true);
+        bundled.writeAsStringSync(plist);
+
+        final result = run(root: root, args: ['--archive', app.path]);
+
+        expect(result.exitCode, equals(0), reason: result.output);
+        expect(
+          result.output,
+          contains('sample_sample.bundle/PrivacyInfo.xcprivacy'),
+        );
+      });
+
+      test('archive mode expects the podspec bundle without SwiftPM', () {
+        final root = makeDarwinTree(
+          swift: '',
+          manifest: manifestFor(
+            'NSPrivacyAccessedAPICategorySystemBootTime',
+            '35F9.1',
+          ),
+        );
+        final app = Directory('${root.path}/Runner.app')..createSync();
+
+        final result = run(root: root, args: ['--archive', app.path]);
+
+        expect(result.exitCode, equals(1));
+        expect(
+          result.output,
+          contains('sample_privacy.bundle/PrivacyInfo.xcprivacy'),
+        );
+      });
     });
   });
 }
