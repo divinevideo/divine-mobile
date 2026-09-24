@@ -9318,6 +9318,269 @@ void main() {
         });
       });
 
+      test('does not confirm an unclassified refusal a different relay '
+          'repeats', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusingRelays = [
+            'wss://first.example',
+            'wss://second.example',
+            'wss://second.example',
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final relay = refusingRelays[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'other'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a refusal whose category changed', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final categories = ['auth-required', 'error', 'error'];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final category = categories[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': category},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a page while any of its refusals is new', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusals = [
+            {'wss://first.example': 'error', 'wss://second.example': 'error'},
+            {'wss://first.example': 'error', 'wss://third.example': 'error'},
+            {'wss://first.example': 'error', 'wss://third.example': 'error'},
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: refusals[nip04Reads++],
+            ),
+          );
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason: 'third.example refused for the first time',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a refusal that moved to a later page', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          const refusal = {'wss://unavailable.example': 'error'};
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            nip04Reads++;
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            // Page 0 always carries an event and the refusal. Page 1 answers
+            // cleanly on the first sweep and is refused from then on.
+            if (filter.until! > 1000) {
+              return QueryResult(
+                events: [deletion(1000)],
+                endedBy: QueryEnd.relayClosed,
+                answeredNetworkRelayCount: 1,
+                closedRelayReasons: refusal,
+              );
+            }
+            return nip04Reads <= 2
+                ? const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.complete,
+                    answeredNetworkRelayCount: 2,
+                  )
+                : const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.relayClosed,
+                    answeredNetworkRelayCount: 1,
+                    closedRelayReasons: refusal,
+                  );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 4);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason: 'page 1 was refused for the first time',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 6);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('remembers refusals from every page of a multi-page walk', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            nip04Reads++;
+            final until =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single
+                    .until!;
+            // Three pages carry one event each, the fourth is empty; the same
+            // relay refuses every one of them on every sweep.
+            final events = switch (until) {
+              > 1000 => [deletion(1000)],
+              1000 => [deletion(999)],
+              999 => [deletion(998)],
+              _ => const <Event>[],
+            };
+            return QueryResult(
+              events: events,
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: const {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 4);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 8);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test("an account switch forgets the previous account's refusals", () {
         fakeAsync((async) {
           stubRelayStatus(
