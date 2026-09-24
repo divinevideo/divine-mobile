@@ -155,7 +155,6 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     }
   }
 
-  /// Creates the publish service with callbacks wired to this notifier.
   /// Whether this publish will be held rather than posted now.
   ///
   /// The hand-off is dispatched before its result is known, so the
@@ -172,6 +171,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     );
   }
 
+  /// Creates the publish service with callbacks wired to this notifier.
   Future<VideoPublishService> _createPublishService({
     required OnProgressChanged onProgressChanged,
   }) async {
