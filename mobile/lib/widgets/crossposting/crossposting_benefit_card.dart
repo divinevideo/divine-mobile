@@ -13,7 +13,7 @@ import 'package:openvine/features/crossposting/crossposting_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
-import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/repositories/crossposting_repository.dart';
 
 /// Encourages a creator with no connected platform to connect one.
 class CrosspostingBenefitCard extends ConsumerWidget {
