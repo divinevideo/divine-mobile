@@ -8262,6 +8262,57 @@ void main() {
         },
       );
 
+      test(
+        'reports a programming failure in outgoing NIP-04 recovery without '
+        'marking complete',
+        () async {
+          final error = StateError('bad recovery state');
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(error);
+
+          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(reporterCalls, hasLength(1));
+          expect(reporterCalls.single.error, same(error));
+          expect(
+            reporterCalls.single.site,
+            DmRepositoryReportableSites.historyDrainUnexpectedFailure,
+          );
+        },
+      );
+
+      test(
+        'does not report a relay failure in outgoing NIP-04 recovery',
+        () async {
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(TimeoutException('relay read timed out'));
+
+          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(reporterCalls, isEmpty);
+        },
+      );
+
       test('shares one in-flight run across concurrent calls', () async {
         final capturedUntil = <int?>[];
         stubFiniteHistory([deletion(50)], capturedUntil);

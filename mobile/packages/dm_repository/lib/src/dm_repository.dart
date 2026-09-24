@@ -1626,15 +1626,26 @@ class DmRepository {
       // drain already reached the end, so treat this as done rather than
       // looping a re-drain for a pathologically long kind-4 history.
       return !sawUnansweredPage;
-    } on Object catch (e) {
+    } on Object catch (e, stackTrace) {
       // Relay/IO failures are expected on flaky networks. Returning false
-      // defers drain completion so recovery retries on the next inbox open
-      // rather than silently skipping it and marking complete. See #5304.
+      // defers drain completion so recovery retries later rather than
+      // silently skipping it and marking complete. See #5304.
       Log.warning(
         'Outgoing NIP-04 recovery did not finish for ${pubkeyForLogs(pubkey)}: '
         '$e',
         category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
       );
+      // A programming-invariant failure would otherwise defer the drain on
+      // every retry while reading like an ordinary relay failure.
+      if (e is StateError || e is TypeError || e is RangeError) {
+        _errorReporter?.call(
+          e,
+          stackTrace,
+          site: DmRepositoryReportableSites.historyDrainUnexpectedFailure,
+        );
+      }
       return false;
     } finally {
       // A pending read can finish after logout, account switch, or teardown.
