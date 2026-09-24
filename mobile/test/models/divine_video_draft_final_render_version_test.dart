@@ -59,6 +59,18 @@ void main() {
         expect(restored.hasStaleFinalRender, isTrue);
       });
 
+      test('marks a render stamped by an older renderer version as stale', () {
+        // A real stamp, not a missing one: builds since #9349 wrote v1.
+        final restored = DivineVideoDraft.fromJson(
+          _draft(finalRenderedClip: _clip('rendered')).toJson()
+            ..['finalRenderVersion'] = 1,
+          '/tmp',
+        );
+
+        expect(restored.finalRenderedClip?.id, 'rendered');
+        expect(restored.hasStaleFinalRender, isTrue);
+      });
+
       test('keeps a stale render stale when the draft is saved again', () {
         final stale = _legacyDraft(finalRenderedClip: _clip('rendered'));
 
