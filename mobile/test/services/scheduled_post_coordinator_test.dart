@@ -716,6 +716,23 @@ void main() {
         await pumpEventQueue();
         expect(coordinator.hasTimer, isFalse);
       });
+
+      test(
+        'waits the sync interval before asking a failing list again',
+        () async {
+          await enqueue(buildEvent(), status: ScheduledPostStatus.scheduled);
+          when(
+            () => client.list(),
+          ).thenAnswer((_) async => const ScheduleListFailure('http_503'));
+
+          await coordinator.initialize();
+          await pumpEventQueue();
+
+          // Offline, a signer that is not ready, or a relay without the route:
+          // none of them clears in five seconds, and each retry signs a token.
+          expect(coordinator.armedDelay, const Duration(minutes: 5));
+        },
+      );
     });
 
     group('cancel', () {

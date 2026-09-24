@@ -135,6 +135,11 @@ class ScheduledPostCoordinator {
   bool _forceNext = false;
   DateTime? _lastSyncAt;
 
+  /// When the list was last asked for, answered or not. The periodic sync is
+  /// paced from this, so a list that keeps failing is not re-asked on every
+  /// timer tick.
+  DateTime? _lastSyncAttemptAt;
+
   /// Rows a user action is working on. A sweep leaves them to it, so the two
   /// never broadcast, finalize or park the same row twice.
   final Set<String> _acting = <String>{};
@@ -271,6 +276,7 @@ class ScheduledPostCoordinator {
         !now.isBefore(_lastSyncAt!.add(_syncInterval)) ||
         _repository.dueForClientPublish(pending, now).isNotEmpty;
     if (force || (syncDue && (pending.isNotEmpty || _serverOnly.isNotEmpty))) {
+      _lastSyncAttemptAt = now;
       final sync = await _repository.syncFromServer();
       if (sync.succeeded) {
         _lastSyncAt = now;
@@ -420,6 +426,7 @@ class ScheduledPostCoordinator {
     ScheduledPost post,
   ) async {
     if (post.attempts == 0) return (post: post, redate: true);
+    _lastSyncAttemptAt = _now();
     final sync = await _repository.syncFromServer();
     if (_stop) return null;
     if (!sync.succeeded) {
@@ -845,9 +852,10 @@ class ScheduledPostCoordinator {
     }
     if (!_isInitialized || _disposed || !_foreground || _isSweeping) return;
     if (pending.isNotEmpty || _serverOnly.isNotEmpty) {
-      final elapsed = _lastSyncAt == null
+      final lastAttempt = _lastSyncAttemptAt;
+      final elapsed = lastAttempt == null
           ? _syncInterval
-          : _now().difference(_lastSyncAt!);
+          : _now().difference(lastAttempt);
       final untilSync = _syncInterval - elapsed;
       final syncWait = untilSync.isNegative ? Duration.zero : untilSync;
       if (delay == null || syncWait < delay) delay = syncWait;
