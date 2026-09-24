@@ -63,14 +63,12 @@ class _ProfileActionsSheetContentState
     };
 
     Navigator.of(context).pop();
-    if (context.mounted) {
-      runDetached(
-        context.push<void>(route),
-        'open profile action destination',
-        logName: 'ProfileActionsSheetContent',
-        category: LogCategory.ui,
-      );
-    }
+    runDetached(
+      context.push<void>(route),
+      'open profile action destination',
+      logName: 'ProfileActionsSheetContent',
+      category: LogCategory.ui,
+    );
   }
 
   @override
