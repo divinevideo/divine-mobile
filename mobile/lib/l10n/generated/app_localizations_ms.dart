@@ -7432,7 +7432,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Apa yang anda tulis di sini akan disiarkan dalam repositori sumber terbuka kami di GitHub supaya pembangun boleh mengendalikannya, bersama maklumat asas peranti seperti model telefon dan versi aplikasi anda. Akaun anda dan log diagnostik aplikasi kekal peribadi dengan pasukan sokongan kami. Jangan masukkan apa-apa yang anda tidak mahu didedahkan kepada umum.';
+      'Apa yang anda tulis di sini akan disiarkan dalam repositori sumber terbuka kami di GitHub supaya pembangun boleh mengendalikannya, bersama maklumat asas peranti seperti model telefon dan versi apl anda. Akaun anda dan log diagnostik apl kekal sulit dalam simpanan pasukan sokongan kami. Jangan masukkan apa-apa yang anda tidak mahu didedahkan kepada umum.';
 
   @override
   String get supportRequiredHelper => 'Diperlukan';
