@@ -3584,6 +3584,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get dmVideoSendFailed => 'Không gửi được video';
 
   @override
+  String dmVideoTooLarge(int maxMegabytes) {
+    return 'Video này quá lớn để gửi. Hãy chọn video dưới $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Lưu video';
 
   @override

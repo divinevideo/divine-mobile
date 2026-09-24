@@ -6202,6 +6202,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t send video'**
   String get dmVideoSendFailed;
 
+  /// SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
+  String dmVideoTooLarge(int maxMegabytes);
+
   /// No description provided for @shareSheetSaveVideo.
   ///
   /// In en, this message translates to:

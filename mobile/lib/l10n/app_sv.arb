@@ -1299,6 +1299,7 @@
     "dmVideoUnavailable": "Det gick inte att öppna videon",
     "dmVideoSent": "Video skickad",
     "dmVideoSendFailed": "Det gick inte att skicka videon",
+    "dmVideoTooLarge": "Den här videon är för stor för att skickas. Välj en under {maxMegabytes} MB",
     "shareSheetSaveVideo": "Spara video",
     "shareSheetAddToClips": "Lägg till i klipp",
     "shareSheetAddToClipsFailed": "Kunde inte lägga till i klipp",

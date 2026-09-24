@@ -924,6 +924,7 @@
     "dmVideoUnavailable": "Hindi mabuksan ang video",
     "dmVideoSent": "Naipadala ang video",
     "dmVideoSendFailed": "Hindi maipadala ang video",
+    "dmVideoTooLarge": "Masyadong malaki ang video na ito para ipadala. Pumili ng mas maliit sa {maxMegabytes} MB",
     "shareSheetSaveVideo": "I-save ang Video",
     "shareSheetAddToClips": "Idagdag sa clips",
     "shareSheetAddToClipsFailed": "Hindi naidagdag sa clips",

@@ -1800,6 +1800,7 @@
   "dmVideoUnavailable": "Không mở được video này",
   "dmVideoSent": "Đã gửi video",
   "dmVideoSendFailed": "Không gửi được video",
+  "dmVideoTooLarge": "Video này quá lớn để gửi. Hãy chọn video dưới {maxMegabytes} MB",
   "shareSheetSaveVideo": "Lưu video",
   "shareSheetAddToClips": "Thêm vào clip",
   "@shareSheetAddToClips": {

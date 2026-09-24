@@ -2284,6 +2284,15 @@
   "@dmVideoSendFailed": {
     "description": "SnackBar shown in a DM conversation when an encrypted video DM fails to upload or send. The composer stays usable, so the user can attach the video again."
   },
+  "dmVideoTooLarge": "That video's too big to send. Pick one under {maxMegabytes} MB",
+  "@dmVideoTooLarge": {
+    "description": "SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.",
+    "placeholders": {
+      "maxMegabytes": {
+        "type": "int"
+      }
+    }
+  },
   "shareSheetSaveVideo": "Save Video",
   "shareSheetAddToClips": "Add to clips",
   "@shareSheetAddToClips": {

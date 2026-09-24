@@ -1299,6 +1299,7 @@
     "dmVideoUnavailable": "Nu am putut deschide acest videoclip",
     "dmVideoSent": "Videoclip trimis",
     "dmVideoSendFailed": "Nu am putut trimite videoclipul",
+    "dmVideoTooLarge": "Acest videoclip e prea mare pentru a fi trimis. Alege unul sub {maxMegabytes} MB",
     "shareSheetSaveVideo": "Salvează videoclipul",
     "shareSheetAddToClips": "Adaugă la clipuri",
     "shareSheetAddToClipsFailed": "Nu s-a putut adăuga la clipuri",

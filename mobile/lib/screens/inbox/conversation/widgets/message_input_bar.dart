@@ -152,33 +152,27 @@ class _MessageInputBarState extends State<MessageInputBar> {
                     start: 4,
                     bottom: 4,
                   ),
-                  child: Semantics(
-                    identifier: 'dm_attach_video_button',
-                    button: true,
-                    label: widget.isAttachVideoBusy
-                        ? context.l10n.libraryPreparingVideo
-                        : context.l10n.dmAttachVideo,
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: IconButton(
-                        onPressed: widget.isAttachVideoBusy
-                            ? null
-                            : widget.onAttachVideo,
-                        padding: EdgeInsets.zero,
-                        icon: widget.isAttachVideoBusy
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : DivineIcon(
-                                icon: DivineIconName.videoCamera,
-                                color: context.vineColors.onSurfaceMuted,
-                                size: 20,
+                  child: SizedBox.square(
+                    dimension: 40,
+                    child: widget.isAttachVideoBusy
+                        ? Center(
+                            child: SizedBox.square(
+                              dimension: 20,
+                              child: DivineCircularProgressIndicator(
+                                strokeWidth: 2,
+                                semanticsLabel:
+                                    context.l10n.libraryPreparingVideo,
                               ),
-                      ),
-                    ),
+                            ),
+                          )
+                        : DivineIconButton(
+                            icon: DivineIconName.videoCamera,
+                            type: DivineIconButtonType.ghostSecondary,
+                            size: DivineIconButtonSize.small,
+                            onPressed: widget.onAttachVideo,
+                            semanticLabel: context.l10n.dmAttachVideo,
+                            semanticIdentifier: 'dm_attach_video_button',
+                          ),
                   ),
                 ),
               // Text input

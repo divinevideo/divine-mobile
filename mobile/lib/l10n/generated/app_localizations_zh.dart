@@ -3379,6 +3379,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmVideoSendFailed => '无法发送视频';
 
   @override
+  String dmVideoTooLarge(int maxMegabytes) {
+    return '这个视频太大，无法发送。请选择小于 $maxMegabytes MB 的视频';
+  }
+
+  @override
   String get shareSheetSaveVideo => '保存视频';
 
   @override

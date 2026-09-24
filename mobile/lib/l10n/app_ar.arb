@@ -1289,6 +1289,7 @@
     "dmVideoUnavailable": "تعذّر فتح هذا الفيديو",
     "dmVideoSent": "تم إرسال الفيديو",
     "dmVideoSendFailed": "تعذّر إرسال الفيديو",
+    "dmVideoTooLarge": "هذا الفيديو كبير جدًا للإرسال. اختر فيديو أصغر من {maxMegabytes} ميغابايت",
     "shareSheetSaveVideo": "حفظ الفيديو",
     "shareSheetAddToClips": "إضافة إلى المقاطع",
     "shareSheetAddToClipsFailed": "تعذّرت الإضافة إلى المقاطع",

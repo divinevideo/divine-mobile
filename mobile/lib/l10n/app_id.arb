@@ -1296,6 +1296,7 @@
     "dmVideoUnavailable": "Tidak dapat membuka video ini",
     "dmVideoSent": "Video terkirim",
     "dmVideoSendFailed": "Tidak dapat mengirim video",
+    "dmVideoTooLarge": "Video ini terlalu besar untuk dikirim. Pilih yang di bawah {maxMegabytes} MB",
     "shareSheetSaveVideo": "Simpan Video",
     "shareSheetAddToClips": "Tambahkan ke klip",
     "shareSheetAddToClipsFailed": "Tidak dapat menambahkan ke klip",

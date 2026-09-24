@@ -1296,6 +1296,7 @@
     "dmVideoUnavailable": "Video açılamadı",
     "dmVideoSent": "Video gönderildi",
     "dmVideoSendFailed": "Video gönderilemedi",
+    "dmVideoTooLarge": "Bu video göndermek için çok büyük. {maxMegabytes} MB'den küçük bir video seç",
     "shareSheetSaveVideo": "Videoyu Kaydet",
     "shareSheetAddToClips": "Kliplere ekle",
     "shareSheetAddToClipsFailed": "Kliplere eklenemedi",

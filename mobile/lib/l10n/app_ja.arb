@@ -1289,6 +1289,7 @@
     "dmVideoUnavailable": "動画を開けませんでした",
     "dmVideoSent": "動画を送信しました",
     "dmVideoSendFailed": "動画を送信できませんでした",
+    "dmVideoTooLarge": "この動画は大きすぎて送信できません。{maxMegabytes} MB未満の動画を選んでください",
     "shareSheetSaveVideo": "動画を保存",
     "shareSheetAddToClips": "クリップに追加",
     "shareSheetAddToClipsFailed": "クリップに追加できませんでした",

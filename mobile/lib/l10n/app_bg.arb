@@ -1383,6 +1383,7 @@
     "dmVideoUnavailable": "Видеото не можа да се отвори",
     "dmVideoSent": "Видеото е изпратено",
     "dmVideoSendFailed": "Видеото не можа да се изпрати",
+    "dmVideoTooLarge": "Това видео е твърде голямо за изпращане. Избери такова под {maxMegabytes} MB",
     "shareSheetSaveVideo": "Запази видео",
     "shareSheetAddToClips": "Добави към клипове",
     "@shareSheetAddToClips": {

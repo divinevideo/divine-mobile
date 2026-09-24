@@ -8,6 +8,31 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// Largest plaintext video accepted for an encrypted video DM.
+///
+/// The whole file is held in memory for AES-GCM on both the send and receive
+/// side, so the ceiling bounds peak memory as well as upload cost.
+const int dmVideoMaxPlaintextBytes = 100 * 1024 * 1024;
+
+/// Largest ciphertext blob a receiver will download: the plaintext ceiling
+/// plus the 16-byte GCM tag appended by [FileEncryption].
+const int dmVideoMaxCiphertextBytes = dmVideoMaxPlaintextBytes + 16;
+
+/// Thrown by [DmVideoEncryption.encryptFile] when the file exceeds
+/// [dmVideoMaxPlaintextBytes].
+class DmVideoTooLargeException implements Exception {
+  /// Creates a [DmVideoTooLargeException] for a file of [sizeBytes].
+  const DmVideoTooLargeException(this.sizeBytes);
+
+  /// Size of the rejected file in bytes.
+  final int sizeBytes;
+
+  @override
+  String toString() =>
+      'DmVideoTooLargeException: $sizeBytes bytes exceeds '
+      '$dmVideoMaxPlaintextBytes';
+}
+
 /// Result of encrypting a video file for an encrypted video DM.
 ///
 /// Carries the on-disk ciphertext plus the key/nonce needed by the recipient.
@@ -55,7 +80,14 @@ class DmVideoEncryption {
   /// Generates a fresh random 256-bit key and 96-bit nonce for every call and
   /// writes `ciphertext || GCM tag` to a temp file named by its own hash. The
   /// plaintext is never written to disk.
+  ///
+  /// Throws a [DmVideoTooLargeException] before reading the file when it is
+  /// larger than [dmVideoMaxPlaintextBytes].
   Future<EncryptedVideoFile> encryptFile(File plaintextFile) async {
+    final size = await plaintextFile.length();
+    if (size > dmVideoMaxPlaintextBytes) {
+      throw DmVideoTooLargeException(size);
+    }
     final plaintext = await plaintextFile.readAsBytes();
     final plaintextHash = HashUtil.sha256Hash(plaintext);
 

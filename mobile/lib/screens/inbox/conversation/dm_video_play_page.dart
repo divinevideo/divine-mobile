@@ -1,77 +1,30 @@
 // ABOUTME: Full-screen playback page for a received encrypted (kind 15) video
-// ABOUTME: DM. Decrypts to a message-unique temp clip, plays it, saves it to the
-// ABOUTME: gallery on demand, and deletes the plaintext on dispose or failure.
+// ABOUTME: DM. Decrypts through DmVideoPlaybackCubit, plays, and saves on demand.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
-import 'package:openvine/services/dm_video_decryptor.dart';
-import 'package:openvine/services/gallery_save_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pro_video_editor/pro_video_editor.dart';
-import 'package:unified_logger/unified_logger.dart';
-
-/// Directory `VideoClip.memory` writes decrypted clips into under the platform
-/// temporary directory. Mirrors the package's own path so this page can clean
-/// up a partial write even when no [VideoClip] was returned.
-const _memoryDirName = 'divine_player_memory';
-
-/// Path `VideoClip.memory` writes [fileName] to.
-///
-/// Resolved before decrypting so a partial plaintext write can be deleted even
-/// when `VideoClip.memory` throws before returning a clip. Matches the
-/// package's own concatenation exactly on every platform.
-Future<String> _resolveTempPath(String fileName) async {
-  final dir = await getTemporaryDirectory();
-  return '${dir.path}/$_memoryDirName/$fileName';
-}
-
-/// Best-effort synchronous delete of a decrypted plaintext temp file.
-void _deleteTempFile(String path) {
-  try {
-    final file = File(path);
-    if (file.existsSync()) file.deleteSync();
-  } catch (error, stackTrace) {
-    Log.warning(
-      'Could not delete decrypted video temp file',
-      name: 'DmVideoPlayPage',
-      category: LogCategory.video,
-      error: error,
-      stackTrace: stackTrace,
-    );
-  }
-}
-
-/// Decrypt-to-play progress of [DmVideoPlayPage].
-enum _LoadStatus { loading, ready, error }
+import 'package:openvine/providers/video_providers.dart';
 
 /// Plays a received encrypted video DM.
 ///
-/// The ciphertext is downloaded and AES-GCM decrypted into a temp file named
-/// [clipFileNameFor] the message, played, and deleted when the page is
-/// disposed or the decrypt fails. The key and nonce stay in memory only —
-/// they are never logged or persisted here.
-class DmVideoPlayPage extends ConsumerStatefulWidget {
+/// The page wires [DmVideoPlaybackCubit]; the cubit owns the decrypted temp
+/// file and deletes it when the page closes. The key and nonce never leave
+/// the message metadata.
+class DmVideoPlayPage extends ConsumerWidget {
   /// Creates a play page for [message], a kind 15 video DM.
-  const DmVideoPlayPage({
-    required this.message,
-    this.decryptor,
-    super.key,
-  });
+  const DmVideoPlayPage({required this.message, super.key});
 
   /// The received kind 15 message whose [DmMessage.fileMetadata] is a video.
   final DmMessage message;
-
-  /// Download/decrypt service. Defaults to [DmVideoDecryptor]; tests inject a
-  /// fake.
-  final DmVideoDecryptor? decryptor;
 
   /// Opens the page for [message] on the enclosing navigator.
   static Future<void> open(BuildContext context, DmMessage message) {
@@ -82,240 +35,201 @@ class DmVideoPlayPage extends ConsumerStatefulWidget {
     );
   }
 
-  /// Temp file name for [message]'s decrypted clip.
-  ///
-  /// Keyed on the message id so two play pages never share a temp path, and
-  /// the extension is taken from the wire MIME type so the native decoder sees
-  /// a recognisable container.
-  static String clipFileNameFor(DmMessage message) {
-    final slash = (message.fileMetadata?.fileType ?? '').indexOf('/');
-    final raw = slash == -1
-        ? ''
-        : message.fileMetadata!.fileType.substring(
-            slash + 1,
-          );
-    final extension = raw.replaceAll(RegExp('[^A-Za-z0-9]'), '');
-    return 'dm_video_${message.id}.${extension.isEmpty ? 'mp4' : extension}';
-  }
-
   @override
-  ConsumerState<DmVideoPlayPage> createState() => _DmVideoPlayPageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Both services are stateless and account-independent.
+    final decryptor = ref.watch(dmVideoDecryptorProvider);
+    final gallerySaveService = ref.watch(gallerySaveServiceProvider);
+    return BlocProvider(
+      key: ValueKey((decryptor, gallerySaveService)),
+      create: (_) => DmVideoPlaybackCubit(
+        message: message,
+        decryptor: decryptor,
+        gallerySaveService: gallerySaveService,
+      )..load(),
+      child: const DmVideoPlayView(),
+    );
+  }
 }
 
-class _DmVideoPlayPageState extends ConsumerState<DmVideoPlayPage> {
-  _LoadStatus _status = _LoadStatus.loading;
-  DivineVideoPlayerController? _controller;
-  VideoClip? _clip;
+/// UI for [DmVideoPlayPage]. Reads [DmVideoPlaybackCubit] from context.
+class DmVideoPlayView extends StatelessWidget {
+  /// Creates a [DmVideoPlayView].
+  @visibleForTesting
+  const DmVideoPlayView({super.key});
 
-  /// The path [VideoClip.memory] will write to. Tracked separately from
-  /// [_clip] so a decrypt failure that left a partial file behind is still
-  /// cleaned up.
-  String? _tempPath;
-  bool _saving = false;
+  @override
+  Widget build(BuildContext context) {
+    final status = context.select(
+      (DmVideoPlaybackCubit cubit) => cubit.state.status,
+    );
+    return BlocListener<DmVideoPlaybackCubit, DmVideoPlaybackState>(
+      listenWhen: (previous, current) =>
+          previous.saveStatus != current.saveStatus,
+      listener: _onSaveStatus,
+      child: Scaffold(
+        backgroundColor: VineTheme.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: VineTheme.transparent,
+          foregroundColor: VineTheme.whiteText,
+          actions: [
+            if (status == DmVideoPlaybackStatus.ready) const _SaveButton(),
+          ],
+        ),
+        body: Center(
+          child: switch (status) {
+            DmVideoPlaybackStatus.loading => const _Loading(),
+            DmVideoPlaybackStatus.failed => const _Unavailable(),
+            DmVideoPlaybackStatus.ready => const _Player(),
+          },
+        ),
+      ),
+    );
+  }
+
+  void _onSaveStatus(BuildContext context, DmVideoPlaybackState state) {
+    final l10n = context.l10n;
+    final destination = GallerySaveService.destinationName;
+    final (message, isError) = switch (state.saveStatus) {
+      DmVideoSaveStatus.idle || DmVideoSaveStatus.saving => (null, false),
+      DmVideoSaveStatus.saved => (
+        l10n.libraryClipsSavedToDestination(1, destination),
+        false,
+      ),
+      DmVideoSaveStatus.permissionDenied => (
+        l10n.libraryGalleryPermissionDenied(destination),
+        true,
+      ),
+      DmVideoSaveStatus.failed => (l10n.videoClipSaveFailed, true),
+    };
+    if (message == null) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
+  }
+}
+
+class _SaveButton extends StatelessWidget {
+  const _SaveButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final saving = context.select(
+      (DmVideoPlaybackCubit cubit) =>
+          cubit.state.saveStatus == DmVideoSaveStatus.saving,
+    );
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 8),
+      child: DivineIconButton(
+        icon: DivineIconName.downloadSimple,
+        type: DivineIconButtonType.ghostOverMedia,
+        size: DivineIconButtonSize.small,
+        onPressed: saving
+            ? null
+            : () => context.read<DmVideoPlaybackCubit>().saveToGallery(),
+        semanticLabel: context.l10n.shareSheetSaveVideo,
+      ),
+    );
+  }
+}
+
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 16,
+      children: [
+        const DivineCircularProgressIndicator(color: VineTheme.whiteText),
+        Text(
+          context.l10n.commonLoading,
+          style: VineTheme.bodyLargeFont(color: VineTheme.whiteText),
+        ),
+      ],
+    );
+  }
+}
+
+class _Unavailable extends StatelessWidget {
+  const _Unavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 16,
+      children: [
+        const DivineIcon(
+          icon: DivineIconName.warningCircle,
+          color: VineTheme.whiteText,
+          size: 48,
+        ),
+        Text(
+          context.l10n.dmVideoUnavailable,
+          style: VineTheme.bodyLargeFont(color: VineTheme.whiteText),
+        ),
+      ],
+    );
+  }
+}
+
+/// Plays the decrypted clip. Owns the native player controller; a player
+/// failure is reported to the cubit, which deletes the clip.
+class _Player extends StatefulWidget {
+  const _Player();
+
+  @override
+  State<_Player> createState() => _PlayerState();
+}
+
+class _PlayerState extends State<_Player> {
+  DivineVideoPlayerController? _controller;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_load());
+    final path = context.read<DmVideoPlaybackCubit>().state.clipPath;
+    if (path != null) unawaited(_start(path));
   }
 
-  Future<void> _load() async {
-    final fileMetadata = widget.message.fileMetadata;
-    if (fileMetadata == null || !fileMetadata.isVideo) {
-      setState(() => _status = _LoadStatus.error);
+  Future<void> _start(String path) async {
+    final controller = DivineVideoPlayerController(
+      useTexture: true,
+      debugLabel: 'dm_video_play',
+    );
+    try {
+      await controller.initialize();
+      await controller.setSource(VideoClip.file(path));
+      await controller.play();
+    } catch (error, stackTrace) {
+      await controller.dispose();
+      if (mounted) {
+        context.read<DmVideoPlaybackCubit>().playbackFailed(error, stackTrace);
+      }
       return;
     }
-
-    final fileName = DmVideoPlayPage.clipFileNameFor(widget.message);
-    _tempPath = await _resolveTempPath(fileName);
-
-    DivineVideoPlayerController? controller;
-    try {
-      final decryptor = widget.decryptor ?? DmVideoDecryptor();
-      final clip = await decryptor.materialize(
-        url: widget.message.content,
-        key: fileMetadata.decryptionKey,
-        nonce: fileMetadata.decryptionNonce,
-        fileName: fileName,
-      );
-      if (!mounted) {
-        _deleteTempFile(clip.uri);
-        return;
-      }
-
-      controller = DivineVideoPlayerController(
-        useTexture: true,
-        debugLabel: 'dm_video_play',
-      );
-      try {
-        await controller.initialize();
-        await controller.setSource(clip);
-        await controller.play();
-      } catch (_) {
-        await controller.dispose();
-        rethrow;
-      }
-
-      if (!mounted) {
-        await controller.dispose();
-        _deleteTempFile(clip.uri);
-        return;
-      }
-
-      setState(() {
-        _controller = controller;
-        _clip = clip;
-        _status = _LoadStatus.ready;
-      });
-    } catch (error, stackTrace) {
-      Log.error(
-        'Encrypted video DM failed to decrypt or load',
-        name: 'DmVideoPlayPage',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      await controller?.dispose();
-      _cleanupTempFiles();
-      if (mounted) setState(() => _status = _LoadStatus.error);
+    if (!mounted) {
+      await controller.dispose();
+      return;
     }
-  }
-
-  Future<void> _saveToGallery() async {
-    final clip = _clip;
-    if (clip == null || _saving) return;
-    setState(() => _saving = true);
-
-    final result = await ref
-        .read(gallerySaveServiceProvider)
-        .saveVideoToGallery(EditorVideo.file(clip.uri));
-
-    if (!mounted) return;
-    setState(() => _saving = false);
-
-    final l10n = context.l10n;
-    final destination = GallerySaveService.destinationName;
-    final (message, isError) = switch (result) {
-      GallerySaveSuccess() => (
-        l10n.libraryClipsSavedToDestination(1, destination),
-        false,
-      ),
-      GallerySavePermissionDenied() => (
-        l10n.libraryGalleryPermissionDenied(destination),
-        true,
-      ),
-      GallerySaveFailure() => (l10n.videoClipSaveFailed, true),
-    };
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
-  }
-
-  /// Deletes every temp path this page could have written.
-  void _cleanupTempFiles() {
-    final clipUri = _clip?.uri;
-    if (clipUri != null) _deleteTempFile(clipUri);
-    final tempPath = _tempPath;
-    if (tempPath != null) _deleteTempFile(tempPath);
+    setState(() => _controller = controller);
   }
 
   @override
   void dispose() {
     final controller = _controller;
     if (controller != null) unawaited(controller.dispose());
-    _cleanupTempFiles();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        actions: [
-          if (_status == _LoadStatus.ready)
-            IconButton(
-              onPressed: _saving ? null : _saveToGallery,
-              tooltip: context.l10n.shareSheetSaveVideo,
-              icon: const DivineIcon(
-                icon: DivineIconName.downloadSimple,
-                color: Colors.white,
-              ),
-            ),
-        ],
-      ),
-      body: Center(child: _buildBody(context)),
-    );
-  }
-
-  Widget _buildBody(BuildContext context) {
-    return switch (_status) {
-      _LoadStatus.loading => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(color: Colors.white),
-          const SizedBox(height: 16),
-          Text(
-            context.l10n.commonLoading,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ],
-      ),
-      _LoadStatus.error => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const DivineIcon(
-            icon: DivineIconName.warningCircle,
-            color: Colors.white,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            context.l10n.dmVideoUnavailable,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ],
-      ),
-      _LoadStatus.ready => DivineVideoPlayer(controller: _controller),
-    };
-  }
-}
-
-/// Decrypts [message]'s encrypted video DM and saves it to the device gallery.
-///
-/// Reuses [GallerySaveService] on the decrypted clip and always removes the
-/// temp file before returning. The key and nonce stay in memory only. Throws
-/// if the download or decrypt fails; otherwise the result never throws.
-Future<GallerySaveResult> saveEncryptedVideoDm({
-  required DmMessage message,
-  required GallerySaveService gallerySaveService,
-  DmVideoDecryptor? decryptor,
-}) async {
-  final fileMetadata = message.fileMetadata;
-  if (fileMetadata == null || !fileMetadata.isVideo) {
-    return const GallerySaveFailure('Message is not a video');
-  }
-
-  VideoClip? clip;
-  String? tempPath;
-  try {
-    final fileName = DmVideoPlayPage.clipFileNameFor(message);
-    // Resolve the target before decrypting so a partial plaintext write is
-    // deleted even if `VideoClip.memory` throws before returning a clip.
-    tempPath = await _resolveTempPath(fileName);
-    clip = await (decryptor ?? DmVideoDecryptor()).materialize(
-      url: message.content,
-      key: fileMetadata.decryptionKey,
-      nonce: fileMetadata.decryptionNonce,
-      fileName: fileName,
-    );
-    return await gallerySaveService.saveVideoToGallery(
-      EditorVideo.file(clip.uri),
-    );
-  } finally {
-    final path = clip?.uri ?? tempPath;
-    if (path != null) _deleteTempFile(path);
+    final controller = _controller;
+    if (controller == null) {
+      return const DivineCircularProgressIndicator(color: VineTheme.whiteText);
+    }
+    return DivineVideoPlayer(controller: controller);
   }
 }

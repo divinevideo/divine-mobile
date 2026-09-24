@@ -849,6 +849,7 @@
     "dmVideoUnavailable": "영상을 열지 못했어요",
     "dmVideoSent": "영상을 보냈어요",
     "dmVideoSendFailed": "영상을 보내지 못했어요",
+    "dmVideoTooLarge": "이 동영상은 너무 커서 보낼 수 없어요. {maxMegabytes}MB 미만의 동영상을 선택하세요",
     "shareSheetSaveVideo": "영상 저장",
     "shareSheetAddToClips": "클립에 추가",
     "shareSheetAddToClipsFailed": "클립에 추가할 수 없어요",

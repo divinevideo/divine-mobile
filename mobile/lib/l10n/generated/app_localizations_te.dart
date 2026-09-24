@@ -3751,6 +3751,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get dmVideoSendFailed => 'వీడియోను పంపడం సాధ్యపడలేదు';
 
   @override
+  String dmVideoTooLarge(int maxMegabytes) {
+    return 'ఈ వీడియో పంపడానికి చాలా పెద్దది. $maxMegabytes MB కంటే తక్కువ ఉన్నదాన్ని ఎంచుకోండి';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'వీడియోను సేవ్ చేయండి';
 
   @override

@@ -1800,6 +1800,7 @@
   "dmVideoUnavailable": "یہ ویڈیو نہیں کھل سکی",
   "dmVideoSent": "ویڈیو بھیج دی گئی",
   "dmVideoSendFailed": "ویڈیو نہیں بھیجی جا سکی",
+  "dmVideoTooLarge": "یہ ویڈیو بھیجنے کے لیے بہت بڑی ہے۔ {maxMegabytes} MB سے چھوٹی ویڈیو منتخب کریں",
   "shareSheetSaveVideo": "ویڈیو محفوظ کریں",
   "shareSheetAddToClips": "کلپس میں شامل کریں",
   "@shareSheetAddToClips": {

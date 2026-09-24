@@ -3722,6 +3722,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get dmVideoSendFailed => 'Nu am putut trimite videoclipul';
 
   @override
+  String dmVideoTooLarge(int maxMegabytes) {
+    return 'Acest videoclip e prea mare pentru a fi trimis. Alege unul sub $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Salvează videoclipul';
 
   @override

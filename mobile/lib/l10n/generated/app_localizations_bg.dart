@@ -3662,6 +3662,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmVideoSendFailed => 'Видеото не можа да се изпрати';
 
   @override
+  String dmVideoTooLarge(int maxMegabytes) {
+    return 'Това видео е твърде голямо за изпращане. Избери такова под $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Запази видео';
 
   @override

@@ -37,6 +37,7 @@ import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
+import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
@@ -472,6 +473,13 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
     blossom: ref.watch(blossomUploadServiceProvider),
   );
 });
+
+/// Downloads and decrypts received encrypted video DMs.
+///
+/// Stateless apart from its HTTP client, so it outlives account switches.
+final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
+  (ref) => DmVideoDecryptor(),
+);
 
 /// Gallery picker used to choose a video to attach to a DM.
 ///

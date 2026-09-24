@@ -1299,6 +1299,7 @@
     "dmVideoUnavailable": "Nie udało się otworzyć tego filmu",
     "dmVideoSent": "Film wysłany",
     "dmVideoSendFailed": "Nie udało się wysłać filmu",
+    "dmVideoTooLarge": "Ten film jest za duży, żeby go wysłać. Wybierz film poniżej {maxMegabytes} MB",
     "shareSheetSaveVideo": "Zapisz film",
     "shareSheetAddToClips": "Dodaj do klipów",
     "shareSheetAddToClipsFailed": "Nie można dodać do klipów",

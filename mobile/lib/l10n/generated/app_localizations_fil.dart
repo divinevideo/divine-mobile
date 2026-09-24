@@ -3631,6 +3631,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get dmVideoSendFailed => 'Hindi maipadala ang video';
 
   @override
+  String dmVideoTooLarge(int maxMegabytes) {
+    return 'Masyadong malaki ang video na ito para ipadala. Pumili ng mas maliit sa $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'I-save ang Video';
 
   @override
