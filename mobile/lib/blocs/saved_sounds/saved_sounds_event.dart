@@ -27,14 +27,19 @@ final class SavedSoundSaveRequested extends SavedSoundsEvent {
     required this.sound,
     required this.completer,
     this.sourceContext,
+    this.personalLabel,
   });
 
   final AudioEvent sound;
   final SavedSoundSourceContext? sourceContext;
+
+  /// Optional private name supplied at save time (e.g. the import flow's name
+  /// field). Null leaves the record unnamed.
+  final String? personalLabel;
   final Completer<SavedSoundSaveResult> completer;
 
   @override
-  List<Object?> get props => [sound, sourceContext, completer];
+  List<Object?> get props => [sound, sourceContext, personalLabel, completer];
 }
 
 final class SavedSoundDetailsChanged extends SavedSoundsEvent {

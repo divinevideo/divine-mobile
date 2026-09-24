@@ -716,6 +716,15 @@ const _knownUntranslatedDebt = <String>{
   // Create-account marketing opt-in translation is deferred until the locale
   // pass for this new consent copy.
   'authCreateAccountMarketingOptIn',
+  // Library file import (#8024 follow-up). These are new user-visible strings
+  // for the Add sound flow; translation is deferred to the next human l10n
+  // pass rather than machine-translated.
+  'soundsAddSound',
+  'soundsImportPromptTitle',
+  'soundsImportPromptDescription',
+  'soundsImportUnsupportedFormat',
+  'soundsImportUnreadable',
+  'soundsImportAccountChanged',
   // The four social-proof keys and searchUserVideoCount left this list when
   // this branch translated them into every locale.
 };

@@ -10,10 +10,34 @@ typedef AudioImportStorageRootProvider = Future<Directory> Function();
 typedef AudioImportDurationResolver = Future<Duration?> Function(File file);
 typedef AudioImportClock = DateTime Function();
 
+/// Why an audio import failed.
+///
+/// The caller has to tell these apart: an unsupported or unreadable pick is a
+/// dead end the user resolves by choosing a different file, while a decoder
+/// failure means the bytes were there but not playable. Import UI renders a
+/// different remedy for each rather than one generic "import failed".
+enum LocalAudioImportFailureReason {
+  /// The picked path does not exist or could not be opened.
+  unreadableSource,
+
+  /// The file extension is not one of the supported audio containers.
+  unsupportedType,
+
+  /// Copying the picked file into library storage failed.
+  copyFailed,
+
+  /// The file was copied but could not be decoded as audio.
+  decodeFailed,
+}
+
 class LocalAudioImportException implements Exception {
-  const LocalAudioImportException(this.message);
+  const LocalAudioImportException(
+    this.message, {
+    this.reason = LocalAudioImportFailureReason.unreadableSource,
+  });
 
   final String message;
+  final LocalAudioImportFailureReason reason;
 
   @override
   String toString() => message;
@@ -32,11 +56,23 @@ class LocalAudioImportService {
   final AudioImportDurationResolver _durationResolver;
   final AudioImportClock _clock;
 
+  /// Process-wide counter folded into every import id and file name so two
+  /// imports that land in the same clock tick — the same injected clock in a
+  /// test, or two picks inside one microsecond — still get distinct identities.
+  static int _importSequence = 0;
+
   /// Copies [sourcePath] into library-owned audio storage.
   ///
   /// The destination is [libraryAudioImportsDirName], not the open draft: an
   /// imported track can be saved to My Sounds and outlive any draft, so no
   /// draft owns it (#8024).
+  ///
+  /// The returned [AudioEvent.id] is unique per call (microsecond timestamp),
+  /// because two picks in the same millisecond used to collide and the second
+  /// import would silently overwrite the first in the library.
+  ///
+  /// A copy that cannot be decoded is deleted before throwing, so a failed
+  /// import never leaves an abandoned file behind.
   Future<AudioEvent> importAudioFile({
     required String sourcePath,
     required String displayName,
@@ -51,27 +87,58 @@ class LocalAudioImportService {
     if (mimeType == null) {
       throw const LocalAudioImportException(
         'That audio file type is not supported.',
+        reason: LocalAudioImportFailureReason.unsupportedType,
       );
     }
 
     final now = _clock();
+    final uniqueSuffix = '${now.microsecondsSinceEpoch}_${_importSequence++}';
     final fileName = _safeFileName(
-      '${now.millisecondsSinceEpoch}_${p.basename(displayName)}',
+      '${uniqueSuffix}_${p.basename(displayName)}',
     );
     final root = await _storageRootProvider();
     await root.create(recursive: true);
 
-    final copied = await source.copy(p.join(root.path, fileName));
-    final duration = await _durationResolver(copied);
+    final File copied;
+    try {
+      copied = await source.copy(p.join(root.path, fileName));
+    } on Exception catch (error) {
+      throw LocalAudioImportException(
+        'The audio file could not be copied: $error',
+        reason: LocalAudioImportFailureReason.copyFailed,
+      );
+    }
+
+    final Duration? duration;
+    try {
+      duration = await _durationResolver(copied);
+    } catch (error) {
+      await _deleteQuietly(copied);
+      throw const LocalAudioImportException(
+        'That audio file could not be read.',
+        reason: LocalAudioImportFailureReason.decodeFailed,
+      );
+    }
 
     return AudioEvent.fromLocalImport(
-      id: 'local_import_${now.millisecondsSinceEpoch}',
+      id: 'local_import_$uniqueSuffix',
       filePath: copied.path,
       createdAt: now.millisecondsSinceEpoch ~/ 1000,
       title: _titleFromDisplayName(displayName),
       mimeType: mimeType,
       duration: duration == null ? null : duration.inMilliseconds / 1000,
     );
+  }
+
+  /// Deletes [file], swallowing a failure so it cannot mask the original error.
+  Future<void> _deleteQuietly(File file) async {
+    try {
+      if (file.existsSync()) await file.delete();
+    } on Exception {
+      // The copy is unreferenced and will be reclaimed by the import UI's
+      // cleanup path or the device's own cleanup; reporting a delete failure
+      // here would replace the decode error the user needs to see.
+    }
   }
 
   static Future<Directory> _defaultStorageRoot() async {

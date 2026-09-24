@@ -4176,6 +4176,27 @@ class AppLocalizationsIt extends AppLocalizations {
       'Tocca Usa suono su un video per salvarlo qui.';
 
   @override
+  String get soundsAddSound => 'Add sound';
+
+  @override
+  String get soundsImportPromptTitle => 'Import a sound';
+
+  @override
+  String get soundsImportPromptDescription =>
+      'Pick an audio file from your device. It stays private in My Sounds.';
+
+  @override
+  String get soundsImportUnsupportedFormat =>
+      'That file type isn\'t supported. Pick an audio file.';
+
+  @override
+  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+
+  @override
+  String get soundsImportAccountChanged =>
+      'You switched accounts, so this import was cancelled.';
+
+  @override
   String get soundsRemoveSavedSound => 'Rimuovi suono';
 
   @override

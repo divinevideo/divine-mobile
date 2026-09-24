@@ -165,7 +165,6 @@ void main() {
 
     Future<void> pumpSoundsTab(
       WidgetTester tester, {
-      Future<AudioEvent?> Function(BuildContext)? showAudioPicker,
       AudioPlaybackService? audioService,
       FutureOr<bool> Function(String path)? localFileExists,
     }) async {
@@ -192,15 +191,18 @@ void main() {
                 routes: [
                   GoRoute(
                     path: '/',
-                    builder: (context, state) => Scaffold(
-                      body: SoundsTab(showAudioPicker: showAudioPicker),
-                    ),
+                    builder: (context, state) =>
+                        const Scaffold(body: SoundsTab()),
                   ),
                   GoRoute(
                     path: '/sound/:id',
-                    builder: (context, state) => Text(
-                      'sound detail ${state.pathParameters['id']}',
-                    ),
+                    builder: (context, state) =>
+                        Text('sound detail ${state.pathParameters['id']}'),
+                  ),
+                  GoRoute(
+                    path: '/sounds/import',
+                    builder: (context, state) =>
+                        const Text('import sound page'),
                   ),
                   GoRoute(
                     path: SoundUploadScreen.path,
@@ -235,9 +237,10 @@ void main() {
       // in _SavedSoundsSection decides which card carries the notice.
       final service = SavedSoundsService(sharedPreferences);
       await service.saveSound(
-        _sound(id: 'gone', title: 'Gone Sound').copyWith(
-          url: '/imports/never-written.m4a',
-        ),
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(url: '/imports/never-written.m4a'),
       );
       await service.saveSound(_sound(id: 'here', title: 'Here Sound'));
 
@@ -452,26 +455,39 @@ void main() {
       );
     });
 
-    testWidgets('saves sound selected from Add audio picker', (tester) async {
-      await pumpSoundsTab(
-        tester,
-        showAudioPicker: (_) async =>
-            _sound(id: 'wednesday', title: 'Wednesday My Dudes'),
-      );
+    testWidgets('shows the permanent Add sound action in an empty library', (
+      tester,
+    ) async {
+      await pumpSoundsTab(tester);
 
-      await tester.tap(find.text('Add audio'));
+      expect(find.text('No saved sounds yet'), findsOneWidget);
+      expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
+    });
+
+    testWidgets('shows the permanent Add sound action with saved sounds', (
+      tester,
+    ) async {
+      await SavedSoundsService(
+        sharedPreferences,
+      ).saveSound(_sound(id: 'sound1', title: 'Loop One'));
+
+      await pumpSoundsTab(tester);
+
+      expect(find.text('Loop One'), findsOneWidget);
+      expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
+    });
+
+    testWidgets('Add sound opens the import flow, not the editor picker', (
+      tester,
+    ) async {
+      await pumpSoundsTab(tester);
+
+      await tester.tap(find.byKey(const Key('sounds_add_sound')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Wednesday My Dudes'), findsOneWidget);
-      expect(find.byKey(const Key('saved_sound_label_field')), findsOneWidget);
-
-      final savedSounds = SavedSoundsService(
-        sharedPreferences,
-      ).loadSavedSounds();
-      expect(
-        savedSounds.map((sound) => sound.audio.title),
-        contains('Wednesday My Dudes'),
-      );
+      // The library add action must route to the private file import, never
+      // the editor's catalog/trimming bottom sheet.
+      expect(find.text('import sound page'), findsOneWidget);
     });
 
     testWidgets('filters rich cards by personal hashtag', (tester) async {
@@ -904,9 +920,7 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
-                sharedPreferencesProvider.overrideWithValue(
-                  sharedPreferences,
-                ),
+                sharedPreferencesProvider.overrideWithValue(sharedPreferences),
                 documentsPathProvider.overrideWithValue('/documents'),
                 nostrSessionProvider.overrideWith(
                   () => _TestNostrSession(

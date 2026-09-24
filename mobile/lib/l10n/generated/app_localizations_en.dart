@@ -4206,6 +4206,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tap Use Sound on a video to save it here.';
 
   @override
+  String get soundsAddSound => 'Add sound';
+
+  @override
+  String get soundsImportPromptTitle => 'Import a sound';
+
+  @override
+  String get soundsImportPromptDescription =>
+      'Pick an audio file from your device. It stays private in My Sounds.';
+
+  @override
+  String get soundsImportUnsupportedFormat =>
+      'That file type isn\'t supported. Pick an audio file.';
+
+  @override
+  String get soundsImportUnreadable => 'That audio file couldn\'t be read.';
+
+  @override
+  String get soundsImportAccountChanged =>
+      'You switched accounts, so this import was cancelled.';
+
+  @override
   String get soundsRemoveSavedSound => 'Remove sound';
 
   @override
@@ -11524,7 +11545,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get savedSoundAddHashtags => 'Add hashtags';
 
   @override
-  String get savedSoundDeviceOnly => 'Saved on this device';
+  String get savedSoundDeviceOnly =>
+      'Audio stays on this device. Details sync across your devices.';
 
   @override
   String get savedSoundDetailsRetry =>
