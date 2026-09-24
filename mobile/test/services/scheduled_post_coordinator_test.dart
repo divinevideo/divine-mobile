@@ -302,6 +302,31 @@ void main() {
         },
       );
 
+      test(
+        'does not mint a second id when a successful list omits the original',
+        () async {
+          final event = buildEvent();
+          await enqueue(event);
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            failureReason: 'timeout',
+            attemptedAt: now,
+          );
+          when(
+            () => client.list(),
+          ).thenAnswer((_) async => const ScheduleListLoaded([]));
+          now = publishAt.subtract(const Duration(seconds: 90));
+
+          await coordinator.sweep();
+
+          expect(broadcasts, isEmpty);
+          expect(
+            (await repository.getById(event.id))!.status,
+            ScheduledPostStatus.pendingSubmit,
+          );
+        },
+      );
+
       test('broadcasts a post it cannot re-date as it was signed', () async {
         final event = buildEvent();
         await enqueue(event);
@@ -588,6 +613,27 @@ void main() {
 
         verifyNever(() => client.list());
       });
+
+      test(
+        'an unforced sweep refreshes posts scheduled on another device',
+        () async {
+          final elsewhere = buildEvent(d: 'elsewhere');
+          when(() => client.list()).thenAnswer(
+            (_) async => ScheduleListLoaded([
+              serverEntry(elsewhere, ScheduledPostServerState.schedule),
+            ]),
+          );
+
+          await coordinator.sweep(force: true);
+          verify(() => client.list()).called(1);
+          expect(coordinator.serverOnlyPosts, isNotEmpty);
+
+          now = now.add(const Duration(minutes: 5));
+          await coordinator.sweep();
+
+          verify(() => client.list()).called(1);
+        },
+      );
     });
 
     group('lifecycle', () {

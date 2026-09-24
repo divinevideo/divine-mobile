@@ -249,7 +249,7 @@ class ScheduledPostCoordinator {
     var pending = await _repository.pending();
     // A forced sweep syncs even with nothing local, so posts scheduled from
     // another device show up.
-    if (pending.isEmpty && !force) return;
+    if (pending.isEmpty && _serverOnly.isEmpty && !force) return;
 
     for (final post in pending) {
       if (_stop) return;
@@ -266,14 +266,11 @@ class ScheduledPostCoordinator {
     if (_stop) return;
 
     pending = await _repository.pending();
-    final anyHeld = pending.any(
-      (p) => p.status == ScheduledPostStatus.scheduled,
-    );
     final syncDue =
         _lastSyncAt == null ||
         !now.isBefore(_lastSyncAt!.add(_syncInterval)) ||
         _repository.dueForClientPublish(pending, now).isNotEmpty;
-    if (force || (anyHeld && syncDue)) {
+    if (force || (syncDue && (pending.isNotEmpty || _serverOnly.isNotEmpty))) {
       final sync = await _repository.syncFromServer();
       if (sync.succeeded) {
         _lastSyncAt = now;
@@ -380,11 +377,12 @@ class ScheduledPostCoordinator {
     // would put the same video out twice.
     if (post.status == ScheduledPostStatus.pendingSubmit) {
       final plan = await _planImmediateBroadcast(post);
-      if (plan == null) return false;
+      if (_stop || plan == null) return false;
       row = plan.redate
           ? await _redateForImmediateBroadcast(plan.post) ?? plan.post
           : plan.post;
     }
+    if (_stop) return false;
     final event = ScheduledPostsRepository.decodeEvent(row);
     final EventPublishOutcome outcome;
     try {
@@ -444,7 +442,13 @@ class ScheduledPostCoordinator {
     if (fresh == null || fresh.status != ScheduledPostStatus.pendingSubmit) {
       return null;
     }
-    return (post: fresh, redate: true);
+    // A successful list that omits the id is not proof the relay missed it.
+    // Absence is eventually consistent and capped, so re-dating would mint
+    // a second event the relay can still publish.
+    if (fresh.publishAtUtc.difference(_now()) > _relayFutureDrift) {
+      return null;
+    }
+    return (post: fresh, redate: false);
   }
 
   /// Replaces a never-handed-off row with one dated now, so the broadcast
@@ -456,7 +460,7 @@ class ScheduledPostCoordinator {
     final now = _now().toUtc().millisecondsSinceEpoch ~/ 1000;
     if (post.publishAt <= now) return post;
     final signed = await _resign(post, createdAt: now);
-    if (signed == null) return null;
+    if (_stop || signed == null) return null;
     if (signed.id == post.eventId) return post;
     final replacement = await _repository.enqueue(
       event: signed,
@@ -681,6 +685,7 @@ class ScheduledPostCoordinator {
       }
 
       final withdrawn = await _withdrawBeforeReplacing(post);
+      if (_stop) return ScheduledPostActionOutcome.failed;
       if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
 
       // The replacement is only handed off here, and the repository already
@@ -731,6 +736,7 @@ class ScheduledPostCoordinator {
       }
 
       final withdrawn = await _withdrawBeforeReplacing(post);
+      if (_stop) return ScheduledPostActionOutcome.failed;
       if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
 
       hold(signed.id);
