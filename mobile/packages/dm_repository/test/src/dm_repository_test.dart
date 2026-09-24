@@ -2377,8 +2377,8 @@ void main() {
             final filters =
                 inv.positionalArguments.first as List<nostr_filter.Filter>;
             final filter = filters.single;
-            // Outgoing-NIP-04 recovery pass (authors:[self], no p): nothing.
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            // The own kind-10050 lookup is not a gift-wrap page.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             // One page of wraps, then exhaustion.
@@ -2500,7 +2500,7 @@ void main() {
             final filters =
                 inv.positionalArguments.first as List<nostr_filter.Filter>;
             final filter = filters.single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             if (served) return answeredPage(const <Event>[]);
@@ -6703,22 +6703,7 @@ void main() {
 
     group('backfillHistoryIfNeeded', () {
       setUp(stubReadCursorRowMatched);
-      setUp(() {
-        when(
-          () => mockNostrClient.readEvents(
-            any(),
-            subscriptionId: any(named: 'subscriptionId'),
-            useCache: any(named: 'useCache'),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenAnswer(
-          (_) async => const QueryResult(
-            events: [],
-            endedBy: QueryEnd.complete,
-            answeredNetworkRelayCount: 3,
-          ),
-        );
-      });
+      setUp(stubNip04RecoveryAnsweredEmpty);
       // A deferred drain arms a relay-status listener (#8550). Default to a
       // pool with nothing connected and a stream that never speaks, so the
       // deferral tests below exercise the deferral itself; the resume tests
@@ -6757,11 +6742,11 @@ void main() {
           final filters =
               inv.positionalArguments.first as List<nostr_filter.Filter>;
           final filter = filters.single;
-          // The outgoing-NIP-04 recovery pass (#5304) runs after the gift-wrap
-          // drain reaches the end and queries `authors:[self]` with no `p`
-          // tag. Return empty (and don't capture its cursor) so these gift-wrap
-          // pagination assertions stay focused on the drain itself.
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          // The own kind-10050 lookup (#4974) also reads through
+          // queryEventsDetailed. Return empty (and don't capture its cursor)
+          // so these gift-wrap pagination assertions stay focused on the
+          // drain itself.
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           final until = filter.until;
@@ -6847,16 +6832,15 @@ void main() {
         'defers on a refused gift-wrap page even when NIP-04 recovery would '
         'answer, so the gift-wrap guard is pinned on its own (#8209)',
         () async {
-          // The refused/fan-out tests above stub ONE answer for both the
-          // gift-wrap drain and the NIP-04 recovery pass, so the NIP-04 guard
-          // masks a regressed gift-wrap guard: break the gift-wrap guard alone
-          // and they still pass because recovery defers on the same refusal.
-          // Split the two queries so this test dies to the gift-wrap guard
-          // specifically — the gift-wrap page is refused while NIP-04 recovery
-          // answers authoritatively, so only a working gift-wrap guard can keep
-          // the drain from latching (a broken one reaches the answering
-          // recovery pass and marks complete).
+          // A test that refuses both the gift-wrap drain and the NIP-04
+          // recovery pass lets the NIP-04 guard mask a regressed gift-wrap
+          // guard: break the gift-wrap guard alone and it still passes because
+          // recovery defers on the same refusal. Here the gift-wrap page is
+          // refused while NIP-04 recovery answers authoritatively, so only a
+          // working gift-wrap guard can keep the drain from latching (a broken
+          // one reaches the answering recovery pass and marks complete).
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
+          stubNip04RecoveryAnsweredEmpty();
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -6872,9 +6856,9 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            return isNip04Recovery
+            final isOwnInboxLookup =
+                filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
+            return isOwnInboxLookup
                 ? answeredPage(const <Event>[])
                 : unansweredPage(timedOut: true);
           });
@@ -6952,9 +6936,10 @@ void main() {
           final filter =
               (inv.positionalArguments.first as List<nostr_filter.Filter>)
                   .single;
-          // Let the outgoing-NIP-04 recovery pass answer cleanly, so anything
-          // this test observes comes from the gift-wrap drain's own guard.
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          // The own kind-10050 lookup answers cleanly, and so does the NIP-04
+          // pass through the group's readEvents default, so anything this
+          // test observes comes from the gift-wrap drain's own guard.
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           final until = filter.until;
@@ -7020,7 +7005,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -7180,8 +7165,8 @@ void main() {
             capturedFilters.addAll(
               inv.positionalArguments.first as List<nostr_filter.Filter>,
             );
-            // Gift-wrap drain exhausts immediately; the NIP-04 recovery query
-            // also returns empty — we only assert that it was issued.
+            // The NIP-04 recovery read returns empty; we only assert that it
+            // was issued.
             return const QueryResult(
               events: [],
               endedBy: QueryEnd.complete,
@@ -7363,8 +7348,8 @@ void main() {
             'sig': '',
           });
 
-          // Gift-wrap drain (p:[self]) exhausts immediately; the NIP-04
-          // recovery (authors:[self], no p) returns one page then empties.
+          // The NIP-04 recovery read returns one page then empties; the
+          // gift-wrap drain (p:[self]) exhausts immediately below.
           final authorsUntils = <int?>[];
           var nip04Pages = 0;
           when(
@@ -7386,6 +7371,7 @@ void main() {
               answeredNetworkRelayCount: 3,
             );
           });
+          // Gift-wrap pages and the #4974 own kind-10050 lookup: nothing.
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -7397,23 +7383,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            // The #4974 own kind-10050 inbox-relay resolve (authors:[self],
-            // kinds:[10050]) also matches authors-with-no-p; skip it so it is
-            // not mistaken for a NIP-04 recovery page.
-            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-              return answeredPage(const <Event>[]);
-            }
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            if (!isNip04Recovery) return answeredPage(const <Event>[]);
-            authorsUntils.add(filter.until);
-            nip04Pages++;
-            return answeredPage(nip04Pages == 1 ? [outgoing] : const <Event>[]);
-          });
+          ).thenAnswer((_) async => answeredPage(const <Event>[]));
 
           when(
             () => mockDirectMessagesDao.hasGiftWrap(any()),
@@ -7521,6 +7491,12 @@ void main() {
         'relay (no silent skip) (#5304)',
         () async {
           final capturedUntil = <int?>[];
+          // Gift-wrap drain reaches the end with relays connected, but the
+          // relay drops before the NIP-04 recovery pass: nothing answers the
+          // recovery window. The relays still report connected, so only the
+          // fan-out's own account of who took the REQ distinguishes this from
+          // "the user has no outgoing NIP-04". Recovery must NOT be treated as
+          // "nothing to recover" and the drain must NOT be marked complete.
           when(
             () => mockNostrClient.readEvents(
               any(),
@@ -7528,23 +7504,10 @@ void main() {
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
-              return const QueryResult(events: [], endedBy: QueryEnd.noRelay);
-            }
-            return const QueryResult(
-              events: [],
-              endedBy: QueryEnd.complete,
-              answeredNetworkRelayCount: 3,
-            );
-          });
-          // Gift-wrap drain reaches the end with relays connected, but the
-          // relay drops before the NIP-04 recovery pass: its first page comes
-          // back empty with 0 connected relays. Recovery must NOT be treated
-          // as "nothing to recover" and the drain must NOT be marked complete.
+          ).thenAnswer(
+            (_) async =>
+                const QueryResult(events: [], endedBy: QueryEnd.noRelay),
+          );
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -7560,13 +7523,10 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            if (isNip04Recovery) {
-              // Nothing answers the recovery window. The relays still report
-              // connected, so only the fan-out's own account of who took the
-              // REQ distinguishes this from "the user has no outgoing NIP-04".
-              return unansweredPage(noRelays: true);
+            // The own kind-10050 lookup answers, so only the NIP-04 pass can
+            // hold completion back.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
+              return answeredPage(const <Event>[]);
             }
             capturedUntil.add(filter.until);
             return answeredPage(
@@ -7612,17 +7572,7 @@ void main() {
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            if (filter.authors == null || (filter.p?.isNotEmpty ?? false)) {
-              return const QueryResult(
-                events: [],
-                endedBy: QueryEnd.complete,
-                answeredNetworkRelayCount: 3,
-              );
-            }
+          ).thenAnswer((_) async {
             nip04Pages++;
             return QueryResult(
               events: nip04Pages == 1 ? [partialNip04] : const <Event>[],
@@ -7631,6 +7581,7 @@ void main() {
               unansweredRelayCount: 1,
             );
           });
+          // Gift-wrap pages and the #4974 own kind-10050 lookup: nothing.
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -7642,21 +7593,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-              return answeredPage(const <Event>[]);
-            }
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            if (!isNip04Recovery) return answeredPage(const <Event>[]);
-            nip04Pages++;
-            return nip04Pages == 1
-                ? partialPage([partialNip04])
-                : answeredPage(const <Event>[]);
-          });
+          ).thenAnswer((_) async => answeredPage(const <Event>[]));
           when(
             () => mockDirectMessagesDao.hasGiftWrap(partialNip04.id),
           ).thenAnswer((_) async => true);
@@ -8350,10 +8287,10 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            // The outgoing-NIP-04 recovery pass (#5304) queries authors:[self]
-            // with no p tag after the gift-wrap drain completes. Return empty
-            // so this test stays focused on gift-wrap drain pubkey routing.
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            // The own kind-10050 lookup (#4974) is not a gift-wrap page. Return
+            // empty so this test stays focused on gift-wrap drain pubkey
+            // routing.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             final pubkey = filter.p!.single;
@@ -8508,13 +8445,9 @@ void main() {
           final filter =
               (inv.positionalArguments.first as List<nostr_filter.Filter>)
                   .single;
-          // Neither the own-kind-10050 inbox resolve (#4974) nor the
-          // outgoing-NIP-04 recovery pass (#5304) is a history page; keep
-          // both out of the page counter.
+          // The own-kind-10050 inbox resolve (#4974) is not a history page;
+          // keep it out of the page counter.
           if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-            return answeredPage(const <Event>[]);
-          }
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
             return answeredPage(const <Event>[]);
           }
           pageCalls++;
@@ -8650,7 +8583,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             pageCalls++;
@@ -8789,7 +8722,7 @@ void main() {
           final filter =
               (inv.positionalArguments.first as List<nostr_filter.Filter>)
                   .single;
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           giftWrapPages++;
@@ -8837,7 +8770,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -8906,7 +8839,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -8953,7 +8886,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -9023,7 +8956,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             stageGiftWrapPages++;
@@ -9533,8 +9466,10 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
-              return unansweredPage(noRelays: true);
+            // The own kind-10050 lookup answers, so only the NIP-04 pass can
+            // hold completion back.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
+              return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
             return answeredPage(const <Event>[]);
@@ -9735,7 +9670,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -9843,7 +9778,7 @@ void main() {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             return answeredPage([deletion((filter.until ?? 1000) - 1)]);
@@ -9869,22 +9804,7 @@ void main() {
 
     group('history drain batch decryption (#5391)', () {
       setUp(stubNoCrossProtocolTwinAvailable);
-      setUp(() {
-        when(
-          () => mockNostrClient.readEvents(
-            any(),
-            subscriptionId: any(named: 'subscriptionId'),
-            useCache: any(named: 'useCache'),
-            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-          ),
-        ).thenAnswer(
-          (_) async => const QueryResult(
-            events: [],
-            endedBy: QueryEnd.complete,
-            answeredNetworkRelayCount: 3,
-          ),
-        );
-      });
+      setUp(stubNip04RecoveryAnsweredEmpty);
 
       // A new recipient keypair per test so the real NIP-44 unwrap in the
       // batched decrypt worker succeeds (the shared _validPubkey* constants
@@ -9993,9 +9913,10 @@ void main() {
         createdAt: createdAt,
       );
 
-      // Returns a queryEvents stub that serves [page] for the gift-wrap drain
-      // filter (p:[self], inclusive `until`) and [] for the NIP-04 recovery
-      // pass (authors:[self]).
+      // Stubs queryEventsDetailed to serve [page] for the gift-wrap drain
+      // filter (p:[self], inclusive `until`) and [] for the own kind-10050
+      // lookup. The NIP-04 recovery pass reads through the group's readEvents
+      // default.
       void stubDrainPage(List<Event> page) {
         when(
           () => mockNostrClient.queryEventsDetailed(
@@ -10012,7 +9933,7 @@ void main() {
           final filters =
               inv.positionalArguments.first as List<nostr_filter.Filter>;
           final filter = filters.single;
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           final until = filter.until ?? (1 << 31);
