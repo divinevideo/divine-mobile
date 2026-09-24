@@ -8457,6 +8457,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'その写真を読み込めませんでした。';
 
   @override
+  String get videoEditorBackdropLabel => '背景';
+
+  @override
+  String get videoEditorBackdropSemanticLabel => 'この枠の背景を変更';
+
+  @override
+  String get videoEditorBackdropTitle => '背景を変更';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'この枠は、切り離したクリップと同じ長さだけ静止画を表示します。何を表示しますか？';
+
+  @override
+  String get videoEditorBackdropColorDetail => '単色を選ぶか、今の色を調整します。';
+
+  @override
+  String get videoEditorBackdropImageDetail => '枠を埋める静止画を撮り直します。';
+
+  @override
+  String get videoEditorBackdropProgressLabel => '背景を変更しています…';
+
+  @override
+  String get videoEditorBackdropFailed => 'その背景を変更できませんでした。枠は今までの背景のままです。';
+
+  @override
   String get videoEditorChromaKeyLabel => 'グリーンバック';
 
   @override

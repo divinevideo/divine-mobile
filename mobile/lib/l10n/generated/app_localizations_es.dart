@@ -8973,6 +8973,35 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'No se pudo cargar esa foto.';
 
   @override
+  String get videoEditorBackdropLabel => 'Fondo';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Cambiar el fondo que ocupa este lugar';
+
+  @override
+  String get videoEditorBackdropTitle => 'Cambiar fondo';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Este lugar mantiene una imagen fija todo lo que duraba el clip que separaste. ¿Qué querés que muestre?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Elegí un color sólido, o ajustá el que ya está.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Sacá una foto nueva para ocupar el lugar.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Cambiando el fondo…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'No se pudo cambiar ese fondo. El lugar sigue con el de antes.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Croma';
 
   @override

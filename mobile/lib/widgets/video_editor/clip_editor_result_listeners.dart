@@ -23,8 +23,9 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
-/// detach, detached-clip transform, remove, audio extraction, library save,
-/// library import — reports its outcome through a `last*Result` field on
+/// detach, backdrop change, detached-clip transform, remove, audio extraction,
+/// library save, library import — reports its outcome through a `last*Result`
+/// field on
 /// [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
@@ -43,11 +44,13 @@ class ClipEditorResultListeners extends StatelessWidget {
         child: _ClipTransformResultListener(
           child: _ClipMergeResultListener(
             child: _ClipDetachResultListener(
-              child: _DetachedClipTransformResultListener(
-                child: _ClipsRemovedResultListener(
-                  child: _AudioExtractionResultListener(
-                    child: _ClipLibrarySaveResultListener(
-                      child: _ClipLibraryImportResultListener(child: child),
+              child: _ClipPlaceholderFillResultListener(
+                child: _DetachedClipTransformResultListener(
+                  child: _ClipsRemovedResultListener(
+                    child: _AudioExtractionResultListener(
+                      child: _ClipLibrarySaveResultListener(
+                        child: _ClipLibraryImportResultListener(child: child),
+                      ),
                     ),
                   ),
                 ),
@@ -377,6 +380,53 @@ class _ClipDetachResultListener extends StatelessWidget {
       layer: layer,
       timelineMarkers: rebasedMarkers,
     );
+  }
+}
+
+/// Listens to [ClipEditorBloc.state.lastPlaceholderFillResult] and surfaces a
+/// snackbar when re-rendering a placeholder's backdrop fails.
+///
+/// Success needs nothing here: the bloc has already swapped the clip and
+/// committed the list to editor history, and the canvas reloads off the new
+/// file through the same player-sync listener a transform goes through.
+///
+/// Kept at the scaffold level (always mounted) so the snackbar fires even if
+/// the timeline controls are hidden while the render is in flight.
+class _ClipPlaceholderFillResultListener extends StatelessWidget {
+  const _ClipPlaceholderFillResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastPlaceholderFillResult,
+            curr.lastPlaceholderFillResult,
+          ) &&
+          curr.lastPlaceholderFillResult != null,
+      listener: _onPlaceholderFillResult,
+      child: child,
+    );
+  }
+
+  void _onPlaceholderFillResult(BuildContext context, ClipEditorState state) {
+    switch (state.lastPlaceholderFillResult) {
+      case ClipPlaceholderFillFailure():
+        ScaffoldMessenger.of(context).showSnackBar(
+          DivineSnackbarContainer.snackBar(
+            context.l10n.videoEditorBackdropFailed,
+          ),
+        );
+      case ClipPlaceholderFillDiscarded():
+      // The slot the user asked to refill was removed while the new still
+      // rendered — nothing to swap onto, and no action worth a snackbar.
+      case ClipPlaceholderFillSuccess():
+      // The swapped clip file drives the canvas; nothing to do here.
+      case null:
+        break;
+    }
   }
 }
 

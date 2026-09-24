@@ -11,9 +11,9 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
-import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:openvine/utils/image_orientation.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -67,6 +67,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       hasChromaKey,
       isDetachingCurrentClip,
       isPlaceholderClip,
+      placeholderFill,
+      isChangingBackdropCurrentClip,
     ) = context.select((ClipEditorBloc b) {
       final state = b.state;
       final index = state.currentClipIndex;
@@ -102,17 +104,24 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
             currentClipId != null &&
             state.detachingClipId == currentClipId,
         hasClip && state.clips[index].isPlaceholder,
+        hasClip ? state.clips[index].placeholderFill : null,
+        state.isRefillingPlaceholder &&
+            currentClipId != null &&
+            state.refillingPlaceholderClipId == currentClipId,
       );
     });
     final isLastClip = clipCount <= 1;
 
     // A colour or photo standing in for a detached clip is a backdrop, not
     // footage. Splitting, reversing, speeding up or extracting audio from a
-    // still are all no-ops dressed as actions, so the only thing offered is
-    // removing it — and not even that while it is the composition's last clip.
+    // still are all no-ops dressed as actions, so what is offered is changing
+    // what it shows and removing it — and not even the latter while it is the
+    // composition's last clip.
     if (isPlaceholderClip) {
       return VideoEditorTimelineControls(
         onDelete: isLastClip ? null : () => _deleteClip(context),
+        onBackdrop: () => _changeBackdrop(context, current: placeholderFill),
+        isChangingBackdrop: isChangingBackdropCurrentClip,
         onDone: () => context.read<ClipEditorBloc>().add(
           const ClipEditorEditingStopped(),
         ),
@@ -257,11 +266,60 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     bloc.add(ClipEditorClipDetachRequested(clipId: clip.id, replacement: fill));
   }
 
-  Future<ClipPlaceholderFill?> _pickColorFill() async {
+  /// Swaps the backdrop the selected placeholder shows for another one.
+  ///
+  /// The slot itself does not move: the clip keeps its id, its length and its
+  /// place, so this is a re-render of one still rather than a second detach.
+  /// [current] is what it holds now — it marks the matching option in the
+  /// sheet and is the shade the colour picker opens on.
+  Future<void> _changeBackdrop(
+    BuildContext context, {
+    required ClipPlaceholderFill? current,
+  }) async {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    final clip = state.clips[state.currentClipIndex];
+    if (!clip.isPlaceholder) return;
+
+    final choice = await showClipBackdropSheet(context, current: current);
+    if (choice == null || !context.mounted) return;
+
+    final fill = switch (choice) {
+      DetachClipChoice.color => await _pickColorFill(
+        initialColor: switch (current) {
+          ClipPlaceholderColorFill(:final color) => color,
+          _ => null,
+        },
+      ),
+      DetachClipChoice.image => await _pickImageFill(),
+      // The backdrop sheet does not offer it: emptying the slot is Delete on
+      // the same action bar, and it shortens the composition.
+      DetachClipChoice.removeSlot => null,
+    };
+    // A dismissed colour picker or camera leaves the backdrop as it was.
+    if (fill == null) return;
+    // Re-picking the shade already on the timeline would render a second,
+    // identical still. Nothing was written for a colour, and for a photo the
+    // only way the paths match is that this *is* the live file — so neither
+    // branch has anything to clean up.
+    if (fill == current) return;
+    if (bloc.isClosed) {
+      await _deleteUnusedImageFill(fill);
+      return;
+    }
+
+    bloc.add(ClipEditorPlaceholderFillRequested(clipId: clip.id, fill: fill));
+  }
+
+  Future<ClipPlaceholderFill?> _pickColorFill({Color? initialColor}) async {
     if (!mounted) return null;
     final picked = await showFullColorPicker(
       context,
-      initialColor: VineTheme.surfaceBackground,
+      initialColor: initialColor ?? VineTheme.surfaceBackground,
     );
     return picked == null ? null : ClipPlaceholderColorFill(picked);
   }

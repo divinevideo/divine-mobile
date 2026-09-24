@@ -8885,6 +8885,34 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'وہ تصویر لوڈ نہیں ہو سکی۔';
 
   @override
+  String get videoEditorBackdropLabel => 'پس منظر';
+
+  @override
+  String get videoEditorBackdropSemanticLabel => 'اس جگہ کا پس منظر بدلیں';
+
+  @override
+  String get videoEditorBackdropTitle => 'پس منظر بدلیں';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'یہ جگہ اُس کلپ کی پوری مدت تک ایک ساکن تصویر رکھتی ہے جو آپ نے الگ کی تھی۔ اس میں کیا دکھایا جائے؟';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'ایک ٹھوس رنگ چنیں، یا جو رنگ ابھی ہے اسے بدلیں۔';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'جگہ رکھنے کے لیے نئی تصویر لیں۔';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'پس منظر بدلا جا رہا ہے…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'وہ پس منظر نہیں بدلا جا سکا۔ جگہ پر پہلے والا ہی ہے۔';
+
+  @override
   String get videoEditorChromaKeyLabel => 'گرین اسکرین';
 
   @override

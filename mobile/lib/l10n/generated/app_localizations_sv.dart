@@ -8882,6 +8882,35 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att läsa in fotot.';
 
   @override
+  String get videoEditorBackdropLabel => 'Bakgrund';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Ändra bakgrunden som håller platsen';
+
+  @override
+  String get videoEditorBackdropTitle => 'Ändra bakgrund';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Platsen håller en stillbild lika länge som klippet du lossade varade. Vad ska den visa?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Välj en enfärgad yta, eller justera den som finns.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Ta ett nytt foto som håller platsen.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Ändrar bakgrunden …';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Det gick inte att ändra bakgrunden. Platsen har kvar den förra.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Green screen';
 
   @override

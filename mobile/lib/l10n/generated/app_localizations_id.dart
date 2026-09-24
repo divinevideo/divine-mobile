@@ -8804,6 +8804,35 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Foto itu tidak bisa dimuat.';
 
   @override
+  String get videoEditorBackdropLabel => 'Latar';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Ubah latar yang menahan tempat ini';
+
+  @override
+  String get videoEditorBackdropTitle => 'Ubah latar';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Tempat ini menahan satu gambar diam selama klip yang kamu lepas tadi berjalan. Mau menampilkan apa?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Pilih satu warna, atau ubah warna yang sekarang.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Ambil foto baru untuk menahan tempatnya.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Mengubah latar…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Latar itu tidak bisa diubah. Tempatnya tetap dengan yang lama.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Layar hijau';
 
   @override

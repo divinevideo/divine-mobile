@@ -8895,6 +8895,35 @@ class AppLocalizationsMs extends AppLocalizations {
       'Foto itu tidak dapat dimuatkan.';
 
   @override
+  String get videoEditorBackdropLabel => 'Latar';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Tukar latar yang menahan tempat ini';
+
+  @override
+  String get videoEditorBackdropTitle => 'Tukar latar';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Tempat ini menahan satu gambar pegun selama klip yang anda tanggalkan itu berjalan. Apa yang patut ditunjukkan?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Pilih satu warna, atau ubah warna yang ada sekarang.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Ambil foto baharu untuk menahan tempatnya.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Menukar latar…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Latar itu tidak dapat ditukar. Tempatnya kekal dengan yang lama.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Skrin hijau';
 
   @override

@@ -8966,6 +8966,35 @@ class AppLocalizationsBg extends AppLocalizations {
       'Снимката не можа да се зареди.';
 
   @override
+  String get videoEditorBackdropLabel => 'Фон';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Смени фона, който задържа мястото';
+
+  @override
+  String get videoEditorBackdropTitle => 'Смяна на фона';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Мястото задържа стоп-кадър толкова, колкото е траел откаченият клип. Какво да показва?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Избери плътен цвят или промени сегашния.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Снимай нов кадър, който да задържи мястото.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Фонът се сменя…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Фонът не можа да се смени. Мястото остава с предишния.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Зелен екран';
 
   @override

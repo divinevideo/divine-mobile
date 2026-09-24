@@ -1,5 +1,6 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, transform, detach, merge, library import) that block the
+// ABOUTME: (reverse, transform, detach, backdrop, merge, library import) that
+// ABOUTME: block the
 // ABOUTME: editor.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -29,6 +30,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
         _ReverseProgressOverlay(),
         _TransformProgressOverlay(),
         _DetachProgressOverlay(),
+        _BackdropProgressOverlay(),
         _MergeProgressOverlay(),
         _LibraryImportProgressOverlay(),
       ],
@@ -116,6 +118,36 @@ class _DetachProgressOverlay extends StatelessWidget {
               : _RenderProgressContent(
                   renderId: renderId,
                   label: context.l10n.videoEditorDetachProgressLabel,
+                ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while the new still for a detached
+/// clip's slot is encoded.
+///
+/// Same encode as the detach overlay above, and the same reason to cover the
+/// editor — but a different wait: nothing is leaving the timeline here, only
+/// the backdrop one slot shows is being replaced.
+class _BackdropProgressOverlay extends StatelessWidget {
+  const _BackdropProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) => state.isRefillingPlaceholder
+          ? state.refillingPlaceholderRenderId
+          : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorBackdropProgressLabel,
                 ),
         );
       },

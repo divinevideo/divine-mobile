@@ -9146,6 +9146,35 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.';
 
   @override
+  String get videoEditorBackdropLabel => 'నేపథ్యం';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'ఈ స్థానాన్ని నింపిన నేపథ్యాన్ని మార్చండి';
+
+  @override
+  String get videoEditorBackdropTitle => 'నేపథ్యం మార్చండి';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'మీరు వేరు చేసిన క్లిప్ నడిచినంత సేపు ఈ స్థానం ఒక స్థిర చిత్రాన్ని ఉంచుతుంది. అది ఏం చూపాలి?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'ఒకే రంగును ఎంచుకోండి, లేదా ఇప్పుడున్న దాన్ని సర్దుబాటు చేయండి.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'స్థానాన్ని నిలిపేందుకు కొత్త ఫోటో తీయండి.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'నేపథ్యాన్ని మారుస్తోంది…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'ఆ నేపథ్యాన్ని మార్చడం సాధ్యపడలేదు. స్థానంలో పాతదే ఉంది.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'గ్రీన్ స్క్రీన్';
 
   @override

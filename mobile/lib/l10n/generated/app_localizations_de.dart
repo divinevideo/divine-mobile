@@ -9003,6 +9003,35 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das Foto konnte nicht geladen werden.';
 
   @override
+  String get videoEditorBackdropLabel => 'Hintergrund';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Den Hintergrund dieses Platzes ändern';
+
+  @override
+  String get videoEditorBackdropTitle => 'Hintergrund ändern';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Dieser Platz hält ein Standbild, so lange wie der abgelöste Clip lief. Was soll es zeigen?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Wähle eine Farbfläche – oder ändere die, die gerade da ist.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Nimm ein neues Standbild auf, das den Platz hält.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Hintergrund wird geändert …';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Der Hintergrund konnte nicht geändert werden. Der Platz behält den bisherigen.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Greenscreen';
 
   @override

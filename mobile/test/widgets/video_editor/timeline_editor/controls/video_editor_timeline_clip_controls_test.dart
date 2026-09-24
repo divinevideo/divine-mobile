@@ -320,6 +320,82 @@ void main() {
       expect(find.text('Detach'), findsNothing);
     });
 
+    testWidgets('offers the backdrop picker on a placeholder clip', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip('clip-1').copyWith(isPlaceholder: true)],
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      // Without it the colour or photo picked during the detach is final —
+      // the one thing the action bar never let the user take back.
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.onBackdrop, isNotNull);
+    });
+
+    testWidgets('hides the backdrop picker on an ordinary clip', (
+      tester,
+    ) async {
+      when(
+        () => bloc.state,
+      ).thenReturn(ClipEditorState(clips: [clip('clip-1')]));
+
+      await tester.pumpWidget(build());
+
+      // Footage has no backdrop to swap; the action would replace the clip
+      // with a still nobody asked for.
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.onBackdrop, isNull);
+    });
+
+    testWidgets('shows the backdrop action busy while this slot renders', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip('clip-1').copyWith(isPlaceholder: true)],
+          isRefillingPlaceholder: true,
+          refillingPlaceholderClipId: 'clip-1',
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.isChangingBackdrop, isTrue);
+    });
+
+    testWidgets('leaves the backdrop action idle while another slot renders', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [clip('clip-1').copyWith(isPlaceholder: true)],
+          isRefillingPlaceholder: true,
+          refillingPlaceholderClipId: 'clip-2',
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      // The spinner belongs on the clip actually rendering; the user can
+      // switch slots mid-render.
+      final controls = tester.widget<VideoEditorTimelineControls>(
+        find.byType(VideoEditorTimelineControls),
+      );
+      expect(controls.isChangingBackdrop, isFalse);
+    });
+
     testWidgets('dispatches ClipEditorEditingStopped when done pressed', (
       tester,
     ) async {

@@ -5821,6 +5821,20 @@
   },
   "videoEditorDetachFailed": "Couldn't detach that clip. Your timeline is unchanged.",
   "videoEditorDetachImagePickFailed": "Couldn't load that photo.",
+  "videoEditorBackdropLabel": "Backdrop",
+  "@videoEditorBackdropLabel": {
+    "description": "Clip action-bar button on the still that holds the slot a detached clip left behind. Opens the sheet that swaps that still for another colour or photo. Keep it short — it sits under a 52dp icon beside Delete and Done."
+  },
+  "videoEditorBackdropSemanticLabel": "Change the backdrop filling this slot",
+  "videoEditorBackdropTitle": "Change backdrop",
+  "videoEditorBackdropDescription": "This slot holds a still for as long as the clip you detached ran. What should it show?",
+  "videoEditorBackdropColorDetail": "Pick a solid color, or adjust the one that's there.",
+  "videoEditorBackdropImageDetail": "Shoot a new still to hold the slot.",
+  "videoEditorBackdropProgressLabel": "Changing the backdrop…",
+  "@videoEditorBackdropProgressLabel": {
+    "description": "Shown under the progress spinner while the new still for a detached clip's slot is being rendered."
+  },
+  "videoEditorBackdropFailed": "Couldn't change that backdrop. The slot still holds the one it had.",
   "videoEditorChromaKeyLabel": "Green screen",
   "videoEditorChromaKeyTitle": "Green screen",
   "videoEditorChromaKeySemanticLabel": "Set up the green screen for this clip",

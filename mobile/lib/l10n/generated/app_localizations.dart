@@ -15158,6 +15158,54 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load that photo.'**
   String get videoEditorDetachImagePickFailed;
 
+  /// Clip action-bar button on the still that holds the slot a detached clip left behind. Opens the sheet that swaps that still for another colour or photo. Keep it short — it sits under a 52dp icon beside Delete and Done.
+  ///
+  /// In en, this message translates to:
+  /// **'Backdrop'**
+  String get videoEditorBackdropLabel;
+
+  /// No description provided for @videoEditorBackdropSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the backdrop filling this slot'**
+  String get videoEditorBackdropSemanticLabel;
+
+  /// No description provided for @videoEditorBackdropTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change backdrop'**
+  String get videoEditorBackdropTitle;
+
+  /// No description provided for @videoEditorBackdropDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This slot holds a still for as long as the clip you detached ran. What should it show?'**
+  String get videoEditorBackdropDescription;
+
+  /// No description provided for @videoEditorBackdropColorDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a solid color, or adjust the one that\'s there.'**
+  String get videoEditorBackdropColorDetail;
+
+  /// No description provided for @videoEditorBackdropImageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Shoot a new still to hold the slot.'**
+  String get videoEditorBackdropImageDetail;
+
+  /// Shown under the progress spinner while the new still for a detached clip's slot is being rendered.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing the backdrop…'**
+  String get videoEditorBackdropProgressLabel;
+
+  /// No description provided for @videoEditorBackdropFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t change that backdrop. The slot still holds the one it had.'**
+  String get videoEditorBackdropFailed;
+
   /// No description provided for @videoEditorChromaKeyLabel.
   ///
   /// In en, this message translates to:

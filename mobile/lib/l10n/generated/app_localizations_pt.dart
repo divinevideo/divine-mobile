@@ -8953,6 +8953,35 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível carregar essa foto.';
 
   @override
+  String get videoEditorBackdropLabel => 'Fundo';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Mudar o fundo que segura esse lugar';
+
+  @override
+  String get videoEditorBackdropTitle => 'Mudar fundo';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Esse lugar segura uma imagem parada pelo tempo que o clipe separado durava. O que ele deve mostrar?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Escolha uma cor sólida, ou ajuste a que já está aí.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Tire uma foto nova para segurar o lugar.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Mudando o fundo…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Não foi possível mudar esse fundo. O lugar continua com o de antes.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Fundo verde';
 
   @override

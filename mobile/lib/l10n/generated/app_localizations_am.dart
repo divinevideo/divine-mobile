@@ -8685,6 +8685,33 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'ያንን ፎቶ መጫን አልተቻለም።';
 
   @override
+  String get videoEditorBackdropLabel => 'ዳራ';
+
+  @override
+  String get videoEditorBackdropSemanticLabel => 'ይህን ቦታ የያዘውን ዳራ ይቀይሩ';
+
+  @override
+  String get videoEditorBackdropTitle => 'ዳራ ይቀይሩ';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'ይህ ቦታ የነጠሉት ቅንጥብ በሄደበት ያህል ጊዜ አንድ ቋሚ ምስል ይይዛል። ምን ያሳይ?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'አንድ ሙሉ ቀለም ይምረጡ፣ ወይም አሁን ያለውን ያስተካክሉ።';
+
+  @override
+  String get videoEditorBackdropImageDetail => 'ቦታውን የሚይዝ አዲስ ፎቶ ያንሱ።';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'ዳራው እየተቀየረ ነው…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'ያንን ዳራ መቀየር አልተቻለም። ቦታው የቀድሞውን ይዞ ይቆያል።';
+
+  @override
   String get videoEditorChromaKeyLabel => 'አረንጓዴ ስክሪን';
 
   @override

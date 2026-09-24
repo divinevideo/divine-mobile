@@ -11,6 +11,7 @@ import 'package:flutter/painting.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
@@ -18,26 +19,6 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
 
 const _logName = 'ClipPlaceholderRenderService';
-
-/// What fills the timeline slot a clip was detached from.
-sealed class ClipPlaceholderFill {
-  const ClipPlaceholderFill();
-}
-
-/// Fill the slot with a solid colour.
-class ClipPlaceholderColorFill extends ClipPlaceholderFill {
-  const ClipPlaceholderColorFill(this.color);
-
-  final Color color;
-}
-
-/// Fill the slot with a photographed image, held for the clip's length.
-class ClipPlaceholderImageFill extends ClipPlaceholderFill {
-  const ClipPlaceholderImageFill(this.imagePath);
-
-  /// Absolute path to the image file.
-  final String imagePath;
-}
 
 /// Renders the still that stands in for a detached clip on the timeline.
 ///
@@ -161,6 +142,11 @@ class ClipPlaceholderRenderService {
       // Keeps Detach off it: lifting a still onto the canvas would only ask
       // for a second still to fill the slot it just vacated.
       isPlaceholder: true,
+      // What the still was made of, so the backdrop can be changed later. The
+      // rendered mp4 answers neither question on its own: a photo and a solid
+      // colour are the same flat frames once encoded, and the exact colour is
+      // not recoverable from a re-compressed one.
+      placeholderFill: fill,
       // The still carries no sound of its own. The detached clip keeps its own
       // volume on its layer, so muting here does not silence anything the user
       // could still hear.

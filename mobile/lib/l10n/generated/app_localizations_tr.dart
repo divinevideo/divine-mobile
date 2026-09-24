@@ -8807,6 +8807,35 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Bu fotoğraf yüklenemedi.';
 
   @override
+  String get videoEditorBackdropLabel => 'Arka plan';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Bu yeri tutan arka planı değiştir';
+
+  @override
+  String get videoEditorBackdropTitle => 'Arka planı değiştir';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Bu yer, ayırdığın klip ne kadar sürdüyse o kadar sabit bir görüntü tutar. Ne göstersin?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Düz bir renk seç ya da şu ankini değiştir.';
+
+  @override
+  String get videoEditorBackdropImageDetail =>
+      'Yeri tutacak yeni bir fotoğraf çek.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Arka plan değiştiriliyor…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Bu arka plan değiştirilemedi. Yer, öncekini tutmaya devam ediyor.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Yeşil perde';
 
   @override

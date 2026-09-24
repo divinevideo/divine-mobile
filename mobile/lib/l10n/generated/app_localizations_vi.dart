@@ -8851,6 +8851,34 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Không tải được ảnh đó.';
 
   @override
+  String get videoEditorBackdropLabel => 'Nền';
+
+  @override
+  String get videoEditorBackdropSemanticLabel =>
+      'Đổi phần nền đang giữ chỗ này';
+
+  @override
+  String get videoEditorBackdropTitle => 'Đổi nền';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      'Chỗ này giữ một ảnh tĩnh đúng bằng thời lượng clip bạn đã tách. Nó nên hiển thị gì?';
+
+  @override
+  String get videoEditorBackdropColorDetail =>
+      'Chọn một màu đặc, hoặc chỉnh lại màu đang có.';
+
+  @override
+  String get videoEditorBackdropImageDetail => 'Chụp ảnh mới để giữ chỗ.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => 'Đang đổi nền…';
+
+  @override
+  String get videoEditorBackdropFailed =>
+      'Không đổi được nền đó. Chỗ này vẫn giữ nền cũ.';
+
+  @override
   String get videoEditorChromaKeyLabel => 'Phông xanh';
 
   @override

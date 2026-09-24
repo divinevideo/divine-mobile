@@ -8471,6 +8471,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => '그 사진을 불러오지 못했어요.';
 
   @override
+  String get videoEditorBackdropLabel => '배경';
+
+  @override
+  String get videoEditorBackdropSemanticLabel => '이 자리를 채운 배경 바꾸기';
+
+  @override
+  String get videoEditorBackdropTitle => '배경 바꾸기';
+
+  @override
+  String get videoEditorBackdropDescription =>
+      '이 자리는 분리한 클립이 재생되던 만큼 정지 화면을 유지해요. 무엇을 보여줄까요?';
+
+  @override
+  String get videoEditorBackdropColorDetail => '단색을 고르거나 지금 색을 조정해요.';
+
+  @override
+  String get videoEditorBackdropImageDetail => '자리를 채울 사진을 새로 찍어요.';
+
+  @override
+  String get videoEditorBackdropProgressLabel => '배경을 바꾸는 중…';
+
+  @override
+  String get videoEditorBackdropFailed => '그 배경을 바꾸지 못했어요. 자리는 원래 배경 그대로예요.';
+
+  @override
   String get videoEditorChromaKeyLabel => '크로마키';
 
   @override

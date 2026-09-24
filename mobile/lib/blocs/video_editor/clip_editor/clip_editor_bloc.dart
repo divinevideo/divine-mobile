@@ -10,6 +10,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -299,6 +300,14 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     // one's placeholder renders is queued rather than silently dropped.
     on<ClipEditorClipDetachRequested>(
       _onClipDetachRequested,
+      transformer: sequential(),
+    );
+
+    // Swap the backdrop a placeholder holds for a freshly rendered one.
+    // sequential for the same reason as the detach above: two changes in a row
+    // are queued rather than the second silently dropped.
+    on<ClipEditorPlaceholderFillRequested>(
+      _onPlaceholderFillRequested,
       transformer: sequential(),
     );
 
@@ -2016,6 +2025,128 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         ),
       ),
     );
+  }
+
+  /// Re-renders the still a placeholder clip shows, so the backdrop picked
+  /// during a detach can be changed afterwards.
+  ///
+  /// Structurally a transform, not a detach: the clip keeps its id, its length
+  /// and its position, only its file is swapped. So the composition does not
+  /// move, no marker needs rebasing, and the commit to editor history is the
+  /// same `onFinalClipInvalidated` every other in-place re-render uses.
+  Future<void> _onPlaceholderFillRequested(
+    ClipEditorPlaceholderFillRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final index = state.clips.indexWhere((c) => c.id == event.clipId);
+    if (index == -1) return;
+    final clip = state.clips[index];
+
+    // Only a placeholder has a backdrop to change. An ordinary clip reaching
+    // here would have its footage replaced by a still, which is a different
+    // (and unasked-for) operation.
+    if (!clip.isPlaceholder) {
+      Log.warning(
+        '⚠️ Refusing to refill clip ${clip.id}: not a placeholder',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    final renderId = '${clip.id}_placeholder';
+    emit(
+      state.copyWith(
+        isRefillingPlaceholder: true,
+        refillingPlaceholderClipId: clip.id,
+        refillingPlaceholderRenderId: renderId,
+      ),
+    );
+
+    DivineVideoClip? rendered;
+    try {
+      rendered = await _renderClipPlaceholder(
+        fill: event.fill,
+        source: clip,
+        taskId: renderId,
+      );
+    } catch (e, stackTrace) {
+      final error = switch (e) {
+        StateError() ||
+        TypeError() ||
+        RangeError() => Reportable(e, context: '_onPlaceholderFillRequested'),
+        _ => e,
+      };
+      addError(error, stackTrace);
+      Log.error(
+        '❌ Failed to render a new backdrop for clip ${clip.id}: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+    }
+
+    // Leaving the editor mid-render still wrote a documents-dir file; hand it
+    // to the reaper rather than orphaning it.
+    if (isClosed) {
+      _deferOrphanedPaths(rendered?.ownedFilePaths ?? const <String?>[]);
+      return;
+    }
+
+    if (rendered == null) {
+      emit(
+        state.copyWith(
+          isRefillingPlaceholder: false,
+          clearRefillingPlaceholderClipId: true,
+          lastPlaceholderFillResult: ClipPlaceholderFillFailure(),
+        ),
+      );
+      return;
+    }
+
+    final currentClips = state.clips;
+    final currentIndex = currentClips.indexWhere((c) => c.id == clip.id);
+    if (currentIndex == -1) {
+      Log.warning(
+        '⚠️ Backdrop discarded: clip ${clip.id} no longer exists',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      _deferOrphanedPaths(rendered.ownedFilePaths);
+      emit(
+        state.copyWith(
+          isRefillingPlaceholder: false,
+          clearRefillingPlaceholderClipId: true,
+          lastPlaceholderFillResult: ClipPlaceholderFillDiscarded(),
+        ),
+      );
+      return;
+    }
+
+    // The rendered clip is taken apart rather than swapped in whole: it
+    // carries a fresh id, and the slot has to keep the one the timeline, the
+    // selection and any duplicate of it already refer to.
+    final superseded = currentClips[currentIndex];
+    final refilled = superseded.copyWith(
+      video: rendered.video,
+      thumbnailPath: rendered.thumbnailPath,
+      placeholderFill: event.fill,
+    );
+    final newClips = List<DivineVideoClip>.of(currentClips)
+      ..[currentIndex] = refilled;
+
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        isRefillingPlaceholder: false,
+        clearRefillingPlaceholderClipId: true,
+        lastPlaceholderFillResult: ClipPlaceholderFillSuccess(),
+      ),
+    );
+
+    onFinalClipInvalidated.call();
+    // The still this one replaces — its mp4 and its source image — as long as
+    // no other clip points at them; a duplicated placeholder shares both.
+    _deferSupersededFiles(superseded);
   }
 
   Future<void> _onChromaKeyRequested(

@@ -7,7 +7,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
+import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 DivineVideoClip _clip(String id, {Duration? duration}) => DivineVideoClip(
