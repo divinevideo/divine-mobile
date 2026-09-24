@@ -15,7 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 /// A horizontal strip of fine tick marks scrolls under a fixed centre
 /// accent while the user pinch-zooms, with the live zoom factor floating
 /// above it. While visible it is also interactive: a horizontal drag along
-/// the ruler scrubs the zoom — dragging toward the higher marks (left) zooms
+/// the ruler scrubs the zoom — dragging toward the lower marks (left) zooms
 /// in, mirroring how the ticks scroll under a pinch. The value eases onto the
 /// major marks (whole factors and the 0.5× stop) with a soft detent and a
 /// haptic tick, matching the pinch's 1× snap. It only accepts pointer events

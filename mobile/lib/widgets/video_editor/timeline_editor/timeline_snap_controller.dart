@@ -5,10 +5,10 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 
 /// Direction of a single snappable edge.
 enum SnapEdgeDirection {
-  /// Accumulator grows positively (left-trim: += dx).
+  /// Accumulator grows positively (left-trim / drag: += dx).
   positive,
 
-  /// Accumulator grows negatively (right-trim / drag: -= dx).
+  /// Accumulator grows negatively (right-trim: -= dx).
   negative,
 }
 
@@ -106,8 +106,8 @@ class TimelineSnapController {
 
   /// Adds [delta] to the raw accumulator.
   ///
-  /// For [SnapEdgeDirection.positive] (left trim) pass `+dx`.
-  /// For [SnapEdgeDirection.negative] (right trim / drag) pass `-dx`.
+  /// For [SnapEdgeDirection.positive] (left trim / drag) pass `+dx`.
+  /// For [SnapEdgeDirection.negative] (right trim) pass `-dx`.
   void accumulate(double delta) {
     _acc += delta;
   }
@@ -138,7 +138,7 @@ class TimelineSnapController {
   /// [rawEdgeMs] — current un-snapped edge position (origin ± accumulated delta).
   /// [snapPoints] — set of snap points in ms; may be null or empty.
   ///
-  /// Side-effects: fires [HapticFeedback] on snap/release transitions.
+  /// Side-effects: fires [HapticFeedback] when the edge snaps to a point.
   int update(int rawEdgeMs, Set<int>? snapPoints) {
     if (_lockedSnapMs != null) {
       final escapePx = (_acc - _catchAcc).abs();

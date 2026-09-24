@@ -10,8 +10,9 @@ import 'package:flutter/widgets.dart';
 /// touches.
 ///
 /// Bypasses the child's own [RenderBox.hitTest] `size.contains` check and
-/// delegates directly to [hitTestChildren] for the normal region, or uses
-/// [_hitTestDeep] for the expanded margins.
+/// delegates directly to [RenderHitExpandedBox.hitTestChildren] for the
+/// normal region, or uses [RenderHitExpandedBox._hitTestDeep] for the
+/// expanded margins.
 class HitExpandedBox extends SingleChildRenderObjectWidget {
   const HitExpandedBox({
     required super.child,

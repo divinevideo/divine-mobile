@@ -10,7 +10,7 @@ import 'package:openvine/utils/path_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Mobile implementation of [CameraService] using the camera package.
+/// Mobile implementation of [CameraService] using the `divine_camera` package.
 ///
 /// Manages camera initialization, recording, and switching between front/back cameras.
 class CameraMobileService extends CameraService {

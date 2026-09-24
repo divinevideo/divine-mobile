@@ -10,7 +10,7 @@ import 'package:openvine/models/video_editor/saved_style_name.dart';
 const Key savedStyleNameFieldKey = Key('saved_style_name_field');
 
 /// Asks for a style name; resolves with the entered text, or `null` when the
-/// prompt is dismissed. The cubit still sanitizes it.
+/// prompt is dismissed. The repository still sanitizes it.
 ///
 /// Shared by the saved caption styles sheet, the caption custom style editor
 /// and the saved title styles sheet, which all ask the same question.

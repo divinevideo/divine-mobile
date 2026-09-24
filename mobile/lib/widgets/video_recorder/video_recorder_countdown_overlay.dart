@@ -8,7 +8,7 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 
 /// Fullscreen overlay displaying countdown before recording starts.
 ///
-/// Animates in and out based on the countdown value, showing numbers 3, 2, 1.
+/// Animates in and out based on the countdown value, counting down to 1.
 class VideoRecorderCountdownOverlay extends StatelessWidget {
   /// Creates a countdown overlay widget.
   const VideoRecorderCountdownOverlay({super.key});

@@ -247,7 +247,8 @@ class _LoadingIndicator extends StatelessWidget {
 }
 
 /// Permission screen with TV static background, sticker, title, description,
-/// and a primary action button. Used for all permission states.
+/// and a primary action button. Used for the error, settings and
+/// web-unsupported screens.
 class _PermissionScreen extends StatelessWidget {
   const _PermissionScreen({
     required this.title,

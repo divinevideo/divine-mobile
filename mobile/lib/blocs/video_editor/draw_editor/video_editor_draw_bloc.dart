@@ -28,7 +28,7 @@ class VideoEditorDrawBloc
     on<VideoEditorDrawReset>(_onReset);
   }
 
-  /// Resets undo/redo capabilities when the draw editor is closed.
+  /// Resets undo/redo capabilities when the draw editor opens.
   void _onReset(
     VideoEditorDrawReset event,
     Emitter<VideoEditorDrawState> emit,

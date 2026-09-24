@@ -23,11 +23,6 @@ enum StopMotionStatus {
 }
 
 /// State for [VideoRecorderBloc].
-///
-/// Ports the legacy `VideoRecorderProviderState` verbatim and adds the mutable
-/// instance fields that were previously held on the provider class
-/// (concurrency flags + zoom-snap gesture state) so all observable
-/// data lives in the state stream per `state_management.md`.
 class VideoRecorderBlocState extends Equatable {
   const VideoRecorderBlocState({
     this.recorderMode = VideoRecorderMode.capture,
@@ -166,15 +161,11 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether to show the rule-of-thirds grid overlay on the camera preview.
   final bool showGridLines;
 
-  /// True while [_VideoRecorderRecordingStarted] is in-flight (between
+  /// True while [VideoRecorderRecordingStartRequested] is in-flight (between
   /// pressing record and the camera reporting the first keyframe).
-  ///
-  /// Moved out of the notifier's private fields per `state_management.md`.
   final bool isStartingRecording;
 
-  /// True while [_VideoRecorderRecordingStopped] is finalizing.
-  ///
-  /// Moved out of the notifier's private fields per `state_management.md`.
+  /// True while [VideoRecorderRecordingStopRequested] is finalizing.
   final bool isStoppingRecording;
 
   /// True when a stop was requested while [isStartingRecording] was true.
@@ -200,15 +191,14 @@ class VideoRecorderBlocState extends Equatable {
 
   /// Zoom level captured at the start of the current pinch gesture.
   ///
-  /// Used to compute relative zoom from pinch scale. Moved out of the
-  /// notifier's private fields per `state_management.md`.
+  /// Used to compute relative zoom from pinch scale.
   final double baseZoomLevel;
 
   /// Whether the zoom is currently locked at 1.0x via the snap detent.
   final bool snappedTo1x;
 
-  /// Last raw (post-damping, pre-snap) zoom value observed by the
-  /// scale update handler — feeds the detent edge detector.
+  /// Last zoom value computed by the scale update handler, after damping
+  /// and the 1x snap — feeds the detent edge detector.
   final double lastRawZoom;
 
   /// Time the snap-to-1x detent engaged. Used to enforce the snap
@@ -233,8 +223,7 @@ class VideoRecorderBlocState extends Equatable {
   /// Captured stop-motion frame file paths, in capture order.
   ///
   /// Each shutter tap in stop-motion mode appends one still here; they are
-  /// encoded into a single video only on finish (assemble-at-end), so capture
-  /// stays instant.
+  /// encoded into a single video only at publish, so capture stays instant.
   final List<String> stopMotionFrames;
 
   /// Lifecycle of the stop-motion assemble step.

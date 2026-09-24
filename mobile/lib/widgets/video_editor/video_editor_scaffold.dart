@@ -22,11 +22,11 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_overlay_controls.dart';
 
-/// A scaffold widget that provides the standard layout for the video editor.
-///
 /// Duration for the timeline ↔ bottom-actions switch animation.
 const _switchDuration = Duration(milliseconds: 240);
 
+/// A scaffold widget that provides the standard layout for the video editor.
+///
 /// This widget arranges the video editor UI into three main sections:
 /// - A main editor area that displays the video with proper aspect ratio
 /// - Overlay controls positioned on top of the video
@@ -244,8 +244,8 @@ class _OverlayControls extends StatelessWidget {
 
 /// Bottom section that switches between different toolbars based on context.
 ///
-/// Only visible when a sub-editor is open. When no sub-editor is open the
-/// timeline is shown instead (see [_TimelineSection]).
+/// Only visible while the draw, filter or tune sub-editor is open. Otherwise
+/// the timeline is shown instead (see [_TimelineSection]).
 class _BottomActions extends StatelessWidget {
   const _BottomActions();
 

@@ -272,7 +272,7 @@ class _IconButton extends StatelessWidget {
   /// so it carries no meaning for a screen-reader user — that is [label].
   final String? identifier;
 
-  /// Current setting of a control that cycles through more than two states,
+  /// Current setting of a control whose states are not just on and off,
   /// announced after [label] (e.g. the active flash mode).
   final String? value;
 

@@ -19,10 +19,10 @@ import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_comm
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Top action bar for the video editor.
+/// Overlay actions for the video editor.
 ///
-/// Displays close, undo, redo, audio, and done buttons. Uses [BlocSelector] to
-/// reactively enable/disable undo and redo based on editor state.
+/// Displays the close and done buttons at the top and the timeline visibility
+/// toggle at the bottom, and hides them while the music sub-editor is open.
 class VideoEditorMainOverlayActions extends StatelessWidget {
   const VideoEditorMainOverlayActions({super.key});
 
@@ -49,7 +49,7 @@ class VideoEditorMainOverlayActions extends StatelessWidget {
   }
 }
 
-/// Top row actions: close, audio chip, and done buttons.
+/// Top row actions: close and done buttons, plus the stop-motion frames chip.
 class _TopActions extends ConsumerWidget {
   const _TopActions();
 

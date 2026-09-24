@@ -13,8 +13,8 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 /// body-space transform for the letterbox scrim, so the bars track the
 /// magnified video instead of lagging behind it.
 ///
-/// The editor content is cover-fitted from its render size into
-/// [targetSize] and centered in [boxSize]. With that fit+centre affine
+/// The editor content is cover-fitted from its render size into the
+/// [geometry]'s target size, centered in its body. With that fit+centre affine
 /// `A`, the on-screen effect of `editorMatrix` (`M`) in body coordinates is
 /// `A · M · A⁻¹`. For a zoom-only `M` (uniform scale `k`, translation `t`),
 /// that reduces to: same scale `k`, translation `coverScale·t + (1-k)·d`,

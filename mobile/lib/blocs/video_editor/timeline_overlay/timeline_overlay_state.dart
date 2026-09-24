@@ -39,13 +39,15 @@ class TimelineOverlayState extends Equatable {
   final int audioTracksRevision;
 
   /// Incremented in [TimelineOverlayItemsUpdate] when any audio track's
-  /// volume differs from the previously stored volume.
+  /// volume differs from the previously stored volume, and in
+  /// [TimelineOverlayTotalDurationChanged] when a re-clamp moves a sound
+  /// window outside a clip trim drag.
   ///
   /// This handles undo/redo restores: after an undo the ProImageEditor's
   /// `activeMeta` reverts to the old volumes, `_syncMainCapabilities`
   /// dispatches a [TimelineOverlayItemsUpdate] with those old volumes, and
   /// this counter makes the resulting state distinct from the current state
-  /// so that Equatable does not suppress the [emit] and the Sync1 player
+  /// so that Equatable does not suppress the `emit` and the player-sync
   /// listener fires.
   ///
   /// Deliberately separate from [audioTracksRevision] — the write-to-history
@@ -74,8 +76,8 @@ class TimelineOverlayState extends Equatable {
 
   /// The live position of the trim handle currently being dragged.
   ///
-  /// Set to the dragged [startTime] or [endTime] while a trim gesture is
-  /// active; `null` when no trim is in progress.
+  /// Set to the dragged item's `startTime` or `endTime` while a trim gesture
+  /// is active; `null` when no trim is in progress.
   final Duration? trimPosition;
 
   /// Strip types that are in collapsed view.

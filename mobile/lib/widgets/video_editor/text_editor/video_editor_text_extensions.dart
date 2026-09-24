@@ -38,7 +38,7 @@ extension TextEditorFont on TextFont {
 
 /// Extension on [TextAlign] for text editor UI purposes.
 extension TextEditorTextAlign on TextAlign {
-  /// Returns the icon asset path for this alignment.
+  /// Returns the icon for this alignment.
   DivineIconName get icon => switch (this) {
     TextAlign.left || TextAlign.start => .textAlignLeft,
     TextAlign.right || TextAlign.end => .textAlignRight,
@@ -55,7 +55,7 @@ extension TextEditorTextAlign on TextAlign {
 
 /// Extension on [LayerBackgroundMode] for text editor UI purposes.
 extension TextEditorBackgroundMode on LayerBackgroundMode {
-  /// Returns the icon asset path for this background mode.
+  /// Returns the icon for this background mode.
   DivineIconName get icon => switch (this) {
     LayerBackgroundMode.onlyColor => .textBgNone,
     LayerBackgroundMode.backgroundAndColor => .textBgFill,

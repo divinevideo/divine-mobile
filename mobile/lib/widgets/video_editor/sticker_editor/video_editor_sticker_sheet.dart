@@ -12,7 +12,7 @@ import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticke
 
 /// A bottom sheet that displays a searchable grid of stickers.
 ///
-/// Returns the selected [StickerData] via [context.pop] when a sticker is
+/// Returns the selected [StickerData] via `context.pop` when a sticker is
 /// tapped.
 class VideoEditorStickerSheet extends StatelessWidget {
   const VideoEditorStickerSheet({

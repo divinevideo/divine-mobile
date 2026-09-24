@@ -54,7 +54,7 @@ class StopMotionSessionStore {
   ///
   /// A session too short to fill a second on its own is stretched to it
   /// ([StopMotionFrameOps.initialHold]): three stills at the default hold play
-  /// in an eighth of a second, which the editor only shows as a flicker.
+  /// in a tenth of a second, which the editor only shows as a flicker.
   static Duration _hold(int frameCount) =>
       StopMotionFrameOps.initialHold(frameCount);
 

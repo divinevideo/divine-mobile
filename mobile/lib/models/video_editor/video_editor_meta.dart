@@ -36,7 +36,7 @@ class VideoEditorMeta {
   /// Video description.
   final String description;
 
-  /// List of hashtags.
+  /// Hashtags attached to the video.
   final Set<String> hashtags;
 
   /// Whether audio can be reused by others.

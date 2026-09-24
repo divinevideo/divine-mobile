@@ -44,7 +44,7 @@ abstract class CameraService {
   final void Function({bool? forceCameraRebuild}) onUpdateState;
 
   /// Called when the camera stops recording on its own — the max duration
-  /// was reached, or (iOS only) the camera was interrupted. [video] is null
+  /// was reached, or (iOS only) the camera was interrupted. `video` is null
   /// when nothing was captured; the recording has ended either way.
   final void Function(EditorVideo? video) onAutoStopped;
 
@@ -54,7 +54,7 @@ abstract class CameraService {
   /// [initialLens] specifies which camera lens to initialize with
   /// (default: front).
   /// [enableAutoLensSwitch] enables automatic lens switching based on zoom
-  /// level (default: true).
+  /// level (default: false).
   /// [preferUnprocessedAudio] captures the microphone without the platform's
   /// speech-tuned noise suppression, so instruments survive at their real
   /// level (default: false). iOS and Android — see
@@ -149,7 +149,7 @@ abstract class CameraService {
   /// Whether the camera supports manual focus point selection.
   bool get isFocusPointSupported;
 
-  /// Whether the camera is ready to record (initialized and not recording).
+  /// Whether the camera is ready to record (initialized).
   bool get canRecord;
 
   /// Whether the device has multiple cameras to switch between.

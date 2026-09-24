@@ -69,7 +69,7 @@ class VideoEditorTextFontSizeChanged extends VideoEditorTextEvent {
   List<Object?> get props => [fontSize];
 }
 
-/// Triggered when the text editor is closed to reset state.
+/// Triggered when the text editor opens for a new layer to reset state.
 class VideoEditorTextReset extends VideoEditorTextEvent {
   const VideoEditorTextReset();
 }

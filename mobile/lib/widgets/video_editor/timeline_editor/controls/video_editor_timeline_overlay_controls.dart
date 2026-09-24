@@ -27,7 +27,7 @@ import 'package:pro_image_editor/features/filter_editor/types/filter_state.dart'
 import 'package:pro_image_editor/features/tune_editor/models/tune_adjustment_matrix.dart';
 
 /// Controls shown when an overlay item is selected.
-/// Adapts buttons based on the overlay type (layer vs filter).
+/// Adapts buttons based on the overlay type.
 class TimelineOverlayControls extends StatelessWidget {
   const TimelineOverlayControls({required this.item, super.key});
 
@@ -401,8 +401,8 @@ class _FilterOverlayControls extends StatelessWidget {
   }
 }
 
-/// Controls for a tune-adjustment *set* overlay: delete, duplicate, split,
-/// and done.
+/// Controls for a tune-adjustment *set* overlay: delete, edit, duplicate,
+/// split, and done.
 ///
 /// Each bar bundles one Adjust session's adjustments (a set sharing one
 /// window). Delete removes every member; duplicate copies the whole set into a

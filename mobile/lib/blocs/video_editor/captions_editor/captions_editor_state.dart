@@ -5,7 +5,7 @@ part of 'captions_editor_cubit.dart';
 
 /// Lifecycle of the captions editor session.
 enum CaptionsEditorStatus {
-  /// On-device transcription is running.
+  /// Transcription is running.
   generating,
 
   /// Cues are editable (possibly an empty list the user fills manually).

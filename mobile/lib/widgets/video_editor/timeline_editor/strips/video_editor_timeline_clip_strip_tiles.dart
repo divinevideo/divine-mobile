@@ -17,11 +17,11 @@ extension _DivineVideoClipTimelineScale on DivineVideoClip {
 
 /// Raster anchor offset for [clip]'s thumbnail slot grid.
 ///
-/// Reversed clips return zero: reversing keeps [DivineVideoClip
-/// .sourceStartOffset] (it survives `copyWith`), but the reversed file is
-/// physically mirrored — there is no recording continuity to preserve, so
-/// the raster stays file-anchored instead of phase-shifting by the stale
-/// offset.
+/// Reversed clips return zero: reversing keeps
+/// [DivineVideoClip.sourceStartOffset] (it survives `copyWith`), but the
+/// reversed file is physically mirrored — there is no recording continuity to
+/// preserve, so the raster stays file-anchored instead of phase-shifting by
+/// the stale offset.
 Duration _rasterAnchorOffset(DivineVideoClip clip) =>
     clip.reversed ? Duration.zero : clip.sourceStartOffset;
 

@@ -1,10 +1,6 @@
 part of 'video_recorder_bloc.dart';
 
 /// Base event type for [VideoRecorderBloc].
-///
-/// Most events correspond 1:1 to methods on the legacy
-/// `VideoRecorderNotifier`; the names are kept close to the original
-/// for review-time grepability of the port.
 sealed class VideoRecorderEvent extends Equatable {
   const VideoRecorderEvent();
 
@@ -124,7 +120,7 @@ final class VideoRecorderLensSet extends VideoRecorderEvent {
   List<Object?> get props => [lens];
 }
 
-/// Sets camera zoom level (clamped to camera's min/max).
+/// Sets camera zoom level (ignored outside the camera's min/max).
 final class VideoRecorderZoomLevelSet extends VideoRecorderEvent {
   const VideoRecorderZoomLevelSet(this.value);
 
@@ -163,9 +159,8 @@ final class VideoRecorderRecordingToggleRequested extends VideoRecorderEvent {
 
 /// Starts recording, including the optional countdown timer.
 ///
-/// Registered with `transformer: sequential()` to make start/stop a
-/// FIFO queue and remove the race conditions the provider papered over
-/// with `_isStartingRecording` / `_isStoppingRecording` flags.
+/// Registered with `transformer: sequential()` so start requests are
+/// handled FIFO, one at a time.
 final class VideoRecorderRecordingStartRequested extends VideoRecorderEvent {
   const VideoRecorderRecordingStartRequested();
 }
@@ -236,10 +231,9 @@ final class VideoRecorderScaleEnded extends VideoRecorderEvent {
 }
 
 /// Disposes the camera service so the next route can take over the
-/// AVAudioSession cleanly. The View dispatches this just before
-/// navigating to a screen that owns the camera, after the push
-/// transition is past the visible frame. Pair with
-/// [VideoRecorderInitializeRequested] on return.
+/// AVAudioSession cleanly. The View dispatches this while navigating
+/// away from the recorder, once the push transition is past the visible
+/// frame. Pair with [VideoRecorderInitializeRequested] on return.
 final class VideoRecorderCameraPausedForNavigation extends VideoRecorderEvent {
   const VideoRecorderCameraPausedForNavigation({this.completion});
 
@@ -263,8 +257,8 @@ final class VideoRecorderRecordingLockedForNavigation
   const VideoRecorderRecordingLockedForNavigation();
 }
 
-/// Sets the recorder mode. Capture↔classic transitions clear recorded
-/// clips and reset the editor; transitions involving
+/// Sets the recorder mode. Switching between recording modes clears
+/// recorded clips and resets the editor; transitions involving
 /// [VideoRecorderMode.upload] preserve both.
 final class VideoRecorderRecorderModeSet extends VideoRecorderEvent {
   const VideoRecorderRecorderModeSet(
@@ -275,8 +269,6 @@ final class VideoRecorderRecorderModeSet extends VideoRecorderEvent {
   final VideoRecorderMode mode;
 
   /// When true the autosaved draft in the database is preserved.
-  /// Used during initialization to restore the saved mode without
-  /// destroying the previous session's draft.
   final bool keepAutosavedDraft;
 
   @override
@@ -307,9 +299,8 @@ final class VideoRecorderGridLinesToggled extends VideoRecorderEvent {
 
 /// Captures a single still in stop-motion mode and appends it to
 /// [VideoRecorderBlocState.stopMotionFrames]. No video is rendered here —
-/// frames are encoded into one video only on
-/// [VideoRecorderStopMotionAssembleRequested] (assemble-at-end), so capture
-/// stays instant.
+/// frames are encoded into one video only at publish, so capture stays
+/// instant.
 ///
 /// Registered with `transformer: droppable()` so rapid taps can't fire
 /// overlapping captures.
@@ -322,9 +313,9 @@ final class VideoRecorderStopMotionFrameUndone extends VideoRecorderEvent {
   const VideoRecorderStopMotionFrameUndone();
 }
 
-/// Encodes all captured stop-motion frames into a single video, adds it to the
-/// clip manager, and signals the UI (via [StopMotionStatus.ready]) to open the
-/// editor.
+/// Adds all captured stop-motion frames to the clip manager as one
+/// frames-based clip, and signals the UI (via [StopMotionStatus.ready]) to
+/// open the editor.
 final class VideoRecorderStopMotionAssembleRequested
     extends VideoRecorderEvent {
   const VideoRecorderStopMotionAssembleRequested();

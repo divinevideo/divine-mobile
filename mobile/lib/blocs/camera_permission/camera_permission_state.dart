@@ -25,7 +25,7 @@ class CameraPermissionInitial extends CameraPermissionState {
   const CameraPermissionInitial();
 }
 
-/// Permission check in progress.
+/// Permission request in progress.
 class CameraPermissionLoading extends CameraPermissionState {
   const CameraPermissionLoading();
 }

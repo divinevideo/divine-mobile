@@ -15,7 +15,7 @@ class VideoEditorFilterState extends Equatable {
   /// List of available filters.
   final List<FilterModel> filters;
 
-  /// The currently selected filter, or `null` if no filter is applied.
+  /// The currently selected filter, or `null` when none is selected.
   final FilterModel? selectedFilter;
 
   /// The opacity of the filter (0.0 - 1.0).

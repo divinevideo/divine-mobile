@@ -12,8 +12,9 @@ sealed class ClipEditorEvent extends Equatable {
 
 /// Initialize the local clip list from an external source.
 ///
-/// Typically called once when the editor screen opens, passing
-/// the current clips from the Riverpod provider.
+/// Dispatched when the editor screen opens, with the clips from the Riverpod
+/// provider, and again whenever the widget layer re-syncs the list, such as
+/// after undo/redo or a reorder.
 class ClipEditorInitialized extends ClipEditorEvent {
   const ClipEditorInitialized(this.clips);
 
@@ -44,7 +45,7 @@ class ClipEditorClipInserted extends ClipEditorEvent {
   List<Object?> get props => [index, clip];
 }
 
-/// Replace a clip with updated data (e.g. after split rendering).
+/// Replace a clip with updated data (e.g. after a speed change).
 class ClipEditorClipUpdated extends ClipEditorEvent {
   const ClipEditorClipUpdated({required this.clipId, required this.clip});
 
@@ -76,8 +77,8 @@ class ClipEditorClipThumbnailUpdated extends ClipEditorEvent {
 
 /// Select a clip by its index in the clip list.
 ///
-/// Updates the selected clip index, resets split position, and logs the
-/// playback offset based on previous clips' durations.
+/// Updates the selected clip index, resets split position, and clears the
+/// selected frame.
 class ClipEditorClipSelected extends ClipEditorEvent {
   const ClipEditorClipSelected(this.index);
 
@@ -235,7 +236,7 @@ class ClipEditorOriginalClipReplaced extends ClipEditorEvent {
 /// [clipId] and [splitPosition] bind the request to a specific clip and cut
 /// point. They are captured at dispatch time so a queued split (the handler is
 /// `sequential`) still targets the intended clip even if the user selects a
-/// different clip or moves the playhead while an earlier split is rendering.
+/// different clip or moves the playhead while an earlier split is in flight.
 /// When omitted, the handler falls back to the current selection and
 /// [ClipEditorState.splitPosition] (used by tests and any legacy caller).
 class ClipEditorSplitRequested extends ClipEditorEvent {
@@ -459,8 +460,7 @@ class ClipEditorPlaceholderFillRequested extends ClipEditorEvent {
 /// event rather than being looked up — and the rendered result goes back out
 /// through [DetachedClipTransformResult] instead of being swapped into the
 /// clip list. Everything else matches [ClipEditorClipTransformRequested]: the
-/// same render, the same progress stream, the same deferred cleanup of the
-/// file it supersedes.
+/// same render and the same progress stream.
 class ClipEditorDetachedClipTransformRequested extends ClipEditorEvent {
   const ClipEditorDetachedClipTransformRequested({
     required this.layerId,

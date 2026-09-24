@@ -88,8 +88,8 @@ class TimelineTrimHandles extends StatefulWidget {
   /// Border radius of the outer container.
   final double borderRadius;
 
-  /// Extra invisible hit area on the outer edge of each handle
-  /// to make small handles easier to grab.
+  /// Extra invisible hit area to make small handles easier to grab, split
+  /// evenly between the outer side of each handle and the content side.
   final double hitAreaExtra;
 
   @override

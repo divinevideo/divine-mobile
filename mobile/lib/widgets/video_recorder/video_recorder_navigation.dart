@@ -80,10 +80,9 @@ void discardRecorderSession(WidgetRef ref) {
 /// Navigates to the video editor (or the metadata screen, depending on mode),
 /// releasing the camera during the transition and re-initializing it on return.
 ///
-/// Mirrors the legacy `VideoRecorderNotifier.openVideoEditor`: the camera is
-/// disposed only after the push animation is past the visible frame (disposing
-/// immediately would flash the camera-init screen behind the transition), and
-/// re-initialized once the pushed route pops.
+/// The camera is disposed only after the push animation is past the visible
+/// frame (disposing immediately would flash the camera-init screen behind the
+/// transition), and re-initialized once the pushed route pops.
 Future<void> openVideoEditorFromRecorder(
   BuildContext context,
   WidgetRef ref,

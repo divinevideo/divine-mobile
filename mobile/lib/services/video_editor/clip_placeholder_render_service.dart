@@ -48,10 +48,10 @@ class ClipPlaceholderRenderService {
   })?
   assembleOverride;
 
-  /// Renders [fill] into a clip that occupies [duration] on the timeline.
+  /// Renders [fill] into a clip that takes [source]'s place on the timeline.
   ///
   /// [source] is the clip being detached: the placeholder inherits its
-  /// duration, aspect ratio and id-prefix so the slot keeps its shape. Returns
+  /// duration and aspect ratio so the slot keeps its shape. Returns
   /// `null` when the render fails; the caller surfaces that rather than
   /// silently leaving a hole in the composition.
   ///

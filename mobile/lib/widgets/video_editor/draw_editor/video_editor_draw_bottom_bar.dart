@@ -16,7 +16,8 @@ import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.da
 
 /// Bottom bar for the video editor draw screen.
 ///
-/// Shows available drawing tools (pencil, marker, neon, eraser) and color picker.
+/// Shows available drawing tools (pencil, marker, arrow, eraser) and color
+/// picker.
 class VideoEditorDrawBottomBar extends StatelessWidget {
   const VideoEditorDrawBottomBar({super.key});
 
