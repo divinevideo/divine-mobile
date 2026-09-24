@@ -119,84 +119,10 @@ void main() {
     closedRelayReasons: {'wss://refusing.example': 'error'},
   );
 
-  test('inbox opens preserve the original delayed confirmation slot', () {
-    fakeAsync((async) {
-      stubAnsweredHistory();
-      var reads = 0;
-      when(
-        () => nostrClient.readEvents(
-          any(),
-          subscriptionId: any(named: 'subscriptionId'),
-          useCache: any(named: 'useCache'),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-        ),
-      ).thenAnswer((_) async {
-        reads++;
-        return refusal();
-      });
-      final repository = makeRepository();
-
-      unawaited(repository.backfillHistoryIfNeeded());
-      async.flushMicrotasks();
-      expect(reads, 1);
-      for (var i = 0; i < 3; i++) {
-        unawaited(repository.backfillHistoryIfNeeded());
-        async.flushMicrotasks();
-      }
-      expect(reads, 4);
-
-      async
-        ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
-        ..flushMicrotasks();
-
-      expect(reads, 5);
-      expect(syncState.historyDrainComplete(_pubkey), isTrue);
-    });
-  });
-
-  test('reconnect sweep does not cancel the confirming timer', () {
-    fakeAsync((async) {
-      stubAnsweredHistory();
-      var reads = 0;
-      when(
-        () => nostrClient.readEvents(
-          any(),
-          subscriptionId: any(named: 'subscriptionId'),
-          useCache: any(named: 'useCache'),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-        ),
-      ).thenAnswer((_) async {
-        reads++;
-        return refusal();
-      });
-      final repository = makeRepository();
-
-      unawaited(repository.backfillHistoryIfNeeded());
-      async.flushMicrotasks();
-      relayStatus.add({
-        'wss://new.example': RelayConnectionStatus.connected(
-          'wss://new.example',
-        ),
-      });
-      async.flushMicrotasks();
-      expect(reads, 2);
-      expect(syncState.historyDrainComplete(_pubkey), isFalse);
-
-      async
-        ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
-        ..flushMicrotasks();
-
-      expect(reads, 3);
-      expect(syncState.historyDrainComplete(_pubkey), isTrue);
-    });
-  });
-
-  test(
-    'timer firing during a non-confirming drain queues a confirming pass',
-    () {
+  group('DM refusal confirmation retry budget', () {
+    test('inbox opens preserve the original delayed confirmation slot', () {
       fakeAsync((async) {
         stubAnsweredHistory();
-        final activeRead = Completer<QueryResult>();
         var reads = 0;
         when(
           () => nostrClient.readEvents(
@@ -205,64 +131,143 @@ void main() {
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
           ),
-        ).thenAnswer((_) {
+        ).thenAnswer((_) async {
           reads++;
-          return reads == 2 ? activeRead.future : Future.value(refusal());
+          return refusal();
         });
         final repository = makeRepository();
 
         unawaited(repository.backfillHistoryIfNeeded());
         async.flushMicrotasks();
         expect(reads, 1);
-        unawaited(repository.backfillHistoryIfNeeded());
-        async.flushMicrotasks();
-        expect(reads, 2);
+        for (var i = 0; i < 3; i++) {
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+        }
+        expect(reads, 4);
+
         async
           ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
           ..flushMicrotasks();
-        expect(reads, 2);
 
-        activeRead.complete(refusal());
+        expect(reads, 5);
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+      });
+    });
+
+    test('reconnect sweep does not cancel the confirming timer', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return refusal();
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
         async.flushMicrotasks();
+        relayStatus.add({
+          'wss://new.example': RelayConnectionStatus.connected(
+            'wss://new.example',
+          ),
+        });
+        async.flushMicrotasks();
+        expect(reads, 2);
+        expect(syncState.historyDrainComplete(_pubkey), isFalse);
+
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
 
         expect(reads, 3);
         expect(syncState.historyDrainComplete(_pubkey), isTrue);
       });
-    },
-  );
-
-  test('stopListening clears a confirmation queued behind an active drain', () {
-    fakeAsync((async) {
-      stubAnsweredHistory();
-      final activeRead = Completer<QueryResult>();
-      var reads = 0;
-      when(
-        () => nostrClient.readEvents(
-          any(),
-          subscriptionId: any(named: 'subscriptionId'),
-          useCache: any(named: 'useCache'),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-        ),
-      ).thenAnswer((_) {
-        reads++;
-        return reads == 2 ? activeRead.future : Future.value(refusal());
-      });
-      final repository = makeRepository();
-
-      unawaited(repository.backfillHistoryIfNeeded());
-      async.flushMicrotasks();
-      unawaited(repository.backfillHistoryIfNeeded());
-      async
-        ..flushMicrotasks()
-        ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
-        ..flushMicrotasks();
-      unawaited(repository.stopListening());
-      async.flushMicrotasks();
-      activeRead.complete(refusal());
-      async.flushMicrotasks();
-
-      expect(reads, 2);
     });
+
+    test(
+      'timer firing during a non-confirming drain queues a confirming pass',
+      () {
+        fakeAsync((async) {
+          stubAnsweredHistory();
+          final activeRead = Completer<QueryResult>();
+          var reads = 0;
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            reads++;
+            return reads == 2 ? activeRead.future : Future.value(refusal());
+          });
+          final repository = makeRepository();
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(reads, 1);
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(reads, 2);
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+          expect(reads, 2);
+
+          activeRead.complete(refusal());
+          async.flushMicrotasks();
+
+          expect(reads, 3);
+          expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        });
+      },
+    );
+
+    test(
+      'stopListening clears a confirmation queued behind an active drain',
+      () {
+        fakeAsync((async) {
+          stubAnsweredHistory();
+          final activeRead = Completer<QueryResult>();
+          var reads = 0;
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            reads++;
+            return reads == 2 ? activeRead.future : Future.value(refusal());
+          });
+          final repository = makeRepository();
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+          activeRead.complete(refusal());
+          async.flushMicrotasks();
+
+          expect(reads, 2);
+        });
+      },
+    );
   });
 }
 
