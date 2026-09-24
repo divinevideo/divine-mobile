@@ -11,6 +11,7 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
+import 'package:openvine/services/video_editor/render_slot_pool.dart';
 import 'package:openvine/services/video_editor/transition_seam_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
@@ -791,6 +792,91 @@ void main() {
         expect(requestedTaskIds[1], startsWith('seam_'));
         expect(requestedTaskIds[1], isNot(requestedTaskIds[0]));
         expect(seams.isRendering(clipA, clipB, dissolve), isTrue);
+      });
+    });
+
+    test('cancelRendersExcept stops a running render the timeline no longer '
+        'needs and frees its boundary', () {
+      fakeAsync((async) {
+        final seams = service();
+        final clipA = clip('a', transition: dissolve);
+        final clipB = clip('b');
+
+        unawaited(
+          seams.render(clipA: clipA, clipB: clipB, transition: dissolve),
+        );
+        async.flushMicrotasks();
+        expect(requestedTaskIds, hasLength(1));
+
+        seams.cancelRendersExcept(const {});
+        async.flushMicrotasks();
+
+        expect(native.cancelledTaskIds, [requestedTaskIds.single]);
+        expect(seams.isRendering(clipA, clipB, dissolve), isFalse);
+        // Nothing gave up on a render here, so nothing is filed as a stall.
+        expect(crashReporter.reports, isEmpty);
+      });
+    });
+
+    test('keeps a render whose key is still needed', () {
+      fakeAsync((async) {
+        final seams = service();
+        final clipA = clip('a', transition: dissolve);
+        final clipB = clip('b');
+
+        unawaited(
+          seams.render(clipA: clipA, clipB: clipB, transition: dissolve),
+        );
+        async.flushMicrotasks();
+
+        seams.cancelRendersExcept({seams.seamKey(clipA, clipB, dissolve)});
+        async.flushMicrotasks();
+
+        expect(native.cancelledTaskIds, isEmpty);
+        expect(seams.isRendering(clipA, clipB, dissolve), isTrue);
+      });
+    });
+
+    test('a render cancelled while it waits for a slot never reaches the '
+        'renderer', () {
+      fakeAsync((async) {
+        final seams = TransitionSeamRenderService(
+          documentsDirectoryProvider: () async => tempRoot,
+          renderSlots: RenderSlotPool(maxConcurrent: 1),
+        );
+        final clipA = clip('a', transition: dissolve);
+        final clipB = clip('b');
+        final clipC = clip('c', transition: dissolve);
+        final clipD = clip('d');
+        var queuedSettled = false;
+        TransitionSeam? queuedResult;
+
+        unawaited(
+          seams.render(clipA: clipA, clipB: clipB, transition: dissolve),
+        );
+        unawaited(
+          seams.render(clipA: clipC, clipB: clipD, transition: dissolve).then((
+            seam,
+          ) {
+            queuedSettled = true;
+            queuedResult = seam;
+          }),
+        );
+        async.flushMicrotasks();
+        expect(
+          requestedTaskIds,
+          hasLength(1),
+          reason: 'the second seam waits for the only slot',
+        );
+
+        seams.cancelRendersExcept({seams.seamKey(clipA, clipB, dissolve)});
+        // The first render stalls until the watchdog frees its slot.
+        async.elapse(VideoEditorConstants.previewRenderWatchdogTimeout);
+        async.flushMicrotasks();
+
+        expect(queuedSettled, isTrue);
+        expect(queuedResult, isNull);
+        expect(requestedTaskIds, hasLength(1));
       });
     });
   });

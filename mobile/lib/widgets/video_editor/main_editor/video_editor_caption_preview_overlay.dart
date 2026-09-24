@@ -1,6 +1,7 @@
 // ABOUTME: Editor canvas preview of CC-overlay captions during playback.
 // ABOUTME: Shows the active cue as the same pill viewers see in the feed.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -38,9 +39,6 @@ class VideoEditorCaptionPreviewOverlay extends StatelessWidget {
     if (hiddenForInteraction || burnIn) return const SizedBox.shrink();
 
     final items = context.select((TimelineOverlayBloc b) => b.state.items);
-    final blocPosition = context.select(
-      (VideoEditorMainBloc b) => b.state.currentPosition,
-    );
 
     return Positioned.fill(
       child: IgnorePointer(
@@ -48,25 +46,85 @@ class VideoEditorCaptionPreviewOverlay extends StatelessWidget {
           alignment: Alignment.bottomCenter,
           child: Padding(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 48),
-            child: ValueListenableBuilder<Duration>(
-              valueListenable: scope.playTimeNotifier,
-              builder: (context, finePosition, _) {
-                // Prefer the fine play time (smooth, no seek round-trip lag);
-                // fall back to the bloc position before the fine notifier has
-                // been driven (it stays at zero until the first playback/seek).
-                final position = finePosition == Duration.zero
-                    ? blocPosition
-                    : finePosition;
-                final text = _activeCueText(items, position);
-                if (text == null || text.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                return CaptionPill(text: text);
-              },
+            child: _ActiveCuePill(
+              items: items,
+              playTime: scope.playTimeNotifier,
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The pill for the cue active at the play time.
+///
+/// The play time ticks every frame during playback while a cue stays on screen
+/// for seconds, so this listens to it directly and rebuilds only when the
+/// active cue text actually changes — not once per frame.
+class _ActiveCuePill extends StatefulWidget {
+  const _ActiveCuePill({required this.items, required this.playTime});
+
+  final List<TimelineOverlayItem> items;
+  final ValueListenable<Duration> playTime;
+
+  @override
+  State<_ActiveCuePill> createState() => _ActiveCuePillState();
+}
+
+class _ActiveCuePillState extends State<_ActiveCuePill> {
+  String? _text;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.playTime.addListener(_onPlayTime);
+    _text = _resolveText();
+  }
+
+  @override
+  void didUpdateWidget(_ActiveCuePill oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.playTime, widget.playTime)) {
+      oldWidget.playTime.removeListener(_onPlayTime);
+      widget.playTime.addListener(_onPlayTime);
+    }
+    _text = _resolveText();
+  }
+
+  @override
+  void dispose() {
+    widget.playTime.removeListener(_onPlayTime);
+    super.dispose();
+  }
+
+  void _onPlayTime() {
+    final text = _resolveText();
+    if (text == _text) return;
+    setState(() => _text = text);
+  }
+
+  String? _resolveText() {
+    // Prefer the fine play time (smooth, no seek round-trip lag); fall back to
+    // the bloc position before the fine notifier has been driven (it stays at
+    // zero until the first playback/seek).
+    final finePosition = widget.playTime.value;
+    final position = finePosition == Duration.zero
+        ? context.read<VideoEditorMainBloc>().state.currentPosition
+        : finePosition;
+    return _activeCueText(widget.items, position);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _text;
+    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+      listenWhen: (previous, current) =>
+          previous.currentPosition != current.currentPosition,
+      listener: (context, state) => _onPlayTime(),
+      child: text == null || text.isEmpty
+          ? const SizedBox.shrink()
+          : CaptionPill(text: text),
     );
   }
 

@@ -14,6 +14,7 @@ import 'package:openvine/extensions/divine_video_clip_player_mapping.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_speed_render_service.dart';
+import 'package:openvine/services/video_editor/render_slot_pool.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path_provider/path_provider.dart';
@@ -65,9 +66,11 @@ class TransitionSeamRenderService {
   TransitionSeamRenderService({
     @visibleForTesting Future<Directory> Function()? documentsDirectoryProvider,
     @visibleForTesting int maxSeamCacheBytes = kSeamCacheLimitBytes,
+    RenderSlotPool? renderSlots,
   }) : _documentsDirectoryProvider =
            documentsDirectoryProvider ?? getApplicationDocumentsDirectory,
-       _maxSeamCacheBytes = maxSeamCacheBytes;
+       _maxSeamCacheBytes = maxSeamCacheBytes,
+       _renderSlots = renderSlots ?? RenderSlotPool();
 
   /// Default upper bound on the total size of the persisted
   /// `transition_seams/` directory. Seam files are individually small, but
@@ -76,8 +79,16 @@ class TransitionSeamRenderService {
   final Future<Directory> Function() _documentsDirectoryProvider;
   final int _maxSeamCacheBytes;
 
+  /// Caps concurrent native renders. Seams take priority slots, so a seam
+  /// never waits behind a backlog of speed bodies sharing the same pool.
+  final RenderSlotPool _renderSlots;
+
   final _cache = <String, TransitionSeam>{};
   final _inFlight = <String, Future<TransitionSeam?>>{};
+
+  /// The attempt behind each [_inFlight] entry, so [cancelRendersExcept] can
+  /// stop it.
+  final _attempts = <String, _SeamRenderAttempt>{};
 
   /// Process-wide count of native seam renders started, so every attempt
   /// gets a task id of its own — see [_nativeTaskId].
@@ -98,6 +109,35 @@ class TransitionSeamRenderService {
     ClipTransition transition,
   ) => _inFlight.containsKey(_key(clipA, clipB, transition));
 
+  /// Identifies the seam for this transition — the key [cached],
+  /// [isRendering] and [cancelRendersExcept] agree on.
+  String seamKey(
+    DivineVideoClip clipA,
+    DivineVideoClip clipB,
+    ClipTransition transition,
+  ) => _key(clipA, clipB, transition);
+
+  /// Stops every in-flight render whose [seamKey] is not in [keep].
+  ///
+  /// Each committed edit next to a transition mints a new key, so without this
+  /// every intermediate trim kept encoding a seam the timeline no longer
+  /// contains while holding a render slot. A queued render bails once it gets
+  /// a slot; a running one has its native task cancelled. The key is released
+  /// immediately, so asking for it again starts a fresh attempt.
+  void cancelRendersExcept(Set<String> keep) {
+    for (final key in _inFlight.keys.toList()) {
+      if (keep.contains(key)) continue;
+      final _ = _inFlight.remove(key);
+      final attempt = _attempts.remove(key);
+      if (attempt == null) continue;
+      attempt.cancelled = true;
+      final taskId = attempt.taskId;
+      if (taskId != null) {
+        unawaited(VideoEditorRenderService.cancelTask(taskId));
+      }
+    }
+  }
+
   /// Returns the already-rendered seam for this transition, or `null` if it is
   /// not rendered yet. Pure cache lookup — never triggers a render.
   TransitionSeam? cached(
@@ -117,7 +157,21 @@ class TransitionSeamRenderService {
     final key = _key(clipA, clipB, transition);
     final cached = _cache[key];
     if (cached != null) return Future.value(cached);
-    return _inFlight[key] ??= _render(clipA, clipB, transition, key);
+    final inFlight = _inFlight[key];
+    if (inFlight != null) return inFlight;
+    final attempt = _SeamRenderAttempt();
+    late final Future<TransitionSeam?> render;
+    render = _render(clipA, clipB, transition, key, attempt).whenComplete(() {
+      // A cancelled attempt already gave up its key, and a newer attempt may
+      // hold it by now; only the owner releases it.
+      if (identical(_inFlight[key], render)) {
+        final _ = _inFlight.remove(key);
+        final _ = _attempts.remove(key);
+      }
+    });
+    _inFlight[key] = render;
+    _attempts[key] = attempt;
+    return render;
   }
 
   Future<TransitionSeam?> _render(
@@ -125,6 +179,7 @@ class TransitionSeamRenderService {
     DivineVideoClip clipB,
     ClipTransition transition,
     String key,
+    _SeamRenderAttempt attempt,
   ) async {
     try {
       final (:consumed, :blend, :seamTransition) = computeSeamSpans(
@@ -173,22 +228,34 @@ class TransitionSeamRenderService {
       // without the watchdog this key stayed in `_inFlight` for the session,
       // the "rendering transition" overlay never cleared, and the boundary
       // was never retried (#9347). On timeout the failure lands in the catch
-      // below like any other, so `finally` frees the key and the next timeline
-      // change re-renders it.
-      final taskId = _nativeTaskId(hash);
-      final outputPath = await VideoRenderWatchdog.run(
-        render: VideoEditorRenderService.renderVideo(
-          clips: [tailClip, headClip],
-          aspectRatio: clipA.targetAspectRatio,
+      // below like any other, the key is freed, and the next timeline change
+      // re-renders it.
+      await _renderSlots.acquire(priority: true);
+      final String? outputPath;
+      try {
+        // The timeline may have moved on while this waited for a slot.
+        if (attempt.cancelled) return null;
+        final taskId = _nativeTaskId(hash);
+        attempt.taskId = taskId;
+        outputPath = await VideoRenderWatchdog.run(
+          render: VideoEditorRenderService.renderVideo(
+            clips: [tailClip, headClip],
+            aspectRatio: clipA.targetAspectRatio,
+            taskId: taskId,
+          ),
           taskId: taskId,
-        ),
-        taskId: taskId,
-        cancelTask: VideoEditorRenderService.cancelTask,
-        timeout: VideoEditorConstants.previewRenderWatchdogTimeout,
-        reason: 'transition seam render timed out',
-      );
+          cancelTask: VideoEditorRenderService.cancelTask,
+          timeout: VideoEditorConstants.previewRenderWatchdogTimeout,
+          reason: 'transition seam render timed out',
+        );
+      } finally {
+        _renderSlots.release();
+      }
       if (outputPath == null) return null;
       try {
+        // Cancelled after the encode finished: nobody plays this seam, and a
+        // fresh attempt for the same key may be publishing to the same path.
+        if (attempt.cancelled) return null;
         // Publish atomically: outputPath is on the temp filesystem, so it
         // can't be renamed straight to the documents dir (cross-device rename
         // fails). Copy it next to the target, then rename within the
@@ -243,8 +310,6 @@ class TransitionSeamRenderService {
         category: .video,
       );
       return null;
-    } finally {
-      final _ = _inFlight.remove(key);
     }
   }
 
@@ -447,6 +512,7 @@ class TransitionSeamRenderService {
   /// best-effort trim of the persisted seam directory (unawaited so it never
   /// blocks editor teardown). Recent seams survive for cross-session reuse.
   void clear() {
+    cancelRendersExcept(const {});
     _cache.clear();
     _version++;
     unawaited(enforceSeamCacheLimit());
@@ -812,4 +878,14 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
     result.add(player.VideoClip.file(wrapSeam.path));
   }
   return result;
+}
+
+/// One render attempt of a seam, cancellable by
+/// [TransitionSeamRenderService.cancelRendersExcept].
+class _SeamRenderAttempt {
+  /// Set once the timeline stopped needing this seam.
+  bool cancelled = false;
+
+  /// The native task id, once the attempt got a slot and started encoding.
+  String? taskId;
 }
