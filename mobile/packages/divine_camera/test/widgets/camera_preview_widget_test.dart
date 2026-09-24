@@ -36,6 +36,9 @@ class MockDivineCameraPlatform
   }
 
   @override
+  ValueChanged<bool>? onScreenFlashChanged;
+
+  @override
   Future<bool> setRemoteRecordControlEnabled({required bool enabled}) async =>
       true;
 

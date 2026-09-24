@@ -55,6 +55,17 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
     _onRemoteRecordTrigger = callback;
   }
 
+  /// Callback for when the front-camera screen flash turns on or off.
+  ValueChanged<bool>? _onScreenFlashChanged;
+
+  @override
+  ValueChanged<bool>? get onScreenFlashChanged => _onScreenFlashChanged;
+
+  @override
+  set onScreenFlashChanged(ValueChanged<bool>? callback) {
+    _onScreenFlashChanged = callback;
+  }
+
   /// Handles method calls from native platform.
   Future<dynamic> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
@@ -73,6 +84,12 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
         if (triggerType != null && _onRemoteRecordTrigger != null) {
           final trigger = RemoteRecordTrigger.fromNativeString(triggerType);
           _onRemoteRecordTrigger!(trigger);
+        }
+        return null;
+      case 'onScreenFlashChanged':
+        final isActive = call.arguments as bool?;
+        if (isActive != null) {
+          _onScreenFlashChanged?.call(isActive);
         }
         return null;
       case 'onNativeLog':

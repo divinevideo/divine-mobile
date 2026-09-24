@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:core';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -616,6 +617,43 @@ void main() {
         // All widgets should still be present
         expect(find.byType(VideoRecorderCaptureStack), findsOneWidget);
         expect(find.byType(VideoRecorderBottomBar), findsOneWidget);
+      });
+    });
+
+    group('Screen flash', () {
+      testWidgets('turns the background white while the screen flash is on', (
+        tester,
+      ) async {
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        const flashOff = VideoRecorderBlocState(
+          isCameraInitialized: true,
+          canRecord: true,
+        );
+        whenListen(recorderBloc, states.stream, initialState: flashOff);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pump();
+
+        Color background() => tester
+            .widget<Scaffold>(
+              find.descendant(
+                of: find.byType(VideoRecorderView),
+                matching: find.byType(Scaffold),
+              ),
+            )
+            .backgroundColor!;
+        final bottomBar = tester.element(find.byType(VideoRecorderBottomBar));
+        expect(background(), isNot(VineTheme.whiteText));
+
+        states.add(flashOff.copyWith(isScreenFlashActive: true));
+        await tester.pump();
+
+        expect(background(), VineTheme.whiteText);
+        // Lighting up must not remount the recorder underneath.
+        expect(
+          tester.element(find.byType(VideoRecorderBottomBar)),
+          same(bottomBar),
+        );
       });
     });
 
