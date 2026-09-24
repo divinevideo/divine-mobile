@@ -30,7 +30,8 @@ class VideoRenderFailedException implements Exception {
   final VideoRenderFailureReason reason;
   final Object? cause;
 
-  /// Compact telemetry label, e.g. `native_render:frame_processing` or
+  /// Compact telemetry label, e.g.
+  /// `native_render:video_frame_processing_failed` or
   /// `insufficient_storage:disk_full`, ending in `:hdr` when the plugin
   /// reports an HDR source among the clips the failed render read.
   String get traceValue {
