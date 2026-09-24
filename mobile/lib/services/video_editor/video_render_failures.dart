@@ -53,7 +53,10 @@ const _diskFullLabel = 'disk_full';
 ///
 /// On Android an HDR clip takes its own GPU path, so the same error code can
 /// hide two different failures (#9492). Only a render reports its sources,
-/// and only on Android.
+/// and only on Android. Encoder failures never do: `pro_video_editor`
+/// rethrows them as [RenderEncoderException] without their details, so
+/// `codec_exhausted` and `encoder_unsupported` never end in `:hdr`, HDR
+/// source or not.
 bool _readHdrSource(Object cause) =>
     cause is PlatformException &&
     (NativeFailureDetails.of(cause)?.hasHdrSource ?? false);
