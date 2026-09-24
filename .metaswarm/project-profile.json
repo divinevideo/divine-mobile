@@ -12,7 +12,7 @@
     "package_manager": "pub",
     "type_checker": "dart analyzer",
     "ci": "GitHub Actions",
-    "git_hooks": "scripts/install-hooks.sh via cd mobile && mise run setup_hooks"
+    "git_hooks": "scripts/install-hooks.sh (shims running scripts/hooks/*) via cd mobile && mise run setup_hooks"
   },
   "choices": {
     "external_tools": false,

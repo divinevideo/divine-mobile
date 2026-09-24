@@ -1,6 +1,6 @@
 # Git Hooks
 
-The repo has pre-commit and pre-push hooks that mirror CI checks locally. They live in `scripts/install-hooks.sh` and use `mise exec --` for the pinned Flutter version.
+The repo has pre-commit and pre-push hooks that mirror CI checks locally. The checks live in `scripts/hooks/pre-commit` and `scripts/hooks/pre-push`, are installed by `scripts/install-hooks.sh`, and use `mise exec --` for the pinned Flutter version.
 
 ## Installation
 
@@ -8,13 +8,19 @@ The repo has pre-commit and pre-push hooks that mirror CI checks locally. They l
 cd mobile && mise run setup_hooks
 ```
 
-The hooks are **generated copies**, not symlinks — editing `scripts/install-hooks.sh` does nothing until each developer re-runs the command above. When a PR changes hook behaviour, say so in its description, because an already-installed hook keeps the old behaviour silently.
+What `.git/hooks` holds is a **thin shim**, not the checks. The hooks directory is shared by every worktree of a clone, so at run time the shim finds the worktree git invoked it from (`git rev-parse --show-toplevel`) and execs that worktree's tracked `scripts/hooks/<name>`. So:
 
-Most recent change: the pre-push untested-services check now invokes its Dart detector through the pinned SDK. Re-run `mise run setup_hooks` to pick up the change; a stale hook can fail with `dart: command not found` when a service or test file changes.
+- Each worktree runs the checks its own branch carries, and no worktree rewrites the hooks another is using.
+- An edit to `scripts/hooks/*` takes effect on the next commit or push, with no re-install. Only a change to the shim itself in `scripts/install-hooks.sh` needs `mise run setup_hooks` again; say so in that PR's description.
+- A worktree whose branch has no `scripts/hooks/<name>` (a branch older than #9447) gets a warning and the commit or push goes ahead unchecked — it fails open rather than making old branches uncommittable. Rebase onto `origin/main` to get the checks back.
 
-Before that: the pre-push merge-conflict check moved into `scripts/check_branch_mergeable.sh`, so future fixes to it apply without re-running `mise run setup_hooks`. Re-run it once to pick up the delegation; a stale hook keeps reporting a shallow clone as a merge conflict (see below).
+Most recent change: the hooks became shims that run each worktree's tracked `scripts/hooks/` (#9447). Hooks installed before that are full generated copies that never update, so re-run `mise run setup_hooks` once.
 
-Earlier: the pre-push hook skips changed files under `mobile/test/goldens/`. Without re-running `mise run setup_hooks`, a golden change is unpushable on macOS — the stale hook runs the image goldens against Ubuntu-rendered references and fails every time.
+Before that: the pre-push untested-services check now invokes its Dart detector through the pinned SDK. Re-run `mise run setup_hooks` to pick up the change; a stale hook can fail with `dart: command not found` when a service or test file changes.
+
+Earlier: the pre-push merge-conflict check moved into `scripts/check_branch_mergeable.sh`, so future fixes to it apply without re-running `mise run setup_hooks`. Re-run it once to pick up the delegation; a stale hook keeps reporting a shallow clone as a merge conflict (see below).
+
+Earlier still: the pre-push hook skips changed files under `mobile/test/goldens/`. Without re-running `mise run setup_hooks`, a golden change is unpushable on macOS — the stale hook runs the image goldens against Ubuntu-rendered references and fails every time.
 
 When a developer reports CI failures on format, analyze, or codegen that they didn't catch locally, FIRST check whether hooks are installed (`ls .git/hooks/pre-commit .git/hooks/pre-push`) before analyzing the failure itself. If hooks are missing, that is likely the root cause — suggest `mise run setup_hooks`. Do not skip this check.
 
@@ -22,7 +28,6 @@ When a developer reports CI failures on format, analyze, or codegen that they di
 
 **Pre-commit** (staged `.dart` files only):
 - `dart format --output=none --set-exit-if-changed`
-- `flutter analyze lib test integration_test`
 - build_runner codegen verification (if codegen inputs changed)
 
 **Pre-push**:

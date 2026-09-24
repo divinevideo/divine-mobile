@@ -40,7 +40,13 @@ void main() {
         reason: 'scripts/install-hooks.sh should exist',
       );
 
-      final content = hookInstallerFile.readAsStringSync();
+      // The installer writes shims that run the tracked scripts/hooks/*, so
+      // the checks themselves live there.
+      final content = [
+        hookInstallerFile,
+        File('../scripts/hooks/pre-commit'),
+        File('../scripts/hooks/pre-push'),
+      ].map((file) => file.readAsStringSync()).join('\n');
       expect(
         content,
         contains('dart run build_runner build --delete-conflicting-outputs'),
