@@ -86,7 +86,8 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// Optional draft ID to load an existing draft.
   final String? draftId;
 
-  /// Whether the editor was opened from the clip library.
+  /// Whether the editor was opened from the Library screen (its clips or
+  /// drafts tab).
   final bool fromLibrary;
 
   /// Route name for this screen.
@@ -102,7 +103,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// Query parameter carrying how the editor was entered.
   static const originQueryParameter = 'from';
 
-  /// Value of [originQueryParameter] for an entry from the clip library.
+  /// Value of [originQueryParameter] for an entry from the Library screen.
   static const libraryOrigin = 'library';
 
   /// Builds the editor location, optionally for an existing [draftId].
@@ -119,7 +120,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
     ).toString();
   }
 
-  /// Whether [uri] entered the editor from the clip library.
+  /// Whether [uri] entered the editor from the Library screen.
   static bool fromLibraryForRoute(Uri uri) =>
       uri.queryParameters[originQueryParameter] == libraryOrigin;
 

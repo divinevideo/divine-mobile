@@ -1,5 +1,5 @@
 // ABOUTME: Bottom toolbar for the video editor with sub-editor buttons.
-// ABOUTME: Provides access to clips, text, draw, volume, and effects editors.
+// ABOUTME: Provides access to clips, text, draw, filter, and tune editors.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
