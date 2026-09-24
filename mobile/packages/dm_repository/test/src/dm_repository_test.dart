@@ -9415,6 +9415,66 @@ void main() {
         });
       });
 
+      test('a relay reconnect resume cannot confirm a repeated refusal', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          // A newly connected relay resumes the drain ahead of the bounded
+          // delay, through the same default-false entry point an inbox open
+          // uses.
+          relayStatus.add(
+            connected([
+              'wss://answering.example',
+              'wss://reconnected.example',
+            ]),
+          );
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                'a reconnect says a relay is reachable again, not that the '
+                'refusal it repeats is what that relay holds',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('failed NIP-04 recovery cannot replenish retries forever', () {
         fakeAsync((async) {
           stubRelayStatus(
