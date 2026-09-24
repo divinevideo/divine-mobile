@@ -992,6 +992,25 @@ void main() {
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
 
+    // The outgoing-NIP-04 recovery pass (#5304) reads through `readEvents`
+    // once the gift-wrap drain reaches the end. Answered and empty: the
+    // account sent no NIP-04, so the pass lets the drain complete.
+    void stubNip04RecoveryAnsweredEmpty() =>
+        when(
+          () => mockNostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            answeredNetworkRelayCount: 3,
+          ),
+        );
+
     void stubNoPersistedGiftWrapIds() => when(
       () => mockDirectMessagesDao.giftWrapIdsPresent(any()),
     ).thenAnswer((_) async => const <String>{});
@@ -2303,6 +2322,7 @@ void main() {
             () => mockDirectMessagesDao.hasGiftWrap(any()),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
+          stubNip04RecoveryAnsweredEmpty();
           // Track persist concurrency on the actual write inside the
           // transaction. Persists run under the event lock, so a yield here
           // would expose any overlap — there must be none.
@@ -2537,6 +2557,7 @@ void main() {
             () => mockDirectMessagesDao.hasGiftWrap(any()),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
+          stubNip04RecoveryAnsweredEmpty();
         });
 
         test(
@@ -5401,6 +5422,7 @@ void main() {
         'history drain targets the own kind-10050 inbox relays as tempRelays',
         () async {
           final capturedDrainTempRelays = <List<String>?>[];
+          stubNip04RecoveryAnsweredEmpty();
           // The own kind-10050 resolve (#8212) and the drain pages (#8209)
           // both read through queryEventsDetailed, so one stub serves both and
           // branches on the filter.
@@ -5426,8 +5448,8 @@ void main() {
               ]);
             }
             // Only the gift-wrap drain pages carry p:[self]; capture their
-            // tempRelays (the NIP-04 recovery uses authors:[self] with no p
-            // and is intentionally not 10050-targeted).
+            // tempRelays. The NIP-04 recovery reads through readEvents and is
+            // intentionally not 10050-targeted.
             if (filter.p?.isNotEmpty ?? false) {
               capturedDrainTempRelays.add(
                 inv.namedArguments[#tempRelays] as List<String>?,
@@ -5455,6 +5477,7 @@ void main() {
         () async {
           var resolveQueries = 0;
           final controller = StreamController<Event>();
+          stubNip04RecoveryAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
               any(),
@@ -5512,6 +5535,7 @@ void main() {
           var resolveQueries = 0;
           final capturedDrainTempRelays = <List<String>?>[];
           final controller = StreamController<Event>();
+          stubNip04RecoveryAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
               any(),
