@@ -6,11 +6,15 @@ import 'dart:async';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 import 'package:openvine/observability/performance_operation.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
+import 'package:openvine/services/startup_performance_service.dart';
 
 class FeedPlaybackPerformance {
+  /// The first sample after launch also completes the startup `video_ready`
+  /// milestone; [StartupPerformanceService.markVideoReady] ignores the rest.
   FeedPlaybackPerformance(
     Stream<FeedFirstFrameMetric> events,
     PerformanceTraceMonitor monitor,
+    StartupPerformanceService startup,
   ) {
     _subscription = events.listen((sample) {
       PerformanceOperation(monitor, 'video_first_frame').finish(
@@ -28,6 +32,7 @@ class FeedPlaybackPerformance {
             'playback_requested_ms': duration.inMilliseconds,
         },
       );
+      startup.markVideoReady();
     });
   }
 
