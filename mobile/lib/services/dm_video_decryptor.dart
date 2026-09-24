@@ -63,19 +63,23 @@ class DmVideoDecryptor {
 
   final Dio _dio;
   final FileEncryption _encryption;
+  int _clipSequence = 0;
 
-  /// Temp file name for [message]'s decrypted clip.
+  /// Temp file name for [message]'s decrypted clip number [sequence].
   ///
-  /// Keyed on the full message id so two consumers never share a path, and
-  /// the extension is taken from the wire MIME type so the native decoder
-  /// sees a recognisable container.
-  static String clipFileNameFor(DmMessage message) {
+  /// Keyed on the full message id plus a per-decrypt [sequence], so the play
+  /// page and a concurrent save of the same message never share a path and
+  /// one cannot delete the clip the other is still reading. The extension is
+  /// taken from the wire MIME type so the native decoder sees a recognisable
+  /// container.
+  static String clipFileNameFor(DmMessage message, {int sequence = 0}) {
     final fileType = message.fileMetadata?.fileType ?? '';
     final slash = fileType.indexOf('/');
     final raw = slash == -1 ? '' : fileType.substring(slash + 1);
     final extension = raw.replaceAll(RegExp('[^A-Za-z0-9]'), '');
     final safeId = message.id.replaceAll(RegExp('[^A-Za-z0-9]'), '');
-    return 'dm_video_$safeId.${extension.isEmpty ? 'mp4' : extension}';
+    return 'dm_video_${safeId}_$sequence.'
+        '${extension.isEmpty ? 'mp4' : extension}';
   }
 
   /// Downloads, verifies, and decrypts [message]'s video, returning the path
@@ -110,7 +114,9 @@ class DmVideoDecryptor {
       hexNonce: metadata.decryptionNonce,
     );
 
-    final path = await _clipPathFor(clipFileNameFor(message));
+    final path = await _clipPathFor(
+      clipFileNameFor(message, sequence: _clipSequence++),
+    );
     try {
       final file = File(path);
       await file.parent.create(recursive: true);

@@ -70,9 +70,9 @@ void main() {
       if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
     });
 
-    String clipPath(DmMessage message) =>
+    String clipPath(DmMessage message, {int sequence = 0}) =>
         '${tempDir.path}/${DmVideoDecryptor.playbackDirName}/'
-        '${DmVideoDecryptor.clipFileNameFor(message)}';
+        '${DmVideoDecryptor.clipFileNameFor(message, sequence: sequence)}';
 
     void stubDownload(Uint8List ciphertext) {
       when(
@@ -122,6 +122,31 @@ void main() {
                 ).captured.single
                 as Options;
         expect(options.responseType, ResponseType.bytes);
+      },
+    );
+
+    test(
+      'gives each decrypt of the same message its own clip, so deleting one '
+      'leaves the other readable',
+      () async {
+        final plaintext = Uint8List.fromList(List<int>.generate(64, (i) => i));
+        final encrypted = await FileEncryption().encrypt(plaintext);
+        stubDownload(encrypted.ciphertext);
+        final message = _videoMessage(
+          fileHash: HashUtil.sha256Hash(encrypted.ciphertext),
+          key: encrypted.key,
+          nonce: encrypted.nonce,
+        );
+        final decryptor = DmVideoDecryptor(dio: dio);
+
+        final first = await decryptor.decryptToFile(message);
+        final second = await decryptor.decryptToFile(message);
+        decryptor.deleteClip(first);
+
+        expect(second, equals(clipPath(message, sequence: 1)));
+        expect(second, isNot(equals(first)));
+        expect(File(first).existsSync(), isFalse);
+        expect(File(second).readAsBytesSync(), equals(plaintext));
       },
     );
 
