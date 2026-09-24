@@ -194,6 +194,51 @@ void main() {
       });
     });
 
+    test('non-refusal deferrals resume on each relay reconnect', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return const QueryResult(events: [], endedBy: QueryEnd.noRelay);
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        expect(reads, 1);
+
+        relayStatus.add({
+          'wss://first.example': RelayConnectionStatus.connected(
+            'wss://first.example',
+          ),
+        });
+        async.flushMicrotasks();
+        expect(reads, 2);
+
+        relayStatus.add({
+          'wss://first.example': RelayConnectionStatus.disconnected(
+            'wss://first.example',
+          ),
+          'wss://second.example': RelayConnectionStatus.connected(
+            'wss://second.example',
+          ),
+        });
+        async.flushMicrotasks();
+        expect(reads, 3);
+
+        unawaited(repository.stopListening());
+        async.flushMicrotasks();
+      });
+    });
+
     test(
       'a flapping relay does not re-drive the armed confirmation window',
       () {

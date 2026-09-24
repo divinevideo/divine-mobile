@@ -2387,7 +2387,8 @@ class DmRepository {
   /// banner stayed up until a manual retry (verified against a paused relay,
   /// #8643). A relay merely reporting again while still connected is not an
   /// edge. A relay that repeatedly reconnects without answering can therefore
-  /// re-drive the bounded drain, at most once per armed retry window. At most
+  /// re-drive the bounded drain, at most once per armed refusal-confirmation
+  /// window. Other deferrals keep their reconnect behavior. At most
   /// one listener is armed at a time, a new run supersedes it, and teardown
   /// cancels it. A page-cap pause deliberately does not arm one: that budget
   /// resumes on the next inbox open by design. See #8550.
@@ -2398,15 +2399,19 @@ class DmRepository {
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     // A non-confirming sweep can defer while the delayed confirmation remains
-    // pending. Keep its deadline and slot. Refresh the reconnect listener only
-    // until that window has already spent its one rising edge, so a flapping
-    // relay cannot re-drive the drain until the confirmation timer fires.
-    if (_drainRetryTimer != null || _pendingNip04RefusalConfirmation) {
+    // pending. Keep its deadline and slot only for an ambiguous NIP-04 refusal;
+    // other deferrals resume immediately on each reconnect as before.
+    final hasRefusalConfirmationWindow =
+        _armedNip04Refusals.isNotEmpty || _pendingNip04RefusalConfirmation;
+    if (hasRefusalConfirmationWindow &&
+        (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
       if (!_confirmationWindowRelayEdgeUsed) {
         _listenForDrainRelayReconnect(pubkey, generation);
       }
       return;
     }
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
     if (_automaticDrainRetryCount >=
         DmHistoryDrainConfig.deferredRetryDelays.length) {
       Log.warning(
@@ -2464,7 +2469,7 @@ class DmRepository {
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
-      if (_drainRetryTimer != null || _pendingNip04RefusalConfirmation) {
+      if (_armedNip04Refusals.isNotEmpty || _pendingNip04RefusalConfirmation) {
         _confirmationWindowRelayEdgeUsed = true;
       }
       Log.info(
