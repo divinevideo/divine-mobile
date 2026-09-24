@@ -9215,6 +9215,107 @@ void main() {
         });
       }
 
+      test('logs the relay refusals a NIP-04 page settled on', () async {
+        await LogCaptureService().clearAllLogs();
+        when(
+          () => mockNostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            closedRelayReasons: {'wss://restricted.example': 'restricted'},
+          ),
+        );
+        final syncState = armedSyncState();
+        final repository = createRepository(syncState: syncState);
+
+        await repository.backfillHistoryIfNeeded();
+
+        expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        final settleLogs = LogCaptureService()
+            .getRecentLogs()
+            .where((e) => e.message.contains('despite relay refusals'))
+            .toList();
+        expect(settleLogs, hasLength(1));
+        expect(
+          settleLogs.single.message,
+          contains(
+            'page 0 as answered despite relay refusals: '
+            'wss://restricted.example restricted',
+          ),
+        );
+      });
+
+      test('logs a deferred retry that joins a drain in flight', () {
+        fakeAsync((async) {
+          unawaited(LogCaptureService().clearAllLogs());
+          async.flushMicrotasks();
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final heldRead = Completer<QueryResult>();
+          const refusal = QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            closedRelayReasons: {'wss://unavailable.example': 'error'},
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            nip04Reads++;
+            return nip04Reads == 2
+                ? heldRead.future
+                : Future<QueryResult>.value(refusal);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          // An inbox open just before the retry is due holds a drain open
+          // across the moment the timer fires.
+          async.elapse(
+            DmHistoryDrainConfig.deferredRetryDelays.first -
+                const Duration(seconds: 1),
+          );
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(seconds: 1))
+            ..flushMicrotasks();
+          expect(nip04Reads, 2);
+
+          final joinLogs = LogCaptureService()
+              .getRecentLogs()
+              .where((e) => e.message.contains('joined a drain'))
+              .toList();
+          expect(joinLogs, hasLength(1));
+          expect(
+            joinLogs.single.message,
+            contains('that run cannot confirm a relay refusal'),
+          );
+
+          heldRead.complete(refusal);
+          async.flushMicrotasks();
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
       test('does not confirm a refusal that a different relay repeats', () {
         fakeAsync((async) {
           stubRelayStatus(

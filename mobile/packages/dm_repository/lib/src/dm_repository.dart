@@ -1582,13 +1582,28 @@ class DmRepository {
         final authoritative =
             result.isComplete || (refusalOnly && confirmedRefusals);
         if (_ingestSessionEnded(pubkey, generation)) return false;
+        if (authoritative && !result.isComplete) {
+          // A settled refusal can be what lets restore finish for good, so
+          // record which relays refused and why.
+          final refusals = [
+            for (final entry in result.closedRelayReasons.entries)
+              '${entry.key} ${entry.value}',
+          ];
+          Log.info(
+            'Outgoing NIP-04 recovery for ${pubkeyForLogs(pubkey)} counts '
+            'page $page as answered despite relay refusals: '
+            '${refusals.join(', ')}',
+            category: LogCategory.system,
+          );
+        }
         if (events.isEmpty) {
-          // An empty page is genuine exhaustion only if a relay actually
-          // ANSWERED it. Nothing answering — no relay took the REQ, every
-          // answer was a refusal, or some relay stayed silent — arrives as an
-          // ordinary empty list, and concluding "nothing to recover" would let
-          // the caller mark the drain complete and permanently strand the
-          // user's outgoing NIP-04 (the #5202 failure mode, mirrored here).
+          // An empty page is genuine exhaustion only if every relay answered
+          // it: with EOSE, a terminal refusal, or an ambiguous refusal a
+          // deferred retry confirmed. No relay taking the REQ, a silent relay,
+          // or a refusal not yet confirmed arrives as an ordinary empty list,
+          // and concluding "nothing to recover" would let the caller mark the
+          // drain complete and permanently strand the user's outgoing NIP-04
+          // (the #5202 failure mode, mirrored here).
           return authoritative && !sawUnansweredPage;
         }
         if (!authoritative) sawUnansweredPage = true;
@@ -1724,11 +1739,24 @@ class DmRepository {
     return _backfillHistoryIfNeeded();
   }
 
+  /// [allowNip04RefusalConfirmation] is passed only by the bounded retry
+  /// timer, whose delay is what separates two sightings of an ambiguous
+  /// refusal. An inbox open or a relay reconnect can follow the first sighting
+  /// within moments, so neither may confirm one.
   Future<void> _backfillHistoryIfNeeded({
     bool allowNip04RefusalConfirmation = false,
   }) {
     final existing = _historyDrain;
-    if (existing != null) return existing;
+    if (existing != null) {
+      if (allowNip04RefusalConfirmation) {
+        Log.info(
+          'DM history retry for ${pubkeyForLogs(_userPubkey)} joined a drain '
+          'already in flight; that run cannot confirm a relay refusal',
+          category: LogCategory.system,
+        );
+      }
+      return existing;
+    }
     final drain = _runHistoryDrain(
       allowNip04RefusalConfirmation: allowNip04RefusalConfirmation,
     );
@@ -2200,9 +2228,11 @@ class DmRepository {
         // "Message requests". See #5304.
         //
         // Defer completion if this pass couldn't run against a live relay
-        // (e.g. a momentary disconnect in this window) so a flaky network
-        // never silently skips recovery AND marks the drain complete — it
-        // resumes on the next inbox open instead.
+        // (e.g. a momentary disconnect in this window) or a relay refused it
+        // ambiguously, so a flaky network never silently skips recovery AND
+        // marks the drain complete. It resumes on the bounded delayed retry,
+        // a relay reconnect or the next inbox open; only the delayed retry can
+        // confirm an ambiguous refusal.
         final nip04Recovered = await _recoverOutgoingNip04(
           pubkey,
           gen,
@@ -2226,10 +2256,9 @@ class DmRepository {
         } else {
           Log.warning(
             'DM history drain reached the end for ${pubkeyForLogs(pubkey)} but '
-            'outgoing '
-            'NIP-04 recovery could not complete (not every relay settled it); '
-            'deferring '
-            'completion to the next inbox open.',
+            'outgoing NIP-04 recovery could not complete (a relay did not '
+            'settle the read, or refused it and the refusal is not confirmed '
+            'yet); deferring completion.',
             category: LogCategory.system,
           );
           _resumeDrainWhenRelayConnects(pubkey, gen);
