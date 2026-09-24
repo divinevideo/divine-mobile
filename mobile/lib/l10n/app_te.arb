@@ -1210,6 +1210,7 @@
     "description": "Snackbar shown when posting a comment from the inline comment field fails (e.g. relay unreachable)."
   },
   "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{లూప్} other{లూప్‌లు}}",
+  "videoFeedTotalLoopsLine": "మొత్తం లూప్‌లు: {compactCount}",
   "@videoFeedLoopCountLine": {
     "placeholders": {
       "compactCount": {

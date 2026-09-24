@@ -2847,6 +2847,7 @@
     "shareMenuDeleteFailedNotInitialized": "L'eliminazione non è ancora pronta. Riprova tra un attimo.",
     "shareMenuDeleteFailedNotOwner": "Puoi eliminare solo i tuoi video.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loop}}",
+    "videoFeedTotalLoopsLine": "Loop totali: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Il relay non ha accettato questa richiesta di eliminazione. Riprova tra poco.",
     "shareMenuDeleteFailedRelayNoResponse": "Non è stato possibile raggiungere il relay. Controlla la connessione e riprova.",
     "shareMenuDeletePartiallyConfirmed": "Eliminato. Non tutti i relay hanno confermato, quindi potrebbe comparire ancora in altre app.",

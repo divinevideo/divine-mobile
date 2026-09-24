@@ -1915,6 +1915,11 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'ጠቅላላ ሉፖች: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'አይደለም Divine';
 
   @override

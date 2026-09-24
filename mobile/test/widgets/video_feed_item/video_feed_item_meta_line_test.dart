@@ -143,7 +143,7 @@ void main() {
 
   String loopLine(WidgetTester tester, int count) => _l10n(
     tester,
-  ).videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
+  ).videoFeedTotalLoopsLine(StringUtils.formatCompactNumber(count));
 
   group('video card meta line', () {
     testWidgets('shows OG Beta Tester for an eligible non-team member', (
@@ -195,27 +195,25 @@ void main() {
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('hides a lifetime total below the visibility floor', (
-      tester,
-    ) async {
+    testWidgets('shows a small lifetime total', (tester) async {
+      // The "Total loops:" label makes even a small number read as data, so
+      // there is no floor hiding it.
       await pump(
         tester,
         video: _video(rawTags: {'views': '7'}),
         authorTotalLoops: 7,
       );
 
-      expect(find.textContaining(loopLine(tester, 7)), findsNothing);
+      expect(find.textContaining(loopLine(tester, 7)), findsOneWidget);
     });
 
-    testWidgets('hides a zero lifetime total', (tester) async {
+    testWidgets('shows a zero lifetime total', (tester) async {
       await pump(tester, video: _video(), authorTotalLoops: 0);
 
-      expect(find.textContaining(loopLine(tester, 0)), findsNothing);
+      expect(find.textContaining(loopLine(tester, 0)), findsOneWidget);
     });
 
-    testWidgets('shows a lifetime total at the visibility floor', (
-      tester,
-    ) async {
+    testWidgets('shows a large lifetime total', (tester) async {
       await pump(tester, video: _video(), authorTotalLoops: 10000);
 
       expect(find.textContaining(loopLine(tester, 10000)), findsOneWidget);

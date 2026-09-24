@@ -2011,6 +2011,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Łączna liczba pętli: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Nie Divine';
 
   @override

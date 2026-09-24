@@ -2847,6 +2847,7 @@
     "shareMenuDeleteFailedNotInitialized": "Löschen ist noch nicht bereit. Versuch es gleich noch einmal.",
     "shareMenuDeleteFailedNotOwner": "Du kannst nur deine eigenen Videos löschen.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{Loop} other{Loops}}",
+    "videoFeedTotalLoopsLine": "Loops insgesamt: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Das Relay hat diese Löschanfrage nicht angenommen. Versuch es gleich noch einmal.",
     "shareMenuDeleteFailedRelayNoResponse": "Das Relay war nicht erreichbar. Prüfe deine Verbindung und versuch es erneut.",
     "shareMenuDeletePartiallyConfirmed": "Gelöscht. Nicht alle Relays haben bestätigt, es kann also noch in anderen Apps auftauchen.",

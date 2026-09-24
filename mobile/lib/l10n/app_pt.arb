@@ -2847,6 +2847,7 @@
     "shareMenuDeleteFailedNotInitialized": "A exclusão ainda não está pronta. Tenta de novo daqui a pouco.",
     "shareMenuDeleteFailedNotOwner": "Só podes apagar os teus próprios vídeos.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loops}}",
+    "videoFeedTotalLoopsLine": "Total de loops: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "O relay não aceitou este pedido de exclusão. Tente de novo daqui a pouco.",
     "shareMenuDeleteFailedRelayNoResponse": "Não foi possível falar com o relay. Verifique sua conexão e tente de novo.",
     "shareMenuDeletePartiallyConfirmed": "Apagado. Nem todos os relays confirmaram, por isso ainda pode aparecer noutras apps.",

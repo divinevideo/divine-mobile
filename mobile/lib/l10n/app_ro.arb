@@ -2847,6 +2847,7 @@
     "shareMenuDeleteFailedNotInitialized": "Ștergerea nu e încă gata. Încearcă din nou peste un moment.",
     "shareMenuDeleteFailedNotOwner": "Poți șterge doar propriile videoclipuri.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{buclă} other{bucle}}",
+    "videoFeedTotalLoopsLine": "Total bucle: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Releul nu a acceptat această cerere de ștergere. Încearcă din nou în scurt timp.",
     "shareMenuDeleteFailedRelayNoResponse": "Nu am putut contacta releul. Verifică conexiunea și încearcă din nou.",
     "shareMenuDeletePartiallyConfirmed": "Șters. Nu toate releele au confirmat, așa că poate apărea în continuare în alte aplicații.",

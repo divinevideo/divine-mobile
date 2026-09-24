@@ -3374,6 +3374,12 @@ abstract class AppLocalizations {
   /// **'{compactCount} {count, plural, =1{loop} other{loops}}'**
   String videoFeedLoopCountLine(String compactCount, int count);
 
+  /// No description provided for @videoFeedTotalLoopsLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Total loops: {compactCount}'**
+  String videoFeedTotalLoopsLine(String compactCount);
+
   /// No description provided for @metadataBadgeNotDivine.
   ///
   /// In en, this message translates to:

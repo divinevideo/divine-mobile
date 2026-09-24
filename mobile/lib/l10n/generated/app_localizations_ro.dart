@@ -2014,6 +2014,11 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Total bucle: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Nu e Divine';
 
   @override

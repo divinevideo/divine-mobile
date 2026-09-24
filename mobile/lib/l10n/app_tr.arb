@@ -2847,6 +2847,7 @@
     "shareMenuDeleteFailedNotInitialized": "Silme henüz hazır değil. Birazdan tekrar dene.",
     "shareMenuDeleteFailedNotOwner": "Yalnızca kendi videolarını silebilirsin.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{döngü} other{döngüler}}",
+    "videoFeedTotalLoopsLine": "Toplam döngü: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Röle bu silme isteğini kabul etmedi. Birazdan tekrar dene.",
     "shareMenuDeleteFailedRelayNoResponse": "Röleye ulaşılamadı. Bağlantını kontrol edip tekrar dene.",
     "shareMenuDeletePartiallyConfirmed": "Silindi. Tüm relay'ler onaylamadı, bu yüzden başka uygulamalarda hâlâ görünebilir.",

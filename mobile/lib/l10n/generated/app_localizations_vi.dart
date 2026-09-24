@@ -1929,6 +1929,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Tổng số vòng lặp: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Không phải Divine';
 
   @override

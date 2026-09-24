@@ -1805,6 +1805,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'ループ合計: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Divine 以外';
 
   @override

@@ -1987,6 +1987,11 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Общо лупове: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Не е от Divine';
 
   @override

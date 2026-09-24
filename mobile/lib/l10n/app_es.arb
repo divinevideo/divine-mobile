@@ -2855,6 +2855,7 @@
     "shareMenuDeleteFailedNotInitialized": "El borrado no está listo todavía. Probá de nuevo en un momento.",
     "shareMenuDeleteFailedNotOwner": "Solo podés borrar tus propios videos.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{bucle} other{bucles}}",
+    "videoFeedTotalLoopsLine": "Bucles totales: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "El relay no aceptó esta solicitud de borrado. Inténtalo de nuevo en un momento.",
     "shareMenuDeleteFailedRelayNoResponse": "No se pudo contactar con el relay. Revisa tu conexión e inténtalo de nuevo.",
     "shareMenuDeletePartiallyConfirmed": "Borrado. No todos los relays lo confirmaron, así que puede seguir apareciendo en otras apps.",

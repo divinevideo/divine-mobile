@@ -1961,6 +1961,11 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'کل لوپس: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Divine نہیں';
 
   @override

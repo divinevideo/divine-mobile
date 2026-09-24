@@ -1956,6 +1956,11 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Kabuuang loops: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Hindi Divine';
 
   @override
