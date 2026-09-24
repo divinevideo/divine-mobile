@@ -528,6 +528,37 @@ void main() {
         expect(find.text(l10n.listFollowButton), findsNothing);
       });
 
+      testWidgets("shares the list's web address", (tester) async {
+        // The shape divine.video routes beside /list/{pubkey}/{listId}; the
+        // app resolves it as well.
+        final shareCalls = <Map<Object?, Object?>>[];
+        const channel = MethodChannel('dev.fluttercommunity.plus/share');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              if (call.method != 'share') return null;
+              shareCalls.add(call.arguments as Map<Object?, Object?>);
+              return 'com.apple.UIKit.activity.CopyToPasteboard';
+            });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(channel, null),
+        );
+        await pumpDiscovered(tester);
+        await tester.pump();
+
+        await tester.tap(findByTooltip(l10n.listShareAction));
+        await tester.pump();
+        await tester.pump();
+
+        expect(shareCalls, hasLength(1));
+        expect(
+          shareCalls.single['text'],
+          contains('https://divine.video/people-lists/$listOwner/crew'),
+        );
+      });
+
       testWidgets('offers no Follow to a signed-out viewer', (tester) async {
         await pumpDiscovered(tester, viewerPubkey: null);
 
