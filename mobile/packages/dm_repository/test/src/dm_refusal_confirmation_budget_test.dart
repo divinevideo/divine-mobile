@@ -458,6 +458,63 @@ void main() {
         });
       },
     );
+
+    test('a page answered between sightings keeps its refusal unconfirmed', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        final outgoing = Event.fromJson({
+          'id':
+              'facefaceface0001facefaceface0001facefaceface0001facefaceface0001',
+          'pubkey': _pubkey,
+          'created_at': 500,
+          'kind': 4,
+          'tags': [
+            [
+              'p',
+              'b1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012',
+            ],
+          ],
+          'content': 'encrypted-outgoing',
+          'sig': '',
+        });
+        final pages = <String>[];
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((inv) async {
+          reads++;
+          pages.add(inv.namedArguments[#subscriptionId] as String);
+          if (reads == 2) {
+            return QueryResult(
+              events: [outgoing],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 1,
+            );
+          }
+          return refusal();
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+
+        // Page 0 was answered after the timer armed, so its refusal did not
+        // recur across the delay. Confirming it would mark restore complete
+        // without ever reading page 1.
+        expect(pages.last, endsWith('_0'));
+        expect(syncState.historyDrainComplete(_pubkey), isFalse);
+      });
+    });
   });
 }
 

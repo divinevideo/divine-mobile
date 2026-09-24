@@ -1555,8 +1555,11 @@ class DmRepository {
     int generation, {
     required bool allowRefusalConfirmation,
   }) async {
+    // A delayed pass confirms only a refusal seen both when its timer armed
+    // and on the latest sweep. A page answered in between did not recur
+    // across the delay, and confirming it would end restore early.
     final priorRefusals = allowRefusalConfirmation
-        ? _armedNip04Refusals
+        ? _armedNip04Refusals.intersection(_previousNip04Refusals)
         : _previousNip04Refusals;
     final currentRefusals = <String>{};
     try {
