@@ -276,7 +276,7 @@ class _StatusBody extends StatelessWidget {
             openSupportMessages: openSupportMessages,
             composeEmail: composeEmail,
             builder: (context, isOpening, openSupport) => DivineButton(
-              label: l10n.accountStatusMessageSupport,
+              label: l10n.supportContactSupport,
               expanded: true,
               isLoading: isOpening,
               onPressed: openSupport,

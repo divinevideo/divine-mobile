@@ -381,12 +381,12 @@ void main() {
           findsNothing,
         );
         await tester.scrollUntilVisible(
-          find.text(l10n.appealOpenSupportCenter),
+          find.text(l10n.supportContactSupport),
           200,
           scrollable: find.byType(Scrollable),
         );
         await tester.pumpAndSettle();
-        expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
       },
     );
 
@@ -571,7 +571,7 @@ void main() {
         expect(find.text(l10n.minorAccountReviewAppealTitle), findsOneWidget);
         expect(find.text(expectedBody), findsOneWidget);
         expect(find.text(otherBody), findsNothing);
-        expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
       }
     });
 
@@ -579,7 +579,7 @@ void main() {
     // used to be returned as the primary action *and* rendered unconditionally
     // below the reconsideration card — two identical buttons straddling it.
     // The reachable states are openReported, cleared, deniedClosed and unknown.
-    testWidgets('offers Support Center once on a decided case, below the '
+    testWidgets('offers the support contact once on a decided case, below the '
         'reconsideration card', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -617,13 +617,13 @@ void main() {
       );
 
       await tester.scrollUntilVisible(
-        find.text(l10n.appealOpenSupportCenter),
+        find.text(l10n.supportContactSupport),
         200,
         scrollable: find.byType(Scrollable),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.appealOpenSupportCenter), findsOneWidget);
+      expect(find.text(l10n.supportContactSupport), findsOneWidget);
       expect(find.text(l10n.minorAccountReviewAppealTitle), findsOneWidget);
     });
 
