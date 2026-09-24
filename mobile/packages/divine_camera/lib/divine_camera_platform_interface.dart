@@ -45,6 +45,10 @@ abstract class DivineCameraPlatform extends PlatformInterface {
   /// without the speech-tuned processing it applies by default. iOS and
   /// Android act on it; other platforms ignore it.
   ///
+  /// [videoStabilizationMode] is applied by the first capture-session
+  /// configuration, so a saved preference costs no second bind. A mode the
+  /// opened lens does not support falls back to off.
+  ///
   /// Returns the initial camera state.
   Future<CameraState> initializeCamera({
     DivineCameraLens lens = DivineCameraLens.back,
@@ -53,6 +57,8 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     bool mirrorFrontCameraOutput = true,
     bool enableAutoLensSwitch = true,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) {
     throw UnimplementedError('initializeCamera() has not been implemented.');
   }
@@ -149,12 +155,14 @@ abstract class DivineCameraPlatform extends PlatformInterface {
 
   /// Pauses the camera preview.
   ///
-  /// When [releaseAudio] is `true` (genuine background), the platform also
-  /// releases the microphone and deactivates the shared audio session so the
-  /// OS stops attributing an active recording to the app. Pass `false` for
-  /// transient foreground interruptions (e.g. iOS `.inactive` from a Control
-  /// Center / app-switcher pull), which stop only the video preview and leave
-  /// the audio session untouched to avoid churning other apps' playback.
+  /// When [releaseAudio] is `true` (genuine background, or the Upload tab),
+  /// iOS also releases the microphone and deactivates the shared audio session
+  /// so the OS stops attributing an active recording to the app, and Android
+  /// unbinds the camera unless a recording is in progress. Pass `false` for
+  /// transient foreground interruptions (e.g. `.inactive` from a Control
+  /// Center / notification-shade pull): iOS then stops only the video preview
+  /// and leaves the audio session untouched, and Android keeps the camera
+  /// bound and the preview running.
   Future<void> pausePreview({bool releaseAudio = true}) {
     throw UnimplementedError('pausePreview() has not been implemented.');
   }

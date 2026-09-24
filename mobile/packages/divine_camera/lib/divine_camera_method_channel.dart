@@ -160,6 +160,8 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
     bool mirrorFrontCameraOutput = true,
     bool enableAutoLensSwitch = true,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     final result = await methodChannel.invokeMapMethod<dynamic, dynamic>(
       'initializeCamera',
@@ -170,6 +172,7 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
         'mirrorFrontCameraOutput': mirrorFrontCameraOutput,
         'enableAutoLensSwitch': enableAutoLensSwitch,
         'preferUnprocessedAudio': preferUnprocessedAudio,
+        'videoStabilizationMode': videoStabilizationMode.toNativeString(),
       },
     );
     if (result == null) {

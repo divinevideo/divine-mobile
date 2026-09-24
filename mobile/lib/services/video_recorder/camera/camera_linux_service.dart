@@ -89,6 +89,8 @@ class CameraLinuxService extends CameraService {
     DivineCameraLens initialLens = DivineCameraLens.front,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     Log.info(
       'Camera is not available on Linux - showing placeholder',

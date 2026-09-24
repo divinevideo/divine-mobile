@@ -298,9 +298,13 @@ class _IconButton extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const .all(8),
-            child: DivineIcon(
+            // Drawn over the live preview, so it is re-rasterized on every
+            // camera frame: a live tinted SVG is a colour-filter saveLayer each
+            // time, the baked glyph is one image draw.
+            child: ShadowedDivineIcon(
               icon: icon,
               color: VineTheme.whiteText.withAlpha(onTap != null ? 255 : 100),
+              shadows: const [],
             ),
           ),
         ),

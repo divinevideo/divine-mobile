@@ -419,9 +419,14 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    context.read<VideoRecorderBloc>().add(
-      VideoRecorderAppLifecycleChanged(state),
-    );
+    final bloc = context.read<VideoRecorderBloc>();
+    // The Upload tab keeps the camera paused; coming back to the app must not
+    // restart it behind the static explainer.
+    if (state == AppLifecycleState.resumed &&
+        bloc.state.recorderMode == VideoRecorderMode.upload) {
+      return;
+    }
+    bloc.add(VideoRecorderAppLifecycleChanged(state));
   }
 
   @override
@@ -455,10 +460,10 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         return bloc;
       },
       // Release the camera while the Upload tab's static explainer is showing,
-      // and re-initialize it when the user returns to a recording mode. Reuses
-      // the recorder's existing pause/resume lifecycle plumbing so we don't
-      // burn battery or trigger the OS recording indicator on a tab with no
-      // preview.
+      // and resume it when the user returns to a recording mode. Reuses the
+      // recorder's existing pause/resume lifecycle plumbing so we don't burn
+      // battery or trigger the OS recording indicator on a tab with no
+      // preview. A camera that never came up is initialized instead.
       child: BlocListener<VideoRecorderBloc, VideoRecorderBlocState>(
         listenWhen: (previous, current) =>
             previous.recorderMode != current.recorderMode,
@@ -473,7 +478,15 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
               const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
             );
           } else if (previous == VideoRecorderMode.upload) {
-            _initializeCamera();
+            if (state.isCameraInitialized) {
+              context.read<VideoRecorderBloc>().add(
+                const VideoRecorderAppLifecycleChanged(
+                  AppLifecycleState.resumed,
+                ),
+              );
+            } else {
+              _initializeCamera();
+            }
           }
         },
         child: PopScope(

@@ -36,8 +36,11 @@ class MockCameraService extends CameraService {
     DivineCameraLens initialLens = DivineCameraLens.front,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async {
     _currentLens = initialLens;
+    stabilizationMode = videoStabilizationMode;
     _isInitialized = true;
   }
 

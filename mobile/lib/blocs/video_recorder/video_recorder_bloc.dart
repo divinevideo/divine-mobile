@@ -227,7 +227,13 @@ class VideoRecorderBloc
       transformer: sequential(),
     );
     on<VideoRecorderLensSet>(_onLensSet);
-    on<VideoRecorderZoomLevelSet>(_onZoomLevelSet);
+    on<VideoRecorderZoomLevelSet>(
+      _onZoomLevelSet,
+      // A pinch sends one request per pointer update. Only the newest may
+      // land: an older platform reply finishing late would otherwise snap
+      // the ruler back to a stale zoom.
+      transformer: restartable(),
+    );
     on<VideoRecorderFocusPointSet>(_onFocusPointSet);
     on<VideoRecorderExposurePointSet>(_onExposurePointSet);
     on<VideoRecorderRecordingToggleRequested>(_onRecordingToggleRequested);
@@ -406,6 +412,9 @@ class VideoRecorderBloc
         // capture session; flipping the setting applies to the next open.
         preferUnprocessedAudio:
             prefs.getBool(MusicModePreferenceService.prefsKey) ?? false,
+        // Rides the first bind: applying it after init would rebind the
+        // whole camera a second time on Android.
+        videoStabilizationMode: _savedStabilizationMode(prefs),
       );
     } catch (e, stackTrace) {
       initError = e;
@@ -454,7 +463,11 @@ class VideoRecorderBloc
       aspectRatio: clips.isNotEmpty ? clips.first.targetAspectRatio : null,
     );
 
-    await _restoreStabilizationModePreference(emit);
+    // Opening straight into Upload: the screen's pause for that tab arrived
+    // while the camera was still starting and was dropped, so release it now.
+    if (state.recorderMode == VideoRecorderMode.upload) {
+      await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
+    }
 
     await _setupRemoteRecordControl();
 
@@ -478,7 +491,27 @@ class VideoRecorderBloc
     VideoRecorderAppLifecycleChanged event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
-    await _cameraService.handleAppLifecycleState(event.state);
+    try {
+      await _cameraService.handleAppLifecycleState(event.state);
+    } catch (e, stackTrace) {
+      Log.warning(
+        '⚠️ Camera failed to handle ${event.state.name}: $e',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      addError(e, stackTrace);
+      if (event.state != AppLifecycleState.resumed) return;
+      // A camera that does not come back would leave a black preview. Show
+      // the initialization error instead; the next initialize (leaving and
+      // returning to the Upload tab, or reopening the recorder) recovers.
+      emit(
+        state.copyWith(
+          isCameraInitialized: false,
+          canRecord: false,
+          initializationError: CameraInitializationError.failed,
+        ),
+      );
+    }
   }
 
   Future<void> _onRemoteRecordPaused(
@@ -1934,6 +1967,16 @@ class VideoRecorderBloc
     _VideoRecorderRemoteRecordTriggered event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
+    // The Upload tab shows no preview and pauses the camera, so a volume or
+    // Bluetooth press there must not start a recording the user cannot see.
+    if (state.recorderMode == VideoRecorderMode.upload) {
+      Log.debug(
+        '🎮 Remote record trigger ignored - Upload tab',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
     if (_remoteRecordPausedForSound) {
       Log.debug(
         '🎮 Remote record trigger ignored - sound is selected',
@@ -2036,31 +2079,17 @@ class VideoRecorderBloc
     );
   }
 
-  /// Re-applies the persisted stabilization mode after the camera initializes.
+  /// The persisted stabilization mode, handed to the camera's initialize.
   ///
   /// The native controller is recreated (mode reset to off) on every init, so
-  /// the saved preference is restored here. Skipped when the saved mode is off
-  /// or unsupported by the active camera.
-  Future<void> _restoreStabilizationModePreference(
-    Emitter<VideoRecorderBlocState> emit,
-  ) async {
-    final saved = _readSharedPreferences().getString(
-      _kLastUsedStabilizationModeKey,
-    );
-    if (saved == null) return;
-    final mode = DivineVideoStabilizationMode.fromNativeString(saved);
-    if (mode == DivineVideoStabilizationMode.off) return;
-    if (!state.availableVideoStabilizationModes.contains(mode)) return;
-
-    final success = await _cameraService.setVideoStabilizationMode(mode);
-    if (success) {
-      emit(state.copyWith(videoStabilizationMode: mode));
-      Log.debug(
-        '🎯 Restored stabilization mode: ${mode.name}',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
-    }
+  /// the saved preference travels with each one. The platform opens with off
+  /// when the active lens does not support it.
+  DivineVideoStabilizationMode _savedStabilizationMode(
+    SharedPreferences prefs,
+  ) {
+    final saved = prefs.getString(_kLastUsedStabilizationModeKey);
+    if (saved == null) return DivineVideoStabilizationMode.off;
+    return DivineVideoStabilizationMode.fromNativeString(saved);
   }
 
   Future<void> _prepareSoundForPlayback() async {

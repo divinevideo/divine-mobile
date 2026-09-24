@@ -35,7 +35,7 @@ void main() {
     test('the plugin forwards it to the controller', () {
       expect(
         declarationAt(pluginSource, 'private fun initializeCamera('),
-        contains('enableAutoLensSwitch, preferUnprocessedAudio)'),
+        contains('enableAutoLensSwitch, preferUnprocessedAudio,'),
       );
     });
 

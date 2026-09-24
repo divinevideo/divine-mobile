@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:c2pa_flutter/c2pa.dart';
 import 'package:crypto/crypto.dart' as crypto;
@@ -529,14 +530,9 @@ class NativeProofModeService {
     }
 
     try {
-      // Open the file as a stream of bytes
-      final Stream<List<int>> fileStream = file.openRead();
-
-      // Transform the stream using the SHA-256 converter
-      final digest = await fileStream.transform(crypto.sha256).first;
-
-      // Convert the Digest object to a hexadecimal string for display/comparison
-      return digest.toString();
+      // Hashing a recorded clip is tens of MB of pure-Dart SHA-256; on the UI
+      // isolate it drops frames right as the recorder returns to preview.
+      return await Isolate.run(() => _sha256OfFile(filePath));
     } catch (e) {
       Log.error(
         'Error generating hash: $e',
@@ -545,6 +541,16 @@ class NativeProofModeService {
       );
       rethrow;
     }
+  }
+
+  /// Streams [filePath] through SHA-256 and returns the hex digest. Runs on a
+  /// background isolate (see [generateSha256FileHash]).
+  static Future<String> _sha256OfFile(String filePath) async {
+    final digest = await File(filePath)
+        .openRead()
+        .transform(crypto.sha256)
+        .first;
+    return digest.toString();
   }
 
   static NativeProofData _attachCreatorIdentityMetadata(

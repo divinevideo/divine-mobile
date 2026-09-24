@@ -57,6 +57,25 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// The route the editor opens the camera recorder in.
+///
+/// Opaque, unlike the editor's tool overlays: the recorder covers the whole
+/// screen, and a non-opaque route kept the editor — its video textures,
+/// colour filter and live icons — composited under every camera frame. A
+/// transition route still paints the editor while the fade runs.
+@visibleForTesting
+PageRouteBuilder<bool> editorRecorderRoute(Widget recorder) {
+  return PageRouteBuilder<bool>(
+    settings: const RouteSettings(name: 'video_recorder'),
+    barrierDismissible: true,
+    barrierColor: VineTheme.transparent,
+    pageBuilder: (_, _, _) => recorder,
+    transitionsBuilder: (_, animation, _, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}
+
 /// The main video editor screen for adding layers (text, stickers, effects).
 ///
 /// Manages the [VideoEditorMainBloc] and [VideoEditorStickerBloc] lifecycle,
@@ -395,18 +414,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
     final result = await Navigator.push<bool>(
       context,
-      PageRouteBuilder<bool>(
-        settings: const RouteSettings(name: 'video_recorder'),
-        opaque: false,
-        barrierDismissible: true,
-        barrierColor: VineTheme.transparent,
-        pageBuilder: (_, _, _) => const VideoRecorderScreen(
+      editorRecorderRoute(
+        const VideoRecorderScreen(
           fromEditor: true,
           entryPoint: CreationEntryPoint.editor,
         ),
-        transitionsBuilder: (_, animation, _, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
       ),
     );
 

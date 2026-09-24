@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoRecorderView - main video recording UI
 // ABOUTME: Tests screen initialization, camera setup, UI elements, and lifecycle
 
+import 'dart:async';
 import 'dart:core';
 
 import 'package:bloc_test/bloc_test.dart';
@@ -392,6 +393,73 @@ void main() {
               any(that: isA<VideoRecorderAppLifecycleChanged>()),
             ),
           ).called(greaterThanOrEqualTo(1));
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('resumes the paused camera when leaving the Upload tab', (
+        tester,
+      ) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final states = StreamController<VideoRecorderBlocState>();
+        try {
+          const capture = VideoRecorderBlocState(
+            isCameraInitialized: true,
+            canRecord: true,
+          );
+          whenListen(recorderBloc, states.stream, initialState: capture);
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pump();
+
+          states.add(capture.copyWith(recorderMode: VideoRecorderMode.upload));
+          await tester.pump();
+          states.add(capture);
+          await tester.pump();
+
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.paused),
+            ),
+          ).called(1);
+          verify(
+            () => recorderBloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            ),
+          ).called(1);
+          // Only the open initializes; the return resumes the live camera.
+          verify(
+            () => recorderBloc.add(const VideoRecorderInitializeRequested()),
+          ).called(1);
+        } finally {
+          await states.close();
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('keeps the camera paused when the app returns to the '
+          'Upload tab', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        try {
+          when(() => recorderBloc.state).thenReturn(
+            const VideoRecorderBlocState(
+              isCameraInitialized: true,
+              recorderMode: VideoRecorderMode.upload,
+            ),
+          );
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pump();
+
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pump();
+
+          verifyNever(
+            () => recorderBloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            ),
+          );
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }

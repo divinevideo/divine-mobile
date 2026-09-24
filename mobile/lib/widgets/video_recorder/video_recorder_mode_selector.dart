@@ -249,97 +249,115 @@ class _VideoRecorderModeSelectorWheelState
                   ),
                 ),
               ),
-              // Scrollable labels with left/right fade-out edges.
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Colors.white,
-                    Colors.white,
-                    Colors.transparent,
-                  ],
-                  stops: [0.0, 0.18, 0.82, 1.0],
-                ).createShader(bounds),
-                blendMode: .dstIn,
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification is ScrollStartNotification) {
-                      // Only user drags/flings should snap. A programmatic
-                      // animateTo scroll has null drag details; letting its
-                      // end re-trigger snapping made the wheel keep advancing
-                      // to the last item.
-                      _userScrolling = notification.dragDetails != null;
-                    } else if (notification is ScrollUpdateNotification) {
-                      _lastScrollDelta = notification.scrollDelta ?? 0;
-                    } else if (notification is ScrollEndNotification &&
-                        _userScrolling) {
-                      _userScrolling = false;
-                      _snapToNearest();
-                    }
-                    return false;
-                  },
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    controller: _scrollController,
-                    padding: EdgeInsets.only(
-                      left: leadingPadding,
-                      right: trailingPadding,
-                    ),
-                    itemCount: modes.length,
-                    itemBuilder: (context, i) {
-                      final isSelected = i == _selectedIndex;
-                      return SizedBox(
-                        width: itemWidths[i],
-                        child: Semantics(
-                          identifier: SemanticIds.cameraMode(modes[i].name),
-                          label: isSelected
-                              ? modes[i].label
-                              : l10n.videoRecorderSwitchToModeLabel(
+              // Scrollable labels.
+              NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollStartNotification) {
+                    // Only user drags/flings should snap. A programmatic
+                    // animateTo scroll has null drag details; letting its
+                    // end re-trigger snapping made the wheel keep advancing
+                    // to the last item.
+                    _userScrolling = notification.dragDetails != null;
+                  } else if (notification is ScrollUpdateNotification) {
+                    _lastScrollDelta = notification.scrollDelta ?? 0;
+                  } else if (notification is ScrollEndNotification &&
+                      _userScrolling) {
+                    _userScrolling = false;
+                    _snapToNearest();
+                  }
+                  return false;
+                },
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  controller: _scrollController,
+                  padding: EdgeInsets.only(
+                    left: leadingPadding,
+                    right: trailingPadding,
+                  ),
+                  itemCount: modes.length,
+                  itemBuilder: (context, i) {
+                    final isSelected = i == _selectedIndex;
+                    return SizedBox(
+                      width: itemWidths[i],
+                      child: Semantics(
+                        identifier: SemanticIds.cameraMode(modes[i].name),
+                        label: isSelected
+                            ? modes[i].label
+                            : l10n.videoRecorderSwitchToModeLabel(
+                                modes[i].label,
+                              ),
+                        selected: isSelected,
+                        button: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            _selectIndex(i, animate: true);
+                          },
+                          child: Center(
+                            child: AnimatedDefaultTextStyle(
+                              duration: _animationDuration.autoReduceMotion(
+                                context,
+                              ),
+                              style: VineTheme.titleSmallFont(
+                                color: isSelected
+                                    ? isLight
+                                          ? colors.onSurface
+                                          : VineTheme.primary
+                                    : isLight
+                                    ? colors.mutedText
+                                    : colors.onSurface,
+                              ),
+                              child: ExcludeSemantics(
+                                child: Text(
                                   modes[i].label,
-                                ),
-                          selected: isSelected,
-                          button: true,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () {
-                              _selectIndex(i, animate: true);
-                            },
-                            child: Center(
-                              child: AnimatedDefaultTextStyle(
-                                duration: _animationDuration.autoReduceMotion(
-                                  context,
-                                ),
-                                style: VineTheme.titleSmallFont(
-                                  color: isSelected
-                                      ? isLight
-                                            ? colors.onSurface
-                                            : VineTheme.primary
-                                      : isLight
-                                      ? colors.mutedText
-                                      : colors.onSurface,
-                                ),
-                                child: ExcludeSemantics(
-                                  child: Text(
-                                    modes[i].label,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.visible,
-                                    softWrap: false,
-                                    textScaler: textScaler,
-                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.visible,
+                                  softWrap: false,
+                                  textScaler: textScaler,
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Left/right fade-out edges. Painted as the bar's own colour
+              // over the labels rather than as a mask: a ShaderMask is a
+              // saveLayer that re-rasterizes with every camera frame.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: _EdgeFade(color: colors.surfaceContainerHigh),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Fades the wheel's labels out towards both edges by painting [color] — the
+/// recorder bar the wheel sits on — over them, opaque at the edges and clear
+/// across the middle 64%.
+class _EdgeFade extends StatelessWidget {
+  const _EdgeFade({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final clear = color.withValues(alpha: 0);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, clear, clear, color],
+          stops: const [0.0, 0.18, 0.82, 1.0],
+        ),
+      ),
     );
   }
 }

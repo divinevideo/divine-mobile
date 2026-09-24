@@ -190,7 +190,8 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             let mirrorFrontCameraOutput = args["mirrorFrontCameraOutput"] as? Bool ?? true
             let enableAutoLensSwitch = args["enableAutoLensSwitch"] as? Bool ?? true
             let preferUnprocessedAudio = args["preferUnprocessedAudio"] as? Bool ?? false
-            initializeCamera(lens: lens, videoQuality: videoQuality, enableScreenFlash: enableScreenFlash, mirrorFrontCameraOutput: mirrorFrontCameraOutput, enableAutoLensSwitch: enableAutoLensSwitch, preferUnprocessedAudio: preferUnprocessedAudio, result: result)
+            let videoStabilizationMode = args["videoStabilizationMode"] as? String ?? "off"
+            initializeCamera(lens: lens, videoQuality: videoQuality, enableScreenFlash: enableScreenFlash, mirrorFrontCameraOutput: mirrorFrontCameraOutput, enableAutoLensSwitch: enableAutoLensSwitch, preferUnprocessedAudio: preferUnprocessedAudio, videoStabilizationMode: videoStabilizationMode, result: result)
             
         case "disposeCamera":
             disposeCamera(result: result)
@@ -291,7 +292,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         return FlutterError(code: code, message: message, details: nil)
     }
 
-    private func initializeCamera(lens: String, videoQuality: String, enableScreenFlash: Bool, mirrorFrontCameraOutput: Bool, enableAutoLensSwitch: Bool, preferUnprocessedAudio: Bool, result: @escaping FlutterResult) {
+    private func initializeCamera(lens: String, videoQuality: String, enableScreenFlash: Bool, mirrorFrontCameraOutput: Bool, enableAutoLensSwitch: Bool, preferUnprocessedAudio: Bool, videoStabilizationMode: String, result: @escaping FlutterResult) {
         guard let registry = textureRegistry else {
             result(Self.cameraError("NO_REGISTRY", "Texture registry not available"))
             return
@@ -303,7 +304,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             reclaimLogSink: { [weak self] in self?.installLogSink() }
         )
 
-        cameraController?.initialize(lens: lens, videoQuality: videoQuality, enableScreenFlash: enableScreenFlash, mirrorFrontCameraOutput: mirrorFrontCameraOutput, enableAutoLensSwitch: enableAutoLensSwitch, preferUnprocessedAudio: preferUnprocessedAudio) { [weak self] state, error in
+        cameraController?.initialize(lens: lens, videoQuality: videoQuality, enableScreenFlash: enableScreenFlash, mirrorFrontCameraOutput: mirrorFrontCameraOutput, enableAutoLensSwitch: enableAutoLensSwitch, preferUnprocessedAudio: preferUnprocessedAudio, videoStabilizationMode: videoStabilizationMode) { [weak self] state, error in
             DispatchQueue.main.async {
                 if let error = error {
                     result(Self.cameraError("INIT_ERROR", error))

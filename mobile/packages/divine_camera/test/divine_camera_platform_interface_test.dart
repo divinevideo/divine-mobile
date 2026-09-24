@@ -18,6 +18,8 @@ class TestDivineCameraPlatform extends DivineCameraPlatform
     bool mirrorFrontCameraOutput = false,
     bool enableAutoLensSwitch = false,
     bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
   }) async => const CameraState(isInitialized: true);
 
   @override
