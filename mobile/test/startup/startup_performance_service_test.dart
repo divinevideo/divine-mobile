@@ -1,4 +1,4 @@
-// ABOUTME: Tests for StartupPerformanceService auth shell readiness
+// ABOUTME: Tests for StartupPerformanceService milestones and their export
 // ABOUTME: Each test builds its own instance, so no state crosses tests
 
 import 'package:flutter_test/flutter_test.dart';
@@ -85,6 +85,35 @@ void main() {
 
         expect(service.authShellReadyTime, equals(firstTime));
       });
+    });
+
+    group('markVideoReady', () {
+      test('ends the total phase and exports each sample once', () async {
+        await service.initialize();
+        final monitor = RecordingPerformanceMonitor();
+        service.attachPerformanceMonitor(monitor);
+
+        service.markVideoReady();
+        service.markVideoReady();
+
+        final videoReady = monitor.traces.where(
+          (trace) => trace.attributes['milestone'] == 'video_ready',
+        );
+        final total = monitor.traces.where(
+          (trace) => trace.attributes['phase'] == 'total',
+        );
+        expect(videoReady.single.metrics['elapsed_ms'], isA<int>());
+        expect(total.single.metrics['elapsed_ms'], isA<int>());
+      });
+
+      test(
+        'is a no-op before initialize, because there is no start time',
+        () {
+          expect(service.markVideoReady, returnsNormally);
+
+          expect(service.getMetrics(), isNot(contains('video_ready_ms')));
+        },
+      );
     });
 
     group('getMetrics', () {
