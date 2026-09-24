@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -36,7 +37,6 @@ import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/list_attribution_chip.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
-import 'package:openvine/widgets/video_feed_item/video_card_meta.dart';
 import 'package:openvine/widgets/video_feed_item/video_follow_button.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -148,16 +148,6 @@ class VideoOverlayActions extends ConsumerWidget {
     final video = this.video;
     final previewData = this.previewData;
     final authorPubkey = previewData?.pubkey ?? video!.pubkey;
-    // Watched purely for its invalidation. AuthService is not a ChangeNotifier
-    // and authServiceProvider hands back a stable singleton, so watching it
-    // (with or without select) never rebuilds on sign-in or account switch —
-    // a card mounted while signed out would keep hiding its owner's counts.
-    ref.watch(currentAuthStateProvider);
-    final currentUserPubkey = ref.read(authServiceProvider).currentPublicKeyHex;
-    final isOwnVideo =
-        video != null &&
-        currentUserPubkey != null &&
-        currentUserPubkey == video.pubkey;
     final trimmedTitle = previewData != null
         ? UserProfile.sanitizeDisplayName(previewData.title).trim()
         : video?.displayTitle?.trim();
@@ -320,6 +310,25 @@ class VideoOverlayActions extends ConsumerWidget {
                     final profile = ref
                         .watch(userProfileReactiveProvider(authorPubkey))
                         .value;
+                    // The card's second line reports the author's lifetime
+                    // loops, not this video's. The figure is social proof for
+                    // the creator, and a per-video number beside every card
+                    // reads as a verdict on one clip rather than a body of
+                    // work. Null while the total is unknown or below the
+                    // shared visibility floor, so the card never flashes
+                    // "0 loops" on first paint or discourages a new creator.
+                    final authorStats = ref
+                        .watch(videoCardAuthorStatsProvider(authorPubkey))
+                        .value;
+                    final authorTotalLoops =
+                        authorStats?.hasKnownTotalViews == true
+                        ? authorStats!.totalViews
+                        : null;
+                    final visibleAuthorLoops =
+                        authorTotalLoops != null &&
+                            authorTotalLoops >= profileLoopsVisibilityFloor
+                        ? authorTotalLoops
+                        : null;
                     // Use embedded author data from REST API as fallback
                     // This avoids WebSocket profile fetches for videos
                     // that already have author_name/author_avatar embedded
@@ -493,10 +502,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                               ],
                                             ),
                                             _VideoCardMetaLine(
-                                              meta: resolveVideoCardMeta(
-                                                video: video,
-                                                isOwnVideo: isOwnVideo,
-                                              ),
+                                              totalLoops: visibleAuthorLoops,
                                             ),
                                           ],
                                         ),
@@ -696,28 +702,30 @@ class VideoOverlayActions extends ConsumerWidget {
   }
 }
 
-/// The line under a video card's author name: the loop count, when one clears
-/// the public floor (and always for the creator's own videos).
+/// The line under a video card's author name: the author's lifetime loop
+/// total across every video they have published.
 ///
-/// The post date is deliberately omitted, so an old timestamp cannot make the
-/// feed read as inactive; the metadata sheet carries it.
+/// The figure describes the creator, not the clip, so it never changes between
+/// their videos and never reads as a verdict on one. The post date is
+/// deliberately omitted, so an old timestamp cannot make the feed read as
+/// inactive; the metadata sheet carries it.
 ///
-/// Renders nothing when there is no count, rather than an empty row.
+/// Renders nothing while the total is unknown (`null`), rather than an empty
+/// row or a placeholder zero.
 class _VideoCardMetaLine extends StatelessWidget {
-  const _VideoCardMetaLine({required this.meta});
+  const _VideoCardMetaLine({required this.totalLoops});
 
-  final VideoCardMeta meta;
+  final int? totalLoops;
 
   @override
   Widget build(BuildContext context) {
-    if (meta.isEmpty) return const SizedBox.shrink();
-
-    final loopCount = meta.loopCount!;
+    final totalLoops = this.totalLoops;
+    if (totalLoops == null) return const SizedBox.shrink();
 
     return Text(
       context.l10n.videoFeedLoopCountLine(
-        StringUtils.formatCompactNumber(loopCount),
-        loopCount,
+        StringUtils.formatCompactNumber(totalLoops),
+        totalLoops,
       ),
       // Sits on the video next to the white author name.
       style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),

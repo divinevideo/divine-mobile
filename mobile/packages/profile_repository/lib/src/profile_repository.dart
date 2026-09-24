@@ -777,18 +777,41 @@ class ProfileRepository implements ProfileReader {
   Stream<ProfileStats?> watchProfileStats({required String pubkey}) {
     final dao = _profileStatsDao;
     if (dao == null) return const Stream.empty();
-    return dao.watchStats(pubkey).map((row) {
-      if (row == null) return null;
-      return ProfileStats(
-        pubkey: row.pubkey,
-        videoCount: row.videoCount ?? 0,
-        totalLikes: row.totalLikes ?? 0,
-        followers: row.followerCount,
-        following: row.followingCount,
-        totalViews: row.totalViews ?? 0,
-        lastUpdated: row.cachedAt,
-      );
-    });
+    return dao.watchStats(pubkey).map(_statsFromRowOrNull);
+  }
+
+  /// Returns fresh cached stats with a known lifetime view total for [pubkey].
+  ///
+  /// Unlike [watchProfileStats], this read is for deciding whether the card
+  /// should start a fetch. It reads the row without deleting it, then applies
+  /// the five-minute cache window and treats a missing lifetime total as a
+  /// cache miss. Returns `null` when no fresh total is cached or no DAO exists.
+  @override
+  Future<ProfileStats?> getCachedProfileStats({required String pubkey}) async {
+    final dao = _profileStatsDao;
+    if (dao == null) return null;
+    final row = await dao.getStatsRaw(pubkey);
+    if (row == null || row.totalViews == null) return null;
+    if (row.cachedAt.isBefore(
+      DateTime.now().subtract(profileStatsCacheDuration),
+    )) {
+      return null;
+    }
+    return _statsFromRowOrNull(row);
+  }
+
+  static ProfileStats? _statsFromRowOrNull(ProfileStatRow? row) {
+    if (row == null) return null;
+    return ProfileStats(
+      pubkey: row.pubkey,
+      videoCount: row.videoCount ?? 0,
+      totalLikes: row.totalLikes ?? 0,
+      followers: row.followerCount,
+      following: row.followingCount,
+      totalViews: row.totalViews ?? 0,
+      hasKnownTotalViews: row.totalViews != null,
+      lastUpdated: row.cachedAt,
+    );
   }
 
   /// Caches profile stats — social counts, video stats and engagement data —

@@ -750,6 +750,106 @@ void main() {
     );
   });
 
+  group('videoCardAuthorStatsProvider', () {
+    late _MockProfileRepository profileRepository;
+    late ProviderContainer container;
+
+    setUp(() {
+      profileRepository = _MockProfileRepository();
+      container = ProviderContainer(
+        overrides: [
+          profileReadRepositoryProvider.overrideWithValue(profileRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      when(
+        () => profileRepository.fetchFreshProfile(pubkey: pubkey),
+      ).thenAnswer((_) async => null);
+    });
+
+    test('does not fetch when a fresh cached row answers the card', () async {
+      when(
+        () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) async => _stats(pubkey));
+      final updates = StreamController<ProfileStats?>();
+      when(
+        () => profileRepository.watchProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) => updates.stream);
+
+      final emitted = <AsyncValue<ProfileStats?>>[];
+      final sub = container.listen(
+        videoCardAuthorStatsProvider(pubkey),
+        (_, next) => emitted.add(next),
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+      addTearDown(updates.close);
+
+      await pumpEventQueue();
+
+      verifyNever(() => profileRepository.fetchFreshProfile(pubkey: pubkey));
+
+      updates.add(_stats(pubkey));
+      await pumpEventQueue();
+
+      expect(emitted.last.value, _stats(pubkey));
+    });
+
+    test('fetches once when the stats cache is empty', () async {
+      when(
+        () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) async => null);
+      final updates = StreamController<ProfileStats?>();
+      when(
+        () => profileRepository.watchProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) => updates.stream);
+
+      final sub = container.listen(
+        videoCardAuthorStatsProvider(pubkey),
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+      addTearDown(updates.close);
+
+      await pumpEventQueue();
+
+      verify(
+        () => profileRepository.fetchFreshProfile(pubkey: pubkey),
+      ).called(1);
+    });
+
+    test('releases the stats watcher when the card unmounts', () async {
+      var cancelled = false;
+      final updates = StreamController<ProfileStats?>(
+        onCancel: () => cancelled = true,
+      );
+      when(
+        () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) async => _stats(pubkey));
+      when(
+        () => profileRepository.watchProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) => updates.stream);
+
+      final sub = container.listen(
+        videoCardAuthorStatsProvider(pubkey),
+        (_, _) {},
+        fireImmediately: true,
+      );
+
+      await pumpEventQueue();
+      expect(container.exists(videoCardAuthorStatsProvider(pubkey)), isTrue);
+
+      sub.close();
+      await pumpEventQueue();
+
+      expect(cancelled, isTrue);
+      expect(container.exists(videoCardAuthorStatsProvider(pubkey)), isFalse);
+      await updates.close();
+    });
+  });
+
   group('read/write split (#6423)', () {
     test('the reactive profile resolves from cache while the signing gate is '
         'still shut', () async {
@@ -884,6 +984,14 @@ void main() {
     });
   });
 }
+
+ProfileStats _stats(String pubkey) => ProfileStats(
+  pubkey: pubkey,
+  followers: 12,
+  following: 34,
+  totalLikes: 56,
+  totalViews: 78,
+);
 
 UserProfile _profile(String pubkey, {String name = 'profile'}) {
   final eventId = switch (name) {

@@ -14,6 +14,7 @@ class ProfileStats {
     this.followers,
     this.following,
     this.totalViews = 0,
+    this.hasKnownTotalViews = true,
     this.lastUpdated,
   });
 
@@ -40,7 +41,19 @@ class ProfileStats {
   final int? following;
 
   /// Total views across all videos.
+  ///
+  /// This is the author's aggregate engagement figure, not an archival-only
+  /// count: `ProfileRepository` fills it from funnelcake's `engagement` total,
+  /// falling back to the loop total, so a classic Vine's archived loops and a
+  /// live Divine video's loops land in the same number. A surface that needs
+  /// the archival-only per-video figure must read the event tags instead.
   final int totalViews;
+
+  /// Whether [totalViews] came from a source that supplied a value.
+  ///
+  /// A missing total is kept as zero for compatibility with existing profile
+  /// consumers, but the video card must not render it as a genuine zero.
+  final bool hasKnownTotalViews;
 
   /// When these stats were last cached.
   final DateTime? lastUpdated;
@@ -53,6 +66,7 @@ class ProfileStats {
     int? followers,
     int? following,
     int? totalViews,
+    bool? hasKnownTotalViews,
     DateTime? lastUpdated,
   }) {
     return ProfileStats(
@@ -62,6 +76,7 @@ class ProfileStats {
       followers: followers ?? this.followers,
       following: following ?? this.following,
       totalViews: totalViews ?? this.totalViews,
+      hasKnownTotalViews: hasKnownTotalViews ?? this.hasKnownTotalViews,
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
   }
@@ -76,6 +91,7 @@ class ProfileStats {
         other.followers == followers &&
         other.following == following &&
         other.totalViews == totalViews &&
+        other.hasKnownTotalViews == hasKnownTotalViews &&
         other.lastUpdated == lastUpdated;
   }
 
@@ -87,6 +103,7 @@ class ProfileStats {
     followers,
     following,
     totalViews,
+    hasKnownTotalViews,
     lastUpdated,
   );
 

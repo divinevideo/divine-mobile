@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for the video card's loop-count meta line.
-// ABOUTME: Pins hidden small counts, the absent date, and the author node.
+// ABOUTME: Widget tests for the video card's author lifetime-loops meta line.
+// ABOUTME: Pins the author total (not the video's), the chits, the author node.
 
 import 'dart:async';
 
@@ -14,6 +14,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
@@ -27,9 +28,6 @@ const _authorPubkey =
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 const _strangerPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
-// 2014-04-22T12:00Z — midday keeps the calendar day stable across
-// runner timezones.
-const _vineEraCreatedAt = 1398168000;
 
 class _MockVideoInteractionsBloc extends Mock
     implements VideoInteractionsBloc {}
@@ -43,18 +41,15 @@ AppLocalizations _l10n(WidgetTester tester) =>
 
 VideoEvent _video({
   String pubkey = _authorPubkey,
-  int? originalLoops,
   Map<String, String> rawTags = const {},
-  int? createdAt,
 }) {
-  final at = createdAt ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  final at = DateTime.now().millisecondsSinceEpoch ~/ 1000;
   return VideoEvent(
     id: 'video-card-meta-line-test-0123456789abcdef0123456789abcdef0123',
     pubkey: pubkey,
     createdAt: at,
     content: 'caption',
     timestamp: DateTime.fromMillisecondsSinceEpoch(at * 1000, isUtc: true),
-    originalLoops: originalLoops,
     rawTags: rawTags,
   );
 }
@@ -92,17 +87,15 @@ void main() {
 
   tearDown(() => authStateController.close());
 
+  /// Pumps the overlay for [video]. [authorTotalLoops] is the author's lifetime
+  /// loop total; null means the stats are not known yet.
   Future<void> pump(
     WidgetTester tester, {
     required VideoEvent video,
-    bool viewerIsAuthor = false,
+    int? authorTotalLoops,
     bool isOgDiviner = false,
     bool eligibilityIsLoading = false,
   }) async {
-    when(
-      () => mockAuthService.currentPublicKeyHex,
-    ).thenReturn(viewerIsAuthor ? _authorPubkey : _strangerPubkey);
-
     await tester.pumpWidget(
       testProviderScope(
         additionalOverrides: [
@@ -112,6 +105,16 @@ void main() {
             eligibilityIsLoading
                 ? (ref, pubkey) => Completer<bool>().future
                 : (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
+          ),
+          videoCardAuthorStatsProvider(video.pubkey).overrideWith(
+            (ref) => authorTotalLoops == null
+                ? const Stream<ProfileStats?>.empty()
+                : Stream.value(
+                    ProfileStats(
+                      pubkey: video.pubkey,
+                      totalViews: authorTotalLoops,
+                    ),
+                  ),
           ),
         ],
         child: MaterialApp(
@@ -146,11 +149,7 @@ void main() {
     testWidgets('shows OG Beta Tester for an eligible non-team member', (
       tester,
     ) async {
-      await pump(
-        tester,
-        video: _video(),
-        isOgDiviner: true,
-      );
+      await pump(tester, video: _video(), isOgDiviner: true);
 
       expect(find.byType(SpecialProfileCheckmark), findsNothing);
       expect(find.byType(OgBetaBadge), findsOneWidget);
@@ -181,74 +180,51 @@ void main() {
       expect(find.byType(OgBetaBadge), findsNothing);
     });
 
-    testWidgets('hides a small count from a stranger', (tester) async {
-      await pump(tester, video: _video(rawTags: {'views': '7'}));
+    testWidgets("shows the author lifetime total, not this video's count", (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}),
+        authorTotalLoops: 23200000,
+      );
 
-      expect(find.text(loopLine(tester, 7)), findsNothing);
+      // The card reports the author's body of work, so the per-video view tag
+      // is ignored even when it is large.
+      expect(find.textContaining(loopLine(tester, 23200000)), findsOneWidget);
+      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('shows a large count to a stranger', (tester) async {
-      await pump(tester, video: _video(rawTags: {'views': '50000'}));
-
-      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
-    });
-
-    testWidgets('shows the creator their own small count', (tester) async {
+    testWidgets('hides a lifetime total below the visibility floor', (
+      tester,
+    ) async {
       await pump(
         tester,
         video: _video(rawTags: {'views': '7'}),
-        viewerIsAuthor: true,
+        authorTotalLoops: 7,
       );
 
-      expect(find.textContaining(loopLine(tester, 7)), findsOneWidget);
+      expect(find.textContaining(loopLine(tester, 7)), findsNothing);
     });
 
-    testWidgets(
-      'hides the date and shows the archival count on a classic Vine',
-      (
-        tester,
-      ) async {
-        await pump(
-          tester,
-          video: _video(
-            originalLoops: 2100000,
-            createdAt: _vineEraCreatedAt,
-            rawTags: {
-              'platform': 'vine',
-              'published_at': '$_vineEraCreatedAt',
-              'views': '340',
-            },
-          ),
-        );
+    testWidgets('hides a zero lifetime total', (tester) async {
+      await pump(tester, video: _video(), authorTotalLoops: 0);
 
-        // Archival figure only: live diVine views must not inflate it.
-        expect(find.textContaining(loopLine(tester, 2100000)), findsOneWidget);
-        // The post date is never part of the card.
-        expect(find.textContaining('2014'), findsNothing);
-      },
-    );
+      expect(find.textContaining(loopLine(tester, 0)), findsNothing);
+    });
 
-    testWidgets('reveals the creator their count after they sign in', (
+    testWidgets('shows a lifetime total at the visibility floor', (
       tester,
     ) async {
-      // authServiceProvider hands back a stable singleton, so without watching
-      // currentAuthStateProvider this card would stay stuck on the signed-out
-      // reading and keep hiding its owner's count.
-      when(
-        () => mockAuthService.authState,
-      ).thenReturn(AuthState.unauthenticated);
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn(null);
+      await pump(tester, video: _video(), authorTotalLoops: 10000);
 
-      await pump(tester, video: _video(rawTags: {'views': '7'}));
+      expect(find.textContaining(loopLine(tester, 10000)), findsOneWidget);
+    });
 
-      expect(find.textContaining(loopLine(tester, 7)), findsNothing);
+    testWidgets('hides the line while the total is unknown', (tester) async {
+      await pump(tester, video: _video(rawTags: {'views': '50000'}));
 
-      when(() => mockAuthService.currentPublicKeyHex).thenReturn(_authorPubkey);
-      when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
-      authStateController.add(AuthState.authenticated);
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining(loopLine(tester, 7)), findsOneWidget);
+      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
     testWidgets('never shows the post date, even beside a count', (
@@ -257,6 +233,7 @@ void main() {
       await pump(
         tester,
         video: _video(rawTags: {'views': '50000'}),
+        authorTotalLoops: 50000,
       );
 
       expect(find.textContaining(_l10n(tester).timeVerboseNow), findsNothing);
@@ -270,7 +247,11 @@ void main() {
       // Without the date there is no text left to merge into the author
       // gesture's own node, so the row only stays labelled if the annotated
       // node is the one carrying the action.
-      await pump(tester, video: _video(rawTags: {'views': '50000'}));
+      await pump(
+        tester,
+        video: _video(rawTags: {'views': '50000'}),
+        authorTotalLoops: 50000,
+      );
 
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
 

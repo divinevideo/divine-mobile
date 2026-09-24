@@ -79,6 +79,38 @@ Stream<ProfileStats?> _watchProfileStats(
   yield* repo.watchProfileStats(pubkey: pubkey);
 }
 
+/// The author's lifetime stats for a feed card, auto-disposing and
+/// cache-first.
+///
+/// The card prints one author's lifetime loop total beside their name, and a
+/// scroll through the feed mounts many distinct authors. The shared
+/// [userProfileStatsReactiveProvider] is a non-auto-disposing family whose
+/// stream fetches before it watches, so a card using it would both start a
+/// fresh profile fetch per distinct author and leave that author's Drift
+/// watcher alive for the rest of the session (#9431). This provider is scoped
+/// to the card: `@riverpod` makes it auto-dispose, so the watcher is released
+/// when the card leaves the tree, and a fresh cached row short-circuits the
+/// fetch so re-mounting a card does not re-fetch.
+@riverpod
+Stream<ProfileStats?> videoCardAuthorStats(Ref ref, String pubkey) async* {
+  final repo = ref.watch(profileReadRepositoryProvider);
+  if (repo == null) {
+    yield null;
+    return;
+  }
+
+  final cached = await repo.getCachedProfileStats(pubkey: pubkey);
+  if (cached?.hasKnownTotalViews != true) {
+    unawaited(
+      repo
+          .fetchFreshProfile(pubkey: pubkey)
+          .catchError((Object _, StackTrace _) => null),
+    );
+  }
+
+  yield* repo.watchProfileStats(pubkey: pubkey);
+}
+
 /// Reactive profile provider backed by Drift's watchProfile stream.
 ///
 /// On first access for a pubkey:

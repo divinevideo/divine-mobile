@@ -1,8 +1,6 @@
 // ABOUTME: Regression test for tapping descriptions in VideoOverlayActions.
 // ABOUTME: Verifies the inline description opens the metadata sheet.
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,8 +13,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/services/auth_service.dart'
-    show AuthService, AuthState;
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
@@ -37,8 +33,6 @@ class _MockVideoInteractionsBloc extends Mock
     implements VideoInteractionsBloc {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
-
-class _MockAuthService extends Mock implements AuthService {}
 
 void main() {
   late _MockVideoInteractionsBloc mockInteractionsBloc;
@@ -250,29 +244,20 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized singular loop label for 1', (
+    testWidgets('author line uses localized plural loop label at the floor', (
       tester,
     ) async {
-      testVideo = testVideo.copyWith(originalLoops: 1);
-
-      // A count of 1 is far below the public floor, so only the creator is ever
-      // shown it — the singular form is unreachable for anyone else.
-      final authStateController = StreamController<AuthState>.broadcast();
-      addTearDown(authStateController.close);
-      final mockAuthService = _MockAuthService();
-      when(
-        () => mockAuthService.currentPublicKeyHex,
-      ).thenReturn(testVideo.pubkey);
-      when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
-      when(
-        () => mockAuthService.authStateStream,
-      ).thenAnswer((_) => authStateController.stream);
-
+      // Totals below the visibility floor are hidden, so visible totals use
+      // the plural ICU form.
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [
             repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
-            authServiceProvider.overrideWithValue(mockAuthService),
+            videoCardAuthorStatsProvider(testVideo.pubkey).overrideWith(
+              (ref) => Stream.value(
+                ProfileStats(pubkey: testVideo.pubkey, totalViews: 10000),
+              ),
+            ),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -294,10 +279,12 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      // The creator's line now carries the post date too, so match within it.
       expect(
         find.textContaining(
-          l10n.videoFeedLoopCountLine(StringUtils.formatCompactNumber(1), 1),
+          l10n.videoFeedLoopCountLine(
+            StringUtils.formatCompactNumber(10000),
+            10000,
+          ),
         ),
         findsOneWidget,
       );

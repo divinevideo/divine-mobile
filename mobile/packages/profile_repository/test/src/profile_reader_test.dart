@@ -46,6 +46,12 @@ class _ExhaustiveReader implements ProfileReader {
   Stream<ProfileStats?> watchProfileStats({required String pubkey}) =>
       const Stream.empty();
 
+  // Widened consciously: a one-shot Drift read of the stats cache —
+  // signer-free and relay-optional, the same invariant as getCachedProfile.
+  @override
+  Future<ProfileStats?> getCachedProfileStats({required String pubkey}) async =>
+      null;
+
   @override
   Future<UserProfile?> fetchFreshProfile({
     required String pubkey,

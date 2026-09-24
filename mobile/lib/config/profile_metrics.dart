@@ -1,27 +1,17 @@
 // ABOUTME: Product thresholds for how profile engagement metrics are shown.
-// ABOUTME: Shared by the profile header and the message-request preview.
+// ABOUTME: Shared by profile, message-request, and feed surfaces.
 
 /// Smallest lifetime loop total a profile shows to visitors.
 ///
-/// Below this the Loops figure is omitted for everyone but the owner: a small
-/// headline number on a new creator's profile discourages the visitor and
-/// tells them nothing useful. Owners always see their own total, since
-/// correcting a creator's underestimate of their audience is what keeps them
-/// posting.
+/// Below this the Loops figure is omitted from visitor profile headers,
+/// message-request previews, and feed cards: repeatedly showing a small total
+/// beside a new creator's name can discourage viewers from watching. Owners
+/// still see their own total on their profile header.
 ///
 /// A product call, not a technical one — the single value to change if the
 /// bar sits wrong.
 ///
-/// Deliberately higher than `publicLoopCountFloor` in
-/// `widgets/video_feed_item/video_card_meta.dart`, which hides small counts on
-/// feed cards. A profile headline is a summary of a whole creator and carries
-/// more weight than a number beside one video, so it earns a higher bar. The
-/// two are independent product calls, not a value that drifted — do not
-/// collapse them into one constant without deciding that both surfaces want
-/// the same number.
-///
-/// Lives here rather than beside one consumer because it now has two: the
-/// profile header's Loops column, and the message-request preview's stats
-/// line. On the preview the sender is never the viewer, so there is no
-/// owner exemption there — the floor always applies.
+/// The floor applies to feed cards and message-request previews even when the
+/// viewer is the creator. It is a product choice, not a cache or formatting
+/// rule.
 const int profileLoopsVisibilityFloor = 10000;
