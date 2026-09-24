@@ -23,6 +23,7 @@ import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/video_identity.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
 import 'package:openvine/widgets/profile/pending_collaborator_invite_banner_cubit.dart';
@@ -166,7 +167,12 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
 
   @override
   void dispose() {
-    _ownerVideoActionsCubit.close();
+    runDetached(
+      _ownerVideoActionsCubit.close(),
+      'close owner video actions cubit',
+      logName: 'ProfileVideosGrid',
+      category: LogCategory.ui,
+    );
     disposePagination();
     super.dispose();
   }
@@ -253,15 +259,20 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
     // Pre-warm adjacent videos before navigation
     prefetchAroundIndex(resolvedIndex, videos);
 
-    context.push(
-      PooledFullscreenVideoFeedScreen.pathForVideoId(tappedVideo.id),
-      extra: ProfilePooledFullscreenVideoFeedArgs(
-        userIdHex: widget.userIdHex,
-        initialIndex: resolvedIndex,
-        seedVideos: videos,
-        initialVideoId: tappedVideo.id,
-        initialStableId: tappedVideo.stableId,
+    runDetached(
+      context.push<void>(
+        PooledFullscreenVideoFeedScreen.pathForVideoId(tappedVideo.id),
+        extra: ProfilePooledFullscreenVideoFeedArgs(
+          userIdHex: widget.userIdHex,
+          initialIndex: resolvedIndex,
+          seedVideos: videos,
+          initialVideoId: tappedVideo.id,
+          initialStableId: tappedVideo.stableId,
+        ),
       ),
+      'open profile video',
+      logName: 'ProfileVideosGrid',
+      category: LogCategory.ui,
     );
   }
 
@@ -736,11 +747,16 @@ class _PendingCollaboratorInviteBanner extends ConsumerWidget {
                               onPressed: state.isRetrying
                                   ? null
                                   : () {
-                                      context
-                                          .read<
-                                            PendingCollaboratorInviteBannerCubit
-                                          >()
-                                          .retry(group);
+                                      runDetached(
+                                        context
+                                            .read<
+                                              PendingCollaboratorInviteBannerCubit
+                                            >()
+                                            .retry(group),
+                                        'retry collaborator invite',
+                                        logName: 'ProfileVideosGrid',
+                                        category: LogCategory.ui,
+                                      );
                                     },
                             ),
                           ],

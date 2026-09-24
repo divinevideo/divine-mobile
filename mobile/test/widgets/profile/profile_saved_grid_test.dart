@@ -57,8 +57,8 @@ void main() {
       mockBloc = _MockProfileSavedVideosBloc();
       mockGoRouter = MockGoRouter();
       when(
-        () => mockGoRouter.push<Object?>(any(), extra: any(named: 'extra')),
-      ).thenAnswer((_) async => null);
+        () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
     });
 
     /// [physics] is the ambient platform behaviour; [gridPhysics] is what the
@@ -386,7 +386,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockGoRouter.push<Object?>(any(), extra: any(named: 'extra')),
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
         ).called(1);
       });
     });

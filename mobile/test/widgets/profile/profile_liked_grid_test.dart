@@ -46,8 +46,8 @@ void main() {
       mockBloc = _MockProfileLikedVideosBloc();
       mockGoRouter = MockGoRouter();
       when(
-        () => mockGoRouter.push<Object?>(any(), extra: any(named: 'extra')),
-      ).thenAnswer((_) async => null);
+        () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
     });
 
     Widget buildSubject({
@@ -286,7 +286,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockGoRouter.push<Object?>(
+          () => mockGoRouter.push<void>(
             any(),
             extra: any(named: 'extra'),
           ),

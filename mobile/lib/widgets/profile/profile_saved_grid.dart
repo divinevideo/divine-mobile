@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
@@ -182,24 +183,29 @@ class _SavedGridTile extends ConsumerWidget {
           category: LogCategory.video,
         );
         final bloc = context.read<ProfileSavedVideosBloc>();
-        context.push(
-          PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
-          extra: PooledFullscreenVideoFeedArgs(
-            source: SavedViewSource(userIdHex),
-            feedRepository: StreamFeedRepository(
-              videos: bloc.stream
-                  .map((state) => state.videos)
-                  .startWith(allVideos),
-              hasMore: bloc.stream
-                  .map((state) => state.hasMoreContent)
-                  .startWith(bloc.state.hasMoreContent),
-              onLoadMore: () async =>
-                  bloc.add(const ProfileSavedVideosLoadMoreRequested()),
+        runDetached(
+          context.push<void>(
+            PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
+            extra: PooledFullscreenVideoFeedArgs(
+              source: SavedViewSource(userIdHex),
+              feedRepository: StreamFeedRepository(
+                videos: bloc.stream
+                    .map((state) => state.videos)
+                    .startWith(allVideos),
+                hasMore: bloc.stream
+                    .map((state) => state.hasMoreContent)
+                    .startWith(bloc.state.hasMoreContent),
+                onLoadMore: () async =>
+                    bloc.add(const ProfileSavedVideosLoadMoreRequested()),
+              ),
+              initialIndex: index,
+              initialVideoId: videoEvent.id,
+              trafficSource: ViewTrafficSource.profile,
             ),
-            initialIndex: index,
-            initialVideoId: videoEvent.id,
-            trafficSource: ViewTrafficSource.profile,
           ),
+          'open saved video',
+          logName: 'ProfileSavedGrid',
+          category: LogCategory.ui,
         );
       },
       child: ClipRRect(

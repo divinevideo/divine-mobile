@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for ProfileActionsSheetContent
 // ABOUTME: Verifies prompt rendering, state transitions, and dismiss behavior
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -29,7 +31,7 @@ void main() {
                       actions: actions,
                       onMaybeLater: onMaybeLater,
                     ),
-                  );
+                  ).ignore();
                 },
                 child: const Text('Open'),
               );
