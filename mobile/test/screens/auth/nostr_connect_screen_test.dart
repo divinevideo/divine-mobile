@@ -224,6 +224,10 @@ void main() {
         await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pump();
 
+        // Positive control: the handoff is parked on the awaited cancel.
+        verify(() => mockAuthService.cancelNostrConnect()).called(1);
+        expect(stateController.hasListener, isFalse);
+
         await tester.pumpWidget(const SizedBox());
         cancellation.complete();
         await tester.pump();
