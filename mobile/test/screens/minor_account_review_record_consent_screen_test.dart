@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
@@ -205,6 +207,9 @@ Future<void> _pumpRecordConsentScreen(
       overrides: [
         minorConsentRecorderProvider.overrideWithValue(recorder),
         permissionsServiceProvider.overrideWithValue(permissions),
+        isFeatureEnabledProvider(
+          FeatureFlag.minorConsentInAppRecording,
+        ).overrideWithValue(true),
         ...overrides,
       ],
       child: MaterialApp.router(
@@ -330,6 +335,9 @@ void main() {
                   cameraStatus: PermissionStatus.requiresSettings,
                 ),
               ),
+              isFeatureEnabledProvider(
+                FeatureFlag.minorConsentInAppRecording,
+              ).overrideWithValue(true),
             ],
             child: MaterialApp.router(
               routerConfig: router,
@@ -392,6 +400,9 @@ void main() {
             permissionsServiceProvider.overrideWithValue(
               _FakePermissions(cameraStatus: PermissionStatus.requiresSettings),
             ),
+            isFeatureEnabledProvider(
+              FeatureFlag.minorConsentInAppRecording,
+            ).overrideWithValue(true),
           ],
           child: MaterialApp.router(
             routerConfig: router,

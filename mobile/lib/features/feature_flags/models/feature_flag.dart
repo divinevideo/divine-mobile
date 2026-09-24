@@ -99,6 +99,14 @@ enum FeatureFlag {
         'Messages are signed with your key into a stream anyone can read. '
         'Stays off outside reviewer builds (#10094).',
     audience: FeatureFlagAudience.internal,
+  ),
+  minorConsentInAppRecording(
+    'In-App Parent Consent Recording',
+    'Let a parent record and submit a consent video in the app for a '
+        'Divine Greenlight account review. Off by default until the '
+        'relay-manager parent-consent route and its request-signing '
+        'contract ship.',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(
