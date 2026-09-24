@@ -10,6 +10,22 @@ import 'package:openvine/services/database_recovery_store.dart';
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
 
 void main() {
+  group('cipher-key storage slots', () {
+    // Both literals are a wire format: they name the Keychain items shipped
+    // installs actually wrote, and nothing else records what those are.
+    // Rename either and the migration looks for an item that does not exist,
+    // the empty read is trusted, a fresh key is generated, and the existing
+    // encrypted database becomes permanently unopenable — with every other
+    // test in this file still green, because they all reference the symbols.
+    test('names the current slot db.cipher.key.v2', () {
+      expect(dbCipherKeyStorageKey, equals('db.cipher.key.v2'));
+    });
+
+    test('names the pre-#9343 slot db.cipher.key.v1', () {
+      expect(legacyDbCipherKeyStorageKey, equals('db.cipher.key.v1'));
+    });
+  });
+
   group('generateCipherKeyHex', () {
     test('returns 64 lower-case hex characters (a raw 32-byte key)', () {
       final key = generateCipherKeyHex();
@@ -85,9 +101,13 @@ void main() {
         migrate: (_) async => outcome,
         deleteDatabase: () async => onDelete(),
         onDatabaseReset: onReset == null ? null : () async => onReset(),
-        canOpenEncryptedDatabase: canOpenEncryptedDatabase == null
-            ? null
-            : (rawKeyHex) async => canOpenEncryptedDatabase(rawKeyHex),
+        // Default to "the database opens cleanly". Left null, the production
+        // probe runs, and it creates and opens a real SQLCipher file at the
+        // app's shared database path — so a test asserting key resolution
+        // fails or passes on whatever a previous run left on disk, and the
+        // merged isolate hands that file to the next suite.
+        canOpenEncryptedDatabase: (rawKeyHex) async =>
+            canOpenEncryptedDatabase?.call(rawKeyHex) ?? true,
         // Default to "nothing to salvage" so the corruption branch falls
         // through to the wipe unless a test opts in.
         salvageDatabase: (rawKeyHex) async =>
@@ -241,10 +261,19 @@ void main() {
       );
 
       test('is not repairable by clearing the local database cache', () {
+        // The cause deliberately names SQLITE_NOTADB, which the message
+        // allowlist matches, so the type guard is the only thing returning
+        // false here. With a cause whose text matches nothing — the real
+        // ProtectedDataUnavailableException shape — the fall-through returns
+        // false on its own and deleting the guard leaves this green.
+        //
+        // Repairing would delete the cipher key this error merely failed to
+        // reach, turning a locked device into permanent data loss. Same trap
+        // the DatabaseUnreadableError guard beside it documents.
         expect(
           shouldRepairLocalDatabaseCacheAfterBootstrapError(
             DatabaseCipherStorageUnavailableException(
-              const ProtectedDataUnavailableException(),
+              StateError('SqliteException(26): SQLITE_NOTADB'),
             ),
           ),
           isFalse,
@@ -1153,6 +1182,34 @@ void main() {
         verify(
           () => legacyStorage.delete(key: legacyDbCipherKeyStorageKey),
         ).called(1);
+      },
+    );
+
+    test(
+      'keeps both slots when the legacy delete fails, so the next launch '
+      'cannot migrate the stale copy back',
+      () async {
+        when(
+          () => legacyStorage.delete(key: any(named: 'key')),
+        ).thenThrow(PlatformException(code: 'Unexpected security result code'));
+
+        await expectLater(
+          resetEncryptedDatabaseCache(
+            secureStorage: storage,
+            legacySecureStorage: legacyStorage,
+            deleteDatabase: () async {},
+          ),
+          throwsA(isA<PlatformException>()),
+        );
+
+        // Legacy slot first, so a throw leaves BOTH copies in place and the
+        // reported failure is the whole truth. Deleting the current slot
+        // first would leave the pre-#9343 copy as the only one, and the next
+        // launch migrates that straight back into the current slot: the reset
+        // rotates nothing while the caller is told it failed.
+        expect(store[dbCipherKeyStorageKey], isNotNull);
+        expect(legacyStore[legacyDbCipherKeyStorageKey], isNotNull);
+        verifyNever(() => storage.delete(key: any(named: 'key')));
       },
     );
 
