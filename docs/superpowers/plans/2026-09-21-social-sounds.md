@@ -183,7 +183,7 @@ Browse mode actions are Save and Use. Selection mode returns AudioEvent to its h
 - [ ] Test canonical identity through a timeline instance suffix, source-video edit, save/reopen, and reuse publication. No duplicate sound page or uncredited republication.
 - [ ] Run affected model/service/widget tests and analyze; commit this slice with only task files staged.
 
-A minimum pure-model regression belongs in the existing audio-event suite:
+A minimum pure-model regression belongs in the existing audio-event suite. It fails on current `main` by design: `AudioEvent.fromBundledSound` puts `VineSound.artist` on `source` (as "<artist> via Freesound" for Freesound URLs), never on `creatorName`, and drops `license`. Make it pass by also setting `creatorName`, while keeping the existing `source` mapping and its tests in the `fromBundledSound` group green:
 ```dart
 test('bundled conversion keeps creator credit distinct from its publisher', () {
   final audio = AudioEvent.fromBundledSound(
@@ -196,6 +196,7 @@ test('bundled conversion keeps creator credit distinct from its publisher', () {
     ),
   );
   expect(audio.creatorName, 'Example artist');
+  expect(audio.source, 'Example artist');
   expect(audio.title, 'Short loop');
 });
 ```
