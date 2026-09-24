@@ -655,12 +655,15 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
 
-  /// Backoff retry paired with [_drainRelayReadySubscription]. Whichever fires
-  /// first cancels the other. The finite delay list bounds consecutive
-  /// no-progress deferrals; durable cursor progress or completion replenishes
-  /// the budget for a later, independent outage. #9030.
+  /// Backoff retry for deferred history drains. A relay reconnect can trigger
+  /// an earlier non-confirming sweep while this timer remains armed; the timer
+  /// is the only delayed opportunity that can confirm an ambiguous NIP-04
+  /// refusal. The finite delay list bounds consecutive no-progress deferrals;
+  /// durable cursor progress or completion replenishes the budget. #9030.
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
+  bool _historyDrainCanConfirmNip04Refusal = false;
+  bool _pendingNip04RefusalConfirmation = false;
 
   /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
   /// sweep. A matching refusal must recur after a deferred drain retry before
@@ -1061,6 +1064,8 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
+    _historyDrainCanConfirmNip04Refusal = false;
+    _pendingNip04RefusalConfirmation = false;
     _previousNip04Refusals = {};
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
@@ -1753,17 +1758,19 @@ class DmRepository {
 
   /// [allowNip04RefusalConfirmation] is passed only by the bounded retry
   /// timer, whose delay is what separates two sightings of an ambiguous
-  /// refusal. An inbox open or a relay reconnect can follow the first sighting
-  /// within moments, so neither may confirm one.
+  /// refusal. If that timer fires during a non-confirming drain, its
+  /// confirmation pass is queued to run as soon as the active drain finishes.
   Future<void> _backfillHistoryIfNeeded({
     bool allowNip04RefusalConfirmation = false,
   }) {
     final existing = _historyDrain;
     if (existing != null) {
-      if (allowNip04RefusalConfirmation) {
+      if (allowNip04RefusalConfirmation &&
+          !_historyDrainCanConfirmNip04Refusal) {
+        _pendingNip04RefusalConfirmation = true;
         Log.info(
-          'DM history retry for ${pubkeyForLogs(_userPubkey)} joined a drain '
-          'already in flight; that run cannot confirm a relay refusal',
+          'DM history retry for ${pubkeyForLogs(_userPubkey)} will confirm a '
+          'relay refusal after the active drain finishes',
           category: LogCategory.system,
         );
       }
@@ -1773,9 +1780,19 @@ class DmRepository {
       allowNip04RefusalConfirmation: allowNip04RefusalConfirmation,
     );
     _historyDrain = drain;
+    _historyDrainCanConfirmNip04Refusal = allowNip04RefusalConfirmation;
     unawaited(
       drain.whenComplete(() {
-        if (identical(_historyDrain, drain)) _historyDrain = null;
+        if (!identical(_historyDrain, drain)) return;
+        _historyDrain = null;
+        _historyDrainCanConfirmNip04Refusal = false;
+        if (!_pendingNip04RefusalConfirmation) return;
+        _pendingNip04RefusalConfirmation = false;
+        if (_disposed || _userPubkey.isEmpty) return;
+        if (_syncState?.historyDrainComplete(_userPubkey) ?? false) return;
+        unawaited(
+          _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
+        );
       }),
     );
     return drain;
@@ -2366,8 +2383,12 @@ class DmRepository {
     if (_ingestSessionEnded(pubkey, generation)) return;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
-    _drainRetryTimer?.cancel();
-    _drainRetryTimer = null;
+    // A non-confirming sweep can defer while the delayed confirmation remains
+    // pending. Keep its deadline and slot; refresh only the reconnect listener.
+    if (_drainRetryTimer != null || _pendingNip04RefusalConfirmation) {
+      _listenForDrainRelayReconnect(pubkey, generation);
+      return;
+    }
     if (_automaticDrainRetryCount >=
         DmHistoryDrainConfig.deferredRetryDelays.length) {
       Log.warning(
@@ -2378,6 +2399,24 @@ class DmRepository {
       );
       return;
     }
+    _listenForDrainRelayReconnect(pubkey, generation);
+    final delay =
+        DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
+    _drainRetryTimer = Timer(delay, () {
+      _drainRetryTimer = null;
+      unawaited(_drainRelayReadySubscription?.cancel());
+      _drainRelayReadySubscription = null;
+      if (_ingestSessionEnded(pubkey, generation)) return;
+      Log.info(
+        'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
+        'bounded retry delay',
+        category: LogCategory.system,
+      );
+      unawaited(_backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true));
+    });
+  }
+
+  void _listenForDrainRelayReconnect(String pubkey, int generation) {
     final lastConnected = <String>{
       for (final entry in _nostrClient.relayStatuses.entries)
         if (entry.value.isConnected) entry.key,
@@ -2404,8 +2443,6 @@ class DmRepository {
       if (!newlyConnected) return;
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
-      _drainRetryTimer?.cancel();
-      _drainRetryTimer = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
       Log.info(
         'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after a relay '
@@ -2413,22 +2450,6 @@ class DmRepository {
         category: LogCategory.system,
       );
       unawaited(backfillHistoryIfNeeded());
-    });
-    final delay =
-        DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
-    _drainRetryTimer = Timer(delay, () {
-      _drainRetryTimer = null;
-      unawaited(_drainRelayReadySubscription?.cancel());
-      _drainRelayReadySubscription = null;
-      if (_ingestSessionEnded(pubkey, generation)) return;
-      Log.info(
-        'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
-        'bounded retry delay',
-        category: LogCategory.system,
-      );
-      unawaited(
-        _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
-      );
     });
   }
 
@@ -2458,6 +2479,8 @@ class DmRepository {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
+    _historyDrainCanConfirmNip04Refusal = false;
+    _pendingNip04RefusalConfirmation = false;
     _previousNip04Refusals = {};
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
