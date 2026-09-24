@@ -464,14 +464,16 @@ void main() {
         stubAnsweredHistory();
         final outgoing = Event.fromJson({
           'id':
-              'facefaceface0001facefaceface0001facefaceface0001facefaceface0001',
+              'facefaceface0001facefaceface0001'
+              'facefaceface0001facefaceface0001',
           'pubkey': _pubkey,
           'created_at': 500,
           'kind': 4,
           'tags': [
             [
               'p',
-              'b1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012',
+              'b1b2c3d4e5f6789012345678901234567890'
+                  'abcdef1234567890123456789012',
             ],
           ],
           'content': 'encrypted-outgoing',
@@ -503,8 +505,8 @@ void main() {
         unawaited(repository.backfillHistoryIfNeeded());
         async.flushMicrotasks();
         unawaited(repository.backfillHistoryIfNeeded());
-        async.flushMicrotasks();
         async
+          ..flushMicrotasks()
           ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
           ..flushMicrotasks();
 
