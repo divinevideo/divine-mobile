@@ -13,8 +13,7 @@ lib/blocs/apps_permissions/apps_permissions_cubit.dart	1
 lib/blocs/audio_sharing/audio_sharing_cubit.dart	1
 lib/blocs/badges/badge_editor_cubit.dart	9
 lib/blocs/dm/reactions/conversation_reactions_cubit.dart	1
-lib/blocs/email_verification/email_verification_cubit.dart	14
+lib/blocs/email_verification/email_verification_cubit.dart	13
 lib/blocs/notifications/badge/notification_badge_cubit.dart	1
 lib/blocs/signature_verification_policy/signature_verification_policy_cubit.dart	1
 lib/blocs/storage/storage_cubit.dart	12
-lib/widgets/profile/pending_collaborator_invite_banner_cubit.dart	1
