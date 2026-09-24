@@ -1166,7 +1166,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     private func rebuildQueueForLoopingChange() {
         guard let player, let item = templateItem else { return }
-        let resumeTime = player.currentTime()
+        // `currentTime()` answers an invalid time whenever the queue has no
+        // current item — an item still loading, or a queue already drained by
+        // an earlier rebuild. `AVPlayerItem` raises `NSInvalidArgumentException`
+        // on a seek to one rather than ignoring it, so restarting from the
+        // beginning is the only safe resume position.
+        let playerTime = player.currentTime()
+        let resumeTime = playerTime.isNumeric ? playerTime : .zero
         let shouldResume = player.rate > 0
         currentStatus = "ready"
         configureQueue(with: item)
