@@ -374,15 +374,24 @@ void main() {
           var secondAttemptRan = false;
 
           bool? firstResult;
+          Object? firstError;
           unawaited(
             coordinator
                 .refreshExpiredSession(
                   attempt: () => Completer<bool>().future, // hangs
                 )
-                .then((r) => firstResult = r),
+                .then(
+                  (result) {
+                    firstResult = result;
+                  },
+                  onError: (Object error) {
+                    firstError = error;
+                  },
+                ),
           );
 
           async.elapse(expiredTimeout + const Duration(milliseconds: 1));
+          expect(firstError, isNull);
           expect(firstResult, isFalse);
 
           coordinator
