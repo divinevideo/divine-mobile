@@ -86,6 +86,21 @@ const Set<int> _supportedDmKinds = {
   EventKind.fileMessage, // 15
 };
 
+/// `CLOSED` reason categories one sighting of which proves nothing about what
+/// a relay holds, so the same relay and page must repeat it on a later
+/// deferred retry before the page counts as exhausted.
+///
+/// `error` and `other` cover a transient relay failure. `auth-required` is
+/// here because the refusal is the relay asking for NIP-42, not an answer:
+/// the pool parks the `REQ` for a post-AUTH replay, and a remote signer that
+/// has not produced the signature yet leaves the read settling on a gate that
+/// opens moments later.
+const Set<String> _unconfirmedRefusalCategories = {
+  'auth-required',
+  'error',
+  'other',
+};
+
 /// Process-local key for support-only DM content correlation tokens.
 ///
 /// Never persist or log this key: changing it on restart prevents tokens from
@@ -1547,7 +1562,7 @@ class DmRepository {
         final events = result.events;
         final ambiguousRefusals = <String>{
           for (final entry in result.closedRelayReasons.entries)
-            if (entry.value == 'error' || entry.value == 'other')
+            if (_unconfirmedRefusalCategories.contains(entry.value))
               '$page|${entry.key}|${entry.value}',
         };
         currentRefusals.addAll(ambiguousRefusals);

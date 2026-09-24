@@ -9131,6 +9131,61 @@ void main() {
         });
       });
 
+      test('does not confirm a NIP-42 refusal a different relay repeats', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusingRelays = [
+            'wss://first.example',
+            'wss://second.example',
+            'wss://second.example',
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final relay = refusingRelays[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'auth-required'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                'a NIP-42 gate that shut on a different relay is not the '
+                'same refusal recurring, and the post-AUTH replay may still '
+                'return that relay history',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test("an account switch forgets the previous account's refusals", () {
         fakeAsync((async) {
           stubRelayStatus(
