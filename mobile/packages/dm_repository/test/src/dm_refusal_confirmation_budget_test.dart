@@ -408,6 +408,56 @@ void main() {
         });
       },
     );
+
+    test(
+      'a restart does not run a confirmation queued before stopListening',
+      () {
+        fakeAsync((async) {
+          stubAnsweredHistory();
+          when(
+            () => nostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer((_) => const Stream<Event>.empty());
+          final activeRead = Completer<QueryResult>();
+          var reads = 0;
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            reads++;
+            return reads == 2 ? activeRead.future : Future.value(refusal());
+          });
+          final repository = makeRepository();
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+          activeRead.complete(refusal());
+          async.flushMicrotasks();
+
+          // The new session's first sweep defers on the same refusal. It must
+          // arm its own delayed retry, not run the old session's queued pass.
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(reads, 3);
+        });
+      },
+    );
   });
 }
 
