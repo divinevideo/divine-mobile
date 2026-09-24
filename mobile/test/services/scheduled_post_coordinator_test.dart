@@ -327,6 +327,7 @@ void main() {
         // invite is a DM that cannot be taken back. Whatever kills the app
         // between the two, the row must already be gone by the time the
         // invite is attempted, or the next sweep sends it again.
+        var inviteAttempted = false;
         ScheduledPost? rowAtInviteTime;
         when(
           () => inviteService.sendInvites(
@@ -338,12 +339,15 @@ void main() {
             relayHint: any(named: 'relayHint'),
           ),
         ).thenAnswer((_) async {
+          inviteAttempted = true;
           rowAtInviteTime = await repository.getById(event.id);
           return const CollaboratorInviteBatchResult(results: {});
         });
 
         await coordinator.sweep(force: true);
 
+        // A null row proves the order only if the invite actually ran.
+        expect(inviteAttempted, isTrue);
         expect(rowAtInviteTime, isNull);
       });
 
