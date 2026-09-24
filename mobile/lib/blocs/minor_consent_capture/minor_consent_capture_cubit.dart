@@ -64,6 +64,10 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   final MinorConsentClipDeleter _deleteClip;
   bool _disposed = false;
 
+  /// Path of the clip the parent can still act on — the one in review, or the
+  /// one they accepted for upload. [_discardClip] never deletes this one.
+  String? _retainedPath;
+
   /// Prepares the camera behind the recorder for a live preview.
   Future<void> initialize() async {
     if (_disposed || isClosed) return;
@@ -83,7 +87,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     if (isClosed || _disposed) {
       // The screen was left while the camera was starting. Discard the clip
       // rather than leaving a recording running with no owner.
-      if (started) await _safeStop();
+      if (started) await _discardClip(await _safeStop());
       return;
     }
     if (!started) {
@@ -101,11 +105,16 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     if (_disposed || isClosed) return;
     if (state is MinorConsentCaptureReview) return;
     final path = await _recorder.stop();
-    if (isClosed || _disposed) return;
+    if (isClosed || _disposed) {
+      // Left mid-stop: nothing will surface this clip, so do not strand it.
+      await _discardClip(path);
+      return;
+    }
     if (path == null) {
       emit(const MinorConsentCaptureError());
       return;
     }
+    _retainedPath = path;
     emit(MinorConsentCaptureReview(path));
   }
 
@@ -114,6 +123,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     if (_disposed || isClosed) return;
     final current = state;
     if (current is MinorConsentCaptureReview) {
+      _retainedPath = null;
       unawaited(_deleteClip(current.filePath));
     }
     emit(const MinorConsentCaptureIdle());
@@ -128,15 +138,20 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
 
   /// Transitions to review when the platform camera stops on its own.
   ///
-  /// Ignores a late callback after the cubit is closed or the recording was
-  /// already finalised, so a disposed camera cannot emit past [close].
+  /// A late callback — after the cubit is closed, or after the recording was
+  /// already finalised — cannot emit past [close], so the clip it carries has
+  /// no owner and is deleted instead of being left in temporary storage. The
+  /// clip already in review, or already accepted, is retained.
   void _handleAutoStopped(String? path) {
-    if (_disposed || isClosed) return;
-    if (state is! MinorConsentCaptureRecording) return;
+    if (_disposed || isClosed || state is! MinorConsentCaptureRecording) {
+      unawaited(_discardClip(path));
+      return;
+    }
     if (path == null) {
       emit(const MinorConsentCaptureError());
       return;
     }
+    _retainedPath = path;
     emit(MinorConsentCaptureReview(path));
   }
 
@@ -150,7 +165,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     _disposed = true;
     _recorder.onAutoStopped = null;
     if (state is MinorConsentCaptureRecording) {
-      await _safeStop();
+      await _discardClip(await _safeStop());
     }
     await _safeDispose();
   }
@@ -158,26 +173,39 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   /// Stops an in-flight recording and releases the camera.
   ///
   /// A clip stopped here is never emitted, so a parent who leaves mid-recording
-  /// cannot have it submitted. Idempotent: the recorder and its provider both
-  /// call it, and [releaseRecorder] may have disposed it already.
+  /// cannot have it submitted — and nothing downstream will ever learn its
+  /// path, so it is deleted here rather than left in temporary storage.
+  /// Idempotent: the recorder and its provider both call it, and
+  /// [releaseRecorder] may have disposed it already.
   @override
   Future<void> close() async {
     if (_disposed) return super.close();
     _disposed = true;
     _recorder.onAutoStopped = null;
     if (state is MinorConsentCaptureRecording) {
-      await _safeStop();
+      await _discardClip(await _safeStop());
     }
     await _safeDispose();
     return super.close();
   }
 
-  Future<void> _safeStop() async {
+  /// Deletes a clip no part of the flow owns.
+  ///
+  /// The retained clip — on screen in review, or accepted for upload — is left
+  /// alone, so a late auto-stop callback carrying the same path cannot delete
+  /// a file the parent is still about to submit.
+  Future<void> _discardClip(String? path) async {
+    if (path == null || path == _retainedPath) return;
+    await _deleteClip(path);
+  }
+
+  Future<String?> _safeStop() async {
     try {
-      await _recorder.stop();
+      return await _recorder.stop();
     } catch (_) {
       // The camera already stopped (auto-stop, or a released session); a failed
       // stop must not reject close() or releaseRecorder().
+      return null;
     }
   }
 
