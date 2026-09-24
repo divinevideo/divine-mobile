@@ -53,6 +53,7 @@ void main() {
   late bool signerFails;
   late String signingPubkey;
   late bool dropOwnershipDuringSign;
+  late bool leaveForegroundDuringSign;
 
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
@@ -75,6 +76,7 @@ void main() {
     signerFails = false;
     signingPubkey = owner;
     dropOwnershipDuringSign = false;
+    leaveForegroundDuringSign = false;
 
     repository = ScheduledPostsRepository(
       dao: database.scheduledPostsDao,
@@ -102,6 +104,10 @@ void main() {
           }) async {
             if (signerFails) return null;
             if (dropOwnershipDuringSign) currentPubkey = collaborator;
+            if (leaveForegroundDuringSign) {
+              foreground.add(false);
+              await pumpEventQueue();
+            }
             return Event(
               signingPubkey,
               kind,
@@ -926,6 +932,52 @@ void main() {
         );
       });
 
+      test(
+        'finishes a move the app left the foreground while signing',
+        () async {
+          stubAccepted();
+          final event = buildEvent();
+          await enqueue(event, status: ScheduledPostStatus.scheduled);
+          when(
+            () => client.cancel(event.id),
+          ).thenAnswer((_) async => const ScheduleCancelled());
+          await coordinator.initialize();
+          await pumpEventQueue();
+          leaveForegroundDuringSign = true;
+
+          final outcome = await coordinator.reschedule(
+            event.id,
+            publishAt.add(const Duration(days: 1)),
+          );
+
+          expect(outcome, ScheduledPostActionOutcome.done);
+          expect((await repository.list()).single.eventId, isNot(event.id));
+        },
+      );
+
+      test('finishes a move the app left the foreground during', () async {
+        stubAccepted();
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        await coordinator.initialize();
+        await pumpEventQueue();
+        // Pulling down Notification Center makes the app inactive, which
+        // turns appForeground off while the withdraw is on the wire.
+        when(() => client.cancel(event.id)).thenAnswer((_) async {
+          foreground.add(false);
+          await pumpEventQueue();
+          return const ScheduleCancelled();
+        });
+        final moved = publishAt.add(const Duration(days: 1));
+
+        final outcome = await coordinator.reschedule(event.id, moved);
+
+        expect(outcome, ScheduledPostActionOutcome.done);
+        final replacement = (await repository.list()).single;
+        expect(replacement.eventId, isNot(event.id));
+        expect(replacement.publishAtUtc, moved);
+      });
+
       test('moves the draft onto the time the post was moved to', () async {
         stubAccepted();
         final event = buildEvent();
@@ -1137,6 +1189,29 @@ void main() {
           expect(replacement.publishAt, now.millisecondsSinceEpoch ~/ 1000);
         },
       );
+
+      test('finishes a post-now the app left the foreground during', () async {
+        final event = buildEvent();
+        await enqueue(event, status: ScheduledPostStatus.scheduled);
+        await coordinator.initialize();
+        await pumpEventQueue();
+        when(() => client.cancel(event.id)).thenAnswer((_) async {
+          foreground.add(false);
+          await pumpEventQueue();
+          return const ScheduleCancelled();
+        });
+
+        await coordinator.publishNow(event.id);
+
+        // The withdrawn post is replaced, not lost: the replacement waits
+        // for the app to come back and goes out on that sweep.
+        final replacement = (await repository.list()).single;
+        expect(replacement.eventId, isNot(event.id));
+        expect(replacement.status, ScheduledPostStatus.pendingSubmit);
+        foreground.add(true);
+        await pumpEventQueue();
+        expect(broadcasts.single.id, replacement.eventId);
+      });
 
       group('when the held event is already dated now', () {
         late Event event;

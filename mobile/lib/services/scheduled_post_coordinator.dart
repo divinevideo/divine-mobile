@@ -337,6 +337,11 @@ class ScheduledPostCoordinator {
 
   bool get _stop => _disposed || !_foreground || !_ownsOutbox;
 
+  /// What stops a user action once it has started. Leaving the foreground
+  /// does not: a move that has already withdrawn its post still owes the
+  /// replacement, and the app goes inactive under a notification shade.
+  bool get _actionAbandoned => _disposed || !_ownsOutbox;
+
   void _publishServerOnly(List<ScheduledPostServerEntry> entries) {
     final ids = {for (final e in entries) e.eventId};
     final previous = {for (final e in _serverOnly) e.eventId};
@@ -684,7 +689,9 @@ class ScheduledPostCoordinator {
         post,
         createdAt: newPublishAt.toUtc().millisecondsSinceEpoch ~/ 1000,
       );
-      if (_stop || signed == null) return ScheduledPostActionOutcome.failed;
+      if (_actionAbandoned || signed == null) {
+        return ScheduledPostActionOutcome.failed;
+      }
       // The time it already has, over a body an earlier move restamped,
       // signs the held event again: replacing it would withdraw and delete
       // the only copy. A failed one goes back to the relay as it is.
@@ -695,7 +702,7 @@ class ScheduledPostCoordinator {
       }
 
       final withdrawn = await _withdrawBeforeReplacing(post);
-      if (_stop) return ScheduledPostActionOutcome.failed;
+      if (_actionAbandoned) return ScheduledPostActionOutcome.failed;
       if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
 
       // The replacement is only handed off here, and the repository already
@@ -736,7 +743,9 @@ class ScheduledPostCoordinator {
         post,
         createdAt: _now().toUtc().millisecondsSinceEpoch ~/ 1000,
       );
-      if (_stop || signed == null) return ScheduledPostActionOutcome.failed;
+      if (_actionAbandoned || signed == null) {
+        return ScheduledPostActionOutcome.failed;
+      }
       // Already dated now: broadcast the held event rather than replace it
       // with itself, which would delete the only copy before the broadcast.
       if (signed.id == post.eventId) {
@@ -746,7 +755,7 @@ class ScheduledPostCoordinator {
       }
 
       final withdrawn = await _withdrawBeforeReplacing(post);
-      if (_stop) return ScheduledPostActionOutcome.failed;
+      if (_actionAbandoned) return ScheduledPostActionOutcome.failed;
       if (withdrawn != ScheduledPostActionOutcome.done) return withdrawn;
 
       hold(signed.id);
@@ -799,7 +808,7 @@ class ScheduledPostCoordinator {
       tags: body.tags,
       createdAt: createdAt,
     );
-    if (_stop ||
+    if (_actionAbandoned ||
         signed == null ||
         signed.createdAt != createdAt ||
         signed.pubkey != ownerPubkey) {
