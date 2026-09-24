@@ -228,11 +228,7 @@ void main() {
           ).thenAnswer((_) => Completer<KeycastSession?>().future);
 
           final coordinator = build();
-          unawaited(
-            coordinator
-                .refreshSession(timeout: const Duration(hours: 1))
-                .catchError((Object _) => null),
-          );
+          coordinator.refreshSession().ignore();
 
           Object? joinedError;
           var joinedDone = false;
