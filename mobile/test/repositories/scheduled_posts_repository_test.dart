@@ -639,6 +639,34 @@ void main() {
         });
       }
 
+      test(
+        'a 404 after the account changed does not cancel the local row',
+        () async {
+          final event = buildEvent();
+          await repository.enqueue(event: event, draftId: 'draft-1');
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            status: ScheduledPostStatus.scheduled,
+          );
+          var owned = true;
+          when(() => client.cancel(event.id)).thenAnswer((_) async {
+            owned = false;
+            return const ScheduleCancelNotFound();
+          });
+
+          final outcome = await repository.cancelOnServer(
+            event.id,
+            stillOwner: () => owned,
+          );
+
+          expect(outcome, ScheduledPostCancelOutcome.failure);
+          expect(
+            (await repository.getById(event.id))!.status,
+            ScheduledPostStatus.scheduled,
+          );
+        },
+      );
+
       test('a conflict on a published post reports alreadyPublished', () async {
         final event = buildEvent();
         await repository.enqueue(event: event, draftId: 'draft-1');

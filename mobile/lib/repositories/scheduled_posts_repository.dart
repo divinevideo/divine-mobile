@@ -450,15 +450,21 @@ class ScheduledPostsRepository {
   /// Only a `scheduled` row is on the relay's side: a `pendingSubmit` row
   /// was never handed off and a `failed` row is terminal there, so both are
   /// cancelled locally without a round trip (as is a relay 404).
-  Future<ScheduledPostCancelOutcome> cancelOnServer(String eventId) async {
+  Future<ScheduledPostCancelOutcome> cancelOnServer(
+    String eventId, {
+    bool Function()? stillOwner,
+  }) async {
+    bool owned() => stillOwner?.call() ?? true;
     // A hand-off still in flight can yet leave the relay holding the post,
     // after this read had cancelled it locally without a round trip.
     await _handOffs[eventId]?.future;
+    if (!owned()) return ScheduledPostCancelOutcome.failure;
     final post = await _dao.getById(eventId);
     if (post == null) return ScheduledPostCancelOutcome.cancelled;
 
     if (post.status == ScheduledPostStatus.scheduled) {
       final result = await _client.cancel(eventId);
+      if (!owned()) return ScheduledPostCancelOutcome.failure;
       switch (result) {
         case ScheduleCancelled():
         case ScheduleCancelNotFound():
@@ -468,6 +474,7 @@ class ScheduledPostsRepository {
           // reports says whether that means published or withdrawn.
           switch (await _serverState(eventId)) {
             case ScheduledPostServerState.published:
+              if (!owned()) return ScheduledPostCancelOutcome.failure;
               await markPublished(eventId);
               return ScheduledPostCancelOutcome.alreadyPublished;
             case ScheduledPostServerState.cancel:
@@ -477,6 +484,7 @@ class ScheduledPostsRepository {
             case null:
               return ScheduledPostCancelOutcome.failure;
           }
+          if (!owned()) return ScheduledPostCancelOutcome.failure;
         case ScheduleCancelTransientFailure(:final unavailable):
           return unavailable
               ? ScheduledPostCancelOutcome.unavailable
@@ -484,6 +492,7 @@ class ScheduledPostsRepository {
       }
     }
 
+    if (!owned()) return ScheduledPostCancelOutcome.failure;
     await _dao.updateStatus(
       eventId: eventId,
       status: ScheduledPostStatus.cancelled,

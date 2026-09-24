@@ -639,7 +639,10 @@ class ScheduledPostCoordinator {
       final post = await _repository.getById(eventId);
       if (post == null) return ScheduledPostActionOutcome.done;
 
-      switch (await _repository.cancelOnServer(eventId)) {
+      switch (await _repository.cancelOnServer(
+        eventId,
+        stillOwner: () => _ownsOutbox,
+      )) {
         case ScheduledPostCancelOutcome.cancelled:
           await _finalizeCancelled(post);
           return ScheduledPostActionOutcome.done;
@@ -807,7 +810,10 @@ class ScheduledPostCoordinator {
   Future<ScheduledPostActionOutcome> _withdrawBeforeReplacing(
     ScheduledPost post,
   ) async {
-    switch (await _repository.cancelOnServer(post.eventId)) {
+    switch (await _repository.cancelOnServer(
+      post.eventId,
+      stillOwner: () => _ownsOutbox,
+    )) {
       case ScheduledPostCancelOutcome.cancelled:
         return ScheduledPostActionOutcome.done;
       case ScheduledPostCancelOutcome.alreadyPublished:
