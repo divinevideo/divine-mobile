@@ -194,8 +194,11 @@ void main() {
         final stateController = StreamController<NostrConnectState>(
           onCancel: () => cancellation.future,
         );
-        addTearDown(() async {
-          if (!stateController.isClosed) await stateController.close();
+        addTearDown(() {
+          // Release the gate and don't await close(): after an early failure
+          // it would wait on onCancel, or on a controller never listened to.
+          if (!cancellation.isCompleted) cancellation.complete();
+          stateController.close().ignore();
         });
 
         when(() => mockAuthService.nostrConnectUrl).thenReturn(connectUrl);
