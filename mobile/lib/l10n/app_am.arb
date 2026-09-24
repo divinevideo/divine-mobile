@@ -1562,6 +1562,11 @@
     "shareSheetRemoveFromSaved": "ከዕልባቶች አስወግድ",
     "shareSheetSaveToGallery": "ወደ ማዕከለ-ስዕላት አስቀምጥ",
     "shareSheetSaveWithWatermark": "በውሃ ምልክት አስቀምጥ",
+    "dmAttachVideo": "ቪዲዮ አይዝ",
+    "dmVideoUnavailable": "ይህ ቪዲዮ መክፈት አልተቸልም",
+    "dmVideoSent": "ቪዲዮ ተልኳል",
+    "dmVideoSendFailed": "ቪዲዮ መልክ አልተቸልም",
+    "dmVideoTooLarge": "ይህ ቪዲዮ ለመላክ በጣም ትልቅ ነው። ከ{maxMegabytes} MB በታች የሆነ ይምረጡ",
     "shareSheetSaveVideo": "ቪዲዮ አስቀምጥ",
     "shareSheetAddToClips": "ወደ ቅንጥቦች ያክሉ",
     "@shareSheetAddToClips": {

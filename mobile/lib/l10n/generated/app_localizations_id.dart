@@ -3532,6 +3532,23 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Simpan dengan Watermark';
 
   @override
+  String get dmAttachVideo => 'Lampirkan video';
+
+  @override
+  String get dmVideoUnavailable => 'Tidak dapat membuka video ini';
+
+  @override
+  String get dmVideoSent => 'Video terkirim';
+
+  @override
+  String get dmVideoSendFailed => 'Tidak dapat mengirim video';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'Video ini terlalu besar untuk dikirim. Pilih yang di bawah $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Simpan Video';
 
   @override

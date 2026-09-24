@@ -12,6 +12,9 @@ enum MessageAction {
   /// Save the shared video to the device gallery.
   saveVideo,
 
+  /// Play a received encrypted video DM.
+  playVideo,
+
   /// Delete the message for everyone (NIP-09 kind 5).
   delete,
 

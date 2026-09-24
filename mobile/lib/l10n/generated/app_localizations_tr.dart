@@ -3542,6 +3542,23 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Filigranlı Kaydet';
 
   @override
+  String get dmAttachVideo => 'Video ekle';
+
+  @override
+  String get dmVideoUnavailable => 'Video açılamadı';
+
+  @override
+  String get dmVideoSent => 'Video gönderildi';
+
+  @override
+  String get dmVideoSendFailed => 'Video gönderilemedi';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'Bu video göndermek için çok büyük. $maxMegabytes MB\'den küçük bir video seç';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Videoyu Kaydet';
 
   @override

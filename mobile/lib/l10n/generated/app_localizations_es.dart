@@ -3642,6 +3642,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Guardar con marca de agua';
 
   @override
+  String get dmAttachVideo => 'Adjuntar video';
+
+  @override
+  String get dmVideoUnavailable => 'No se pudo abrir este video';
+
+  @override
+  String get dmVideoSent => 'Video enviado';
+
+  @override
+  String get dmVideoSendFailed => 'No se pudo enviar el video';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'Este video es demasiado grande para enviarlo. Elige uno de menos de $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Guardar video';
 
   @override

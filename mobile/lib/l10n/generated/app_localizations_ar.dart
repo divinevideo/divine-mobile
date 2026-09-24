@@ -3573,6 +3573,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'حفظ مع العلامة المائية';
 
   @override
+  String get dmAttachVideo => 'إرفاق فيديو';
+
+  @override
+  String get dmVideoUnavailable => 'تعذّر فتح هذا الفيديو';
+
+  @override
+  String get dmVideoSent => 'تم إرسال الفيديو';
+
+  @override
+  String get dmVideoSendFailed => 'تعذّر إرسال الفيديو';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'هذا الفيديو كبير جدًا للإرسال. اختر فيديو أصغر من $maxMegabytes ميغابايت';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'حفظ الفيديو';
 
   @override

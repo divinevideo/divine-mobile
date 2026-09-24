@@ -2268,6 +2268,32 @@
   },
   "shareSheetSaveToGallery": "Save to Gallery",
   "shareSheetSaveWithWatermark": "Save with Watermark",
+  "dmAttachVideo": "Attach video",
+  "@dmAttachVideo": {
+    "description": "Screen-reader label for the DM composer button that attaches a video to the conversation. While the video is being encrypted and sent, `libraryPreparingVideo` replaces it."
+  },
+  "dmVideoUnavailable": "Couldn't open this video",
+  "@dmVideoUnavailable": {
+    "description": "Error state on the full-screen play page for a received encrypted video DM when it cannot be decrypted or played. Distinct from `notificationsVideoUnavailable`, which means the video itself is missing."
+  },
+  "dmVideoSent": "Video sent",
+  "@dmVideoSent": {
+    "description": "SnackBar shown in a DM conversation after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded."
+  },
+  "dmVideoSendFailed": "Couldn't send video",
+  "@dmVideoSendFailed": {
+    "description": "SnackBar shown in a DM conversation when an encrypted video DM fails to upload or send. The composer stays usable, so the user can attach the video again."
+  },
+  "dmVideoTooLarge": "That video's too big to send. Pick one under {maxMegabytes} MB",
+  "@dmVideoTooLarge": {
+    "description": "SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.",
+    "placeholders": {
+      "maxMegabytes": {
+        "type": "String",
+        "example": "100"
+      }
+    }
+  },
   "shareSheetSaveVideo": "Save Video",
   "shareSheetAddToClips": "Add to clips",
   "@shareSheetAddToClips": {

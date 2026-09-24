@@ -3383,6 +3383,23 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareSheetSaveWithWatermark => '워터마크와 함께 저장';
 
   @override
+  String get dmAttachVideo => '동영상 첨부';
+
+  @override
+  String get dmVideoUnavailable => '영상을 열지 못했어요';
+
+  @override
+  String get dmVideoSent => '영상을 보냈어요';
+
+  @override
+  String get dmVideoSendFailed => '영상을 보내지 못했어요';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return '이 동영상은 너무 커서 보낼 수 없어요. ${maxMegabytes}MB 미만의 동영상을 선택하세요';
+  }
+
+  @override
   String get shareSheetSaveVideo => '영상 저장';
 
   @override

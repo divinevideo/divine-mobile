@@ -3739,6 +3739,23 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'వాటర్‌మార్క్‌తో సేవ్ చేయండి';
 
   @override
+  String get dmAttachVideo => 'వీడియోను అటాచ్ చేయండి';
+
+  @override
+  String get dmVideoUnavailable => 'ఈ వీడియోను తెరవడం సాధ్యపడలేదు';
+
+  @override
+  String get dmVideoSent => 'వీడియో పంపబడింది';
+
+  @override
+  String get dmVideoSendFailed => 'వీడియోను పంపడం సాధ్యపడలేదు';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'ఈ వీడియో పంపడానికి చాలా పెద్దది. $maxMegabytes MB కంటే తక్కువ ఉన్నదాన్ని ఎంచుకోండి';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'వీడియోను సేవ్ చేయండి';
 
   @override

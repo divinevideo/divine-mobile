@@ -1,6 +1,9 @@
 // ABOUTME: Main view for a single DM conversation.
 // ABOUTME: Displays grouped message bubbles and a bottom input bar.
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart' show DmRepository;
 import 'package:flutter/semantics.dart' show SemanticsService;
@@ -10,13 +13,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart'
     show FollowRelationship;
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/dm_thread_writability.dart';
+import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubit.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/blocs/dm/shared_video_save/shared_video_save_cubit.dart';
+import 'package:openvine/blocs/dm/video_dm_send/video_dm_send_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
@@ -26,12 +32,14 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -321,14 +329,35 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
               ) ??
               '';
 
-    return BlocProvider(
-      create: (_) => SharedVideoSaveCubit(
-        videosRepository: ref.read(videosRepositoryProvider),
-        profileRepository: ref.read(profileRepositoryProvider),
-        currentPubkey: currentPubkey,
-      ),
-      child: BlocListener<SharedVideoSaveCubit, SharedVideoSaveState>(
-        listener: _onSharedVideoSaveState,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => SharedVideoSaveCubit(
+            videosRepository: ref.read(videosRepositoryProvider),
+            profileRepository: ref.read(profileRepositoryProvider),
+            currentPubkey: currentPubkey,
+          ),
+        ),
+        // Both dependencies are stateless, account-independent services, so
+        // reading them once is safe.
+        BlocProvider(
+          create: (_) => EncryptedVideoSaveCubit(
+            decryptor: ref.read(dmVideoDecryptorProvider),
+            gallerySaveService: ref.read(gallerySaveServiceProvider),
+          ),
+        ),
+      ],
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<SharedVideoSaveCubit, SharedVideoSaveState>(
+            listener: _onSharedVideoSaveState,
+          ),
+          BlocListener<EncryptedVideoSaveCubit, EncryptedVideoSaveState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status,
+            listener: _onEncryptedVideoSaveState,
+          ),
+        ],
         child: Scaffold(
           backgroundColor: context.vineColors.surface,
           body: MultiBlocListener(
@@ -547,6 +576,33 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     }
   }
 
+  /// Reports the outcome of decrypting an encrypted video DM to the gallery.
+  void _onEncryptedVideoSaveState(
+    BuildContext context,
+    EncryptedVideoSaveState state,
+  ) {
+    final l10n = context.l10n;
+    final destination = GallerySaveService.destinationName;
+    switch (state.status) {
+      case DmVideoSaveStatus.idle:
+        return;
+      case DmVideoSaveStatus.saving:
+        _showSnackbar(l10n.libraryPreparingVideo, error: false);
+      case DmVideoSaveStatus.saved:
+        _showSnackbar(
+          l10n.libraryClipsSavedToDestination(1, destination),
+          error: false,
+        );
+      case DmVideoSaveStatus.permissionDenied:
+        _showSnackbar(
+          l10n.libraryGalleryPermissionDenied(destination),
+          error: true,
+        );
+      case DmVideoSaveStatus.failed:
+        _showSnackbar(l10n.videoClipSaveFailed, error: true);
+    }
+  }
+
   /// Briefly announces an unconfirmed "Delete for everyone" (#8201).
   ///
   /// The durable affordance is the warning beside the visible bubble; this
@@ -690,16 +746,34 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
 /// OK-confirmed publish can legitimately run for tens of seconds on a slow
 /// relay or remote signer — freezing the composer for that window swallowed
 /// every follow-up message the user tried to type.
-class _SendBar extends StatefulWidget {
+class _SendBar extends ConsumerWidget {
   const _SendBar({required this.participantPubkeys});
 
   final List<String> participantPubkeys;
 
   @override
-  State<_SendBar> createState() => _SendBarState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Keyed on the service so an account switch that rebuilds the DM
+    // repository or Blossom client also rebuilds the cubit around them.
+    final service = ref.watch(dmVideoSendServiceProvider);
+    return BlocProvider<VideoDmSendCubit>(
+      key: ValueKey(service),
+      create: (_) => VideoDmSendCubit(service: service),
+      child: _SendBarBody(participantPubkeys: participantPubkeys),
+    );
+  }
 }
 
-class _SendBarState extends State<_SendBar> {
+class _SendBarBody extends ConsumerStatefulWidget {
+  const _SendBarBody({required this.participantPubkeys});
+
+  final List<String> participantPubkeys;
+
+  @override
+  ConsumerState<_SendBarBody> createState() => _SendBarBodyState();
+}
+
+class _SendBarBodyState extends ConsumerState<_SendBarBody> {
   final _controller = TextEditingController();
 
   @override
@@ -708,26 +782,112 @@ class _SendBarState extends State<_SendBar> {
     super.dispose();
   }
 
+  /// Picks a video from the gallery and sends it to the thread's single
+  /// counterparty. Groups never show the affordance.
+  Future<void> _onAttachVideo() async {
+    final participantPubkeys = widget.participantPubkeys;
+    if (participantPubkeys.length != 1) return;
+    final recipient = participantPubkeys.first;
+    if (recipient.isEmpty) return;
+
+    final XFile? picked;
+    try {
+      picked = await ref
+          .read(dmVideoPickerProvider)
+          .pickVideo(source: ImageSource.gallery);
+    } catch (error, stackTrace) {
+      Log.error(
+        'Picking a video to attach to a DM failed',
+        name: 'ConversationView',
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    await context.read<VideoDmSendCubit>().send(
+      recipientPubkey: recipient,
+      videoFile: File(picked.path),
+    );
+  }
+
+  /// Surfaces the terminal outcome of a video DM send.
+  ///
+  /// Progress is the composer's spinner, so only terminal states need copy.
+  /// A failure would otherwise be silent: a send refused before the enqueue
+  /// leaves no bubble, so the spinner stopping is the only signal.
+  void _onVideoSendOutcome(BuildContext context, VideoDmSendState state) {
+    final l10n = context.l10n;
+    final (message, isError) = switch (state.status) {
+      VideoDmSendStatus.sent => (l10n.dmVideoSent, false),
+      VideoDmSendStatus.failed => (l10n.dmVideoSendFailed, true),
+      VideoDmSendStatus.tooLarge => (
+        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
+        true,
+      ),
+      VideoDmSendStatus.idle ||
+      VideoDmSendStatus.encrypting ||
+      VideoDmSendStatus.uploading ||
+      VideoDmSendStatus.sending => (null, false),
+    };
+    if (message == null) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
+    // Per `accessibility.md`, async visible state changes must announce
+    // explicitly — Material's default SnackBar semantics are weaker than the
+    // written rule and not guaranteed across platforms.
+    runDetached(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+      ),
+      'announce DM video send outcome',
+      logName: 'ConversationView',
+      category: LogCategory.ui,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isVideoSendBusy = context.select(
+      (VideoDmSendCubit cubit) => cubit.state.isSending,
+    );
     // An oversized rumor is refused before the enqueue, so it leaves no queue
     // row and no bubble to carry the failure (#7331). The bar has already
     // cleared itself by then, so put the text back: it is the only copy the
     // user has, and the fix they need is to shorten it.
-    return BlocListener<ConversationBloc, ConversationState>(
-      listenWhen: (previous, current) =>
-          previous.sendStatus != current.sendStatus &&
-          current.sendStatus == SendStatus.tooLong,
-      listener: (context, state) {
-        final rejected = _lastSubmitted;
-        if (rejected == null || _controller.text.isNotEmpty) return;
-        _controller.value = TextEditingValue(
-          text: rejected,
-          selection: TextSelection.collapsed(offset: rejected.length),
-        );
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ConversationBloc, ConversationState>(
+          listenWhen: (previous, current) =>
+              previous.sendStatus != current.sendStatus &&
+              current.sendStatus == SendStatus.tooLong,
+          listener: (context, state) {
+            final rejected = _lastSubmitted;
+            if (rejected == null || _controller.text.isNotEmpty) return;
+            _controller.value = TextEditingValue(
+              text: rejected,
+              selection: TextSelection.collapsed(offset: rejected.length),
+            );
+          },
+        ),
+        BlocListener<VideoDmSendCubit, VideoDmSendState>(
+          listenWhen: (previous, current) => previous.status != current.status,
+          listener: _onVideoSendOutcome,
+        ),
+      ],
       child: MessageInputBar(
         controller: _controller,
+        // Video DMs address a single recipient; a group has none, so the
+        // affordance is hidden rather than a dead tap.
+        onAttachVideo: widget.participantPubkeys.length == 1
+            ? _onAttachVideo
+            : null,
+        isAttachVideoBusy: isVideoSendBusy,
         onSend: (text) {
           _lastSubmitted = text;
           context.read<ConversationBloc>().add(
@@ -1088,6 +1248,7 @@ class _MessageList extends StatelessWidget {
       context: context,
       isSent: isSent,
       isVideoShare: videoTarget != null,
+      isEncryptedVideo: message.fileMetadata?.isVideo == true,
       showPicker: showPicker,
       showDelete:
           (retractionsEnabled || !isPersisted) &&
@@ -1111,11 +1272,26 @@ class _MessageList extends StatelessWidget {
     if (action == null) return;
     switch (action) {
       case MessageAction.copy:
+        // An encrypted video's content is its ciphertext URL, which is never
+        // user-visible; the action sheet withholds the tile, and this guard
+        // keeps it off the clipboard if the action is ever returned.
+        if (message.fileMetadata?.isVideo == true) return;
         await ClipboardUtils.copy(context, message.content);
       case MessageAction.copyVideoUrl:
         if (videoTarget == null) return;
         await ClipboardUtils.copy(context, videoTarget.canonicalUrl);
+      case MessageAction.playVideo:
+        await DmVideoPlayPage.open(context, message);
       case MessageAction.saveVideo:
+        if (message.fileMetadata?.isVideo == true && videoTarget == null) {
+          runDetached(
+            context.read<EncryptedVideoSaveCubit>().save(message),
+            'save encrypted DM video',
+            logName: 'ConversationView',
+            category: LogCategory.video,
+          );
+          return;
+        }
         if (videoTarget == null) return;
         runDetached(
           context.read<SharedVideoSaveCubit>().save(videoTarget),
@@ -1404,6 +1580,13 @@ class _MessageList extends StatelessWidget {
             dmReplyContext: dmReplyContext,
             sharedVideoRef: ownShareVideoRef,
             quotedVideoRef: quotedVideoRef,
+            fileMetadata: message.fileMetadata,
+            // A received (or own) encrypted video DM opens a decrypt-and-play
+            // page on tap. A failed own send ignores this and keeps the outer
+            // resend affordance.
+            onOpenEncryptedVideo: message.fileMetadata?.isVideo == true
+                ? () => DmVideoPlayPage.open(context, message)
+                : null,
           );
           return Column(
             crossAxisAlignment: isSent

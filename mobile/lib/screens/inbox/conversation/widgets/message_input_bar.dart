@@ -61,9 +61,25 @@ Widget? _buildCounter(
 /// Features a text field with surfaceContainer background, 20px radius,
 /// and a green send button that appears when text is entered.
 class MessageInputBar extends StatefulWidget {
-  const MessageInputBar({required this.onSend, this.controller, super.key});
+  const MessageInputBar({
+    required this.onSend,
+    this.controller,
+    this.onAttachVideo,
+    this.isAttachVideoBusy = false,
+    super.key,
+  });
 
   final ValueChanged<String> onSend;
+
+  /// Invoked when the user taps the attach-video affordance.
+  ///
+  /// The button is not rendered when this is `null`.
+  final VoidCallback? onAttachVideo;
+
+  /// Whether an attached video is currently being encrypted/uploaded/sent.
+  ///
+  /// While busy the affordance shows a progress indicator and ignores taps.
+  final bool isAttachVideoBusy;
 
   /// Optional externally-owned controller.
   ///
@@ -130,6 +146,35 @@ class _MessageInputBarState extends State<MessageInputBar> {
             // Anchor send button to pill bottom as the field grows.
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              if (widget.onAttachVideo != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 4,
+                    bottom: 4,
+                  ),
+                  child: SizedBox.square(
+                    dimension: 40,
+                    child: widget.isAttachVideoBusy
+                        ? Center(
+                            child: SizedBox.square(
+                              dimension: 20,
+                              child: DivineCircularProgressIndicator(
+                                strokeWidth: 2,
+                                semanticsLabel:
+                                    context.l10n.libraryPreparingVideo,
+                              ),
+                            ),
+                          )
+                        : DivineIconButton(
+                            icon: DivineIconName.videoCamera,
+                            type: DivineIconButtonType.ghostSecondary,
+                            size: DivineIconButtonSize.small,
+                            onPressed: widget.onAttachVideo,
+                            semanticLabel: context.l10n.dmAttachVideo,
+                            semanticIdentifier: 'dm_attach_video_button',
+                          ),
+                  ),
+                ),
               // Text input
               Expanded(
                 // Field honours font scaling (#4620): no withNoTextScaling.

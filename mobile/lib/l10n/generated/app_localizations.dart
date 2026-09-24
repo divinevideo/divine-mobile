@@ -6178,6 +6178,36 @@ abstract class AppLocalizations {
   /// **'Save with Watermark'**
   String get shareSheetSaveWithWatermark;
 
+  /// Screen-reader label for the DM composer button that attaches a video to the conversation. While the video is being encrypted and sent, `libraryPreparingVideo` replaces it.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach video'**
+  String get dmAttachVideo;
+
+  /// Error state on the full-screen play page for a received encrypted video DM when it cannot be decrypted or played. Distinct from `notificationsVideoUnavailable`, which means the video itself is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this video'**
+  String get dmVideoUnavailable;
+
+  /// SnackBar shown in a DM conversation after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded.
+  ///
+  /// In en, this message translates to:
+  /// **'Video sent'**
+  String get dmVideoSent;
+
+  /// SnackBar shown in a DM conversation when an encrypted video DM fails to upload or send. The composer stays usable, so the user can attach the video again.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send video'**
+  String get dmVideoSendFailed;
+
+  /// SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
+  String dmVideoTooLarge(String maxMegabytes);
+
   /// No description provided for @shareSheetSaveVideo.
   ///
   /// In en, this message translates to:

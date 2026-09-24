@@ -3615,6 +3615,23 @@ class AppLocalizationsNl extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'Opslaan met watermerk';
 
   @override
+  String get dmAttachVideo => 'Video toevoegen';
+
+  @override
+  String get dmVideoUnavailable => 'Video kon niet worden geopend';
+
+  @override
+  String get dmVideoSent => 'Video verzonden';
+
+  @override
+  String get dmVideoSendFailed => 'Video kon niet worden verzonden';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'Deze video is te groot om te versturen. Kies er een onder de $maxMegabytes MB';
+  }
+
+  @override
   String get shareSheetSaveVideo => 'Video opslaan';
 
   @override

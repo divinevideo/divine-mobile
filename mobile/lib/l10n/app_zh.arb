@@ -1796,6 +1796,11 @@
   "shareSheetRemoveFromSaved": "移除收藏",
   "shareSheetSaveToGallery": "保存到相册",
   "shareSheetSaveWithWatermark": "保存（带水印）",
+  "dmAttachVideo": "附加视频",
+  "dmVideoUnavailable": "无法打开此视频",
+  "dmVideoSent": "视频已发送",
+  "dmVideoSendFailed": "无法发送视频",
+  "dmVideoTooLarge": "这个视频太大，无法发送。请选择小于 {maxMegabytes} MB 的视频",
   "shareSheetSaveVideo": "保存视频",
   "shareSheetAddToClips": "加入片段库",
   "@shareSheetAddToClips": {

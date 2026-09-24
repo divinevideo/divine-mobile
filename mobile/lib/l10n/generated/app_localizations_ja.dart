@@ -3368,6 +3368,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareSheetSaveWithWatermark => 'ウォーターマーク付きで保存';
 
   @override
+  String get dmAttachVideo => '動画を添付';
+
+  @override
+  String get dmVideoUnavailable => '動画を開けませんでした';
+
+  @override
+  String get dmVideoSent => '動画を送信しました';
+
+  @override
+  String get dmVideoSendFailed => '動画を送信できませんでした';
+
+  @override
+  String dmVideoTooLarge(String maxMegabytes) {
+    return 'この動画は大きすぎて送信できません。$maxMegabytes MB未満の動画を選んでください';
+  }
+
+  @override
   String get shareSheetSaveVideo => '動画を保存';
 
   @override

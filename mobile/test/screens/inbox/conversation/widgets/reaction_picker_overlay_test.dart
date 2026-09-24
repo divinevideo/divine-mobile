@@ -21,6 +21,7 @@ void main() {
     bool isSent = false,
     bool showPicker = true,
     bool isVideoShare = false,
+    bool isEncryptedVideo = false,
   }) async {
     await tester.pumpWidget(
       testMaterialApp(
@@ -35,6 +36,7 @@ void main() {
                       isSent: isSent,
                       showPicker: showPicker,
                       isVideoShare: isVideoShare,
+                      isEncryptedVideo: isEncryptedVideo,
                     ),
                   );
                 },
@@ -73,6 +75,24 @@ void main() {
 
       expect(find.text(l10n.dmMessageActionCopyVideoUrl), findsOneWidget);
       expect(find.text(l10n.shareSheetSaveVideo), findsOneWidget);
+    });
+
+    testWidgets('shows play and save actions for an encrypted video', (
+      tester,
+    ) async {
+      await openOverlay(tester, isEncryptedVideo: true);
+
+      expect(find.text(l10n.videoPlayerPlayVideo), findsOneWidget);
+      expect(find.text(l10n.shareSheetSaveVideo), findsOneWidget);
+      expect(find.text(l10n.dmMessageActionCopyVideoUrl), findsNothing);
+    });
+
+    testWidgets('offers no copy action for an encrypted video', (tester) async {
+      await openOverlay(tester, isEncryptedVideo: true);
+
+      // Copy text would place the ciphertext URL on the clipboard, which the
+      // encrypted card deliberately never renders.
+      expect(find.text(l10n.dmMessageActionCopyText), findsNothing);
     });
 
     testWidgets('returns saveVideo after selecting Save video', (tester) async {
