@@ -106,6 +106,16 @@ RecoverableFlutterError? classifyRecoverableFlutterError(
           context.contains('image codec') ||
           context.contains('instantiateImageCodecWithSize'));
 
+  // A bundled image that cannot be read or decoded, such as a missing or
+  // corrupt sticker: the widget paints nothing and the screen carries on. The
+  // engine words a failed frame decode in lower case ("possibly due to invalid
+  // image data"), which the check above misses. Gated on the wording as well
+  // as the library, so any other image-pipeline error stays fatal.
+  final isUnreadableImage =
+      library == 'image resource service' &&
+      (error.contains('Unable to load asset') ||
+          error.contains('Codec failed to produce an image'));
+
   // A MediaCacheImageProvider download that finishes without a usable file
   // (dead legacy media, non-2xx, DNS failure) is recoverable by contract —
   // the widget falls back to a placeholder. It is host-agnostic because dead
@@ -131,7 +141,8 @@ RecoverableFlutterError? classifyRecoverableFlutterError(
   if (isImageHttpFailure ||
       isMediaHostLookup ||
       isMissingHttpHost ||
-      isInvalidImageData) {
+      isInvalidImageData ||
+      isUnreadableImage) {
     return (reason: _recoverableMediaLoadReason, report: true);
   }
 
