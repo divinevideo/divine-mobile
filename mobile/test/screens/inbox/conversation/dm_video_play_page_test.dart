@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/permissions_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/gallery_save_service.dart';
@@ -48,15 +51,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _MockDmVideoDecryptor decryptor;
+  late _MockGallerySaveService gallerySaveService;
   late Directory tempDir;
   late PathProviderPlatform originalPathProvider;
 
   setUpAll(() {
     registerFallbackValue('');
+    registerFallbackValue(_videoMessage());
   });
 
   setUp(() {
     decryptor = _MockDmVideoDecryptor();
+    gallerySaveService = _MockGallerySaveService();
     tempDir = Directory.systemTemp.createTempSync('dm_video_play_page_');
     originalPathProvider = PathProviderPlatform.instance;
     PathProviderPlatform.instance = MockPathProviderPlatform()
@@ -84,25 +90,30 @@ void main() {
   });
 
   String expectedClipPath() =>
-      '${tempDir.path}/divine_player_memory/'
-      '${DmVideoPlayPage.clipFileNameFor(_videoMessage())}';
+      '${tempDir.path}/${DmVideoDecryptor.playbackDirName}/'
+      '${DmVideoDecryptor.clipFileNameFor(_videoMessage())}';
 
-  void stubMaterialize(Future<VideoClip> Function() answer) {
-    when(
-      () => decryptor.materialize(
-        url: any(named: 'url'),
-        key: any(named: 'key'),
-        nonce: any(named: 'nonce'),
-        fileName: any(named: 'fileName'),
-      ),
-    ).thenAnswer((_) => answer());
+  void stubDecrypt(Future<String> Function() answer) {
+    when(() => decryptor.decryptToFile(any())).thenAnswer((_) => answer());
+  }
+
+  void stubDelete() {
+    when(() => decryptor.deleteClip(any())).thenAnswer((invocation) {
+      final path = invocation.positionalArguments.first as String;
+      final file = File(path);
+      if (file.existsSync()) file.deleteSync();
+    });
   }
 
   Widget host() => ProviderScope(
+    overrides: [
+      dmVideoDecryptorProvider.overrideWithValue(decryptor),
+      gallerySaveServiceProvider.overrideWithValue(gallerySaveService),
+    ],
     child: MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: DmVideoPlayPage(message: _videoMessage(), decryptor: decryptor),
+      home: DmVideoPlayPage(message: _videoMessage()),
     ),
   );
 
@@ -110,33 +121,34 @@ void main() {
     testWidgets('shows a progress state while decrypting, then the player', (
       tester,
     ) async {
-      final completer = Completer<VideoClip>();
-      stubMaterialize(() => completer.future);
+      final completer = Completer<String>();
+      stubDecrypt(() => completer.future);
       installMockDivineVideoPlayer();
 
       await tester.pumpWidget(host());
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.byType(DivineVideoPlayer), findsNothing);
 
       File(expectedClipPath())
         ..createSync(recursive: true)
         ..writeAsBytesSync(const [1, 2, 3]);
-      completer.complete(VideoClip.file(expectedClipPath()));
+      completer.complete(expectedClipPath());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
       expect(find.byType(DivineVideoPlayer), findsOneWidget);
     });
 
     testWidgets('removes the decrypted temp file on dispose', (tester) async {
-      stubMaterialize(() async {
-        final file = File(expectedClipPath())
+      stubDelete();
+      stubDecrypt(() async {
+        File(expectedClipPath())
           ..createSync(recursive: true)
           ..writeAsBytesSync(const [1, 2, 3]);
-        return VideoClip.file(file.path);
+        return expectedClipPath();
       });
       installMockDivineVideoPlayer();
 
@@ -150,17 +162,11 @@ void main() {
       await tester.pump();
 
       expect(File(expectedClipPath()).existsSync(), isFalse);
+      verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
     });
 
-    testWidgets('shows an error state and cleans up when decrypt fails', (
-      tester,
-    ) async {
-      stubMaterialize(() async {
-        File(expectedClipPath())
-          ..createSync(recursive: true)
-          ..writeAsBytesSync(const [1, 2, 3]);
-        throw Exception('decrypt failed');
-      });
+    testWidgets('shows an error state when decrypt fails', (tester) async {
+      stubDecrypt(() async => throw Exception('decrypt failed'));
       installMockDivineVideoPlayer();
 
       await tester.pumpWidget(host());
@@ -168,39 +174,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(DivineVideoPlayer), findsNothing);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
       expect(
         find.text(AppLocalizationsEn().dmVideoUnavailable),
         findsOneWidget,
       );
-      expect(File(expectedClipPath()).existsSync(), isFalse);
     });
-
-    test(
-      'saveEncryptedVideoDm removes a partial plaintext write when '
-      'materialize throws mid-write',
-      () async {
-        stubMaterialize(() async {
-          // Simulate VideoClip.memory writing bytes and then failing before it
-          // can return a clip (e.g. disk full).
-          File(expectedClipPath())
-            ..createSync(recursive: true)
-            ..writeAsBytesSync(const [1, 2, 3]);
-          throw Exception('write failed');
-        });
-        final gallerySaveService = _MockGallerySaveService();
-
-        await expectLater(
-          saveEncryptedVideoDm(
-            message: _videoMessage(),
-            gallerySaveService: gallerySaveService,
-            decryptor: decryptor,
-          ),
-          throwsA(isA<Exception>()),
-        );
-
-        expect(File(expectedClipPath()).existsSync(), isFalse);
-      },
-    );
   });
 }

@@ -193,13 +193,13 @@ void main() {
           ),
         );
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-        await tester.tap(
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        // The busy state replaces the attach affordance with progress, so
+        // there is nothing tappable while a send is in flight.
+        expect(
           find.bySemanticsIdentifier('dm_attach_video_button'),
+          findsNothing,
         );
-        await tester.pump();
-
         expect(attachCalls, isZero);
       });
     });

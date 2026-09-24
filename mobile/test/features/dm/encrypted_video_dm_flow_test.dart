@@ -93,7 +93,12 @@ void _recordSend({
 /// Serves [bytes] from [url] through the faked receive transport.
 void _stubDownload(_MockDio dio, String url, List<int> bytes) {
   when(
-    () => dio.get<List<int>>(url, options: any(named: 'options')),
+    () => dio.get<List<int>>(
+      url,
+      options: any(named: 'options'),
+      cancelToken: any(named: 'cancelToken'),
+      onReceiveProgress: any(named: 'onReceiveProgress'),
+    ),
   ).thenAnswer(
     (_) async => Response<List<int>>(
       requestOptions: RequestOptions(path: url),
@@ -125,6 +130,8 @@ void main() {
       );
       registerFallbackValue(File('/tmp/dm_video_flow_fallback'));
       registerFallbackValue(Options());
+      registerFallbackValue(CancelToken());
+      registerFallbackValue((int received, int total) {});
     });
 
     setUp(() {
@@ -206,19 +213,13 @@ void main() {
         expect(received.isFileMessage, isTrue);
         expect(received.fileMetadata!.isVideo, isTrue);
 
-        final clip =
-            await DmVideoDecryptor(
-              dio: dio,
-              encryption: FileEncryption(),
-            ).materialize(
-              url: received.content,
-              key: received.fileMetadata!.decryptionKey,
-              nonce: received.fileMetadata!.decryptionNonce,
-              fileName: 'dm_video_${received.id}.mp4',
-            );
+        final clip = await DmVideoDecryptor(
+          dio: dio,
+          encryption: FileEncryption(),
+        ).decryptToFile(received);
 
         // The decrypted plaintext equals the original input, byte for byte.
-        expect(File(clip.uri).readAsBytesSync(), equals(plaintext));
+        expect(File(clip).readAsBytesSync(), equals(plaintext));
       },
     );
 
@@ -248,16 +249,22 @@ void main() {
         tampered[0] ^= 0xff;
         _stubDownload(dio, sent.fileUrl!, tampered.toList());
 
+        final tamperedMessage = DmMessage(
+          id: _messageId,
+          conversationId: _conversationId,
+          senderPubkey: _senderPubkey,
+          content: sent.fileUrl!,
+          createdAt: 1700000000,
+          giftWrapId: _giftWrapId,
+          messageKind: 15,
+          fileMetadata: sent.metadata,
+        );
+
         await expectLater(
           DmVideoDecryptor(
             dio: dio,
             encryption: FileEncryption(),
-          ).materialize(
-            url: sent.fileUrl!,
-            key: sent.metadata!.decryptionKey,
-            nonce: sent.metadata!.decryptionNonce,
-            fileName: 'dm_video_$_messageId.mp4',
-          ),
+          ).decryptToFile(tamperedMessage),
           throwsA(isA<Exception>()),
         );
       },

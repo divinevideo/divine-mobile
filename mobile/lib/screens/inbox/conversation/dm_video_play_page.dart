@@ -13,6 +13,7 @@ import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 
 /// Plays a received encrypted video DM.
 ///
@@ -42,11 +43,15 @@ class DmVideoPlayPage extends ConsumerWidget {
     final gallerySaveService = ref.watch(gallerySaveServiceProvider);
     return BlocProvider(
       key: ValueKey((decryptor, gallerySaveService)),
-      create: (_) => DmVideoPlaybackCubit(
-        message: message,
-        decryptor: decryptor,
-        gallerySaveService: gallerySaveService,
-      )..load(),
+      create: (_) {
+        final cubit = DmVideoPlaybackCubit(
+          message: message,
+          decryptor: decryptor,
+          gallerySaveService: gallerySaveService,
+        );
+        unawaited(cubit.load());
+        return cubit;
+      },
       child: const DmVideoPlayView(),
     );
   }
@@ -126,7 +131,9 @@ class _SaveButton extends StatelessWidget {
         size: DivineIconButtonSize.small,
         onPressed: saving
             ? null
-            : () => context.read<DmVideoPlaybackCubit>().saveToGallery(),
+            : () => unawaited(
+                context.read<DmVideoPlaybackCubit>().saveToGallery(),
+              ),
         semanticLabel: context.l10n.shareSheetSaveVideo,
       ),
     );
