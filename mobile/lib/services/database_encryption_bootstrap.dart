@@ -37,7 +37,8 @@ const dbCipherKeyAccessibilityBackupStorageKey =
 /// it, on every platform. Internal builds shipped with that design before
 /// #9385 moved the key back, so on those installs the primary reads back empty
 /// while the key that opens the database is here. Read only to adopt it into
-/// the primary; never written. On iOS the item carries the class named by
+/// the primary, and only on a launch that could have read the primary; never
+/// written. On iOS the item carries the class named by
 /// `dbCipherKeyV2IosSecureStorageOptions`.
 @visibleForTesting
 const dbCipherKeyV2StorageKey = 'db.cipher.key.v2';
@@ -345,6 +346,10 @@ class DatabaseEncryptionBootstrap {
       await _restorePrimaryKey(backup);
       return (backup, false);
     }
+    // While the device is locked, an empty primary may be one the Keychain
+    // would not hand over. Adopting `.v2` could then write an earlier build's
+    // key over it, so neither slot is acted on until a launch that could read.
+    await _requireReadableKeystore();
     // An install that ran #9380 moved the key to `.v2` and deleted the
     // primary, so an empty primary is not yet key loss there either. Checked
     // after the recovery copy, which is this build's own record of its primary
@@ -359,9 +364,6 @@ class DatabaseEncryptionBootstrap {
       await _adoptV2Key(moved);
       return (moved, false);
     }
-    // Every slot read back empty. Only a keystore that could have answered
-    // makes that a fresh install rather than a key it refused to hand over.
-    await _requireReadableKeystore();
     return (await _createKey(), true);
   }
 
@@ -481,8 +483,8 @@ class DatabaseEncryptionBootstrap {
     }
   }
 
-  /// Refuses to treat an empty keystore as a fresh install while the platform
-  /// cannot decrypt `unlocked`-class data.
+  /// Refuses to act on an empty primary slot while the platform cannot decrypt
+  /// `unlocked`-class data.
   ///
   /// On the Keychain backends an item the current device state cannot decrypt
   /// reads back as `null`, not as a throw: `flutter_secure_storage`'s iOS
@@ -492,7 +494,10 @@ class DatabaseEncryptionBootstrap {
   /// `unlocked` class because [_upgradeKeyAccessibility] has not run yet,
   /// whenever the device is locked — an absent key is indistinguishable from
   /// one that is merely locked away. Generating a replacement then would
-  /// strand the database the real key opens (#9343).
+  /// strand the database the real key opens (#9343). Adopting the
+  /// [dbCipherKeyV2StorageKey] key then could write an earlier build's key
+  /// over it: whether the plugin's delete-then-add reaches a locked item has
+  /// never been tested on a device, so nothing here relies on it failing.
   ///
   /// Throws [DatabaseCipherStorageUnavailableException] in that state; the
   /// launch fails closed and the next unlocked launch reads the key as usual.

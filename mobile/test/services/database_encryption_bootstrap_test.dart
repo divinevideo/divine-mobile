@@ -806,6 +806,39 @@ void main() {
         expect(store[dbCipherKeyStorageKey], moved);
       });
 
+      test(
+        'is not adopted while the keychain may be withholding the primary',
+        () async {
+          // A tester who ran #9380 and then an older build keeps a stale `.v2`
+          // beside a newer primary under `unlocked`, which the plugin reads
+          // back as null while the phone is locked.
+          store[dbCipherKeyStorageKey] = other;
+          store[dbCipherKeyV2StorageKey] = moved;
+          var locked = true;
+          when(() => storage.read(key: dbCipherKeyStorageKey)).thenAnswer(
+            (_) async => locked ? null : store[dbCipherKeyStorageKey],
+          );
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => fail('must not reset the database'),
+            isProtectedDataAvailable: () async => !locked,
+          );
+
+          await expectLater(
+            launch().resolveCipherKey(),
+            throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+          );
+          expect(
+            store[dbCipherKeyStorageKey],
+            other,
+            reason: 'a locked launch must not write the stale key over it',
+          );
+
+          locked = false;
+          expect(await launch().resolveCipherKey(), other);
+        },
+      );
+
       test('is removed before a replacement key is written', () async {
         // Rotation on genuine key loss. Every write of a different key clears
         // the auxiliary slots first, so none of them can bring back a key the

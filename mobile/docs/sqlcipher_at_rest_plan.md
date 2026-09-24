@@ -74,7 +74,10 @@ treating the empty primary as key loss. A key found there is written to the
 primary and read back, and only then is `.v2` deleted, by a delete that names
 `first_unlock_this_device`, since the plugin puts the class into its delete
 query. A failed primary write fails startup closed with `.v2` intact for the
-next launch. Every write of a different key, and an explicit key reset, deletes
+next launch. The check waits for a launch with protected data available: while
+the phone is locked, an empty primary may be a newer key the Keychain will not
+hand over, and adopting `.v2` could overwrite it, so that launch fails closed
+instead. Every write of a different key, and an explicit key reset, deletes
 `.v2` before touching the primary, so it cannot bring back a key the database
 no longer opens.
 
