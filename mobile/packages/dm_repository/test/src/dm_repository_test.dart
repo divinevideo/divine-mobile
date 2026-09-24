@@ -6890,18 +6890,38 @@ void main() {
 
           await repository.backfillHistoryIfNeeded();
 
-          verify(
+          final captured = verify(
             () => mockNostrClient.queryEventsDetailed(
-              any(),
+              captureAny(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
-              requireAllRelaysSettled: true,
-              acceptRelayClosedWhenOthersAnswered: any(
+              relayTypes: any(named: 'relayTypes'),
+              requireAllRelaysSettled: captureAny(
+                named: 'requireAllRelaysSettled',
+              ),
+              acceptRelayClosedWhenOthersAnswered: captureAny(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
             ),
-          ).called(greaterThan(0));
+          ).captured;
+
+          // Pair each call's filter with the flags it passed, then keep the
+          // gift-wrap pages. The memoized kind-10050 inbox resolve goes through
+          // this same method and deliberately does NOT demand settlement — a
+          // relay list is re-resolvable, a skipped page is not (#8212).
+          final giftWrapPages = <(Object?, Object?)>[];
+          for (var i = 0; i + 2 < captured.length; i += 3) {
+            final filter = (captured[i]! as List<nostr_filter.Filter>).single;
+            final kinds = filter.kinds ?? const <int>[];
+            if (kinds.contains(EventKind.dmRelaysList)) continue;
+            giftWrapPages.add((captured[i + 1], captured[i + 2]));
+          }
+          expect(giftWrapPages, isNotEmpty);
+          // Every gift-wrap page demands settlement, and none settles on a
+          // relay's refusal: only the NIP-04 pass below may weigh refusals.
+          expect(giftWrapPages, everyElement(equals((true, false))));
           verify(
             () => mockNostrClient.readEvents(
               any(),
