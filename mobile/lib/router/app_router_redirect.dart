@@ -410,6 +410,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
       location == MinorAccountReviewParentConsentScreen.path;
   final isParentContactRoute =
       location == MinorAccountReviewParentContactScreen.path;
+  final isRecordConsentRoute =
+      location == RoutePaths.minorAccountReviewConsentRecord;
   final isPublicUnder13Route = location == MinorAccountReviewUnder13Screen.path;
   final isUnder13SupportRoute =
       location == MinorAccountReviewUnder13SupportScreen.path;
@@ -483,14 +485,17 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
 
   if (authState == AuthState.authenticated &&
       reviewStatus?.isRestricted != true &&
-      (isReviewRoute || isParentContactRoute || isUnder13SupportRoute)) {
+      (isReviewRoute ||
+          isParentContactRoute ||
+          isRecordConsentRoute ||
+          isUnder13SupportRoute)) {
     return VideoFeedPage.pathForIndex(0);
   }
 
   if (authState == AuthState.authenticated &&
       reviewStatus?.isRestricted == true) {
     final reviewCase = reviewStatus?.currentCase;
-    if (isParentContactRoute) {
+    if (isParentContactRoute || isRecordConsentRoute) {
       if (reviewCase == null) {
         return MinorAccountReviewScreen.path;
       }
@@ -498,9 +503,18 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         return MinorAccountReviewUnder13SupportScreen.path;
       }
     }
+    // In-app recording stays dark until its upload route ships; a stale link
+    // or deep link lands on the email / private-link consent path instead.
+    if (isRecordConsentRoute &&
+        !ref.read(
+          isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
+        )) {
+      return MinorAccountReviewParentConsentScreen.path;
+    }
 
     if (!isReviewRoute &&
         !isParentContactRoute &&
+        !isRecordConsentRoute &&
         !isUnder13SupportRoute &&
         !isSupportRoute &&
         !isModerationConversationRoute &&

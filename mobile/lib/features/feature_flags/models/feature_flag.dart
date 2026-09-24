@@ -80,6 +80,14 @@ enum FeatureFlag {
     'Show the View and Share confirmation to its assigned group. Turn off '
         'while checking that both identical groups measure the same.',
     audience: FeatureFlagAudience.internal,
+  ),
+  minorConsentInAppRecording(
+    'In-App Parent Consent Recording',
+    'Let a parent record and submit a consent video in the app for a '
+        'Divine Greenlight account review. Off by default until the '
+        'relay-manager parent-consent route and its request-signing '
+        'contract ship.',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(
