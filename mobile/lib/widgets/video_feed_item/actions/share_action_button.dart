@@ -29,6 +29,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
@@ -171,15 +172,20 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      final crosspostCubit = VideoCrosspostCubit(
-        client: ref.read(crossposterApiClientProvider),
-        eventId: widget.video.id,
-      );
-      _crosspostCubit = crosspostCubit;
-      _runShareDetached(
-        crosspostCubit.loadConnections(),
-        'load crosspost connections',
-      );
+      // The Crosspost row is offered even with nothing connected, so it must
+      // not appear for an identity the crossposter cannot serve at all.
+      if (ref.read(crosspostingAvailabilityProvider) !=
+          CrosspostingAvailability.unavailable) {
+        final crosspostCubit = VideoCrosspostCubit(
+          client: ref.read(crossposterApiClientProvider),
+          eventId: widget.video.id,
+        );
+        _crosspostCubit = crosspostCubit;
+        _runShareDetached(
+          crosspostCubit.loadConnections(),
+          'load crosspost connections',
+        );
+      }
     }
     _shareSheetBloc =
         ShareSheetBloc(
