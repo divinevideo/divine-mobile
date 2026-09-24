@@ -333,6 +333,30 @@ void main() {
         },
       );
 
+      test(
+        'broadcasts the original when a successful list omits it',
+        () async {
+          final event = buildEvent();
+          await enqueue(event);
+          await database.scheduledPostsDao.updateStatus(
+            eventId: event.id,
+            failureReason: 'timeout',
+            attemptedAt: now,
+          );
+          when(
+            () => client.list(),
+          ).thenAnswer((_) async => const ScheduleListLoaded([]));
+          now = publishAt.subtract(const Duration(seconds: 30));
+
+          await coordinator.sweep();
+
+          // Inside the relay's drift window the submitted event goes out as
+          // signed: a re-dated copy would be a second post if the relay
+          // holds this one after all.
+          expect(broadcasts.single.id, event.id);
+        },
+      );
+
       test('broadcasts a post it cannot re-date as it was signed', () async {
         final event = buildEvent();
         await enqueue(event);
