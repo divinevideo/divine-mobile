@@ -288,10 +288,12 @@ and a new image golden needs all three:
 | `mise run test` | `tags: ['golden']` on every test in the file + `--exclude-tags "integration \|\| golden"` in the mise task |
 | pre-push hook | `scripts/hooks/pre-push` skips changed files under `test/goldens/` |
 
-Hooks are generated copies, so that last one only takes effect after
-`cd mobile && mise run setup_hooks`. Until you re-run it, a stale pre-push
-hook still runs the image goldens against Ubuntu references and a golden
-change is unpushable on macOS.
+The hook installed by `scripts/install-hooks.sh` is a shim that execs this
+worktree's tracked `scripts/hooks/pre-push`, so that last one takes effect on
+the next push with no re-install. Only a hook installed before the shims
+(#9447) still needs one `cd mobile && mise run setup_hooks`; until you re-run
+it, a stale pre-push hook runs the image goldens against Ubuntu references and
+a golden change is unpushable on macOS.
 
 Use a **test-level** `tags:` argument, not a file-level `@Tags` annotation.
 File-level annotations are dropped inside the merged bundle, so `@Tags` there
