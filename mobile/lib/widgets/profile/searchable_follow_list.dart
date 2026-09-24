@@ -3,13 +3,11 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/follow_list_search/follow_list_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/utils/detached_future.dart';
-import 'package:unified_logger/unified_logger.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 
 /// Builds the row rendered for [pubkey] at [index] in a follow list.
 typedef FollowListItemBuilder = Widget Function(
@@ -90,15 +88,11 @@ class _SearchableFollowListState extends State<SearchableFollowList> {
       _visiblePubkeys = visible;
     });
     if (state.query.isNotEmpty && visible.isEmpty) {
-      runDetached(
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          context.l10n.searchNoResultsFound(state.query),
-          Directionality.of(context),
-        ),
-        'announce empty follow search',
+      announceDetached(
+        context,
+        context.l10n.searchNoResultsFound(state.query),
+        description: 'announce empty follow search',
         logName: 'SearchableFollowList',
-        category: LogCategory.ui,
       );
     }
   }
