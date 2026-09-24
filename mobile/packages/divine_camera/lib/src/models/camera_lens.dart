@@ -1,6 +1,8 @@
 // ABOUTME: Enum for camera lens types
 // ABOUTME: Defines all available camera lens options
 
+import 'package:flutter/foundation.dart';
+
 /// Available camera lens types.
 ///
 /// Modern smartphones have multiple camera lenses. This enum represents
@@ -98,6 +100,19 @@ enum DivineCameraLens {
 
   /// Whether this lens is a back-facing camera (including specialized lenses).
   bool get isBackFacing => !isFrontFacing;
+
+  /// Whether this lens looks at the user, so its preview reads like a mirror.
+  ///
+  /// True for the front lenses, and for every lens where
+  /// [allCamerasFaceUser] holds, including the one reported as [back].
+  bool get facesUser => isFrontFacing || allCamerasFaceUser;
+
+  /// Whether every camera on the current platform looks at the user.
+  ///
+  /// A Mac's cameras (built-in, USB webcam, Continuity Camera) all do, so the
+  /// second one, which the plugin reports as [back], is no rear camera.
+  static bool get allCamerasFaceUser =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
 
   /// Returns a human-readable display name for the lens type.
   String get displayName {

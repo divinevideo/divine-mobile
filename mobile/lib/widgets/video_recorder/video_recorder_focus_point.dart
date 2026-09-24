@@ -30,7 +30,7 @@ class _VideoRecorderFocusPointState extends State<VideoRecorderFocusPoint> {
   bool get _isPreviewMirrored {
     if (kIsWeb) return false;
     final camera = DivineCamera.instance;
-    if (!camera.lens.isFrontFacing) return false;
+    if (!camera.lens.facesUser) return false;
 
     // Must mirror the indicator the same way CameraPreviewWidget mirrors the
     // preview, so the indicator stays under the user's finger.

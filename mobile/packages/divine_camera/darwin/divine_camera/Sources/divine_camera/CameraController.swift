@@ -361,34 +361,38 @@ class CameraController: NSObject {
     }
     
     #if os(macOS)
-    /// Checks which cameras are available on the Mac.
+    /// The cameras a Mac can record with, built-in camera first.
     ///
-    /// Macs have no lens array: the built-in FaceTime camera is the only
-    /// built-in device, and it often reports `.unspecified` rather than
-    /// `.front`, so it counts as the front camera. Without one, any video
-    /// device (an external webcam) stands in for it.
-    private func checkCameraAvailability() {
-        let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera],
+    /// Mac cameras report no position, so "front" and "back" are assigned by
+    /// order: "front" is the built-in camera (or the first external one on a
+    /// Mac without it) and "back" the next camera, such as a USB webcam or
+    /// an iPhone through Continuity Camera. Desk View is left out: it is a
+    /// cropped second view of the built-in camera.
+    private static func macCameras() -> [AVCaptureDevice] {
+        let deviceTypes: [AVCaptureDevice.DeviceType]
+        if #available(macOS 14.0, *) {
+            deviceTypes = [.builtInWideAngleCamera, .external, .continuityCamera]
+        } else {
+            deviceTypes = [.builtInWideAngleCamera, .externalUnknown]
+        }
+        let devices = AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
             mediaType: .video,
             position: .unspecified
-        )
-        for device in discoverySession.devices {
-            switch device.position {
-            case .front, .unspecified:
-                hasFrontCamera = true
-            case .back:
-                hasBackCamera = true
-            @unknown default:
-                break
-            }
-        }
-        if !hasFrontCamera && !hasBackCamera && AVCaptureDevice.default(for: .video) != nil {
-            hasFrontCamera = true
-        }
+        ).devices
+        return devices.filter { $0.deviceType == .builtInWideAngleCamera }
+            + devices.filter { $0.deviceType != .builtInWideAngleCamera }
+    }
+
+    /// Checks which cameras are available on the Mac.
+    private func checkCameraAvailability() {
+        let cameras = Self.macCameras()
+        hasFrontCamera = !cameras.isEmpty
+        hasBackCamera = cameras.count > 1
         DivineCameraLog.shared.debug(
             "[DivineCameraController] Camera availability: "
-                + "front=\(hasFrontCamera), back=\(hasBackCamera)"
+                + "front=\(hasFrontCamera), back=\(hasBackCamera), "
+                + "types=\(cameras.map(\.deviceType.rawValue))"
         )
     }
     #else
@@ -940,15 +944,14 @@ class CameraController: NSObject {
     
     #if os(macOS)
     /// Gets the AVCaptureDevice for the specified lens type. Only "front"
-    /// (the FaceTime camera, or the default video device when the built-in
-    /// one reports no position) and "back" exist on a Mac.
+    /// and "back" exist on a Mac; see `macCameras()` for which is which.
     private func getDeviceForLensType(_ lensType: String) -> AVCaptureDevice? {
+        let cameras = Self.macCameras()
         switch lensType {
         case "front":
-            return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front)
-                ?? AVCaptureDevice.default(for: .video)
+            return cameras.first
         case "back":
-            return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
+            return cameras.count > 1 ? cameras[1] : nil
         default:
             return nil
         }
@@ -1771,14 +1774,14 @@ class CameraController: NSObject {
                 if let videoConnection = self.videoOutput?.connection(with: .video) {
                     Self.applyCaptureOrientation(to: videoConnection)
                     // Mirror pixels for front camera when mirrorFrontCameraOutput is enabled
-                    let isFront = newDevice.position == .front
+                    let isFront = self.currentLens == .front
                     if videoConnection.isVideoMirroringSupported {
                         videoConnection.isVideoMirrored = isFront && self.mirrorFrontCameraOutput
                     }
                 }
                 if let photoConnection = self.photoOutput?.connection(with: .video) {
                     Self.applyCaptureOrientation(to: photoConnection)
-                    let isFront = newDevice.position == .front
+                    let isFront = self.currentLens == .front
                     if photoConnection.isVideoMirroringSupported {
                         photoConnection.isVideoMirrored = isFront && self.mirrorFrontCameraOutput
                     }
@@ -1786,7 +1789,7 @@ class CameraController: NSObject {
                 if self.previewOptimizedActive,
                     let previewConnection = self.previewOutput?.connection(with: .video) {
                     Self.applyCaptureOrientation(to: previewConnection)
-                    let isFront = newDevice.position == .front
+                    let isFront = self.currentLens == .front
                     if previewConnection.isVideoMirroringSupported {
                         previewConnection.isVideoMirrored = isFront && self.mirrorFrontCameraOutput
                     }

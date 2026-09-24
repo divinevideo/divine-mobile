@@ -234,6 +234,37 @@ void main() {
         );
         expect(transformFinder, findsOneWidget);
       });
+
+      // Every Mac camera faces the user, so the preview under the ghost is
+      // mirrored for the second camera the plugin reports as "back" too.
+      testWidgets(
+        'flips back camera clips on macOS',
+        variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+        (tester) async {
+          final backCameraClip = DivineVideoClip(
+            id: 'mac_back_cam_clip',
+            video: EditorVideo.file('/path/to/video.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 16 / 9,
+            ghostFramePath: tempFile.path,
+            lensMetadata: const CameraLensMetadata(lensType: 'back'),
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              showLastClipOverlay: true,
+              clips: [backCameraClip],
+            ),
+          );
+
+          final transformFinder = find.byWidgetPredicate(
+            (w) => w is Transform && w.transform.getColumn(0)[0] == -1.0,
+          );
+          expect(transformFinder, findsOneWidget);
+        },
+      );
     });
 
     group('stop-motion ghost', () {

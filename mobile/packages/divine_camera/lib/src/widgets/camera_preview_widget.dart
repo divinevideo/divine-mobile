@@ -70,7 +70,7 @@ class _CameraPreviewWidgetState extends State<CameraPreviewWidget> {
   /// Used to adjust tap coordinates for focus.
   bool get _isPreviewMirrored {
     if (kIsWeb) return false;
-    if (!_camera.lens.isFrontFacing) return false;
+    if (!_camera.lens.facesUser) return false;
 
     // Platform-specific mirror handling. These branches depend on the host OS
     // via `dart:io` Platform, so they resolve differently under a widget test
