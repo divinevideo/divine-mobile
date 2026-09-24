@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
@@ -198,10 +200,19 @@ void main() {
 
     testWidgets('shows the public parent-consent screen copy', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: ProviderScope(child: MinorAccountReviewParentConsentScreen()),
+          home: ProviderScope(
+            overrides: [
+              // The copy is independent of the recording flag; overriding it
+              // keeps the flag provider from reaching SharedPreferences here.
+              isFeatureEnabledProvider(
+                FeatureFlag.minorConsentInAppRecording,
+              ).overrideWithValue(false),
+            ],
+            child: const MinorAccountReviewParentConsentScreen(),
+          ),
         ),
       );
 
