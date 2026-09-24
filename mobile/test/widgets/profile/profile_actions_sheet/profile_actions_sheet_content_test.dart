@@ -23,15 +23,17 @@ void main() {
             builder: (context) {
               return ElevatedButton(
                 onPressed: () {
-                  VineBottomSheet.show<void>(
-                    context: context,
-                    scrollable: false,
-                    showHeaderDivider: false,
-                    body: ProfileActionsSheetContent(
-                      actions: actions,
-                      onMaybeLater: onMaybeLater,
+                  unawaited(
+                    VineBottomSheet.show<void>(
+                      context: context,
+                      scrollable: false,
+                      showHeaderDivider: false,
+                      body: ProfileActionsSheetContent(
+                        actions: actions,
+                        onMaybeLater: onMaybeLater,
+                      ),
                     ),
-                  ).ignore();
+                  );
                 },
                 child: const Text('Open'),
               );
