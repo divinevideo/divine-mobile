@@ -51,6 +51,7 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   final AudioPlaybackService? audioService;
 
   static Future<AudioEvent?> show(BuildContext context) {
+    final navigator = Navigator.of(context);
     return VineBottomSheet.show<AudioEvent>(
       context: context,
       maxChildSize: 1,
@@ -67,7 +68,7 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
         children: [
           DivineIconButton(
             icon: .x,
-            onPressed: context.pop,
+            onPressed: navigator.pop,
             type: .secondary,
             size: .small,
           ),

@@ -1,6 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
@@ -46,12 +45,13 @@ class VideoMetadataExpirationSelector extends ConsumerWidget {
       videoEditorProvider.select((s) => s.expiration),
     );
 
+    final navigator = Navigator.of(context);
     final result = await VineBottomSheetSelectionMenu.show(
       context: context,
       selectedValue: currentOption.name,
       headerLeadingAction: DivineIconButton(
         icon: .x,
-        onPressed: context.pop,
+        onPressed: navigator.pop,
         type: .secondary,
         size: .small,
       ),

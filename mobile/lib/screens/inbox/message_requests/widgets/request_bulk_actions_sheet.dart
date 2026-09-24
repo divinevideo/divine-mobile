@@ -2,7 +2,6 @@
 // ABOUTME: Provides "Mark all requests as read" and "Remove all requests".
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
@@ -14,6 +13,7 @@ enum RequestBulkAction { markAllRead, removeAll }
 /// Returns the chosen [RequestBulkAction] or `null` if dismissed.
 class RequestBulkActionsSheet {
   static Future<RequestBulkAction?> show(BuildContext context) {
+    final navigator = Navigator.of(context);
     return VineBottomSheet.show<RequestBulkAction>(
       context: context,
       scrollable: false,
@@ -24,14 +24,14 @@ class RequestBulkActionsSheet {
           _ActionTile(
             icon: DivineIconName.checks,
             label: context.l10n.inboxRequestsMarkAllRead,
-            onTap: () => context.pop(RequestBulkAction.markAllRead),
+            onTap: () => navigator.pop(RequestBulkAction.markAllRead),
           ),
           _ActionTile(
             icon: DivineIconName.trash,
             label: context.l10n.inboxRequestsRemoveAll,
             isDestructive: true,
             showDivider: false,
-            onTap: () => context.pop(RequestBulkAction.removeAll),
+            onTap: () => navigator.pop(RequestBulkAction.removeAll),
           ),
         ],
       ),

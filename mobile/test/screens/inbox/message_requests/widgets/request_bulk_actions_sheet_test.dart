@@ -21,13 +21,11 @@ void main() {
     tearDown(() => VineThemeColors.debugFallbackCount = 0);
 
     // A real GoRouter, not the MockGoRouter the rest of the inbox tests use.
-    // The sheet dismisses through go_router's `context.pop(result)`, and a mock
-    // no-ops it, so `VineBottomSheet.show` never completes its future and every
-    // assertion about the result or the sheet closing is unreachable — with no
-    // error and no missed tap to explain why. The old `verify(pop(...))` passed
-    // anyway, which is what made this suite a false positive (#8409). Swapping
-    // back to `testMaterialApp(home: ...)` would read as a simplification and
-    // would silently restore that.
+    // The sheet once dismissed through go_router's `context.pop(result)`, which
+    // a mock no-ops, so `VineBottomSheet.show` never completed its future and
+    // every assertion about the result was unreachable while the old
+    // `verify(pop(...))` still passed (#8409). The real router keeps these
+    // assertions honest whichever navigator API the tiles use.
     Widget buildSubject({
       required ValueChanged<RequestBulkAction?> onResult,
       Locale? locale,
@@ -133,6 +131,56 @@ void main() {
       expect(find.text(l10n.inboxRequestsRemoveAll), findsNothing);
     });
 
+    // The opener can be torn down while the sheet is up — a route redirect
+    // or a rebuild of the requests view. Resolving the navigator from its
+    // context at tap time then throws, because a deactivated element has no
+    // inherited widgets left to find the router through.
+    testWidgets('returns the tapped action after its opener unmounts', (
+      tester,
+    ) async {
+      RequestBulkAction? capturedResult;
+      final openerVisible = ValueNotifier<bool>(true);
+      addTearDown(openerVisible.dispose);
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => Scaffold(
+              body: ValueListenableBuilder<bool>(
+                valueListenable: openerVisible,
+                builder: (_, visible, _) => visible
+                    ? _SheetOpener(
+                        onResult: (result) => capturedResult = result,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+        ),
+      );
+
+      await showSheet(tester);
+      openerVisible.value = false;
+      await tester.pumpAndSettle();
+      expect(find.byKey(showSheetButtonKey), findsNothing);
+
+      await tester.tap(find.text(l10n.inboxRequestsRemoveAll));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(capturedResult, RequestBulkAction.removeAll);
+      expect(find.text(l10n.inboxRequestsRemoveAll), findsNothing);
+    });
+
     // `show` promises "the chosen [RequestBulkAction] or `null` if dismissed",
     // and the only caller leans on it: `message_requests_view.dart:60` returns
     // early on null rather than sweeping the list. `VineBottomSheet.show` runs
@@ -165,4 +213,28 @@ void main() {
       expect(find.text(l10n.inboxRequestsMarkAllRead), findsNothing);
     });
   });
+}
+
+/// Opens the sheet from its own [State.context], so unmounting it leaves the
+/// sheet open above a defunct opener.
+class _SheetOpener extends StatefulWidget {
+  const _SheetOpener({required this.onResult});
+
+  final ValueChanged<RequestBulkAction?> onResult;
+
+  @override
+  State<_SheetOpener> createState() => _SheetOpenerState();
+}
+
+class _SheetOpenerState extends State<_SheetOpener> {
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      key: const Key('show-sheet-button'),
+      onPressed: () async {
+        widget.onResult(await RequestBulkActionsSheet.show(context));
+      },
+      child: const Text('Show sheet'),
+    );
+  }
 }
