@@ -158,6 +158,9 @@ MockAuthService createMockAuthService({
   // Future and throws type 'Null' is not a subtype of type 'Future<String?>'
   // from initState, far from anything about auth.
   when(mockAuth.getBoundDivineAccessToken).thenAnswer((_) async => null);
+  // Matches authenticationSource above: no Divine account unless a test says
+  // so. Crossposting availability reads it when the share sheet mounts.
+  when(() => mockAuth.isRegistered).thenReturn(false);
 
   // Stub authState and authStateStream so currentAuthStateProvider does not
   // crash with type 'Null' is not a subtype of type 'Stream<AuthState>'

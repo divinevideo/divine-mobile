@@ -379,12 +379,13 @@ void main() {
           WidgetTester tester, {
           MockGoRouter? goRouter,
           List<Override>? additionalOverrides,
+          bool isRegistered = true,
         }) async {
           final mockAuth = createMockAuthService(
             authState: AuthState.authenticated,
             currentPublicKeyHex: ownPubkey,
           );
-          when(() => mockAuth.isRegistered).thenReturn(true);
+          when(() => mockAuth.isRegistered).thenReturn(isRegistered);
           final app = testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
@@ -488,6 +489,16 @@ void main() {
 
           expect(find.text(l10n.shareSheetCrosspost), findsOneWidget);
         });
+
+        testWidgets(
+          'hides Crosspost for an identity the crossposter cannot serve',
+          (tester) async {
+            await pumpOwnerSheet(tester, isRegistered: false);
+
+            expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
+            expect(find.text(l10n.shareSheetCrosspost), findsNothing);
+          },
+        );
 
         testWidgets('Crosspost routes to settings with no connections', (
           tester,
