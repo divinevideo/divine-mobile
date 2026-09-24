@@ -1,12 +1,11 @@
-"""Behavioural tests for scripts/install-hooks.sh.
+"""Behavioural tests for scripts/install-hooks.sh and the hooks it installs.
 
-The installer stamps a content hash of itself into every generated hook. A hook
-whose stamp no longer matches the installer re-installs itself and aborts
-instead of running, so a change to the installer reaches hooks that were
-installed from a stamped version of it.
+The installer puts a thin shim in the hooks directory every worktree shares.
+At run time the shim execs the tracked scripts/hooks/<name> of the worktree git
+invoked it from, so each worktree runs the checks its own branch carries and
+no worktree rewrites the hooks another is using.
 """
 
-import hashlib
 import os
 import shutil
 import stat
@@ -17,11 +16,24 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INSTALLER = REPO_ROOT / "scripts" / "install-hooks.sh"
+TRACKED_HOOKS = REPO_ROOT / "scripts" / "hooks"
 HOOKS = ("pre-commit", "pre-push")
 
+COMMIT = ("-c", "user.name=Test", "-c", "user.email=test@example.invalid")
 
-def run(cmd, cwd, env):
-    return subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True)
+
+def run(cmd, cwd, env, **kwargs):
+    return subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, **kwargs)
+
+
+def fake_hook(marker, status=0):
+    # Records what the shim handed it: its own path, argv, stdin, cwd.
+    return (
+        "#!/bin/bash\n"
+        f'echo "ran {marker} from $0 args=$* cwd=$PWD"\n'
+        'if [ ! -t 0 ]; then echo "stdin=$(cat)"; fi\n'
+        f"exit {status}\n"
+    )
 
 
 class InstallHooksTest(unittest.TestCase):
@@ -29,12 +41,12 @@ class InstallHooksTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
         self.root = Path(self._tmp.name) / "repo"
-        (self.root / "scripts").mkdir(parents=True)
-        # The generated hooks cd into mobile/ before their staleness check.
+        (self.root / "scripts" / "hooks").mkdir(parents=True)
         (self.root / "mobile").mkdir()
         (self.root / "mobile" / ".gitkeep").touch()
         shutil.copy(INSTALLER, self.root / "scripts" / "install-hooks.sh")
-        self.installer = self.root / "scripts" / "install-hooks.sh"
+        for name in HOOKS:
+            self.write_tracked_hook(name, fake_hook(f"main-{name}"))
 
         # The installer only checks that `mise` is on PATH; it never calls it.
         # A stub keeps this test runnable on runners that do not install mise.
@@ -55,40 +67,41 @@ class InstallHooksTest(unittest.TestCase):
         self.env = env
 
         self.git("init", "-q", "-b", "main")
-        # pre-push reads HEAD, and a linked worktree needs a commit to check out.
-        self.git("add", "-A")
-        self.git(
-            "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
-            "commit", "-q", "-m", "init",
-        )
+        self.commit_all("init")
 
-    def git(self, *args):
+    def git(self, *args, cwd=None):
         return subprocess.run(
             ["git", *args],
-            cwd=self.root,
+            cwd=cwd or self.root,
             env=self.env,
             check=True,
             capture_output=True,
             text=True,
         )
 
+    def commit_all(self, message, cwd=None):
+        self.git("add", "-A", cwd=cwd)
+        self.git(*COMMIT, "commit", "-q", "--allow-empty", "-m", message, cwd=cwd)
+
+    def write_tracked_hook(self, name, body, root=None):
+        path = (root or self.root) / "scripts" / "hooks" / name
+        path.write_text(body)
+        return path
+
     def hooks_dir(self):
         return self.root / ".git" / "hooks"
 
-    def installer_hash(self):
-        return hashlib.sha256(self.installer.read_bytes()).hexdigest()
-
-    def install(self):
-        result = run(["bash", "scripts/install-hooks.sh"], self.root, self.env)
+    def install(self, cwd=None, env=None):
+        result = run(["bash", "scripts/install-hooks.sh"], cwd or self.root, env or self.env)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
-    def change_installer(self):
-        self.installer.write_text(
-            self.installer.read_text() + "\n# installer changed\n"
-        )
+    def add_worktree(self, branch="feature"):
+        linked = Path(self._tmp.name) / branch
+        self.git("worktree", "add", "-q", "-b", branch, str(linked))
+        return linked
 
-    def run_hook(self, name, cwd=None):
+    def run_hook(self, name, cwd=None, stdin=None):
         # Executed the way git runs it, so a hook that lost its executable bit
         # fails here rather than passing under an explicit `bash`.
         argv = [str(self.hooks_dir() / name)]
@@ -98,117 +111,119 @@ class InstallHooksTest(unittest.TestCase):
             argv,
             cwd=cwd or self.root,
             env=self.env,
-            stdin=subprocess.DEVNULL,
+            input=stdin,
+            stdin=None if stdin is not None else subprocess.DEVNULL,
             capture_output=True,
             text=True,
         )
 
-    def assert_runs_clean(self, result):
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertNotIn("stale", result.stdout.lower())
-
-    def assert_hooks_match_installer(self):
-        for name in HOOKS:
-            with self.subTest(hook=name):
-                body = (self.hooks_dir() / name).read_text()
-                self.assertIn(f'HOOKS_GENERATOR_HASH="{self.installer_hash()}"', body)
-                self.assert_runs_clean(self.run_hook(name))
-
-    def assert_stale_hook_heals(self, name):
+    def test_installed_hooks_run_the_worktrees_tracked_script(self):
         self.install()
-        self.change_installer()
-
-        stale = self.run_hook(name)
-
-        self.assertEqual(stale.returncode, 1, stale.stdout + stale.stderr)
-        self.assertIn("stale", stale.stdout.lower())
-        # The re-install stamped the current installer, so the next run is clean.
-        self.assert_runs_clean(self.run_hook(name))
-
-    def test_installs_both_hooks_with_a_matching_stamp(self):
-        self.install()
-
-        expected = self.installer_hash()
-        for name in HOOKS:
-            body = (self.hooks_dir() / name).read_text()
-            self.assertNotIn("@GENERATOR_HASH@", body)
-            self.assertIn(f'HOOKS_GENERATOR_HASH="{expected}"', body)
-
-    def test_freshly_installed_hooks_pass_their_staleness_check(self):
-        self.install()
-
-        for name in HOOKS:
-            with self.subTest(hook=name):
-                self.assert_runs_clean(self.run_hook(name))
-
-    def test_stale_pre_commit_reinstalls_itself_and_aborts(self):
-        self.assert_stale_hook_heals("pre-commit")
-
-    def test_stale_pre_push_reinstalls_itself_and_aborts(self):
-        self.assert_stale_hook_heals("pre-push")
-
-    def test_failed_reinstall_reports_its_error_instead_of_success(self):
-        self.install()
-        self.installer.write_text(
-            '#!/bin/bash\necho "installer exploded" >&2\nexit 3\n'
-        )
 
         for name in HOOKS:
             with self.subTest(hook=name):
                 result = self.run_hook(name)
-                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertIn("installer exploded", result.stdout)
-                self.assertNotIn("Hooks updated", result.stdout)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(f"ran main-{name}", result.stdout)
+                self.assertIn(str(self.root / "scripts" / "hooks" / name), result.stdout)
+
+    def test_each_worktree_runs_its_own_branchs_hooks(self):
+        self.install()
+        linked = self.add_worktree()
+        for name in HOOKS:
+            self.write_tracked_hook(name, fake_hook(f"feature-{name}"), root=linked)
+        self.commit_all("feature hooks", cwd=linked)
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                self.assertIn(f"ran main-{name}", self.run_hook(name).stdout)
+                self.assertIn(f"ran feature-{name}", self.run_hook(name, cwd=linked).stdout)
+
+    def test_an_edit_to_a_tracked_hook_applies_without_reinstalling(self):
+        self.install()
+        self.write_tracked_hook("pre-commit", fake_hook("edited"))
+
+        self.assertIn("ran edited", self.run_hook("pre-commit").stdout)
+
+    def test_hook_exit_status_reaches_git(self):
+        self.install()
+        for name in HOOKS:
+            self.write_tracked_hook(name, fake_hook(name, status=7))
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                self.assertEqual(self.run_hook(name).returncode, 7)
+
+    def test_arguments_and_stdin_reach_the_tracked_script(self):
+        # git feeds pre-push the refs being pushed on stdin.
+        self.install()
+
+        result = self.run_hook("pre-push", stdin="refs/heads/x abc refs/heads/x def\n")
+
+        self.assertIn("args=origin https://example.invalid", result.stdout)
+        self.assertIn("stdin=refs/heads/x abc refs/heads/x def", result.stdout)
+
+    def test_missing_tracked_script_warns_and_lets_git_continue(self):
+        # A branch older than scripts/hooks/ has nothing to run.
+        self.install()
+        shutil.rmtree(self.root / "scripts" / "hooks")
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                result = self.run_hook(name)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(f"no scripts/hooks/{name}", result.stderr)
+
+    def test_installing_from_any_worktree_writes_identical_shims(self):
+        # Worktrees on different branches must not keep re-writing each
+        # other's hooks, so the shim may not depend on the installing tree.
+        self.install()
+        first = {name: (self.hooks_dir() / name).read_bytes() for name in HOOKS}
+        linked = self.add_worktree()
+        with (linked / "scripts" / "install-hooks.sh").open("a") as installer:
+            installer.write("\n# a comment only this branch has\n")
+
+        self.install(cwd=linked)
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                self.assertEqual((self.hooks_dir() / name).read_bytes(), first[name])
+
+    def test_shims_carry_no_checks_of_their_own(self):
+        self.install()
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                body = (self.hooks_dir() / name).read_text()
+                self.assertIn(f'HOOK_SCRIPT="$REPO_ROOT/scripts/hooks/{name}"', body)
+                self.assertIn('exec bash "$HOOK_SCRIPT" "$@"', body)
+                self.assertNotIn("mise", body)
+                self.assertNotIn("@HOOK_NAME@", body)
 
     def test_reinstall_leaves_a_running_hook_its_original_script(self):
-        self.install()
+        (self.hooks_dir() / "pre-push").write_text("#!/bin/bash\n# pre-shim hook\n")
         hook = self.hooks_dir() / "pre-push"
 
         # bash reads a hook it is running through an open descriptor like this.
         with hook.open("rb") as running:
             original = hook.read_bytes()
-            self.change_installer()
             self.install()
 
             self.assertNotEqual(hook.read_bytes(), original)
             self.assertEqual(running.read(), original)
 
-    def test_hooks_run_clean_from_a_linked_worktree(self):
-        self.install()
-        linked = Path(self._tmp.name) / "linked"
-        self.git("worktree", "add", "-q", "-b", "feature", str(linked))
-
-        for name in HOOKS:
-            with self.subTest(hook=name):
-                self.assert_runs_clean(self.run_hook(name, cwd=linked))
-
-    def test_stamp_survives_an_exported_cdpath(self):
-        # With CDPATH set, `cd scripts` can land in a same-named directory
+    def test_installs_into_the_right_hooks_dir_under_an_exported_cdpath(self):
+        # With CDPATH set, `cd .git` can land in a same-named directory
         # elsewhere and print where it went.
         decoy = Path(self._tmp.name) / "decoy"
-        (decoy / "scripts").mkdir(parents=True)
-        self.env = {**self.env, "CDPATH": str(decoy)}
+        (decoy / ".git" / "hooks").mkdir(parents=True)
+        linked = self.add_worktree()
+        env = {**self.env, "CDPATH": str(decoy)}
 
-        self.install()
+        self.install(cwd=linked, env=env)
 
-        self.assert_hooks_match_installer()
-
-    def test_stamp_survives_a_backslash_in_the_checkout_path(self):
-        # For such a path, shasum and GNU sha256sum prefix the digest with a
-        # backslash. macOS's /sbin/sha256sum does not, so leave it off PATH.
-        moved = Path(self._tmp.name) / "back\\slash" / "repo"
-        moved.parent.mkdir()
-        self.root = self.root.rename(moved)
-        self.installer = self.root / "scripts" / "install-hooks.sh"
-        path = self.env["PATH"].split(os.pathsep)
-        self.env = {
-            **self.env,
-            "PATH": os.pathsep.join(p for p in path if p != "/sbin"),
-        }
-
-        self.install()
-
-        self.assert_hooks_match_installer()
+        self.assertEqual(list((decoy / ".git" / "hooks").iterdir()), [])
+        self.assertIn("ran main-pre-commit", self.run_hook("pre-commit").stdout)
 
     def test_installed_hooks_are_readable_and_runnable_by_everyone(self):
         previous = os.umask(0o022)
@@ -248,6 +263,19 @@ class InstallHooksTest(unittest.TestCase):
             if p.name.startswith(".install-hooks.")
         ]
         self.assertEqual(staged, [])
+
+    def test_real_tracked_hooks_pass_when_there_is_nothing_to_check(self):
+        # The repo's actual hooks, through the shim: pre-commit with nothing
+        # staged and pre-push with no Dart changes both finish cleanly.
+        for name in HOOKS:
+            shutil.copy(TRACKED_HOOKS / name, self.root / "scripts" / "hooks" / name)
+        self.commit_all("real hooks")
+        self.install()
+
+        for name in HOOKS:
+            with self.subTest(hook=name):
+                result = self.run_hook(name)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

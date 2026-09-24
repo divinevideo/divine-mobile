@@ -286,7 +286,7 @@ and a new image golden needs all three:
 |---|---|
 | CI `Tests` job | `scripts/ci/select_test_shard.sh` deletes `test/goldens/` from every shard |
 | `mise run test` | `tags: ['golden']` on every test in the file + `--exclude-tags "integration \|\| golden"` in the mise task |
-| pre-push hook | `scripts/install-hooks.sh` skips changed files under `test/goldens/` |
+| pre-push hook | `scripts/hooks/pre-push` skips changed files under `test/goldens/` |
 
 Hooks are generated copies, so that last one only takes effect after
 `cd mobile && mise run setup_hooks`. Until you re-run it, a stale pre-push

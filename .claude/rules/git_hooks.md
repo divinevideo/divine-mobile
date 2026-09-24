@@ -1,6 +1,6 @@
 # Git Hooks
 
-The repo has pre-commit and pre-push hooks that mirror CI checks locally. They live in `scripts/install-hooks.sh` and use `mise exec --` for the pinned Flutter version.
+The repo has pre-commit and pre-push hooks that mirror CI checks locally. The checks live in `scripts/hooks/pre-commit` and `scripts/hooks/pre-push`, are installed by `scripts/install-hooks.sh`, and use `mise exec --` for the pinned Flutter version.
 
 ## Installation
 
@@ -8,9 +8,13 @@ The repo has pre-commit and pre-push hooks that mirror CI checks locally. They l
 cd mobile && mise run setup_hooks
 ```
 
-The hooks are **generated copies**, not symlinks. Each one carries a hash of the `scripts/install-hooks.sh` that generated it; when the installer changes, the next commit or push re-installs the hooks and stops with `Hooks updated. Re-run your command.` Hooks installed before that hash existed carry none and never update themselves, so re-run the command above once. When a PR changes hook behaviour, still say so in its description.
+What `.git/hooks` holds is a **thin shim**, not the checks. The hooks directory is shared by every worktree of a clone, so at run time the shim finds the worktree git invoked it from (`git rev-parse --show-toplevel`) and execs that worktree's tracked `scripts/hooks/<name>`. So:
 
-Most recent change: the hooks carry the installer hash described above and re-install themselves when the installer changes (#9447). Re-run `mise run setup_hooks` once to get hooks that have it.
+- Each worktree runs the checks its own branch carries, and no worktree rewrites the hooks another is using.
+- An edit to `scripts/hooks/*` takes effect on the next commit or push, with no re-install. Only a change to the shim itself in `scripts/install-hooks.sh` needs `mise run setup_hooks` again; say so in that PR's description.
+- A worktree whose branch has no `scripts/hooks/<name>` (a branch older than #9447) gets a warning and the commit or push goes ahead unchecked — it fails open rather than making old branches uncommittable. Rebase onto `origin/main` to get the checks back.
+
+Most recent change: the hooks became shims that run each worktree's tracked `scripts/hooks/` (#9447). Hooks installed before that are full generated copies that never update, so re-run `mise run setup_hooks` once.
 
 Before that: the pre-push untested-services check now invokes its Dart detector through the pinned SDK. Re-run `mise run setup_hooks` to pick up the change; a stale hook can fail with `dart: command not found` when a service or test file changes.
 
@@ -21,8 +25,6 @@ Earlier still: the pre-push hook skips changed files under `mobile/test/goldens/
 When a developer reports CI failures on format, analyze, or codegen that they didn't catch locally, FIRST check whether hooks are installed (`ls .git/hooks/pre-commit .git/hooks/pre-push`) before analyzing the failure itself. If hooks are missing, that is likely the root cause — suggest `mise run setup_hooks`. Do not skip this check.
 
 ## What the hooks check
-
-**Both hooks**, before anything else and on every commit and push: the installer-hash staleness check described above.
 
 **Pre-commit** (staged `.dart` files only):
 - `dart format --output=none --set-exit-if-changed`

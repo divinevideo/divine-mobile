@@ -133,7 +133,7 @@ class CheckBranchMergeableTest(unittest.TestCase):
 class InstallHooksWiringTest(unittest.TestCase):
     def test_pre_push_delegates_to_the_script(self):
         source = (
-            Path(__file__).resolve().parents[3] / "scripts" / "install-hooks.sh"
+            Path(__file__).resolve().parents[3] / "scripts" / "hooks" / "pre-push"
         ).read_text()
 
         self.assertIn("check_branch_mergeable.sh", source)
@@ -146,7 +146,7 @@ class InstallHooksWiringTest(unittest.TestCase):
 
     def test_pre_push_delegation_does_not_gate_on_the_execute_bit(self):
         source = (
-            Path(__file__).resolve().parents[3] / "scripts" / "install-hooks.sh"
+            Path(__file__).resolve().parents[3] / "scripts" / "hooks" / "pre-push"
         ).read_text()
 
         # The check is run through `bash "$MERGEABLE_CHECK"`, which needs the
