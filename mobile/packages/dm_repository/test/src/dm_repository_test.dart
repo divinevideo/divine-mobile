@@ -9142,6 +9142,79 @@ void main() {
         });
       });
 
+      for (final (label, refusal) in [
+        (
+          'a relay stayed silent',
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.deadline,
+            answeredNetworkRelayCount: 1,
+            unansweredRelayCount: 1,
+            closedRelayReasons: {'wss://unavailable.example': 'error'},
+          ),
+        ),
+        (
+          'a relay rate-limited the read',
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            rateLimitedRelayCount: 1,
+            closedRelayReasons: {
+              'wss://unavailable.example': 'error',
+              'wss://busy.example': 'rate-limited',
+            },
+          ),
+        ),
+        (
+          'no relay answered the read',
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            closedRelayReasons: {'wss://unavailable.example': 'error'},
+          ),
+        ),
+      ]) {
+        test('a repeated refusal does not settle a page when $label', () {
+          fakeAsync((async) {
+            stubRelayStatus(
+              connectedNow: connected(['wss://answering.example']),
+            );
+            var nip04Reads = 0;
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) async {
+              nip04Reads++;
+              return refusal;
+            });
+            final syncState = armedSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.backfillHistoryIfNeeded());
+            async.flushMicrotasks();
+            for (final delay in DmHistoryDrainConfig.deferredRetryDelays.take(
+              2,
+            )) {
+              async
+                ..elapse(delay)
+                ..flushMicrotasks();
+            }
+
+            expect(
+              nip04Reads,
+              3,
+              reason: 'the refusal recurred on two deferred retries',
+            );
+            expect(syncState.markedCompletePubkeys, isEmpty);
+          });
+        });
+      }
+
       test('does not confirm a refusal that a different relay repeats', () {
         fakeAsync((async) {
           stubRelayStatus(
