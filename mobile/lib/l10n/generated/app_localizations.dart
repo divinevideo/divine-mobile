@@ -19284,6 +19284,12 @@ abstract class AppLocalizations {
   /// **'Supporter subscriptions are not available here right now.'**
   String get supporterUnavailable;
 
+  /// Shown on the Supporter screen in place of the plan buttons when this build cannot be billed by a store, such as an Android build installed from Zapstore or a GitHub release.
+  ///
+  /// In en, this message translates to:
+  /// **'Memberships in this version of Divine go through Google Play or the App Store. Other ways to back Divine are on the way.'**
+  String get supporterStoreNotInThisBuild;
+
   /// Button label that re-checks the store for an existing supporter subscription.
   ///
   /// In en, this message translates to:

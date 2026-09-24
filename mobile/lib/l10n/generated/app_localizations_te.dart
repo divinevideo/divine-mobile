@@ -11736,6 +11736,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'సపోర్టర్ సబ్‌స్క్రిప్షన్‌లు ప్రస్తుతం ఇక్కడ అందుబాటులో లేవు.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'ఈ Divine వెర్షన్‌లో మెంబర్‌షిప్‌లు Google Play లేదా App Store ద్వారా మాత్రమే. Divineకు మద్దతు ఇచ్చే ఇతర మార్గాలు త్వరలో వస్తున్నాయి.';
+
+  @override
   String get supporterRestorePurchases => 'కొనుగోళ్లను పునరుద్ధరించండి';
 
   @override

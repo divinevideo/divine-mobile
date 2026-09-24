@@ -2331,6 +2331,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Hindi available ang mga supporter subscription dito ngayon.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "Sa bersyong ito ng Divine, dumadaan sa Google Play o App Store ang mga membership. Parating na ang iba pang paraan para suportahan ang Divine.",
     "supporterRestorePurchases": "I-restore ang mga purchase",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "I-dismiss ang error",

@@ -10849,6 +10849,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterUnavailable => '今はここでサポーターサブスクは利用できないよ。';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'このバージョンのDivineでは、メンバーシップはGoogle PlayかApp Store経由だよ。Divineを応援するほかの方法も準備中。';
+
+  @override
   String get supporterRestorePurchases => '購入を復元';
 
   @override

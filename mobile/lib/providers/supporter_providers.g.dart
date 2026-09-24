@@ -8,6 +8,63 @@ part of 'supporter_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Whether this build is offered store checkout for supporter memberships.
+///
+/// Kept alive because [entitlementValidatorProvider] is, and the install
+/// source never changes within a process.
+
+@ProviderFor(supporterStoreBillingAvailable)
+final supporterStoreBillingAvailableProvider =
+    SupporterStoreBillingAvailableProvider._();
+
+/// Whether this build is offered store checkout for supporter memberships.
+///
+/// Kept alive because [entitlementValidatorProvider] is, and the install
+/// source never changes within a process.
+
+final class SupporterStoreBillingAvailableProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Whether this build is offered store checkout for supporter memberships.
+  ///
+  /// Kept alive because [entitlementValidatorProvider] is, and the install
+  /// source never changes within a process.
+  SupporterStoreBillingAvailableProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'supporterStoreBillingAvailableProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$supporterStoreBillingAvailableHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return supporterStoreBillingAvailable(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$supporterStoreBillingAvailableHash() =>
+    r'47f7bbf144c46ac2b42a26df8e43ef93082f4764';
+
 /// Whether this build can talk to the supporter Worker at all.
 ///
 /// Equivalent to `supporterApiClientProvider != null`, because an unusable
@@ -129,20 +186,20 @@ final class SupporterApiClientProvider
 String _$supporterApiClientHash() =>
     r'fbbc695c2015266839ff967d5748842e882495e1';
 
-/// The store-backed [EntitlementValidator] for the current platform.
+/// The store-backed [EntitlementValidator] for this build.
 ///
-/// Returns an [InAppPurchaseValidator] on iOS/Android and a
-/// [StubEntitlementValidator] elsewhere so the rest of the app can treat the
-/// supporter feature uniformly.
+/// Returns an [InAppPurchaseValidator] when [supportsStoreBilling] holds and a
+/// [StubEntitlementValidator] otherwise, so a build no store can bill never
+/// starts a checkout, restore, or background recovery against one.
 
 @ProviderFor(entitlementValidator)
 final entitlementValidatorProvider = EntitlementValidatorProvider._();
 
-/// The store-backed [EntitlementValidator] for the current platform.
+/// The store-backed [EntitlementValidator] for this build.
 ///
-/// Returns an [InAppPurchaseValidator] on iOS/Android and a
-/// [StubEntitlementValidator] elsewhere so the rest of the app can treat the
-/// supporter feature uniformly.
+/// Returns an [InAppPurchaseValidator] when [supportsStoreBilling] holds and a
+/// [StubEntitlementValidator] otherwise, so a build no store can bill never
+/// starts a checkout, restore, or background recovery against one.
 
 final class EntitlementValidatorProvider
     extends
@@ -152,11 +209,11 @@ final class EntitlementValidatorProvider
           EntitlementValidator
         >
     with $Provider<EntitlementValidator> {
-  /// The store-backed [EntitlementValidator] for the current platform.
+  /// The store-backed [EntitlementValidator] for this build.
   ///
-  /// Returns an [InAppPurchaseValidator] on iOS/Android and a
-  /// [StubEntitlementValidator] elsewhere so the rest of the app can treat the
-  /// supporter feature uniformly.
+  /// Returns an [InAppPurchaseValidator] when [supportsStoreBilling] holds and a
+  /// [StubEntitlementValidator] otherwise, so a build no store can bill never
+  /// starts a checkout, restore, or background recovery against one.
   EntitlementValidatorProvider._()
     : super(
         from: null,
@@ -192,7 +249,7 @@ final class EntitlementValidatorProvider
 }
 
 String _$entitlementValidatorHash() =>
-    r'8e01226ddfb565538f6d0e1512371490b1ce85ac';
+    r'd043410a169ac993ff553ae5238bacb853b91e26';
 
 /// The account-scoped [SupporterRepository] that owns the cached entitlement.
 

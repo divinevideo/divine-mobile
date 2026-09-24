@@ -6181,6 +6181,7 @@
   "@supporterUnavailable": {
     "description": "Note shown when no supporter subscription tiers are available on this device or storefront."
   },
+  "supporterStoreNotInThisBuild": "Divine کے اس ورژن میں ممبرشپ Google Play یا App Store کے ذریعے ہوتی ہے۔ Divine کو سپورٹ کرنے کے دوسرے طریقے جلد آ رہے ہیں۔",
   "supporterRestorePurchases": "خریداریاں بحال کریں",
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."

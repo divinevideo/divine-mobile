@@ -7319,6 +7319,7 @@
   "@supporterUnavailable": {
     "description": "Note shown when no supporter subscription tiers are available on this device or storefront."
   },
+  "supporterStoreNotInThisBuild": "ఈ Divine వెర్షన్‌లో మెంబర్‌షిప్‌లు Google Play లేదా App Store ద్వారా మాత్రమే. Divineకు మద్దతు ఇచ్చే ఇతర మార్గాలు త్వరలో వస్తున్నాయి.",
   "supporterRestorePurchases": "కొనుగోళ్లను పునరుద్ధరించండి",
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."

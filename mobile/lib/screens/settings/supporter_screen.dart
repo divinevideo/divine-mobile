@@ -27,6 +27,9 @@ class SupporterScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(supporterRepositoryProvider);
     final analytics = ref.watch(analyticsEventSinkProvider);
+    final storeBillingAvailable = ref.watch(
+      supporterStoreBillingAvailableProvider,
+    );
     return BlocProvider(
       key: ValueKey((repository, analytics)),
       create: (_) => SupporterCubit(
@@ -34,13 +37,17 @@ class SupporterScreen extends ConsumerWidget {
         trackEvent: (event) =>
             analytics.logEvent(name: event, parameters: const {}),
       ),
-      child: const SupporterScreenView(),
+      child: SupporterScreenView(storeBillingAvailable: storeBillingAvailable),
     );
   }
 }
 
 class SupporterScreenView extends StatefulWidget {
-  const SupporterScreenView({super.key});
+  const SupporterScreenView({this.storeBillingAvailable = true, super.key});
+
+  /// Whether a store can bill this build. When false, plans and restore are
+  /// replaced by a note, because no checkout can succeed here.
+  final bool storeBillingAvailable;
 
   @override
   State<SupporterScreenView> createState() => _SupporterScreenViewState();
@@ -85,6 +92,8 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                     _PurchaseStatusNote(status: state.status),
                   if (state.isSupporter)
                     const _ActiveBadge()
+                  else if (!widget.storeBillingAvailable)
+                    const _NonStoreBuildNote()
                   else if (state.hasTiers)
                     _TierList(state: state)
                   else if (!showPurchaseStatus)
@@ -123,7 +132,8 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                       onPressed: () => context.push(VerifyPage.path),
                     ),
                   const SizedBox(height: 16),
-                  if (!state.isSupporter) _RestoreButton(state: state),
+                  if (!state.isSupporter && widget.storeBillingAvailable)
+                    _RestoreButton(state: state),
                   if (state.failure != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 16),
@@ -291,6 +301,19 @@ class _UnavailableNote extends StatelessWidget {
       loading
           ? context.l10n.supporterStoreChecking
           : context.l10n.supporterUnavailable,
+      style: Theme.of(context).textTheme.bodyMedium,
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _NonStoreBuildNote extends StatelessWidget {
+  const _NonStoreBuildNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      context.l10n.supporterStoreNotInThisBuild,
       style: Theme.of(context).textTheme.bodyMedium,
       textAlign: TextAlign.center,
     );

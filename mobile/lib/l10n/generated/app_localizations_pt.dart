@@ -11502,6 +11502,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'As assinaturas de apoiador não estão disponíveis aqui no momento.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Nesta versão do Divine, as assinaturas passam pelo Google Play ou pela App Store. Outras formas de apoiar o Divine estão a caminho.';
+
+  @override
   String get supporterRestorePurchases => 'Restaurar compras';
 
   @override

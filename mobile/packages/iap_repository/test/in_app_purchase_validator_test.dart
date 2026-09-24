@@ -22,8 +22,9 @@ PurchaseDetails _purchase(
   PurchaseStatus status = PurchaseStatus.purchased,
   bool pendingComplete = false,
   String? purchaseID,
+  IAPError? error,
 }) {
-  return PurchaseDetails(
+  final details = PurchaseDetails(
     productID: productId,
     purchaseID: purchaseID,
     status: status,
@@ -34,6 +35,8 @@ PurchaseDetails _purchase(
       source: 'test',
     ),
   )..pendingCompletePurchase = pendingComplete;
+  if (error != null) details.error = error;
+  return details;
 }
 
 /// A minimal fake [ProductDetails] for tests.
@@ -418,6 +421,28 @@ void main() {
         ]);
         await expectLater(future, throwsA(isA<PurchaseFailedException>()));
       });
+
+      test(
+        'Play billing unavailable rejects with StoreUnavailableException',
+        () async {
+          // Google Play reports a build it did not install (Zapstore, a GitHub
+          // APK) this way. It is not a purchase the store can later deliver.
+          final future = validator.purchase('divine.supporter.monthly');
+          await pumpMicrotasks();
+          streamController.add([
+            _purchase(
+              '',
+              status: PurchaseStatus.error,
+              error: IAPError(
+                source: 'google_play',
+                code: 'purchase_error',
+                message: 'BillingResponse.billingUnavailable',
+              ),
+            ),
+          ]);
+          await expectLater(future, throwsA(isA<StoreUnavailableException>()));
+        },
+      );
 
       test('canceled status rejects with PurchaseFailedException', () async {
         final future = validator.purchase('divine.supporter.monthly');

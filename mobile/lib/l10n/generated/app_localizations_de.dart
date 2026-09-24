@@ -11560,6 +11560,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Supporter-Abos sind hier gerade nicht verfügbar.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Mitgliedschaften laufen in dieser Divine-Version über Google Play oder den App Store. Weitere Wege, Divine zu unterstützen, sind unterwegs.';
+
+  @override
   String get supporterRestorePurchases => 'Käufe wiederherstellen';
 
   @override

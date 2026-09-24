@@ -3109,6 +3109,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Les abonnements supporter ne sont pas disponibles ici pour l'instant.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "Dans cette version de Divine, les adhésions passent par Google Play ou l'App Store. D'autres façons de soutenir Divine arrivent bientôt.",
     "supporterRestorePurchases": "Restaurer les achats",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "Masquer l'erreur",

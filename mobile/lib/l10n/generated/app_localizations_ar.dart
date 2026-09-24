@@ -11352,6 +11352,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supporterUnavailable => 'اشتراكات الدعم غير متاحة هنا حاليًا.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'العضويات في هذا الإصدار من Divine تتم عبر Google Play أو App Store. طرق أخرى لدعم Divine في الطريق.';
+
+  @override
   String get supporterRestorePurchases => 'استعادة المشتريات';
 
   @override

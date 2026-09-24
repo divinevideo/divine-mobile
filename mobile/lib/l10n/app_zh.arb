@@ -6181,6 +6181,7 @@
   "@supporterUnavailable": {
     "description": "Note shown when no supporter subscription tiers are available on this device or storefront."
   },
+  "supporterStoreNotInThisBuild": "此版本的 Divine 只能通过 Google Play 或 App Store 成为会员。更多支持 Divine 的方式即将推出。",
   "supporterRestorePurchases": "恢复购买",
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."

@@ -3102,6 +3102,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "今はここでサポーターサブスクは利用できないよ。",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "このバージョンのDivineでは、メンバーシップはGoogle PlayかApp Store経由だよ。Divineを応援するほかの方法も準備中。",
     "supporterRestorePurchases": "購入を復元",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "エラーを閉じる",

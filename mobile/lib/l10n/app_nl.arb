@@ -3109,6 +3109,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Supporter-abonnementen zijn hier nu niet beschikbaar.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "In deze versie van Divine lopen lidmaatschappen via Google Play of de App Store. Andere manieren om Divine te steunen komen eraan.",
     "supporterRestorePurchases": "Aankopen herstellen",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "Fout negeren",

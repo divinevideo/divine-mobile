@@ -11347,6 +11347,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Destekçi abonelikleri şu anda burada kullanılamıyor.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Divine\'ın bu sürümünde üyelikler Google Play veya App Store üzerinden alınır. Divine\'ı desteklemenin başka yolları da yolda.';
+
+  @override
   String get supporterRestorePurchases => 'Satın alımları geri yükle';
 
   @override
