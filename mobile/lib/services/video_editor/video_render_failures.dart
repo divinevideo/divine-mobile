@@ -31,12 +31,13 @@ class VideoRenderFailedException implements Exception {
   final Object? cause;
 
   /// Compact telemetry label, e.g. `native_render:frame_processing` or
-  /// `insufficient_storage:disk_full`.
+  /// `insufficient_storage:disk_full`, ending in `:hdr` when the plugin
+  /// reports an HDR source among the clips the failed render read.
   String get traceValue {
     final cause = this.cause;
-    return cause == null
-        ? reason.traceValue
-        : '${reason.traceValue}:${nativeRenderFailureLabel(cause)}';
+    if (cause == null) return reason.traceValue;
+    return '${reason.traceValue}:${nativeRenderFailureLabel(cause)}'
+        '${_readHdrSource(cause) ? ':hdr' : ''}';
   }
 
   @override
@@ -46,6 +47,15 @@ class VideoRenderFailedException implements Exception {
 }
 
 const _diskFullLabel = 'disk_full';
+
+/// Whether the failed render read an HDR clip.
+///
+/// On Android an HDR clip takes its own GPU path, so the same error code can
+/// hide two different failures (#9492). Only a render reports its sources,
+/// and only on Android.
+bool _readHdrSource(Object cause) =>
+    cause is PlatformException &&
+    (NativeFailureDetails.of(cause)?.hasHdrSource ?? false);
 
 /// Names the shape of a native render failure for telemetry.
 ///
