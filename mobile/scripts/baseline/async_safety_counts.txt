@@ -77,10 +77,6 @@ discarded_futures|lib/widgets/user_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
 discarded_futures|lib/widgets/video_metadata/modes/classic/video_metadata_classic_preview_thumbnail.dart	3
 discarded_futures|lib/widgets/video_metadata/modes/edit/video_metadata_edit_bottom_bar.dart	1
-discarded_futures|lib/widgets/video_recorder/clip_delete_snackbar.dart	1
-discarded_futures|lib/widgets/video_recorder/video_recorder_library_button.dart	2
-discarded_futures|lib/widgets/video_recorder/video_recorder_mode_selector.dart	2
-discarded_futures|lib/widgets/video_recorder/video_recorder_navigation.dart	1
 discarded_futures|lib/widgets/video_reply_parent_link.dart	1
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
@@ -155,8 +151,6 @@ unawaited_futures|lib/screens/web_auth_screen.dart	3
 unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1
 unawaited_futures|lib/widgets/image_attachment_picker.dart	1
 unawaited_futures|lib/widgets/upload_failure_sheet.dart	1
-unawaited_futures|lib/widgets/video_recorder/video_recorder_library_button.dart	1
-unawaited_futures|lib/widgets/video_recorder/video_recorder_navigation.dart	1
 unawaited_futures|test/blocs/account_deletion_recovery/account_deletion_recovery_cubit_test.dart	3
 unawaited_futures|test/features/feature_flags/screens/feature_flag_screen_route_test.dart	1
 unawaited_futures|test/helpers/test_provider_overrides.dart	1

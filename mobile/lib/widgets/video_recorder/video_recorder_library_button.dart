@@ -7,8 +7,10 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class VideoRecorderLibraryButton extends ConsumerStatefulWidget {
   const VideoRecorderLibraryButton({this.interactive = true, super.key});
@@ -42,7 +44,34 @@ class _VideoRecorderLibraryButtonState
   @override
   void initState() {
     super.initState();
-    _loadLibraryThumbnail();
+    _loadLibraryThumbnailDetached();
+  }
+
+  void _loadLibraryThumbnailDetached() {
+    runDetached(
+      _loadLibraryThumbnail(),
+      'load recorder library thumbnail',
+      logName: 'VideoRecorderLibraryButton',
+      category: LogCategory.video,
+    );
+  }
+
+  void _openLibrary() {
+    runDetached(
+      _openLibraryAndRefreshThumbnail(),
+      'open recorder library',
+      logName: 'VideoRecorderLibraryButton',
+      category: LogCategory.video,
+    );
+  }
+
+  Future<void> _openLibraryAndRefreshThumbnail() async {
+    await openRecorderLibrary(context, ref);
+    if (!context.mounted) return;
+
+    // Refresh after returning — the user may have deleted clips or new
+    // thumbnails may have been recovered in the library.
+    await _loadLibraryThumbnail();
   }
 
   Future<void> _loadLibraryThumbnail() async {
@@ -83,7 +112,7 @@ class _VideoRecorderLibraryButtonState
       previous,
       next,
     ) {
-      if (next < (previous ?? next + 1)) _loadLibraryThumbnail();
+      if (next < (previous ?? next + 1)) _loadLibraryThumbnailDetached();
     });
 
     final currentPath = clips.lastOrNull?.thumbnailPath;
@@ -128,16 +157,7 @@ class _VideoRecorderLibraryButtonState
         enabled: hasClips && widget.interactive,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: hasClips && widget.interactive
-              ? () async {
-                  await openRecorderLibrary(context, ref);
-
-                  // Refresh library thumbnail after returning — user may have
-                  // deleted clips or new thumbnails may have been recovered.
-                  if (!context.mounted) return;
-                  _loadLibraryThumbnail();
-                }
-              : null,
+          onTap: hasClips && widget.interactive ? _openLibrary : null,
           child: Container(
             width: 40,
             height: 40,

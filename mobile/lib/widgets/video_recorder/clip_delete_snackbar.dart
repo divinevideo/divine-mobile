@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Shows the floating "Clip moved to trash • Undo" snackbar after the
 /// user taps the recorder's delete-last-clip button. Tapping Undo
@@ -31,7 +33,12 @@ void showClipDeleteSnackbar(BuildContext context, WidgetRef ref) {
       actionLabel: context.l10n.videoRecorderClipUndoLabel,
       onActionPressed: () {
         messenger.hideCurrentSnackBar();
-        clipManager.undoPendingDeletion();
+        runDetached(
+          clipManager.undoPendingDeletion(),
+          'undo clip deletion',
+          logName: 'ClipDeleteSnackbar',
+          category: LogCategory.video,
+        );
       },
     ),
   );

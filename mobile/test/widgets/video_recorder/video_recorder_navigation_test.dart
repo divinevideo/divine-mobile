@@ -63,6 +63,7 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   DraftSaveOutcome saveResult = DraftSaveOutcome.saved;
   int restoreDraftCalls = 0;
   int removeAutosavedDraftCalls = 0;
+  Completer<void>? startRenderCompleter;
 
   /// Clips the autosave hands back, mirroring the real restore writing them
   /// into the clip manager.
@@ -96,6 +97,7 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   @override
   Future<void> startRenderVideo() async {
     startRenderVideoCalled = true;
+    await startRenderCompleter?.future;
   }
 }
 
@@ -243,6 +245,29 @@ void main() {
             const VideoRecorderRecordingLockedForNavigation(),
           ),
         ).called(1);
+      });
+
+      testWidgets('waits for classic-mode rendering before metadata', (
+        tester,
+      ) async {
+        final renderCompleter = Completer<void>();
+        fakeEditor.startRenderCompleter = renderCompleter;
+        when(() => recorderBloc.state).thenReturn(
+          const VideoRecorderBlocState(recorderMode: VideoRecorderMode.classic),
+        );
+
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pump();
+
+        expect(fakeEditor.startRenderVideoCalled, isTrue);
+        expect(find.text('metadata'), findsNothing);
+
+        renderCompleter.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('metadata'), findsOneWidget);
       });
 
       testWidgets('openRecorderLibrary proceeds to the library '
