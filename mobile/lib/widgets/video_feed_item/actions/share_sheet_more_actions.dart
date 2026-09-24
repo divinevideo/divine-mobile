@@ -108,7 +108,7 @@ class _MoreActionsSection extends ConsumerWidget {
                 'share_sheet',
               ),
             );
-            onCrosspost!.call();
+            unawaited(onCrosspost!.call());
           },
         ),
       _ActionData(
