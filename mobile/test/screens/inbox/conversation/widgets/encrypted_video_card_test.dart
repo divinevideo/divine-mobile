@@ -115,25 +115,51 @@ void main() {
       );
     });
 
-    testWidgets('falls back to the unavailable pattern without a blurhash', (
-      tester,
-    ) async {
+    testWidgets(
+      'shows a play placeholder, not an unavailable warning, without a '
+      'blurhash',
+      (tester) async {
+        await tester.pumpWidget(
+          _bubbleFrom(_videoMessage(blurhash: null), isSent: false),
+        );
+        await tester.pump();
+
+        expect(find.byType(EncryptedVideoCard), findsOneWidget);
+        expect(find.byType(BlurhashDisplay), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.playCircleFill,
+          ),
+          findsOneWidget,
+        );
+        expect(find.text(strings.notificationsVideoUnavailable), findsNothing);
+      },
+    );
+
+    testWidgets('labels the tappable card for screen readers', (tester) async {
+      final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
-        _bubbleFrom(_videoMessage(blurhash: null), isSent: false),
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMetadata(blurhash: null),
+            onOpenEncryptedVideo: () {},
+          ),
+        ),
       );
       await tester.pump();
 
-      expect(find.byType(EncryptedVideoCard), findsOneWidget);
-      expect(find.byType(BlurhashDisplay), findsNothing);
       expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is DivineIcon &&
-              widget.icon == DivineIconName.warningCircle,
+        find.bySemanticsLabel(
+          RegExp(RegExp.escape(strings.videoPlayerPlayVideo)),
         ),
         findsOneWidget,
       );
-      expect(find.text(strings.notificationsVideoUnavailable), findsOneWidget);
+      semantics.dispose();
     });
 
     testWidgets('forwards a card tap to onOpenEncryptedVideo', (tester) async {

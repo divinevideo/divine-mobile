@@ -27,8 +27,8 @@ const double encryptedVideoCardRadius = 16;
 /// owned by the video DM play page; [onTap] is the future hook for it.
 ///
 /// When the sender provided no blurhash there is nothing safe to preview, so
-/// the card falls back to the same unavailable pattern the shared-video card
-/// uses for a dead reel.
+/// the card shows a neutral play placeholder. Divine's own sender attaches no
+/// blurhash, so this is the normal state for its video DMs, not a failure.
 class EncryptedVideoCard extends StatefulWidget {
   const EncryptedVideoCard({
     required this.fileMetadata,
@@ -44,8 +44,8 @@ class EncryptedVideoCard extends StatefulWidget {
   /// Whether the enclosing bubble is the current user's own message.
   final bool isSent;
 
-  /// Opens playback. Null until the play page is wired (Task A7), which keeps
-  /// the placeholder non-interactive rather than a dead tap target.
+  /// Opens playback. When null the card is not interactive, so it never
+  /// becomes a dead tap target.
   final VoidCallback? onTap;
 
   @override
@@ -57,7 +57,7 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
   Widget build(BuildContext context) {
     final blurhash = widget.fileMetadata.blurhash;
     final card = (blurhash == null || blurhash.isEmpty)
-        ? const _EncryptedVideoUnavailableCard()
+        ? const _EncryptedVideoPlaceholderCard()
         : ClipRRect(
             borderRadius: BorderRadius.circular(encryptedVideoCardRadius),
             child: SizedBox(
@@ -75,15 +75,15 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
     if (onTap == null) return card;
     return Semantics(
       button: true,
+      label: context.l10n.videoPlayerPlayVideo,
       child: GestureDetector(onTap: onTap, child: card),
     );
   }
 }
 
-/// Non-tappable placeholder shown when a received video DM carries no
-/// blurhash. Mirrors the shared-video card's unavailable state.
-class _EncryptedVideoUnavailableCard extends StatelessWidget {
-  const _EncryptedVideoUnavailableCard();
+/// Neutral placeholder shown when a video DM carries no blurhash.
+class _EncryptedVideoPlaceholderCard extends StatelessWidget {
+  const _EncryptedVideoPlaceholderCard();
 
   @override
   Widget build(BuildContext context) {
@@ -94,22 +94,12 @@ class _EncryptedVideoUnavailableCard extends StatelessWidget {
         height: encryptedVideoCardHeight,
         color: context.vineColors.card,
         alignment: Alignment.center,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DivineIcon(
-              icon: DivineIconName.warningCircle,
-              color: context.vineColors.onSurfaceMuted,
-              size: 32,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.notificationsVideoUnavailable,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.onSurfaceMuted,
-              ),
-            ),
-          ],
+        child: ExcludeSemantics(
+          child: DivineIcon(
+            icon: DivineIconName.playCircleFill,
+            color: context.vineColors.onSurfaceMuted,
+            size: 48,
+          ),
         ),
       ),
     );

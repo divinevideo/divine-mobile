@@ -1930,7 +1930,7 @@ void main() {
         expect(frame.constraints?.maxWidth, 248 + 32);
       });
 
-      testWidgets('shows the unavailable pattern without a blurhash', (
+      testWidgets('shows a play placeholder without a blurhash', (
         tester,
       ) async {
         await tester.pumpWidget(bubble(hash: null));
@@ -1938,8 +1938,16 @@ void main() {
 
         expect(find.byType(BlurhashDisplay), findsNothing);
         expect(
-          find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.playCircleFill,
+          ),
           findsOneWidget,
+        );
+        expect(
+          find.text(AppLocalizationsEn().notificationsVideoUnavailable),
+          findsNothing,
         );
       });
     });
