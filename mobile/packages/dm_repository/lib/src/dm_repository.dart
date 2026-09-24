@@ -94,7 +94,8 @@ const Set<int> _supportedDmKinds = {
 /// here because the refusal is the relay asking for NIP-42, not an answer:
 /// the pool parks the `REQ` for a post-AUTH replay, and a remote signer that
 /// has not produced the signature yet leaves the read settling on a gate that
-/// opens moments later.
+/// opens moments later. Only a relay that sent `CLOSED` carries a category: a
+/// relay whose gate shut before it sent a frame has none to repeat.
 const Set<String> _unconfirmedRefusalCategories = {
   'auth-required',
   'error',

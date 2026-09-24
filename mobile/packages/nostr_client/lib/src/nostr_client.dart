@@ -917,11 +917,14 @@ class NostrClient {
   /// relay is still unanswered. It never settles on silence, a dropped socket,
   /// a deadline, or a `rate-limited` refusal, all of which a retry may change.
   /// Transient `error:`, unclassified (`other`) and NIP-42 `auth-required`
-  /// refusals remain incomplete. A caller with a deferred retry policy may
-  /// confirm those refusals on a later attempt. This method never issues an
-  /// immediate confirmation read: a relay may still be completing AUTH or
-  /// recovering from a transient failure. Other terminal refusal categories
-  /// may settle on the first read.
+  /// refusals remain incomplete. A caller that must confirm such a refusal
+  /// across attempts reads through [readEvents] and compares
+  /// [QueryResult.closedRelayReasons]; this method reports the read only as
+  /// `timedOut: true`. It never issues an immediate confirmation read: a relay
+  /// may still be completing AUTH or recovering from a transient failure.
+  /// Other terminal refusal categories may settle on the first read. Only a
+  /// relay that sent `CLOSED` carries a category: one whose NIP-42 gate shut
+  /// before it sent a frame counts as closed without one.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -986,10 +989,10 @@ class NostrClient {
     );
   }
 
-  /// `CLOSED` categories [queryEventsDetailed] never settles on at the first
-  /// sighting: `error` and `other` may be transient, and `auth-required`
-  /// asks for NIP-42 rather than answering, so the gate may open moments
-  /// later once a remote signer produces the signature.
+  /// `CLOSED` categories [queryEventsDetailed] never settles on: `error` and
+  /// `other` may be transient, and `auth-required` asks for NIP-42 rather than
+  /// answering, so the gate may open moments later once a remote signer
+  /// produces the signature.
   static const Set<String> _deferredConfirmationRefusalCategories = {
     'auth-required',
     'error',
