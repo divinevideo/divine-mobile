@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
+import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
@@ -65,6 +66,29 @@ class _ReviewRecorder implements MinorConsentRecorder {
 
   @override
   Future<void> dispose() async {}
+}
+
+/// Stands in for the real repository so the submit pane can render without an
+/// `ApiService`; the goldens never submit.
+class _InertRepository implements MinorAccountReviewRepository {
+  @override
+  Future<MinorAccountReviewStatus> fetchCurrentStatus() async =>
+      MinorAccountReviewStatus.active();
+
+  @override
+  Future<void> submitParentContact({
+    required String caseId,
+    required String email,
+    MinorReviewInstructions? localReceipt,
+  }) async {}
+
+  @override
+  Future<void> submitParentConsent({
+    required String caseId,
+    required String email,
+    required String videoPath,
+    MinorReviewInstructions? localReceipt,
+  }) async {}
 }
 
 class _FakePermissions implements PermissionsService {
@@ -189,6 +213,9 @@ void main() {
           overrides: [
             currentMinorAccountReviewStatusProvider.overrideWith(
               (ref) async => _statusWithCase(),
+            ),
+            minorAccountReviewRepositoryProvider.overrideWithValue(
+              _InertRepository(),
             ),
           ],
           child: MaterialApp.router(
