@@ -502,4 +502,55 @@ void main() {
       expect(sanitized, 'rejected [REDACTED] for this key');
     });
   });
+
+  group('relayRefusalCategoryForDiagnostics', () {
+    test('categorizes a bare prefix carrying no human-readable half', () {
+      // NIP-42's own example `OK` rejection is the prefix alone. Requiring a
+      // colon reported it as `other`, which callers read as unclassified.
+      expect(
+        relayRefusalCategoryForDiagnostics('auth-required'),
+        'auth-required',
+      );
+      expect(relayRefusalCategoryForDiagnostics('restricted'), 'restricted');
+    });
+
+    test('keeps the relay text out of the category', () {
+      expect(
+        relayRefusalCategoryForDiagnostics(
+          'invalid: token=secret via 203.0.113.9',
+        ),
+        'invalid',
+      );
+    });
+
+    test('matches the prefix rather than searching the whole message', () {
+      // `blocked: too many failed auth attempts` is an account block, not a
+      // NIP-42 problem; searching would send triage to the wrong place.
+      expect(
+        relayRefusalCategoryForDiagnostics(
+          'blocked: too many failed auth-required attempts',
+        ),
+        'blocked',
+      );
+    });
+
+    test('reports an unrecognized or absent prefix as other', () {
+      expect(relayRefusalCategoryForDiagnostics('go away'), 'other');
+      expect(relayRefusalCategoryForDiagnostics(''), 'other');
+      expect(
+        relayRefusalCategoryForDiagnostics('teapot: short and stout'),
+        'other',
+      );
+    });
+
+    test('agrees with the CLOSED settlement path on every known prefix', () {
+      for (final prefix in relayRefusalPrefixes) {
+        expect(
+          relayRefusalCategoryForDiagnostics('$prefix: relay said so'),
+          prefix,
+          reason: 'one refusal vocabulary serves CLOSED and the AUTH OK path',
+        );
+      }
+    });
+  });
 }
