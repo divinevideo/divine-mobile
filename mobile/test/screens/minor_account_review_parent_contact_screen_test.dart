@@ -5,9 +5,20 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
+import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Fails the test if the screen reaches the backend: the simulation override
+/// is supposed to short-circuit before any request.
+class _UnreachableApiService implements ApiService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    fail('ApiService.${invocation.memberName} called under a local override');
+  }
+}
 
 void main() {
   group('MinorAccountReviewParentContactScreen', () {
@@ -41,6 +52,14 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
             minorAccountReviewOverrideServiceProvider.overrideWithValue(
               overrideService,
+            ),
+            // The real repository owns the override-vs-backend decision, so
+            // wire it directly rather than building the ApiService chain.
+            minorAccountReviewRepositoryProvider.overrideWithValue(
+              MinorAccountReviewRepository(
+                apiService: _UnreachableApiService(),
+                overrideService: overrideService,
+              ),
             ),
             currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
               final localOverride = overrideService.getOverride();
