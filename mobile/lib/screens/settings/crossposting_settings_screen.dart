@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
+import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/oauth/app_oauth_callback.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
@@ -464,10 +465,20 @@ class _ConnectionAction extends StatelessWidget {
               if (entry.isConnected) {
                 unawaited(cubit.disconnect(entry.platform));
               } else {
-                unawaited(cubit.connect(entry.platform));
+                unawaited(_connect(context, cubit));
               }
             },
     );
+  }
+
+  Future<void> _connect(
+    BuildContext context,
+    CrosspostingSettingsCubit cubit,
+  ) async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    if (await openCrosspostingWebSetupIfRequired(container)) return;
+    if (!context.mounted) return;
+    await cubit.connect(entry.platform);
   }
 }
 

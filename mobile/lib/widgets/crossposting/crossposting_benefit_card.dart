@@ -8,11 +8,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
-import 'package:openvine/config/app_config.dart';
 import 'package:openvine/features/crossposting/crossposting_analytics.dart';
+import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
-import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/repositories/crossposting_repository.dart';
 
 /// Encourages a creator with no connected platform to connect one.
@@ -46,16 +45,8 @@ class CrosspostingBenefitCard extends ConsumerWidget {
       ),
     );
     final container = ProviderScope.containerOf(context, listen: false);
-    final availability = await resolveCrosspostingAvailability(container);
+    if (await openCrosspostingWebSetupIfRequired(container)) return;
     if (!context.mounted) return;
-    if (availability == CrosspostingAvailability.webOnly) {
-      unawaited(
-        ref.read(crosspostingWebOpenerProvider)(
-          Uri.parse(AppConfig.crossposterBaseUrl),
-        ),
-      );
-      return;
-    }
     unawaited(context.read<CrosspostingSettingsCubit>().connect(platform));
   }
 }

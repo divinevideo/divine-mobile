@@ -993,6 +993,49 @@ void main() {
       },
     );
 
+    testWidgets(
+      'sends a platform row connect to the web when in-app OAuth is '
+      'unsupported',
+      (tester) async {
+        when(repository.loadSettings).thenAnswer(
+          (_) async => [_disconnected()],
+        );
+        var webOpened = false;
+        var oauthLaunched = false;
+
+        await tester.pumpWidget(
+          buildApp(
+            launchOAuth: (_) async {
+              oauthLaunched = true;
+              return null;
+            },
+            additionalOverrides: [
+              appOAuthSupportProvider.overrideWith((ref) async => false),
+              crosspostingWebOpenerProvider.overrideWithValue((_) async {
+                webOpened = true;
+                return true;
+              }),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const ValueKey('crossposting-action-instagram')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(webOpened, isTrue);
+        expect(oauthLaunched, isFalse);
+        verifyNever(
+          () => repository.startConnection(
+            any(),
+            returnUrl: any(named: 'returnUrl'),
+          ),
+        );
+      },
+    );
+
     testWidgets('encourages automatic mode for a connected manual platform', (
       tester,
     ) async {
