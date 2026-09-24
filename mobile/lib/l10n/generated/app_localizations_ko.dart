@@ -2790,6 +2790,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsPublishPrompt => '순위를 보려면 영상을 몇 개 게시해보세요.';
 
   @override
+  String get analyticsYourSounds => '내가 만든 사운드';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      '각 사운드를 사용한 영상 수예요(전체 기간). 가장 많이 쓰인 순서로 보여줘요.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      '아직 사운드가 없어요. 사운드를 업로드하거나 오디오 재사용을 허용하고 얼마나 멀리 퍼지는지 확인해 보세요.';
+
+  @override
   String get analyticsEngagementRateExplainer => '오른쪽 % = 참여율 (상호작용 ÷ 조회수).';
 
   @override

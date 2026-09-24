@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -26,12 +27,16 @@ void main() {
     SocialCounts? socialCounts,
     bool hasSocialCounts = true,
     Set<AnalyticsDataSource> failedSources = const {},
+    List<SoundStats> sounds = const [],
   }) async {
     final authService = _MockAuthService();
     final repository = _MockCreatorAnalyticsRepository();
     final now = DateTime.now();
 
     when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+    when(
+      () => repository.fetchCreatorSounds('a' * 64),
+    ).thenAnswer((_) async => sounds);
     when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
       (_) async => CreatorAnalyticsSnapshot(
         videos: videos,
@@ -178,6 +183,34 @@ void main() {
         expect(listViewWidth, moreOrLessEquals(600));
       },
     );
+
+    testWidgets('lists the creator sounds with their video counts', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(600, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await pumpAnalyticsScreen(
+        tester,
+        videos: [analyticsVideo(id: 'video-1', views: 120)],
+        sounds: [
+          SoundStats(
+            id: 'sound-hit',
+            pubkey: 'a' * 64,
+            title: 'Birks crew',
+            createdAt: DateTime.now().toUtc(),
+            usageCount: 42,
+          ),
+        ],
+      );
+
+      expect(find.text(l10n.analyticsYourSounds), findsOneWidget);
+      expect(find.text('Birks crew'), findsOneWidget);
+      expect(find.text(l10n.soundVideoCount(42)), findsOneWidget);
+    });
 
     testWidgets('counts native Divine engagement in creator analytics', (
       tester,

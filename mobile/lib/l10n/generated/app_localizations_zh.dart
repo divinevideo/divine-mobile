@@ -2790,6 +2790,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsPublishPrompt => '发布几条视频后就能看到排名。';
 
   @override
+  String get analyticsYourSounds => '你的声音';
+
+  @override
+  String get analyticsYourSoundsExplainer => '使用你每个声音的视频数，累计至今。使用最多的排在前面。';
+
+  @override
+  String get analyticsYourSoundsEmpty => '还没有声音。上传一个，或允许他人复用你的音频，看看它能传多远。';
+
+  @override
   String get analyticsEngagementRateExplainer => '右侧百分比 = 互动率（互动数除以观看数）。';
 
   @override

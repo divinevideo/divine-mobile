@@ -3,9 +3,14 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/content_deletion_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Enables fixture analytics payload for local UI development.
 final useFixtureCreatorAnalyticsProvider = StateProvider<bool>((_) => false);
@@ -19,9 +24,38 @@ final creatorAnalyticsRepositoryProvider = Provider<CreatorAnalyticsRepository>(
     }
 
     final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
-    return FunnelcakeCreatorAnalyticsRepository(funnelcakeClient);
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return FunnelcakeCreatorAnalyticsRepository(
+      funnelcakeClient,
+      locallyDeletedEventIds: () => _locallyDeletedEventIds(prefs),
+    );
   },
 );
+
+/// Event ids this device has deleted, from the persisted deletion history.
+///
+/// Read from preferences on each call rather than from the async
+/// [ContentDeletionService] provider, so a deletion made after the repository
+/// was built still counts and the repository never waits on that service.
+Set<String> _locallyDeletedEventIds(SharedPreferences prefs) {
+  try {
+    return {
+      for (final deletion in ContentDeletionService.parseDeletionHistory(
+        prefs.getString(ContentDeletionService.deletionsStorageKey),
+      ))
+        deletion.originalEventId,
+    };
+  } on Object catch (error, stackTrace) {
+    Log.error(
+      'Failed to read deletion history for creator analytics',
+      name: 'CreatorAnalyticsRepository',
+      category: LogCategory.system,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return const {};
+  }
+}
 
 class _FixtureCreatorAnalyticsRepository implements CreatorAnalyticsRepository {
   @override
@@ -66,5 +100,19 @@ class _FixtureCreatorAnalyticsRepository implements CreatorAnalyticsRepository {
         fetchedAt: DateTime.now(),
       ),
     );
+  }
+
+  @override
+  Future<List<SoundStats>> fetchCreatorSounds(String pubkey) async {
+    final now = DateTime.now().toUtc();
+    return List.generate(3, (index) {
+      return SoundStats(
+        id: 'fixture-sound-$index',
+        pubkey: pubkey,
+        title: 'Fixture Sound $index',
+        createdAt: now.subtract(Duration(days: index * 3)),
+        usageCount: 24 - (index * 10),
+      );
+    });
   }
 }

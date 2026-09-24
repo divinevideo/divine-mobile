@@ -3002,6 +3002,17 @@ class AppLocalizationsPt extends AppLocalizations {
       'Publique alguns vídeos para ver o ranking.';
 
   @override
+  String get analyticsYourSounds => 'Seus sons';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Vídeos que usam cada um dos seus sons, desde sempre. Os mais usados primeiro.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Ainda não há sons. Envie um ou deixe seu áudio disponível para reutilização e veja até onde ele vai.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       '% à direita = taxa de engajamento (interações divididas por visualizações).';
 

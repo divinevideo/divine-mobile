@@ -5116,6 +5116,24 @@ abstract class AppLocalizations {
   /// **'Publish a few videos to see rankings.'**
   String get analyticsPublishPrompt;
 
+  /// Title of the Creator Analytics card that lists the signed-in creator's own published sounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Sounds'**
+  String get analyticsYourSounds;
+
+  /// Explains the per-sound number in the Your Sounds card: lifetime count of videos using each sound, sorted most used first.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos using each of your sounds, all time. Most used first.'**
+  String get analyticsYourSoundsExplainer;
+
+  /// Shown in the Your Sounds card when the creator has not published any sounds yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No sounds yet. Upload one or make your audio available for reuse, then watch it travel.'**
+  String get analyticsYourSoundsEmpty;
+
   /// No description provided for @analyticsEngagementRateExplainer.
   ///
   /// In en, this message translates to:

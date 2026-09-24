@@ -79,6 +79,12 @@ class CreatorAnalyticsSnapshot {
 /// Repository used by creator analytics screens.
 abstract class CreatorAnalyticsRepository {
   Future<CreatorAnalyticsSnapshot> fetchCreatorAnalytics(String pubkey);
+
+  /// The sounds [pubkey] has published, most used first, each with the number
+  /// of videos that use it.
+  ///
+  /// Throws [CreatorAnalyticsLoadException] when the sounds cannot be loaded.
+  Future<List<SoundStats>> fetchCreatorSounds(String pubkey);
 }
 
 /// Funnelcake-backed implementation with layered fallbacks.
@@ -91,10 +97,27 @@ class FunnelcakeCreatorAnalyticsRepository
   FunnelcakeCreatorAnalyticsRepository(
     this._client, {
     Duration socialCountsCacheDuration = const Duration(minutes: 5),
-  }) : _socialCountsCacheDuration = socialCountsCacheDuration;
+    Set<String> Function()? locallyDeletedEventIds,
+  }) : _socialCountsCacheDuration = socialCountsCacheDuration,
+       _locallyDeletedEventIds = locallyDeletedEventIds ?? _noDeletedEventIds;
+
+  /// Sounds requested per page by [fetchCreatorSounds].
+  static const creatorSoundsPageSize = 100;
+
+  /// Pages [fetchCreatorSounds] reads at most, so a creator with a long
+  /// history still costs a bounded number of requests.
+  static const creatorSoundsMaxPages = 4;
 
   final FunnelcakeApiClient _client;
   final Duration _socialCountsCacheDuration;
+
+  /// Event ids this device has deleted, read at call time.
+  ///
+  /// The sounds endpoint still lists a sound after its NIP-09 deletion, so
+  /// without this a creator would keep seeing a sound they just removed.
+  final Set<String> Function() _locallyDeletedEventIds;
+
+  static Set<String> _noDeletedEventIds() => const {};
 
   final _socialCountsCache = <String, SocialCounts?>{};
   final _socialCountsCachedAt = <String, DateTime>{};
@@ -195,6 +218,43 @@ class FunnelcakeCreatorAnalyticsRepository
         videoCatalogTruncated: authorResult.truncated,
       ),
     );
+  }
+
+  @override
+  Future<List<SoundStats>> fetchCreatorSounds(String pubkey) async {
+    final List<SoundStats> sounds;
+    try {
+      sounds = await _fetchAllCreatorSounds(pubkey);
+    } on Exception catch (e) {
+      throw CreatorAnalyticsLoadException(
+        _classifyRequiredLoadFailure(e),
+        cause: e,
+      );
+    }
+
+    final deleted = _locallyDeletedEventIds();
+    return sounds.where((sound) => !deleted.contains(sound.id)).toList()
+      ..sort((a, b) {
+        final byUsage = b.usageCount.compareTo(a.usageCount);
+        return byUsage != 0 ? byUsage : b.createdAt.compareTo(a.createdAt);
+      });
+  }
+
+  /// Reads the creator's sounds newest first, stopping at a short page or
+  /// after [creatorSoundsMaxPages], so the most used sounds are ranked across
+  /// the whole bounded window rather than just the newest page.
+  Future<List<SoundStats>> _fetchAllCreatorSounds(String pubkey) async {
+    final collected = <SoundStats>[];
+    for (var page = 0; page < creatorSoundsMaxPages; page++) {
+      final batch = await _client.getUserSounds(
+        pubkey: pubkey,
+        limit: creatorSoundsPageSize,
+        offset: page * creatorSoundsPageSize,
+      );
+      collected.addAll(batch);
+      if (batch.length < creatorSoundsPageSize) break;
+    }
+    return collected;
   }
 
   Future<_AuthorVideosResult> _fetchAuthorVideos(

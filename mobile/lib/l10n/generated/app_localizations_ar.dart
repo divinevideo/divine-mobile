@@ -2955,6 +2955,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get analyticsPublishPrompt => 'انشر بعض الفيديوهات لرؤية الترتيبات.';
 
   @override
+  String get analyticsYourSounds => 'أصواتك';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'عدد مقاطع الفيديو التي تستخدم كل صوت من أصواتك، منذ البداية. الأكثر استخدامًا أولًا.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'لا توجد أصوات بعد. يمكن رفع صوت أو إتاحة الصوت لإعادة الاستخدام، ثم متابعة مدى انتشاره.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'النسبة المئوية على الجانب الأيمن = معدل التفاعل (التفاعلات مقسومة على المشاهدات).';
 

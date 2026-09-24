@@ -2916,6 +2916,17 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sıralamaları görmek için birkaç video yayınla.';
 
   @override
+  String get analyticsYourSounds => 'Seslerin';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Seslerinin her birini kullanan videolar, tüm zamanlar. En çok kullanılanlar önce.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Henüz ses yok. Bir tane yükle ya da sesini yeniden kullanıma aç, sonra ne kadar yayıldığını izle.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Sağ taraftaki % = Etkileşim Oranı (etkileşimlerin görüntülenmeye bölümü).';
 

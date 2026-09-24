@@ -2979,6 +2979,17 @@ class AppLocalizationsUr extends AppLocalizations {
       'رینکنگ دیکھنے کے لیے کچھ ویڈیوز شائع کریں۔';
 
   @override
+  String get analyticsYourSounds => 'آپ کی آوازیں';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'آپ کی ہر آواز استعمال کرنے والی ویڈیوز، اب تک۔ سب سے زیادہ استعمال ہونے والی پہلے۔';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'ابھی کوئی آواز نہیں۔ ایک اپ لوڈ کریں یا اپنی آڈیو دوبارہ استعمال کے لیے دستیاب کریں، پھر دیکھیں یہ کتنی دور جاتی ہے۔';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'دائیں طرف کی % = مصروفیت کی شرح (تفاعلات تقسیم ویوز)۔';
 

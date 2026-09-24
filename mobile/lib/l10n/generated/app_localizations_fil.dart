@@ -2988,6 +2988,17 @@ class AppLocalizationsFil extends AppLocalizations {
       'Mag-publish ng ilang video para makita ang ranking.';
 
   @override
+  String get analyticsYourSounds => 'Mga Sound Mo';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Mga video na gumagamit ng bawat sound mo, all time. Pinakaginagamit ang nauuna.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Wala pang sound. Mag-upload ng isa o gawing available for reuse ang audio mo, tapos panoorin kung gaano kalayo ito aabot.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Right-side % = Engagement Rate (interactions na hinati sa views).';
 

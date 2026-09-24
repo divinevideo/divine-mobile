@@ -2990,6 +2990,17 @@ class AppLocalizationsNl extends AppLocalizations {
       'Publiceer een paar video\'s om de ranglijst te zien.';
 
   @override
+  String get analyticsYourSounds => 'Jouw sounds';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Video\'s die elk van je sounds gebruiken, sinds het begin. Meest gebruikt eerst.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Nog geen sounds. Upload er een of maak je audio beschikbaar voor hergebruik, en kijk hoe ver hij komt.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Rechts het % = betrokkenheidsratio (interacties gedeeld door weergaven).';
 

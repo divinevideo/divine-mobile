@@ -60,6 +60,23 @@ VideoStats _videoStats({
   );
 }
 
+SoundStats _sound(
+  String id, {
+  required int usageCount,
+  int createdAtSeconds = 1780000000,
+}) {
+  return SoundStats(
+    id: id,
+    pubkey: 'pubkey',
+    title: id,
+    createdAt: DateTime.fromMillisecondsSinceEpoch(
+      createdAtSeconds * 1000,
+      isUtc: true,
+    ),
+    usageCount: usageCount,
+  );
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue('');
@@ -890,6 +907,169 @@ void main() {
             .rawTags['views'],
         '12',
       );
+    });
+
+    group('fetchCreatorSounds', () {
+      const pubkey = 'pubkey';
+      late MockFunnelcakeApiClient api;
+
+      setUp(() {
+        api = MockFunnelcakeApiClient();
+      });
+
+      void stubPage(int offset, List<SoundStats> sounds) {
+        when(
+          () => api.getUserSounds(
+            pubkey: pubkey,
+            limit: FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
+            offset: offset,
+          ),
+        ).thenAnswer((_) async => sounds);
+      }
+
+      test('ranks sounds by usage, newest first on a tie', () async {
+        stubPage(0, [
+          _sound('rarely-used', usageCount: 1),
+          _sound('older-tie', usageCount: 7, createdAtSeconds: 1785000000),
+          _sound('most-used', usageCount: 42),
+          _sound('newer-tie', usageCount: 7, createdAtSeconds: 1790000000),
+        ]);
+
+        final sounds = await FunnelcakeCreatorAnalyticsRepository(
+          api,
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds.map((sound) => sound.id), [
+          'most-used',
+          'newer-tie',
+          'older-tie',
+          'rarely-used',
+        ]);
+      });
+
+      test('ranks an older page ahead of a less used newer one', () async {
+        final fullPage = List.generate(
+          FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
+          (index) => _sound('recent-$index', usageCount: 1),
+        );
+        stubPage(0, fullPage);
+        stubPage(100, [_sound('old-hit', usageCount: 90)]);
+
+        final sounds = await FunnelcakeCreatorAnalyticsRepository(
+          api,
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds, hasLength(101));
+        expect(sounds.first.id, equals('old-hit'));
+      });
+
+      test('stops after the maximum number of pages', () async {
+        final fullPage = List.generate(
+          FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
+          (index) => _sound('sound-$index', usageCount: 1),
+        );
+        when(
+          () => api.getUserSounds(
+            pubkey: pubkey,
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => fullPage);
+
+        await FunnelcakeCreatorAnalyticsRepository(
+          api,
+        ).fetchCreatorSounds(pubkey);
+
+        verify(
+          () => api.getUserSounds(
+            pubkey: pubkey,
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).called(FunnelcakeCreatorAnalyticsRepository.creatorSoundsMaxPages);
+      });
+
+      test('drops sounds this device has deleted', () async {
+        stubPage(0, [
+          _sound('kept', usageCount: 3),
+          _sound('deleted', usageCount: 9),
+        ]);
+
+        final sounds = await FunnelcakeCreatorAnalyticsRepository(
+          api,
+          locallyDeletedEventIds: () => {'deleted'},
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds.map((sound) => sound.id), ['kept']);
+      });
+
+      test('reads the deletion record on every call', () async {
+        stubPage(0, [_sound('removed-later', usageCount: 3)]);
+        var deleted = <String>{};
+        final repo = FunnelcakeCreatorAnalyticsRepository(
+          api,
+          locallyDeletedEventIds: () => deleted,
+        );
+
+        final before = await repo.fetchCreatorSounds(pubkey);
+        deleted = {'removed-later'};
+        final after = await repo.fetchCreatorSounds(pubkey);
+
+        expect(before, hasLength(1));
+        expect(after, isEmpty);
+      });
+
+      test('classifies server errors as server unavailable', () async {
+        when(
+          () => api.getUserSounds(
+            pubkey: pubkey,
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenThrow(
+          const FunnelcakeApiException(
+            message: 'Failed to fetch user sounds',
+            statusCode: 503,
+            url: 'https://api.divine.video/api/users/pubkey/sounds',
+          ),
+        );
+
+        await expectLater(
+          FunnelcakeCreatorAnalyticsRepository(api).fetchCreatorSounds(pubkey),
+          throwsA(
+            isA<CreatorAnalyticsLoadException>().having(
+              (error) => error.kind,
+              'kind',
+              CreatorAnalyticsFailureKind.serverUnavailable,
+            ),
+          ),
+        );
+      });
+
+      test('classifies timeouts as connection issues', () async {
+        when(
+          () => api.getUserSounds(
+            pubkey: pubkey,
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenThrow(
+          const FunnelcakeTimeoutException(
+            'https://api.divine.video/api/users/pubkey/sounds',
+          ),
+        );
+
+        await expectLater(
+          FunnelcakeCreatorAnalyticsRepository(api).fetchCreatorSounds(pubkey),
+          throwsA(
+            isA<CreatorAnalyticsLoadException>().having(
+              (error) => error.kind,
+              'kind',
+              CreatorAnalyticsFailureKind.connectionIssue,
+            ),
+          ),
+        );
+      });
     });
   });
 }

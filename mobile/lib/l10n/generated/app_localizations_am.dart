@@ -2912,6 +2912,17 @@ class AppLocalizationsAm extends AppLocalizations {
   String get analyticsPublishPrompt => 'ደረጃዎችን ለማየት ጥቂት ቪዲዮዎችን ያትሙ።';
 
   @override
+  String get analyticsYourSounds => 'የእርስዎ ድምፆች';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'እያንዳንዱን ድምፅዎን የሚጠቀሙ ቪዲዮዎች፣ ከመጀመሪያው ጀምሮ። በብዛት ጥቅም ላይ የዋሉት መጀመሪያ።';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'እስካሁን ምንም ድምፆች የሉም። አንዱን ይስቀሉ ወይም ኦዲዮዎን ለዳግም ጥቅም ያቅርቡ፣ ከዚያ ምን ያህል እንደሚሄድ ይመልከቱ።';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'የቀኝ ጎን % = የተሳትፎ መጠን (ግንኙነቶች በእይታዎች የተከፋፈሉ)።';
 
