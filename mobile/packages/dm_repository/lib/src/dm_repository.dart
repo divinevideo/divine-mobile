@@ -150,7 +150,8 @@ abstract class DmHistoryDrainConfig {
   /// page in a large history. See #9030.
   static const int unsettledPageRetriesPerRun = 2;
 
-  /// Automatic retries after a drain defers without a relay status edge.
+  /// Automatic retries after a drain defers. A relay reconnect can resume the
+  /// drain sooner, but the retry stays armed either way.
   static const List<Duration> deferredRetryDelays = [
     Duration(seconds: 5),
     Duration(seconds: 15),
@@ -2383,10 +2384,10 @@ class DmRepository {
   /// banner stayed up until a manual retry (verified against a paused relay,
   /// #8643). A relay merely reporting again while still connected is not an
   /// edge. A relay that repeatedly reconnects without answering can therefore
-  /// re-drive the bounded drain. At most one listener is armed at a time, a
-  /// new run supersedes it, and teardown cancels it. A page-cap pause
-  /// deliberately does not arm one: that budget resumes on the next inbox
-  /// open by design. See #8550.
+  /// re-drive the bounded drain, at most once per armed retry window. At most
+  /// one listener is armed at a time, a new run supersedes it, and teardown
+  /// cancels it. A page-cap pause deliberately does not arm one: that budget
+  /// resumes on the next inbox open by design. See #8550.
   void _resumeDrainWhenRelayConnects(String pubkey, int generation) {
     // A drain that outlived its session must not cancel the retry the current
     // session armed; _resetState already cancelled the stale session's own.
