@@ -26,6 +26,8 @@ const _pubkey =
     'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
 const _privateKey =
     'd4e5f6789012345678901234567890abcdef1234567890123456789012ab12c3';
+const _peerPubkey =
+    'b1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
 
 void main() {
   late _MockNostrClient nostrClient;
@@ -470,11 +472,7 @@ void main() {
           'created_at': 500,
           'kind': 4,
           'tags': [
-            [
-              'p',
-              'b1b2c3d4e5f6789012345678901234567890'
-                  'abcdef1234567890123456789012',
-            ],
+            ['p', _peerPubkey],
           ],
           'content': 'encrypted-outgoing',
           'sig': '',
