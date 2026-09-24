@@ -50,14 +50,21 @@ void main() {
   });
 
   group('appDbCipherKeyIosSecureStorageOptions', () {
-    test('stores the database key readable after first unlock, on this '
-        'device only', () {
+    test('stores the database key readable after first unlock, and '
+        'restorable onto a new device', () {
       // `unlocked` is what made every locked-screen launch fail with -25308
       // and land on the database-failure screen (#9343); the full map pins
-      // the rest of the item's identity so the one-time migration keeps
-      // finding what earlier installs wrote.
+      // the rest of the item's identity so a rewrite keeps finding what
+      // earlier installs wrote.
+      //
+      // `first_unlock_this_device` fixes #9343 just as well and is the trap:
+      // its items never migrate to a new device, while `divine_db.db` is in
+      // the backup, so a restore onto a new iPhone would find the database,
+      // find no key and wipe it through key-loss recovery (#9385). Plain
+      // `first_unlock` is also what `nostr_key_manager` already stores the
+      // Nostr identity key under, in the same backup.
       expect(appDbCipherKeyIosSecureStorageOptions().toMap(), <String, String>{
-        'accessibility': 'first_unlock_this_device',
+        'accessibility': 'first_unlock',
         'accountName': 'flutter_secure_storage_service',
         'synchronizable': 'false',
       });
@@ -77,6 +84,19 @@ void main() {
           'synchronizable': 'false',
         },
       );
+    });
+  });
+
+  group('dbCipherKeyV2IosSecureStorageOptions', () {
+    test('names the item #9380 wrote to the .v2 slot', () {
+      // The full map #9380 pinned for the options it stored the key under. A
+      // delete naming anything else leaves that item in the Keychain, and a
+      // reset that leaves it behind hands the old key to the next launch.
+      expect(dbCipherKeyV2IosSecureStorageOptions().toMap(), <String, String>{
+        'accessibility': 'first_unlock_this_device',
+        'accountName': 'flutter_secure_storage_service',
+        'synchronizable': 'false',
+      });
     });
   });
 }

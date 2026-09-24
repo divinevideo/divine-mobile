@@ -6,8 +6,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/services/database_recovery_store.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
+
+Future<LogCaptureService> _clearedLogCapture() async {
+  final logs = LogCaptureService();
+  await logs.clearAllLogs();
+  addTearDown(logs.clearAllLogs);
+  return logs;
+}
+
+Iterable<LogEntry> _bootstrapWarnings(LogCaptureService logs) => logs
+    .getRecentLogs(minLevel: LogLevel.warning)
+    .where((entry) => entry.name == 'DatabaseEncryptionBootstrap');
+
+Iterable<String> _loggedText(LogCaptureService logs) => logs
+    .getRecentLogs()
+    .map((entry) => '${entry.message} ${entry.error ?? ''}');
+
+/// Per-call iOS options naming [accessibility]. The plugin puts the class into
+/// its delete query, so this decides which Keychain item a delete removes.
+Matcher _iosClass(String accessibility) => isA<IOSOptions>().having(
+  (options) => options.toMap()['accessibility'],
+  'accessibility',
+  accessibility,
+);
 
 void main() {
   group('generateCipherKeyHex', () {
@@ -24,10 +48,10 @@ void main() {
   group('DatabaseEncryptionBootstrap.resolveCipherKey', () {
     late _MockSecureStorage storage;
     late Map<String, String> store;
-    // The pre-#9343 slot lives behind its own storage instance (the one that
-    // still names the old iOS accessibility), so it gets its own backing map:
-    // a test that seeds only `legacyStore` models an install that has not
-    // migrated yet.
+    // The primary slot is shared. The second instance differs only in the iOS
+    // accessibility it names, and exists because `delete` is the one operation
+    // that filters on the class. It gets its own backing map so a test can tell
+    // which instance issued a delete.
     late _MockSecureStorage legacyStorage;
     late Map<String, String> legacyStore;
 
@@ -44,7 +68,12 @@ void main() {
         map[inv.namedArguments[#key] as String] =
             inv.namedArguments[#value] as String;
       });
-      when(() => mock.delete(key: any(named: 'key'))).thenAnswer((inv) async {
+      when(
+        () => mock.delete(
+          key: any(named: 'key'),
+          iOptions: any(named: 'iOptions'),
+        ),
+      ).thenAnswer((inv) async {
         map.remove(inv.namedArguments[#key] as String);
       });
     }
@@ -74,7 +103,6 @@ void main() {
     }) {
       return DatabaseEncryptionBootstrap(
         secureStorage: storage,
-        legacySecureStorage: legacyStorage,
         isProtectedDataAvailable: isProtectedDataAvailable,
         hasPendingCorruptionRecovery: () async => hasPendingCorruptionRecovery,
         clearPendingCorruptionRecovery: onClearPendingCorruptionRecovery == null
@@ -85,9 +113,8 @@ void main() {
         migrate: (_) async => outcome,
         deleteDatabase: () async => onDelete(),
         onDatabaseReset: onReset == null ? null : () async => onReset(),
-        canOpenEncryptedDatabase: canOpenEncryptedDatabase == null
-            ? null
-            : (rawKeyHex) async => canOpenEncryptedDatabase(rawKeyHex),
+        canOpenEncryptedDatabase: (rawKeyHex) async =>
+            canOpenEncryptedDatabase?.call(rawKeyHex) ?? true,
         // Default to "nothing to salvage" so the corruption branch falls
         // through to the wipe unless a test opts in.
         salvageDatabase: (rawKeyHex) async =>
@@ -252,30 +279,22 @@ void main() {
       });
 
       test(
-        'does not consult the probe when the current slot holds a key',
+        'never fails a launch that read a key, however the probe answers',
         () async {
           const existing =
               '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
           store[dbCipherKeyStorageKey] = existing;
-          var probed = false;
           final bootstrap = buildBootstrap(
             outcome: CipherMigrationOutcome.alreadyEncrypted,
             onDelete: () {},
-            isProtectedDataAvailable: () async {
-              probed = true;
-              return false;
-            },
+            isProtectedDataAvailable: () async => false,
           );
 
+          // The probe gates the accessibility rewrite, never the key that was
+          // read: a key stored under first_unlock is readable while locked,
+          // and a locked launch after first unlock must open the database —
+          // that is the point of #9343.
           expect(await bootstrap.resolveCipherKey(), equals(existing));
-          expect(
-            probed,
-            isFalse,
-            reason:
-                'a key stored under first_unlock is readable while locked, '
-                'and a locked launch after first unlock must open the '
-                'database — that is the point of #9343',
-          );
         },
       );
 
@@ -337,122 +356,328 @@ void main() {
       );
     });
 
-    group('legacy cipher-key slot (pre-#9343 accessibility)', () {
+    group('cipher-key slot', () {
+      test('is the name every shipped build reads and writes', () {
+        // A wire format, not an implementation detail. Moving the key to a
+        // second slot leaves an older build — an App Store or TestFlight
+        // rollback, a downgraded macOS build, a sideloaded older APK, a
+        // Shorebird patch rolled back to its release baseline — reading an
+        // empty slot, generating a replacement and wiping the database it
+        // could still have opened. See #9385.
+        expect(dbCipherKeyStorageKey, equals('db.cipher.key.v1'));
+      });
+    });
+
+    group('Keychain accessibility upgrade (#9343 class, in place)', () {
       const existing =
           '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
 
-      test(
-        'moves the key into the current slot and deletes it from the legacy '
-        'one without treating it as generated',
-        () async {
-          legacyStore[legacyDbCipherKeyStorageKey] = existing;
-          var deleted = false;
-          final bootstrap = buildBootstrap(
-            outcome: CipherMigrationOutcome.alreadyEncrypted,
-            onDelete: () => deleted = true,
-          );
-
-          final key = await bootstrap.resolveCipherKey();
-
-          expect(key, equals(existing));
-          expect(store[dbCipherKeyStorageKey], equals(existing));
-          expect(legacyStore, isEmpty);
-          // The delete must go through the legacy instance: on iOS only its
-          // query names the accessibility the old item carries.
-          verify(
-            () => legacyStorage.delete(key: legacyDbCipherKeyStorageKey),
-          ).called(1);
-          verifyNever(() => storage.delete(key: any(named: 'key')));
-          expect(
-            deleted,
-            isFalse,
-            reason: 'a migrated key is the existing key, not a generated one',
-          );
-        },
-      );
-
-      test('reads the current slot first and leaves the legacy slot alone '
-          'once migrated', () async {
+      test('rewrites an existing key into its own slot so the stored item '
+          'picks up the current accessibility', () async {
         store[dbCipherKeyStorageKey] = existing;
-        legacyStore[legacyDbCipherKeyStorageKey] = 'stale-copy-left-behind';
         final bootstrap = buildBootstrap(
           outcome: CipherMigrationOutcome.alreadyEncrypted,
           onDelete: () {},
+          isProtectedDataAvailable: () async => true,
         );
 
         expect(await bootstrap.resolveCipherKey(), equals(existing));
+        // Same slot, same value: the plugin's iOS write is what changes the
+        // class, and it only does so for the item already at this key.
+        verify(
+          () => storage.write(key: dbCipherKeyStorageKey, value: existing),
+        ).called(1);
+        expect(store[dbCipherKeyStorageKey], equals(existing));
+        // Only the temporary recovery copy is removed; rollback reads primary.
+        expect(store, {dbCipherKeyStorageKey: existing});
+        verifyNever(() => storage.delete(key: dbCipherKeyStorageKey));
         verifyNever(() => legacyStorage.read(key: any(named: 'key')));
         verifyNever(() => legacyStorage.delete(key: any(named: 'key')));
       });
 
       test(
-        'keeps the legacy copy when the write to the current slot fails',
+        'restores the primary after a delete-then-add rewrite failure',
         () async {
-          legacyStore[legacyDbCipherKeyStorageKey] = existing;
-          final platformFailure = PlatformException(
-            code: 'Unexpected security result code',
-            message: 'Code: -25308, Message: User interaction is not allowed.',
-          );
-          when(
-            () => storage.write(
-              key: any(named: 'key'),
-              value: any(named: 'value'),
-            ),
-          ).thenThrow(platformFailure);
-          final bootstrap = buildBootstrap(
+          store[dbCipherKeyStorageKey] = existing;
+          var writes = 0;
+          var resets = 0;
+          when(() => storage.write(key: dbCipherKeyStorageKey, value: existing))
+              .thenAnswer((_) async {
+                if (++writes == 1) {
+                  store.remove(dbCipherKeyStorageKey);
+                  throw PlatformException(code: 'SecItemAdd failed');
+                }
+                store[dbCipherKeyStorageKey] = existing;
+              });
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
             outcome: CipherMigrationOutcome.alreadyEncrypted,
-            onDelete: () {},
+            onDelete: () => resets++,
+            isProtectedDataAvailable: () async => true,
+            canOpenEncryptedDatabase: (_) => true,
+          );
+
+          expect(await launch().resolveCipherKey(), existing);
+          expect(
+            store[dbCipherKeyStorageKey],
+            existing,
+            reason: 'a rollback must still find its original primary key',
+          );
+          expect(await launch().resolveCipherKey(), existing);
+          expect(resets, 0);
+        },
+      );
+
+      test(
+        'failed restoration keeps a recovery copy for the next launch',
+        () async {
+          store[dbCipherKeyStorageKey] = existing;
+          var failWrites = true;
+          var resets = 0;
+          when(
+            () => storage.write(key: dbCipherKeyStorageKey, value: existing),
+          ).thenAnswer((_) async {
+            store.remove(dbCipherKeyStorageKey);
+            if (failWrites) throw PlatformException(code: 'SecItemAdd failed');
+            store[dbCipherKeyStorageKey] = existing;
+          });
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => resets++,
+            isProtectedDataAvailable: () async => true,
           );
 
           await expectLater(
-            bootstrap.resolveCipherKey(),
-            throwsA(
-              isA<DatabaseCipherStorageUnavailableException>().having(
-                (e) => e.cause,
-                'cause',
-                same(platformFailure),
-              ),
-            ),
+            launch().resolveCipherKey(),
+            throwsA(isA<DatabaseCipherStorageUnavailableException>()),
           );
-          expect(
-            legacyStore[legacyDbCipherKeyStorageKey],
-            equals(existing),
-            reason: 'write first, delete second: the only copy must survive',
-          );
-          verifyNever(() => legacyStorage.delete(key: any(named: 'key')));
+          expect(store[dbCipherKeyStorageKey], isNull);
+          expect(store[dbCipherKeyAccessibilityBackupStorageKey], existing);
+          failWrites = false;
+          expect(await launch().resolveCipherKey(), existing);
+          expect(store, {dbCipherKeyStorageKey: existing});
+          expect(resets, 0);
         },
       );
 
       test(
-        'a failed delete of the legacy copy does not fail the launch',
+        'never rewrites the primary without a verified recovery copy',
         () async {
-          legacyStore[legacyDbCipherKeyStorageKey] = existing;
-          when(() => legacyStorage.delete(key: any(named: 'key'))).thenThrow(
-            PlatformException(code: 'Unexpected security result code'),
-          );
+          store[dbCipherKeyStorageKey] = existing;
+          when(
+            () => storage.write(
+              key: dbCipherKeyAccessibilityBackupStorageKey,
+              value: existing,
+            ),
+          ).thenAnswer((_) async {});
           final bootstrap = buildBootstrap(
             outcome: CipherMigrationOutcome.alreadyEncrypted,
             onDelete: () {},
+            isProtectedDataAvailable: () async => true,
           );
-
-          expect(await bootstrap.resolveCipherKey(), equals(existing));
-          expect(
-            store[dbCipherKeyStorageKey],
-            equals(existing),
-            reason:
-                'the key is already in its new slot; the leftover copy '
-                'is harmless',
+          expect(await bootstrap.resolveCipherKey(), existing);
+          expect(store, {dbCipherKeyStorageKey: existing});
+          verifyNever(
+            () => storage.write(key: dbCipherKeyStorageKey, value: existing),
           );
         },
       );
 
       test(
-        'regenerates when the legacy value is malformed without consulting '
+        'recovers an interrupted rewrite before generating a new key',
+        () async {
+          final logs = await _clearedLogCapture();
+          store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
+          var resets = 0;
+          final bootstrap = buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => resets++,
+            isProtectedDataAvailable: () async => true,
+          );
+          expect(await bootstrap.resolveCipherKey(), existing);
+          expect(store, {dbCipherKeyStorageKey: existing});
+          expect(resets, 0);
+          expect(
+            _bootstrapWarnings(logs),
+            hasLength(1),
+            reason:
+                'an interrupted rewrite is the only field evidence that '
+                'the delete-then-add window was hit',
+          );
+          expect(_loggedText(logs), everyElement(isNot(contains(existing))));
+        },
+      );
+
+      test('fails closed when the recovery copy cannot be read', () async {
+        store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
+        when(() => storage.read(key: dbCipherKeyAccessibilityBackupStorageKey))
+            .thenThrow(PlatformException(code: 'Keychain unavailable'));
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+        await expectLater(
+          bootstrap.resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        expect(store, {dbCipherKeyAccessibilityBackupStorageKey: existing});
+      });
+
+      test('keeps the recovery copy when primary read-back fails', () async {
+        store[dbCipherKeyAccessibilityBackupStorageKey] = existing;
+        when(() => storage.write(key: dbCipherKeyStorageKey, value: existing))
+            .thenAnswer((_) async {});
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+        await expectLater(
+          bootstrap.resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        expect(store, {dbCipherKeyAccessibilityBackupStorageKey: existing});
+      });
+
+      test(
+        'a recovery copy that cannot be removed does not fail a launch whose '
+        'primary is verified',
+        () async {
+          final logs = await _clearedLogCapture();
+          store[dbCipherKeyStorageKey] = existing;
+          when(
+            () => storage.delete(key: dbCipherKeyAccessibilityBackupStorageKey),
+          ).thenThrow(PlatformException(code: 'Keychain unavailable'));
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => fail('must not reset the database'),
+            isProtectedDataAvailable: () async => true,
+          );
+
+          expect(await launch().resolveCipherKey(), existing);
+          expect(await launch().resolveCipherKey(), existing);
+          expect(store, {
+            dbCipherKeyStorageKey: existing,
+            dbCipherKeyAccessibilityBackupStorageKey: existing,
+          });
+          expect(_bootstrapWarnings(logs), hasLength(2));
+          expect(_loggedText(logs), everyElement(isNot(contains(existing))));
+        },
+      );
+
+      test('prefers the primary to an obsolete recovery copy', () async {
+        store[dbCipherKeyStorageKey] = existing;
+        store[dbCipherKeyAccessibilityBackupStorageKey] = 'ab' * 32;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+        expect(await bootstrap.resolveCipherKey(), existing);
+        expect(store, {dbCipherKeyStorageKey: existing});
+      });
+
+      test('does not report an existing key as generated', () async {
+        store[dbCipherKeyStorageKey] = existing;
+        var deleted = false;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => deleted = true,
+          isProtectedDataAvailable: () async => true,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), equals(existing));
+        expect(
+          deleted,
+          isFalse,
+          reason: 'a rewritten key is the existing key, not a generated one',
+        );
+      });
+
+      test('skips the rewrite while protected data is unavailable', () async {
+        store[dbCipherKeyStorageKey] = existing;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () {},
+          isProtectedDataAvailable: () async => false,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), equals(existing));
+        // Deleting the old item would fail with -25308 and the re-add would
+        // collide with the copy that survived. The next unlocked launch does
+        // it instead.
+        verifyNever(
+          () => storage.write(
+            key: any(named: 'key'),
+            value: any(named: 'value'),
+          ),
+        );
+      });
+
+      test('skips the rewrite where the platform has no protected-data '
+          'notion', () async {
+        store[dbCipherKeyStorageKey] = existing;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () {},
+          isProtectedDataAvailable: () async => null,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), equals(existing));
+        // Android, web and macOS never changed class, so there is nothing to
+        // rewrite and no reason to touch the keystore.
+        verifyNever(
+          () => storage.write(
+            key: any(named: 'key'),
+            value: any(named: 'value'),
+          ),
+        );
+      });
+
+      test('a failed rewrite does not fail the launch', () async {
+        final logs = await _clearedLogCapture();
+        store[dbCipherKeyStorageKey] = existing;
+        when(
+          () => storage.write(
+            key: any(named: 'key'),
+            value: any(named: 'value'),
+          ),
+        ).thenThrow(
+          PlatformException(
+            code: 'Unexpected security result code',
+            message: 'Code: -25308, Message: User interaction is not allowed.',
+          ),
+        );
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () {},
+          isProtectedDataAvailable: () async => true,
+        );
+
+        expect(
+          await bootstrap.resolveCipherKey(),
+          equals(existing),
+          reason:
+              'the caller already holds a key that opens the database; a '
+              'failed backup write leaves the primary intact',
+        );
+        expect(
+          _bootstrapWarnings(logs),
+          hasLength(1),
+          reason:
+              'a deferred rewrite leaves the locked-launch fix unapplied, '
+              'and support cannot see that without a log line',
+        );
+        expect(_loggedText(logs), everyElement(isNot(contains(existing))));
+      });
+
+      test(
+        'regenerates when the stored value is malformed without consulting '
         'the probe',
         () async {
           // A value came back, so the keystore did answer; the probe is only
           // for the case where it may have hidden an existing item.
-          legacyStore[legacyDbCipherKeyStorageKey] = 'not-a-valid-key';
+          store[dbCipherKeyStorageKey] = 'not-a-valid-key';
           final bootstrap = buildBootstrap(
             outcome: CipherMigrationOutcome.noDatabase,
             onDelete: () {},
@@ -465,6 +690,183 @@ void main() {
           expect(store[dbCipherKeyStorageKey], equals(key));
         },
       );
+    });
+
+    group('key an earlier build moved to the .v2 slot', () {
+      // #9380 moved the key to `.v2` on every platform and deleted the primary,
+      // and internal builds shipped with it before #9385 moved the key back. On
+      // those installs the primary reads back empty while the key that opens
+      // the database is still in `.v2`.
+      const moved =
+          '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
+      final other = 'ab' * 32;
+
+      test(
+        'is adopted into the primary instead of wiping the database',
+        () async {
+          final logs = await _clearedLogCapture();
+          store[dbCipherKeyV2StorageKey] = moved;
+          final bootstrap = buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => fail('must not reset the database'),
+            isProtectedDataAvailable: () async => true,
+          );
+
+          expect(await bootstrap.resolveCipherKey(), moved);
+          expect(store, {dbCipherKeyStorageKey: moved});
+          // Removed under the class #9380 wrote it with. The plugin puts the
+          // class into its delete query, so a delete naming any other one would
+          // leave the item behind.
+          verify(
+            () => storage.delete(
+              key: dbCipherKeyV2StorageKey,
+              iOptions: any(
+                named: 'iOptions',
+                that: _iosClass('first_unlock_this_device'),
+              ),
+            ),
+          ).called(1);
+          expect(
+            _bootstrapWarnings(logs),
+            hasLength(1),
+            reason:
+                'an adoption is the only field evidence of an install that '
+                'ran the .v2 design',
+          );
+          expect(_loggedText(logs), everyElement(isNot(contains(moved))));
+        },
+      );
+
+      test('stays in place when the primary cannot be written', () async {
+        store[dbCipherKeyV2StorageKey] = moved;
+        when(
+          () => storage.write(key: dbCipherKeyStorageKey, value: moved),
+        ).thenThrow(PlatformException(code: 'Keychain unavailable'));
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        await expectLater(
+          bootstrap.resolveCipherKey(),
+          throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+        );
+        // The next launch finds it where it was and adopts it then.
+        expect(store, {dbCipherKeyV2StorageKey: moved});
+      });
+
+      test('does not fail the launch when it cannot be removed', () async {
+        store[dbCipherKeyV2StorageKey] = moved;
+        when(
+          () => storage.delete(
+            key: dbCipherKeyV2StorageKey,
+            iOptions: any(named: 'iOptions'),
+          ),
+        ).thenThrow(PlatformException(code: 'Keychain unavailable'));
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        // Both slots now hold the same key, and the primary wins every read.
+        expect(await bootstrap.resolveCipherKey(), moved);
+        expect(store, {
+          dbCipherKeyStorageKey: moved,
+          dbCipherKeyV2StorageKey: moved,
+        });
+      });
+
+      test('loses to the primary', () async {
+        store[dbCipherKeyStorageKey] = moved;
+        store[dbCipherKeyV2StorageKey] = other;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), moved);
+        expect(store[dbCipherKeyStorageKey], moved);
+      });
+
+      test('loses to the recovery copy of an interrupted rewrite', () async {
+        // The copy is this build's own record of the primary it was rewriting,
+        // so it is newer than anything an earlier build left in `.v2`.
+        store[dbCipherKeyAccessibilityBackupStorageKey] = moved;
+        store[dbCipherKeyV2StorageKey] = other;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => fail('must not reset the database'),
+          isProtectedDataAvailable: () async => true,
+        );
+
+        expect(await bootstrap.resolveCipherKey(), moved);
+        expect(store[dbCipherKeyStorageKey], moved);
+      });
+
+      test(
+        'is not adopted while the keychain may be withholding the primary',
+        () async {
+          // A tester who ran #9380 and then an older build keeps a stale `.v2`
+          // beside a newer primary under `unlocked`, which the plugin reads
+          // back as null while the phone is locked.
+          store[dbCipherKeyStorageKey] = other;
+          store[dbCipherKeyV2StorageKey] = moved;
+          var locked = true;
+          when(() => storage.read(key: dbCipherKeyStorageKey)).thenAnswer(
+            (_) async => locked ? null : store[dbCipherKeyStorageKey],
+          );
+          DatabaseEncryptionBootstrap launch() => buildBootstrap(
+            outcome: CipherMigrationOutcome.alreadyEncrypted,
+            onDelete: () => fail('must not reset the database'),
+            isProtectedDataAvailable: () async => !locked,
+          );
+
+          await expectLater(
+            launch().resolveCipherKey(),
+            throwsA(isA<DatabaseCipherStorageUnavailableException>()),
+          );
+          expect(
+            store[dbCipherKeyStorageKey],
+            other,
+            reason: 'a locked launch must not write the stale key over it',
+          );
+
+          locked = false;
+          expect(await launch().resolveCipherKey(), other);
+        },
+      );
+
+      test('is removed before a replacement key is written', () async {
+        // Rotation on genuine key loss. Every write of a different key clears
+        // the auxiliary slots first, so none of them can bring back a key the
+        // database no longer opens.
+        store[dbCipherKeyStorageKey] = moved;
+        store[dbCipherKeyV2StorageKey] = other;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () {},
+          isProtectedDataAvailable: () async => null,
+          canOpenEncryptedDatabase: (_) => false,
+        );
+
+        final key = await bootstrap.resolveCipherKey();
+
+        expect(key, isNot(anyOf(moved, other)));
+        expect(store, {dbCipherKeyStorageKey: key});
+        verifyInOrder([
+          () => storage.delete(
+            key: dbCipherKeyV2StorageKey,
+            iOptions: any(
+              named: 'iOptions',
+              that: _iosClass('first_unlock_this_device'),
+            ),
+          ),
+          () => storage.write(key: dbCipherKeyStorageKey, value: key),
+        ]);
+      });
     });
 
     test(
@@ -776,7 +1178,6 @@ void main() {
         store[dbCipherKeyStorageKey] = existing;
         final bootstrap = DatabaseEncryptionBootstrap(
           secureStorage: storage,
-          legacySecureStorage: legacyStorage,
           ensureRuntime: () async {},
           isCipherAvailable: () => true,
           migrate: (_) async => CipherMigrationOutcome.alreadyEncrypted,
@@ -987,7 +1388,6 @@ void main() {
         store[dbCipherKeyStorageKey] = existing;
         final bootstrap = DatabaseEncryptionBootstrap(
           secureStorage: storage,
-          legacySecureStorage: legacyStorage,
           ensureRuntime: () async {},
           isCipherAvailable: () => true,
           migrate: (_) async => throw error,
@@ -1011,7 +1411,6 @@ void main() {
         var deleted = false;
         final bootstrap = DatabaseEncryptionBootstrap(
           secureStorage: storage,
-          legacySecureStorage: legacyStorage,
           ensureRuntime: () async {},
           isCipherAvailable: () => true,
           migrate: (_) async => throw error,
@@ -1102,13 +1501,16 @@ void main() {
         'auth_key': 'must-stay',
       };
       when(
-        () => storage.delete(key: any(named: 'key')),
+        () => storage.delete(
+          key: any(named: 'key'),
+          iOptions: any(named: 'iOptions'),
+        ),
       ).thenAnswer((inv) async {
         store.remove(inv.namedArguments[#key] as String);
       });
       legacyStorage = _MockSecureStorage();
       legacyStore = <String, String>{
-        legacyDbCipherKeyStorageKey:
+        dbCipherKeyStorageKey:
             '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99',
       };
       when(
@@ -1139,6 +1541,81 @@ void main() {
     );
 
     test(
+      'removes the temporary recovery copy on an explicit key reset',
+      () async {
+        store[dbCipherKeyAccessibilityBackupStorageKey] = 'ab' * 32;
+        await resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        );
+        expect(store, {'auth_key': 'must-stay'});
+        expect(legacyStore, isEmpty);
+      },
+    );
+
+    test(
+      'removes the .v2 slot under its own class, before the primary',
+      () async {
+        // Left behind, it outlives the reset: the next launch finds the primary
+        // empty, adopts the key from `.v2`, and the reset rotated nothing.
+        store[dbCipherKeyV2StorageKey] = 'ab' * 32;
+
+        await resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        );
+
+        expect(store, {'auth_key': 'must-stay'});
+        verifyInOrder([
+          () => storage.delete(
+            key: dbCipherKeyV2StorageKey,
+            iOptions: any(
+              named: 'iOptions',
+              that: _iosClass('first_unlock_this_device'),
+            ),
+          ),
+          () => storage.delete(key: dbCipherKeyStorageKey),
+        ]);
+      },
+    );
+
+    test('failed recovery-copy cleanup leaves the primary intact', () async {
+      final primary = store[dbCipherKeyStorageKey];
+      expect(primary, isNotNull);
+      store[dbCipherKeyAccessibilityBackupStorageKey] = primary!;
+      when(() => storage.delete(key: dbCipherKeyAccessibilityBackupStorageKey))
+          .thenThrow(PlatformException(code: 'Keychain unavailable'));
+      await expectLater(
+        resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+      expect(store[dbCipherKeyStorageKey], primary);
+      expect(store[dbCipherKeyAccessibilityBackupStorageKey], primary);
+    });
+
+    test('failed legacy cleanup leaves the primary intact', () async {
+      final primary = store[dbCipherKeyStorageKey];
+      expect(primary, isNotNull);
+      when(() => legacyStorage.delete(key: dbCipherKeyStorageKey))
+          .thenThrow(PlatformException(code: 'Keychain unavailable'));
+      await expectLater(
+        resetEncryptedDatabaseCache(
+          secureStorage: storage,
+          legacySecureStorage: legacyStorage,
+          deleteDatabase: () async {},
+        ),
+        throwsA(isA<PlatformException>()),
+      );
+      expect(store[dbCipherKeyStorageKey], primary);
+    });
+
+    test(
       'deletes the pre-#9343 copy of the key through the legacy storage',
       () async {
         await resetEncryptedDatabaseCache(
@@ -1147,11 +1624,13 @@ void main() {
           deleteDatabase: () async {},
         );
 
-        // Otherwise the next launch would migrate the stale copy back into the
-        // current slot and the reset would not have rotated anything.
+        // The key is in one slot, but an item this device has not rewritten yet
+        // still carries the pre-#9343 class, and only `delete` filters on it.
+        // Without the second delete that item survives the reset, and the next
+        // launch reads the key the reset was supposed to rotate.
         expect(legacyStore, isEmpty);
         verify(
-          () => legacyStorage.delete(key: legacyDbCipherKeyStorageKey),
+          () => legacyStorage.delete(key: dbCipherKeyStorageKey),
         ).called(1);
       },
     );
