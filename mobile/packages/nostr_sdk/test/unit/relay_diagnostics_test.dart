@@ -543,7 +543,7 @@ void main() {
       );
     });
 
-    test('agrees with the CLOSED settlement path on every known prefix', () {
+    test('maps every known prefix to itself', () {
       for (final prefix in relayRefusalPrefixes) {
         expect(
           relayRefusalCategoryForDiagnostics('$prefix: relay said so'),
