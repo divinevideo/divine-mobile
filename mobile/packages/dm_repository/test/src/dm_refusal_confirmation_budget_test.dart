@@ -285,6 +285,54 @@ void main() {
     });
 
     test(
+      'a preserved timer does not confirm a refusal first seen after it armed',
+      () {
+        fakeAsync((async) {
+          stubAnsweredHistory();
+          var reads = 0;
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            final relay = reads == 1
+                ? 'wss://first.example'
+                : 'wss://second.example';
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'error'},
+            );
+          });
+          final repository = makeRepository();
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(reads, 3);
+          expect(syncState.historyDrainComplete(_pubkey), isFalse);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(reads, 4);
+          expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        });
+      },
+    );
+
+    test(
       'timer firing during a non-confirming drain queues a confirming pass',
       () {
         fakeAsync((async) {

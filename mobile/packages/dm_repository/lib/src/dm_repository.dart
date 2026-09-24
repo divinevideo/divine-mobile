@@ -666,6 +666,11 @@ class DmRepository {
   bool _pendingNip04RefusalConfirmation = false;
   bool _confirmationWindowRelayEdgeUsed = false;
 
+  /// Refusal signatures captured when the confirmation timer was armed.
+  /// A later non-confirming sweep can replace [_previousNip04Refusals]; the
+  /// armed timer must not treat that new signature as already delayed.
+  Set<String> _armedNip04Refusals = {};
+
   /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
   /// sweep. A matching refusal must recur after a deferred drain retry before
   /// it can count as an exhausted relay for history completion.
@@ -1068,6 +1073,7 @@ class DmRepository {
     _historyDrainCanConfirmNip04Refusal = false;
     _pendingNip04RefusalConfirmation = false;
     _confirmationWindowRelayEdgeUsed = false;
+    _armedNip04Refusals = {};
     _previousNip04Refusals = {};
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
@@ -1548,7 +1554,9 @@ class DmRepository {
     int generation, {
     required bool allowRefusalConfirmation,
   }) async {
-    final priorRefusals = _previousNip04Refusals;
+    final priorRefusals = allowRefusalConfirmation
+        ? _armedNip04Refusals
+        : _previousNip04Refusals;
     final currentRefusals = <String>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -2406,6 +2414,7 @@ class DmRepository {
       return;
     }
     _confirmationWindowRelayEdgeUsed = false;
+    _armedNip04Refusals = Set<String>.of(_previousNip04Refusals);
     _listenForDrainRelayReconnect(pubkey, generation);
     final delay =
         DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
@@ -2492,6 +2501,7 @@ class DmRepository {
     _historyDrainCanConfirmNip04Refusal = false;
     _pendingNip04RefusalConfirmation = false;
     _confirmationWindowRelayEdgeUsed = false;
+    _armedNip04Refusals = {};
     _previousNip04Refusals = {};
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
