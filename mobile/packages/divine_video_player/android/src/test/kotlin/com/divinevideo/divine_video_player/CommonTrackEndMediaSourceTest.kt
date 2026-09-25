@@ -13,6 +13,7 @@ import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -261,6 +262,17 @@ class CommonTrackEndMediaSourceTest {
         val period = createPeriod(source)
 
         assertEquals(23_000L, period.seekToUs(0L))
+    }
+
+    @Test
+    fun `releasing an already-released period fails instead of double-forwarding`() {
+        // A mismatched create-release pairing must surface here, not as a
+        // silent second release into the child source's own period pool.
+        val source = source(trackEnds = longArrayOf(6_290_000L, 6_336_000L))
+        val period = createPeriod(source)
+        source.releasePeriod(period)
+
+        assertThrows(IllegalStateException::class.java) { source.releasePeriod(period) }
     }
 
     @Test
