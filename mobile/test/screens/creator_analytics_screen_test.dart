@@ -201,7 +201,7 @@ void main() {
           SoundStats(
             id: 'sound-hit',
             pubkey: 'a' * 64,
-            title: 'Birks crew',
+            title: 'Test sound',
             createdAt: DateTime.now().toUtc(),
             usageCount: 42,
           ),
@@ -209,7 +209,7 @@ void main() {
       );
 
       expect(find.text(l10n.analyticsYourSounds), findsOneWidget);
-      expect(find.text('Birks crew'), findsOneWidget);
+      expect(find.text('Test sound'), findsOneWidget);
       expect(find.text(l10n.soundVideoCount(42)), findsOneWidget);
     });
 

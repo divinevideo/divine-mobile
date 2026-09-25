@@ -88,7 +88,7 @@ void main() {
           CreatorSoundsState(
             status: CreatorSoundsStatus.success,
             sounds: [
-              sound('sound-a', 'Birks crew', 42),
+              sound('sound-a', 'Test sound', 42),
               sound('sound-b', 'Original sound', 1),
               sound('sound-c', 'Fresh upload', 0),
             ],
@@ -98,7 +98,7 @@ void main() {
         expect(find.text(l10n.analyticsYourSoundsExplainer), findsOneWidget);
         expect(
           find.bySemanticsLabel(
-            'Birks crew, ${l10n.soundVideoCount(42)}, '
+            'Test sound, ${l10n.soundVideoCount(42)}, '
             '${l10n.timeAgo(l10n.timeShortDays(3))}',
           ),
           findsOneWidget,
@@ -143,11 +143,11 @@ void main() {
           tester,
           CreatorSoundsState(
             status: CreatorSoundsStatus.success,
-            sounds: [sound('sound-a', 'Birks crew', 42)],
+            sounds: [sound('sound-a', 'Test sound', 42)],
           ),
         );
 
-        await tester.tap(find.text('Birks crew'));
+        await tester.tap(find.text('Test sound'));
 
         verify(
           () => goRouter.push<Object?>(SoundDetailScreen.pathForId('sound-a')),

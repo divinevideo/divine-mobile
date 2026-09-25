@@ -19,12 +19,12 @@ void main() {
 
       test('reads numeric fields sent as doubles', () {
         final sound = SoundStats.fromJson(const {
-          'created_at': 1781214822.0,
+          'created_at': 1780000000.0,
           'usage_count': 12.0,
         });
 
         expect(sound.usageCount, equals(12));
-        expect(sound.createdAt.millisecondsSinceEpoch, equals(1781214822000));
+        expect(sound.createdAt.millisecondsSinceEpoch, equals(1780000000000));
       });
     });
 

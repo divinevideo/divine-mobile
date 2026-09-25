@@ -4348,10 +4348,10 @@ void main() {
         const validResponse =
             '''
 [
-  {"id": "sound-a", "pubkey": "$testPubkey", "title": "Birks crew",
-   "created_at": 1781214822, "usage_count": 107, "kind": 1063},
+  {"id": "sound-a", "pubkey": "$testPubkey", "title": "Test sound",
+   "created_at": 1780000000, "usage_count": 12, "kind": 1063},
   {"id": "sound-b", "pubkey": "$testPubkey", "title": "Original sound",
-   "created_at": 1780890196, "usage_count": 1}
+   "created_at": 1780100000, "usage_count": 1}
 ]
 ''';
         when(
@@ -4366,19 +4366,19 @@ void main() {
             SoundStats(
               id: 'sound-a',
               pubkey: testPubkey,
-              title: 'Birks crew',
+              title: 'Test sound',
               createdAt: DateTime.fromMillisecondsSinceEpoch(
-                1781214822000,
+                1780000000000,
                 isUtc: true,
               ),
-              usageCount: 107,
+              usageCount: 12,
             ),
             SoundStats(
               id: 'sound-b',
               pubkey: testPubkey,
               title: 'Original sound',
               createdAt: DateTime.fromMillisecondsSinceEpoch(
-                1780890196000,
+                1780100000000,
                 isUtc: true,
               ),
               usageCount: 1,
