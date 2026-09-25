@@ -232,23 +232,7 @@ class _OtherProfileButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return BlocConsumer<MyFollowingBloc, MyFollowingState>(
-      // The bell is follow-gated, so an abandoned subscription would keep
-      // pushing videos from someone the viewer no longer follows with no UI
-      // left to switch it off. Bridged here rather than inside the bell,
-      // which has already unmounted by the time this fires.
-      listenWhen: (previous, current) =>
-          canShowBell &&
-          previous.isFollowing(userIdHex) &&
-          !current.isFollowing(userIdHex),
-      listener: (context, state) {
-        runDetached(
-          context.read<NotifyBellCubit>().clearForUnfollow(),
-          'clear creator notifications after unfollow',
-          logName: 'ProfileActionButtons',
-          category: LogCategory.ui,
-        );
-      },
+    return BlocBuilder<MyFollowingBloc, MyFollowingState>(
       buildWhen: (previous, current) =>
           previous.isFollowing(userIdHex) != current.isFollowing(userIdHex),
       builder: (context, state) {

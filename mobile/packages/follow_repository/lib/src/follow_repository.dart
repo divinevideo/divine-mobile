@@ -220,6 +220,19 @@ class FollowRepository {
   Stream<List<String>> get followingStream =>
       _followingSubject.stream.whereType<List<String>>();
 
+  /// Emits a creator only after an unfollow is accepted locally or a newer
+  /// contact list confirms that the viewer no longer follows them.
+  ///
+  /// Unlike [followingStream], this does not emit for optimistic mutations.
+  /// Consumers that trigger irreversible side effects (such as removing a
+  /// notification subscription) can therefore ignore a local unfollow that
+  /// later rolls back.
+  final _confirmedUnfollowController = StreamController<String>.broadcast(
+    sync: true,
+  );
+  Stream<String> get confirmedUnfollowStream =>
+      _confirmedUnfollowController.stream;
+
   // In-memory cache — following
   List<String> _followingPubkeys = [];
   Event? _currentUserContactListEvent;
@@ -250,6 +263,10 @@ class FollowRepository {
   /// against this to know what the pending local change actually is.
   List<String> _adoptedFollows = const [];
 
+  /// Whether a relay has answered with the user's kind 3 this session, or
+  /// this session has published one. See [isFollowingConfirmedByRelay].
+  bool _followingConfirmedByRelay = false;
+
   /// Adopt [pubkeys] when [createdAt] makes its source the newest one seen.
   ///
   /// Returns whether the list was adopted. [createdAt] `null` means the source
@@ -274,10 +291,16 @@ class FollowRepository {
       return false;
     }
 
+    final adoptedPubkeys = _adoptedFollows.toSet();
+    final nextPubkeys = pubkeys.toSet();
+    final removedPubkeys = adoptedPubkeys
+        .where((pubkey) => !nextPubkeys.contains(pubkey))
+        .toList(growable: false);
     _followingPubkeys = pubkeys;
     _adoptedFollows = List<String>.from(pubkeys);
     _followingProvenance = (createdAt: createdAt, id: eventId);
     _emitFollowingList();
+    removedPubkeys.forEach(_emitConfirmedUnfollow);
 
     Log.info(
       'Adopted contact list from $source: ${pubkeys.length} following '
@@ -369,6 +392,15 @@ class FollowRepository {
   /// [initialize] returns early and stays retryable.
   Future<void> get initialized => _initializedCompleter.future;
 
+  /// Whether [followingPubkeys] reflects a contact list a relay returned (or
+  /// that this session published), rather than only derived local caches.
+  ///
+  /// [initialized] also completes when the relay read times out or returns
+  /// nothing, leaving the list at whatever LocalStorage or the REST index
+  /// held — possibly empty on a fresh install. Anything that deletes data for
+  /// creators missing from the list must check this first.
+  bool get isFollowingConfirmedByRelay => _followingConfirmedByRelay;
+
   /// Drops entries that are not 32-byte hex pubkeys.
   ///
   /// Every source of the following list is untrusted: Kind 3 events are
@@ -413,6 +445,12 @@ class FollowRepository {
     }
   }
 
+  void _emitConfirmedUnfollow(String pubkey) {
+    if (!_confirmedUnfollowController.isClosed) {
+      _confirmedUnfollowController.add(pubkey);
+    }
+  }
+
   /// Compare two lists for equality by value
   bool _listsEqual(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
@@ -431,6 +469,9 @@ class FollowRepository {
     }
     if (!_followingSubject.isClosed) {
       unawaited(_followingSubject.close());
+    }
+    if (!_confirmedUnfollowController.isClosed) {
+      unawaited(_confirmedUnfollowController.close());
     }
   }
 
@@ -2232,6 +2273,8 @@ class FollowRepository {
       // Save to local storage for persistence
       await _saveToLocalStorage();
 
+      _emitConfirmedUnfollow(pubkey);
+
       Log.info(
         'Queued unfollow action for offline sync: '
         '${pubkeyForLogs(pubkey)}',
@@ -2247,6 +2290,8 @@ class FollowRepository {
 
       // 3. Save to local storage
       await _saveToLocalStorage();
+
+      _emitConfirmedUnfollow(pubkey);
 
       Log.info(
         'Successfully unfollowed user: ${pubkeyForLogs(pubkey)}',
@@ -2290,6 +2335,8 @@ class FollowRepository {
 
     // Save to local storage
     await _saveToLocalStorage();
+
+    _emitConfirmedUnfollow(pubkey);
 
     Log.info(
       'Executed unfollow action for: ${pubkeyForLogs(pubkey)}',
@@ -2980,6 +3027,7 @@ class FollowRepository {
     _followingProvenance = (createdAt: event.createdAt, id: event.id);
     _adoptedFollows = List<String>.from(_followingPubkeys);
     _contactListBroadcastPending = false;
+    _followingConfirmedByRelay = true;
 
     Log.debug(
       'Broadcasted contact list: ${event.id}',
@@ -3005,6 +3053,7 @@ class FollowRepository {
       source: 'network Kind 3 event ${event.id}',
     );
     _rememberContactListEvent(event);
+    _followingConfirmedByRelay = true;
     if (!adopted) return;
 
     unawaited(_saveToLocalStorage());

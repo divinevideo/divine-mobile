@@ -365,27 +365,28 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('unfollowing clears the subscription', (tester) async {
-      followingTarget();
+    testWidgets(
+      'profile transition does not own notification subscription cleanup',
+      (tester) async {
+        followingTarget();
 
-      await tester.pumpWidget(buildWidget());
-      await tester.pumpAndSettle();
-      expect(find.byType(ProfileNotifyBellButton), findsOneWidget);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        expect(find.byType(ProfileNotifyBellButton), findsOneWidget);
 
-      // The bell unmounts the moment the row flips to not-following, so the
-      // teardown has to be driven from a host above it.
-      when(() => followRepository.followingPubkeys).thenReturn(const []);
-      followingStream.add(const <String>[]);
-      await tester.pumpAndSettle();
+        when(() => followRepository.followingPubkeys).thenReturn(const []);
+        followingStream.add(const <String>[]);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(ProfileNotifyBellButton), findsNothing);
-      verify(
-        () => notifyRepository.unsubscribe(
-          ownerPubkey: viewerPubkey,
-          creatorPubkey: targetPubkey,
-        ),
-      ).called(1);
-    });
+        expect(find.byType(ProfileNotifyBellButton), findsNothing);
+        verifyNever(
+          () => notifyRepository.unsubscribe(
+            ownerPubkey: viewerPubkey,
+            creatorPubkey: targetPubkey,
+          ),
+        );
+      },
+    );
   });
 
   group('accessibility', () {

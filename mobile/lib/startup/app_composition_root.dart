@@ -67,6 +67,9 @@ class AppCompositionRoot extends ConsumerWidget {
 
     final oauthClient = ref.watch(oauthClientProvider);
     final authService = ref.watch(authServiceProvider);
+    // Keep notification subscriptions aligned with confirmed follow changes
+    // even when the profile that owns a bell is not mounted.
+    ref.watch(notifySubscriptionsUnfollowCleanupProvider);
 
     // Wrap with geo-blocking check first, then lifecycle handler
     // The two app-shell badge cubits + their repository-sync listeners live
