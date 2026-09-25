@@ -34,12 +34,16 @@ import 'package:unified_logger/unified_logger.dart';
 class ProfileSavedGrid extends StatefulWidget {
   const ProfileSavedGrid({
     required this.userIdHex,
+    this.acquireFeedLease,
     this.physics = const ClampingScrollPhysics(),
     super.key,
   });
 
   /// The hex public key of the profile being viewed (always the viewer's own).
   final String userIdHex;
+
+  /// Retains the tab bloc until the pushed fullscreen feed returns.
+  final VoidCallback? Function()? acquireFeedLease;
 
   /// Scroll physics for every state the grid renders.
   ///
@@ -145,6 +149,7 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
                   index: index,
                   allVideos: savedVideos,
                   userIdHex: widget.userIdHex,
+                  acquireFeedLease: widget.acquireFeedLease,
                 );
               }, childCount: savedVideos.length),
             ),
@@ -163,12 +168,14 @@ class _SavedGridTile extends ConsumerWidget {
     required this.index,
     required this.allVideos,
     required this.userIdHex,
+    required this.acquireFeedLease,
   });
 
   final VideoEvent videoEvent;
   final int index;
   final List<VideoEvent> allVideos;
   final String userIdHex;
+  final VoidCallback? Function()? acquireFeedLease;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Semantics(
@@ -183,26 +190,29 @@ class _SavedGridTile extends ConsumerWidget {
           category: LogCategory.video,
         );
         final bloc = context.read<ProfileSavedVideosBloc>();
+        final releaseFeedLease = acquireFeedLease?.call();
         runDetached(
-          context.push<void>(
-            PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
-            extra: PooledFullscreenVideoFeedArgs(
-              source: SavedViewSource(userIdHex),
-              feedRepository: StreamFeedRepository(
-                videos: bloc.stream
-                    .map((state) => state.videos)
-                    .startWith(allVideos),
-                hasMore: bloc.stream
-                    .map((state) => state.hasMoreContent)
-                    .startWith(bloc.state.hasMoreContent),
-                onLoadMore: () async =>
-                    bloc.add(const ProfileSavedVideosLoadMoreRequested()),
-              ),
-              initialIndex: index,
-              initialVideoId: videoEvent.id,
-              trafficSource: ViewTrafficSource.profile,
-            ),
-          ),
+          context
+              .push<void>(
+                PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
+                extra: PooledFullscreenVideoFeedArgs(
+                  source: SavedViewSource(userIdHex),
+                  feedRepository: StreamFeedRepository(
+                    videos: bloc.stream
+                        .map((state) => state.videos)
+                        .startWith(allVideos),
+                    hasMore: bloc.stream
+                        .map((state) => state.hasMoreContent)
+                        .startWith(bloc.state.hasMoreContent),
+                    onLoadMore: () async =>
+                        bloc.add(const ProfileSavedVideosLoadMoreRequested()),
+                  ),
+                  initialIndex: index,
+                  initialVideoId: videoEvent.id,
+                  trafficSource: ViewTrafficSource.profile,
+                ),
+              )
+              .whenComplete(() => releaseFeedLease?.call()),
           'open saved video',
           logName: 'ProfileSavedGrid',
           category: LogCategory.ui,

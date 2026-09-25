@@ -32,6 +32,7 @@ class ProfileCollabsGrid extends ConsumerStatefulWidget {
   const ProfileCollabsGrid({
     required this.isOwnProfile,
     required this.userIdHex,
+    this.acquireFeedLease,
     super.key,
   });
 
@@ -40,6 +41,9 @@ class ProfileCollabsGrid extends ConsumerStatefulWidget {
 
   /// The hex public key of the profile being viewed.
   final String userIdHex;
+
+  /// Retains the tab bloc until the pushed fullscreen feed returns.
+  final VoidCallback? Function()? acquireFeedLease;
 
   @override
   ConsumerState<ProfileCollabsGrid> createState() => _ProfileCollabsGridState();
@@ -101,26 +105,29 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
     prefetchAroundIndex(index, allVideos);
 
     final bloc = context.read<ProfileCollabVideosBloc>();
+    final releaseFeedLease = widget.acquireFeedLease?.call();
     runDetached(
-      context.push<void>(
-        PooledFullscreenVideoFeedScreen.pathForVideoId(allVideos[index].id),
-        extra: PooledFullscreenVideoFeedArgs(
-          source: CollabsViewSource(widget.userIdHex),
-          feedRepository: StreamFeedRepository(
-            videos: bloc.stream
-                .map((state) => state.videos)
-                .startWith(allVideos),
-            hasMore: bloc.stream
-                .map((state) => state.hasMoreContent)
-                .startWith(bloc.state.hasMoreContent),
-            onLoadMore: () async =>
-                bloc.add(const ProfileCollabVideosLoadMoreRequested()),
-          ),
-          initialIndex: index,
-          initialVideoId: allVideos[index].id,
-          trafficSource: ViewTrafficSource.profile,
-        ),
-      ),
+      context
+          .push<void>(
+            PooledFullscreenVideoFeedScreen.pathForVideoId(allVideos[index].id),
+            extra: PooledFullscreenVideoFeedArgs(
+              source: CollabsViewSource(widget.userIdHex),
+              feedRepository: StreamFeedRepository(
+                videos: bloc.stream
+                    .map((state) => state.videos)
+                    .startWith(allVideos),
+                hasMore: bloc.stream
+                    .map((state) => state.hasMoreContent)
+                    .startWith(bloc.state.hasMoreContent),
+                onLoadMore: () async =>
+                    bloc.add(const ProfileCollabVideosLoadMoreRequested()),
+              ),
+              initialIndex: index,
+              initialVideoId: allVideos[index].id,
+              trafficSource: ViewTrafficSource.profile,
+            ),
+          )
+          .whenComplete(() => releaseFeedLease?.call()),
       'open collaborator video',
       logName: 'ProfileCollabsGrid',
       category: LogCategory.ui,

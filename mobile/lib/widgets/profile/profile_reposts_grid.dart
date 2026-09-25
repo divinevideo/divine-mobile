@@ -31,6 +31,7 @@ class ProfileRepostsGrid extends StatefulWidget {
   const ProfileRepostsGrid({
     required this.isOwnProfile,
     required this.userIdHex,
+    this.acquireFeedLease,
     super.key,
   });
 
@@ -39,6 +40,9 @@ class ProfileRepostsGrid extends StatefulWidget {
 
   /// The hex public key of the profile being viewed.
   final String userIdHex;
+
+  /// Retains the tab bloc until the pushed fullscreen feed returns.
+  final VoidCallback? Function()? acquireFeedLease;
 
   @override
   State<ProfileRepostsGrid> createState() => _ProfileRepostsGridState();
@@ -133,6 +137,7 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
                   index: index,
                   allVideos: repostedVideos,
                   userIdHex: widget.userIdHex,
+                  acquireFeedLease: widget.acquireFeedLease,
                 );
               }, childCount: repostedVideos.length),
             ),
@@ -151,12 +156,14 @@ class _RepostGridTile extends ConsumerWidget {
     required this.index,
     required this.allVideos,
     required this.userIdHex,
+    required this.acquireFeedLease,
   });
 
   final VideoEvent videoEvent;
   final int index;
   final List<VideoEvent> allVideos;
   final String userIdHex;
+  final VoidCallback? Function()? acquireFeedLease;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Semantics(
@@ -173,26 +180,30 @@ class _RepostGridTile extends ConsumerWidget {
         );
 
         final bloc = context.read<ProfileRepostedVideosBloc>();
+        final releaseFeedLease = acquireFeedLease?.call();
         runDetached(
-          context.push<void>(
-            PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
-            extra: PooledFullscreenVideoFeedArgs(
-              source: RepostsViewSource(userIdHex),
-              feedRepository: StreamFeedRepository(
-                videos: bloc.stream
-                    .map((state) => state.videos)
-                    .startWith(allVideos),
-                hasMore: bloc.stream
-                    .map((state) => state.hasMoreContent)
-                    .startWith(bloc.state.hasMoreContent),
-                onLoadMore: () async =>
-                    bloc.add(const ProfileRepostedVideosLoadMoreRequested()),
-              ),
-              initialIndex: index,
-              initialVideoId: videoEvent.id,
-              trafficSource: ViewTrafficSource.profile,
-            ),
-          ),
+          context
+              .push<void>(
+                PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
+                extra: PooledFullscreenVideoFeedArgs(
+                  source: RepostsViewSource(userIdHex),
+                  feedRepository: StreamFeedRepository(
+                    videos: bloc.stream
+                        .map((state) => state.videos)
+                        .startWith(allVideos),
+                    hasMore: bloc.stream
+                        .map((state) => state.hasMoreContent)
+                        .startWith(bloc.state.hasMoreContent),
+                    onLoadMore: () async => bloc.add(
+                      const ProfileRepostedVideosLoadMoreRequested(),
+                    ),
+                  ),
+                  initialIndex: index,
+                  initialVideoId: videoEvent.id,
+                  trafficSource: ViewTrafficSource.profile,
+                ),
+              )
+              .whenComplete(() => releaseFeedLease?.call()),
           'open reposted video',
           logName: 'ProfileRepostsGrid',
           category: LogCategory.ui,
