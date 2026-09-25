@@ -17886,6 +17886,12 @@ abstract class AppLocalizations {
   /// **'Email Divine support'**
   String get minorAccountReviewParentConsentEmailCta;
 
+  /// No description provided for @minorAccountReviewParentConsentRecordCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Record consent video'**
+  String get minorAccountReviewParentConsentRecordCta;
+
   /// No description provided for @minorAccountReviewParentConsentEmailSubject.
   ///
   /// In en, this message translates to:
@@ -17897,6 +17903,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hi Divine support,\n\nI am contacting Divine about Divine Greenlight for a teen who is 13-15.\n\nI have attached a short private video that shows:\n- the teen\n- a parent or guardian speaking on camera\n- that the teen has permission to use Divine\n- that the parent or guardian knows about the account and will supervise its use\n\nCountry/ies of residence:\n\nHelpful context:\n\nThanks.'**
   String get minorAccountReviewParentConsentEmailBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record consent video'**
+  String get minorAccountReviewRecordConsentTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.'**
+  String get minorAccountReviewRecordConsentBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Say this on camera'**
+  String get minorAccountReviewRecordConsentPromptTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentRecordCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get minorAccountReviewRecordConsentRecordCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentStopCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get minorAccountReviewRecordConsentStopCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera preview'**
+  String get minorAccountReviewRecordConsentPreviewLabel;
+
+  /// No description provided for @minorAccountReviewRecordConsentReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your video'**
+  String get minorAccountReviewRecordConsentReviewTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentReviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch it back. Retake if anything is missing, or use it if it shows everything above.'**
+  String get minorAccountReviewRecordConsentReviewBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentRetakeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake'**
+  String get minorAccountReviewRecordConsentRetakeCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentUseVideoCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this video'**
+  String get minorAccountReviewRecordConsentUseVideoCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We can\'t use the camera'**
+  String get minorAccountReviewRecordConsentDeniedTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine could not start the camera. You can still email a private video to Divine support instead.'**
+  String get minorAccountReviewRecordConsentDeniedBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentEmailInsteadCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Use email instead'**
+  String get minorAccountReviewRecordConsentEmailInsteadCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording failed'**
+  String get minorAccountReviewRecordConsentErrorTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while recording. Please try again.'**
+  String get minorAccountReviewRecordConsentErrorBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentTryAgainCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get minorAccountReviewRecordConsentTryAgainCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentConfirmEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email'**
+  String get minorAccountReviewRecordConsentConfirmEmailTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentSubmitCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit video'**
+  String get minorAccountReviewRecordConsentSubmitCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentSubmitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not submit your video. Please try again.'**
+  String get minorAccountReviewRecordConsentSubmitError;
 
   /// No description provided for @minorAccountReviewParentSupportInstructions.
   ///

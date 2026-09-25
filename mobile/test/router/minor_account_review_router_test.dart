@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -12,17 +14,22 @@ import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
+import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
 import 'package:openvine/screens/account_deletion_recovery_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
+import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bug_report_service.dart';
+import 'package:openvine/services/minor_consent_recorder.dart';
+import 'package:permissions_service/permissions_service.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/test_provider_overrides.dart';
@@ -39,6 +46,82 @@ class _NotReadyNostrSession extends NostrSession {
 
 class _MockDeletionRepository extends Mock
     implements AccountDeletionRecoveryRepository {}
+
+/// Recorder whose [initialize] stays pending so the capture screen renders its
+/// inert idle layout instead of a native camera preview.
+class _PendingRecorder implements MinorConsentRecorder {
+  @override
+  void Function(String? path)? onAutoStopped;
+
+  @override
+  Future<void> initialize() => Completer<void>().future;
+
+  @override
+  Future<bool> start({
+    required Duration maxDuration,
+    required String outputDirectory,
+  }) async => true;
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// Permissions stand-in that grants every capability, so the capture screen
+/// reaches its camera-ready idle state.
+class _GrantedPermissions implements PermissionsService {
+  @override
+  Future<PermissionStatus> checkCameraStatus() async =>
+      PermissionStatus.granted;
+
+  @override
+  Future<PermissionStatus> requestCameraPermission() async =>
+      PermissionStatus.granted;
+
+  @override
+  Future<PermissionStatus> checkMicrophoneStatus() async =>
+      PermissionStatus.granted;
+
+  @override
+  Future<PermissionStatus> requestMicrophonePermission() async =>
+      PermissionStatus.granted;
+
+  @override
+  Future<bool> openAppSettings() async => true;
+
+  @override
+  Future<PermissionStatus> checkGalleryStatus() async =>
+      PermissionStatus.granted;
+
+  @override
+  Future<PermissionStatus> requestGalleryPermission() async =>
+      PermissionStatus.granted;
+}
+
+/// Repository stand-in that never touches the API, so the capture screen does
+/// not create a real API client (and its refresh timer) in a router test.
+class _StubRepository implements MinorAccountReviewRepository {
+  @override
+  Future<MinorAccountReviewStatus> fetchCurrentStatus() async =>
+      MinorAccountReviewStatus.active();
+
+  @override
+  Future<void> submitParentContact({
+    required String caseId,
+    required String email,
+    MinorReviewInstructions? localReceipt,
+  }) async {}
+
+  @override
+  Future<void> submitParentConsent({
+    required String caseId,
+    required String email,
+    required String videoPath,
+    MinorReviewInstructions? localReceipt,
+  }) async {}
+}
 
 /// The `AsyncLoading` that retains the pre-auth `AsyncData(null)` — the state
 /// `currentAccountDeletionAttemptProvider` enters on its first refetch after
@@ -529,6 +612,102 @@ void main() {
       expect(
         router.routeInformationProvider.value.uri.toString(),
         MinorAccountReviewParentContactScreen.path,
+      );
+    });
+
+    testWidgets('allows record consent route while restricted', (tester) async {
+      final container = ProviderContainer(
+        overrides: [
+          ...routerOverrides(),
+          nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => restrictedStatus(),
+          ),
+          minorConsentRecorderProvider.overrideWithValue(_PendingRecorder()),
+          permissionsServiceProvider.overrideWithValue(_GrantedPermissions()),
+          minorAccountReviewRepositoryProvider.overrideWithValue(
+            _StubRepository(),
+          ),
+          isFeatureEnabledProvider(
+            FeatureFlag.minorConsentInAppRecording,
+          ).overrideWithValue(true),
+        ],
+      );
+      registerContainerTearDown(tester, container);
+      await container.read(currentMinorAccountReviewStatusProvider.future);
+      await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+      final router = container.read(goRouterProvider);
+      router.go(MinorAccountReviewRecordConsentScreen.path);
+      await tester.pump();
+
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        MinorAccountReviewRecordConsentScreen.path,
+      );
+    });
+
+    testWidgets(
+      'redirects the record consent route to parent consent while the '
+      'recording flag is off',
+      (tester) async {
+        final container = ProviderContainer(
+          overrides: [
+            ...routerOverrides(),
+            nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => restrictedStatus(),
+            ),
+            isFeatureEnabledProvider(
+              FeatureFlag.minorConsentInAppRecording,
+            ).overrideWithValue(false),
+          ],
+        );
+        registerContainerTearDown(tester, container);
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+        final router = container.read(goRouterProvider);
+        router.go(MinorAccountReviewRecordConsentScreen.path);
+        await tester.pumpAndSettle();
+
+        expect(
+          router.routeInformationProvider.value.uri.toString(),
+          MinorAccountReviewParentConsentScreen.path,
+        );
+      },
+    );
+
+    testWidgets('redirects under-13 cases away from the record consent route', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          ...routerOverrides(),
+          nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => restrictedStatus(
+              state: MinorReviewCaseState.restrictedPendingSupportEmail,
+              ageBand: SuspectedAgeBand.under13,
+              resolution: MinorReviewResolutionType.supportEmailOnly,
+            ),
+          ),
+          isFeatureEnabledProvider(
+            FeatureFlag.minorConsentInAppRecording,
+          ).overrideWithValue(true),
+        ],
+      );
+      registerContainerTearDown(tester, container);
+      await container.read(currentMinorAccountReviewStatusProvider.future);
+      await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+      final router = container.read(goRouterProvider);
+      router.go(MinorAccountReviewRecordConsentScreen.path);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        MinorAccountReviewUnder13SupportScreen.path,
       );
     });
 
