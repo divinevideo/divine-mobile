@@ -149,13 +149,17 @@ class VideoClip {
   ///
   /// Support is per-platform, and the web and Linux backends ignore it:
   ///
-  /// * Apple reads both tracks before it builds the player item, for local
+  /// * Apple reads both tracks before it builds the composition, for local
   ///   and remote sources alike.
   /// * Android takes the track lengths from its own extractor as it parses
   ///   the container during prepare, and clips the source there — before the
   ///   first frame, on every source and every [VideoBufferProfile], with no
-  ///   read in front of the load. Only a clip starting at zero is clipped
-  ///   this way; one with a [start] uses lengths already seen for its source.
+  ///   read in front of the load. It also starts the clip at its first frame
+  ///   when an empty edit of at most 100 ms delays the picture: every Divine
+  ///   derivative carries one of 21–23 ms, which otherwise held the last
+  ///   frame that much longer at every restart. Only a clip starting at zero
+  ///   is clipped this way; one with a [start] uses lengths already seen for
+  ///   its source.
   /// * Neither platform clamps an HLS source: an HLS asset exposes no tracks
   ///   to Apple, and a playlist has no container for Android to read them
   ///   from. An HLS clip plays unclamped on both.

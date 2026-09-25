@@ -101,6 +101,14 @@ void main() {
       );
       expect(
         mediaSource,
+        contains('leadingVideoGapUs(videoStartUs = ends[2], endUs = endUs)'),
+        reason:
+            "An empty edit ahead of the first frame holds the last lap's final "
+            'frame at every restart; the clip has to start where the picture '
+            'does.',
+      );
+      expect(
+        mediaSource,
         contains('updateClipping(periodStartUs, periodEndUs)'),
         reason:
             'The end has to reach the period already being prepared: it is '

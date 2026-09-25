@@ -30,15 +30,29 @@ import androidx.media3.extractor.text.SubtitleParser
  * arrives before the player publishes the source's timeline, so the clip end
  * is set before anything is shown.
  *
+ * It also reports where the picture begins. A transcoder that pads the video
+ * with an initial empty edit — every Divine derivative carries one of 21–23 ms,
+ * the AAC encoder's priming — has the first frame appear that far into the
+ * clip, so a loop from zero holds the previous lap's last frame for that long
+ * at every restart.
+ *
  * [onTrackEnds] runs on the loading thread, once per parse of a container that
- * carries both a video and an audio track. The lengths are the tracks'
+ * carries both a video and an audio track, when the extractor publishes its
+ * seek map — which the MP4 extractor does straight after its track list, and
+ * the player waits for before it prepares. The lengths are the tracks'
  * presentation ends — edit list included — which is what the player's own
- * timeline is made of.
+ * timeline is made of; the start is the presentation time of the first video
+ * frame the seek map would start from.
  */
 @UnstableApi
 internal class TrackEndCapturingExtractorsFactory(
     private val delegate: ExtractorsFactory,
-    private val onTrackEnds: (uri: Uri, videoEndUs: Long, audioEndUs: Long) -> Unit,
+    private val onTrackEnds: (
+        uri: Uri,
+        videoEndUs: Long,
+        audioEndUs: Long,
+        videoStartUs: Long,
+    ) -> Unit,
 ) : ExtractorsFactory {
 
     override fun createExtractors(): Array<Extractor> = delegate.createExtractors()
@@ -49,8 +63,8 @@ internal class TrackEndCapturingExtractorsFactory(
     ): Array<Extractor> =
         delegate.createExtractors(uri, responseHeaders)
             .map { extractor ->
-                TrackEndCapturingExtractor(extractor) { videoEndUs, audioEndUs ->
-                    onTrackEnds(uri, videoEndUs, audioEndUs)
+                TrackEndCapturingExtractor(extractor) { videoEndUs, audioEndUs, videoStartUs ->
+                    onTrackEnds(uri, videoEndUs, audioEndUs, videoStartUs)
                 }
             }
             .toTypedArray()
@@ -83,11 +97,11 @@ internal class TrackEndCapturingExtractorsFactory(
     }
 }
 
-/** Passes everything through, and hands the track lengths out at `endTracks`. */
+/** Passes everything through, and hands the track bounds out with the seek map. */
 @UnstableApi
 private class TrackEndCapturingExtractor(
     private val delegate: Extractor,
-    private val onTrackEnds: (videoEndUs: Long, audioEndUs: Long) -> Unit,
+    private val onTrackEnds: (videoEndUs: Long, audioEndUs: Long, videoStartUs: Long) -> Unit,
 ) : Extractor {
 
     override fun sniff(input: ExtractorInput): Boolean = delegate.sniff(input)
@@ -114,7 +128,7 @@ private class TrackEndCapturingExtractor(
 @UnstableApi
 private class TrackEndCapturingOutput(
     private val delegate: ExtractorOutput,
-    private val onTrackEnds: (videoEndUs: Long, audioEndUs: Long) -> Unit,
+    private val onTrackEnds: (videoEndUs: Long, audioEndUs: Long, videoStartUs: Long) -> Unit,
 ) : ExtractorOutput {
 
     private var videoEndUs = C.TIME_UNSET
@@ -136,14 +150,24 @@ private class TrackEndCapturingOutput(
         if (type == C.TRACK_TYPE_AUDIO && audioEndUs == C.TIME_UNSET) audioEndUs = durationUs
     }
 
-    override fun endTracks() {
-        if (videoEndUs != C.TIME_UNSET && audioEndUs != C.TIME_UNSET) {
-            onTrackEnds(videoEndUs, audioEndUs)
-        }
-        delegate.endTracks()
-    }
+    override fun endTracks() = delegate.endTracks()
 
-    override fun seekMap(seekMap: SeekMap) = delegate.seekMap(seekMap)
+    /**
+     * The MP4 seek map starts from the first video sync sample, so asking it
+     * for time zero answers with the time the first frame is shown — past
+     * zero when an empty edit delays the picture.
+     */
+    override fun seekMap(seekMap: SeekMap) {
+        if (videoEndUs != C.TIME_UNSET && audioEndUs != C.TIME_UNSET) {
+            val videoStartUs = if (seekMap.isSeekable) {
+                seekMap.getSeekPoints(0L).first.timeUs.coerceAtLeast(0L)
+            } else {
+                0L
+            }
+            onTrackEnds(videoEndUs, audioEndUs, videoStartUs)
+        }
+        delegate.seekMap(seekMap)
+    }
 }
 
 @UnstableApi

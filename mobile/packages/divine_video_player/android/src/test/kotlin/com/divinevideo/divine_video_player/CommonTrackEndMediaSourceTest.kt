@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Timeline
+import androidx.media3.exoplayer.source.ForwardingTimeline
 import androidx.media3.exoplayer.source.MediaPeriod
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.SinglePeriodTimeline
@@ -16,8 +17,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins where a clip tagged for its common track end stops, and that the end
- * reaches the periods already playing rather than only the ones created later.
+ * Pins where a clip tagged for its common track end starts and stops, and
+ * that both reach the periods already playing rather than only the ones
+ * created later.
  */
 class CommonTrackEndMediaSourceTest {
 
@@ -37,10 +39,11 @@ class CommonTrackEndMediaSourceTest {
     private fun periodDurationUs(timeline: Timeline): Long =
         timeline.getPeriod(0, Timeline.Period()).durationUs
 
-    /** A child period that reports [bufferedUs] as loaded. */
+    /** A child period that reports [bufferedUs] as loaded, and seeks where asked. */
     private fun childPeriod(bufferedUs: Long): MediaPeriod =
         mockk<MediaPeriod>(relaxed = true).also {
             every { it.bufferedPositionUs } returns bufferedUs
+            every { it.seekToUs(any()) } answers { firstArg() }
         }
 
     private fun source(
@@ -200,5 +203,81 @@ class CommonTrackEndMediaSourceTest {
 
         assertEquals(listOf("https://cdn.example/a.mp4"), asked)
         assertEquals(6_290_000L, windowDurationUs(clipped))
+    }
+
+    @Test
+    fun `a first frame a muxer's edit shows late starts the clip`() {
+        // The CDN derivative of a 3.1 s Vine: 23 ms of empty edit, then the
+        // picture. From zero, each restart held the last frame 23 ms longer.
+        assertEquals(23_000L, leadingVideoGapUs(videoStartUs = 23_000L, endUs = 3_124_000L))
+    }
+
+    @Test
+    fun `a late first frame past the bounds is the creator's and stays`() {
+        // Past a tenth of a second it is not a muxer's edit.
+        assertEquals(0L, leadingVideoGapUs(videoStartUs = 150_000L, endUs = 6_000_000L))
+        // Nor past a tenth of a short clip.
+        assertEquals(0L, leadingVideoGapUs(videoStartUs = 60_000L, endUs = 500_000L))
+        assertEquals(0L, leadingVideoGapUs(videoStartUs = 0L, endUs = 3_124_000L))
+    }
+
+    @Test
+    fun `the published timeline runs from the first frame to the shorter track's end`() {
+        val source = source(trackEnds = longArrayOf(3_124_000L, 3_135_000L, 23_000L))
+
+        val clipped = source.clip(timeline(durationUs = 3_135_000L))
+
+        val window = clipped.getWindow(0, Timeline.Window())
+        val period = clipped.getPeriod(0, Timeline.Period())
+        assertEquals(3_101_000L, window.durationUs)
+        assertEquals(23_000L, window.positionInFirstPeriodUs)
+        assertEquals(-23_000L, period.positionInWindowUs)
+        assertEquals(3_124_000L, period.durationUs)
+    }
+
+    @Test
+    fun `a period already playing starts at the first frame when the bounds arrive`() {
+        val source = source(
+            trackEnds = longArrayOf(3_124_000L, 3_135_000L, 23_000L),
+            childPeriod = childPeriod(bufferedUs = 0L),
+        )
+        val period = createPeriod(source)
+        assertEquals(0L, period.seekToUs(0L))
+
+        source.clip(timeline(durationUs = 3_135_000L))
+
+        assertEquals(23_000L, period.seekToUs(0L))
+    }
+
+    @Test
+    fun `a period created after the bounds arrived starts at the first frame`() {
+        // Every repeat is a new period, and it is where every later lap begins.
+        val source = source(
+            trackEnds = longArrayOf(3_124_000L, 3_135_000L, 23_000L),
+            childPeriod = childPeriod(bufferedUs = 0L),
+        )
+        source.clip(timeline(durationUs = 3_135_000L))
+
+        val period = createPeriod(source)
+
+        assertEquals(23_000L, period.seekToUs(0L))
+    }
+
+    @Test
+    fun `a placeholder timeline stays a placeholder once clipped`() {
+        // The player moves an unprepared period to the new start only when
+        // the timeline it was created against was a placeholder.
+        val placeholder = object : ForwardingTimeline(timeline(durationUs = C.TIME_UNSET)) {
+            override fun getPeriod(periodIndex: Int, period: Period, setIds: Boolean): Period {
+                super.getPeriod(periodIndex, period, setIds)
+                period.isPlaceholder = true
+                return period
+            }
+        }
+        val source = source(trackEnds = longArrayOf(3_124_000L, 3_135_000L, 23_000L))
+
+        val clipped = source.clip(placeholder)
+
+        assertTrue(clipped.getPeriod(0, Timeline.Period()).isPlaceholder)
     }
 }

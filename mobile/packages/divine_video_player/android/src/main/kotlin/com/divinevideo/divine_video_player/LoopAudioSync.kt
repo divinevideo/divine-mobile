@@ -105,6 +105,10 @@ internal class LoopAudioSync(
         nowNanos: Long,
     ): Long? {
         if (presentedNanos <= anchorNanos || presentedFrame < anchorCounterFrame) return null
+        // The first reports after a start describe an output still filling:
+        // measured on an SM-S942B they put a sound that was in step 49 ms
+        // early, and the head was moved for nothing.
+        if (presentedFrame - anchorCounterFrame < framesFor(SETTLE_US)) return null
         val presentedNow = presentedFrame +
             (nowNanos - presentedNanos) * sampleRate * rateFactor / NANOS_PER_SECOND
         val audibleFrame = floorMod(
@@ -130,9 +134,15 @@ internal class LoopAudioSync(
             awaitingFirstMeasurement = false
             // The sound came out errorUs early: the pipeline took that much
             // less than was allowed for. Blend rather than replace, so one
-            // odd start does not throw the next one off.
-            val observedUs = (anchorLatencyUs - errorUs).coerceIn(0L, MAX_START_LATENCY_US)
-            startLatencyUs = (startLatencyUs + observedUs) / 2
+            // odd start does not throw the next one off — and a start too far
+            // off to steer teaches nothing at all. That is an output waking
+            // from standby after a pause, ~200 ms on an SM-S942B's speaker
+            // against ~50 warm; learnt, it put the next two placements 67 ms
+            // early and then 24 ms late, each one an audible jump.
+            if (abs(errorUs) <= REANCHOR_THRESHOLD_US) {
+                val observedUs = (anchorLatencyUs - errorUs).coerceIn(0L, MAX_START_LATENCY_US)
+                startLatencyUs = (startLatencyUs + observedUs) / 2
+            }
         }
         if (abs(errorUs) > REANCHOR_THRESHOLD_US) {
             rateFactor = 1.0
@@ -150,6 +160,29 @@ internal class LoopAudioSync(
         return Correction.STEER
     }
 
+    /**
+     * How long a frame the track consumes now takes to be heard, measured on
+     * the running output, or `null` when the readings do not fit together.
+     *
+     * [headFrame] is the consumed-frame counter read at [nowNanos];
+     * [presentedFrame] and [presentedNanos] are an `AudioTimestamp`. What has
+     * been consumed but not yet presented is in the pipeline, and a head
+     * placed again on a running output waits behind exactly that — unlike a
+     * start after a pause, which can also wait for the output to wake up.
+     */
+    fun pipelineLatencyUs(
+        headFrame: Long,
+        presentedFrame: Long,
+        presentedNanos: Long,
+        nowNanos: Long,
+    ): Long? {
+        val presentedNow = presentedFrame +
+            (nowNanos - presentedNanos) * sampleRate * rateFactor / NANOS_PER_SECOND
+        val inFlightUs = (headFrame - presentedNow) * MICROS_PER_SECOND / sampleRate
+        if (inFlightUs < 0 || inFlightUs > MAX_START_LATENCY_US) return null
+        return inFlightUs.toLong()
+    }
+
     private fun framesFor(us: Long): Long = Math.round(us.toDouble() * sampleRate / MICROS_PER_SECOND)
 
     enum class Correction { STEER, REANCHOR }
@@ -160,6 +193,9 @@ internal class LoopAudioSync(
 
         /** A few milliseconds is measurement noise, not a gap to close. */
         const val DEADBAND_US = 4_000L
+
+        /** How much has to have been heard since a start before it is measured. */
+        const val SETTLE_US = 30_000L
 
         /**
          * Past this the sound is audibly apart from the picture and steering

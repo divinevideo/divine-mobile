@@ -19,7 +19,8 @@ import androidx.media3.extractor.text.SubtitleParser
 import com.google.common.base.Supplier
 
 /**
- * Asks for a clip to end where the shorter of its video and audio tracks does.
+ * Asks for a clip to end where the shorter of its video and audio tracks does,
+ * and to begin where its picture does.
  *
  * Carried as the media item's tag; [CommonTrackEndMediaSourceFactory] turns
  * it into a [CommonTrackEndMediaSource]. [requestedEndUs] is the caller's own
@@ -71,11 +72,41 @@ internal const val MAX_COMMON_TRACK_END_TRIM_US = 500_000L
 internal const val MAX_COMMON_TRACK_END_TRIM_RATIO = 0.10
 
 /**
+ * Where a clip whose first frame is shown at [videoStartUs] should begin, or
+ * zero when it should begin at the top of the container.
+ *
+ * An initial empty edit on the video track shows nothing new until
+ * [videoStartUs]. Played once, that is a moment of black or of the poster;
+ * looped, it is the previous lap's last frame held that much longer at every
+ * restart. Every Divine derivative carries 21–23 ms of it — the AAC encoder's
+ * priming, which the transcoder's muxer offsets the picture by — so on a
+ * 30 fps clip the restart frame stayed up for ~56 ms instead of 33. Starting
+ * the clip at the first frame also drops the sound under that gap, which on
+ * those files is priming, not content.
+ *
+ * Bounded like the end: only a lead of at most [MAX_LEADING_VIDEO_GAP_US], and
+ * at most [MAX_COMMON_TRACK_END_TRIM_RATIO] of what plays, is taken to be the
+ * muxer's rather than the creator's.
+ */
+internal fun leadingVideoGapUs(videoStartUs: Long, endUs: Long): Long {
+    if (videoStartUs <= 0 || endUs <= videoStartUs) return 0L
+    val limitUs = minOf(
+        MAX_LEADING_VIDEO_GAP_US,
+        (endUs * MAX_COMMON_TRACK_END_TRIM_RATIO).toLong(),
+    )
+    return if (videoStartUs <= limitUs) videoStartUs else 0L
+}
+
+/** Longest lead before the first frame treated as a muxer's empty edit. */
+internal const val MAX_LEADING_VIDEO_GAP_US = 100_000L
+
+/**
  * Hands every item tagged with a [CommonTrackEndClip] to a
  * [CommonTrackEndMediaSource]; everything else passes straight through.
  *
- * [trackEndsFor] looks up the `[videoEndUs, audioEndUs]` the player's own
- * extractor recorded for a URI (see [TrackEndCapturingExtractorsFactory]).
+ * [trackEndsFor] looks up the `[videoEndUs, audioEndUs, videoStartUs]` the
+ * player's own extractor recorded for a URI (see
+ * [TrackEndCapturingExtractorsFactory]).
  */
 @UnstableApi
 internal class CommonTrackEndMediaSourceFactory(
@@ -143,7 +174,8 @@ internal class CommonTrackEndMediaSourceFactory(
 }
 
 /**
- * Clips a source to its common track end the moment that end is known.
+ * Clips a source to its common track end, and to its first frame, the moment
+ * those are known.
  *
  * `ClippingMediaSource` takes its end from the media item, so an end learned
  * after the item was handed over can only be applied by replacing the item —
@@ -156,7 +188,11 @@ internal class CommonTrackEndMediaSourceFactory(
  * already the right length.
  *
  * Periods are clipped in place through [ClippingMediaPeriod.updateClipping],
- * the same call `ClippingMediaSource` makes when a live window moves.
+ * the same call `ClippingMediaSource` makes when a live window moves. A start
+ * learned that way arrives with the source's first real timeline, which
+ * replaces a placeholder, so the player moves the period it has not prepared
+ * yet to the new start rather than playing the gap; every repeat is created
+ * there.
  */
 @UnstableApi
 internal class CommonTrackEndMediaSource(
@@ -201,34 +237,34 @@ internal class CommonTrackEndMediaSource(
     }
 
     /**
-     * Clips every live period to the end [newTimeline] and the recorded track
-     * ends call for, and returns the timeline to publish in its place.
+     * Clips every live period to the start and end [newTimeline] and the
+     * recorded track bounds call for, and returns the timeline to publish in
+     * its place.
      */
     internal fun clip(newTimeline: Timeline): Timeline {
         if (newTimeline.windowCount != 1 || newTimeline.periodCount != 1) return newTimeline
         newTimeline.getWindow(/* windowIndex= */ 0, window)
-        val clipEndUs = clipEndUs()
-        periodStartUs = window.positionInFirstPeriodUs
+        val ends = trackEnds()?.takeIf { it.size >= 2 }
+        val clipEndUs = clipEndUs(ends)
+        val clipStartUs = clipStartUs(ends, clipEndUs)
+        periodStartUs = window.positionInFirstPeriodUs + clipStartUs
         periodEndUs = if (clipEndUs == C.TIME_END_OF_SOURCE) {
             C.TIME_END_OF_SOURCE
         } else {
-            periodStartUs + clipEndUs
+            window.positionInFirstPeriodUs + clipEndUs
         }
         mediaPeriods.forEach { it.updateClipping(periodStartUs, periodEndUs) }
-        return if (clipEndUs == C.TIME_END_OF_SOURCE) {
+        return if (clipStartUs == 0L && clipEndUs == C.TIME_END_OF_SOURCE) {
             newTimeline
         } else {
-            EndClippedTimeline(newTimeline, clipEndUs)
+            TrackBoundsTimeline(newTimeline, clipStartUs, clipEndUs)
         }
     }
 
     /** The end the clip plays to: the caller's, tightened to the tracks'. */
-    private fun clipEndUs(): Long {
-        val ends = trackEnds()
-        val commonEndUs = if (ends != null && ends.size >= 2) {
-            commonTrackEndUs(requestedEndUs, videoEndUs = ends[0], audioEndUs = ends[1])
-        } else {
-            null
+    private fun clipEndUs(ends: LongArray?): Long {
+        val commonEndUs = ends?.let {
+            commonTrackEndUs(requestedEndUs, videoEndUs = it[0], audioEndUs = it[1])
         }
         return when {
             commonEndUs != null -> commonEndUs
@@ -236,30 +272,47 @@ internal class CommonTrackEndMediaSource(
             else -> requestedEndUs
         }
     }
+
+    /** Where the clip starts: its first frame, when that trails zero a little. */
+    private fun clipStartUs(ends: LongArray?, clipEndUs: Long): Long {
+        if (ends == null || ends.size < 3) return 0L
+        val endUs = if (clipEndUs == C.TIME_END_OF_SOURCE) ends[0] else clipEndUs
+        return leadingVideoGapUs(videoStartUs = ends[2], endUs = endUs)
+    }
 }
 
 /**
- * A single-window, single-period timeline ending at [endUs] from the start of
- * its window — the part of `ClippingMediaSource`'s timeline this needs, with
- * the start fixed at zero.
+ * A single-window, single-period timeline played from [startUs] to [endUs] of
+ * its window — `ClippingMediaSource`'s own timeline, for a clip whose bounds
+ * arrive with the source's timeline instead of with the media item.
+ * [endUs] may be [C.TIME_END_OF_SOURCE] for none.
  */
 @UnstableApi
-internal class EndClippedTimeline(timeline: Timeline, endUs: Long) : ForwardingTimeline(timeline) {
+internal class TrackBoundsTimeline(
+    timeline: Timeline,
+    private val startUs: Long,
+    endUs: Long,
+) : ForwardingTimeline(timeline) {
 
+    private val endUs: Long
     private val durationUs: Long
     private val isDynamic: Boolean
 
     init {
         val window = timeline.getWindow(/* windowIndex= */ 0, Timeline.Window())
-        val clippedEndUs = if (window.durationUs != C.TIME_UNSET) {
-            minOf(endUs, window.durationUs)
-        } else {
-            endUs
+        var resolvedEndUs = if (endUs == C.TIME_END_OF_SOURCE) window.durationUs else endUs
+        if (window.durationUs != C.TIME_UNSET && resolvedEndUs > window.durationUs) {
+            resolvedEndUs = window.durationUs
         }
-        durationUs = clippedEndUs
+        this.endUs = resolvedEndUs
+        durationUs = if (resolvedEndUs == C.TIME_UNSET) {
+            C.TIME_UNSET
+        } else {
+            (resolvedEndUs - startUs).coerceAtLeast(0L)
+        }
         isDynamic = window.isDynamic &&
-            window.durationUs != C.TIME_UNSET &&
-            clippedEndUs == window.durationUs
+            (resolvedEndUs == C.TIME_UNSET ||
+                (window.durationUs != C.TIME_UNSET && resolvedEndUs == window.durationUs))
     }
 
     override fun getWindow(
@@ -268,23 +321,34 @@ internal class EndClippedTimeline(timeline: Timeline, endUs: Long) : ForwardingT
         defaultPositionProjectionUs: Long,
     ): Window {
         timeline.getWindow(/* windowIndex= */ 0, window, /* defaultPositionProjectionUs= */ 0)
+        window.positionInFirstPeriodUs += startUs
         window.durationUs = durationUs
         window.isDynamic = isDynamic
         if (window.defaultPositionUs != C.TIME_UNSET) {
-            window.defaultPositionUs = minOf(window.defaultPositionUs, durationUs)
+            var defaultUs = maxOf(window.defaultPositionUs, startUs)
+            if (endUs != C.TIME_UNSET) defaultUs = minOf(defaultUs, endUs)
+            window.defaultPositionUs = defaultUs - startUs
         }
         return window
     }
 
     override fun getPeriod(periodIndex: Int, period: Period, setIds: Boolean): Period {
         timeline.getPeriod(/* periodIndex= */ 0, period, setIds)
-        val positionInWindowUs = period.positionInWindowUs
-        return period.set(
+        val isPlaceholder = period.isPlaceholder
+        val positionInWindowUs = period.positionInWindowUs - startUs
+        val periodDurationUs = if (durationUs == C.TIME_UNSET) {
+            C.TIME_UNSET
+        } else {
+            durationUs - positionInWindowUs
+        }
+        period.set(
             period.id,
             period.uid,
             /* windowIndex= */ 0,
-            durationUs - positionInWindowUs,
+            periodDurationUs,
             positionInWindowUs,
         )
+        period.isPlaceholder = isPlaceholder
+        return period
     }
 }

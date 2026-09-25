@@ -354,11 +354,11 @@ internal class DivineVideoPlayerInstance(
                 .setEnableDecoderFallback(true)
         // The player's own extractor records each source's track lengths as it
         // parses the container, and a clip tagged for it is clipped to where
-        // the shorter track ends before its first frame. See
-        // [CommonTrackEndMediaSource].
+        // the shorter track ends, and to where its picture begins, before its
+        // first frame. See [CommonTrackEndMediaSource].
         val extractorsFactory = TrackEndCapturingExtractorsFactory(DefaultExtractorsFactory()) {
-                uri, videoEndUs, audioEndUs ->
-            recordTrackEnds(uri.toString(), videoEndUs, audioEndUs)
+                uri, videoEndUs, audioEndUs, videoStartUs ->
+            recordTrackEnds(uri.toString(), videoEndUs, audioEndUs, videoStartUs)
         }
         val builder = ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(
@@ -720,7 +720,7 @@ internal class DivineVideoPlayerInstance(
         if (startMs != 0L) return false
         if (endMs == null) return true
         val durations = trackDurationsCache[uri] ?: return false
-        val containerEndMs = (durations.maxOrNull() ?: return false) / 1000
+        val containerEndMs = (durations.take(2).maxOrNull() ?: return false) / 1000
         return endMs >= containerEndMs
     }
 
@@ -828,12 +828,16 @@ internal class DivineVideoPlayerInstance(
         // The presented length is only known once the timeline is populated;
         // [onPlaybackStateChanged] calls back in when it is.
         val exoPlayer = ensurePlayer()
-        val loopUs = if (awaitTimeline) C.TIME_UNSET else presentedDurationUs(exoPlayer)
+        val presented = if (awaitTimeline) null else presentedWindow(exoPlayer)
+        val loopUs = presented?.durationUs ?: C.TIME_UNSET
         if (loopUs == C.TIME_UNSET || loopUs <= 0) {
             clipAudioPending = true
             return
         }
         clipAudioPending = false
+        // Where the picture's lap begins in the source: past zero when the
+        // source clipped an empty edit ahead of the first frame.
+        val clipStartUs = presented?.positionInFirstPeriodUs?.coerceAtLeast(0L) ?: 0L
 
         // A remote anonymous clip is decoded from the player's cache rather
         // than fetched again, so the decode waits until the player has the
@@ -857,7 +861,13 @@ internal class DivineVideoPlayerInstance(
         if (metadataExecutor.isShutdown) return
         runCatching {
             metadataExecutor.execute {
-                val loop = ClipAudioLoopTrack.create(uri, headers, loopUs, remoteSourceFactory)
+                val loop = ClipAudioLoopTrack.create(
+                    uri,
+                    headers,
+                    loopUs,
+                    clipStartUs,
+                    remoteSourceFactory,
+                )
                 mainHandler.post {
                     if (generation != clipAudioGeneration) {
                         loop?.release()
@@ -874,17 +884,18 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * The single clip's presented length in microseconds, or [C.TIME_UNSET].
+     * The single clip's presented window, or null before there is one: its
+     * length in microseconds, and where in the source it begins.
      *
      * Read from the timeline rather than [ExoPlayer.getDuration], which rounds
      * down to whole milliseconds. The loop track repeats in the HAL on its own
      * clock, so a loop even a fraction of a millisecond short of the picture's
      * period walks away from it by that much on every lap.
      */
-    private fun presentedDurationUs(exoPlayer: ExoPlayer): Long {
+    private fun presentedWindow(exoPlayer: ExoPlayer): Timeline.Window? {
         val timeline = exoPlayer.currentTimeline
-        if (timeline.isEmpty) return C.TIME_UNSET
-        return timeline.getWindow(exoPlayer.currentMediaItemIndex, Timeline.Window()).durationUs
+        if (timeline.isEmpty) return null
+        return timeline.getWindow(exoPlayer.currentMediaItemIndex, Timeline.Window())
     }
 
     /**
@@ -1021,7 +1032,11 @@ internal class DivineVideoPlayerInstance(
     /**
      * Keeps a playing loop on the picture; see [LoopAudioSync].
      *
-     * Runs every [CLIP_AUDIO_SYNC_INTERVAL_MS] while the loop plays. A few
+     * Runs every [CLIP_AUDIO_SYNC_INTERVAL_MS] while the loop plays, and every
+     * [CLIP_AUDIO_SYNC_FIRST_CHECK_MS] after a start until the first
+     * measurement: a start that came out wrong — an output waking from
+     * standby after a pause — is heard wrong until then, so the sooner it is
+     * put right, the closer to the first sound the correction falls. A few
      * milliseconds of measurement noise is ignored; anything wider is steered
      * out through the playback rate.
      */
@@ -1039,13 +1054,20 @@ internal class DivineVideoPlayerInstance(
                     name = "DivineVideoPlayer.AudioLoop",
                 )
             }
-            mainHandler.postDelayed(this, CLIP_AUDIO_SYNC_INTERVAL_MS)
+            mainHandler.postDelayed(
+                this,
+                if (loop.measuredSinceStart) {
+                    CLIP_AUDIO_SYNC_INTERVAL_MS
+                } else {
+                    CLIP_AUDIO_SYNC_FIRST_CHECK_MS
+                },
+            )
         }
     }
 
     private fun scheduleClipAudioSync() {
         mainHandler.removeCallbacks(clipAudioSyncRunnable)
-        mainHandler.postDelayed(clipAudioSyncRunnable, CLIP_AUDIO_SYNC_INTERVAL_MS)
+        mainHandler.postDelayed(clipAudioSyncRunnable, CLIP_AUDIO_SYNC_FIRST_CHECK_MS)
     }
 
     /** Releases the private audio path and lets ExoPlayer see audio again. */
@@ -1963,6 +1985,9 @@ internal class DivineVideoPlayerInstance(
         /** How often a playing loop track is measured against the picture. */
         private const val CLIP_AUDIO_SYNC_INTERVAL_MS = 250L
 
+        /** How often a loop is checked after a start, until it has been measured. */
+        private const val CLIP_AUDIO_SYNC_FIRST_CHECK_MS = 20L
+
         /** Every this many measurements, one goes to the log. */
         private const val CLIP_AUDIO_SYNC_LOG_EVERY = 40
 
@@ -2008,12 +2033,17 @@ internal class DivineVideoPlayerInstance(
             trackDurationsCache.clear()
         }
 
-        /** Records the track ends the player's extractor just parsed. */
-        internal fun recordTrackEnds(uri: String, videoEndUs: Long, audioEndUs: Long) {
-            trackDurationsCache[uri] = longArrayOf(videoEndUs, audioEndUs)
+        /** Records the track bounds the player's extractor just parsed. */
+        internal fun recordTrackEnds(
+            uri: String,
+            videoEndUs: Long,
+            audioEndUs: Long,
+            videoStartUs: Long = 0L,
+        ) {
+            trackDurationsCache[uri] = longArrayOf(videoEndUs, audioEndUs, videoStartUs)
         }
 
-        /** The `[videoEndUs, audioEndUs]` last recorded for [uri], if any. */
+        /** The `[videoEndUs, audioEndUs, videoStartUs]` last recorded for [uri], if any. */
         internal fun trackEndsFor(uri: String): LongArray? = trackDurationsCache[uri]
 
         /**

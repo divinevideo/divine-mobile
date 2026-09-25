@@ -144,6 +144,23 @@ class LoopAudioSyncTest {
     }
 
     @Test
+    fun `an output still filling after a start is not measured yet`() {
+        // 10 ms heard since the head was placed: the output's first reports
+        // put an in-step sound 49 ms early on an SM-S942B.
+        val sync = LoopAudioSync(loopFrames, sampleRate)
+        sync.anchor(videoPositionUs = 0L, counterFrame = 0L, nowNanos = t0)
+
+        assertNull(
+            sync.errorUs(
+                presentedFrame = frames(10_000L),
+                presentedNanos = t0 + 60_000_000L,
+                videoPositionUs = 60_000L,
+                nowNanos = t0 + 60_000_000L,
+            ),
+        )
+    }
+
+    @Test
     fun `the first measurement after a start teaches the start latency`() {
         val sync = LoopAudioSync(loopFrames, sampleRate)
         sync.anchor(videoPositionUs = 0L, counterFrame = 0L, nowNanos = t0)
@@ -156,6 +173,49 @@ class LoopAudioSyncTest {
         // Later measurements are steering, not starts.
         sync.correct(errorUs = -30_000L)
         assertEquals(65_000L, LoopAudioSync.startLatencyUs)
+    }
+
+    @Test
+    fun `a start too far off to steer teaches nothing`() {
+        // An output waking from standby after a pause: 156 ms late, measured
+        // on an SM-S942B. The next start finds it awake again, so this is not
+        // what the next start costs.
+        val sync = LoopAudioSync(loopFrames, sampleRate)
+        sync.anchor(videoPositionUs = 0L, counterFrame = 0L, nowNanos = t0)
+
+        assertEquals(LoopAudioSync.Correction.REANCHOR, sync.correct(errorUs = -156_000L))
+
+        assertEquals(50_000L, LoopAudioSync.startLatencyUs)
+    }
+
+    @Test
+    fun `what is in flight is what has been consumed and not yet heard`() {
+        val sync = LoopAudioSync(loopFrames, sampleRate)
+
+        // 45 ms consumed ahead of the speaker, read 5 ms after the timestamp.
+        val pipelineUs = sync.pipelineLatencyUs(
+            headFrame = frames(145_000L),
+            presentedFrame = frames(95_000L),
+            presentedNanos = t0,
+            nowNanos = t0 + 5_000_000L,
+        )!!
+
+        assertEquals(45_000.0, pipelineUs.toDouble(), 100.0)
+    }
+
+    @Test
+    fun `readings that do not fit together measure no pipeline`() {
+        val sync = LoopAudioSync(loopFrames, sampleRate)
+
+        // Heard further than consumed: a timestamp from before the head moved.
+        assertNull(
+            sync.pipelineLatencyUs(
+                headFrame = frames(50_000L),
+                presentedFrame = frames(95_000L),
+                presentedNanos = t0,
+                nowNanos = t0,
+            ),
+        )
     }
 
     @Test

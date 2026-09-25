@@ -13,6 +13,7 @@ import androidx.media3.datasource.DataSource
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.abs
 
 /**
  * Plays a looping clip's audio outside ExoPlayer, through a static
@@ -51,6 +52,24 @@ internal class ClipAudioLoopTrack private constructor(
     private val timestamp = AudioTimestamp()
 
     /**
+     * Whether the gap has been measured since the head was last placed. Until
+     * it has, the caller checks often: a start that came out wrong is heard
+     * wrong until the first measurement puts it right.
+     */
+    var measuredSinceStart = false
+        private set
+
+    /** The level the caller asked for; held back while [aligning]. */
+    private var targetVolume = 1f
+
+    /**
+     * Whether the loop is playing muted until it is in step: a start on an
+     * output that has gone quiet, see [play].
+     */
+    private var aligning = false
+    private var alignStartedNanos = 0L
+
+    /**
      * Starts or resumes the loop in step with the picture at [positionUs].
      *
      * The head is placed ahead of the picture by what the output takes to
@@ -58,13 +77,28 @@ internal class ClipAudioLoopTrack private constructor(
      * heard belongs to the frame on screen at that moment rather than to the
      * one `play` was called on. A static track can only be repositioned while
      * it is not playing, so the head moves first and playback starts after.
+     *
+     * That allowance is what a *running* output takes. One that has had
+     * nothing to play for [WARM_OUTPUT_NS] may be in standby, and waking it
+     * costs far more — ~200 ms against ~50 on an SM-S942B's speaker after a
+     * pause — so the sound would start late and then jump once measured. On
+     * such an output the loop starts muted and is only heard once [sync] has
+     * measured it in step: a moment more silence after a long pause instead
+     * of a skip in the sound.
      */
     fun play(positionUs: Long, volume: Float) {
         if (released) return
         runCatching {
-            track.setVolume(volume)
+            targetVolume = volume
             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                val nowNanos = System.nanoTime()
+                aligning = volume > 0f && nowNanos - lastOutputNanos > WARM_OUTPUT_NS
+                alignStartedNanos = nowNanos
+                track.setVolume(if (aligning) 0f else volume)
                 startAt(positionUs, learn = volume > 0f)
+                lastOutputNanos = nowNanos
+            } else if (!aligning) {
+                track.setVolume(volume)
             }
         }
     }
@@ -117,6 +151,9 @@ internal class ClipAudioLoopTrack private constructor(
         if (released) return null
         return runCatching {
             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) return null
+            lastOutputNanos = nowNanos
+            // Better heard a little off than not at all.
+            if (aligning && nowNanos - alignStartedNanos > ALIGN_TIMEOUT_NS) reveal()
             if (!track.getTimestamp(timestamp)) return null
             val errorUs = sync.errorUs(
                 presentedFrame = timestamp.framePosition,
@@ -126,18 +163,72 @@ internal class ClipAudioLoopTrack private constructor(
             ) ?: return null
             when (sync.correct(errorUs)) {
                 LoopAudioSync.Correction.REANCHOR -> {
+                    // The output is running now, so what is in flight on it
+                    // is what the new head waits behind — whatever the start
+                    // being replaced cost.
+                    val pipelineUs = sync.pipelineLatencyUs(
+                        headFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK,
+                        presentedFrame = timestamp.framePosition,
+                        presentedNanos = timestamp.nanoTime,
+                        nowNanos = System.nanoTime(),
+                    )
                     DivineVideoPlayerLog.info(
-                        "Loop audio ${errorUs / 1000} ms off the picture; placing it again",
+                        "Loop audio ${errorUs / 1000} ms off the picture; placing it again " +
+                            "(${pipelineUs?.div(1000) ?: "?"} ms in flight)",
                         name = "DivineVideoPlayer.AudioLoop",
                     )
-                    val elapsedUs = (System.nanoTime() - nowNanos) / 1000L
-                    track.pause()
-                    startAt(videoPositionUs + elapsedUs, learn = true)
+                    placeOnRunningOutput(videoPositionUs, nowNanos, pipelineUs, learn = true)
                 }
-                LoopAudioSync.Correction.STEER -> applyRate()
+                LoopAudioSync.Correction.STEER -> {
+                    measuredSinceStart = true
+                    if (aligning && abs(errorUs) > ALIGN_TOLERANCE_US) {
+                        // Muted, so moving it now cannot be heard; steering
+                        // it in while audible would take seconds.
+                        val pipelineUs = sync.pipelineLatencyUs(
+                            headFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK,
+                            presentedFrame = timestamp.framePosition,
+                            presentedNanos = timestamp.nanoTime,
+                            nowNanos = System.nanoTime(),
+                        )
+                        placeOnRunningOutput(videoPositionUs, nowNanos, pipelineUs, learn = false)
+                    } else {
+                        if (aligning) reveal()
+                        applyRate()
+                    }
+                }
             }
             errorUs
         }.getOrNull()
+    }
+
+    /**
+     * Places the head again on an output that is already running, allowing
+     * for [pipelineUs] — what is in flight on it — when that was measured.
+     */
+    private fun placeOnRunningOutput(
+        videoPositionUs: Long,
+        measuredNanos: Long,
+        pipelineUs: Long?,
+        learn: Boolean,
+    ) {
+        val elapsedUs = (System.nanoTime() - measuredNanos) / 1000L
+        track.pause()
+        startAt(
+            videoPositionUs + elapsedUs,
+            learn = learn,
+            latencyUs = pipelineUs ?: LoopAudioSync.startLatencyUs,
+        )
+    }
+
+    /** Ends a muted start: the loop is in step, or has waited long enough. */
+    private fun reveal() {
+        aligning = false
+        track.setVolume(targetVolume)
+        DivineVideoPlayerLog.debug(
+            "Loop audio heard after " +
+                "${(System.nanoTime() - alignStartedNanos) / 1_000_000} ms on a quiet output",
+            name = "DivineVideoPlayer.AudioLoop",
+        )
     }
 
     private fun startAt(
@@ -145,6 +236,7 @@ internal class ClipAudioLoopTrack private constructor(
         learn: Boolean,
         latencyUs: Long = LoopAudioSync.startLatencyUs,
     ) {
+        measuredSinceStart = false
         val counterFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK
         val bufferFrame = sync.anchor(
             positionUs,
@@ -165,11 +257,16 @@ internal class ClipAudioLoopTrack private constructor(
 
     fun pause() {
         if (released) return
-        runCatching { track.pause() }
+        runCatching {
+            if (track.playState == AudioTrack.PLAYSTATE_PLAYING) lastOutputNanos = System.nanoTime()
+            track.pause()
+        }
     }
 
     fun setVolume(volume: Float) {
         if (released) return
+        targetVolume = volume
+        if (aligning) return
         runCatching { track.setVolume(volume) }
     }
 
@@ -188,6 +285,27 @@ internal class ClipAudioLoopTrack private constructor(
         /** The consumed-frame counter is an unsigned 32-bit value in an `int`. */
         private const val UNSIGNED_INT_MASK = 0xFFFF_FFFFL
 
+        /**
+         * When a loop last had the output running, shared by every loop in
+         * the process: the one a swipe starts finds the output the previous
+         * one kept awake.
+         */
+        @Volatile
+        private var lastOutputNanos = Long.MIN_VALUE / 2
+
+        /**
+         * How long an output may have had nothing to play and still be taken
+         * as running. Android puts an idle output into standby after about
+         * three seconds; this stays well inside that.
+         */
+        private const val WARM_OUTPUT_NS = 1_000_000_000L
+
+        /** A muted start is heard once it measures within this of the picture. */
+        private const val ALIGN_TOLERANCE_US = 10_000L
+
+        /** A muted start is heard after this long whatever it measured. */
+        private const val ALIGN_TIMEOUT_NS = 1_000_000_000L
+
         /** A feed clip is seconds long; this only bounds a pathological file. */
         private const val MAX_PCM_BYTES = 16 * 1024 * 1024
 
@@ -198,7 +316,9 @@ internal class ClipAudioLoopTrack private constructor(
          * the seam, and wraps it in a looping [AudioTrack].
          *
          * [loopUs] must be the duration the player presents, not the media
-         * duration of any track.
+         * duration of any track, and [clipStartUs] where in the source the
+         * player's lap begins — past zero when it skips an empty edit ahead
+         * of the first frame, whose sound the loop then skips too.
          *
          * A remote [uri] is read through [remoteSourceFactory] when one is
          * given — the player's own cache-backed factory, so the bytes the
@@ -215,6 +335,7 @@ internal class ClipAudioLoopTrack private constructor(
             uri: String,
             headers: Map<String, String>,
             loopUs: Long,
+            clipStartUs: Long = 0L,
             remoteSourceFactory: DataSource.Factory? = null,
         ): ClipAudioLoopTrack? {
             val extractor = MediaExtractor()
@@ -326,7 +447,7 @@ internal class ClipAudioLoopTrack private constructor(
                 ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN)
                     .asShortBuffer().get(samples)
 
-                val startUs = firstPresentationUs ?: 0L
+                val startUs = (firstPresentationUs ?: 0L) - clipStartUs
                 val prepared = LoopPcm.prepare(
                     samples = samples,
                     channels = channels,
@@ -337,6 +458,7 @@ internal class ClipAudioLoopTrack private constructor(
                 val loopFrames = prepared.loopFrames
                 val fadeFrames = prepared.fadeFrames
                 val fromPast = prepared.blendedFromPastTheLoop
+                val lapLagMs = prepared.lapLagFrames * 1000L / sampleRate
 
                 val bytes = ByteArray(loopFrames * channels * 2)
                 ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -388,7 +510,12 @@ internal class ClipAudioLoopTrack private constructor(
                     "Looping clip audio outside ExoPlayer: ${loopFrames} frames " +
                         "at ${sampleRate}Hz for ${loopUs} us presented, " +
                         "${samples.size / channels} decoded from ${startUs} us, " +
-                        "${fadeFrames} frame ${if (fromPast) "crossfade" else "ramp"}",
+                        "${fadeFrames} frame " +
+                        when {
+                            fromPast -> "crossfade with what follows the loop point"
+                            lapLagMs > 0 -> "crossfade with the lap from $lapLagMs ms back"
+                            else -> "ramp"
+                        },
                     name = "DivineVideoPlayer.AudioLoop",
                 )
                 return ClipAudioLoopTrack(track, sampleRate, loopFrames)

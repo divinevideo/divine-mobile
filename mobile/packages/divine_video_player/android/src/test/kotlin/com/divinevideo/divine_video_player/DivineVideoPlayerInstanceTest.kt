@@ -1007,10 +1007,17 @@ class DivineVideoPlayerInstanceTest {
      * Has the player present a single clip of [durationMs], through both the
      * rounded [ExoPlayer.getDuration] and the timeline the loop is cut from.
      */
-    private fun presentDuration(durationMs: Long, durationUs: Long = durationMs * 1000L) {
+    private fun presentDuration(
+        durationMs: Long,
+        durationUs: Long = durationMs * 1000L,
+        startUs: Long = 0L,
+    ) {
         every { mockPlayer.duration } returns durationMs
         every { mockPlayer.currentTimeline } returns SinglePeriodTimeline(
-            /* durationUs = */ durationUs,
+            /* periodDurationUs = */ startUs + durationUs,
+            /* windowDurationUs = */ durationUs,
+            /* windowPositionInPeriodUs = */ startUs,
+            /* windowDefaultStartPositionUs = */ 0L,
             /* isSeekable = */ true,
             /* isDynamic = */ false,
             /* useLiveConfiguration = */ false,
@@ -1023,7 +1030,7 @@ class DivineVideoPlayerInstanceTest {
     fun `a clip whose audio will not decode keeps the player's audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             presentDuration(3_000L)
             val disabled = captureAudioTrackDisables()
 
@@ -1043,7 +1050,7 @@ class DivineVideoPlayerInstanceTest {
     fun `a fresh clip list waits for its own timeline before cutting the audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             // A reused player still holds the outgoing item while the new clips
             // are applied, so its duration describes that one.
             presentDuration(3_000L)
@@ -1056,11 +1063,11 @@ class DivineVideoPlayerInstanceTest {
             // Cutting to that duration here would loop the incoming video's
             // sound at the previous video's length, drifting a little further
             // from the picture every lap.
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) }
 
             listener.onPlaybackStateChanged(Player.STATE_READY)
 
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
@@ -1070,7 +1077,7 @@ class DivineVideoPlayerInstanceTest {
     fun `the loop decode waits until the player has the whole clip buffered`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             presentDuration(3_000L)
             every { mockPlayer.bufferedPosition } returns 1_200L
             captureAudioTrackDisables()
@@ -1082,24 +1089,24 @@ class DivineVideoPlayerInstanceTest {
             // The decode reads through the player's cache, and the range the
             // player is still downloading is locked there: a reader would sit
             // on it, on the one thread every player's metadata reads share.
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) }
 
             // The player pauses loading every megabyte to ask whether to go
             // on; that boundary is not the end of the clip.
             listener.onIsLoadingChanged(false)
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) }
 
             every { mockPlayer.bufferedPosition } returns 3_000L
             listener.onIsLoadingChanged(false)
 
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000_000L, any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000_000L, any(), any()) }
 
             // A later load — the next lap's period, a seek — is not a
             // reason to decode again.
             listener.onIsLoadingChanged(true)
             listener.onIsLoadingChanged(false)
 
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
@@ -1109,7 +1116,7 @@ class DivineVideoPlayerInstanceTest {
     fun `an authenticated remote clip does not wait on buffering to decode loop audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             presentDuration(3_000L)
             every { mockPlayer.bufferedPosition } returns 1_200L
             captureAudioTrackDisables()
@@ -1126,7 +1133,7 @@ class DivineVideoPlayerInstanceTest {
 
             // Authenticated bytes bypass the cache, so waiting for the player
             // to finish would only delay a second download.
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000_000L, any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000_000L, any(), any()) }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
@@ -1136,7 +1143,7 @@ class DivineVideoPlayerInstanceTest {
     fun `a local clip's loop decode does not wait on buffering`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             presentDuration(3_000L)
             every { mockPlayer.bufferedPosition } returns 0L
             captureAudioTrackDisables()
@@ -1146,7 +1153,7 @@ class DivineVideoPlayerInstanceTest {
             instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
 
             // There is no download to wait for; the file is on the device.
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000_000L, any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_000_000L, any(), any()) }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
@@ -1158,7 +1165,7 @@ class DivineVideoPlayerInstanceTest {
         try {
             val factories = mutableListOf<DataSource.Factory?>()
             every {
-                ClipAudioLoopTrack.create(any(), any(), any(), captureNullable(factories))
+                ClipAudioLoopTrack.create(any(), any(), any(), any(), captureNullable(factories))
             } returns null
             presentDuration(3_000L)
             every { mockPlayer.bufferedPosition } returns 3_000L
@@ -1182,7 +1189,7 @@ class DivineVideoPlayerInstanceTest {
         mockkObject(ClipAudioLoopTrack.Companion)
         mockkObject(VideoCache)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             val headerFns = mutableListOf<(Uri) -> Map<String, String>>()
             every { VideoCache.dataSourceFactory(any(), any()) } answers {
                 headerFns += secondArg<(Uri) -> Map<String, String>>()
@@ -1214,7 +1221,7 @@ class DivineVideoPlayerInstanceTest {
     fun `an off-speed player keeps its own audio`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             presentDuration(3_000L)
             val disabled = captureAudioTrackDisables()
 
@@ -1227,7 +1234,7 @@ class DivineVideoPlayerInstanceTest {
 
             // A static track plays the recording at its own rate, so it would
             // drift away from a picture running at twice the speed.
-            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any()) }
+            verify(exactly = 0) { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) }
             assertEquals(false, disabled.contains(true))
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
@@ -1239,7 +1246,7 @@ class DivineVideoPlayerInstanceTest {
      * audio path, and hands back the player listener the instance registered.
      */
     private fun installLoopTrack(loop: ClipAudioLoopTrack): Player.Listener {
-        every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
+        every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns loop
         presentDuration(3_000L)
         captureAudioTrackDisables()
         val listener = capturePlayerListener()
@@ -1326,7 +1333,7 @@ class DivineVideoPlayerInstanceTest {
 
     /** Brings a playing single clip up to the point its loop lands mid-lap. */
     private fun landLoopMidLap(loop: ClipAudioLoopTrack): Pair<List<Boolean>, Player.Listener> {
-        every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
+        every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns loop
         presentDuration(3_000L)
         every { mockPlayer.isPlaying } returns true
         every { mockPlayer.currentPosition } returns 40L
@@ -1431,7 +1438,7 @@ class DivineVideoPlayerInstanceTest {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
             val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns loop
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns loop
             presentDuration(3_000L)
             every { mockPlayer.isPlaying } returns false
             every { mockPlayer.currentPosition } returns 0L
@@ -1640,7 +1647,7 @@ class DivineVideoPlayerInstanceTest {
     fun `the loop audio is cut to the presented length to the microsecond`() {
         mockkObject(ClipAudioLoopTrack.Companion)
         try {
-            every { ClipAudioLoopTrack.create(any(), any(), any(), any()) } returns null
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
             // The timeline carries the clip end the extractor read; the
             // player's own duration rounds it down to whole milliseconds.
             presentDuration(durationMs = 3_123L, durationUs = 3_123_219L)
@@ -1652,7 +1659,30 @@ class DivineVideoPlayerInstanceTest {
 
             // 0.2 ms short would put the sound another 0.2 ms behind the
             // picture on every lap: 20 ms after a hundred.
-            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_123_219L, any()) }
+            verify(exactly = 1) { ClipAudioLoopTrack.create(any(), any(), 3_123_219L, any(), any()) }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `the loop audio starts where the picture's lap does`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns null
+            // The source skipped a 23 ms empty edit ahead of the first frame,
+            // so each lap of the picture begins 23 ms into the file.
+            presentDuration(durationMs = 3_101L, durationUs = 3_101_000L, startUs = 23_000L)
+            captureAudioTrackDisables()
+            capturePlayerListener()
+
+            instance.onMethodCall(setClipsCall(), mockk(relaxed = true))
+            instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+            // Cut from zero, the sound would run 23 ms behind the picture.
+            verify(exactly = 1) {
+                ClipAudioLoopTrack.create(any(), any(), 3_101_000L, 23_000L, any())
+            }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }
