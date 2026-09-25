@@ -2261,7 +2261,7 @@ class FunnelcakeApiClient {
     } on FunnelcakeException {
       rethrow;
     } catch (e) {
-      throw FunnelcakeException('Failed to fetch user sounds: $e');
+      throw FunnelcakeException('Failed to fetch user sounds: $e', cause: e);
     }
   }
 

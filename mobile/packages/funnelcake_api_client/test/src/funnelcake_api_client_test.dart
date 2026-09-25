@@ -2,6 +2,7 @@
 // ABOUTME: Tests API calls, error handling, and edge cases.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
@@ -4486,6 +4487,24 @@ void main() {
               (e) => e.message,
               'message',
               contains('Failed to fetch user sounds'),
+            ),
+          ),
+        );
+      });
+
+      test('keeps the transport failure as the exception cause', () async {
+        const failure = SocketException('Failed host lookup');
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => throw failure);
+
+        expect(
+          () => client.getUserSounds(pubkey: testPubkey),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.cause,
+              'cause',
+              same(failure),
             ),
           ),
         );
