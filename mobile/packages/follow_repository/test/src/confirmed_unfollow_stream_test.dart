@@ -150,6 +150,90 @@ void main() {
       expect(repository.isFollowing(creatorPubkey), isTrue);
       expect(removals, isEmpty);
     });
+
+    test('emits when an unfollow is queued while offline', () async {
+      final queuedUnfollows = <String>[];
+      final offlineRepository = FollowRepository(
+        nostrClient: nostrClient,
+        isCacheInitialized: () => false,
+        getCachedEventsByKind: (_) => const <Event>[],
+        cacheUserEvent: (_) {},
+        indexerRelayUrls: const [],
+        queryContactList:
+            ({
+              required eventStream,
+              required pubkey,
+              fallbackTimeoutSeconds = 10,
+            }) async => null,
+        isOnline: () => false,
+        queueOfflineAction: ({required isFollow, required pubkey}) async {
+          if (!isFollow) queuedUnfollows.add(pubkey);
+        },
+      );
+      addTearDown(offlineRepository.dispose);
+
+      await offlineRepository.initialize();
+      final removals = <String>[];
+      final subscription = offlineRepository.confirmedUnfollowStream.listen(
+        removals.add,
+      );
+      addTearDown(subscription.cancel);
+
+      await offlineRepository.unfollow(creatorPubkey);
+
+      expect(queuedUnfollows, [creatorPubkey]);
+      expect(removals, [creatorPubkey]);
+    });
+  });
+
+  group('executeUnfollowAction', () {
+    test('emits once a queued unfollow is published', () async {
+      final published = _MockEvent();
+      when(
+        () => nostrClient.sendContactList(
+          any(),
+          any(),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => published);
+
+      await repository.initialize();
+      final removals = <String>[];
+      final subscription = repository.confirmedUnfollowStream.listen(
+        removals.add,
+      );
+      addTearDown(subscription.cancel);
+
+      await repository.executeUnfollowAction(creatorPubkey);
+
+      expect(removals, [creatorPubkey]);
+    });
+
+    test('does not emit when the queued unfollow fails to publish', () async {
+      when(
+        () => nostrClient.sendContactList(
+          any(),
+          any(),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      await repository.initialize();
+      final removals = <String>[];
+      final subscription = repository.confirmedUnfollowStream.listen(
+        removals.add,
+      );
+      addTearDown(subscription.cancel);
+
+      await expectLater(
+        repository.executeUnfollowAction(creatorPubkey),
+        throwsException,
+      );
+
+      expect(removals, isEmpty);
+    });
   });
 
   group('isFollowingConfirmedByRelay', () {
