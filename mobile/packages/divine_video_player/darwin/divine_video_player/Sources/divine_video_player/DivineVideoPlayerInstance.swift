@@ -503,19 +503,30 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
     }
 
+    /// Whether [uri] may skip the composition and be played from the asset.
+    ///
+    /// A single unchanged clip has nothing to compose, and `AVPlayerLooper`
+    /// only closes the seam over the asset itself — over a composition of the
+    /// same file it does not. Remote URLs stay on the composition path, which
+    /// owns the buffering and header handling for them: played straight from a
+    /// remote asset, every copy the looper makes of the item stalled picture
+    /// and sound at each restart on an iPad Air (M4), though it looped cleanly
+    /// in the simulator.
+    private static func takesDirectItemPath(_ uri: String) -> Bool {
+        if URL(string: uri)?.pathExtension.lowercased() == "m3u8" { return true }
+        return !uri.hasPrefix("http")
+    }
+
     /// The single clip of [clipsRaw] the direct-item path can represent
     /// exactly, otherwise nil.
     ///
-    /// Every source qualifies, for one of two reasons. An HLS `AVURLAsset`
-    /// exposes **no** tracks — `loadTracks` returns an empty array — so a
-    /// composition built from one always ends in
-    /// [CompositionError.noPlayableVideoTracks] and can never play. Any other
-    /// single unchanged clip — a local file or a remote one — has nothing to
-    /// compose, and `AVPlayerLooper` closes the seam over the asset itself and
-    /// does not over a composition of the same file. Remote progressive clips
-    /// used to stay on the composition, which kept the seam on every video the
-    /// feed opened from the network rather than from its cache; the asset
-    /// carries the same header options on either path.
+    /// Two sources qualify, for different reasons. An HLS `AVURLAsset` exposes
+    /// **no** tracks — `loadTracks` returns an empty array — so a composition
+    /// built from one always ends in
+    /// [CompositionError.noPlayableVideoTracks] and can never play. A local
+    /// file qualifies because there is nothing to compose: `AVPlayerLooper`
+    /// closes the seam over the asset itself and does not over a composition
+    /// of the same file.
     ///
     /// Rotation is decided later, against the loaded asset, in
     /// [directItemSuitsRotation] — it cannot be read from the URL.
@@ -531,7 +542,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         in clipsRaw: [[String: Any]]
     ) -> [String: Any]? {
         guard clipsRaw.count == 1, let clip = clipsRaw.first,
-            clip["uri"] is String,
+            let uri = clip["uri"] as? String,
+            Self.takesDirectItemPath(uri),
             (clip["startMs"] as? NSNumber)?.int64Value ?? 0 == 0,
             (clip["volume"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0,
             (clip["playbackSpeed"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0
