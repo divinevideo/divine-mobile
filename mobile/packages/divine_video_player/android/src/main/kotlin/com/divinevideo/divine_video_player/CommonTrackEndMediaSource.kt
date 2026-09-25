@@ -65,10 +65,23 @@ internal fun commonTrackEndUs(
     return commonEndUs.takeIf { trimUs <= limitUs }
 }
 
-/** Longest tail treated as an encoder/muxer track-end mismatch. */
+/**
+ * Longest tail treated as an encoder/muxer track-end mismatch.
+ *
+ * Mirrored independently by `maxCommonTrackEndTrimMs` in the Apple
+ * implementation (`DivineVideoPlayerInstance.swift`) — there is no shared
+ * constant between the two platforms, so a retune here needs the same
+ * change there. `loop_seam_trim_contract_test.dart` asserts the two stay
+ * equal.
+ */
 internal const val MAX_COMMON_TRACK_END_TRIM_US = 500_000L
 
-/** Largest share of a clip the track-end clamp may take. */
+/**
+ * Largest share of a clip the track-end clamp may take.
+ *
+ * Mirrored independently by `maxCommonTrackEndTrimRatio` in the Apple
+ * implementation; see [MAX_COMMON_TRACK_END_TRIM_US].
+ */
 internal const val MAX_COMMON_TRACK_END_TRIM_RATIO = 0.10
 
 /**
@@ -228,7 +241,9 @@ internal class CommonTrackEndMediaSource(
     }
 
     override fun releasePeriod(mediaPeriod: MediaPeriod) {
-        mediaPeriods.remove(mediaPeriod)
+        check(mediaPeriods.remove(mediaPeriod)) {
+            "releasePeriod called for a period this source did not create: $mediaPeriod"
+        }
         mediaSource.releasePeriod((mediaPeriod as ClippingMediaPeriod).mediaPeriod)
     }
 
