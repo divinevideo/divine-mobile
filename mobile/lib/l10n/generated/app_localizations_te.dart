@@ -2004,6 +2004,11 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'మొత్తం లూప్‌లు: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'కాదు Divine';
 
   @override

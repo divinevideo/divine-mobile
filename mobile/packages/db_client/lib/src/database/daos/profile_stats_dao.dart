@@ -70,6 +70,13 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
     final existing = await (select(
       profileStats,
     )..where((t) => t.pubkey.equals(pubkey))).getSingleOrNull();
+    final existingTotalViews = existing?.totalViews;
+    // Funnelcake collapses some ClickHouse failures into a successful zero
+    // engagement response. Preserve a known positive total in that case; a
+    // real new account can still cache zero when no positive value exists.
+    final totalViewsToStore = totalViews == 0 && (existingTotalViews ?? 0) > 0
+        ? existingTotalViews
+        : totalViews ?? existingTotalViews;
     final countsUpdatedAt = followerCount != null || followingCount != null
         ? DateTime.now()
         : existing?.followerCountsUpdatedAt;
@@ -79,7 +86,7 @@ class ProfileStatsDao extends DatabaseAccessor<AppDatabase>
       videoCount: Value(videoCount ?? existing?.videoCount),
       followerCount: Value(followerCount ?? existing?.followerCount),
       followingCount: Value(followingCount ?? existing?.followingCount),
-      totalViews: Value(totalViews ?? existing?.totalViews),
+      totalViews: Value(totalViewsToStore),
       totalLikes: Value(totalLikes ?? existing?.totalLikes),
       cachedAt: DateTime.now(),
       followerCountsUpdatedAt: Value(countsUpdatedAt),

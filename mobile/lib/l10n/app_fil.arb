@@ -503,6 +503,7 @@
     "videoEngagementRepostersEmpty": "Wala pang nag-repost",
     "videoEngagementLoadFailed": "Hindi ma-load ang listahan",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loops}}",
+    "videoFeedTotalLoopsLine": "Kabuuang loops: {compactCount}",
     "metadataBadgeNotDivine": "Hindi Divine",
     "metadataBadgeHumanMade": "Gawa ng Tao",
     "metadataSoundsLabel": "Mga Tunog",

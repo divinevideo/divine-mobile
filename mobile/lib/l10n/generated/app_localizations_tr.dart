@@ -1896,6 +1896,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Toplam döngü: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Divine Değil';
 
   @override

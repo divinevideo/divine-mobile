@@ -1285,6 +1285,14 @@
     "description": "Snackbar shown when posting a comment from the inline comment field fails (e.g. relay unreachable)."
   },
   "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loops}}",
+  "videoFeedTotalLoopsLine": "Total loops: {compactCount}",
+  "@videoFeedTotalLoopsLine": {
+    "placeholders": {
+      "compactCount": {
+        "type": "String"
+      }
+    }
+  },
   "@videoFeedLoopCountLine": {
     "placeholders": {
       "compactCount": {

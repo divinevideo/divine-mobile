@@ -2851,6 +2851,7 @@
     "shareMenuDeleteFailedNotInitialized": "Usuwanie nie jest jeszcze gotowe. Spróbuj ponownie za chwilę.",
     "shareMenuDeleteFailedNotOwner": "Możesz usuwać tylko własne filmy.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{pętla} few{pętle} many{pętli} other{pętli}}",
+    "videoFeedTotalLoopsLine": "Łączna liczba pętli: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Przekaźnik nie przyjął tego żądania usunięcia. Spróbuj ponownie za chwilę.",
     "shareMenuDeleteFailedRelayNoResponse": "Nie udało się połączyć z przekaźnikiem. Sprawdź połączenie i spróbuj ponownie.",
     "shareMenuDeletePartiallyConfirmed": "Usunięto. Nie wszystkie przekaźniki potwierdziły, więc może się jeszcze pojawiać w innych aplikacjach.",

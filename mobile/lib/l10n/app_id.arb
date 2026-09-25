@@ -2851,6 +2851,7 @@
     "shareMenuDeleteFailedNotInitialized": "Penghapusan belum siap. Coba lagi sebentar lagi.",
     "shareMenuDeleteFailedNotOwner": "Kamu cuma bisa menghapus video milikmu sendiri.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loop}}",
+    "videoFeedTotalLoopsLine": "Total loop: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Relay tidak menerima permintaan hapus ini. Coba lagi sebentar lagi.",
     "shareMenuDeleteFailedRelayNoResponse": "Relay tidak bisa dihubungi. Periksa koneksimu dan coba lagi.",
     "shareMenuDeletePartiallyConfirmed": "Terhapus. Tidak semua relay mengonfirmasi, jadi ini mungkin masih muncul di aplikasi lain.",

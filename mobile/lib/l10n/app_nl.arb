@@ -2851,6 +2851,7 @@
     "shareMenuDeleteFailedNotInitialized": "Verwijderen is nog niet klaar. Probeer het zo meteen opnieuw.",
     "shareMenuDeleteFailedNotOwner": "Je kunt alleen je eigen video's verwijderen.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loops}}",
+    "videoFeedTotalLoopsLine": "Totaal aantal loops: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "De relay accepteerde dit verwijderverzoek niet. Probeer het zo nog eens.",
     "shareMenuDeleteFailedRelayNoResponse": "De relay was niet bereikbaar. Controleer je verbinding en probeer het opnieuw.",
     "shareMenuDeletePartiallyConfirmed": "Verwijderd. Niet elke relay heeft bevestigd, dus hij kan nog in andere apps opduiken.",

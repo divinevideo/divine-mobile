@@ -2851,6 +2851,7 @@
     "shareMenuDeleteFailedNotInitialized": "Borttagningen är inte redo än. Försök igen om en stund.",
     "shareMenuDeleteFailedNotOwner": "Du kan bara ta bort dina egna videor.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loopar}}",
+    "videoFeedTotalLoopsLine": "Totalt antal loopar: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Relät accepterade inte den här raderingsbegäran. Försök igen om en stund.",
     "shareMenuDeleteFailedRelayNoResponse": "Kunde inte nå relät. Kontrollera anslutningen och försök igen.",
     "shareMenuDeletePartiallyConfirmed": "Raderad. Alla reläer bekräftade inte, så den kan fortfarande dyka upp i andra appar.",

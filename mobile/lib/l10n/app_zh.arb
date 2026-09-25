@@ -942,6 +942,7 @@
     "description": "Snackbar shown when posting a comment from the inline comment field fails (e.g. relay unreachable)."
   },
   "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{次循环} other{次循环}}",
+  "videoFeedTotalLoopsLine": "总循环数: {compactCount}",
   "@videoFeedLoopCountLine": {
     "placeholders": {
       "compactCount": {

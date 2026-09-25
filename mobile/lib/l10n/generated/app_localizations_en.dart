@@ -1964,6 +1964,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return 'Total loops: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => 'Not Divine';
 
   @override

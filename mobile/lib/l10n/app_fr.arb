@@ -2851,6 +2851,7 @@
     "shareMenuDeleteFailedNotInitialized": "La suppression n'est pas prête. Réessaie dans un instant.",
     "shareMenuDeleteFailedNotOwner": "Tu peux supprimer uniquement tes propres vidéos.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{boucle} other{boucles}}",
+    "videoFeedTotalLoopsLine": "Total des boucles : {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "Le relais n'a pas accepté cette demande de suppression. Réessaie dans un instant.",
     "shareMenuDeleteFailedRelayNoResponse": "Impossible de joindre le relais. Vérifie ta connexion et réessaie.",
     "shareMenuDeletePartiallyConfirmed": "Supprimée. Tous les relais n'ont pas confirmé, elle peut donc encore apparaître dans d'autres apps.",

@@ -88,6 +88,18 @@ void main() {
         expect(count, equals(1));
       });
 
+      test('does not replace a known total with an ambiguous zero', () async {
+        await dao.upsertStats(pubkey: testPubkey, totalViews: 3);
+
+        // Funnelcake can return zero engagement when its summary source is
+        // unavailable. Keep the last known total instead of caching that
+        // ambiguous zero as the new value.
+        await dao.upsertStats(pubkey: testPubkey, totalViews: 0);
+
+        final result = await appDbClient.getProfileStatRow(testPubkey);
+        expect(result!.totalViews, equals(3));
+      });
+
       test('handles null optional fields', () async {
         await dao.upsertStats(pubkey: testPubkey);
 

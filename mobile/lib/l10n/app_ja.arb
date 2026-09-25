@@ -2844,6 +2844,7 @@
     "shareMenuDeleteFailedNotInitialized": "削除の準備がまだだよ。少し待ってからもう一度試してね。",
     "shareMenuDeleteFailedNotOwner": "自分の動画だけ削除できるよ。",
     "videoFeedLoopCountLine": "{compactCount}{count, plural, other{ループ}}",
+    "videoFeedTotalLoopsLine": "ループ合計: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "リレーがこの削除リクエストを受け付けませんでした。少し待ってからもう一度お試しください。",
     "shareMenuDeleteFailedRelayNoResponse": "リレーに接続できませんでした。接続を確認してもう一度お試しください。",
     "shareMenuDeletePartiallyConfirmed": "削除しました。すべてのリレーが確認したわけではないので、他のアプリではまだ表示されることがあります。",

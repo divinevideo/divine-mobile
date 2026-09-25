@@ -1821,6 +1821,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String videoFeedTotalLoopsLine(String compactCount) {
+    return '总循环数: $compactCount';
+  }
+
+  @override
   String get metadataBadgeNotDivine => '非 Divine';
 
   @override

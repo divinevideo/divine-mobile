@@ -2390,6 +2390,7 @@
     "shareMenuDeleteFailedNotInitialized": "삭제 준비가 아직 안 됐어요. 잠시 뒤에 다시 시도해요.",
     "shareMenuDeleteFailedNotOwner": "내가 올린 영상만 삭제할 수 있어요.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, other{루프}}",
+    "videoFeedTotalLoopsLine": "총 루프: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "릴레이가 이 삭제 요청을 받아들이지 않았어요. 잠시 후 다시 시도해 주세요.",
     "shareMenuDeleteFailedRelayNoResponse": "릴레이에 연결하지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.",
     "shareMenuDeletePartiallyConfirmed": "삭제했어요. 모든 릴레이가 확인한 건 아니라서 다른 앱에는 아직 보일 수 있어요.",

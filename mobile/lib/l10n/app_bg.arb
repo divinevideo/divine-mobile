@@ -693,6 +693,7 @@
         "description": "Screen-reader label for the tappable description row on the video overlay. Action-oriented: describes what tapping does (opens the metadata sheet), not the description text itself — that's already read aloud by the underlying Text widget."
     },
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{луп} other{лупа}}",
+    "videoFeedTotalLoopsLine": "Общо лупове: {compactCount}",
     "@videoFeedLoopCountLine": {
         "placeholders": {
             "compactCount": {

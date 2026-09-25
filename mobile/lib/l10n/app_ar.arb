@@ -2844,6 +2844,7 @@
     "shareMenuDeleteFailedNotInitialized": "الحذف غير جاهز بعد. حاول مرة أخرى بعد لحظة.",
     "shareMenuDeleteFailedNotOwner": "يمكنك حذف مقاطع الفيديو الخاصة بك فقط.",
     "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{تكرار} other{تكرارات}}",
+    "videoFeedTotalLoopsLine": "إجمالي التكرارات: {compactCount}",
     "shareMenuDeleteFailedRelayRejected": "لم يقبل الريلاي طلب الحذف هذا. حاول مرة أخرى بعد قليل.",
     "shareMenuDeleteFailedRelayNoResponse": "تعذّر الوصول إلى الريلاي. تحقق من اتصالك وحاول مرة أخرى.",
     "shareMenuDeletePartiallyConfirmed": "تم الحذف. لم تؤكّد كل المرحّلات، لذا قد يظل ظاهرًا في تطبيقات أخرى.",
