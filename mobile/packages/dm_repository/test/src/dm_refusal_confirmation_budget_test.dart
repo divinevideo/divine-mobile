@@ -696,6 +696,46 @@ void main() {
       });
     });
 
+    test('a queued confirmation announces no reconnect resume it replaces', () {
+      fakeAsync((async) {
+        unawaited(LogCaptureService().clearAllLogs());
+        async.flushMicrotasks();
+        stubAnsweredHistory();
+        final activeRead = Completer<QueryResult>();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) {
+          reads++;
+          return reads == 2 ? activeRead.future : Future.value(refusal());
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        activeRead.complete(refusal());
+        async.flushMicrotasks();
+
+        // Only the first deferral arms a resume. The active drain's deferral
+        // hands over to the queued pass, which starts at once.
+        final resumes = LogCaptureService()
+            .getRecentLogs()
+            .where((e) => e.message.contains('will resume when a relay'))
+            .toList();
+        expect(resumes, hasLength(1));
+      });
+    });
+
     test('an account switch drops a confirmation queued for the old one', () {
       fakeAsync((async) {
         stubAnsweredHistory();

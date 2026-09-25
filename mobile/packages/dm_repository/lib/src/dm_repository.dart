@@ -2414,14 +2414,18 @@ class DmRepository {
     // other deferrals resume immediately on each reconnect as before.
     if (_armedNip04Refusals.isNotEmpty &&
         (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
-      if (!_confirmationWindowRelayEdgeUsed) {
-        _listenForDrainRelayReconnect(pubkey, generation);
-      } else {
-        Log.info(
-          'DM history drain for ${pubkeyForLogs(pubkey)} keeps its delayed '
-          'retry to confirm a relay refusal; further reconnects wait for it',
-          category: LogCategory.system,
-        );
+      // A queued confirmation starts as this drain ends and cancels any
+      // listener armed here, so only a kept timer needs one.
+      if (_drainRetryTimer != null) {
+        if (!_confirmationWindowRelayEdgeUsed) {
+          _listenForDrainRelayReconnect(pubkey, generation);
+        } else {
+          Log.info(
+            'DM history drain for ${pubkeyForLogs(pubkey)} keeps its delayed '
+            'retry to confirm a relay refusal; further reconnects wait for it',
+            category: LogCategory.system,
+          );
+        }
       }
       return;
     }
