@@ -280,15 +280,19 @@ class StartupPerformanceService {
     _exportCompletedSamples();
   }
 
-  /// Mark when video system is ready
+  /// Mark when the first fullscreen-feed video rendered a frame.
+  ///
+  /// Called for every rendered first frame; only the first call after
+  /// [initialize] is recorded, and it completes the `total` phase.
   void markVideoReady() {
     if (_videoReadyTime != null) return;
+    if (_appStartTime == null) return;
 
     _videoReadyTime = DateTime.now();
     final elapsed = _videoReadyTime!.difference(_appStartTime!).inMilliseconds;
 
     Log.info(
-      '🎬 Video system ready in ${elapsed}ms',
+      '🎬 First video frame rendered in ${elapsed}ms',
       name: 'StartupPerformance',
       category: LogCategory.system,
     );

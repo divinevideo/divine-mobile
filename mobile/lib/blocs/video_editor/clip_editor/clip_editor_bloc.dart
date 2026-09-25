@@ -161,13 +161,13 @@ typedef SaveClipToLibraryFn = Future<bool> Function({
 ///
 /// Owns a local copy of the clip list so that all mutations (add, remove,
 /// trim, split) happen in-memory without touching the Riverpod
-/// [ClipManagerProvider]. The parent screen syncs the final clip list
-/// back to the provider when the editor closes.
+/// `clipManagerProvider`. The widget layer mirrors the clip list back to
+/// the provider from editor history.
 ///
 /// **Transition seam**: This BLoC receives its initial clip list from the
-/// Riverpod [ClipManagerProvider] via [ClipEditorInitialized] dispatched in
+/// Riverpod `clipManagerProvider` via [ClipEditorInitialized] dispatched in
 /// the widget layer. This is an intentional migration boundary — the target
-/// architecture replaces the Riverpod provider with a [VideoEditorRepository]
+/// architecture replaces the Riverpod provider with a `VideoEditorRepository`
 /// injected directly into this BLoC.
 class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   ClipEditorBloc({

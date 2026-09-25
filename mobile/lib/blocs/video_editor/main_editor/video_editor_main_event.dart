@@ -8,7 +8,7 @@ sealed class VideoEditorMainEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Triggered when editor capabilities change (undo/redo availability, sub-editor state).
+/// Triggered when editor capabilities change (undo/redo availability).
 ///
 /// This event carries the current state from the editor widget, allowing the
 /// BLoC to update its state without directly accessing the widget.
@@ -86,8 +86,6 @@ class VideoEditorPlayerReady extends VideoEditorMainEvent {
 }
 
 /// Triggered when an external component requests playback pause/resume.
-///
-/// Used by the audio selection UI to pause video during audio browsing.
 class VideoEditorExternalPauseRequested extends VideoEditorMainEvent {
   const VideoEditorExternalPauseRequested({required this.isPaused});
 
@@ -98,8 +96,6 @@ class VideoEditorExternalPauseRequested extends VideoEditorMainEvent {
 }
 
 /// Triggered when playback restart is requested (video + audio sync).
-///
-/// Used after audio selection changes to restart synchronized playback.
 class VideoEditorPlaybackRestartRequested extends VideoEditorMainEvent {
   const VideoEditorPlaybackRestartRequested();
 }

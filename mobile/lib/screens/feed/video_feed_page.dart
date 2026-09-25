@@ -154,9 +154,11 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
   /// overlay open/close. Kept in sync by [_syncFeedActive].
   bool _isNewFeedActive = true;
 
-  /// Guards so startup milestones fire only once.
+  /// Guards so the UI-ready startup milestone fires only once. Video
+  /// readiness comes from the first rendered frame instead
+  /// (`FeedPlaybackPerformance`), because [FeedVideos.onActiveVideoChanged]
+  /// does not fire for the initial page.
   bool _hasMarkedUIReady = false;
-  bool _hasMarkedVideoReady = false;
 
   /// Whether the app has actually been backgrounded since the last resume.
   ///
@@ -543,12 +545,6 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                                   .startVideoSwipeTracking(
                                     video.id,
                                   );
-                              if (!_hasMarkedVideoReady && index == 0) {
-                                _hasMarkedVideoReady = true;
-                                ref
-                                    .read(startupPerformanceServiceProvider)
-                                    .markVideoReady();
-                              }
                             },
                             onNearEnd: () {
                               if (state.hasMore) {

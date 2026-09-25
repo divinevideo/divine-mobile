@@ -21,6 +21,7 @@ import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
@@ -717,7 +718,6 @@ void main() {
       when(() => mockNostrClient.connectedRelayCount).thenReturn(3);
       when(() => mockNostrClient.configuredRelayCount).thenReturn(3);
       when(() => mockNostrClient.isRelayAllowed(any())).thenReturn(true);
-
       // Default conversation-list read for tests that trigger maintenance.
       when(
         () => mockConversationsDao.getAllConversations(
@@ -736,6 +736,9 @@ void main() {
           tempRelays: any(named: 'tempRelays'),
           relayTypes: any(named: 'relayTypes'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
           timeout: any(named: 'timeout'),
         ),
       ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -982,9 +985,31 @@ void main() {
         tempRelays: any(named: 'tempRelays'),
         relayTypes: any(named: 'relayTypes'),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        acceptRelayClosedWhenOthersAnswered: any(
+          named: 'acceptRelayClosedWhenOthersAnswered',
+        ),
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
+
+    // The outgoing-NIP-04 recovery pass (#5304) reads through `readEvents`
+    // once the gift-wrap drain reaches the end. Answered and empty: the
+    // account sent no NIP-04, so the pass lets the drain complete.
+    void stubNip04RecoveryAnsweredEmpty() =>
+        when(
+          () => mockNostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            answeredNetworkRelayCount: 3,
+          ),
+        );
 
     void stubNoPersistedGiftWrapIds() => when(
       () => mockDirectMessagesDao.giftWrapIdsPresent(any()),
@@ -2297,6 +2322,7 @@ void main() {
             () => mockDirectMessagesDao.hasGiftWrap(any()),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
+          stubNip04RecoveryAnsweredEmpty();
           // Track persist concurrency on the actual write inside the
           // transaction. Persists run under the event lock, so a yield here
           // would expose any overlap — there must be none.
@@ -2343,13 +2369,16 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
                 inv.positionalArguments.first as List<nostr_filter.Filter>;
             final filter = filters.single;
-            // Outgoing-NIP-04 recovery pass (authors:[self], no p): nothing.
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            // The own kind-10050 lookup is not a gift-wrap page.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             // One page of wraps, then exhaustion.
@@ -2463,12 +2492,15 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
                 inv.positionalArguments.first as List<nostr_filter.Filter>;
             final filter = filters.single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             if (served) return answeredPage(const <Event>[]);
@@ -2525,6 +2557,7 @@ void main() {
             () => mockDirectMessagesDao.hasGiftWrap(any()),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
+          stubNip04RecoveryAnsweredEmpty();
         });
 
         test(
@@ -4468,6 +4501,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).called(1);
@@ -4750,6 +4786,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => answeredList(events));
@@ -4783,6 +4822,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) => stalledRead.future);
@@ -4955,6 +4997,9 @@ void main() {
                     requireAllRelaysSettled: any(
                       named: 'requireAllRelaysSettled',
                     ),
+                    acceptRelayClosedWhenOthersAnswered: any(
+                      named: 'acceptRelayClosedWhenOthersAnswered',
+                    ),
                     timeout: any(named: 'timeout'),
                   ),
                 ).captured.single
@@ -4971,6 +5016,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenThrow(Exception('relay down'));
@@ -4996,6 +5044,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(
@@ -5041,6 +5092,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => answer);
@@ -5079,6 +5133,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -5156,6 +5213,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -5237,6 +5297,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -5277,6 +5340,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -5356,6 +5422,7 @@ void main() {
         'history drain targets the own kind-10050 inbox relays as tempRelays',
         () async {
           final capturedDrainTempRelays = <List<String>?>[];
+          stubNip04RecoveryAnsweredEmpty();
           // The own kind-10050 resolve (#8212) and the drain pages (#8209)
           // both read through queryEventsDetailed, so one stub serves both and
           // branches on the filter.
@@ -5366,6 +5433,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -5378,8 +5448,8 @@ void main() {
               ]);
             }
             // Only the gift-wrap drain pages carry p:[self]; capture their
-            // tempRelays (the NIP-04 recovery uses authors:[self] with no p
-            // and is intentionally not 10050-targeted).
+            // tempRelays. The NIP-04 recovery reads through readEvents and is
+            // intentionally not 10050-targeted.
             if (filter.p?.isNotEmpty ?? false) {
               capturedDrainTempRelays.add(
                 inv.namedArguments[#tempRelays] as List<String>?,
@@ -5407,6 +5477,7 @@ void main() {
         () async {
           var resolveQueries = 0;
           final controller = StreamController<Event>();
+          stubNip04RecoveryAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
               any(),
@@ -5425,6 +5496,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -5461,6 +5535,7 @@ void main() {
           var resolveQueries = 0;
           final capturedDrainTempRelays = <List<String>?>[];
           final controller = StreamController<Event>();
+          stubNip04RecoveryAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
               any(),
@@ -5476,6 +5551,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -5540,6 +5618,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) {
@@ -5798,6 +5879,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -5889,6 +5973,9 @@ void main() {
             tempRelays: any(named: 'tempRelays'),
             relayTypes: any(named: 'relayTypes'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         );
@@ -5913,6 +6000,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenThrow(Exception('relay down'));
@@ -5944,6 +6034,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -6009,6 +6102,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((inv) async {
@@ -6056,6 +6152,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => answer);
@@ -6085,6 +6184,9 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -6383,6 +6485,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((invocation) async {
@@ -6438,6 +6543,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) async {
@@ -6488,6 +6596,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -6526,6 +6637,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) => read.future);
@@ -6561,6 +6675,9 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((_) => read.future);
@@ -6586,6 +6703,7 @@ void main() {
 
     group('backfillHistoryIfNeeded', () {
       setUp(stubReadCursorRowMatched);
+      setUp(stubNip04RecoveryAnsweredEmpty);
       // A deferred drain arms a relay-status listener (#8550). Default to a
       // pool with nothing connected and a stream that never speaks, so the
       // deferral tests below exercise the deferral itself; the resume tests
@@ -6616,16 +6734,19 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filters =
               inv.positionalArguments.first as List<nostr_filter.Filter>;
           final filter = filters.single;
-          // The outgoing-NIP-04 recovery pass (#5304) runs after the gift-wrap
-          // drain reaches the end and queries `authors:[self]` with no `p`
-          // tag. Return empty (and don't capture its cursor) so these gift-wrap
-          // pagination assertions stay focused on the drain itself.
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          // The own kind-10050 lookup (#4974) also reads through
+          // queryEventsDetailed. Return empty (and don't capture its cursor)
+          // so these gift-wrap pagination assertions stay focused on the
+          // drain itself.
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           final until = filter.until;
@@ -6653,6 +6774,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer(
           (_) async => unansweredPage(noRelays: noRelays, timedOut: timedOut),
@@ -6705,53 +6829,8 @@ void main() {
       );
 
       test(
-        'defers on a refused gift-wrap page even when NIP-04 recovery would '
-        'answer, so the gift-wrap guard is pinned on its own (#8209)',
-        () async {
-          // The refused/fan-out tests above stub ONE answer for both the
-          // gift-wrap drain and the NIP-04 recovery pass, so the NIP-04 guard
-          // masks a regressed gift-wrap guard: break the gift-wrap guard alone
-          // and they still pass because recovery defers on the same refusal.
-          // Split the two queries so this test dies to the gift-wrap guard
-          // specifically — the gift-wrap page is refused while NIP-04 recovery
-          // answers authoritatively, so only a working gift-wrap guard can keep
-          // the drain from latching (a broken one reaches the answering
-          // recovery pass and marks complete).
-          when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
-          when(
-            () => mockNostrClient.queryEventsDetailed(
-              any(),
-              subscriptionId: any(named: 'subscriptionId'),
-              useCache: any(named: 'useCache'),
-              tempRelays: any(named: 'tempRelays'),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-            ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            return isNip04Recovery
-                ? answeredPage(const <Event>[])
-                : unansweredPage(timedOut: true);
-          });
-
-          final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
-            ..drainVersionOverride = DmSyncState.currentDrainVersion;
-          final repository = createRepository(syncState: syncState);
-
-          await repository.backfillHistoryIfNeeded();
-
-          expect(syncState.drainCompleteOverride, isFalse);
-          expect(syncState.markedCompletePubkeys, isEmpty);
-        },
-      );
-
-      test(
-        'demands full relay settlement on every drain page, so a refusal '
-        'cannot arrive as an ordinary empty answer (#8209)',
+        'demands full relay settlement for both gift-wrap and NIP-04 pages '
+        '(#8209)',
         () async {
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
           final capturedUntil = <int?>[];
@@ -6770,26 +6849,40 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: captureAny(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: captureAny(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+              timeout: any(named: 'timeout'),
             ),
           ).captured;
 
-          // Pair each call's filters with the flag it passed, then keep the
-          // drain's own reads. The memoized kind-10050 inbox resolve goes
-          // through this same method and deliberately does NOT demand
-          // settlement — a relay list is re-resolvable, a skipped page is not
-          // (#8212).
-          final demands = <Object?>[];
-          for (var i = 0; i + 1 < captured.length; i += 2) {
-            final filters = captured[i]! as List<nostr_filter.Filter>;
-            final kinds = filters.single.kinds ?? const <int>[];
+          // Pair each call's filter with the flags it passed, then keep the
+          // gift-wrap pages. The memoized kind-10050 inbox resolve goes through
+          // this same method and deliberately does NOT demand settlement — a
+          // relay list is re-resolvable, a skipped page is not (#8212).
+          final giftWrapPages = <(Object?, Object?)>[];
+          for (var i = 0; i + 2 < captured.length; i += 3) {
+            final filter = (captured[i]! as List<nostr_filter.Filter>).single;
+            final kinds = filter.kinds ?? const <int>[];
             if (kinds.contains(EventKind.dmRelaysList)) continue;
-            demands.add(captured[i + 1]);
+            giftWrapPages.add((captured[i + 1], captured[i + 2]));
           }
-          expect(demands, isNotEmpty);
-          expect(demands, everyElement(isTrue));
+          expect(giftWrapPages, isNotEmpty);
+          // Every gift-wrap page demands settlement, and none settles on a
+          // relay's refusal: only the NIP-04 pass below may weigh refusals.
+          expect(giftWrapPages, everyElement(equals((true, false))));
+          verify(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: true,
+            ),
+          ).called(1);
         },
       );
 
@@ -6808,14 +6901,18 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filter =
               (inv.positionalArguments.first as List<nostr_filter.Filter>)
                   .single;
-          // Let the outgoing-NIP-04 recovery pass answer cleanly, so anything
-          // this test observes comes from the gift-wrap drain's own guard.
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          // The own kind-10050 lookup answers cleanly, and so does the NIP-04
+          // pass through the group's readEvents default, so anything this
+          // test observes comes from the gift-wrap drain's own guard.
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           final until = filter.until;
@@ -6873,12 +6970,15 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -7028,20 +7128,23 @@ void main() {
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
           final capturedFilters = <nostr_filter.Filter>[];
           when(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
-              tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
             ),
           ).thenAnswer((inv) async {
             capturedFilters.addAll(
               inv.positionalArguments.first as List<nostr_filter.Filter>,
             );
-            // Gift-wrap drain exhausts immediately; the NIP-04 recovery query
-            // also returns empty — we only assert that it was issued.
-            return answeredPage(const <Event>[]);
+            // The NIP-04 recovery read returns empty; we only assert that it
+            // was issued.
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 3,
+            );
           });
 
           final syncState = _FakeDmSyncState()
@@ -7078,6 +7181,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           // The drain recovered the user's own last-sent message in this convo.
@@ -7215,10 +7321,30 @@ void main() {
             'sig': '',
           });
 
-          // Gift-wrap drain (p:[self]) exhausts immediately; the NIP-04
-          // recovery (authors:[self], no p) returns one page then empties.
+          // The NIP-04 recovery read returns one page then empties; the
+          // gift-wrap drain (p:[self]) exhausts immediately below.
           final authorsUntils = <int?>[];
           var nip04Pages = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            authorsUntils.add(filter.until);
+            nip04Pages++;
+            return QueryResult(
+              events: nip04Pages == 1 ? [outgoing] : const <Event>[],
+              endedBy: QueryEnd.complete,
+              answeredNetworkRelayCount: 3,
+            );
+          });
+          // Gift-wrap pages and the #4974 own kind-10050 lookup: nothing.
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -7226,24 +7352,11 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            // The #4974 own kind-10050 inbox-relay resolve (authors:[self],
-            // kinds:[10050]) also matches authors-with-no-p; skip it so it is
-            // not mistaken for a NIP-04 recovery page.
-            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-              return answeredPage(const <Event>[]);
-            }
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            if (!isNip04Recovery) return answeredPage(const <Event>[]);
-            authorsUntils.add(filter.until);
-            nip04Pages++;
-            return answeredPage(nip04Pages == 1 ? [outgoing] : const <Event>[]);
-          });
+          ).thenAnswer((_) async => answeredPage(const <Event>[]));
 
           when(
             () => mockDirectMessagesDao.hasGiftWrap(any()),
@@ -7352,9 +7465,22 @@ void main() {
         () async {
           final capturedUntil = <int?>[];
           // Gift-wrap drain reaches the end with relays connected, but the
-          // relay drops before the NIP-04 recovery pass: its first page comes
-          // back empty with 0 connected relays. Recovery must NOT be treated
-          // as "nothing to recover" and the drain must NOT be marked complete.
+          // relay drops before the NIP-04 recovery pass: nothing answers the
+          // recovery window. The relays still report connected, so only the
+          // fan-out's own account of who took the REQ distinguishes this from
+          // "the user has no outgoing NIP-04". Recovery must NOT be treated as
+          // "nothing to recover" and the drain must NOT be marked complete.
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const QueryResult(events: [], endedBy: QueryEnd.noRelay),
+          );
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -7362,18 +7488,18 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            if (isNip04Recovery) {
-              // Nothing answers the recovery window. The relays still report
-              // connected, so only the fan-out's own account of who took the
-              // REQ distinguishes this from "the user has no outgoing NIP-04".
-              return unansweredPage(noRelays: true);
+            // The own kind-10050 lookup answers, so only the NIP-04 pass can
+            // hold completion back.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
+              return answeredPage(const <Event>[]);
             }
             capturedUntil.add(filter.until);
             return answeredPage(
@@ -7413,28 +7539,34 @@ void main() {
           });
           var nip04Pages = 0;
           when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Pages++;
+            return QueryResult(
+              events: nip04Pages == 1 ? [partialNip04] : const <Event>[],
+              endedBy: QueryEnd.deadline,
+              answeredNetworkRelayCount: 1,
+              unansweredRelayCount: 1,
+            );
+          });
+          // Gift-wrap pages and the #4974 own kind-10050 lookup: nothing.
+          when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-              return answeredPage(const <Event>[]);
-            }
-            final isNip04Recovery =
-                filter.authors != null && (filter.p?.isEmpty ?? true);
-            if (!isNip04Recovery) return answeredPage(const <Event>[]);
-            nip04Pages++;
-            return nip04Pages == 1
-                ? partialPage([partialNip04])
-                : answeredPage(const <Event>[]);
-          });
+          ).thenAnswer((_) async => answeredPage(const <Event>[]));
           when(
             () => mockDirectMessagesDao.hasGiftWrap(partialNip04.id),
           ).thenAnswer((_) async => true);
@@ -7652,6 +7784,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -7741,6 +7876,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -7780,6 +7918,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => answeredList(const <Event>[]));
@@ -7814,6 +7955,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         );
       });
@@ -7830,6 +7974,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         );
       });
@@ -7846,6 +7993,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -7899,6 +8049,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -7984,6 +8137,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -8037,6 +8193,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenThrow(error);
 
@@ -8053,6 +8212,57 @@ void main() {
             reporterCalls.single.site,
             DmRepositoryReportableSites.historyDrainUnexpectedFailure,
           );
+        },
+      );
+
+      test(
+        'reports a programming failure in outgoing NIP-04 recovery without '
+        'marking complete',
+        () async {
+          final error = StateError('bad recovery state');
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(error);
+
+          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(reporterCalls, hasLength(1));
+          expect(reporterCalls.single.error, same(error));
+          expect(
+            reporterCalls.single.site,
+            DmRepositoryReportableSites.historyDrainUnexpectedFailure,
+          );
+        },
+      );
+
+      test(
+        'does not report a relay failure in outgoing NIP-04 recovery',
+        () async {
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenThrow(TimeoutException('relay read timed out'));
+
+          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(reporterCalls, isEmpty);
         },
       );
 
@@ -8093,15 +8303,18 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            // The outgoing-NIP-04 recovery pass (#5304) queries authors:[self]
-            // with no p tag after the gift-wrap drain completes. Return empty
-            // so this test stays focused on gift-wrap drain pubkey routing.
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            // The own kind-10050 lookup (#4974) is not a gift-wrap page. Return
+            // empty so this test stays focused on gift-wrap drain pubkey
+            // routing.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             final pubkey = filter.p!.single;
@@ -8248,18 +8461,17 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filter =
               (inv.positionalArguments.first as List<nostr_filter.Filter>)
                   .single;
-          // Neither the own-kind-10050 inbox resolve (#4974) nor the
-          // outgoing-NIP-04 recovery pass (#5304) is a history page; keep
-          // both out of the page counter.
+          // The own-kind-10050 inbox resolve (#4974) is not a history page;
+          // keep it out of the page counter.
           if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
-            return answeredPage(const <Event>[]);
-          }
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
             return answeredPage(const <Event>[]);
           }
           pageCalls++;
@@ -8387,12 +8599,15 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             pageCalls++;
@@ -8523,12 +8738,15 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filter =
               (inv.positionalArguments.first as List<nostr_filter.Filter>)
                   .single;
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           giftWrapPages++;
@@ -8568,12 +8786,15 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -8634,12 +8855,15 @@ void main() {
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -8678,12 +8902,15 @@ void main() {
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -8745,12 +8972,15 @@ void main() {
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             stageGiftWrapPages++;
@@ -8793,12 +9023,1126 @@ void main() {
         });
       });
 
+      test('confirms an ambiguous NIP-04 refusal on a deferred retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('settles a terminal NIP-04 refusal on first sight', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://restricted.example': 'restricted'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 1);
+          expect(
+            syncState.markedCompletePubkeys,
+            [_validPubkeyA],
+            reason:
+                'a terminal refusal already says what that relay holds, so '
+                'the inbox-open sweep may finish restore',
+          );
+        });
+      });
+
+      test('a terminal refusal does not settle an ambiguous one beside it', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://restricted.example': 'restricted',
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      for (final (label, refusal) in [
+        (
+          'a relay stayed silent',
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.deadline,
+            answeredNetworkRelayCount: 1,
+            unansweredRelayCount: 1,
+            closedRelayReasons: {'wss://unavailable.example': 'error'},
+          ),
+        ),
+        (
+          'a relay rate-limited the read',
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            rateLimitedRelayCount: 1,
+            closedRelayReasons: {
+              'wss://unavailable.example': 'error',
+              'wss://busy.example': 'rate-limited',
+            },
+          ),
+        ),
+        (
+          'no relay answered the read',
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            closedRelayReasons: {'wss://unavailable.example': 'error'},
+          ),
+        ),
+      ]) {
+        test('a repeated refusal does not settle a page when $label', () {
+          fakeAsync((async) {
+            stubRelayStatus(
+              connectedNow: connected(['wss://answering.example']),
+            );
+            var nip04Reads = 0;
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) async {
+              nip04Reads++;
+              return refusal;
+            });
+            final syncState = armedSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.backfillHistoryIfNeeded());
+            async.flushMicrotasks();
+            for (final delay in DmHistoryDrainConfig.deferredRetryDelays.take(
+              2,
+            )) {
+              async
+                ..elapse(delay)
+                ..flushMicrotasks();
+            }
+
+            expect(
+              nip04Reads,
+              3,
+              reason: 'the refusal recurred on two deferred retries',
+            );
+            expect(syncState.markedCompletePubkeys, isEmpty);
+          });
+        });
+      }
+
+      test('logs the relay refusals a NIP-04 page settled on', () async {
+        await LogCaptureService().clearAllLogs();
+        when(
+          () => mockNostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            closedRelayReasons: {'wss://restricted.example': 'restricted'},
+          ),
+        );
+        final syncState = armedSyncState();
+        final repository = createRepository(syncState: syncState);
+
+        await repository.backfillHistoryIfNeeded();
+
+        expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        final settleLogs = LogCaptureService()
+            .getRecentLogs()
+            .where((e) => e.message.contains('despite relay refusals'))
+            .toList();
+        expect(settleLogs, hasLength(1));
+        expect(
+          settleLogs.single.message,
+          contains(
+            'page 0 as answered despite relay refusals: '
+            'wss://restricted.example restricted',
+          ),
+        );
+      });
+
+      test('logs a deferred retry that joins a drain in flight', () {
+        fakeAsync((async) {
+          unawaited(LogCaptureService().clearAllLogs());
+          async.flushMicrotasks();
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final heldRead = Completer<QueryResult>();
+          const refusal = QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            closedRelayReasons: {'wss://unavailable.example': 'error'},
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            nip04Reads++;
+            return nip04Reads == 2
+                ? heldRead.future
+                : Future<QueryResult>.value(refusal);
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          // An inbox open just before the retry is due holds a drain open
+          // across the moment the timer fires.
+          async.elapse(
+            DmHistoryDrainConfig.deferredRetryDelays.first -
+                const Duration(seconds: 1),
+          );
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(seconds: 1))
+            ..flushMicrotasks();
+          expect(nip04Reads, 2);
+
+          final joinLogs = LogCaptureService()
+              .getRecentLogs()
+              .where((e) => e.message.contains('joined a drain'))
+              .toList();
+          expect(joinLogs, hasLength(1));
+          expect(
+            joinLogs.single.message,
+            contains('that run cannot confirm a relay refusal'),
+          );
+
+          heldRead.complete(refusal);
+          async.flushMicrotasks();
+          expect(syncState.markedCompletePubkeys, isEmpty);
+        });
+      });
+
+      test('does not confirm a refusal that a different relay repeats', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusingRelays = [
+            'wss://first.example',
+            'wss://second.example',
+            'wss://second.example',
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final relay = refusingRelays[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a NIP-42 refusal a different relay repeats', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusingRelays = [
+            'wss://first.example',
+            'wss://second.example',
+            'wss://second.example',
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final relay = refusingRelays[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'auth-required'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                'a NIP-42 gate that shut on a different relay is not the '
+                'same refusal recurring, and the post-AUTH replay may still '
+                'return that relay history',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm an unclassified refusal a different relay '
+          'repeats', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusingRelays = [
+            'wss://first.example',
+            'wss://second.example',
+            'wss://second.example',
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final relay = refusingRelays[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {relay: 'other'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a refusal whose category changed', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final categories = ['auth-required', 'error', 'error'];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            final category = categories[nip04Reads++];
+            return QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': category},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a page while any of its refusals is new', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final refusals = [
+            {'wss://first.example': 'error', 'wss://second.example': 'error'},
+            {'wss://first.example': 'error', 'wss://third.example': 'error'},
+            {'wss://first.example': 'error', 'wss://third.example': 'error'},
+          ];
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => QueryResult(
+              events: const [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: refusals[nip04Reads++],
+            ),
+          );
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason: 'third.example refused for the first time',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('does not confirm a refusal that moved to a later page', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          const refusal = {'wss://unavailable.example': 'error'};
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            nip04Reads++;
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            // Page 0 always carries an event and the refusal. Page 1 answers
+            // cleanly on the first sweep and is refused from then on.
+            if (filter.until! > 1000) {
+              return QueryResult(
+                events: [deletion(1000)],
+                endedBy: QueryEnd.relayClosed,
+                answeredNetworkRelayCount: 1,
+                closedRelayReasons: refusal,
+              );
+            }
+            return nip04Reads <= 2
+                ? const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.complete,
+                    answeredNetworkRelayCount: 2,
+                  )
+                : const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.relayClosed,
+                    answeredNetworkRelayCount: 1,
+                    closedRelayReasons: refusal,
+                  );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 4);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason: 'page 1 was refused for the first time',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 6);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('remembers refusals from every page of a multi-page walk', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((inv) async {
+            nip04Reads++;
+            final until =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single
+                    .until!;
+            // Three pages carry one event each, the fourth is empty; the same
+            // relay refuses every one of them on every sweep.
+            final events = switch (until) {
+              > 1000 => [deletion(1000)],
+              1000 => [deletion(999)],
+              999 => [deletion(998)],
+              _ => const <Event>[],
+            };
+            return QueryResult(
+              events: events,
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: const {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 4);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 8);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test("an account switch forgets the previous account's refusals", () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          // The session after the break defers on its gift-wrap pages before
+          // its NIP-04 pass, so its first NIP-04 sweep is the deferred retry:
+          // the one sweep that may confirm, which a kept memory would satisfy.
+          var accountBGiftWrapReads = -1;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            final isOwnInboxLookup =
+                filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
+            if (accountBGiftWrapReads < 0 || isOwnInboxLookup) {
+              return answeredPage(const <Event>[]);
+            }
+            accountBGiftWrapReads++;
+            return accountBGiftWrapReads <=
+                    DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
+                ? unansweredPage(noRelays: true)
+                : answeredPage(const <Event>[]);
+          });
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          accountBGiftWrapReads = 0;
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(
+            nip04Reads,
+            1,
+            reason: 'the first run after the break defers before NIP-04',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                "the new account's first sighting must not be confirmed by the "
+                "previous account's",
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyB]);
+        });
+      });
+
+      test('a stop and restart forgets the refusals seen before it', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final subscription = StreamController<Event>();
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) => subscription.stream);
+          // The session after the break defers on its gift-wrap pages before
+          // its NIP-04 pass, so its first NIP-04 sweep is the deferred retry:
+          // the one sweep that may confirm, which a kept memory would satisfy.
+          var restartedGiftWrapReads = -1;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              tempRelays: any(named: 'tempRelays'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer((inv) async {
+            final filter =
+                (inv.positionalArguments.first as List<nostr_filter.Filter>)
+                    .single;
+            final isOwnInboxLookup =
+                filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
+            if (restartedGiftWrapReads < 0 || isOwnInboxLookup) {
+              return answeredPage(const <Event>[]);
+            }
+            restartedGiftWrapReads++;
+            return restartedGiftWrapReads <=
+                    DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
+                ? unansweredPage(noRelays: true)
+                : answeredPage(const <Event>[]);
+          });
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          restartedGiftWrapReads = 0;
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(
+            nip04Reads,
+            1,
+            reason: 'the first run after the break defers before NIP-04',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[0])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                'a refusal seen before stopListening must not confirm the '
+                'first one seen after the restart',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+
+          unawaited(repository.stopListening());
+          unawaited(subscription.close());
+          async.flushMicrotasks();
+        });
+      });
+
+      test(
+        'stale recovery cannot restore refusals after account switch',
+        () {
+          fakeAsync((async) {
+            stubRelayStatus(
+              connectedNow: connected(['wss://answering.example']),
+            );
+            final oldAccountRead = Completer<QueryResult>();
+            var nip04Reads = 0;
+            const refusal = QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
+            ).thenAnswer((_) {
+              nip04Reads++;
+              return switch (nip04Reads) {
+                1 => oldAccountRead.future,
+                // The new account's first sweep sees no refusal at all.
+                2 => Future<QueryResult>.value(
+                  const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.deadline,
+                    answeredNetworkRelayCount: 1,
+                    unansweredRelayCount: 1,
+                  ),
+                ),
+                _ => Future<QueryResult>.value(refusal),
+              };
+            });
+
+            final syncState = armedSyncState();
+            final repository = createRepository(syncState: syncState);
+
+            unawaited(repository.backfillHistoryIfNeeded());
+            async.flushMicrotasks();
+            expect(nip04Reads, 1);
+
+            repository.setCredentials(
+              userPubkey: _validPubkeyB,
+              signer: LocalNostrSigner(_validPrivateKey),
+              messageService: mockMessageService,
+            );
+            unawaited(repository.backfillHistoryIfNeeded());
+            async.flushMicrotasks();
+            expect(nip04Reads, 2);
+
+            // The old account's sweep settles after the new session's first
+            // sweep, with a refusal the new account has not seen yet.
+            oldAccountRead.complete(refusal);
+            async
+              ..flushMicrotasks()
+              ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+              ..flushMicrotasks();
+
+            expect(nip04Reads, 3);
+            expect(
+              syncState.markedCompletePubkeys,
+              isEmpty,
+              reason:
+                  "the new account's first refusal must not be confirmed by "
+                  "the previous account's refusal memory",
+            );
+          });
+        },
+      );
+
+      test('stale drain does not cancel the new account retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          final oldAccountRead = Completer<QueryResult>();
+          var nip04Reads = 0;
+          const unsettled = QueryResult(
+            events: [],
+            endedBy: QueryEnd.deadline,
+            answeredNetworkRelayCount: 1,
+            unansweredRelayCount: 1,
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) {
+            nip04Reads++;
+            return nip04Reads == 1
+                ? oldAccountRead.future
+                : Future<QueryResult>.value(unsettled);
+          });
+
+          final repository = createRepository(syncState: armedSyncState());
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 2);
+
+          oldAccountRead.complete(unsettled);
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(
+            nip04Reads,
+            3,
+            reason:
+                "the previous account's drain ending must leave the new "
+                "account's retry armed",
+          );
+        });
+      });
+
+      test('only the deferred retry can confirm a repeated refusal', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 2);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
+      test('a relay reconnect resume cannot confirm a repeated refusal', () {
+        fakeAsync((async) {
+          final relayStatus = stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var nip04Reads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Reads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {
+                'wss://unavailable.example': 'error',
+              },
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(nip04Reads, 1);
+
+          // A newly connected relay resumes the drain ahead of the bounded
+          // delay, through the same default-false entry point an inbox open
+          // uses.
+          relayStatus.add(
+            connected([
+              'wss://answering.example',
+              'wss://reconnected.example',
+            ]),
+          );
+          async.flushMicrotasks();
+
+          expect(nip04Reads, 2);
+          expect(
+            syncState.markedCompletePubkeys,
+            isEmpty,
+            reason:
+                'a reconnect says a relay is reachable again, not that the '
+                'refusal it repeats is what that relay holds',
+          );
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+            ..flushMicrotasks();
+
+          expect(nip04Reads, 3);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('failed NIP-04 recovery cannot replenish retries forever', () {
         fakeAsync((async) {
           stubRelayStatus(
             connectedNow: connected(['wss://silent.example']),
           );
           var giftWrapPages = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                const QueryResult(events: [], endedBy: QueryEnd.noRelay),
+          );
           when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
@@ -8808,13 +10152,18 @@ void main() {
               requireAllRelaysSettled: any(
                 named: 'requireAllRelaysSettled',
               ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
-              return unansweredPage(noRelays: true);
+            // The own kind-10050 lookup answers, so only the NIP-04 pass can
+            // hold completion back.
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
+              return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
             return answeredPage(const <Event>[]);
@@ -9007,12 +10356,15 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
@@ -9043,28 +10395,35 @@ void main() {
           final relayStatus = stubRelayStatus();
           var nip04Pages = 0;
           when(
+            () => mockNostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            nip04Pages++;
+            return nip04Pages == 1
+                ? const QueryResult(events: [], endedBy: QueryEnd.noRelay)
+                : const QueryResult(
+                    events: [],
+                    endedBy: QueryEnd.complete,
+                    answeredNetworkRelayCount: 1,
+                  );
+          });
+          // Gift-wrap pages and the #4974 own kind-10050 lookup: nothing.
+          when(
             () => mockNostrClient.queryEventsDetailed(
               any(),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
-          ).thenAnswer((inv) async {
-            final filter =
-                (inv.positionalArguments.first as List<nostr_filter.Filter>)
-                    .single;
-            // The drain's own kind-10050 inbox lookup has the same
-            // `authors`-only shape; only the kind-4 pass is under test.
-            if (filter.authors != null &&
-                (filter.kinds?.contains(EventKind.directMessage) ?? false)) {
-              nip04Pages++;
-              return nip04Pages == 1
-                  ? unansweredPage(noRelays: true)
-                  : answeredPage(const <Event>[]);
-            }
-            return answeredPage(const <Event>[]);
-          });
+          ).thenAnswer((_) async => answeredPage(const <Event>[]));
           final syncState = armedSyncState();
           final repository = createRepository(syncState: syncState);
 
@@ -9092,12 +10451,15 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filter =
                 (inv.positionalArguments.first as List<nostr_filter.Filter>)
                     .single;
-            if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+            if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
               return answeredPage(const <Event>[]);
             }
             return answeredPage([deletion((filter.until ?? 1000) - 1)]);
@@ -9123,6 +10485,7 @@ void main() {
 
     group('history drain batch decryption (#5391)', () {
       setUp(stubNoCrossProtocolTwinAvailable);
+      setUp(stubNip04RecoveryAnsweredEmpty);
 
       // A new recipient keypair per test so the real NIP-44 unwrap in the
       // batched decrypt worker succeeds (the shared _validPubkey* constants
@@ -9231,9 +10594,10 @@ void main() {
         createdAt: createdAt,
       );
 
-      // Returns a queryEvents stub that serves [page] for the gift-wrap drain
-      // filter (p:[self], inclusive `until`) and [] for the NIP-04 recovery
-      // pass (authors:[self]).
+      // Stubs queryEventsDetailed to serve [page] for the gift-wrap drain
+      // filter (p:[self], inclusive `until`) and [] for the own kind-10050
+      // lookup. The NIP-04 recovery pass reads through the group's readEvents
+      // default.
       void stubDrainPage(List<Event> page) {
         when(
           () => mockNostrClient.queryEventsDetailed(
@@ -9242,12 +10606,15 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
           ),
         ).thenAnswer((inv) async {
           final filters =
               inv.positionalArguments.first as List<nostr_filter.Filter>;
           final filter = filters.single;
-          if (filter.authors != null && (filter.p?.isEmpty ?? true)) {
+          if (filter.kinds?.contains(EventKind.dmRelaysList) ?? false) {
             return answeredPage(const <Event>[]);
           }
           final until = filter.until ?? (1 << 31);
@@ -9888,6 +11255,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -15160,6 +16530,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(
@@ -16102,6 +17475,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => answer);
@@ -16243,6 +17619,9 @@ void main() {
                 useCache: any(named: 'useCache'),
                 tempRelays: any(named: 'tempRelays'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
                 timeout: any(named: 'timeout'),
               ),
             ).thenAnswer((invocation) async {
@@ -21877,6 +23256,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => unansweredList(noRelays: true));
@@ -23413,6 +24795,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -24982,6 +26367,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((invocation) async {
@@ -25103,6 +26491,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => unansweredList(timedOut: true));
@@ -25871,6 +27262,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer((_) async => unansweredList(noRelays: true));
@@ -26692,6 +28086,9 @@ void main() {
               useCache: any(named: 'useCache'),
               tempRelays: any(named: 'tempRelays'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
               timeout: any(named: 'timeout'),
             ),
           ).thenAnswer(

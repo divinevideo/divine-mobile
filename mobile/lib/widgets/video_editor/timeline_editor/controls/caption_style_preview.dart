@@ -45,7 +45,7 @@ class CaptionStylePreview extends StatelessWidget {
   /// Loop length in milliseconds; animation durations are relative to it.
   final int loopMs;
 
-  /// Preview size; slide animations travel across it.
+  /// Preview width.
   final double width;
 
   /// Preview height.

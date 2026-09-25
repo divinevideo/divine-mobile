@@ -322,6 +322,9 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             textureRegistry: registry,
             reclaimLogSink: { [weak self] in self?.installLogSink() }
         )
+        cameraController?.onScreenFlashChanged = { [weak self] isActive in
+            self?.methodChannel?.invokeMethod("onScreenFlashChanged", arguments: isActive)
+        }
 
         cameraController?.initialize(lens: lens, videoQuality: videoQuality, enableScreenFlash: enableScreenFlash, mirrorFrontCameraOutput: mirrorFrontCameraOutput, enableAutoLensSwitch: enableAutoLensSwitch, preferUnprocessedAudio: preferUnprocessedAudio, videoStabilizationMode: videoStabilizationMode) { [weak self] state, error in
             DispatchQueue.main.async {

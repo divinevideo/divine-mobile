@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,6 +68,20 @@ void main() {
         when(() => nostrClient.connectedRelayCount).thenReturn(1);
         when(() => nostrClient.configuredRelayCount).thenReturn(1);
         when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => const QueryResult(
+            events: [],
+            endedBy: QueryEnd.complete,
+            answeredNetworkRelayCount: 1,
+          ),
+        );
+        when(
           () => nostrClient.queryEvents(
             any(),
             subscriptionId: any(named: 'subscriptionId'),
@@ -80,6 +95,9 @@ void main() {
             useCache: any(named: 'useCache'),
             tempRelays: any(named: 'tempRelays'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer(

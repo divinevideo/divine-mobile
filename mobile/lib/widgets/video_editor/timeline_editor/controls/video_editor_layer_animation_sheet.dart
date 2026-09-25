@@ -47,10 +47,10 @@ const _slideDirections = <SlideDirection>[
 /// Opens the enter/leave animation picker for [layer] and applies the choice to
 /// that layer through the editor history.
 ///
-/// A layer carries up to one enter animation and one leave animation; both are
-/// editable in the sheet and stored on [Layer.animations], which pro_image_editor
-/// uses to drive the in-editor timeline preview and which the export maps to
-/// pro_video_editor.
+/// A layer carries an enter and a leave phase, each composing any of fade,
+/// slide and scale. Both are editable in the sheet and stored on
+/// [Layer.animations], which pro_image_editor uses to drive the in-editor
+/// timeline preview and which the export maps to pro_video_editor.
 ///
 /// [totalDuration] is the true total video duration — independent of the
 /// layer's own [Layer.endTime]. It both anchors the leave animation and lets
@@ -304,10 +304,12 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   int get _maxMs => widget.maxDurationMs;
 
   List<LayerAnimation> _build(_PhaseConfig config, AnimationPhase phase) {
-    // A custom point overrides the direction at export, but a direction is
-    // still carried: pro_image_editor requires one on every slide and drives
-    // the in-editor preview from it, so the closest edge to the point keeps
-    // that preview travelling roughly the way the export will.
+    // A custom point overrides the direction wherever it is attached, but a
+    // direction is still carried: the slide is built here without
+    // `slideFrom` (the point lives in LayerSlidePoints and is attached
+    // later), and pro_video_editor only accepts that with a direction. The
+    // closest edge to the point keeps anything that falls back to the
+    // direction travelling roughly the way the export will.
     final travel = _travelOf(config);
     final direction = travel == null
         ? config.direction
@@ -569,8 +571,8 @@ class _PhaseConfig {
   /// so per-effect differences set externally collapse on edit.)
   ///
   /// [slideFrom] comes from the layer instead of the animations: the custom
-  /// point is stored beside them, because pro_image_editor's animation model
-  /// has nowhere to keep it (see [LayerSlidePoints]).
+  /// point is stored beside them, because the animations' own pixel copy is
+  /// not the source of truth (see [LayerSlidePoints]).
   factory _PhaseConfig.fromAnimations(
     List<LayerAnimation> animations, {
     Offset? slideFrom,
@@ -783,7 +785,7 @@ class _LayerTypeTile extends StatelessWidget {
   final SlideDirection direction;
 
   /// Where the custom point sits relative to the layer's resting place, in
-  /// layer coordinates. `null` previews the edge slide [direction] names.
+  /// canvas proportions. `null` previews the edge slide [direction] names.
   final Offset? slideVector;
   final double scaleFrom;
   final AnimationCurve curve;

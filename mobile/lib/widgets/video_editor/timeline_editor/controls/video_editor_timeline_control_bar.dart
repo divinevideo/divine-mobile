@@ -10,8 +10,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 
 /// Shows context-specific controls at the bottom of the timeline based on
-/// what is currently active: marker mode, a clip (editing), a layer overlay,
-/// or a filter overlay.
+/// what is currently active: marker mode, a multi-select mode, a clip
+/// (editing), or a selected overlay item.
 class TimelineControlsBar extends StatelessWidget {
   const TimelineControlsBar({
     required this.isEditing,

@@ -912,6 +912,20 @@ class NostrClient {
   /// Note this only bounds the WebSocket leg; cached rows are merged in either
   /// way.
   ///
+  /// [acceptRelayClosedWhenOthersAnswered] lets a [requireAllRelaysSettled]
+  /// read settle on relay refusals once a non-cache relay sent `EOSE` and no
+  /// relay is still unanswered. It never settles on silence, a dropped socket,
+  /// a deadline, or a `rate-limited` refusal, all of which a retry may change.
+  /// Transient `error:`, unclassified (`other`) and NIP-42 `auth-required`
+  /// refusals remain incomplete. A caller that must confirm such a refusal
+  /// across attempts reads through [readEvents] and compares
+  /// [QueryResult.closedRelayReasons]; this method reports the read only as
+  /// `timedOut: true`. It never issues an immediate confirmation read: a relay
+  /// may still be completing AUTH or recovering from a transient failure.
+  /// Other terminal refusal categories may settle on the first read. Only a
+  /// relay that sent `CLOSED` carries a category: one whose NIP-42 gate shut
+  /// before it sent a frame counts as closed without one.
+  ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
   /// the call arrived, and a fan-out no relay took — the last of which a
@@ -942,8 +956,9 @@ class NostrClient {
     bool useQueryPool = true,
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
+    bool acceptRelayClosedWhenOthersAnswered = false,
   }) async {
-    final read = await _read(
+    final first = await _read(
       filters,
       subscriptionId: subscriptionId,
       tempRelays: tempRelays,
@@ -954,12 +969,43 @@ class NostrClient {
       timeout: timeout,
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
+    // Only a read that would otherwise report `timedOut` has anything for
+    // the refusals to settle.
+    if (!acceptRelayClosedWhenOthersAnswered ||
+        !first.timedOut ||
+        !_othersAnsweredDespiteRefusals(first.result)) {
+      return (
+        events: first.result.events,
+        timedOut: first.timedOut,
+        noRelays: first.noRelays,
+      );
+    }
+    final needsDeferredConfirmation = first.result.closedRelayReasons.values
+        .any(_deferredConfirmationRefusalCategories.contains);
     return (
-      events: read.result.events,
-      timedOut: read.timedOut,
-      noRelays: read.noRelays,
+      events: first.result.events,
+      timedOut: needsDeferredConfirmation,
+      noRelays: first.noRelays,
     );
   }
+
+  /// `CLOSED` categories [queryEventsDetailed] never settles on: `error` and
+  /// `other` may be transient, and `auth-required` asks for NIP-42 rather than
+  /// answering, so the gate may open moments later once a remote signer
+  /// produces the signature.
+  static const Set<String> _deferredConfirmationRefusalCategories = {
+    'auth-required',
+    'error',
+    'other',
+  };
+
+  /// Whether [result] ended on refusals alone while a non-cache relay
+  /// answered, with no relay still unanswered and none rate limited.
+  static bool _othersAnsweredDespiteRefusals(QueryResult result) =>
+      result.endedBy == QueryEnd.relayClosed &&
+      result.answeredNetworkRelayCount > 0 &&
+      result.unansweredRelayCount == 0 &&
+      result.rateLimitedRelayCount == 0;
 
   /// Reads the events [filters] match and reports how the read ended.
   ///
@@ -969,7 +1015,8 @@ class NostrClient {
   /// [QueryResult.possiblyCapped] / [QueryResult.confirmedExhaustive] how
   /// complete the relays' answer was.
   ///
-  /// All three describe the **network leg only**. A cached row merged into
+  /// Every field except [QueryResult.events] describes the **network leg
+  /// only**. A cached row merged into
   /// [QueryResult.events] can never make a read the relays did not finish
   /// look finished.
   ///
@@ -1252,6 +1299,10 @@ class NostrClient {
     final result = QueryResult(
       events: events,
       endedBy: network.endedBy,
+      answeredNetworkRelayCount: network.answeredNetworkRelayCount,
+      unansweredRelayCount: network.unansweredRelayCount,
+      rateLimitedRelayCount: network.rateLimitedRelayCount,
+      closedRelayReasons: network.closedRelayReasons,
       possiblyCapped: network.possiblyCapped,
       confirmedExhaustive: network.confirmedExhaustive,
     );

@@ -20,8 +20,9 @@ import 'package:openvine/widgets/stereo_waveform_painter.dart';
 /// Shows left channel on top and right channel (mirrored) on bottom.
 /// Only visible during active recording when a sound is selected.
 ///
-/// Uses [SoundWaveformBloc] for waveform extraction (new BLoC pattern)
-/// and existing Riverpod providers for recorder state (legacy).
+/// Uses [SoundWaveformBloc] for waveform extraction, [VideoRecorderBloc] for
+/// the recording state, and Riverpod providers for the clips and the
+/// selected sound.
 class VideoRecorderAudioProgressBar extends ConsumerWidget {
   /// Creates an audio progress bar widget.
   const VideoRecorderAudioProgressBar({super.key});

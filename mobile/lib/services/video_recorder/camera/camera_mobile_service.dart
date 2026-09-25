@@ -10,7 +10,7 @@ import 'package:openvine/utils/path_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Mobile implementation of [CameraService] using the camera package.
+/// Mobile implementation of [CameraService] using the `divine_camera` package.
 ///
 /// Manages camera initialization, recording, and switching between front/back cameras.
 class CameraMobileService extends CameraService {
@@ -18,6 +18,7 @@ class CameraMobileService extends CameraService {
   CameraMobileService({
     required super.onUpdateState,
     required super.onAutoStopped,
+    super.onScreenFlashChanged,
   });
 
   bool _isInitialized = false;
@@ -55,6 +56,7 @@ class CameraMobileService extends CameraService {
           result == null ? null : EditorVideo.file(result.filePath),
         );
       };
+      _camera.onScreenFlashChanged = onScreenFlashChanged;
       // Re-apply remote record trigger callback (gets cleared on dispose)
       if (_remoteRecordTriggerCallback != null) {
         final callback = _remoteRecordTriggerCallback!;

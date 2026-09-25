@@ -32,6 +32,7 @@ class _MockNostrClient extends Mock implements NostrClient {
     bool useQueryPool = true,
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
+    bool acceptRelayClosedWhenOthersAnswered = false,
   }) async {
     queryTimeout = timeout;
     queryRequiresAllRelaysSettled = requireAllRelaysSettled;

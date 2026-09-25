@@ -233,7 +233,11 @@ class CameraController: NSObject {
     // Screen brightness for front camera "torch" mode
     private var originalBrightness: CGFloat?
     private var screenFlashFeatureEnabled: Bool = true
-    
+
+    /// Called on the main queue whenever the screen flash turns on or off, so
+    /// Flutter can light the UI around the preview while it is on.
+    var onScreenFlashChanged: ((Bool) -> Void)?
+
     // Whether to mirror front camera video output
     private var mirrorFrontCameraOutput: Bool = true
 
@@ -1928,12 +1932,16 @@ class CameraController: NSObject {
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            let wasActive = self.originalBrightness != nil
             // Save original brightness if not already saved
-            if self.originalBrightness == nil {
+            if !wasActive {
                 self.originalBrightness = UIScreen.main.brightness
             }
             // Set brightness to maximum (1.0 = 100%)
             UIScreen.main.brightness = 1.0
+            if !wasActive {
+                self.onScreenFlashChanged?(true)
+            }
         }
         #endif
     }
@@ -1947,6 +1955,7 @@ class CameraController: NSObject {
                 UIScreen.main.brightness = brightness
                 self.originalBrightness = nil
                 DivineCameraLog.shared.debug("DivineCamera: Screen flash disabled (brightness restored)")
+                self.onScreenFlashChanged?(false)
             }
         }
         #endif

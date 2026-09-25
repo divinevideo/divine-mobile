@@ -1,5 +1,5 @@
 // ABOUTME: Reusable rounded icon button for video editor controls
-// ABOUTME: Customizable size, colors, and shadow styling
+// ABOUTME: Customizable size, colors, and corner radius
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';

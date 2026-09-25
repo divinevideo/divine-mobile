@@ -94,6 +94,22 @@ void main() {
         }
       });
 
+      testWidgets('lists capture leftmost and upload rightmost', (
+        tester,
+      ) async {
+        await pumpSelector(tester);
+
+        final labelsLeftToRight =
+            VideoRecorderMode.values.map((mode) => mode.label).toList()..sort(
+              (a, b) => tester
+                  .getCenter(find.text(a))
+                  .dx
+                  .compareTo(tester.getCenter(find.text(b)).dx),
+            );
+        expect(labelsLeftToRight.first, VideoRecorderMode.capture.label);
+        expect(labelsLeftToRight.last, VideoRecorderMode.upload.label);
+      });
+
       testWidgets('renders with capture mode selected', (tester) async {
         await pumpSelector(tester, mode: VideoRecorderMode.capture);
 
@@ -197,12 +213,12 @@ void main() {
 
         // A single user drag must produce a single snap. Regression guard:
         // the programmatic snap animation used to re-trigger snapping and run
-        // the wheel all the way to the final ("Classic") item.
+        // the wheel all the way to the final ("Upload") item.
         await tester.drag(find.byType(ListView), const Offset(-60, 0));
         await tester.pumpAndSettle();
 
         expect(modeChanges, isNotEmpty);
-        expect(modeChanges, isNot(contains(VideoRecorderMode.classic)));
+        expect(modeChanges, isNot(contains(VideoRecorderMode.upload)));
       });
 
       testWidgets('fades the edges into the recorder bar without a mask', (

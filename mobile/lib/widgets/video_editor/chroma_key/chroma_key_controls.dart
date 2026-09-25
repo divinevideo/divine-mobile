@@ -39,8 +39,9 @@ class ChromaKeyControls extends StatelessWidget {
     super.key,
   });
 
-  /// Opens the picker for [type]. Owned by the screen because an image is shot
-  /// with the camera and a video comes from the clip library.
+  /// Opens the picker for the chosen background type. Owned by the screen
+  /// because an image is shot with the camera and a video comes from the clip
+  /// library.
   final ValueChanged<ClipChromaKeyBackgroundType> onPickBackground;
 
   /// What the keyed clip sits on. See [ChromaKeySurface].

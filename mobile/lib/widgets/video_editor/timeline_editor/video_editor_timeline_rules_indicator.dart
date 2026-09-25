@@ -43,7 +43,7 @@ class VideoEditorTimelineRulesIndicator extends StatelessWidget {
   /// Empty falls back to the editor axis (identity mapping).
   final List<DivineVideoClip> clips;
 
-  /// Left padding of the enclosing [SingleChildScrollView].
+  /// Empty space laid out before the ruler in the horizontal scroll content.
   /// Needed so the painter can convert scroll offset to the
   /// ruler's local coordinate space.
   final double scrollPadding;

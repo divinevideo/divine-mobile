@@ -1,6 +1,6 @@
 /// Extension on Duration for video editor time formatting.
 extension VideoEditorTimeUtils on Duration {
-  /// Formats duration as SS:MS (seconds:milliseconds).
+  /// Formats duration as SS:CS (seconds:centiseconds).
   ///
   /// Example: Duration(seconds: 5, milliseconds: 730) → "05:73"
   String toVideoTime() {

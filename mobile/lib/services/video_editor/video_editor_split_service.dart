@@ -34,7 +34,7 @@ class VideoEditorSplitService {
   /// differ, so there is **no re-encode** and the cut is instant. This is safe
   /// because:
   /// * the export already clips each clip to its `[trimStart, trimEnd]` window
-  ///   (`VideoEditorRenderService._normalizeClipsToAspectRatio`), so two clips
+  ///   (`ClipNormalizationRender.normalizeClipsToAspectRatio`), so two clips
   ///   on one file each export their own segment, and
   /// * `FileCleanupService` only deletes a file no clip/draft still references,
   ///   so a shared source file is never deleted out from under a sibling half.

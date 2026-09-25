@@ -37,7 +37,7 @@ const double detachedClipLayoutWidth = 1000;
 
 /// Identifies the media a detached-clip [meta] describes.
 ///
-/// Two metas for the same clip share one player; a different clip, trim, speed
+/// Two metas for the same clip share this key; a different clip, trim, speed
 /// or volume gets its own. Read straight off the serialized clip so it needs no
 /// documents path and cannot fail.
 String? detachedClipSourceKey(Map<String, dynamic>? meta) {

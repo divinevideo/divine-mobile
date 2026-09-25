@@ -74,6 +74,7 @@ typedef AudioPlaybackServiceFactory = AudioPlaybackService Function();
 typedef CameraServiceFactory = CameraService Function({
   required void Function({bool? forceCameraRebuild}) onUpdateState,
   required void Function(EditorVideo? video) onAutoStopped,
+  ValueChanged<bool>? onScreenFlashChanged,
 });
 
 /// Accessor for the [ClipManagerNotifier] (method-call + public-getter
@@ -89,8 +90,7 @@ typedef ReadClipManager = ClipManagerNotifier Function();
 /// Accessor for the [VideoEditorNotifier] (method-call side).
 typedef ReadVideoEditor = VideoEditorNotifier Function();
 
-/// Accessor for the current [VideoEditorProviderState]. See
-/// [ReadClipManagerState] for the same rationale.
+/// Accessor for the current [VideoEditorProviderState].
 typedef ReadVideoEditorState = VideoEditorProviderState Function();
 
 /// Accessor for the [SharedPreferences] instance.
@@ -143,21 +143,19 @@ AudioPlaybackService defaultAudioPlaybackServiceFactory() =>
 ///    dispose the camera mid-transition without owning the
 ///    navigation contract.
 /// 4. Sibling Riverpod providers are reached via typedef accessors
-///    ([ReadClipManager], [ReadVideoEditor], [ReadSharedPreferences])
-///    so the bloc remains pure Dart.
+///    ([ReadClipManager], [ReadVideoEditor], [ReadVideoEditorState],
+///    [ReadSharedPreferences]) so the bloc remains pure Dart.
 class VideoRecorderBloc
     extends Bloc<VideoRecorderEvent, VideoRecorderBlocState> {
   /// Creates a video recorder bloc.
   ///
-  /// [readClipManager], [readVideoEditor], and [readSharedPreferences]
-  /// bridge the Riverpod-scoped dependencies that survive
-  /// migration (the sibling providers are out of scope for #4744 —
-  /// see `tasks/plan_4744.md` §4 WS-2 PR3).
+  /// [readClipManager], [readVideoEditor], [readVideoEditorState], and
+  /// [readSharedPreferences] bridge the Riverpod-scoped dependencies.
   ///
   /// [cameraService] and [cameraServiceFactory] are test seams. When the
   /// service override is omitted, the factory creates the platform-appropriate
-  /// [CameraService] and wires its update / auto-stop / remote callbacks to
-  /// internal events.
+  /// [CameraService] and wires its update / auto-stop / screen-flash callbacks
+  /// to internal events.
   ///
   /// [countdownSoundServiceFactory] and [audioPlaybackServiceFactory]
   /// are optional test overrides. Defaults preserve the iOS
@@ -203,6 +201,9 @@ class VideoRecorderBloc
             if (isClosed) return;
             add(_VideoRecorderAutoStopped(video));
           },
+          onScreenFlashChanged: (isActive) => addIfOpen(
+            _VideoRecorderScreenFlashChanged(isActive: isActive),
+          ),
         );
 
     on<VideoRecorderInitializeRequested>(_onInitializeRequested);
@@ -271,6 +272,7 @@ class VideoRecorderBloc
     on<_VideoRecorderCameraStateChanged>(_onCameraStateChanged);
     on<_VideoRecorderRemoteRecordTriggered>(_onRemoteRecordTriggered);
     on<_VideoRecorderAutoStopped>(_onAutoStopped);
+    on<_VideoRecorderScreenFlashChanged>(_onScreenFlashChanged);
     on<_VideoRecorderFocusPointTimerFired>(_onFocusPointTimerFired);
     on<_VideoRecorderZoomIndicatorTimerFired>(_onZoomIndicatorTimerFired);
   }
@@ -1327,9 +1329,9 @@ class VideoRecorderBloc
   /// Aborts a native recording session the navigation lock landed on while a
   /// start was still in flight: best-effort stops + discards the just-started
   /// session (when [sessionStarted]) and returns to idle. Shared by the two
-  /// lock guards in [_onRecordingStartRequested] — before the native start and
-  /// after the wakelock-enable await — so neither latches a recording the user
-  /// can never stop.
+  /// lock guards in [_onRecordingStartRequested] — after the native start
+  /// returns and after the wakelock-enable await — so neither latches a
+  /// recording the user can never stop.
   Future<void> _abortInFlightStartForLock(
     Emitter<VideoRecorderBlocState> emit, {
     required bool sessionStarted,
@@ -1869,8 +1871,8 @@ class VideoRecorderBloc
   /// The frames are the source of truth; no mp4 is rendered here. The editor
   /// previews the frames via the stop-motion player and only renders an mp4 at
   /// publish. Synchronous by design: nothing here is worth making the user wait
-  /// for (the library save is queued, see [_ingestStopMotionClip]), so no
-  /// progress UI ever gets a frame to paint in.
+  /// for (the library save is queued, see [StopMotionSessionStore.ingest]), so
+  /// no progress UI ever gets a frame to paint in.
   void _onStopMotionAssembleRequested(
     VideoRecorderStopMotionAssembleRequested event,
     Emitter<VideoRecorderBlocState> emit,
@@ -1921,10 +1923,19 @@ class VideoRecorderBloc
     _emitCameraSync(emit, cameraRebuildCount: event.cameraRebuildCount);
   }
 
-  /// Re-synchronizes the camera-derived fields in [state] with the
-  /// current [CameraService] values. Matches the legacy
-  /// `VideoRecorderNotifier.updateState` semantics: replaces sensor /
-  /// capability fields wholesale and resets flash to `off`.
+  void _onScreenFlashChanged(
+    _VideoRecorderScreenFlashChanged event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(state.copyWith(isScreenFlashActive: event.isActive));
+  }
+
+  /// Rebuilds [state] from the current [CameraService] values.
+  ///
+  /// Only the rebuild count, aspect ratio, recorder mode, overlay and grid
+  /// toggles, the stop-motion session and, while the camera is initialized,
+  /// the screen flash carry over; flash resets to `off` and every other field
+  /// to its default.
   void _emitCameraSync(
     Emitter<VideoRecorderBlocState> emit, {
     int? cameraRebuildCount,
@@ -1941,6 +1952,12 @@ class VideoRecorderBloc
         canRecord: _cameraService.canRecord,
         isCameraInitialized: _cameraService.isInitialized,
         hasFlash: _cameraService.hasFlash,
+        // Only the native camera turns the screen flash on or off, so a
+        // re-sync keeps its last report. A disposed camera has restored the
+        // brightness, but that report can arrive after the camera callbacks
+        // were cleared.
+        isScreenFlashActive:
+            _cameraService.isInitialized && state.isScreenFlashActive,
         canSwitchCamera: _cameraService.canSwitchCamera,
         isFrontCamera: _cameraService.currentLens.isFrontFacing,
         previewTextureId: _cameraService.textureId,

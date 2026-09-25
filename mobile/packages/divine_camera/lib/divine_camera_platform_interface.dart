@@ -233,6 +233,17 @@ abstract class DivineCameraPlatform extends PlatformInterface {
     throw UnimplementedError('onRemoteRecordTrigger has not been implemented.');
   }
 
+  /// Callback for when the front-camera screen flash turns on or off.
+  ValueChanged<bool>? get onScreenFlashChanged {
+    throw UnimplementedError('onScreenFlashChanged has not been implemented.');
+  }
+
+  /// Sets the callback for when the front-camera screen flash turns on or
+  /// off. See [onScreenFlashChanged].
+  set onScreenFlashChanged(ValueChanged<bool>? callback) {
+    throw UnimplementedError('onScreenFlashChanged has not been implemented.');
+  }
+
   /// Enables or disables remote record control via volume buttons.
   ///
   /// When enabled, volume button presses will trigger the

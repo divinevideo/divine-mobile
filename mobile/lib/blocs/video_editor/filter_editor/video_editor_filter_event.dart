@@ -40,16 +40,17 @@ class VideoEditorFilterCancelled extends VideoEditorFilterEvent {
 
 /// Triggered when the user confirms the filter selection (presses done).
 ///
-/// Appends the currently selected filter to [appliedFilters] and clears
-/// the selection so the next editor session starts fresh.
+/// Appends the currently selected filter to
+/// [VideoEditorFilterState.appliedFilters] and clears the selection so the
+/// next editor session starts fresh.
 class VideoEditorFilterConfirmed extends VideoEditorFilterEvent {
   const VideoEditorFilterConfirmed();
 }
 
 /// Triggered when the filter editor is initialized.
 ///
-/// This event synchronizes the editor state with the BLoC state,
-/// applying the previously selected filter and opacity.
+/// Snapshots the current selection, opacity and applied filters so
+/// [VideoEditorFilterCancelled] can restore them.
 class VideoEditorFilterEditorInitialized extends VideoEditorFilterEvent {
   const VideoEditorFilterEditorInitialized();
 }

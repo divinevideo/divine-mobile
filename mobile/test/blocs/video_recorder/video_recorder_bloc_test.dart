@@ -1754,7 +1754,11 @@ void main() {
           final bloc =
               buildBloc(
                 cameraServiceFactory:
-                    ({required onUpdateState, required onAutoStopped}) {
+                    ({
+                      required onUpdateState,
+                      required onAutoStopped,
+                      onScreenFlashChanged,
+                    }) {
                       autoStopCallback = onAutoStopped;
                       return cameraService;
                     },
@@ -1786,7 +1790,11 @@ void main() {
 
         VideoRecorderBloc buildBlocCapturingAutoStop() => buildBloc(
           cameraServiceFactory:
-              ({required onUpdateState, required onAutoStopped}) {
+              ({
+                required onUpdateState,
+                required onAutoStopped,
+                onScreenFlashChanged,
+              }) {
                 autoStopCallback = onAutoStopped;
                 return cameraService;
               },
@@ -1844,6 +1852,63 @@ void main() {
             verifyNever(() => clipManager.stopRecording());
           },
         );
+      });
+    });
+
+    group('native screen flash callback', () {
+      late ValueChanged<bool> screenFlashCallback;
+      late void Function({bool? forceCameraRebuild}) updateStateCallback;
+
+      VideoRecorderBloc buildBlocCapturingCallbacks() => buildBloc(
+        cameraServiceFactory:
+            ({
+              required onUpdateState,
+              required onAutoStopped,
+              onScreenFlashChanged,
+            }) {
+              updateStateCallback = onUpdateState;
+              screenFlashCallback = onScreenFlashChanged!;
+              return cameraService;
+            },
+      );
+
+      test('follows the screen flash turning on and off', () async {
+        final bloc = buildBlocCapturingCallbacks();
+        addTearDown(bloc.close);
+
+        screenFlashCallback(true);
+        await pumpEventQueue();
+        expect(bloc.state.isScreenFlashActive, isTrue);
+
+        screenFlashCallback(false);
+        await pumpEventQueue();
+        expect(bloc.state.isScreenFlashActive, isFalse);
+      });
+
+      test('keeps the screen flash across a camera re-sync', () async {
+        final bloc = buildBlocCapturingCallbacks();
+        addTearDown(bloc.close);
+        screenFlashCallback(true);
+        await pumpEventQueue();
+
+        updateStateCallback();
+        await pumpEventQueue();
+
+        expect(bloc.state.isScreenFlashActive, isTrue);
+      });
+
+      test('clears the screen flash once the camera is disposed', () async {
+        final bloc = buildBlocCapturingCallbacks();
+        addTearDown(bloc.close);
+        screenFlashCallback(true);
+        await pumpEventQueue();
+        expect(bloc.state.isScreenFlashActive, isTrue);
+
+        when(() => cameraService.isInitialized).thenReturn(false);
+        updateStateCallback();
+        await pumpEventQueue();
+
+        expect(bloc.state.isScreenFlashActive, isFalse);
       });
     });
 

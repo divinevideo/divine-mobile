@@ -86,7 +86,8 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// Optional draft ID to load an existing draft.
   final String? draftId;
 
-  /// Whether the editor was opened from the clip library.
+  /// Whether the editor was opened from the Library screen (its clips or
+  /// drafts tab).
   final bool fromLibrary;
 
   /// Route name for this screen.
@@ -102,7 +103,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   /// Query parameter carrying how the editor was entered.
   static const originQueryParameter = 'from';
 
-  /// Value of [originQueryParameter] for an entry from the clip library.
+  /// Value of [originQueryParameter] for an entry from the Library screen.
   static const libraryOrigin = 'library';
 
   /// Builds the editor location, optionally for an existing [draftId].
@@ -119,7 +120,7 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
     ).toString();
   }
 
-  /// Whether [uri] entered the editor from the clip library.
+  /// Whether [uri] entered the editor from the Library screen.
   static bool fromLibraryForRoute(Uri uri) =>
       uri.queryParameters[originQueryParameter] == libraryOrigin;
 
@@ -394,7 +395,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     }
   }
 
-  /// Opens the camera recorder as a modal overlay over the editor.
+  /// Opens the camera recorder in a full-screen route over the editor.
   ///
   /// Snapshots the current clip IDs before opening so that any newly recorded
   /// clips can be rolled back if the user cancels (`result != true`).
@@ -804,9 +805,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// new takes play back in place.
   ///
   /// Takes are laid back-to-back: the first starts at the beginning and each
-  /// subsequent take starts where the previous one ended, clamped to
-  /// [VideoEditorConstants.maxDuration]. All takes are committed in a single
-  /// history entry so one undo removes them together.
+  /// subsequent take starts where the previous one ended, or back at the
+  /// beginning once the previous one reached the end, clamped to the clip
+  /// length (at most [VideoEditorConstants.maxDuration]). All takes are
+  /// committed in a single history entry so one undo removes them together.
   Future<void> _openVoiceOver({required VideoEditorMainBloc mainBloc}) async {
     final availableDuration = resolveVoiceOverAvailableDuration(
       clipDuration: _clipEditorBloc.state.totalDuration,

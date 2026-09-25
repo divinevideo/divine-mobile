@@ -163,8 +163,8 @@ class VideoEditorRenderService {
   ///
   /// * [VideoRenderFailedException] if the render produced no video — the
   ///   reason distinguishes an empty clip list, a failed stop-motion assembly,
-  ///   a native render failure, a device out of storage, a cancellation, and a
-  ///   timed-out export.
+  ///   a native render failure, a device out of storage, a sound that could
+  ///   not be fetched, a cancellation, and a timed-out export.
   static Future<(DivineVideoClip, String? proofManifestJson)>
   renderVideoToClip({
     required List<DivineVideoClip> clips,
@@ -399,7 +399,7 @@ class VideoEditorRenderService {
     return proofData != null ? jsonEncode(proofData) : null;
   }
 
-  /// Ensures every clip has a [proofManifestJson].
+  /// Ensures every clip has a [DivineVideoClip.proofManifestJson].
   ///
   /// Clips that already have proof data are returned as-is. For clips without
   /// proof, [NativeProofModeService.proofFile] is called on the clip's video
@@ -454,12 +454,6 @@ class VideoEditorRenderService {
   }
 
   /// Renders multiple clips into a single video file with aspect ratio cropping.
-  ///
-  /// When [customAudioPath] is provided, the custom audio track is mixed into
-  /// the output.
-  ///
-  /// When [imageBytes] is provided (PNG with transparency), it is composited
-  /// on top of the video as a watermark overlay.
   ///
   /// Returns the path to the rendered video file, or null if cancelled/failed.
   ///
@@ -519,7 +513,7 @@ class VideoEditorRenderService {
   ///
   /// [reportEveryFailure] widens Crashlytics reporting from `Error` subtypes to
   /// every failure. Only the final export ([renderVideoToClip]) passes it —
-  /// see [_reportRenderFailure].
+  /// see [VideoRenderWatchdog.reportFailure].
   static Future<String> _renderVideoOrThrow({
     required List<DivineVideoClip> clips,
     bool usePersistentStorage = false,
@@ -1017,9 +1011,10 @@ class VideoEditorRenderService {
   /// end. Returns `null` when there is nothing to overlay.
   ///
   /// Detached clips are skipped: their raster is a single frame of a video, and
-  /// [_compositeDetachedClips] composites the moving picture instead. A render
-  /// path that does not run that pass — saving one clip to the library —
-  /// therefore leaves them out rather than freezing them into the file.
+  /// [DetachedClipRenderPass.composite] composites the moving picture instead.
+  /// A render path that does not run that pass — saving one clip to the
+  /// library — therefore leaves them out rather than freezing them into the
+  /// file.
   ///
   /// Public because the detached-clip pass builds the layers that go over its
   /// composition with the same geometry, and both have to agree exactly.
@@ -1094,7 +1089,7 @@ class VideoEditorRenderService {
   // Cleanup
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Cleans up temporary normalized clip files.
+  /// Best-effort deletes the temporary render files at [paths].
   static Future<void> _cleanupTempFiles(List<String> paths) async {
     for (final path in paths) {
       try {
@@ -1157,7 +1152,7 @@ class VideoEditorRenderService {
     }
   }
 
-  /// Cancels any existing native render with [task.id], tracks this render
+  /// Cancels any existing native render with [task]'s id, tracks this render
   /// instance, then renders to [outputPath].
   ///
   /// All app-owned `pro_video_editor` render entry points should use this

@@ -1,5 +1,5 @@
 // ABOUTME: Bottom toolbar for the video editor with sub-editor buttons.
-// ABOUTME: Provides access to clips, text, draw, volume, and effects editors.
+// ABOUTME: Provides access to clips, text, draw, filter, and tune editors.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,8 +13,8 @@ import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart'
 
 /// Bottom action bar for the video editor.
 ///
-/// Displays buttons to open sub-editors (text, draw, stickers, effects, music)
-/// and dispatches [VideoEditorMainOpenSubEditor] events to the BLoC.
+/// Displays buttons to open sub-editors (library, text, draw, filter, tune)
+/// through the [VideoEditorScope] callbacks and the editor state.
 class VideoEditorMainBottomBar extends StatelessWidget {
   const VideoEditorMainBottomBar({super.key});
 

@@ -585,9 +585,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// state with resolvable media (or a genuinely clip-less entry) is reached.
   bool _orphanStepDidReverse = false;
 
-  /// Guards against duplicate [addHistory] calls when both
-  /// [ClipEditorBloc.clipsVolumeRevision] and
-  /// [TimelineOverlayBloc.audioTracksRevision] change in the same frame
+  /// Guards against duplicate [ProImageEditorState.addHistory] calls when both
+  /// [ClipEditorState.clipsVolumeRevision] and
+  /// [TimelineOverlayState.audioTracksRevision] change in the same frame
   /// (e.g. mute-all toggle). When both revision counters fire, only one
   /// combined undo point is written instead of two separate ones.
   bool _isVolumeSavePending = false;
@@ -1037,18 +1037,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     });
   }
 
-  /// Handles seek requests from BLoC (e.g. timeline scrubbing).
-  ///
-  /// Uses a leading + trailing pattern with async backpressure:
-  /// - The first request (leading) is executed immediately via await.
-  /// - While the native seekTo is in flight, intermediate requests are
-  ///   dropped; only the latest position is kept.
-  /// - Once the seek completes, the last received position is fired as
-  ///   a trailing seek so the video always lands on the final frame.
-  ///
-  /// This relies on both Android and iOS returning from seekTo only
-  /// after the frame is actually decoded and rendered.
-  ///
   /// Returns the composite-timeline position of the most recent
   /// in-progress clip trim (and clears the captured values), so that
   /// after a trim drag ends and the multi-clip composite is restored,
@@ -1070,6 +1058,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
   }
 
+  /// Handles seek requests from BLoC (e.g. timeline scrubbing).
+  ///
+  /// Uses a leading + trailing pattern with async backpressure:
+  /// - The first request (leading) is executed immediately via await.
+  /// - While the native seekTo is in flight, intermediate requests are
+  ///   dropped; only the latest position is kept.
+  /// - Once the seek completes, the last received position is fired as
+  ///   a trailing seek so the video always lands on the final frame.
+  ///
+  /// This relies on both Android and iOS returning from seekTo only
+  /// after the frame is actually decoded and rendered.
   Future<void> _onSeekRequested(
     Duration position, {
     Duration? playTimePosition,
@@ -1495,12 +1494,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     await player.dispose();
   }
 
-  /// Syncs native audio overlay tracks from the [TimelineOverlayBloc]
-  /// sound items.
-  ///
-  /// Reads timeline positions (`startTime` / `endTime`) from the BLoC
-  /// state and combines them with the source [AudioEvent] from the
-  /// Riverpod provider (URL, asset path, start offset).
   /// Schedules the timeline sounds on the stop-motion audio engine, mirroring
   /// the native `setAudioTracks` mapping: each sound's window comes from its
   /// timeline item, and the source is clipped to the sound's own start offset
@@ -1567,6 +1560,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
   }
 
+  /// Syncs native audio overlay tracks from the [TimelineOverlayBloc]
+  /// sound items.
+  ///
+  /// Reads timeline positions (`startTime` / `endTime`) from the BLoC
+  /// state and combines them with the source `AudioEvent` from its
+  /// `audioTracks` (URL, asset path or local file path, start offset).
   Future<void> _syncAudioTracks() async {
     // Frames-only composition: no native player exists to carry the tracks —
     // schedule them on the stop-motion audio engine instead.
@@ -1678,7 +1677,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
   }
 
-  /// Syncs the main-editor capabilities from the main editor to the bloc.
   /// Timeline end position for a lip-sync sound seeded on editor init.
   ///
   /// Spans from zero up to the sound's own length, capped at the editor's hard

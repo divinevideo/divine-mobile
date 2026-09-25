@@ -12,7 +12,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 ///
 /// Usage:
 /// ```dart
-/// VideoEditorScope.of(context).undo();
+/// VideoEditorScope.of(context).editor?.undoAction();
 /// ```
 class VideoEditorScope extends InheritedWidget {
   /// Creates a [VideoEditorScope].
@@ -75,7 +75,7 @@ class VideoEditorScope extends InheritedWidget {
   /// Callback to open the voice-over recorder.
   final VoidCallback onOpenVoiceOver;
 
-  /// Callback to open the captions flow (mode prompt + captions editor).
+  /// Callback to open the captions editor.
   final VoidCallback onOpenCaptions;
 
   /// Original aspect ratio of the clip being edited.
@@ -84,7 +84,8 @@ class VideoEditorScope extends InheritedWidget {
   /// Target crop aspect ratio of the clip being edited.
   final double? targetClipAspectRatio;
 
-  /// Whether the clip was selected from the device library.
+  /// Whether the editor was opened from the Library screen (its clips or
+  /// drafts tab).
   final bool fromLibrary;
 
   /// Notifier for the body size, updated by [_CanvasFitter].
@@ -136,7 +137,7 @@ class VideoEditorScope extends InheritedWidget {
   ///
   /// A layer's `width` is in these coordinates — `LayerWidgetCustomItem` sizes
   /// it as `SizedBox(width: layer.width * layer.scale)` — so a layer as wide as
-  /// this exactly spans the video. Deriving a layer width from [bodySize]
+  /// this exactly spans the video. Deriving a layer width from the body size
   /// instead is off by `targetSize / bodySize`, which is why a "80% of the
   /// canvas" layer came out wider than the video it sat on.
   Size get canvasRenderSize => canvasGeometry.renderSize;

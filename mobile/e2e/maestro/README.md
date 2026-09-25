@@ -383,9 +383,9 @@ Stop-motion only:
 
 Classic only:
 
-- **Reaching the mode at all.** Classic is the last entry on the wheel, three
-  places from Capture — further than any other mode has to travel on a lazy
-  `ListView` that only builds entries near the armed one. `openClassicMode`
+- **Reaching the mode at all.** Classic sits three places from Capture —
+  further than any other mode a flow has to travel on a lazy `ListView` that
+  only builds entries near the armed one. `openClassicMode`
   therefore hops one entry at a time, and guards the hops on Classic not
   already being on screen: on a rerun the recorder opens straight on Classic
   (selecting a mode persists it), and from there Stop Motion is two entries

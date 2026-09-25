@@ -67,9 +67,7 @@ class TimelineOverlayItemMoved extends TimelineOverlayEvent {
 
 /// Update the trim of an overlay item.
 ///
-/// When [startTime] or [duration] are provided, the item is being
-/// extended beyond its original boundary (overlays have no fixed
-/// content length).
+/// A `null` [startTime] or [endTime] keeps that edge where it is.
 class TimelineOverlayItemTrimmed extends TimelineOverlayEvent {
   const TimelineOverlayItemTrimmed({
     required this.itemId,
@@ -161,8 +159,7 @@ class TimelineOverlayCollapseToggled extends TimelineOverlayEvent {
 
 /// Clamp all overlay items so they fit within [totalDuration].
 ///
-/// Dispatched when clip trimming or removal shortens the total
-/// video duration.
+/// Dispatched whenever the clips' total duration changes.
 class TimelineOverlayTotalDurationChanged extends TimelineOverlayEvent {
   const TimelineOverlayTotalDurationChanged(
     this.totalDuration, {
@@ -285,7 +282,8 @@ class TimelineOverlayAudioVolumeChanged extends TimelineOverlayEvent {
   List<Object?> get props => [trackId, volume];
 }
 
-/// Set the same [volume] on every non-original-sound audio track.
+/// Set the same [volume] on every audio track except clip-anchored original
+/// sound.
 /// [volume] is clamped to [0.0, 1.0] by the handler.
 class TimelineOverlayAllAudioVolumeChanged extends TimelineOverlayEvent {
   const TimelineOverlayAllAudioVolumeChanged({required this.volume});

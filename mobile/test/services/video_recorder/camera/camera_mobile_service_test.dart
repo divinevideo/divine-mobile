@@ -1,5 +1,6 @@
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_camera/divine_camera_platform_interface.dart';
+import 'package:flutter/foundation.dart' show ValueChanged;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
 import 'package:openvine/services/video_recorder/camera/camera_mobile_service.dart';
@@ -21,6 +22,9 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
 
   @override
   void Function(RemoteRecordTrigger trigger)? onRemoteRecordTrigger;
+
+  @override
+  ValueChanged<bool>? onScreenFlashChanged;
 
   @override
   Future<CameraState> initializeCamera({
@@ -170,6 +174,24 @@ void main() {
 
         expect(autoStopped, hasLength(1));
         expect(autoStopped.single?.file?.path, '/clips/auto.mp4');
+      });
+    });
+
+    group('onScreenFlashChanged', () {
+      test('forwards native screen flash changes', () async {
+        final changes = <bool>[];
+        platform.shouldFail = false;
+        service = CameraMobileService(
+          onUpdateState: ({forceCameraRebuild}) {},
+          onAutoStopped: (_) {},
+          onScreenFlashChanged: changes.add,
+        );
+        await service.initialize();
+
+        platform.onScreenFlashChanged!(true);
+        platform.onScreenFlashChanged!(false);
+
+        expect(changes, [isTrue, isFalse]);
       });
     });
   });

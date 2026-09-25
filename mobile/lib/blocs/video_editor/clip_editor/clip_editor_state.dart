@@ -4,9 +4,9 @@ part of 'clip_editor_bloc.dart';
 ///
 /// Manages clip selection, editing mode, and local clip mutations.
 ///
-/// Clip mutations happen locally in this state. The parent screen
-/// syncs the final clip list back to the Riverpod provider when
-/// the editor is closed.
+/// Clip mutations happen locally in this state. The widget layer
+/// mirrors the clip list back to the Riverpod provider from editor
+/// history.
 class ClipEditorState extends Equatable {
   const ClipEditorState({
     this.clips = const [],
@@ -88,14 +88,14 @@ class ClipEditorState extends Equatable {
 
   /// Last completed split operation. Consumed by the timeline strip
   /// to seed the new clips' thumbnail notifiers from the source clip
-  /// — avoiding a flash of placeholder/wrong-range thumbnails while
-  /// the trimmed segment files are still being rendered.
+  /// — avoiding a flash of placeholder/wrong-range thumbnails.
   ///
   /// Identity-compared (not value-compared) so each split delivers a
   /// fresh signal even when fields happen to repeat.
   final ClipSplitEvent? lastSplit;
 
-  /// The live absolute timeline position of the trim handle being dragged.
+  /// The live position of the trim handle being dragged, measured on the
+  /// untrimmed timeline of [trimmingClipId].
   ///
   /// Set while a trim gesture is active; `null` when no trim is in progress.
   final Duration? trimPosition;
@@ -128,16 +128,16 @@ class ClipEditorState extends Equatable {
   /// re-extraction still works.
   final Set<String> extractedAudioClipIds;
 
-  /// Whether a split operation is currently in progress (rendering).
+  /// Whether a split operation is currently in progress.
   final bool isSplitting;
 
-  /// The ID of the clip currently being split (rendering).
+  /// The ID of the clip currently being split.
   ///
   /// Non-`null` while [isSplitting] is `true`. Lets the controls disable
   /// Split only for the affected clip, leaving other clips unblocked.
   final String? splittingClipId;
 
-  /// One-shot signal emitted when a split rendering operation fails.
+  /// One-shot signal emitted when a split operation fails.
   ///
   /// Identity-compared so the [BlocListener] in the scaffold fires exactly
   /// once per failure even if the same error type repeats.
@@ -282,11 +282,13 @@ class ClipEditorState extends Equatable {
   /// the same player-sync listener a transform goes through.
   final ClipPlaceholderFillResult? lastPlaceholderFillResult;
 
-  /// Whether library clips are being rendered so they can join the timeline.
+  /// Whether library clips are being converted so they can join the timeline.
   ///
   /// Only true while a stop-motion set picked into a video composition is
-  /// assembled into an mp4; sets merging into a stop-motion composition, and
-  /// plain video clips, complete within the handler.
+  /// assembled into an mp4, or a video clip picked into a stop-motion
+  /// composition is sampled into stills. Sets merging into a stop-motion
+  /// composition, and plain video clips joining a video one, complete within
+  /// the handler.
   final bool isImportingLibraryClips;
 
   /// Render id of the clip being converted, or `null`. Moves on to each clip
@@ -604,10 +606,10 @@ final class ClipAudioExtractionSuccess extends ClipAudioExtractionResult {
 /// Extraction was attempted but the clip has no locally available file.
 final class ClipAudioExtractionNoLocalFile extends ClipAudioExtractionResult {}
 
-/// Extraction completed but the source clip was removed from the timeline
-/// while the async extraction was in flight. The widget should silently
-/// ignore this — there is no clip to attach the result to and no user
-/// action that warrants a snackbar.
+/// Extraction completed but the source clip was removed from the timeline,
+/// or its source changed, while the async extraction was in flight. The
+/// widget should silently ignore this — there is no clip to attach the result
+/// to and no user action that warrants a snackbar.
 final class ClipAudioExtractionDiscarded extends ClipAudioExtractionResult {}
 
 /// Extraction failed; widget should show a snackbar.
@@ -616,7 +618,7 @@ final class ClipAudioExtractionFailure extends ClipAudioExtractionResult {}
 // === SPLIT FAILURE SIGNAL ===
 
 /// One-shot signal emitted into [ClipEditorState.lastSplitFailure] when a
-/// split rendering operation fails. The scaffold listener uses this to show
+/// split operation fails. The scaffold listener uses this to show
 /// an error snackbar to the user.
 ///
 /// Identity-compared so each failure produces a distinct notification even
@@ -733,7 +735,8 @@ final class ClipLibraryImportSuccess extends ClipLibraryImportResult {
   final List<AudioEvent> audioTracks;
 }
 
-/// Rendering a stop-motion set into a clip failed; the timeline is unchanged.
+/// Converting a picked clip so it could join the composition failed; the
+/// timeline is unchanged.
 final class ClipLibraryImportFailure extends ClipLibraryImportResult {}
 
 /// Every picked clip was a stop-motion set whose stills are gone from the

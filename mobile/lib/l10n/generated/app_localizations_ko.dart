@@ -9808,12 +9808,6 @@ class AppLocalizationsKo extends AppLocalizations {
       'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
-  String get appealOpenSupportCenter => '지원 센터 열기';
-
-  @override
-  String get accountStatusMessageSupport => 'Message support';
-
-  @override
   String get minorAccountReviewOpenModerationMessage => '검수 메시지 열기';
 
   @override

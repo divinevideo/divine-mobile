@@ -9,10 +9,10 @@ part 'video_editor_main_state.dart';
 /// BLoC for managing the video editor main screen state.
 ///
 /// Handles:
-/// - Undo/Redo availability and actions
+/// - Undo/Redo availability
 /// - Layer interaction state (scaling/rotating)
 /// - Sub-editor open state and navigation
-/// - Close/Done actions
+/// - Playback, seek and timeline mode state
 class VideoEditorMainBloc
     extends Bloc<VideoEditorMainEvent, VideoEditorMainState> {
   VideoEditorMainBloc() : super(const VideoEditorMainState()) {
@@ -40,7 +40,7 @@ class VideoEditorMainBloc
     on<VideoEditorSlidePointPlacementChanged>(_onSlidePointPlacementChanged);
   }
 
-  /// Updates undo/redo/subEditor state based on editor capabilities.
+  /// Updates undo/redo state based on editor capabilities.
   void _onCapabilitiesChanged(
     VideoEditorMainCapabilitiesChanged event,
     Emitter<VideoEditorMainState> emit,

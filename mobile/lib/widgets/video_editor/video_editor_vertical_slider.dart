@@ -8,7 +8,7 @@ import 'package:openvine/l10n/l10n.dart';
 /// A vertical slider with a custom design matching the Figma specs.
 ///
 /// Features:
-/// - Vertical track with gradient (active portion colored)
+/// - Tapered vertical track (active portion colored)
 /// - Round thumb with subtle drop shadow
 /// - Smooth drag interaction
 class VideoEditorVerticalSlider extends StatefulWidget {
@@ -156,7 +156,7 @@ class _SliderBody extends StatelessWidget {
   }
 }
 
-/// The vertical track with gradient coloring.
+/// The tapered vertical track, colored below the thumb.
 class _Track extends StatelessWidget {
   const _Track({required this.height, required this.value});
 

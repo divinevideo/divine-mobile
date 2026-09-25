@@ -20,13 +20,18 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 /// Provides a unified API for camera control, recording, and preview.
 abstract class CameraService {
   /// Protected constructor for subclasses
-  CameraService({required this.onUpdateState, required this.onAutoStopped});
+  CameraService({
+    required this.onUpdateState,
+    required this.onAutoStopped,
+    this.onScreenFlashChanged,
+  });
 
   /// Factory constructor that returns the appropriate camera service
   /// implementation based on the current platform.
   factory CameraService.create({
     required void Function({bool? forceCameraRebuild}) onUpdateState,
     required void Function(EditorVideo? video) onAutoStopped,
+    ValueChanged<bool>? onScreenFlashChanged,
   }) {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.linux) {
       return CameraLinuxService(
@@ -37,6 +42,7 @@ abstract class CameraService {
     return CameraMobileService(
       onUpdateState: onUpdateState,
       onAutoStopped: onAutoStopped,
+      onScreenFlashChanged: onScreenFlashChanged,
     );
   }
 
@@ -44,9 +50,13 @@ abstract class CameraService {
   final void Function({bool? forceCameraRebuild}) onUpdateState;
 
   /// Called when the camera stops recording on its own — the max duration
-  /// was reached, or (iOS only) the camera was interrupted. [video] is null
+  /// was reached, or (iOS only) the camera was interrupted. `video` is null
   /// when nothing was captured; the recording has ended either way.
   final void Function(EditorVideo? video) onAutoStopped;
+
+  /// Called when the front-camera screen flash turns on or off. It is on for
+  /// torch mode, and for auto mode while a recording started in the dark.
+  final ValueChanged<bool>? onScreenFlashChanged;
 
   /// Initializes the camera and prepares it for use.
   ///
@@ -54,7 +64,7 @@ abstract class CameraService {
   /// [initialLens] specifies which camera lens to initialize with
   /// (default: front).
   /// [enableAutoLensSwitch] enables automatic lens switching based on zoom
-  /// level (default: true).
+  /// level (default: false).
   /// [preferUnprocessedAudio] captures the microphone without the platform's
   /// speech-tuned noise suppression, so instruments survive at their real
   /// level (default: false). iOS and Android — see
@@ -149,7 +159,7 @@ abstract class CameraService {
   /// Whether the camera supports manual focus point selection.
   bool get isFocusPointSupported;
 
-  /// Whether the camera is ready to record (initialized and not recording).
+  /// Whether the camera is ready to record (initialized).
   bool get canRecord;
 
   /// Whether the device has multiple cameras to switch between.

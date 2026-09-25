@@ -49,7 +49,8 @@ class _VideoClipTransformScreenState extends State<VideoClipTransformScreen> {
   ProVideoController? _videoController;
   StreamSubscription<DivineVideoPlayerState>? _playerSubscription;
 
-  /// Captured from [onCompleteWithParameters] before the close callback pops.
+  /// Captured from [ProImageEditorCallbacks.onCompleteWithParameters] before
+  /// the close callback pops.
   ExportTransform? _result;
   bool _popped = false;
 

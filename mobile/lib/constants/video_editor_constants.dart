@@ -35,7 +35,8 @@ class VideoEditorConstants {
   /// Unique history key for timeline marker positions.
   static const String timelineMarkersStateHistoryKey = 'timelineMarkers';
 
-  /// Unique history key for the caption track (mode, preset, overlay cues).
+  /// Unique history key for the caption track (burn-in flag, preset,
+  /// language, custom style, cues).
   static const String captionsStateHistoryKey = 'captions';
 
   /// `Layer.meta` key marking a layer as a burned-in caption cue.
@@ -120,7 +121,7 @@ class VideoEditorConstants {
 
   /// Minimum duration a rendered stop-motion video must reach.
   ///
-  /// Very short clips (a single still ≈ 83ms) make looping players stutter and
+  /// Very short clips (a single still ≈ 33ms) make looping players stutter and
   /// oscillate. The renderer repeats the captured sequence an integer number of
   /// times until the output is at least this long, preserving the per-frame
   /// timing and keeping the loop seamless.

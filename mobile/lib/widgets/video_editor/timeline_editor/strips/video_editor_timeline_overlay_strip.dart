@@ -19,10 +19,6 @@ import 'package:openvine/widgets/video_editor/timeline_editor/timeline_snap_cont
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 /// Callback reporting a trim / resize change for an overlay item.
-///
-/// [startTime] and [duration] are non-null when the resize extends
-/// beyond the original item boundary (overlays have no fixed content
-/// length so they can grow in either direction).
 typedef OverlayTrimCallback = void Function({
   required TimelineOverlayItem item,
   required Duration startTime,

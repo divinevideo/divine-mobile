@@ -56,6 +56,14 @@ class DivineCamera {
   /// when remote record control is enabled.
   void Function(RemoteRecordTrigger trigger)? onRemoteRecordTrigger;
 
+  /// Callback invoked when the front-camera screen flash turns on or off.
+  ///
+  /// The screen flash maxes out the display brightness instead of firing a
+  /// hardware flash. It follows the flash mode: on for torch, and for auto
+  /// only while a recording started in the dark. Not reported on macOS,
+  /// which lights the face with its own overlay windows.
+  ValueChanged<bool>? onScreenFlashChanged;
+
   /// Whether remote record control is currently enabled.
   bool _remoteRecordControlEnabled = false;
 
@@ -89,6 +97,11 @@ class DivineCamera {
   /// Handles remote record trigger event from platform.
   void _handleRemoteRecordTrigger(RemoteRecordTrigger trigger) {
     onRemoteRecordTrigger?.call(trigger);
+  }
+
+  /// Handles a screen flash change from platform.
+  void _handleScreenFlashChanged(bool isActive) {
+    onScreenFlashChanged?.call(isActive);
   }
 
   /// Returns the platform version.
@@ -133,6 +146,8 @@ class DivineCamera {
     // Register remote record trigger callback with platform
     _platform.onRemoteRecordTrigger = _handleRemoteRecordTrigger;
 
+    _platform.onScreenFlashChanged = _handleScreenFlashChanged;
+
     // Store the mirror setting for preview widget
     _mirrorFrontCameraOutput = mirrorFrontCameraOutput;
 
@@ -161,8 +176,10 @@ class DivineCamera {
     onStateChanged = null;
     onRecordingAutoStopped = null;
     onRemoteRecordTrigger = null;
+    onScreenFlashChanged = null;
     _platform.onRecordingAutoStopped = null;
     _platform.onRemoteRecordTrigger = null;
+    _platform.onScreenFlashChanged = null;
     _remoteRecordControlEnabled = false;
   }
 

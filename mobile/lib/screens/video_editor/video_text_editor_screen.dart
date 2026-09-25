@@ -362,7 +362,8 @@ class _KeyboardHeightPanelState extends State<_KeyboardHeightPanel>
     _lastInset = bottomInset;
   }
 
-  /// Schedules a pop callback with delay if not already popped.
+  /// Calls `widget.onKeyboardClosedWithoutPanel` once, if this route is still
+  /// the current one.
   void _schedulePopIfNeeded() {
     if (_hasPopped) return;
     _hasPopped = true;

@@ -306,7 +306,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     );
   }
 
-  /// Initialize camera and free background video resources.
+  /// Initialize camera.
   ///
   /// [recorderMode] and [autoStartRecording] belong to the open only; a
   /// re-initialization (leaving the Upload tab, returning from the editor)
@@ -495,63 +495,109 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
               discardRecorderSession(ref);
             }
           },
-          child: AnnotatedRegion<SystemUiOverlayStyle>(
-            value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
-            child: Scaffold(
-              backgroundColor: context.vineColors.surfaceContainerHigh,
-              resizeToAvoidBottomInset: false,
-              body: Column(
-                children: [
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: switch (context.select(
-                        (VideoRecorderBloc b) => b.state.recorderMode,
-                      )) {
-                        .upload => const VideoRecorderUploadStack(),
-                        .capture => VideoRecorderCaptureStack(
-                          fromEditor: widget.fromEditor,
-                        ),
-                        // Stop-motion reuses the capture stack — each shutter
-                        // tap captures a still that becomes a 1-frame video
-                        // clip, so the capture flow (clips, library, editor,
-                        // ghost) applies unchanged. It only fills the top
-                        // bar's center slot, which capture mode leaves empty,
-                        // with the session's remaining-shots budget.
-                        .stopMotion => VideoRecorderCaptureStack(
-                          fromEditor: widget.fromEditor,
-                          topBarCenter: const VideoRecorderStopMotionBudget(),
-                        ),
-                        .lipSync => const VideoRecorderLipSyncStack(),
-                        .classic => const VideoRecorderClassicStack(),
-                      },
-                    ),
-                  ),
+          child: _ScreenFlashTheme(
+            child: _VideoRecorderScaffold(fromEditor: widget.fromEditor),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                  if (!widget.fromEditor)
-                    const Padding(
-                      padding: .symmetric(vertical: 22),
-                      child: VideoRecorderBottomBar(),
-                    )
-                  else
-                    // Editor-hosted recorder: no mode wheel and no library
-                    // navigation, but the library button still renders as a
-                    // read-only capture counter (last still + count badge).
-                    const Padding(
-                      padding: .symmetric(vertical: 22),
-                      child: SafeArea(
-                        top: false,
-                        child: Row(
-                          children: [
-                            VideoRecorderLibraryButton(interactive: false),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
+/// Lights the area around the camera preview while the front-camera screen
+/// flash is on.
+///
+/// The native camera maxes out the display brightness for the screen flash,
+/// but the recorder chrome around the preview stays dark and lights little.
+/// While the flash is on, the recorder takes the light theme with a pure white
+/// background, so that area glows and the controls on it stay readable.
+class _ScreenFlashTheme extends StatelessWidget {
+  const _ScreenFlashTheme({required this.child});
+
+  final Widget child;
+
+  /// Built once, so a rebuild hands [Theme] the identical instance instead of
+  /// one that needs a deep `ThemeData` comparison.
+  static final ThemeData _flashTheme = VineTheme.lightTheme.copyWith(
+    extensions: [
+      VineTheme.lightColors.copyWith(surfaceContainerHigh: VineTheme.whiteText),
+    ],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final isScreenFlashActive = context.select(
+      (VideoRecorderBloc b) => b.state.isScreenFlashActive,
+    );
+    // Always wrapped, so turning the flash on or off never remounts the
+    // camera preview underneath.
+    return Theme(
+      data: isScreenFlashActive ? _flashTheme : Theme.of(context),
+      child: child,
+    );
+  }
+}
+
+class _VideoRecorderScaffold extends StatelessWidget {
+  const _VideoRecorderScaffold({required this.fromEditor});
+
+  final bool fromEditor;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
+      child: Scaffold(
+        backgroundColor: context.vineColors.surfaceContainerHigh,
+        resizeToAvoidBottomInset: false,
+        body: Column(
+          children: [
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: switch (context.select(
+                  (VideoRecorderBloc b) => b.state.recorderMode,
+                )) {
+                  .upload => const VideoRecorderUploadStack(),
+                  .capture => VideoRecorderCaptureStack(fromEditor: fromEditor),
+                  // Stop-motion reuses the capture stack — each shutter
+                  // tap adds a still to the session, which joins the
+                  // clip list as one frames-based clip, so the capture
+                  // flow (clips, library, editor, ghost) applies
+                  // unchanged. It only fills the top bar's center slot,
+                  // which capture mode leaves empty, with the session's
+                  // remaining-shots budget.
+                  .stopMotion => VideoRecorderCaptureStack(
+                    fromEditor: fromEditor,
+                    topBarCenter: const VideoRecorderStopMotionBudget(),
+                  ),
+                  .lipSync => const VideoRecorderLipSyncStack(),
+                  .classic => const VideoRecorderClassicStack(),
+                },
               ),
             ),
-          ),
+
+            if (!fromEditor)
+              const Padding(
+                padding: .symmetric(vertical: 22),
+                child: VideoRecorderBottomBar(),
+              )
+            else
+              // Editor-hosted recorder: no mode wheel and no library
+              // navigation, but the library button still renders as a
+              // read-only capture counter (last still + count badge).
+              const Padding(
+                padding: .symmetric(vertical: 22),
+                child: SafeArea(
+                  top: false,
+                  child: Row(
+                    children: [
+                      VideoRecorderLibraryButton(interactive: false),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

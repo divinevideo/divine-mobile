@@ -368,6 +368,10 @@ class QueryResult {
   final QueryEnd endedBy;
   final bool possiblyCapped;       // defaults to false
   final bool confirmedExhaustive;  // defaults to false
+  final int answeredNetworkRelayCount;  // defaults to 0
+  final int unansweredRelayCount;       // defaults to 0
+  final int rateLimitedRelayCount;      // defaults to 0
+  final Map<String, String> closedRelayReasons;  // defaults to {}
   bool get isComplete;             // true only when endedBy == QueryEnd.complete
 }
 ```
@@ -388,6 +392,14 @@ class QueryResult {
   caller that will act on it should give the filter a `limit`.
 - `confirmedExhaustive`: `true` only when every relay that answered
   explicitly confirmed it had no further matching events (NIP-67 `finish`).
+- `answeredNetworkRelayCount`: how many non-cache relays sent `EOSE`.
+- `unansweredRelayCount`: how many relays sent no terminal frame and could
+  still have answered. A dropped relay, or one behind a shut NIP-42 gate, is
+  not counted.
+- `rateLimitedRelayCount`: how many relays refused with `rate-limited`.
+- `closedRelayReasons`: each non-cache relay's `CLOSED` reason category, keyed
+  by relay url — a NIP-01 prefix, `auth-required`, `unsupported`, or `other`.
+  Only the category is kept, never the relay's own text.
 
 ### PagedQueryResult
 

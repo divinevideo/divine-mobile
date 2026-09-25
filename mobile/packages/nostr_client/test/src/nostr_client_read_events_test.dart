@@ -42,6 +42,31 @@ class _StubPagerNostr extends Mock implements Nostr {
   }
 }
 
+/// Answers each one-shot read with the next scripted [QueryResult], so the
+/// client's settlement of a read can be tested without a relay pool. Records
+/// the deadline each read was given.
+class _ScriptedReadsNostr extends Mock implements Nostr {
+  _ScriptedReadsNostr(this.results);
+
+  final List<QueryResult> results;
+  final List<DateTime?> deadlines = [];
+
+  @override
+  Future<QueryResult> readEvents(
+    List<Map<String, dynamic>> filters, {
+    String? id,
+    List<String>? tempRelays,
+    List<int> relayTypes = RelayType.all,
+    bool sendAfterAuth = false,
+    Duration timeout = const Duration(seconds: 5),
+    DateTime? deadline,
+    bool requireAllRelaysSettled = false,
+  }) async {
+    deadlines.add(deadline);
+    return results[deadlines.length - 1];
+  }
+}
+
 /// A relay whose every frame the test writes by hand, so a read can be held
 /// open past its deadline, closed mid-replay, or left silent on purpose.
 class _ScriptedRelay extends Relay {
@@ -536,6 +561,381 @@ void main() {
       expect(result.timedOut, isFalse);
       expect(result.noRelays, isFalse);
       expect(result.events, hasLength(1));
+    });
+
+    group('with acceptRelayClosedWhenOthersAnswered', () {
+      late Nostr nostr;
+      late _ScriptedRelay answering;
+      late _ScriptedRelay refusing;
+      late NostrClient client;
+
+      setUp(() async {
+        nostr = _newNostr();
+        answering = _ScriptedRelay('wss://answers.example');
+        refusing = _ScriptedRelay('wss://refuses.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(refusing), isTrue);
+        client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+        );
+      });
+
+      Future<({List<Event> events, bool timedOut, bool noRelays})> read({
+        bool optIn = true,
+        Duration timeout = const Duration(seconds: 3),
+      }) => client.queryEventsDetailed(
+        [_textNotes()],
+        useCache: false,
+        timeout: timeout,
+        requireAllRelaysSettled: true,
+        acceptRelayClosedWhenOthersAnswered: optIn,
+      );
+
+      /// Has the answering relay send EOSE and the refusing relay [reason] for
+      /// the REQ each of them was sent.
+      Future<void> answerAndRefuse(String reason) async {
+        final answeringSub = await answering.awaitReq(0);
+        final refusingSub = await refusing.awaitReq(0);
+        await answering.deliver(['EOSE', answeringSub]);
+        await refusing.deliver(['CLOSED', refusingSub, reason]);
+      }
+
+      test('keeps a CLOSED refusal timed out without the opt-in', () async {
+        final pending = read(optIn: false);
+        await answerAndRefuse('error: unsupported request');
+
+        expect((await pending).timedOut, isTrue);
+      });
+
+      test('leaves an error refusal for the caller deferred retry', () async {
+        final pending = read();
+        await answerAndRefuse('error: unsupported request');
+
+        expect((await pending).timedOut, isTrue);
+        expect(answering.reqSubIds, hasLength(1));
+        expect(refusing.reqSubIds, hasLength(1));
+      });
+
+      test(
+        'keeps a strfry-style ERROR: auth-required refusal timed out for a '
+        'later attempt to confirm',
+        () async {
+          // strfry prefixes every CLOSED reason with "ERROR: ", so its NIP-42
+          // refusal is categorised `error`, not `auth-required`.
+          const reason =
+              'ERROR: auth-required: requested filter requires authentication';
+          final pending = read();
+          await answerAndRefuse(reason);
+
+          expect((await pending).timedOut, isTrue);
+          expect(refusing.reqSubIds, hasLength(1));
+        },
+      );
+
+      for (final reason in const [
+        'restricted: members only',
+        'blocked: not accepting reads',
+        'unsupported: filter contains unknown elements',
+      ]) {
+        test(
+          'settles when the other relay refuses with "$reason"',
+          () async {
+            final pending = read();
+            await answerAndRefuse(reason);
+
+            expect((await pending).timedOut, isFalse);
+            expect(answering.reqSubIds, hasLength(1));
+            expect(refusing.reqSubIds, hasLength(1));
+          },
+        );
+      }
+
+      test('keeps an auth-required refusal timed out', () async {
+        // The pool parks the query for its post-AUTH replay, so the read
+        // runs to its deadline rather than settling on the refusal.
+        final pending = read(timeout: const Duration(milliseconds: 800));
+        await answerAndRefuse('auth-required: authenticate first');
+
+        expect((await pending).timedOut, isTrue);
+        expect(refusing.reqSubIds, hasLength(1));
+      });
+
+      test(
+        'keeps a new ambiguous refusal incomplete without a confirmation read',
+        () async {
+          final third = _ScriptedRelay('wss://third.example');
+          expect(await nostr.relayPool.add(third), isTrue);
+          client = _clientOver(
+            nostr,
+            connectedRelays: [
+              'wss://answers.example',
+              'wss://refuses.example',
+              'wss://third.example',
+            ],
+          );
+
+          final pending = read();
+          final thirdSub = await third.awaitReq(0);
+          await answerAndRefuse('error: temporary failure');
+          await third.deliver(['EOSE', thirdSub]);
+
+          expect((await pending).timedOut, isTrue);
+          expect(answering.reqSubIds, hasLength(1));
+          expect(refusing.reqSubIds, hasLength(1));
+          expect(third.reqSubIds, hasLength(1));
+        },
+      );
+    });
+
+    group('with acceptRelayClosedWhenOthersAnswered and a scripted pool', () {
+      const refusedWithError = QueryResult(
+        events: [],
+        endedBy: QueryEnd.relayClosed,
+        answeredNetworkRelayCount: 1,
+        closedRelayReasons: {'wss://refuses.example': 'error'},
+      );
+
+      Future<({List<Event> events, bool timedOut, bool noRelays})> readWith(
+        _ScriptedReadsNostr nostr,
+      ) =>
+          _clientOver(
+            nostr,
+            connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+          ).queryEventsDetailed(
+            [_textNotes()],
+            useCache: false,
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          );
+
+      test('keeps an error refusal timed out after a single read', () async {
+        final nostr = _ScriptedReadsNostr([refusedWithError]);
+
+        final result = await readWith(nostr);
+
+        expect(result.timedOut, isTrue);
+        expect(nostr.deadlines, hasLength(1));
+      });
+
+      test(
+        'keeps an auth-required refusal settled by the auth gate timed out '
+        'for a later attempt to confirm',
+        () async {
+          // A relay with no live AUTH handshake has its gate closed and the
+          // read settles on `auth-required`, a gate that may open moments
+          // later once a remote signer produces the signature.
+          final nostr = _ScriptedReadsNostr([
+            const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://refuses.example': 'auth-required'},
+            ),
+          ]);
+
+          final result = await readWith(nostr);
+
+          expect(result.timedOut, isTrue);
+          expect(nostr.deadlines, hasLength(1));
+        },
+      );
+
+      test('keeps a read with an unanswered relay timed out', () async {
+        final nostr = _ScriptedReadsNostr([
+          const QueryResult(
+            events: [],
+            endedBy: QueryEnd.relayClosed,
+            answeredNetworkRelayCount: 1,
+            unansweredRelayCount: 1,
+            closedRelayReasons: {'wss://refuses.example': 'restricted'},
+          ),
+        ]);
+
+        final result = await readWith(nostr);
+
+        expect(result.timedOut, isTrue);
+        expect(nostr.deadlines, hasLength(1));
+      });
+    });
+
+    test(
+      'leaves a read that was not held for full settlement as it settled',
+      () async {
+        final nostr = _newNostr();
+        final answering = _ScriptedRelay('wss://answers.example');
+        final refusing = _ScriptedRelay('wss://refuses.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(refusing), isTrue);
+        final client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+        );
+
+        // Without full settlement a refusal never reports `timedOut`, so the
+        // opt-in has nothing to change.
+        final pending = client.queryEventsDetailed(
+          [_textNotes()],
+          useCache: false,
+          timeout: const Duration(milliseconds: 800),
+          acceptRelayClosedWhenOthersAnswered: true,
+        );
+        final answeringSub = await answering.awaitReq(0);
+        final refusingSub = await refusing.awaitReq(0);
+        await answering.deliver(['EOSE', answeringSub]);
+        await refusing.deliver([
+          'CLOSED',
+          refusingSub,
+          'error: unsupported request',
+        ]);
+        final result = await pending;
+
+        expect(result.timedOut, isFalse);
+        expect(answering.reqSubIds, hasLength(1));
+        expect(refusing.reqSubIds, hasLength(1));
+      },
+    );
+
+    test('returns events collected before an ambiguous refusal', () async {
+      final nostr = _newNostr();
+      final answering = _ScriptedRelay('wss://answers.example');
+      final refusing = _ScriptedRelay('wss://refuses.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(refusing), isTrue);
+      final notes = await _signedNotes(nostr, 2);
+      final client = _clientOver(
+        nostr,
+        connectedRelays: ['wss://answers.example', 'wss://refuses.example'],
+      );
+
+      final pending = client.queryEventsDetailed(
+        [_textNotes()],
+        useCache: false,
+        timeout: const Duration(seconds: 3),
+        requireAllRelaysSettled: true,
+        acceptRelayClosedWhenOthersAnswered: true,
+      );
+      final answeringSub = await answering.awaitReq(0);
+      final refusingSub = await refusing.awaitReq(0);
+      for (final note in notes) {
+        await answering.deliver(['EVENT', answeringSub, note.toJson()]);
+      }
+      await answering.deliver(['EOSE', answeringSub]);
+      await refusing.deliver([
+        'CLOSED',
+        refusingSub,
+        'error: unsupported request',
+      ]);
+      final result = await pending;
+
+      expect(result.timedOut, isTrue);
+      expect(answering.reqSubIds, hasLength(1));
+      expect(refusing.reqSubIds, hasLength(1));
+      expect(
+        result.events.map((event) => event.id),
+        unorderedEquals(notes.map((note) => note.id)),
+      );
+    });
+
+    group('keeps an opted-in read timed out', () {
+      late Nostr nostr;
+      late _ScriptedRelay first;
+      late _ScriptedRelay second;
+      late NostrClient client;
+
+      setUp(() async {
+        nostr = _newNostr();
+        first = _ScriptedRelay('wss://first.example');
+        second = _ScriptedRelay('wss://second.example');
+        expect(await nostr.relayPool.add(first), isTrue);
+        expect(await nostr.relayPool.add(second), isTrue);
+        client = _clientOver(
+          nostr,
+          connectedRelays: ['wss://first.example', 'wss://second.example'],
+        );
+      });
+
+      /// Starts an opted-in read and returns once both relays hold its `REQ`;
+      /// the record keeps `await` from flattening the pending `timedOut`.
+      Future<({Future<bool> timedOut})> optedInRead({
+        Duration timeout = const Duration(seconds: 3),
+      }) async {
+        final pending = client.queryEventsDetailed(
+          [_textNotes()],
+          useCache: false,
+          timeout: timeout,
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        );
+        await first.awaitReq(0);
+        await second.awaitReq(0);
+        return (timedOut: pending.then((result) => result.timedOut));
+      }
+
+      test('when the refusal is a rate limit', () async {
+        final read = await optedInRead();
+        await first.deliver(['EOSE', first.reqSubIds.single]);
+        await second.deliver([
+          'CLOSED',
+          second.reqSubIds.single,
+          'rate-limited: slow down',
+        ]);
+
+        expect(await read.timedOut, isTrue);
+      });
+
+      test('when every relay refused and none answered', () async {
+        final read = await optedInRead();
+        await first.deliver([
+          'CLOSED',
+          first.reqSubIds.single,
+          'error: unsupported request',
+        ]);
+        await second.deliver([
+          'CLOSED',
+          second.reqSubIds.single,
+          'error: unsupported request',
+        ]);
+
+        expect(await read.timedOut, isTrue);
+        // Settled on its own refusals rather than by running out the
+        // deadline.
+        expect(first.reqSubIds, hasLength(1));
+        expect(second.reqSubIds, hasLength(1));
+      });
+
+      test('when another relay dropped its socket', () async {
+        final read = await optedInRead(
+          timeout: const Duration(milliseconds: 400),
+        );
+        await first.deliver(['EOSE', first.reqSubIds.single]);
+        second.onError('socket closed');
+
+        expect(await read.timedOut, isTrue);
+      });
+
+      test('when a refusal still needs confirming', () async {
+        final read = await optedInRead();
+        await first.deliver([
+          'CLOSED',
+          first.reqSubIds.single,
+          'error: temporary failure',
+        ]);
+        await second.deliver(['EOSE', second.reqSubIds.single]);
+
+        expect(await read.timedOut, isTrue);
+        expect(first.reqSubIds, hasLength(1));
+        expect(second.reqSubIds, hasLength(1));
+      });
+
+      test('when another relay stayed silent', () async {
+        final read = await optedInRead(
+          timeout: const Duration(milliseconds: 400),
+        );
+        await first.deliver(['EOSE', first.reqSubIds.single]);
+
+        expect(await read.timedOut, isTrue);
+      });
     });
   });
 

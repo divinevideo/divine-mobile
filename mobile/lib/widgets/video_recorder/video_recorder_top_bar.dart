@@ -13,7 +13,7 @@ import 'package:openvine/widgets/video_editor/audio_editor/video_editor_audio_ch
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
 
-/// Top bar with close button, segment bar, and forward button.
+/// Top bar with close button, audio chip, and forward button.
 class VideoRecorderTopBar extends ConsumerStatefulWidget {
   /// Creates a video recorder top bar widget.
   const VideoRecorderTopBar({super.key});

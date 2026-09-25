@@ -44,8 +44,9 @@ class ClipChromaKey {
         '[backgroundVideoPath] must be a real path when set',
       );
 
-  /// The key itself: screen color, tolerances, and — for the [color] and
-  /// [image] background types — the fill.
+  /// The key itself: screen color, tolerances, and — for the
+  /// [ClipChromaKeyBackgroundType.color] and
+  /// [ClipChromaKeyBackgroundType.image] background types — the fill.
   ///
   /// For [ClipChromaKeyBackgroundType.video] this stays transparent so the
   /// layer below shows through; the backdrop comes from [backgroundVideoPath].
@@ -66,8 +67,8 @@ class ClipChromaKey {
     return ClipChromaKeyBackgroundType.transparent;
   }
 
-  /// Whether baking this key needs a two-layer composition rather than a
-  /// single keyed segment.
+  /// Whether baking this key needs a [VideoComposition] rather than a single
+  /// keyed segment.
   bool get needsComposition =>
       backgroundType == ClipChromaKeyBackgroundType.video ||
       backgroundType == ClipChromaKeyBackgroundType.transparent;

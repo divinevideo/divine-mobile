@@ -13,8 +13,10 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/follow_from_profile_button.dart';
 import 'package:openvine/widgets/profile/profile_notify_bell_button.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Action buttons shown on profile page.
 ///
@@ -109,11 +111,20 @@ class ProfileActionButtons extends ConsumerWidget {
         ),
         if (canShowBell)
           BlocProvider(
-            create: (_) => NotifyBellCubit(
-              repository: notifySubscriptions,
-              viewerPubkey: viewerPubkey,
-              creatorPubkey: userIdHex,
-            )..load(),
+            create: (_) {
+              final cubit = NotifyBellCubit(
+                repository: notifySubscriptions,
+                viewerPubkey: viewerPubkey,
+                creatorPubkey: userIdHex,
+              );
+              runDetached(
+                cubit.load(),
+                'load creator notifications',
+                logName: 'ProfileActionButtons',
+                category: LogCategory.ui,
+              );
+              return cubit;
+            },
           ),
       ],
       child: _OtherProfileButtons(
@@ -231,7 +242,12 @@ class _OtherProfileButtons extends StatelessWidget {
           previous.isFollowing(userIdHex) &&
           !current.isFollowing(userIdHex),
       listener: (context, state) {
-        context.read<NotifyBellCubit>().clearForUnfollow();
+        runDetached(
+          context.read<NotifyBellCubit>().clearForUnfollow(),
+          'clear creator notifications after unfollow',
+          logName: 'ProfileActionButtons',
+          category: LogCategory.ui,
+        );
       },
       buildWhen: (previous, current) =>
           previous.isFollowing(userIdHex) != current.isFollowing(userIdHex),

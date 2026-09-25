@@ -60,8 +60,8 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   }
 
   /// Undo window before a scheduled deletion is committed to library
-  /// trash for good. The snackbar must outlast this so the user can
-  /// always tap Undo while the option is shown.
+  /// trash for good. The Undo snackbar uses the same duration, so Undo is
+  /// honored for as long as it is shown.
   static const pendingDeletionWindow = Duration(seconds: 5);
 
   /// Returns an unmodifiable view of all clips.
@@ -69,8 +69,8 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Calculates the remaining recording time available.
   ///
-  /// Returns the difference between [maxDuration] and the sum of all clip
-  /// durations.
+  /// Returns the difference between [VideoEditorConstants.maxDuration] and
+  /// the sum of all clip durations.
   Duration get remainingDuration {
     return VideoEditorConstants.maxDuration - totalDuration;
   }
@@ -194,7 +194,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   ///
   /// After recording (and optional trimming), a ProofMode / C2PA attestation
   /// is generated for the clip's video file. The clip is updated with the
-  /// resulting [proofManifestJson] once generation completes.
+  /// resulting [DivineVideoClip.proofManifestJson] once generation completes.
   ///
   /// Returns the created clip with unique ID.
   DivineVideoClip addClip({
@@ -419,10 +419,9 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     return clip;
   }
 
-  /// Add multiple clips at once (e.g., from draft restoration).
+  /// Add multiple clips at once.
   ///
   /// Appends all clips to the end of the current clip list and updates state.
-  /// Used when restoring drafts or importing multiple clips from library.
   void addMultipleClips(List<DivineVideoClip> clips) {
     if (clips.isEmpty) {
       Log.debug(
@@ -704,7 +703,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
 
   /// Update thumbnail path for a clip.
   ///
-  /// Alternative method to [updateThumbnail] with same functionality.
+  /// Like [updateThumbnail], but leaves the clip's thumbnail timestamp as is.
   void updateClipThumbnail(String clipId, String thumbnailPath) {
     final index = _clips.indexWhere((c) => c.id == clipId);
     if (index != -1) {
@@ -888,8 +887,6 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   }
 
   /// Clear all clips without deleting files or autosave.
-  ///
-  /// Used when restoring a draft to prevent clip duplication.
   void clearClips() {
     _cancelPendingDeletionTimer();
     final clipCount = _clips.length;
