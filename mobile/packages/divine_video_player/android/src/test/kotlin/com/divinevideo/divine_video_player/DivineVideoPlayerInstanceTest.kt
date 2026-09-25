@@ -1332,7 +1332,9 @@ class DivineVideoPlayerInstanceTest {
     }
 
     /** Brings a playing single clip up to the point its loop lands mid-lap. */
-    private fun landLoopMidLap(loop: ClipAudioLoopTrack): Pair<List<Boolean>, Player.Listener> {
+    private fun landLoopMidLap(
+        loop: ClipAudioLoopTrack,
+    ): Triple<List<Boolean>, Player.Listener, DivineVideoPlayerInstance> {
         every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any()) } returns loop
         presentDuration(3_000L)
         every { mockPlayer.isPlaying } returns true
@@ -1351,7 +1353,7 @@ class DivineVideoPlayerInstanceTest {
         // (#8021), so the renderer keeps the sound while the decode runs.
         assertEquals(false, disabled.contains(true))
         executor.drain()
-        return disabled to listenerSlot.captured
+        return Triple(disabled, listenerSlot.captured, held)
     }
 
     @Test
@@ -1428,6 +1430,36 @@ class DivineVideoPlayerInstanceTest {
             assertEquals(true, disabled.last())
             verify { loop.setVolume(1f) }
             verify { loop.pause() }
+        } finally {
+            unmockkObject(ClipAudioLoopTrack.Companion)
+        }
+    }
+
+    @Test
+    fun `a seek mid-takeover hands the sound to the loop before repositioning it`() {
+        mockkObject(ClipAudioLoopTrack.Companion)
+        try {
+            val loop = mockk<ClipAudioLoopTrack>(relaxed = true)
+            every { loop.sync(any(), any()) } returns null
+            val (disabled, _, held) = landLoopMidLap(loop)
+            // The decode lands and the takeover starts, but never lines up.
+            capturePostedRunnables().forEach { it.run() }
+            assertEquals(false, disabled.contains(true))
+
+            held.onMethodCall(
+                MethodCall("seekTo", mapOf("positionMs" to 500)),
+                mockk(relaxed = true),
+            )
+
+            // The crossfade must be settled — the loop at full volume and
+            // ExoPlayer's renderer silenced — before the loop track is
+            // repositioned, or the still-stepping takeover would keep ramping
+            // volume against a track whose position just jumped underneath it.
+            assertEquals(true, disabled.last())
+            verifyOrder {
+                loop.setVolume(1f)
+                loop.seekTo(any())
+            }
         } finally {
             unmockkObject(ClipAudioLoopTrack.Companion)
         }

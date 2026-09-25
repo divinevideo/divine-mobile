@@ -1128,6 +1128,11 @@ internal class DivineVideoPlayerInstance(
         // and not the start of the video, so the fade out stays on the join.
         declickProcessor.nextStreamStartUs = resolved.second * 1000L
         exoPlayer.seekTo(targetIndex, resolved.second)
+        // Settle any in-flight takeover before repositioning the loop track,
+        // the same way pausing and setVolume do — otherwise the crossfade
+        // keeps stepping against a track whose position just jumped underneath
+        // it, which is audible whenever the loop is already partially audible.
+        finishClipAudioTakeover()
         // The loop track is outside the player and does not hear the seek.
         clipAudioLoop?.seekTo(resolved.second * 1000L)
 
