@@ -6,6 +6,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
+import 'package:openvine/widgets/support_contact_action.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -48,10 +50,14 @@ class MinorAccountReviewScreen extends ConsumerWidget {
 
   const MinorAccountReviewScreen({
     this.entryPoint = MinorAccountReviewEntryPoint.moderation,
+    this.openSupportMessages,
+    this.composeEmail,
     super.key,
   });
 
   final MinorAccountReviewEntryPoint entryPoint;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -70,7 +76,11 @@ class MinorAccountReviewScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: statusAsync.when(
-              data: (status) => _LoadedView(status: status),
+              data: (status) => _LoadedView(
+                status: status,
+                openSupportMessages: openSupportMessages,
+                composeEmail: composeEmail,
+              ),
               loading: () =>
                   const Center(child: PartialCircleSpinner(progress: 0.33)),
               error: (error, _) {
@@ -226,9 +236,15 @@ class MinorAccountReviewLoadingScreen extends StatelessWidget {
 }
 
 class _LoadedView extends ConsumerWidget {
-  const _LoadedView({required this.status});
+  const _LoadedView({
+    required this.status,
+    this.openSupportMessages,
+    this.composeEmail,
+  });
 
   final MinorAccountReviewStatus status;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -342,11 +358,10 @@ class _LoadedView extends ConsumerWidget {
               : l10n.minorAccountReviewAppealTeenBody,
         ),
         const SizedBox(height: 12),
-        DivineButton(
-          label: l10n.supportContactSupport,
-          leadingIcon: DivineIconName.headphones,
-          expanded: true,
-          onPressed: () => context.push(SupportCenterScreen.path),
+        _AppealSupportButton(
+          isUnder13Path: reviewCase?.isUnder13Path == true,
+          openSupportMessages: openSupportMessages,
+          composeEmail: composeEmail,
         ),
         const SizedBox(height: 12),
         DivineButton(
@@ -469,6 +484,9 @@ class _LoadedView extends ConsumerWidget {
         context.push(MinorAccountReviewParentContactScreen.path);
       case MinorReviewResolutionType.supportEmailOnly:
         context.push(MinorAccountReviewUnder13SupportScreen.path);
+      // Neither resolution has a dedicated flow, so the next step is unknown and
+      // the general menu is the fallback. This is not the appeal, which routes
+      // through _AppealSupportButton.
       case MinorReviewResolutionType.supportReviewOnly:
       case MinorReviewResolutionType.unknown:
         context.push(SupportCenterScreen.path);
@@ -492,6 +510,49 @@ Future<void> _openExternalPage(
       context.l10n.supportCouldNotOpenPage(pageName),
     ),
   );
+}
+
+/// The reconsideration card's contact action.
+///
+/// Teens open private support directly, falling back to email, as Account
+/// Status does. Under-13 goes to the parent-support screen instead: a support
+/// conversation is filed against the signed-in account, and that path is built
+/// around a parent or guardian making contact, not the child.
+class _AppealSupportButton extends StatelessWidget {
+  const _AppealSupportButton({
+    required this.isUnder13Path,
+    this.openSupportMessages,
+    this.composeEmail,
+  });
+
+  final bool isUnder13Path;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.supportContactSupport;
+    if (isUnder13Path) {
+      return DivineButton(
+        label: label,
+        leadingIcon: DivineIconName.headphones,
+        expanded: true,
+        onPressed: () =>
+            context.push(MinorAccountReviewUnder13SupportScreen.path),
+      );
+    }
+    return SupportContactAction(
+      openSupportMessages: openSupportMessages,
+      composeEmail: composeEmail,
+      builder: (context, isOpening, openSupport) => DivineButton(
+        label: label,
+        leadingIcon: DivineIconName.headphones,
+        expanded: true,
+        isLoading: isOpening,
+        onPressed: openSupport,
+      ),
+    );
+  }
 }
 
 class _MinorReviewInfoCardCopy {

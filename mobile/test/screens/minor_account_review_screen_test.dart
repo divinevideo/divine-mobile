@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/models/protected_minor_status.dart';
@@ -10,8 +14,10 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
+import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
+import '../helpers/go_router.dart';
 import '../helpers/scroll.dart';
 import '../helpers/url_launcher_test_double.dart';
 
@@ -696,7 +702,171 @@ void main() {
         );
       },
     );
+
+    // The appeal is how a restricted account contests the decision, so it must
+    // reach a person. Teens open private support directly, as Account Status
+    // does. Under-13 stays on the parent-email screen: a support conversation
+    // is filed against the signed-in account, which here is the child's.
+    group('appeal support contact', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      testWidgets('a teen appeal opens support messages without navigating', (
+        tester,
+      ) async {
+        final goRouter = MockGoRouter();
+        when(() => goRouter.push(any())).thenAnswer((_) async => null);
+        var openCalls = 0;
+
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.age13To15,
+          goRouter: goRouter,
+          openSupportMessages: () async {
+            openCalls++;
+            return true;
+          },
+        );
+        await tester.tap(find.text(l10n.supportContactSupport));
+        await tester.pumpAndSettle();
+
+        expect(openCalls, 1);
+        verifyNever(() => goRouter.push(any()));
+      });
+
+      testWidgets(
+        'a teen appeal falls back to email when messages cannot open',
+        (
+          tester,
+        ) async {
+          String? emailBody;
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.age13To15,
+            openSupportMessages: () async => false,
+            composeEmail:
+                ({
+                  required toEmail,
+                  required subject,
+                  required body,
+                  sharePositionOrigin,
+                }) async {
+                  emailBody = body;
+                },
+          );
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pumpAndSettle();
+
+          expect(emailBody, contains(l10n.supportCouldNotOpenMessages));
+        },
+      );
+
+      testWidgets('a teen appeal shows progress and ignores a repeated tap', (
+        tester,
+      ) async {
+        final opening = Completer<bool>();
+        var openCalls = 0;
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.age13To15,
+          openSupportMessages: () {
+            openCalls++;
+            return opening.future;
+          },
+        );
+        await tester.tap(find.text(l10n.supportContactSupport));
+        await tester.pump();
+        await tester.tap(find.text(l10n.supportContactSupport));
+
+        expect(openCalls, 1);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+        opening.complete(true);
+        await tester.pumpAndSettle();
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      });
+
+      testWidgets(
+        'an under-13 appeal goes to parent support, never messaging',
+        (
+          tester,
+        ) async {
+          final goRouter = MockGoRouter();
+          when(() => goRouter.push(any())).thenAnswer((_) async => null);
+          var openCalls = 0;
+
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.under13,
+            goRouter: goRouter,
+            openSupportMessages: () async {
+              openCalls++;
+              return true;
+            },
+          );
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pumpAndSettle();
+
+          expect(openCalls, 0);
+          verify(
+            () => goRouter.push(MinorAccountReviewUnder13SupportScreen.path),
+          ).called(1);
+        },
+      );
+    });
   });
+}
+
+/// Pumps a case awaiting moderator review, which renders no primary action, so
+/// the appeal button is the only "Contact Support" on screen.
+Future<void> _pumpAppeal(
+  WidgetTester tester, {
+  required SuspectedAgeBand ageBand,
+  MockGoRouter? goRouter,
+  OpenSupportMessages? openSupportMessages,
+  ComposeSupportEmail? composeEmail,
+}) async {
+  // Tall surface so the appeal button is laid out without scrolling.
+  tester.view.physicalSize = const Size(1080, 3200);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  final app = MaterialApp(
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: MinorAccountReviewScreen(
+      openSupportMessages: openSupportMessages,
+      composeEmail: composeEmail,
+    ),
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+          return MinorAccountReviewStatus(
+            restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+            currentCase: MinorReviewCase(
+              id: 'case-appeal',
+              state: MinorReviewCaseState.submittedForReview,
+              suspectedAgeBand: ageBand,
+              allowedResolution: ageBand == SuspectedAgeBand.under13
+                  ? MinorReviewResolutionType.supportEmailOnly
+                  : MinorReviewResolutionType.parentVideoOrEmail,
+              instructions: const MinorReviewInstructions(
+                title: 'Submission received',
+                body: 'We are reviewing this case.',
+              ),
+              supportEmail: 'support@divine.video',
+            ),
+          );
+        }),
+      ],
+      child: goRouter == null
+          ? app
+          : MockGoRouterProvider(goRouter: goRouter, child: app),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpRestrictedReview(

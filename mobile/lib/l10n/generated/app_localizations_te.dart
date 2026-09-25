@@ -10706,7 +10706,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'ప్రతిస్పందన గడువు ముగిసింది. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -10714,7 +10714,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'మేము ప్రస్తుతం మీ ప్రతిస్పందన గడువును చూపలేము. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle =>
@@ -10722,11 +10722,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'మద్దతు కేంద్రాన్ని సంప్రదించండి మరియు ఏమి జరిగిందో మాకు తెలియజేయండి. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
