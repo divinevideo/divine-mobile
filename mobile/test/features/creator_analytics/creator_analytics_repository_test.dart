@@ -912,9 +912,11 @@ void main() {
     group('fetchCreatorSounds', () {
       const pubkey = 'pubkey';
       late MockFunnelcakeApiClient api;
+      late List<String> countedIds;
 
       setUp(() {
         api = MockFunnelcakeApiClient();
+        countedIds = [];
       });
 
       void stubPage(int offset, List<SoundStats> sounds) {
@@ -927,24 +929,73 @@ void main() {
         ).thenAnswer((_) async => sounds);
       }
 
-      test('ranks sounds by usage, newest first on a tie', () async {
+      /// Counts one video per sound unless [counts] names the sound.
+      FunnelcakeCreatorAnalyticsRepository repository({
+        Map<String, int?> counts = const {},
+        Set<String> Function()? locallyDeletedEventIds,
+      }) {
+        return FunnelcakeCreatorAnalyticsRepository(
+          api,
+          locallyDeletedEventIds: locallyDeletedEventIds,
+          countVideosUsingSound: (soundId) async {
+            countedIds.add(soundId);
+            return counts.containsKey(soundId) ? counts[soundId] : 1;
+          },
+        );
+      }
+
+      test('shows the counted videos instead of the usage count', () async {
+        stubPage(0, [_sound('republished', usageCount: 8)]);
+
+        final sounds = await repository(
+          counts: {'republished': 1},
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds.single.videoCount, equals(1));
+      });
+
+      test('ranks sounds by counted videos, newest first on a tie', () async {
         stubPage(0, [
-          _sound('rarely-used', usageCount: 1),
+          _sound('inflated', usageCount: 42),
           _sound('older-tie', usageCount: 7, createdAtSeconds: 1785000000),
-          _sound('most-used', usageCount: 42),
-          _sound('newer-tie', usageCount: 7, createdAtSeconds: 1790000000),
+          _sound('reused', usageCount: 5),
+          _sound('newer-tie', usageCount: 3, createdAtSeconds: 1790000000),
         ]);
 
-        final sounds = await FunnelcakeCreatorAnalyticsRepository(
-          api,
+        final sounds = await repository(
+          counts: {
+            'inflated': 1,
+            'older-tie': 2,
+            'reused': 4,
+            'newer-tie': 2,
+          },
         ).fetchCreatorSounds(pubkey);
 
         expect(sounds.map((sound) => sound.id), [
-          'most-used',
+          'reused',
           'newer-tie',
           'older-tie',
-          'rarely-used',
+          'inflated',
         ]);
+      });
+
+      test('counts only the sounds with the highest usage counts', () async {
+        stubPage(0, [
+          for (var i = 0; i < 12; i++) _sound('sound-$i', usageCount: 20 - i),
+        ]);
+
+        final sounds = await repository().fetchCreatorSounds(pubkey);
+
+        expect(
+          countedIds,
+          unorderedEquals([for (var i = 0; i < 10; i++) 'sound-$i']),
+        );
+        expect(
+          sounds,
+          hasLength(
+            FunnelcakeCreatorAnalyticsRepository.creatorSoundsRecountLimit,
+          ),
+        );
       });
 
       test('ranks an older page ahead of a less used newer one', () async {
@@ -955,15 +1006,14 @@ void main() {
         stubPage(0, fullPage);
         stubPage(100, [_sound('old-hit', usageCount: 90)]);
 
-        final sounds = await FunnelcakeCreatorAnalyticsRepository(
-          api,
+        final sounds = await repository(
+          counts: {'old-hit': 30},
         ).fetchCreatorSounds(pubkey);
 
-        expect(sounds, hasLength(101));
         expect(sounds.first.id, equals('old-hit'));
       });
 
-      test('lists a sound once when a shifted page repeats it', () async {
+      test('counts a sound once when a shifted page repeats it', () async {
         final fullPage = List.generate(
           FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
           (index) => index == 99
@@ -976,13 +1026,13 @@ void main() {
           _sound('older', usageCount: 5),
         ]);
 
-        final sounds = await FunnelcakeCreatorAnalyticsRepository(
-          api,
+        final sounds = await repository(
+          counts: {'hit': 3, 'older': 2},
         ).fetchCreatorSounds(pubkey);
 
-        expect(sounds, hasLength(101));
+        expect(countedIds.where((id) => id == 'hit'), hasLength(1));
         expect(sounds.where((sound) => sound.id == 'hit'), hasLength(1));
-        expect(sounds.first.usageCount, equals(51));
+        expect(sounds.first.id, equals('hit'));
         expect(sounds[1].id, equals('older'));
       });
 
@@ -991,17 +1041,20 @@ void main() {
         () async {
           final fullPage = List.generate(
             FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
-            (index) => _sound(index == 0 ? '' : 'recent-$index', usageCount: 1),
+            (index) => _sound(
+              index == 0 ? '' : 'recent-$index',
+              usageCount: index == 0 ? 99 : 1,
+            ),
           );
           stubPage(0, fullPage);
           stubPage(100, [_sound('older', usageCount: 5)]);
 
-          final sounds = await FunnelcakeCreatorAnalyticsRepository(
-            api,
+          final sounds = await repository(
+            counts: {'older': 2},
           ).fetchCreatorSounds(pubkey);
 
+          expect(countedIds, isNot(contains('')));
           expect(sounds.map((sound) => sound.id), isNot(contains('')));
-          expect(sounds, hasLength(100));
           expect(sounds.first.id, equals('older'));
         },
       );
@@ -1019,9 +1072,7 @@ void main() {
           ),
         ).thenAnswer((_) async => fullPage);
 
-        await FunnelcakeCreatorAnalyticsRepository(
-          api,
-        ).fetchCreatorSounds(pubkey);
+        await repository().fetchCreatorSounds(pubkey);
 
         verify(
           () => api.getUserSounds(
@@ -1038,21 +1089,18 @@ void main() {
           _sound('deleted', usageCount: 9),
         ]);
 
-        final sounds = await FunnelcakeCreatorAnalyticsRepository(
-          api,
+        final sounds = await repository(
           locallyDeletedEventIds: () => {'deleted'},
         ).fetchCreatorSounds(pubkey);
 
         expect(sounds.map((sound) => sound.id), ['kept']);
+        expect(countedIds, isNot(contains('deleted')));
       });
 
       test('reads the deletion record on every call', () async {
         stubPage(0, [_sound('removed-later', usageCount: 3)]);
         var deleted = <String>{};
-        final repo = FunnelcakeCreatorAnalyticsRepository(
-          api,
-          locallyDeletedEventIds: () => deleted,
-        );
+        final repo = repository(locallyDeletedEventIds: () => deleted);
 
         final before = await repo.fetchCreatorSounds(pubkey);
         deleted = {'removed-later'};
@@ -1061,6 +1109,71 @@ void main() {
         expect(before, hasLength(1));
         expect(after, isEmpty);
       });
+
+      test('returns no sounds for a creator who has none', () async {
+        stubPage(0, const []);
+
+        final sounds = await repository().fetchCreatorSounds(pubkey);
+
+        expect(sounds, isEmpty);
+        expect(countedIds, isEmpty);
+      });
+
+      test('leaves out a sound whose count is unavailable', () async {
+        stubPage(0, [
+          _sound('counted', usageCount: 3),
+          _sound('unknown', usageCount: 9),
+        ]);
+
+        final sounds = await repository(
+          counts: {'unknown': null},
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds.map((sound) => sound.id), ['counted']);
+      });
+
+      test('leaves out a sound whose count fails', () async {
+        stubPage(0, [
+          _sound('counted', usageCount: 3),
+          _sound('failing', usageCount: 9),
+        ]);
+
+        final sounds = await FunnelcakeCreatorAnalyticsRepository(
+          api,
+          countVideosUsingSound: (soundId) async {
+            if (soundId == 'failing') {
+              throw const SocketException('relay unreachable');
+            }
+            return 2;
+          },
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds.map((sound) => sound.id), ['counted']);
+      });
+
+      test(
+        'classifies a list where no sound could be counted as a '
+        'connection issue',
+        () async {
+          stubPage(0, [
+            _sound('first', usageCount: 3),
+            _sound('second', usageCount: 1),
+          ]);
+
+          await expectLater(
+            repository(
+              counts: {'first': null, 'second': null},
+            ).fetchCreatorSounds(pubkey),
+            throwsA(
+              isA<CreatorAnalyticsLoadException>().having(
+                (error) => error.kind,
+                'kind',
+                CreatorAnalyticsFailureKind.connectionIssue,
+              ),
+            ),
+          );
+        },
+      );
 
       test('classifies server errors as server unavailable', () async {
         when(
@@ -1078,7 +1191,7 @@ void main() {
         );
 
         await expectLater(
-          FunnelcakeCreatorAnalyticsRepository(api).fetchCreatorSounds(pubkey),
+          repository().fetchCreatorSounds(pubkey),
           throwsA(
             isA<CreatorAnalyticsLoadException>().having(
               (error) => error.kind,
@@ -1103,7 +1216,7 @@ void main() {
         );
 
         await expectLater(
-          FunnelcakeCreatorAnalyticsRepository(api).fetchCreatorSounds(pubkey),
+          repository().fetchCreatorSounds(pubkey),
           throwsA(
             isA<CreatorAnalyticsLoadException>().having(
               (error) => error.kind,

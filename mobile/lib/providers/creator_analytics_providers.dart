@@ -3,11 +3,11 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -25,9 +25,11 @@ final creatorAnalyticsRepositoryProvider = Provider<CreatorAnalyticsRepository>(
 
     final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
     final prefs = ref.watch(sharedPreferencesProvider);
+    final soundsRepository = ref.watch(soundsRepositoryProvider);
     return FunnelcakeCreatorAnalyticsRepository(
       funnelcakeClient,
       locallyDeletedEventIds: () => _locallyDeletedEventIds(prefs),
+      countVideosUsingSound: soundsRepository.fetchVideosUsingSoundCount,
     );
   },
 );
@@ -103,15 +105,14 @@ class _FixtureCreatorAnalyticsRepository implements CreatorAnalyticsRepository {
   }
 
   @override
-  Future<List<SoundStats>> fetchCreatorSounds(String pubkey) async {
+  Future<List<CreatorSound>> fetchCreatorSounds(String pubkey) async {
     final now = DateTime.now().toUtc();
     return List.generate(3, (index) {
-      return SoundStats(
+      return CreatorSound(
         id: 'fixture-sound-$index',
-        pubkey: pubkey,
         title: 'Fixture Sound $index',
         createdAt: now.subtract(Duration(days: index * 3)),
-        usageCount: 24 - (index * 10),
+        videoCount: 24 - (index * 10),
       );
     });
   }

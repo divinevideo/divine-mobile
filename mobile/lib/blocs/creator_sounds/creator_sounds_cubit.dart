@@ -3,7 +3,6 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
 import 'package:openvine/observability/reportable_error.dart';

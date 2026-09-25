@@ -5,7 +5,6 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/creator_sounds/creator_sounds_cubit.dart';
@@ -52,12 +51,11 @@ void main() {
       );
     }
 
-    SoundStats sound(String id, String title, int usageCount) => SoundStats(
+    CreatorSound sound(String id, String title, int videoCount) => CreatorSound(
       id: id,
-      pubkey: 'a' * 64,
       title: title,
       createdAt: DateTime.now().toUtc().subtract(const Duration(days: 3)),
-      usageCount: usageCount,
+      videoCount: videoCount,
     );
 
     group('renders', () {

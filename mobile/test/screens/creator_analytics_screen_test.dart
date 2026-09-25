@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -27,7 +26,7 @@ void main() {
     SocialCounts? socialCounts,
     bool hasSocialCounts = true,
     Set<AnalyticsDataSource> failedSources = const {},
-    List<SoundStats> sounds = const [],
+    List<CreatorSound> sounds = const [],
   }) async {
     final authService = _MockAuthService();
     final repository = _MockCreatorAnalyticsRepository();
@@ -198,12 +197,11 @@ void main() {
         tester,
         videos: [analyticsVideo(id: 'video-1', views: 120)],
         sounds: [
-          SoundStats(
+          CreatorSound(
             id: 'sound-hit',
-            pubkey: 'a' * 64,
             title: 'Test sound',
             createdAt: DateTime.now().toUtc(),
-            usageCount: 42,
+            videoCount: 42,
           ),
         ],
       );
@@ -226,12 +224,11 @@ void main() {
         tester,
         videos: [analyticsVideo(id: 'video-1', views: 120)],
         sounds: [
-          SoundStats(
+          CreatorSound(
             id: 'sound-hit',
-            pubkey: 'a' * 64,
             title: 'Hit sound',
             createdAt: DateTime.now().toUtc(),
-            usageCount: 42,
+            videoCount: 42,
           ),
         ],
       );

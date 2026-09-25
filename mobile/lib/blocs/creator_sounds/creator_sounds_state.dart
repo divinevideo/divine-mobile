@@ -12,7 +12,7 @@ class CreatorSoundsState extends Equatable {
   final CreatorSoundsStatus status;
 
   /// The creator's most used sounds, most used first.
-  final List<SoundStats> sounds;
+  final List<CreatorSound> sounds;
 
   /// Why the last load failed; `null` unless [status] is
   /// [CreatorSoundsStatus.failure].

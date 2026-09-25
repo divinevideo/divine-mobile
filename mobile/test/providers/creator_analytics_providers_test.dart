@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the creator analytics repository provider wiring.
-// ABOUTME: Covers how the persisted deletion history filters the sounds list.
+// ABOUTME: Covers the deletion history filter and where sound counts come from.
 
 import 'dart:convert';
 
@@ -11,10 +11,14 @@ import 'package:openvine/features/creator_analytics/creator_analytics_repository
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sounds_repository/sounds_repository.dart';
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+
+class _MockSoundsRepository extends Mock implements SoundsRepository {}
 
 final String _pubkey = 'a' * 64;
 
@@ -38,6 +42,7 @@ String _historyWith(String originalEventId) => jsonEncode([
 void main() {
   group('creatorAnalyticsRepositoryProvider', () {
     late _MockFunnelcakeApiClient client;
+    late _MockSoundsRepository soundsRepository;
     late SharedPreferences prefs;
 
     setUp(() async {
@@ -49,6 +54,10 @@ void main() {
           offset: any(named: 'offset'),
         ),
       ).thenAnswer((_) async => [_sound('kept', 3), _sound('deleted', 9)]);
+      soundsRepository = _MockSoundsRepository();
+      when(
+        () => soundsRepository.fetchVideosUsingSoundCount(any()),
+      ).thenAnswer((_) async => 1);
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
     });
@@ -58,6 +67,7 @@ void main() {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           funnelcakeApiClientProvider.overrideWithValue(client),
+          soundsRepositoryProvider.overrideWithValue(soundsRepository),
         ],
       );
       addTearDown(container.dispose);
@@ -80,6 +90,22 @@ void main() {
         final sounds = await readRepository().fetchCreatorSounds(_pubkey);
 
         expect(sounds.map((sound) => sound.id), equals(['deleted', 'kept']));
+      });
+
+      test('counts videos the way the sound page does', () async {
+        when(
+          () => soundsRepository.fetchVideosUsingSoundCount('kept'),
+        ).thenAnswer((_) async => 4);
+        when(
+          () => soundsRepository.fetchVideosUsingSoundCount('deleted'),
+        ).thenAnswer((_) async => 2);
+
+        final sounds = await readRepository().fetchCreatorSounds(_pubkey);
+
+        expect(
+          sounds.map((sound) => (sound.id, sound.videoCount)),
+          equals([('kept', 4), ('deleted', 2)]),
+        );
       });
 
       test('honors a deletion made after the repository was built', () async {

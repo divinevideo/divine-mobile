@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/creator_sounds/creator_sounds_cubit.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
@@ -14,12 +13,11 @@ class _MockCreatorAnalyticsRepository extends Mock
 const _pubkey =
     '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd';
 
-SoundStats _sound(String id, int usageCount) => SoundStats(
+CreatorSound _sound(String id, int videoCount) => CreatorSound(
   id: id,
-  pubkey: _pubkey,
   title: id,
   createdAt: DateTime.utc(2026, 9),
-  usageCount: usageCount,
+  videoCount: videoCount,
 );
 
 void main() {
@@ -148,7 +146,7 @@ void main() {
       );
 
       test('ignores a load requested while one is running', () async {
-        final pending = Completer<List<SoundStats>>();
+        final pending = Completer<List<CreatorSound>>();
         when(
           () => repository.fetchCreatorSounds(_pubkey),
         ).thenAnswer((_) => pending.future);

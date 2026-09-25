@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/creator_sounds/creator_sounds_cubit.dart';
@@ -152,7 +151,7 @@ class _CreatorSoundsError extends StatelessWidget {
 class _CreatorSoundsList extends StatelessWidget {
   const _CreatorSoundsList({required this.sounds});
 
-  final List<SoundStats> sounds;
+  final List<CreatorSound> sounds;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +176,7 @@ class _CreatorSoundRow extends StatelessWidget {
   const _CreatorSoundRow({required this.rank, required this.sound});
 
   final int rank;
-  final SoundStats sound;
+  final CreatorSound sound;
 
   @override
   Widget build(BuildContext context) {
@@ -185,9 +184,9 @@ class _CreatorSoundRow extends StatelessWidget {
     final title = sound.title.trim().isEmpty
         ? l10n.videoEditorAudioUntitledSound
         : sound.title;
-    final countText = sound.usageCount == 0
+    final countText = sound.videoCount == 0
         ? l10n.soundNoVideoCount
-        : l10n.soundVideoCount(sound.usageCount);
+        : l10n.soundVideoCount(sound.videoCount);
     final age = LocalizedTimeFormatter.formatRelativeVerbose(
       l10n,
       sound.createdAt.millisecondsSinceEpoch ~/ 1000,
