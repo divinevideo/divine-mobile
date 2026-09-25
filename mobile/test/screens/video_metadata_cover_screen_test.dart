@@ -16,12 +16,16 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_cover_screen.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:pro_video_editor/core/platform/native_method_channel.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
 
@@ -44,6 +48,36 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
 class _NoopInitProVideoEditor extends MethodChannelProVideoEditor {
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
+}
+
+/// Fails the duration probe with a programming error rather than a platform
+/// one, which the picker has to report instead of absorbing.
+class _DefectiveMetadataProVideoEditor extends _NoopInitProVideoEditor {
+  @override
+  Future<VideoMetadata> getMetadata(
+    EditorVideo value, {
+    bool checkStreamingOptimization = false,
+    NativeLogLevel? nativeLogLevel,
+  }) async => throw StateError('metadata probe invariant');
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
 }
 
 class _PendingEditorVideo extends Fake implements EditorVideo {
@@ -756,5 +790,140 @@ void main() {
         semanticsHandle.dispose();
       },
     );
+
+    testWidgets(
+      'leaves the loading state and stays scrubbable when the video file '
+      'cannot be loaded',
+      (tester) async {
+        setUpPlayerChannel();
+        addTearDown(tearDownPlayerChannel);
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final semanticsHandle = tester.ensureSemantics();
+        final pendingPath = Completer<String>();
+
+        await tester.pumpWidget(
+          buildWidget(
+            clip: _createTestClip(
+              video: _PendingEditorVideo(pendingPath.future),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+
+        pendingPath.completeError(Exception('Failed to download video'));
+        await tester.pump();
+
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+        expect(
+          logCapture
+              .getRecentLogs(minLevel: LogLevel.error)
+              .map((log) => log.message),
+          contains(contains('Failed to download video')),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final stripFinder = find.bySemanticsLabel(
+          l10n.videoMetadataEditCoverStripSemanticLabel,
+        );
+        final before = tester.getSemantics(stripFinder).getSemanticsData();
+        final stripSemantics = find.semantics.byAction(
+          SemanticsAction.increase,
+        );
+        tester.semantics.increase(stripSemantics);
+        await tester.pump();
+        tester.semantics.increase(stripSemantics);
+        await tester.pump();
+        final after = tester.getSemantics(stripFinder).getSemanticsData();
+        expect(after.value, isNot(equals(before.value)));
+
+        semanticsHandle.dispose();
+      },
+    );
+
+    testWidgets(
+      'keeps the picker working when the video metadata cannot be read',
+      (tester) async {
+        setUpPlayerChannel();
+        addTearDown(tearDownPlayerChannel);
+        var stripRequested = false;
+        _setHandler(const MethodChannel('pro_video_editor'), (call) async {
+          if (call.method == 'startThumbnailStream') {
+            stripRequested = true;
+            return null;
+          }
+          if (call.method == 'getMetadata') {
+            throw PlatformException(code: 'METADATA', message: 'unreadable');
+          }
+          return null;
+        });
+        final semanticsHandle = tester.ensureSemantics();
+        VideoThumbnailService.resetStripQueueForTesting();
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pump(const Duration(milliseconds: 400));
+        for (var i = 0; i < 10; i++) {
+          await tester.pump();
+        }
+
+        expect(stripRequested, isTrue);
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final stripFinder = find.bySemanticsLabel(
+          l10n.videoMetadataEditCoverStripSemanticLabel,
+        );
+        final before = tester.getSemantics(stripFinder).getSemanticsData();
+        final stripSemantics = find.semantics.byAction(
+          SemanticsAction.increase,
+        );
+        tester.semantics.increase(stripSemantics);
+        await tester.pump();
+        tester.semantics.increase(stripSemantics);
+        await tester.pump();
+        final after = tester.getSemantics(stripFinder).getSemanticsData();
+        expect(after.value, isNot(equals(before.value)));
+
+        semanticsHandle.dispose();
+      },
+    );
+
+    group('crash reporting', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      tearDown(() {
+        detachedFailureReporter = originalReporter;
+      });
+
+      testWidgets(
+        'reports a defect in the duration probe and leaves the loading state',
+        (tester) async {
+          setUpPlayerChannel();
+          addTearDown(tearDownPlayerChannel);
+          ProVideoEditor.instance = _DefectiveMetadataProVideoEditor();
+
+          await tester.pumpWidget(buildWidget());
+          await tester.pump(const Duration(milliseconds: 400));
+
+          expect(find.byType(BrandedLoadingIndicator), findsNothing);
+          expect(reporter.recordedErrors, hasLength(1));
+          expect(
+            reporter.recordedErrors.single,
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<StateError>(),
+            ),
+          );
+        },
+      );
+    });
   });
 }

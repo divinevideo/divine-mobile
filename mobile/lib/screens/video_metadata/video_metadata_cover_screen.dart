@@ -101,15 +101,23 @@ class _VideoMetadataCoverScreenState
     // captured frame (already set as the thumbnail).
     final video = widget.clip.video;
     if (video == null) return;
-    final localPath = await video.safeFilePath();
-
+    final String localPath;
+    try {
+      localPath = await video.safeFilePath();
+      if (!mounted) return;
+      _videoDuration = await _readVideoDuration(localPath);
+    } catch (_) {
+      // Nothing left to load, but the cursor still works and confirm retries
+      // the download. runDetached logs the failure and reports defects.
+      if (mounted) {
+        setState(() {
+          _videoDuration = widget.clip.duration;
+          _playerInitFailed = true;
+        });
+      }
+      rethrow;
+    }
     if (!mounted) return;
-
-    final metadata = await ProVideoEditor.instance.getMetadata(
-      EditorVideo.file(localPath),
-    );
-    if (!mounted) return;
-    _videoDuration = metadata.duration;
 
     final controller = DivineVideoPlayerController(
       useTexture: true,
@@ -175,6 +183,26 @@ class _VideoMetadataCoverScreenState
         logName: 'VideoMetadataCoverScreen',
         category: LogCategory.video,
       );
+    }
+  }
+
+  /// Probes [localPath] for its duration, falling back to the clip's own when
+  /// the platform cannot read it, so the strip and scrubbing keep a timeline.
+  Future<Duration> _readVideoDuration(String localPath) async {
+    try {
+      final metadata = await ProVideoEditor.instance.getMetadata(
+        EditorVideo.file(localPath),
+      );
+      return metadata.duration;
+    } on Exception catch (e, stackTrace) {
+      Log.warning(
+        'Cover preview could not read the video duration',
+        name: 'VideoMetadataCoverScreen',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return widget.clip.duration;
     }
   }
 
