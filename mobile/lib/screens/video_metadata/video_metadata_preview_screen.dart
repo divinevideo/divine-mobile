@@ -390,15 +390,7 @@ class _FittedVideoSurfaceState extends State<_FittedVideoSurface> {
   void didUpdateWidget(_FittedVideoSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      if (_sub != null) {
-        runDetached(
-          _sub!.cancel(),
-          'cancel metadata preview listener',
-          logName: 'VideoMetadataPreviewScreen',
-          category: LogCategory.video,
-        );
-        _sub = null;
-      }
+      _cancelSubscription();
       _subscribeToController(widget.controller);
     }
   }
@@ -413,17 +405,21 @@ class _FittedVideoSurfaceState extends State<_FittedVideoSurface> {
     });
   }
 
+  void _cancelSubscription() {
+    final pending = _sub?.cancel();
+    _sub = null;
+    if (pending == null) return;
+    runDetached(
+      pending,
+      'cancel metadata preview listener',
+      logName: 'VideoMetadataPreviewScreen',
+      category: LogCategory.video,
+    );
+  }
+
   @override
   void dispose() {
-    if (_sub != null) {
-      runDetached(
-        _sub!.cancel(),
-        'cancel metadata preview listener',
-        logName: 'VideoMetadataPreviewScreen',
-        category: LogCategory.video,
-      );
-      _sub = null;
-    }
+    _cancelSubscription();
     super.dispose();
   }
 

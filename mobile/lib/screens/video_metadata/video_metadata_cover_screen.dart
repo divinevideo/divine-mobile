@@ -493,15 +493,7 @@ class _VideoAreaState extends State<_VideoArea> {
   void didUpdateWidget(_VideoArea oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      if (_sub != null) {
-        runDetached(
-          _sub!.cancel(),
-          'cancel metadata preview listener',
-          logName: 'VideoMetadataCoverScreen',
-          category: LogCategory.video,
-        );
-        _sub = null;
-      }
+      _cancelSubscription();
       _subscribeToController(widget.controller);
     }
   }
@@ -516,17 +508,21 @@ class _VideoAreaState extends State<_VideoArea> {
     });
   }
 
+  void _cancelSubscription() {
+    final pending = _sub?.cancel();
+    _sub = null;
+    if (pending == null) return;
+    runDetached(
+      pending,
+      'cancel cover preview listener',
+      logName: 'VideoMetadataCoverScreen',
+      category: LogCategory.video,
+    );
+  }
+
   @override
   void dispose() {
-    if (_sub != null) {
-      runDetached(
-        _sub!.cancel(),
-        'cancel metadata preview listener',
-        logName: 'VideoMetadataCoverScreen',
-        category: LogCategory.video,
-      );
-      _sub = null;
-    }
+    _cancelSubscription();
     super.dispose();
   }
 
