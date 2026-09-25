@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +13,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_metadata/metadata_hero_corners.dart';
@@ -352,15 +352,11 @@ class _VideoMetadataCoverScreenState
 
     if (!mounted) return;
     if (didSucceed) {
-      runDetached(
-        SemanticsService.sendAnnouncement(
-          View.of(context),
-          context.l10n.videoMetadataEditCoverSuccessAnnouncement,
-          Directionality.of(context),
-        ),
-        'announce cover update success',
+      announceDetached(
+        context,
+        context.l10n.videoMetadataEditCoverSuccessAnnouncement,
+        description: 'announce cover update success',
         logName: 'VideoMetadataCoverScreen',
-        category: LogCategory.ui,
       );
       context.pop();
       return;
@@ -368,15 +364,11 @@ class _VideoMetadataCoverScreenState
 
     // Stay on screen so the user can retry. Surface the failure.
     final message = context.l10n.videoMetadataEditCoverFailedSnackbar;
-    runDetached(
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
-      ),
-      'announce cover update failure',
+    announceDetached(
+      context,
+      message,
+      description: 'announce cover update failure',
       logName: 'VideoMetadataCoverScreen',
-      category: LogCategory.ui,
     );
     ScaffoldMessenger.of(
       context,
