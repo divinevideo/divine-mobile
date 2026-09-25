@@ -6190,6 +6190,8 @@
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."
   },
+  "supporterTermsOfUse": "Terma Penggunaan",
+  "supporterAutoRenewNotice": "Pelan diperbaharui secara automatik pada harga yang ditunjukkan sehingga anda membatalkannya. Batalkan pada bila-bila masa dalam tetapan langganan App Store atau Google Play, sekurang-kurangnya 24 jam sebelum pembaharuan seterusnya.",
   "supporterDismissError": "Ketepikan ralat",
   "@supporterDismissError": {
     "description": "Accessibility label for the button that dismisses the supporter error banner."

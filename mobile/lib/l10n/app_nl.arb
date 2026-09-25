@@ -3116,6 +3116,8 @@
     "supporterStoreNotInThisBuild": "In deze versie van Divine lopen lidmaatschappen via Google Play of de App Store. Andere manieren om Divine te steunen komen eraan.",
     "supporterRestorePurchases": "Aankopen herstellen",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "Gebruiksvoorwaarden",
+    "supporterAutoRenewNotice": "Abonnementen worden automatisch verlengd tegen de getoonde prijs totdat je opzegt. Je kunt altijd opzeggen via je abonnementsinstellingen in de App Store of Google Play, minstens 24 uur voor de volgende verlenging.",
     "supporterDismissError": "Fout negeren",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "De store is niet beschikbaar op dit apparaat.",

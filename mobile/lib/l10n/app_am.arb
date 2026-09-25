@@ -1066,6 +1066,8 @@
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
     "supporterRestorePurchases": "ግዢዎችን መልስ",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "የአጠቃቀም ውሎች",
+    "supporterAutoRenewNotice": "ዕቅዶች እስኪሰረዙ ድረስ በሚታየው ዋጋ በራስ-ሰር ይታደሳሉ። ከሚቀጥለው እድሳት ቢያንስ 24 ሰዓት በፊት በApp Store ወይም Google Play የደንበኝነት ምዝገባ ቅንብሮች ውስጥ በማንኛውም ጊዜ መሰረዝ ይቻላል።",
     "supporterDismissError": "ስህተቱን አሰናብት",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "መደብሩ በዚህ መሣሪያ ላይ አይገኝም።",

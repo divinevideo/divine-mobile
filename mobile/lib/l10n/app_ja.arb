@@ -3109,6 +3109,8 @@
     "supporterStoreNotInThisBuild": "このバージョンのDivineでは、メンバーシップはGoogle PlayかApp Store経由だよ。Divineを応援するほかの方法も準備中。",
     "supporterRestorePurchases": "購入を復元",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "利用規約",
+    "supporterAutoRenewNotice": "プランは解約するまで表示価格で自動更新されます。App Store または Google Play のサブスクリプション設定から、次回更新の24時間前までにいつでも解約できます。",
     "supporterDismissError": "エラーを閉じる",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "このデバイスではストアを利用できないよ。",

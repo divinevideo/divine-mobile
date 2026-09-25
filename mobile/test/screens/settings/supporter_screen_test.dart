@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,7 +19,10 @@ import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
 import '../../helpers/l10n.dart';
+import '../../helpers/url_launcher_test_double.dart';
 
 /// A minimal fake repository exposing the surface the screen reads.
 class _FakeRepository extends Fake implements SupporterRepository {
@@ -594,6 +598,142 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('did not complete'), findsOneWidget);
+    });
+  });
+
+  group('subscription terms', () {
+    const tier = SupporterTier(
+      productId: 'divine.supporter.monthly',
+      title: 'Monthly Supporter',
+      price: r'$6.99',
+      billingPeriod: SupporterBillingPeriod.monthly,
+    );
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    late UrlLauncherTestDouble launcher;
+
+    setUp(() {
+      final original = UrlLauncherPlatform.instance;
+      launcher = UrlLauncherTestDouble();
+      UrlLauncherPlatform.instance = launcher;
+      addTearDown(() => UrlLauncherPlatform.instance = original);
+    });
+
+    Future<void> pumpScreen(
+      WidgetTester tester, {
+      List<SupporterTier> tiers = const [tier],
+      SupporterEntitlement initial = SupporterEntitlement.inactive,
+    }) async {
+      final controller = StreamController<SupporterEntitlement>.broadcast();
+      addTearDown(controller.close);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            supporterRepositoryProvider.overrideWithValue(
+              _FakeRepository(controller, tiers: tiers, initial: initial),
+            ),
+          ],
+          child: buildLocalizedWidget(const SupporterScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> tapLink(WidgetTester tester, String label) async {
+      final link = find.widgetWithText(DivineButton, label);
+      await tester.ensureVisible(link);
+      await tester.pumpAndSettle();
+      await tester.tap(link);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows renewal notice and legal links beside the plans', (
+      tester,
+    ) async {
+      await pumpScreen(tester);
+
+      expect(find.text(l10n.supporterAutoRenewNotice), findsOneWidget);
+      expect(
+        find.widgetWithText(DivineButton, l10n.supporterTermsOfUse),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(DivineButton, l10n.legalPrivacyPolicy),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides renewal notice when no plans are offered', (
+      tester,
+    ) async {
+      await pumpScreen(tester, tiers: const []);
+
+      expect(find.text(l10n.supporterAutoRenewNotice), findsNothing);
+      expect(find.text(l10n.supporterTermsOfUse), findsNothing);
+    });
+
+    testWidgets('hides renewal notice for an active supporter', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        initial: const SupporterEntitlement(
+          productId: 'divine.supporter.monthly',
+          source: EntitlementSource.server,
+        ),
+      );
+
+      expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
+      expect(find.text(l10n.supporterAutoRenewNotice), findsNothing);
+    });
+
+    testWidgets("opens Apple's standard EULA on iOS", (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await pumpScreen(tester);
+
+      await tapLink(tester, l10n.supporterTermsOfUse);
+
+      expect(
+        launcher.launched.single.url,
+        SupporterLegalLinks.appleStandardEula,
+      );
+      expect(launcher.launched.single.useExternalApplication, isTrue);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('opens Divine terms on Android', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await pumpScreen(tester);
+
+      await tapLink(tester, l10n.supporterTermsOfUse);
+
+      expect(launcher.launched.single.url, SupporterLegalLinks.divineTerms);
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('opens the privacy policy', (tester) async {
+      await pumpScreen(tester);
+
+      await tapLink(tester, l10n.legalPrivacyPolicy);
+
+      expect(launcher.launched.single.url, SupporterLegalLinks.privacyPolicy);
+    });
+
+    testWidgets('tells the user when a legal page cannot open', (
+      tester,
+    ) async {
+      launcher = UrlLauncherTestDouble(launchResult: false);
+      UrlLauncherPlatform.instance = launcher;
+      await pumpScreen(tester);
+
+      await tapLink(tester, l10n.legalPrivacyPolicy);
+
+      expect(
+        find.text(l10n.legalCouldNotOpenPage(l10n.legalPrivacyPolicy)),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -6190,6 +6190,8 @@
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."
   },
+  "supporterTermsOfUse": "使用条款",
+  "supporterAutoRenewNotice": "方案会按显示的价格自动续订，直到你取消为止。你可以随时在 App Store 或 Google Play 的订阅设置中取消，但需在下次续订前至少 24 小时操作。",
   "supporterDismissError": "忽略错误",
   "@supporterDismissError": {
     "description": "Accessibility label for the button that dismisses the supporter error banner."

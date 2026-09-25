@@ -11512,6 +11512,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supporterRestorePurchases => 'استعادة المشتريات';
 
   @override
+  String get supporterTermsOfUse => 'شروط الاستخدام';
+
+  @override
+  String get supporterAutoRenewNotice =>
+      'تتجدد الخطط تلقائيًا بالسعر المعروض إلى حين الإلغاء. يمكن الإلغاء في أي وقت من إعدادات الاشتراكات في App Store أو Google Play، قبل 24 ساعة على الأقل من التجديد التالي.';
+
+  @override
   String get supporterDismissError => 'تجاهل الخطأ';
 
   @override

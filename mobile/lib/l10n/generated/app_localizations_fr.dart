@@ -11745,6 +11745,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get supporterRestorePurchases => 'Restaurer les achats';
 
   @override
+  String get supporterTermsOfUse => 'Conditions d\'utilisation';
+
+  @override
+  String get supporterAutoRenewNotice =>
+      'Les formules se renouvellent automatiquement au prix indiqué jusqu\'à ce que tu les résilies. Tu peux résilier à tout moment dans les réglages d\'abonnement de l\'App Store ou de Google Play, au moins 24 heures avant le prochain renouvellement.';
+
+  @override
   String get supporterDismissError => 'Masquer l\'erreur';
 
   @override

@@ -3116,6 +3116,8 @@
     "supporterStoreNotInThisBuild": "Mitgliedschaften laufen in dieser Divine-Version über Google Play oder den App Store. Weitere Wege, Divine zu unterstützen, sind unterwegs.",
     "supporterRestorePurchases": "Käufe wiederherstellen",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "Nutzungsbedingungen",
+    "supporterAutoRenewNotice": "Pläne verlängern sich automatisch zum angezeigten Preis, bis du kündigst. Du kannst jederzeit in deinen App-Store- oder Google-Play-Abo-Einstellungen kündigen, spätestens 24 Stunden vor der nächsten Verlängerung.",
     "supporterDismissError": "Fehler ausblenden",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "Der Store ist auf diesem Gerät nicht verfügbar.",

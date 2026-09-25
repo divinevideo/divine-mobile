@@ -11499,6 +11499,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get supporterRestorePurchases => 'Satın alımları geri yükle';
 
   @override
+  String get supporterTermsOfUse => 'Kullanım Koşulları';
+
+  @override
+  String get supporterAutoRenewNotice =>
+      'Planlar, iptal edene kadar gösterilen fiyattan otomatik olarak yenilenir. İstediğin zaman App Store veya Google Play abonelik ayarlarından, bir sonraki yenilemeden en az 24 saat önce iptal edebilirsin.';
+
+  @override
   String get supporterDismissError => 'Hatayı kapat';
 
   @override

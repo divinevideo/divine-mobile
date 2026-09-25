@@ -3116,6 +3116,8 @@
     "supporterStoreNotInThisBuild": "I den här versionen av Divine går medlemskap via Google Play eller App Store. Fler sätt att stötta Divine är på väg.",
     "supporterRestorePurchases": "Återställ köp",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "Användarvillkor",
+    "supporterAutoRenewNotice": "Planerna förnyas automatiskt till det visade priset tills du säger upp dem. Säg upp när som helst i prenumerationsinställningarna i App Store eller Google Play, minst 24 timmar före nästa förnyelse.",
     "supporterDismissError": "Stäng felmeddelandet",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "Butiken är inte tillgänglig på den här enheten.",

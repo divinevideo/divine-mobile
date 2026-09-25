@@ -2,6 +2,7 @@
 // ABOUTME: Acknowledges membership, manages recognition, and explains verification eligibility.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,8 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
+import 'package:unified_logger/unified_logger.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SupporterScreen extends ConsumerWidget {
   static const routeName = 'supporter';
@@ -134,6 +137,8 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                   const SizedBox(height: 16),
                   if (!state.isSupporter && widget.storeBillingAvailable)
                     _RestoreButton(state: state),
+                  if (!state.isSupporter && state.hasTiers)
+                    const _SubscriptionTerms(),
                   if (state.failure != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 16),
@@ -334,6 +339,94 @@ class _RestoreButton extends StatelessWidget {
           ? null
           : () => context.read<SupporterCubit>().restore(),
       label: context.l10n.supporterRestorePurchases,
+    );
+  }
+}
+
+/// Links App Store Review requires beside auto-renewing subscription offers.
+abstract class SupporterLegalLinks {
+  /// Apple's standard EULA, which covers the App Store subscriptions.
+  static const appleStandardEula =
+      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+  static const divineTerms = 'https://divine.video/terms';
+  static const privacyPolicy = 'https://divine.video/privacy';
+
+  /// The Terms of Use that govern a purchase on the current platform.
+  static String get termsOfUse => switch (defaultTargetPlatform) {
+    _ when kIsWeb => divineTerms,
+    TargetPlatform.iOS || TargetPlatform.macOS => appleStandardEula,
+    _ => divineTerms,
+  };
+}
+
+class _SubscriptionTerms extends StatelessWidget {
+  const _SubscriptionTerms();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        children: [
+          Text(
+            l10n.supporterAutoRenewNotice,
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            children: [
+              DivineButton(
+                type: DivineButtonType.link,
+                label: l10n.supporterTermsOfUse,
+                onPressed: () => _openLegalPage(
+                  context,
+                  SupporterLegalLinks.termsOfUse,
+                  l10n.supporterTermsOfUse,
+                ),
+              ),
+              DivineButton(
+                type: DivineButtonType.link,
+                label: l10n.legalPrivacyPolicy,
+                onPressed: () => _openLegalPage(
+                  context,
+                  SupporterLegalLinks.privacyPolicy,
+                  l10n.legalPrivacyPolicy,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _openLegalPage(
+  BuildContext context,
+  String url,
+  String pageName,
+) async {
+  var opened = false;
+  try {
+    opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+  } catch (e) {
+    Log.error(
+      'Failed to open $url: $e',
+      name: 'SupporterScreen',
+      category: LogCategory.ui,
+    );
+  }
+  if (!opened && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.legalCouldNotOpenPage(pageName),
+        error: true,
+      ),
     );
   }
 }

@@ -11275,6 +11275,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterRestorePurchases => 'ግዢዎችን መልስ';
 
   @override
+  String get supporterTermsOfUse => 'የአጠቃቀም ውሎች';
+
+  @override
+  String get supporterAutoRenewNotice =>
+      'ዕቅዶች እስኪሰረዙ ድረስ በሚታየው ዋጋ በራስ-ሰር ይታደሳሉ። ከሚቀጥለው እድሳት ቢያንስ 24 ሰዓት በፊት በApp Store ወይም Google Play የደንበኝነት ምዝገባ ቅንብሮች ውስጥ በማንኛውም ጊዜ መሰረዝ ይቻላል።';
+
+  @override
   String get supporterDismissError => 'ስህተቱን አሰናብት';
 
   @override

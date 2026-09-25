@@ -11675,6 +11675,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get supporterRestorePurchases => 'I-restore ang mga purchase';
 
   @override
+  String get supporterTermsOfUse => 'Terms of Use';
+
+  @override
+  String get supporterAutoRenewNotice =>
+      'Awtomatikong nire-renew ang mga plan sa ipinakitang presyo hangga\'t hindi mo kina-cancel. Puwede kang mag-cancel anumang oras sa subscription settings ng App Store o Google Play, hindi bababa sa 24 oras bago ang susunod na renewal.';
+
+  @override
   String get supporterDismissError => 'I-dismiss ang error';
 
   @override

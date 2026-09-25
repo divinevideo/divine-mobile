@@ -3116,6 +3116,8 @@
     "supporterStoreNotInThisBuild": "Divine'ın bu sürümünde üyelikler Google Play veya App Store üzerinden alınır. Divine'ı desteklemenin başka yolları da yolda.",
     "supporterRestorePurchases": "Satın alımları geri yükle",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "Kullanım Koşulları",
+    "supporterAutoRenewNotice": "Planlar, iptal edene kadar gösterilen fiyattan otomatik olarak yenilenir. İstediğin zaman App Store veya Google Play abonelik ayarlarından, bir sonraki yenilemeden en az 24 saat önce iptal edebilirsin.",
     "supporterDismissError": "Hatayı kapat",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "Mağaza bu cihazda kullanılamıyor.",

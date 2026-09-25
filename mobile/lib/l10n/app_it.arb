@@ -3116,6 +3116,8 @@
     "supporterStoreNotInThisBuild": "In questa versione di Divine gli abbonamenti passano da Google Play o dall'App Store. Altri modi per sostenere Divine stanno arrivando.",
     "supporterRestorePurchases": "Ripristina gli acquisti",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
+    "supporterTermsOfUse": "Termini d'uso",
+    "supporterAutoRenewNotice": "I piani si rinnovano automaticamente al prezzo indicato finché non li disdici. Puoi disdire in qualsiasi momento dalle impostazioni degli abbonamenti di App Store o Google Play, almeno 24 ore prima del prossimo rinnovo.",
     "supporterDismissError": "Ignora l'errore",
     "@supporterDismissError": {"description": "Accessibility label for the button that dismisses the supporter error banner."},
     "supporterErrorStoreUnavailable": "Lo store non è disponibile su questo dispositivo.",

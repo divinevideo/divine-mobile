@@ -11522,6 +11522,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supporterRestorePurchases => 'Khôi phục giao dịch mua';
 
   @override
+  String get supporterTermsOfUse => 'Điều khoản sử dụng';
+
+  @override
+  String get supporterAutoRenewNotice =>
+      'Các gói sẽ tự động gia hạn với mức giá hiển thị cho đến khi bạn hủy. Bạn có thể hủy bất cứ lúc nào trong phần cài đặt gói đăng ký của App Store hoặc Google Play, ít nhất 24 giờ trước kỳ gia hạn tiếp theo.';
+
+  @override
   String get supporterDismissError => 'Bỏ qua lỗi';
 
   @override
