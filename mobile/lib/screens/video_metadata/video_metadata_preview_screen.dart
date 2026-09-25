@@ -75,17 +75,15 @@ class _VideoMetadataPreviewScreenState
 
     ref.listenManual(
       videoPublishProvider.select((state) => state.publishState),
-      (previous, next) {
-        if (previous != next && _controller?.state.isPlaying == true) {
-          final controller = _controller;
-          if (controller == null) return;
-          runDetached(
-            controller.pause(),
-            'pause metadata preview',
-            logName: 'VideoMetadataPreviewScreen',
-            category: LogCategory.video,
-          );
-        }
+      (_, _) {
+        final controller = _controller;
+        if (controller == null || !controller.state.isPlaying) return;
+        runDetached(
+          controller.pause(),
+          'pause metadata preview',
+          logName: 'VideoMetadataPreviewScreen',
+          category: LogCategory.video,
+        );
       },
     );
   }
