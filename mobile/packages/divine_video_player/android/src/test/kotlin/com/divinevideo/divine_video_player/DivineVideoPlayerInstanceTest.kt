@@ -1636,6 +1636,43 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `a mid-clip start bounds itself with the cached track end`() {
+        // A non-zero startMs takes this source through buildMediaItem rather
+        // than CommonTrackEndMediaSource (clipsAtTrackEnd requires startMs ==
+        // 0): the source recomputes the common end live from a fresh parse,
+        // so only this fallback path ever consumes the cache read by
+        // boundedCommonTrackEndMs. It is the only place a regression in the
+        // us-to-ms conversion or the trim-bound arithmetic would surface.
+        DivineVideoPlayerInstance.recordTrackEnds(
+            "https://cdn.example/cached.mp4",
+            videoEndUs = 6_000_000L,
+            audioEndUs = 5_800_000L,
+        )
+
+        withParsableUris {
+            instance.onMethodCall(
+                MethodCall(
+                    "setClips",
+                    mapOf(
+                        "clips" to listOf(
+                            mapOf(
+                                "uri" to "https://cdn.example/cached.mp4",
+                                "startMs" to 500,
+                                "trimToCommonTrackEnd" to true,
+                            ),
+                        ),
+                    ),
+                ),
+                mockk(relaxed = true),
+            )
+
+            val clippingConfiguration = appliedItems().single().clippingConfiguration
+            assertEquals(500L, clippingConfiguration.startPositionMs)
+            assertEquals(5_800L, clippingConfiguration.endPositionMs)
+        }
+    }
+
+    @Test
     fun `an HLS source is played to the playlist's end`() {
         withParsableUris {
             instance.onMethodCall(
