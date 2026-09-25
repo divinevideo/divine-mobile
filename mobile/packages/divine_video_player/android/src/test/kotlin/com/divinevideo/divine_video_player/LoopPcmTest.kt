@@ -39,7 +39,7 @@ class LoopPcmTest {
             samples = tone(frames = (3.1 * sampleRate).toInt()),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 3000,
+            loopUs = 3_000_000L,
         )!!
 
         assertEquals(3000 * sampleRate / 1000, prepared.loopFrames)
@@ -56,7 +56,7 @@ class LoopPcmTest {
             samples = tone(frames = decoded),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 2020,
+            loopUs = 2_020_000L,
         )!!
 
         assertEquals(2020 * sampleRate / 1000, prepared.loopFrames)
@@ -79,7 +79,7 @@ class LoopPcmTest {
             samples = tone(frames = decoded),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 7000,
+            loopUs = 7_000_000L,
         )!!
 
         assertEquals(7 * sampleRate, prepared.loopFrames)
@@ -96,7 +96,7 @@ class LoopPcmTest {
             samples = tone(frames = decoded),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1500,
+            loopUs = 1_500_000L,
         )!!
 
         assertTrue(prepared.loopFrames > decoded)
@@ -117,7 +117,7 @@ class LoopPcmTest {
             samples = tone(frames = loopFrames + sampleRate / 4),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
         )!!
 
         assertTrue(prepared.blendedFromPastTheLoop)
@@ -128,7 +128,7 @@ class LoopPcmTest {
     fun `the blend shrinks the step at the wrap`() {
         val loopFrames = sampleRate
         val samples = tone(frames = loopFrames + sampleRate / 4)
-        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopMs = 1000)!!
+        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopUs = 1_000_000L)!!
 
         val before = abs(samples[loopFrames - 1] - samples[0])
         assertTrue(
@@ -146,7 +146,7 @@ class LoopPcmTest {
             samples = tone(frames = loopFrames),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
         )!!
 
         assertEquals(false, prepared.blendedFromPastTheLoop)
@@ -166,7 +166,7 @@ class LoopPcmTest {
             samples = tone(frames = loopFrames + sampleRate / 4, channels = channels),
             channels = channels,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
         )!!
 
         // Channel 1 carries a +7 marker the blend has to preserve.
@@ -191,7 +191,7 @@ class LoopPcmTest {
             samples = source,
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 6000,
+            loopUs = 6_000_000L,
             startUs = startUs,
         )!!
 
@@ -220,7 +220,7 @@ class LoopPcmTest {
             samples = source,
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
             startUs = startUs,
         )!!
 
@@ -239,25 +239,41 @@ class LoopPcmTest {
                 samples = tone(frames = sampleRate),
                 channels = 1,
                 sampleRate = sampleRate,
-                loopMs = 1000,
+                loopUs = 1_000_000L,
                 startUs = 1_000_000L,
             ),
         )
     }
 
     @Test
+    fun `keeps the picture's period to the sample, not the millisecond`() {
+        // The clip end comes from the container in microseconds. Rounded down
+        // to 1000 ms, this loop would be 22 frames short of the picture's
+        // 1000.5 ms period at 44.1 kHz, and the sound would fall another half
+        // a millisecond behind it on every lap.
+        val prepared = LoopPcm.prepare(
+            samples = tone(frames = sampleRate * 2),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 1_000_500L,
+        )!!
+
+        assertEquals(44_122, prepared.loopFrames)
+    }
+
+    @Test
     fun `refuses input it cannot make a loop from`() {
-        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, sampleRate, loopMs = 0))
-        assertNull(LoopPcm.prepare(ShortArray(0), channels = 1, sampleRate, loopMs = 1000))
-        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 0, sampleRate, loopMs = 1000))
-        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, 0, loopMs = 1000))
+        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, sampleRate, loopUs = 0L))
+        assertNull(LoopPcm.prepare(ShortArray(0), channels = 1, sampleRate, loopUs = 1_000_000L))
+        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 0, sampleRate, loopUs = 1_000_000L))
+        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, 0, loopUs = 1_000_000L))
     }
 
     @Test
     fun `leaves the material outside the blend untouched`() {
         val loopFrames = sampleRate
         val samples = tone(frames = loopFrames + sampleRate / 4)
-        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopMs = 1000)!!
+        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopUs = 1_000_000L)!!
 
         for (frame in prepared.fadeFrames until loopFrames) {
             assertEquals(

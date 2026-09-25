@@ -147,26 +147,18 @@ class VideoClip {
   /// rather than a seam. Clamping only ever shortens: [end], when set, still
   /// wins if it is earlier.
   ///
-  /// Support is per-platform, and the web and Linux backends ignore it.
-  /// Reading a source's track lengths costs a metadata read, which for a
-  /// remote source is a network request in front of first frame:
+  /// Support is per-platform, and the web and Linux backends ignore it:
   ///
-  /// * Apple reads both tracks before it builds the composition, for local
+  /// * Apple reads both tracks before it builds the player item, for local
   ///   and remote sources alike.
-  /// * Android reads a local file before the load. Whether a remote source's
-  ///   read also sits in front of the load depends on the controller's
-  ///   [VideoBufferProfile]: a [VideoBufferProfile.full] player reads first,
-  ///   bounded by a short wait after which it plays unclamped; a
-  ///   [VideoBufferProfile.feed] player starts immediately and warms the
-  ///   lengths in the background, which tightens the playlist only while the
-  ///   player still sits paused at frame zero — a feed preloads its tiles
-  ///   that way, so the clamp usually lands before play. A feed player that
-  ///   was already playing when the read landed keeps the seam for that play,
-  ///   and the cached lengths clamp the next load of the source instead.
-  ///   Either way Android caches the result per source.
-  /// * Neither platform probes an HLS source: an HLS asset exposes no tracks
-  ///   to Apple, and Android's `MediaExtractor` cannot open a playlist. An
-  ///   HLS clip plays unclamped on both.
+  /// * Android takes the track lengths from its own extractor as it parses
+  ///   the container during prepare, and clips the source there — before the
+  ///   first frame, on every source and every [VideoBufferProfile], with no
+  ///   read in front of the load. Only a clip starting at zero is clipped
+  ///   this way; one with a [start] uses lengths already seen for its source.
+  /// * Neither platform clamps an HLS source: an HLS asset exposes no tracks
+  ///   to Apple, and a playlist has no container for Android to read them
+  ///   from. An HLS clip plays unclamped on both.
   final bool trimToCommonTrackEnd;
 
   /// Serializes this clip for platform channel transport.

@@ -1,28 +1,28 @@
 package com.divinevideo.divine_video_player
 
 import android.content.Context
-import android.media.MediaExtractor
-import android.media.MediaFormat
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
 import java.util.Collections
+import kotlin.math.abs
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ThreadFactory
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.extractor.DefaultExtractorsFactory
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
@@ -51,8 +51,8 @@ internal class DivineVideoPlayerInstance(
         AudioOverlayManager(ctx)
     },
     /**
-     * Reads source metadata off the platform thread. Single-threaded, so the
-     * clips of one call resolve in order and two calls cannot interleave.
+     * Decodes a looping clip's audio off the platform thread. Single-threaded,
+     * so two decodes for the same player cannot interleave.
      */
     private val metadataExecutor: ExecutorService =
         Executors.newSingleThreadExecutor(metadataThreadFactory(playerId)),
@@ -149,11 +149,8 @@ internal class DivineVideoPlayerInstance(
     /** Set when the audio loop is waiting for the player to finish loading. */
     private var clipAudioAwaitingLoad = false
 
-    /**
-     * A loop that decoded while the player was playing, held for the next
-     * loop restart. See [adoptClipAudioLoop].
-     */
-    private var pendingClipAudioLoop: ClipAudioLoopTrack? = null
+    /** A loop fading in over ExoPlayer's audio. See [ClipAudioTakeover]. */
+    private var clipAudioTakeover: ClipAudioTakeover? = null
 
     /**
      * The clips last handed over.
@@ -209,61 +206,6 @@ internal class DivineVideoPlayerInstance(
     private var pendingGlobalStartMs: Long = 0L
 
     private val audioOverlayManager = audioOverlayManagerFactory(context)
-
-    /** Bumped by every [handleSetClips] so late background work can be dropped. */
-    private var setClipsGeneration = 0L
-
-    /**
-     * The `setClips` whose track lengths are still being read, if any.
-     *
-     * At most one exists: a newer call settles the previous one before taking
-     * the slot.
-     */
-    private var deferredSetClips: DeferredSetClips? = null
-
-    /**
-     * A resolved track-end clamp waiting for a loop restart to be applied.
-     *
-     * Held when the read lands on a player that is already playing, where
-     * swapping the item outright would jump the video back to its start. At
-     * the loop boundary the position is already back at zero, so the swap
-     * costs nothing there. Superseded by the generation check like every other
-     * piece of late background work.
-     */
-    private var pendingCommonTrackEndClamp: PendingCommonTrackEndClamp? = null
-
-    /**
-     * Gives up waiting for the track lengths and starts the player unclamped.
-     *
-     * The read has to be bounded. `MediaExtractor` fetches a remote source
-     * through `MediaHTTPConnection`, which sets a connect timeout and no read
-     * timeout at all, so a host that accepts the connection and then stalls
-     * would hold `await setClips()` open indefinitely. A seam is bad, a player
-     * that never starts is worse — so the clips go in without the clamp, and
-     * the read still finishes into [trackDurationsCache] for the next play of
-     * that source.
-     */
-    private val deferredSetClipsTimeout = Runnable {
-        deferredSetClips?.let { deferred ->
-            trackDurationProbingDisabled = true
-            DivineVideoPlayerLog.warning(
-                "$logTarget applied clips unclamped: track lengths not " +
-                    "read within ${TRACK_DURATION_RESOLVE_TIMEOUT_MS}ms; " +
-                    "metadata probing disabled for this instance",
-                name = "DivineVideoPlayer.Load",
-            )
-            settleDeferredSetClips(deferred, apply = true)
-        }
-    }
-
-    /**
-     * True after a metadata read misses its deadline on this instance.
-     *
-     * `MediaExtractor` remote reads are native I/O and may not be interruptible.
-     * Once the single metadata thread is plausibly pinned, queuing more work only
-     * makes later loads wait for a deadline before playing unclamped anyway.
-     */
-    private var trackDurationProbingDisabled = false
 
     /**
      * Fades the outer edges of a looping video so its loop join is not a click
@@ -410,13 +352,24 @@ internal class DivineVideoPlayerInstance(
         val renderersFactory =
             LoopDeclickRenderersFactory(context, declickProcessor)
                 .setEnableDecoderFallback(true)
+        // The player's own extractor records each source's track lengths as it
+        // parses the container, and a clip tagged for it is clipped to where
+        // the shorter track ends before its first frame. See
+        // [CommonTrackEndMediaSource].
+        val extractorsFactory = TrackEndCapturingExtractorsFactory(DefaultExtractorsFactory()) {
+                uri, videoEndUs, audioEndUs ->
+            recordTrackEnds(uri.toString(), videoEndUs, audioEndUs)
+        }
         val builder = ExoPlayer.Builder(context, renderersFactory)
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(
-                    VideoCache.dataSourceFactory(context) { uri: Uri ->
-                        httpHeadersForRequest(uri.toString())
-                    },
-                ),
+                CommonTrackEndMediaSourceFactory(
+                    DefaultMediaSourceFactory(
+                        VideoCache.dataSourceFactory(context) { uri: Uri ->
+                            httpHeadersForRequest(uri.toString())
+                        },
+                        extractorsFactory,
+                    ),
+                ) { uri -> trackEndsFor(uri) },
             )
         // The feed keeps several players live on memory-constrained devices,
         // so cap their read-ahead to avoid ExoPlayer OOM (#3419). Editing
@@ -437,11 +390,11 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * What a `MediaExtractor` reads remote clips through: the same factory
+     * What the loop audio decode reads remote clips through: the same factory
      * the player itself uses — its cache for anonymous HTTP(S), straight to
      * the network otherwise — so the extractor reads what the player has
-     * fetched. [headers] is the clip's own map, not [httpHeadersForRequest]:
-     * the duration probe runs before [applyClips] fills that lookup.
+     * fetched. [headers] is the clip's own map rather than a lookup, so the
+     * decode carries exactly what the clip was loaded with.
      * Deliberately not the blocking variant of the cache source: the
      * extractor holds several ranges open at once, and one of them blocking
      * on a range another holds locked would wait on itself.
@@ -541,266 +494,10 @@ internal class DivineVideoPlayerInstance(
             result.error("INVALID_ARGS", "clips list required", null)
             return
         }
-
-        // Any newer call supersedes a resolution still in flight.
-        val generation = ++setClipsGeneration
-        pendingCommonTrackEndClamp = null
-        deferredSetClips?.let { settleDeferredSetClips(it, apply = false) }
-
-        val unresolved = if (trackDurationProbingDisabled) {
-            emptyList()
-        } else {
-            clipsRaw.mapNotNull { map ->
-                val uri = map["uri"] as? String ?: return@mapNotNull null
-                if (map["trimToCommonTrackEnd"] as? Boolean != true) return@mapNotNull null
-                if (!canReadTrackDurations(uri)) return@mapNotNull null
-                if (trackDurationsCache.containsKey(uri)) return@mapNotNull null
-                uri to httpHeadersOf(map)
-            }
-        }
-        val blockingUnresolved = unresolved.filter { (uri, _) ->
-            shouldBlockSetClipsForTrackDurations(uri)
-        }
-        val backgroundUnresolved = unresolved.filterNot { (uri, _) ->
-            shouldBlockSetClipsForTrackDurations(uri)
-        }
-        if (blockingUnresolved.isEmpty()) {
-            if (backgroundUnresolved.isNotEmpty()) {
-                warmTrackDurationsInBackground(generation, clipsRaw, backgroundUnresolved)
-            }
-            applyClips(call, clipsRaw, result)
-            return
-        }
-
-        // Where each track really ends is only in the source's metadata. Local
-        // files can be read before the playlist swap without adding a network
-        // round trip to first frame; a feed player's remote sources warm in
-        // the background and tighten the current playlist when they land.
-        val deferred = DeferredSetClips(call, clipsRaw, result)
-        deferredSetClips = deferred
-        mainHandler.postDelayed(
-            deferredSetClipsTimeout,
-            TRACK_DURATION_RESOLVE_TIMEOUT_MS,
-        )
-
-        try {
-            metadataExecutor.execute {
-                // The clips must be applied even if resolving blows up —
-                // playing to the container duration is a seam, not playing at
-                // all is a dead player.
-                try {
-                    blockingUnresolved.forEach { (uri, headers) ->
-                        resolveTrackDurations(uri, headers)
-                    }
-                } finally {
-                    mainHandler.post {
-                        if (backgroundUnresolved.isNotEmpty()) {
-                            warmTrackDurationsInBackground(
-                                generation,
-                                clipsRaw,
-                                backgroundUnresolved,
-                            )
-                        }
-                        settleDeferredSetClips(deferred, apply = true)
-                    }
-                }
-            }
-        } catch (e: RejectedExecutionException) {
-            // Disposed while a call was in flight; nothing left to play into.
-            DivineVideoPlayerLog.warning(
-                "$logTarget dropped setClips after dispose: $e",
-                name = "DivineVideoPlayer.Load",
-            )
-            if (claimDeferredSetClips(deferred)) {
-                result.error("DISPOSED", "Player was disposed", null)
-            }
-        }
-    }
-
-    private fun warmTrackDurationsInBackground(
-        generation: Long,
-        clipsRaw: List<Map<String, Any?>>,
-        unresolved: List<Pair<String, Map<String, String>>>,
-    ) {
-        try {
-            metadataExecutor.execute {
-                try {
-                    unresolved.forEach { (uri, headers) ->
-                        resolveTrackDurations(uri, headers)
-                    }
-                } finally {
-                    mainHandler.post {
-                        applyResolvedCommonTrackEnds(generation, clipsRaw)
-                    }
-                }
-            }
-        } catch (e: RejectedExecutionException) {
-            DivineVideoPlayerLog.warning(
-                "$logTarget dropped background track-duration read: $e",
-                name = "DivineVideoPlayer.Load",
-            )
-        }
-    }
-
-    /**
-     * Tightens the loaded playlist to the track ends a background read just
-     * resolved, at the first moment doing so is free.
-     *
-     * A clamp lives in the item's `ClippingConfiguration`, and
-     * `ClippingMediaSource.canUpdateMediaItem` compares that configuration, so
-     * a changed one can never be applied in place: `replaceMediaItem` falls
-     * back to remove-and-insert, and removing the period being played resolves
-     * the position to the *default* position of the one that takes its place.
-     * On a player that has not started that is invisible — a preloaded tile
-     * sits paused at frame zero, and the feed preloads a window around the
-     * current index.
-     *
-     * On one that is already playing, swapping *now* would be the video
-     * jumping back to its start mid-watch. Waiting for the source's next
-     * `setClips` is not a fix either: for a remote source the read never lands
-     * before the tile the viewer is on starts playing, so the video they are
-     * actually watching keeps the seam for its whole visit. Instead the clamp
-     * is parked and applied at the next loop restart, where the position has
-     * already returned to zero and resolving to the default position is where
-     * playback is anyway.
-     */
-    private fun applyResolvedCommonTrackEnds(
-        generation: Long,
-        clipsRaw: List<Map<String, Any?>>,
-    ) {
-        if (generation != setClipsGeneration) return
-        val exoPlayer = player ?: return
-        if (exoPlayer.mediaItemCount != clipsRaw.size) return
-        if (exoPlayer.playWhenReady || exoPlayer.currentPosition > 0L) {
-            pendingCommonTrackEndClamp =
-                PendingCommonTrackEndClamp(generation, clipsRaw)
-            return
-        }
-        pendingCommonTrackEndClamp = null
-        clampLoadedClipsToResolvedTrackEnds(exoPlayer, clipsRaw)
-    }
-
-    /**
-     * Applies a clamp parked by [applyResolvedCommonTrackEnds] now that the
-     * player has looped.
-     *
-     * Runs from [Player.Listener.onPositionDiscontinuity] on an automatic
-     * transition, which for the feed's single repeating clip is the loop
-     * restart itself.
-     */
-    private fun applyPendingCommonTrackEndClamp() {
-        val pending = pendingCommonTrackEndClamp ?: return
-        pendingCommonTrackEndClamp = null
-        if (pending.generation != setClipsGeneration) return
-        val exoPlayer = player ?: return
-        if (exoPlayer.mediaItemCount != pending.clipsRaw.size) return
-        clampLoadedClipsToResolvedTrackEnds(exoPlayer, pending.clipsRaw)
-    }
-
-    /** Rebuilds every loaded item whose resolved clamp differs from its own. */
-    private fun clampLoadedClipsToResolvedTrackEnds(
-        exoPlayer: ExoPlayer,
-        clipsRaw: List<Map<String, Any?>>,
-    ) {
-        val replacements = clipsRaw.mapIndexedNotNull { index, map ->
-            resolvedClampFor(exoPlayer, index, map)?.let { index to it }
-        }
-        if (replacements.isEmpty()) return
-
-        // `replaceMediaItem` cannot change a clipping configuration in place,
-        // so it inserts the new item and removes the old one. After a removal
-        // the player looks for the period to continue from by walking the old
-        // timeline in its current repeat mode, and under `REPEAT_MODE_ONE`
-        // that walk never leaves the removed period: no successor is found
-        // and playback ends. On the feed that was a video freezing on its
-        // last frame after its first lap. Widen the mode for the swap so the
-        // walk reaches the inserted item; the player handles its messages in
-        // order, so restoring it right after is safe.
-        val repeatMode = exoPlayer.repeatMode
-        if (repeatMode == Player.REPEAT_MODE_ONE) {
-            exoPlayer.repeatMode = Player.REPEAT_MODE_ALL
-        }
-        replacements.forEach { (index, item) -> exoPlayer.replaceMediaItem(index, item) }
-        if (repeatMode == Player.REPEAT_MODE_ONE) {
-            exoPlayer.repeatMode = repeatMode
-        }
-
-        refreshClipOffsets(exoPlayer)
-        // The loop audio was cut to the duration the player presented before
-        // the clamp, and the clamp moves only the picture. Cut it again
-        // against the clipped timeline once the player reports it, or the two
-        // loop at different lengths from here on.
-        startClipAudioLoop(clipsRaw, clipsRaw.size, awaitTimeline = true)
-        DivineVideoPlayerLog.info(
-            "$logTarget applied resolved track-end clamp",
-            name = "DivineVideoPlayer.Load",
-        )
-    }
-
-    /**
-     * The item that clip [index] should be replaced with to carry its resolved
-     * clamp, or null when the loaded item already does.
-     */
-    private fun resolvedClampFor(
-        exoPlayer: ExoPlayer,
-        index: Int,
-        map: Map<String, Any?>,
-    ): MediaItem? {
-        val uri = map["uri"] as? String ?: return null
-        if (map["trimToCommonTrackEnd"] as? Boolean != true) return null
-        val startMs = (map["startMs"] as? Number)?.toLong() ?: 0L
-        val requestedEndMs = (map["endMs"] as? Number)?.toLong()
-        val commonEndMs = boundedCommonTrackEndMs(uri, startMs, requestedEndMs)
-            ?: return null
-        val effectiveEndMs = listOfNotNull(requestedEndMs, commonEndMs).minOrNull()
-            ?: return null
-        val currentItem = exoPlayer.getMediaItemAt(index)
-        if (currentItem.clippingConfiguration.endPositionMs == effectiveEndMs) {
-            return null
-        }
-        return buildMediaItem(uri, startMs, effectiveEndMs)
-    }
-
-    /**
-     * Takes [deferred] out of the pending slot, or returns `false` if
-     * something else already settled it.
-     *
-     * Whoever wins owes Dart a reply: a `setClips` whose
-     * [MethodChannel.Result] is dropped leaves `await setClips()` pending for
-     * the life of the app, which in the feed pins the tile's failover state
-     * and suppresses every later recovery attempt for it.
-     */
-    private fun claimDeferredSetClips(deferred: DeferredSetClips): Boolean {
-        if (deferred.settled) return false
-        deferred.settled = true
-        if (deferredSetClips === deferred) {
-            deferredSetClips = null
-            mainHandler.removeCallbacks(deferredSetClipsTimeout)
-        }
-        return true
-    }
-
-    /**
-     * Applies [deferred]'s clips, or tells its caller they were superseded.
-     *
-     * Runs on the platform thread from whichever comes first: the resolution
-     * landing, [deferredSetClipsTimeout] expiring, a newer [handleSetClips],
-     * or [dispose].
-     */
-    private fun settleDeferredSetClips(deferred: DeferredSetClips, apply: Boolean) {
-        if (!claimDeferredSetClips(deferred)) return
-        if (apply) {
-            applyClips(deferred.call, deferred.clipsRaw, deferred.result)
-        } else {
-            // Same contract [applyClips] uses for a superseded in-flight call:
-            // the Dart controller swallows CANCELLED, and the newer call is
-            // the one that answers.
-            deferred.result.error(
-                "CANCELLED",
-                "Superseded by newer setClips call",
-                null,
-            )
-        }
+        // Nothing is read ahead of the load: where each track ends is recorded
+        // by the player's own extractor while it prepares the source, and a
+        // clip that asked for it is clipped there before its first frame.
+        applyClips(call, clipsRaw, result)
     }
 
     private fun applyClips(
@@ -834,6 +531,11 @@ internal class DivineVideoPlayerInstance(
             // silence, or a frozen frame. On a looping player that stretch is
             // the seam. Clamping may only ever shorten: an earlier explicit
             // trim still wins.
+            val clipsAtTrackEnd = trimToCommonTrackEnd &&
+                startMs == 0L &&
+                canClipToCommonTrackEnd(uri)
+            // A clip clipped at its track end learns that end during prepare;
+            // a known one only seeds the offsets until the timeline reports it.
             val commonEndMs = if (trimToCommonTrackEnd) {
                 boundedCommonTrackEndMs(uri, startMs, endMs)
             } else {
@@ -849,7 +551,13 @@ internal class DivineVideoPlayerInstance(
                 blobHashFromUrl(uri)?.let { headersByHash[it] = httpHeaders }
             }
 
-            mediaItems.add(buildMediaItem(uri, startMs, effectiveEndMs))
+            mediaItems.add(
+                if (clipsAtTrackEnd) {
+                    buildCommonTrackEndItem(uri, endMs)
+                } else {
+                    buildMediaItem(uri, startMs, effectiveEndMs)
+                },
+            )
             offsets.add(accumulated)
             volumes.add(clipVol)
             speeds.add(clipSpeed)
@@ -965,11 +673,10 @@ internal class DivineVideoPlayerInstance(
      * compose — and there it cost the loop seam; playing the asset itself
      * closed it.
      *
-     * The feed always passes an end (its maximum playback duration), so
-     * without this test every feed video was wrapped, whether or not the end
-     * fell inside the clip. Track lengths come from [trackDurationsCache],
-     * which is already filled by then; when they are unknown the wrapper stays,
-     * because guessing wrong here would silently play past a trim.
+     * Track lengths come from [trackDurationsCache], filled by the player's
+     * own extractor whenever it has parsed the source before; when they are
+     * unknown the wrapper stays, because guessing wrong here would silently
+     * play past a trim.
      */
     private fun buildMediaItem(
         uri: String,
@@ -990,12 +697,29 @@ internal class DivineVideoPlayerInstance(
             .build()
     }
 
+    /**
+     * Wraps [uri] in a media item that [CommonTrackEndMediaSource] clips to
+     * where its shorter track ends, and to [endMs] if that comes first.
+     *
+     * The end is left to the source rather than written into a clipping
+     * configuration because it is not known yet: the player's extractor reads
+     * it from the container during prepare, before the first frame.
+     */
+    private fun buildCommonTrackEndItem(uri: String, endMs: Long?): MediaItem =
+        MediaItem.Builder()
+            .setUri(uri)
+            .setTag(
+                CommonTrackEndClip(
+                    requestedEndUs = endMs?.let { it * 1000L } ?: C.TIME_END_OF_SOURCE,
+                ),
+            )
+            .build()
+
     /** Whether clipping [uri] to [startMs]..[endMs] would leave it untouched. */
     private fun clipsNothing(uri: String, startMs: Long, endMs: Long?): Boolean {
         if (startMs != 0L) return false
         if (endMs == null) return true
-        val durations = trackDurationsCache[uri]
-        if (durations == null || durations.contentEquals(NO_TRACK_PAIR)) return false
+        val durations = trackDurationsCache[uri] ?: return false
         val containerEndMs = (durations.maxOrNull() ?: return false) / 1000
         return endMs >= containerEndMs
     }
@@ -1004,8 +728,8 @@ internal class DivineVideoPlayerInstance(
      * The point up to which *every* track of [uri] still has content, in
      * milliseconds, or `null` when the source's track lengths are not known.
      *
-     * Reads only [trackDurationsCache] — never I/O, so it is safe on the
-     * platform thread. [resolveTrackDurations] fills the cache first.
+     * Reads only [trackDurationsCache], which the player's extractor fills
+     * each time it parses a source.
      */
     private fun boundedCommonTrackEndMs(
         uri: String,
@@ -1013,32 +737,25 @@ internal class DivineVideoPlayerInstance(
         requestedEndMs: Long?,
     ): Long? {
         val durations = trackDurationsCache[uri] ?: return null
-        if (durations.size < 2 || durations[0] <= 0 || durations[1] <= 0) {
-            return null
-        }
-        return boundedCommonTrackEndMs(
-            startMs = startMs,
-            requestedEndMs = requestedEndMs,
-            videoEndMs = durations[0] / 1000,
-            audioEndMs = durations[1] / 1000,
-        )
+        if (durations.size < 2) return null
+        return commonTrackEndUs(
+            requestedEndUs = requestedEndMs?.let { it * 1000L } ?: C.TIME_END_OF_SOURCE,
+            videoEndUs = durations[0],
+            audioEndUs = durations[1],
+            startUs = startMs * 1000L,
+        )?.let { it / 1000L }
     }
 
     /**
-     * Whether [uri]'s track lengths can be read at all.
+     * Whether [uri] can be clipped at its common track end by
+     * [CommonTrackEndMediaSource].
      *
-     * `MediaExtractor` has no HLS extractor: it fetches the playlist, fails to
-     * sniff it and throws. A throw is deliberately uncached (see
-     * [resolveTrackDurations]), so probing a playlist would hold every
-     * `setClips` for that source behind a read that can only fail, and pay the
-     * fetch again on the next one. The feed keeps HLS as a fallback for a
-     * progressive source that would not start, so this is the path a video
-     * takes when it is already having a bad time.
-     *
-     * A scheme [resolveTrackDurations] cannot open is the same shape of
-     * answer: permanent, and not worth deferring a load to rediscover.
+     * The track ends come from the progressive extractor, so an HLS playlist
+     * never reports them; the feed keeps HLS as a fallback for a progressive
+     * source that would not start, and plays it to the playlist's end, as the
+     * Apple player does.
      */
-    private fun canReadTrackDurations(uri: String): Boolean {
+    private fun canClipToCommonTrackEnd(uri: String): Boolean {
         val path = uri.substringBefore('?').substringBefore('#')
         if (path.endsWith(".m3u8", ignoreCase = true) ||
             path.contains("/hls/", ignoreCase = true)
@@ -1049,96 +766,6 @@ internal class DivineVideoPlayerInstance(
             uri.startsWith("file://") ||
             uri.startsWith("http://") ||
             uri.startsWith("https://")
-    }
-
-    /**
-     * Whether [uri]'s track lengths are read before the playlist swap or
-     * warmed behind it.
-     *
-     * A local file is cheap enough to read first. A remote read is a second
-     * connection in front of first frame, and whether that is affordable is a
-     * property of the surface, not the source. A [BufferProfile.FEED] player
-     * is first-frame measured and preloads its tiles paused, so the warm
-     * usually lands before `play` and [applyResolvedCommonTrackEnds] tightens
-     * the playlist for free. A [BufferProfile.FULL] player is a preview that
-     * starts on tap: nothing sits paused for the warm to land on, so a
-     * background read could only ever clamp the *next* load of the source and
-     * the play the user just started kept its seam (#8897). It reads first,
-     * like a local file, and like the Apple player does for every source.
-     */
-    private fun shouldBlockSetClipsForTrackDurations(uri: String): Boolean =
-        uri.startsWith("/") || uri.startsWith("file://") ||
-            bufferProfile == BufferProfile.FULL
-
-    /**
-     * Reads [uri]'s video and audio track lengths into [trackDurationsCache].
-     *
-     * Only ever called for a [uri] [canReadTrackDurations] accepted.
-     *
-     * Blocks on I/O — a remote source costs a range request for the moov box —
-     * so it must never run on the platform thread. The Apple player pays the
-     * same cost, awaiting `load(.timeRange)` on both tracks before it builds
-     * the composition.
-     *
-     * A source that genuinely carries no video/audio pair is cached as
-     * [NO_TRACK_PAIR] so the read is not repeated for it. A read that *threw*
-     * is not cached: a socket reset or a 5xx says nothing about the source,
-     * and [NO_TRACK_PAIR] is permanent — one bad moment would disable the
-     * clamp for that URL for the rest of the process.
-     */
-    private fun resolveTrackDurations(uri: String, headers: Map<String, String>) {
-        if (trackDurationsCache.containsKey(uri)) return
-
-        val extractor = MediaExtractor()
-        var remoteSource: DataSourceMediaDataSource? = null
-        val durations = try {
-            when {
-                uri.startsWith("file://") ->
-                    extractor.setDataSource(Uri.parse(uri).path ?: return)
-                // Through the player's cache: a clip seen before is read
-                // from disk, and what this read fetches of a new one is
-                // there for the player's own load.
-                uri.startsWith("http://") || uri.startsWith("https://") -> {
-                    remoteSource =
-                        DataSourceMediaDataSource(
-                            extractorDataSourceFactory(headers),
-                            Uri.parse(uri),
-                        )
-                    extractor.setDataSource(remoteSource)
-                }
-                // A bare filesystem path. [canReadTrackDurations] rejected
-                // everything else before this was ever queued.
-                else -> extractor.setDataSource(uri)
-            }
-            var videoUs = -1L
-            var audioUs = -1L
-            for (i in 0 until extractor.trackCount) {
-                val format = extractor.getTrackFormat(i)
-                val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
-                if (!format.containsKey(MediaFormat.KEY_DURATION)) continue
-                val durationUs = format.getLong(MediaFormat.KEY_DURATION)
-                when {
-                    mime.startsWith("video/") && videoUs < 0 -> videoUs = durationUs
-                    mime.startsWith("audio/") && audioUs < 0 -> audioUs = durationUs
-                }
-            }
-            // A clip without both track types has no mismatch to trim.
-            if (videoUs <= 0 || audioUs <= 0) {
-                NO_TRACK_PAIR
-            } else {
-                longArrayOf(videoUs, audioUs)
-            }
-        } catch (e: Exception) {
-            DivineVideoPlayerLog.warning(
-                "$logTarget could not read track durations: $e",
-                name = "DivineVideoPlayer.Load",
-            )
-            return
-        } finally {
-            extractor.release()
-            runCatching { remoteSource?.close() }
-        }
-        trackDurationsCache[uri] = durations
     }
 
     /** The per-clip HTTP headers Dart sent, if any. */
@@ -1152,25 +779,6 @@ internal class DivineVideoPlayerInstance(
             ?.toMap()
             ?: emptyMap()
 
-    private fun boundedCommonTrackEndMs(
-        startMs: Long,
-        requestedEndMs: Long?,
-        videoEndMs: Long,
-        audioEndMs: Long,
-    ): Long? {
-        val containerEndMs = maxOf(videoEndMs, audioEndMs)
-        val playbackEndMs = minOf(requestedEndMs ?: containerEndMs, containerEndMs)
-        val commonEndMs = minOf(videoEndMs, audioEndMs)
-        val trimMs = playbackEndMs - commonEndMs
-        if (commonEndMs <= startMs || trimMs <= 0) return null
-
-        val playableDurationMs = playbackEndMs - startMs
-        if (playableDurationMs <= 0) return null
-
-        val relativeLimitMs = (playableDurationMs * MAX_COMMON_TRACK_END_TRIM_RATIO).toLong()
-        val trimLimitMs = minOf(MAX_COMMON_TRACK_END_TRIM_MS, relativeLimitMs)
-        return commonEndMs.takeIf { trimMs <= trimLimitMs }
-    }
 
     /**
      * Hands the declick fade the current video's length, which bounds how long
@@ -1220,8 +828,8 @@ internal class DivineVideoPlayerInstance(
         // The presented length is only known once the timeline is populated;
         // [onPlaybackStateChanged] calls back in when it is.
         val exoPlayer = ensurePlayer()
-        val loopMs = if (awaitTimeline) C.TIME_UNSET else exoPlayer.duration
-        if (loopMs == C.TIME_UNSET || loopMs <= 0) {
+        val loopUs = if (awaitTimeline) C.TIME_UNSET else presentedDurationUs(exoPlayer)
+        if (loopUs == C.TIME_UNSET || loopUs <= 0) {
             clipAudioPending = true
             return
         }
@@ -1249,7 +857,7 @@ internal class DivineVideoPlayerInstance(
         if (metadataExecutor.isShutdown) return
         runCatching {
             metadataExecutor.execute {
-                val loop = ClipAudioLoopTrack.create(uri, headers, loopMs, remoteSourceFactory)
+                val loop = ClipAudioLoopTrack.create(uri, headers, loopUs, remoteSourceFactory)
                 mainHandler.post {
                     if (generation != clipAudioGeneration) {
                         loop?.release()
@@ -1266,41 +874,178 @@ internal class DivineVideoPlayerInstance(
     }
 
     /**
-     * Takes the audio over from ExoPlayer with a freshly decoded [loop].
+     * The single clip's presented length in microseconds, or [C.TIME_UNSET].
      *
-     * A player that is not playing switches at once: nothing is sounding, and
-     * [onIsPlayingChanged] starts the loop from the picture's position when it
-     * does. A playing one keeps ExoPlayer's audio until its next loop restart,
-     * where the switch lands on the discontinuity the renderer's seam already
-     * makes rather than adding one of its own mid-lap.
+     * Read from the timeline rather than [ExoPlayer.getDuration], which rounds
+     * down to whole milliseconds. The loop track repeats in the HAL on its own
+     * clock, so a loop even a fraction of a millisecond short of the picture's
+     * period walks away from it by that much on every lap.
      */
-    private fun adoptClipAudioLoop(loop: ClipAudioLoopTrack) {
-        if (player?.isPlaying == true) {
-            pendingClipAudioLoop?.release()
-            pendingClipAudioLoop = loop
-            return
-        }
-        installClipAudioLoop(loop)
+    private fun presentedDurationUs(exoPlayer: ExoPlayer): Long {
+        val timeline = exoPlayer.currentTimeline
+        if (timeline.isEmpty) return C.TIME_UNSET
+        return timeline.getWindow(exoPlayer.currentMediaItemIndex, Timeline.Window()).durationUs
     }
 
     /**
-     * Installs a loop parked by [adoptClipAudioLoop]. Runs from
-     * [Player.Listener.onPositionDiscontinuity] on an automatic transition,
-     * which for a single repeating clip is the loop restart.
+     * Takes the audio over from ExoPlayer with a freshly decoded [loop].
+     *
+     * A player that is not playing switches at once: nothing is sounding, and
+     * [onIsPlayingChanged] starts the loop against the picture when it does.
+     * A playing one hands over mid-lap without a seam of its own: see
+     * [ClipAudioTakeover]. Waiting for the next loop restart instead (#9324)
+     * left the first restart of every video opened from a grid to ExoPlayer's
+     * audio — the very seam the private track exists to avoid.
      */
-    private fun adoptPendingClipAudioLoop() {
-        val loop = pendingClipAudioLoop ?: return
-        pendingClipAudioLoop = null
-        installClipAudioLoop(loop)
+    private fun adoptClipAudioLoop(loop: ClipAudioLoopTrack) {
+        val exoPlayer = player
+        if (exoPlayer?.isPlaying != true) {
+            installClipAudioLoop(loop)
+            return
+        }
+        // Silent until it is in step with the picture, so aligning it cannot
+        // be heard; ExoPlayer keeps the sound meanwhile.
+        clipAudioLoop = loop
+        loop.play(exoPlayer.currentPosition * 1000L, 0f)
+        val takeover = ClipAudioTakeover(loop)
+        clipAudioTakeover = takeover
+        mainHandler.post(takeover)
     }
 
-    /** Switches the sound from the player's renderer to [loop]. */
+    /** Switches the sound from the player's renderer to [loop] outright. */
     private fun installClipAudioLoop(loop: ClipAudioLoopTrack) {
         setExoPlayerAudioEnabled(false)
         clipAudioLoop = loop
         player?.takeIf { it.isPlaying }?.let {
-            loop.play(it.currentPosition, it.volume)
+            loop.play(it.currentPosition * 1000L, it.volume)
+            scheduleClipAudioSync()
         }
+    }
+
+    /**
+     * Hands the sound from ExoPlayer to [loop] while both are playing.
+     *
+     * The loop starts muted and is placed again until it measures within
+     * [LoopAudioSync.DEADBAND_US] of the picture — inaudible while it is
+     * silent — or until [TAKEOVER_ALIGN_TIMEOUT_NS] passes. Then the two
+     * cross over in [TAKEOVER_FADE_STEPS] steps: two copies of the same sound
+     * a few milliseconds apart, so the crossing is not heard, and neither is a
+     * seam, because there is none mid-lap. ExoPlayer's audio renderer is only
+     * switched off once it is silent.
+     */
+    private inner class ClipAudioTakeover(val loop: ClipAudioLoopTrack) : Runnable {
+        val startedNanos = System.nanoTime()
+        private var fadeStep = -1
+
+        /** Readings since the loop was last placed; judged by their median. */
+        private val readings = ArrayList<Long>(TAKEOVER_READINGS)
+
+        override fun run() {
+            if (clipAudioTakeover !== this) return
+            val exoPlayer = player
+            if (exoPlayer == null || !exoPlayer.isPlaying) {
+                finishClipAudioTakeover()
+                return
+            }
+            if (fadeStep < 0) {
+                val nowNanos = System.nanoTime()
+                val positionUs = exoPlayer.currentPosition * 1000L
+                val errorUs = loop.sync(positionUs, nowNanos)
+                val timedOut = nowNanos - startedNanos >= TAKEOVER_ALIGN_TIMEOUT_NS
+                when {
+                    // A gap too wide to steer was placed again by [sync]
+                    // itself; what was read before it no longer applies.
+                    errorUs != null && abs(errorUs) > LoopAudioSync.REANCHOR_THRESHOLD_US ->
+                        readings.clear()
+                    errorUs != null -> readings.add(errorUs)
+                }
+                if (readings.size >= TAKEOVER_READINGS || timedOut) {
+                    val medianUs = readings.sorted().getOrNull(readings.size / 2)
+                    if (timedOut || medianUs == null ||
+                        abs(medianUs) <= LoopAudioSync.DEADBAND_US
+                    ) {
+                        fadeStep = 0
+                    } else {
+                        // Placed again by exactly what it was off by, which
+                        // cannot be heard while muted, rather than steered
+                        // over seconds.
+                        loop.realign(positionUs, measuredErrorUs = medianUs)
+                        readings.clear()
+                    }
+                }
+                if (fadeStep < 0) {
+                    mainHandler.postDelayed(this, TAKEOVER_STEP_MS)
+                    return
+                }
+            }
+            fadeStep++
+            val target = nominalPlayerVolume()
+            val progress = fadeStep.toFloat() / TAKEOVER_FADE_STEPS
+            loop.setVolume(target * progress)
+            exoPlayer.volume = target * (1f - progress)
+            if (fadeStep >= TAKEOVER_FADE_STEPS) {
+                finishClipAudioTakeover()
+            } else {
+                mainHandler.postDelayed(this, TAKEOVER_STEP_MS)
+            }
+        }
+    }
+
+    /**
+     * Completes a takeover in progress at once: the loop has the sound from
+     * here on, at full level, and ExoPlayer's renderer is switched off.
+     *
+     * Also the way out when playback stops, the volume changes or the loop is
+     * released mid-takeover — none of them can leave the two sounding at once.
+     */
+    private fun finishClipAudioTakeover() {
+        val takeover = clipAudioTakeover ?: return
+        clipAudioTakeover = null
+        DivineVideoPlayerLog.debug(
+            "$logTarget loop audio took over after " +
+                "${(System.nanoTime() - takeover.startedNanos) / 1_000_000} ms",
+            name = "DivineVideoPlayer.AudioLoop",
+        )
+        mainHandler.removeCallbacks(takeover)
+        setExoPlayerAudioEnabled(false)
+        val target = nominalPlayerVolume()
+        player?.volume = target
+        takeover.loop.setVolume(target)
+        if (player?.isPlaying == true) scheduleClipAudioSync()
+    }
+
+    /** The player's volume outside a takeover: the clip's gain times Dart's. */
+    private fun nominalPlayerVolume(): Float =
+        clipVolumes.getOrElse(player?.currentMediaItemIndex ?: 0) { 1.0f } * volume.toFloat()
+
+    /**
+     * Keeps a playing loop on the picture; see [LoopAudioSync].
+     *
+     * Runs every [CLIP_AUDIO_SYNC_INTERVAL_MS] while the loop plays. A few
+     * milliseconds of measurement noise is ignored; anything wider is steered
+     * out through the playback rate.
+     */
+    private val clipAudioSyncRunnable = object : Runnable {
+        private var measurements = 0
+
+        override fun run() {
+            val loop = clipAudioLoop ?: return
+            val exoPlayer = player ?: return
+            if (!exoPlayer.isPlaying || clipAudioTakeover != null) return
+            val errorUs = loop.sync(exoPlayer.currentPosition * 1000L, System.nanoTime())
+            if (errorUs != null && measurements++ % CLIP_AUDIO_SYNC_LOG_EVERY == 0) {
+                DivineVideoPlayerLog.debug(
+                    "$logTarget loop audio ${errorUs / 1000.0} ms from the picture",
+                    name = "DivineVideoPlayer.AudioLoop",
+                )
+            }
+            mainHandler.postDelayed(this, CLIP_AUDIO_SYNC_INTERVAL_MS)
+        }
+    }
+
+    private fun scheduleClipAudioSync() {
+        mainHandler.removeCallbacks(clipAudioSyncRunnable)
+        mainHandler.postDelayed(clipAudioSyncRunnable, CLIP_AUDIO_SYNC_INTERVAL_MS)
     }
 
     /** Releases the private audio path and lets ExoPlayer see audio again. */
@@ -1308,11 +1053,13 @@ internal class DivineVideoPlayerInstance(
         clipAudioGeneration++
         clipAudioPending = false
         clipAudioAwaitingLoad = false
-        pendingClipAudioLoop?.release()
-        pendingClipAudioLoop = null
+        clipAudioTakeover?.let { mainHandler.removeCallbacks(it) }
+        clipAudioTakeover = null
+        mainHandler.removeCallbacks(clipAudioSyncRunnable)
         clipAudioLoop?.release()
         clipAudioLoop = null
         setExoPlayerAudioEnabled(true)
+        player?.volume = nominalPlayerVolume()
     }
 
     /** Selects or deselects the player's own audio renderer. */
@@ -1360,7 +1107,7 @@ internal class DivineVideoPlayerInstance(
         declickProcessor.nextStreamStartUs = resolved.second * 1000L
         exoPlayer.seekTo(targetIndex, resolved.second)
         // The loop track is outside the player and does not hear the seek.
-        clipAudioLoop?.seekTo(resolved.second)
+        clipAudioLoop?.seekTo(resolved.second * 1000L)
 
         // Apply the target clip's per-clip speed and volume immediately.
         // ExoPlayer does not fire onPositionDiscontinuity / onMediaItemTransition
@@ -1416,6 +1163,7 @@ internal class DivineVideoPlayerInstance(
 
     private fun handleSetVolume(call: MethodCall, result: MethodChannel.Result) {
         volume = (call.argument<Number>("volume"))?.toDouble() ?: 1.0
+        finishClipAudioTakeover()
         val currentIndex = player?.currentMediaItemIndex ?: 0
         player?.volume = (clipVolumes.getOrElse(currentIndex) { 1.0f }) * volume.toFloat()
         clipAudioLoop?.setVolume(
@@ -1877,9 +1625,16 @@ internal class DivineVideoPlayerInstance(
             // already folds in the clip's own gain and is deliberately zero
             // during the foreground frame flush.
             if (isPlaying) {
-                player?.let { clipAudioLoop?.play(it.currentPosition, it.volume) }
+                player?.let { exoPlayer ->
+                    clipAudioLoop?.let { loop ->
+                        loop.play(exoPlayer.currentPosition * 1000L, exoPlayer.volume)
+                        if (clipAudioTakeover == null) scheduleClipAudioSync()
+                    }
+                }
                 syncAudioOverlays()
             } else {
+                finishClipAudioTakeover()
+                mainHandler.removeCallbacks(clipAudioSyncRunnable)
                 clipAudioLoop?.pause()
                 audioOverlayManager.pauseAndDeactivateAll()
                 reportUnrequestedStop()
@@ -1892,19 +1647,6 @@ internal class DivineVideoPlayerInstance(
             newPosition: Player.PositionInfo,
             reason: Int,
         ) {
-            // The loop restart is the free moment to install a track-end clamp
-            // that resolved while this player was already playing. Deliberately
-            // outside the mediaItemIndex guard below: a single repeating clip
-            // reports index 0 on both sides, and that loop is the case the
-            // clamp exists for.
-            if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
-                applyPendingCommonTrackEndClamp()
-                // After the clamp: a clamp re-cuts the loop audio, which
-                // releases a parked loop as stale along with the rest. The
-                // renderer keeps the sound for that lap and the re-cut loop
-                // takes over at the restart after it.
-                adoptPendingClipAudioLoop()
-            }
             // Apply per-clip speed/volume as early as possible on auto-transition.
             // [onMediaItemTransition] fires later in the pipeline, after a few
             // frames of the new clip have already rendered with the previous
@@ -2186,11 +1928,6 @@ internal class DivineVideoPlayerInstance(
         mainHandler.removeCallbacks(setClipsTimeoutRunnable)
         mainHandler.removeCallbacks(bufferingWatchdogRunnable)
         cancelDecoderRetry()
-        // A metadata read already in flight finishes into a bumped generation
-        // and is dropped; queued ones never start. Its caller is answered here
-        // rather than left waiting on a continuation that will not apply.
-        setClipsGeneration++
-        deferredSetClips?.let { settleDeferredSetClips(it, apply = false) }
         releaseClipAudioLoop()
         metadataExecutor.shutdownNow()
         seekCompletionResult?.success(null)
@@ -2216,69 +1953,45 @@ internal class DivineVideoPlayerInstance(
         legacyEntry?.release()
         legacyEntry = null
         audioOverlayManager.releaseAll()
-        pendingCommonTrackEndClamp = null
         eventSink = null
     }
-
-    /**
-     * A `setClips` held back until its clips' track lengths have been read.
-     *
-     * Carries everything [applyClips] needs so the call can be replayed on the
-     * platform thread once the read lands — or answered without applying when
-     * something supersedes it.
-     */
-    private class DeferredSetClips(
-        val call: MethodCall,
-        val clipsRaw: List<Map<String, Any?>>,
-        val result: MethodChannel.Result,
-    ) {
-        /**
-         * Set by whichever of the resolution, the deadline, a newer
-         * `setClips`, or `dispose` gets here first. Read and written on the
-         * platform thread only.
-         */
-        var settled: Boolean = false
-    }
-
-    /**
-     * A resolved track-end clamp waiting for the loop restart that makes
-     * installing it free.
-     *
-     * [generation] is the `setClips` the clamp was resolved for, so a newer one
-     * discards it rather than clamping the wrong playlist.
-     */
-    private class PendingCommonTrackEndClamp(
-        val generation: Long,
-        val clipsRaw: List<Map<String, Any?>>,
-    )
 
     companion object {
 
         private const val POSITION_UPDATE_INTERVAL_MS = 200L
-        private const val SET_CLIPS_TIMEOUT_MS = 10_000L
+
+        /** How often a playing loop track is measured against the picture. */
+        private const val CLIP_AUDIO_SYNC_INTERVAL_MS = 250L
+
+        /** Every this many measurements, one goes to the log. */
+        private const val CLIP_AUDIO_SYNC_LOG_EVERY = 40
+
+        /** Spacing of a takeover's alignment checks and fade steps. */
+        private const val TAKEOVER_STEP_MS = 10L
+
+        /** A takeover lines the loop up on the median of this many readings. */
+        private const val TAKEOVER_READINGS = 5
+
+        /** A takeover crosses over in this many steps: 60 ms. */
+        private const val TAKEOVER_FADE_STEPS = 6
 
         /**
-         * How long a `setClips` waits for its clips' track lengths.
-         *
-         * Long enough for a moov range request against a healthy CDN, short
-         * enough that a stalled one costs a seam rather than a load. The
-         * ordinary `setClips` watchdog cannot cover this window — it is armed
-         * in [applyClips], which is exactly what the wait is holding up.
-         *
-         * Internal rather than private so the test can post the deadline it
-         * asserts on rather than restate the number.
+         * How long a takeover waits for the loop to measure in step before
+         * crossing over regardless. A timestamp usually arrives within
+         * 50–100 ms of a start; an output that never reports one still has
+         * to hand over.
          */
-        internal const val TRACK_DURATION_RESOLVE_TIMEOUT_MS = 1_500L
-
-        /** Cached "this source carries no video/audio pair to trim". */
-        private val NO_TRACK_PAIR = longArrayOf(-1L, -1L)
+        private const val TAKEOVER_ALIGN_TIMEOUT_NS = 500_000_000L
+        private const val SET_CLIPS_TIMEOUT_MS = 10_000L
 
         /**
          * Video and audio track lengths in microseconds, keyed by source.
          *
-         * Shared across instances so a failover to a mirror of the same video,
-         * or a second visit to it in the feed, does not pay the read again.
-         * Bounded, because a long feed session visits a lot of sources.
+         * Written by the player's extractor on every parse of a container that
+         * carries both, so an entry always describes the file last seen at
+         * that address. Shared across instances so a second visit, or a clip
+         * with an explicit start, can clamp before its own parse. Bounded,
+         * because a long feed session visits a lot of sources.
          */
         private val trackDurationsCache: MutableMap<String, LongArray> =
             Collections.synchronizedMap(
@@ -2295,14 +2008,22 @@ internal class DivineVideoPlayerInstance(
             trackDurationsCache.clear()
         }
 
+        /** Records the track ends the player's extractor just parsed. */
+        internal fun recordTrackEnds(uri: String, videoEndUs: Long, audioEndUs: Long) {
+            trackDurationsCache[uri] = longArrayOf(videoEndUs, audioEndUs)
+        }
+
+        /** The `[videoEndUs, audioEndUs]` last recorded for [uri], if any. */
+        internal fun trackEndsFor(uri: String): LongArray? = trackDurationsCache[uri]
+
         /**
          * Names the metadata thread and marks it a daemon.
          *
-         * `shutdownNow()` cannot interrupt a [MediaExtractor] read — it is
-         * native I/O — so the stalled host this design already plans for keeps
-         * its thread alive past [dispose]. Daemon so it can never hold the
-         * process up, named so a thread dump says which player it belongs to
-         * instead of showing an anonymous `pool-N-thread-1`.
+         * `shutdownNow()` cannot interrupt the loop decode's `MediaExtractor`
+         * read — it is native I/O — so a stalled host keeps its thread alive
+         * past [dispose]. Daemon so it can never hold the process up, named so
+         * a thread dump says which player it belongs to instead of showing an
+         * anonymous `pool-N-thread-1`.
          */
         private fun metadataThreadFactory(playerId: Int) = ThreadFactory { runnable ->
             Thread(runnable, "divine-video-metadata-$playerId").apply { isDaemon = true }
@@ -2323,9 +2044,6 @@ internal class DivineVideoPlayerInstance(
          */
         private const val MIN_PLAYBACK_SPEED = 0.001f
 
-        /** Maximum tail considered an encoder/export track-end mismatch. */
-        private const val MAX_COMMON_TRACK_END_TRIM_MS = 500L
-        private const val MAX_COMMON_TRACK_END_TRIM_RATIO = 0.10
 
         /**
          * How many times an editing/preview player re-prepares after a

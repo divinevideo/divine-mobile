@@ -42,9 +42,11 @@ internal object LoopPcm {
     }
 
     /**
-     * Prepares [samples] as a loop of [loopMs], blending its seam.
+     * Prepares [samples] as a loop of [loopUs], blending its seam.
      *
-     * [loopMs] must be the duration the *player* presents. A track's media
+     * [loopUs] must be the duration the *player* presents, to the microsecond:
+     * the track repeats on its own clock, so a loop even a fraction of a
+     * millisecond off the picture's period drifts from it every lap. A track's media
      * duration ignores the edit list, and on a clip whose edit list was
      * corrected the two differ — looping the sound on the media length walks it
      * away from the picture a little every lap.
@@ -57,7 +59,7 @@ internal object LoopPcm {
      * is worse than either — the tail has to fade or it is heard twice, so the
      * seam becomes a dip to near-silence followed by material that jumps back.
      *
-     * A decode that falls short of [loopMs] is padded with silence to reach it,
+     * A decode that falls short of [loopUs] is padded with silence to reach it,
      * however far short. The picture loops at the presented duration whatever
      * the sound does, and the track repeats in the HAL on its own clock, so a
      * loop cut to the decode has a shorter period than the picture and
@@ -87,11 +89,11 @@ internal object LoopPcm {
         samples: ShortArray,
         channels: Int,
         sampleRate: Int,
-        loopMs: Long,
+        loopUs: Long,
         startUs: Long = 0L,
     ): Prepared? {
-        if (channels <= 0 || sampleRate <= 0 || loopMs <= 0) return null
-        val loopFrames = (loopMs * sampleRate / 1000L)
+        if (channels <= 0 || sampleRate <= 0 || loopUs <= 0) return null
+        val loopFrames = Math.round(loopUs.toDouble() * sampleRate / 1_000_000.0)
             .coerceAtMost(Int.MAX_VALUE / channels.toLong())
             .toInt()
         if (loopFrames <= 0) return null

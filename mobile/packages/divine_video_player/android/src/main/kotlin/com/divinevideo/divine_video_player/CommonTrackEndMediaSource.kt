@@ -1,0 +1,290 @@
+package com.divinevideo.divine_video_player
+
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Timeline
+import androidx.media3.common.util.ExperimentalApi
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
+import androidx.media3.exoplayer.source.ClippingMediaPeriod
+import androidx.media3.exoplayer.source.ForwardingTimeline
+import androidx.media3.exoplayer.source.MediaPeriod
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.WrappingMediaSource
+import androidx.media3.exoplayer.upstream.Allocator
+import androidx.media3.exoplayer.upstream.CmcdConfiguration
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import androidx.media3.exoplayer.util.ReleasableExecutor
+import androidx.media3.extractor.text.SubtitleParser
+import com.google.common.base.Supplier
+
+/**
+ * Asks for a clip to end where the shorter of its video and audio tracks does.
+ *
+ * Carried as the media item's tag; [CommonTrackEndMediaSourceFactory] turns
+ * it into a [CommonTrackEndMediaSource]. [requestedEndUs] is the caller's own
+ * end, or [C.TIME_END_OF_SOURCE] for none — the track end may only shorten it.
+ */
+internal data class CommonTrackEndClip(val requestedEndUs: Long)
+
+/**
+ * Where a clip whose tracks end at [videoEndUs] and [audioEndUs] should stop,
+ * or `null` when it should play to [requestedEndUs] (or its own end) as it is.
+ *
+ * The container's duration is the *longer* track, so playing to it leaves a
+ * stretch where the shorter one has already run out — a frozen last frame or
+ * silence, and on a looping player that stretch is the seam. Encoders and
+ * muxers leave a frame or two of it; anything past [MAX_COMMON_TRACK_END_TRIM_US],
+ * or past [MAX_COMMON_TRACK_END_TRIM_RATIO] of what plays, is taken to be the
+ * creator's own and left. Clamping only ever shortens: an earlier requested
+ * end still wins.
+ */
+internal fun commonTrackEndUs(
+    requestedEndUs: Long,
+    videoEndUs: Long,
+    audioEndUs: Long,
+    startUs: Long = 0L,
+): Long? {
+    if (videoEndUs <= 0 || audioEndUs <= 0) return null
+    val containerEndUs = maxOf(videoEndUs, audioEndUs)
+    val playbackEndUs =
+        if (requestedEndUs == C.TIME_END_OF_SOURCE || requestedEndUs == C.TIME_UNSET) {
+            containerEndUs
+        } else {
+            minOf(requestedEndUs, containerEndUs)
+        }
+    val commonEndUs = minOf(videoEndUs, audioEndUs)
+    val trimUs = playbackEndUs - commonEndUs
+    val playableUs = playbackEndUs - startUs
+    if (commonEndUs <= startUs || trimUs <= 0 || playableUs <= 0) return null
+    val limitUs = minOf(
+        MAX_COMMON_TRACK_END_TRIM_US,
+        (playableUs * MAX_COMMON_TRACK_END_TRIM_RATIO).toLong(),
+    )
+    return commonEndUs.takeIf { trimUs <= limitUs }
+}
+
+/** Longest tail treated as an encoder/muxer track-end mismatch. */
+internal const val MAX_COMMON_TRACK_END_TRIM_US = 500_000L
+
+/** Largest share of a clip the track-end clamp may take. */
+internal const val MAX_COMMON_TRACK_END_TRIM_RATIO = 0.10
+
+/**
+ * Hands every item tagged with a [CommonTrackEndClip] to a
+ * [CommonTrackEndMediaSource]; everything else passes straight through.
+ *
+ * [trackEndsFor] looks up the `[videoEndUs, audioEndUs]` the player's own
+ * extractor recorded for a URI (see [TrackEndCapturingExtractorsFactory]).
+ */
+@UnstableApi
+internal class CommonTrackEndMediaSourceFactory(
+    private val delegate: MediaSource.Factory,
+    private val trackEndsFor: (uri: String) -> LongArray?,
+) : MediaSource.Factory {
+
+    override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+        val source = delegate.createMediaSource(mediaItem)
+        val localConfiguration = mediaItem.localConfiguration ?: return source
+        val clip = localConfiguration.tag as? CommonTrackEndClip ?: return source
+        val uri = localConfiguration.uri.toString()
+        return CommonTrackEndMediaSource(source, clip.requestedEndUs) { trackEndsFor(uri) }
+    }
+
+    override fun getSupportedTypes(): IntArray = delegate.supportedTypes
+
+    override fun setDrmSessionManagerProvider(
+        drmSessionManagerProvider: DrmSessionManagerProvider,
+    ): MediaSource.Factory = apply {
+        delegate.setDrmSessionManagerProvider(drmSessionManagerProvider)
+    }
+
+    override fun setLoadErrorHandlingPolicy(
+        loadErrorHandlingPolicy: LoadErrorHandlingPolicy,
+    ): MediaSource.Factory = apply {
+        delegate.setLoadErrorHandlingPolicy(loadErrorHandlingPolicy)
+    }
+
+    override fun setCmcdConfigurationFactory(
+        cmcdConfigurationFactory: CmcdConfiguration.Factory,
+    ): MediaSource.Factory = apply {
+        delegate.setCmcdConfigurationFactory(cmcdConfigurationFactory)
+    }
+
+    @Deprecated("Forwarded to the wrapped factory, which is where it is deprecated.")
+    @ExperimentalApi
+    override fun experimentalParseSubtitlesDuringExtraction(
+        parseSubtitlesDuringExtraction: Boolean,
+    ): MediaSource.Factory = apply {
+        @Suppress("DEPRECATION")
+        delegate.experimentalParseSubtitlesDuringExtraction(parseSubtitlesDuringExtraction)
+    }
+
+    override fun setSubtitleParserFactory(
+        subtitleParserFactory: SubtitleParser.Factory,
+    ): MediaSource.Factory = apply {
+        delegate.setSubtitleParserFactory(subtitleParserFactory)
+    }
+
+    @ExperimentalApi
+    override fun experimentalSetCodecsToParseWithinGopSampleDependencies(
+        codecsToParseWithinGopSampleDependencies: Int,
+    ): MediaSource.Factory = apply {
+        delegate.experimentalSetCodecsToParseWithinGopSampleDependencies(
+            codecsToParseWithinGopSampleDependencies,
+        )
+    }
+
+    override fun setDownloadExecutor(
+        downloadExecutor: Supplier<ReleasableExecutor>,
+    ): MediaSource.Factory = apply {
+        delegate.setDownloadExecutor(downloadExecutor)
+    }
+}
+
+/**
+ * Clips a source to its common track end the moment that end is known.
+ *
+ * `ClippingMediaSource` takes its end from the media item, so an end learned
+ * after the item was handed over can only be applied by replacing the item —
+ * which re-prepares the source, and on a playing video froze the first loop
+ * restart for ~300 ms. Here the end is set when the child publishes the
+ * timeline that carries the real duration. For a progressive source that
+ * happens as the `moov` box is parsed, after [TrackEndCapturingExtractorsFactory]
+ * has recorded the track lengths and before the period reports itself
+ * prepared, so the renderers never read a sample past it and the first lap is
+ * already the right length.
+ *
+ * Periods are clipped in place through [ClippingMediaPeriod.updateClipping],
+ * the same call `ClippingMediaSource` makes when a live window moves.
+ */
+@UnstableApi
+internal class CommonTrackEndMediaSource(
+    mediaSource: MediaSource,
+    private val requestedEndUs: Long,
+    private val trackEnds: () -> LongArray?,
+) : WrappingMediaSource(mediaSource) {
+
+    private val mediaPeriods = ArrayList<ClippingMediaPeriod>()
+    private val window = Timeline.Window()
+    private var periodStartUs = 0L
+    private var periodEndUs = requestedEndUs
+
+    override fun canUpdateMediaItem(mediaItem: MediaItem): Boolean =
+        mediaItem.localConfiguration?.tag == getMediaItem().localConfiguration?.tag &&
+            super.canUpdateMediaItem(mediaItem)
+
+    override fun createPeriod(
+        id: MediaSource.MediaPeriodId,
+        allocator: Allocator,
+        startPositionUs: Long,
+    ): MediaPeriod {
+        // A clip that starts at zero starts on a key frame, so there is no
+        // initial discontinuity to report.
+        val mediaPeriod = ClippingMediaPeriod(
+            mediaSource.createPeriod(id, allocator, startPositionUs),
+            /* enableInitialDiscontinuity= */ false,
+            periodStartUs,
+            periodEndUs,
+        )
+        mediaPeriods.add(mediaPeriod)
+        return mediaPeriod
+    }
+
+    override fun releasePeriod(mediaPeriod: MediaPeriod) {
+        mediaPeriods.remove(mediaPeriod)
+        mediaSource.releasePeriod((mediaPeriod as ClippingMediaPeriod).mediaPeriod)
+    }
+
+    override fun onChildSourceInfoRefreshed(newTimeline: Timeline) {
+        refreshSourceInfo(clip(newTimeline))
+    }
+
+    /**
+     * Clips every live period to the end [newTimeline] and the recorded track
+     * ends call for, and returns the timeline to publish in its place.
+     */
+    internal fun clip(newTimeline: Timeline): Timeline {
+        if (newTimeline.windowCount != 1 || newTimeline.periodCount != 1) return newTimeline
+        newTimeline.getWindow(/* windowIndex= */ 0, window)
+        val clipEndUs = clipEndUs()
+        periodStartUs = window.positionInFirstPeriodUs
+        periodEndUs = if (clipEndUs == C.TIME_END_OF_SOURCE) {
+            C.TIME_END_OF_SOURCE
+        } else {
+            periodStartUs + clipEndUs
+        }
+        mediaPeriods.forEach { it.updateClipping(periodStartUs, periodEndUs) }
+        return if (clipEndUs == C.TIME_END_OF_SOURCE) {
+            newTimeline
+        } else {
+            EndClippedTimeline(newTimeline, clipEndUs)
+        }
+    }
+
+    /** The end the clip plays to: the caller's, tightened to the tracks'. */
+    private fun clipEndUs(): Long {
+        val ends = trackEnds()
+        val commonEndUs = if (ends != null && ends.size >= 2) {
+            commonTrackEndUs(requestedEndUs, videoEndUs = ends[0], audioEndUs = ends[1])
+        } else {
+            null
+        }
+        return when {
+            commonEndUs != null -> commonEndUs
+            requestedEndUs == C.TIME_UNSET -> C.TIME_END_OF_SOURCE
+            else -> requestedEndUs
+        }
+    }
+}
+
+/**
+ * A single-window, single-period timeline ending at [endUs] from the start of
+ * its window — the part of `ClippingMediaSource`'s timeline this needs, with
+ * the start fixed at zero.
+ */
+@UnstableApi
+internal class EndClippedTimeline(timeline: Timeline, endUs: Long) : ForwardingTimeline(timeline) {
+
+    private val durationUs: Long
+    private val isDynamic: Boolean
+
+    init {
+        val window = timeline.getWindow(/* windowIndex= */ 0, Timeline.Window())
+        val clippedEndUs = if (window.durationUs != C.TIME_UNSET) {
+            minOf(endUs, window.durationUs)
+        } else {
+            endUs
+        }
+        durationUs = clippedEndUs
+        isDynamic = window.isDynamic &&
+            window.durationUs != C.TIME_UNSET &&
+            clippedEndUs == window.durationUs
+    }
+
+    override fun getWindow(
+        windowIndex: Int,
+        window: Window,
+        defaultPositionProjectionUs: Long,
+    ): Window {
+        timeline.getWindow(/* windowIndex= */ 0, window, /* defaultPositionProjectionUs= */ 0)
+        window.durationUs = durationUs
+        window.isDynamic = isDynamic
+        if (window.defaultPositionUs != C.TIME_UNSET) {
+            window.defaultPositionUs = minOf(window.defaultPositionUs, durationUs)
+        }
+        return window
+    }
+
+    override fun getPeriod(periodIndex: Int, period: Period, setIds: Boolean): Period {
+        timeline.getPeriod(/* periodIndex= */ 0, period, setIds)
+        val positionInWindowUs = period.positionInWindowUs
+        return period.set(
+            period.id,
+            period.uid,
+            /* windowIndex= */ 0,
+            durationUs - positionInWindowUs,
+            positionInWindowUs,
+        )
+    }
+}

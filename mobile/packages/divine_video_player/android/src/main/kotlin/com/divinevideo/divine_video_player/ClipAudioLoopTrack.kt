@@ -2,6 +2,7 @@ package com.divinevideo.divine_video_player
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioTimestamp
 import android.media.AudioTrack
 import android.media.MediaCodec
 import android.media.MediaExtractor
@@ -34,8 +35,9 @@ import java.nio.ByteOrder
  *    leaves an audible restart; blending makes the last sample of the loop and
  *    its first two consecutive samples of the recording.
  *
- * The remaining cost is that video and audio now run on two clocks. They start
- * together and share a period to the sample, but nothing locks them.
+ * Video and audio run on two clocks. They share a period to the sample, and
+ * [LoopAudioSync] places the head against the picture at every start and
+ * steers out whatever gap remains.
  */
 internal class ClipAudioLoopTrack private constructor(
     private val track: AudioTrack,
@@ -45,46 +47,120 @@ internal class ClipAudioLoopTrack private constructor(
 
     private var released = false
 
+    private val sync = LoopAudioSync(frameCount.toLong(), sampleRate)
+    private val timestamp = AudioTimestamp()
+
     /**
-     * Starts or resumes the loop at [positionMs] of the clip.
+     * Starts or resumes the loop in step with the picture at [positionUs].
      *
-     * A static track can only be repositioned while it is not playing, so the
-     * head moves first and playback starts after.
+     * The head is placed ahead of the picture by what the output takes to
+     * carry a frame to the speaker (see [LoopAudioSync]), so the first sound
+     * heard belongs to the frame on screen at that moment rather than to the
+     * one `play` was called on. A static track can only be repositioned while
+     * it is not playing, so the head moves first and playback starts after.
      */
-    fun play(positionMs: Long, volume: Float) {
+    fun play(positionUs: Long, volume: Float) {
         if (released) return
         runCatching {
             track.setVolume(volume)
             if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                moveHead(positionMs)
-                track.play()
+                startAt(positionUs, learn = volume > 0f)
             }
         }
     }
 
     /**
-     * Moves the loop to [positionMs] of the clip.
+     * Moves the loop to [positionUs] of the clip.
      *
      * The player's own seek only moves the picture; without this the sound
-     * keeps running from wherever it had got to and the two stay apart for the
-     * rest of the visit. A static track can only be repositioned while it is
-     * not playing, so a running loop is paused across the move.
+     * keeps running from wherever it had got to. A paused loop needs nothing:
+     * [play] places the head against the picture when it resumes.
      */
-    fun seekTo(positionMs: Long) {
+    fun seekTo(positionUs: Long) = realign(positionUs)
+
+    /**
+     * Places a running loop again against the picture at [positionUs].
+     *
+     * [measuredErrorUs] is how far the placement being replaced was found to
+     * be off; the new one allows for the pipeline that much less, rather than
+     * guessing again.
+     *
+     * Teaches nothing: it is used on a muted loop lining up under another
+     * sound, and on a seek, neither of which starts like a play does.
+     */
+    fun realign(positionUs: Long, measuredErrorUs: Long = 0L) {
         if (released) return
         runCatching {
-            val wasPlaying = track.playState == AudioTrack.PLAYSTATE_PLAYING
-            if (wasPlaying) track.pause()
-            moveHead(positionMs)
-            if (wasPlaying) track.play()
+            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) return
+            track.pause()
+            startAt(
+                positionUs,
+                learn = false,
+                latencyUs = if (measuredErrorUs == 0L) {
+                    LoopAudioSync.startLatencyUs
+                } else {
+                    sync.anchorLatencyUs - measuredErrorUs
+                },
+            )
         }
     }
 
-    /** Puts the playback head at [positionMs], wrapped into the loop. */
-    private fun moveHead(positionMs: Long) {
-        if (frameCount <= 0) return
-        val frame = ((positionMs * sampleRate) / 1000L).toInt()
-        track.setPlaybackHeadPosition(frame.mod(frameCount))
+    /**
+     * Measures how far the sound is from the picture at [videoPositionUs],
+     * sampled at [nowNanos], and steers it back.
+     *
+     * Returns the gap in microseconds — positive when the sound is ahead — or
+     * `null` when the track has not yet reported a frame heard since it last
+     * started.
+     */
+    fun sync(videoPositionUs: Long, nowNanos: Long): Long? {
+        if (released) return null
+        return runCatching {
+            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) return null
+            if (!track.getTimestamp(timestamp)) return null
+            val errorUs = sync.errorUs(
+                presentedFrame = timestamp.framePosition,
+                presentedNanos = timestamp.nanoTime,
+                videoPositionUs = videoPositionUs,
+                nowNanos = nowNanos,
+            ) ?: return null
+            when (sync.correct(errorUs)) {
+                LoopAudioSync.Correction.REANCHOR -> {
+                    DivineVideoPlayerLog.info(
+                        "Loop audio ${errorUs / 1000} ms off the picture; placing it again",
+                        name = "DivineVideoPlayer.AudioLoop",
+                    )
+                    val elapsedUs = (System.nanoTime() - nowNanos) / 1000L
+                    track.pause()
+                    startAt(videoPositionUs + elapsedUs, learn = true)
+                }
+                LoopAudioSync.Correction.STEER -> applyRate()
+            }
+            errorUs
+        }.getOrNull()
+    }
+
+    private fun startAt(
+        positionUs: Long,
+        learn: Boolean,
+        latencyUs: Long = LoopAudioSync.startLatencyUs,
+    ) {
+        val counterFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK
+        val bufferFrame = sync.anchor(
+            positionUs,
+            counterFrame,
+            System.nanoTime(),
+            learn,
+            latencyUs.coerceAtLeast(0L),
+        )
+        applyRate()
+        track.setPlaybackHeadPosition(bufferFrame.toInt())
+        track.play()
+    }
+
+    private fun applyRate() {
+        val rate = Math.round(sampleRate * sync.rateFactor).toInt()
+        if (rate != track.playbackRate) track.setPlaybackRate(rate)
     }
 
     fun pause() {
@@ -109,16 +185,19 @@ internal class ClipAudioLoopTrack private constructor(
 
     companion object {
 
+        /** The consumed-frame counter is an unsigned 32-bit value in an `int`. */
+        private const val UNSIGNED_INT_MASK = 0xFFFF_FFFFL
+
         /** A feed clip is seconds long; this only bounds a pathological file. */
         private const val MAX_PCM_BYTES = 16 * 1024 * 1024
 
         private const val DEQUEUE_TIMEOUT_US = 10_000L
 
         /**
-         * Decodes [uri]'s audio to 16-bit PCM, cut to [loopMs] and blended at
+         * Decodes [uri]'s audio to 16-bit PCM, cut to [loopUs] and blended at
          * the seam, and wraps it in a looping [AudioTrack].
          *
-         * [loopMs] must be the duration the player presents, not the media
+         * [loopUs] must be the duration the player presents, not the media
          * duration of any track.
          *
          * A remote [uri] is read through [remoteSourceFactory] when one is
@@ -135,7 +214,7 @@ internal class ClipAudioLoopTrack private constructor(
         fun create(
             uri: String,
             headers: Map<String, String>,
-            loopMs: Long,
+            loopUs: Long,
             remoteSourceFactory: DataSource.Factory? = null,
         ): ClipAudioLoopTrack? {
             val extractor = MediaExtractor()
@@ -162,7 +241,7 @@ internal class ClipAudioLoopTrack private constructor(
                     val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
                     if (mime.startsWith("audio/") && audioIndex < 0) audioIndex = index
                 }
-                if (audioIndex < 0 || loopMs <= 0) return null
+                if (audioIndex < 0 || loopUs <= 0) return null
 
                 val inputFormat = extractor.getTrackFormat(audioIndex)
                 val mime = inputFormat.getString(MediaFormat.KEY_MIME) ?: return null
@@ -252,7 +331,7 @@ internal class ClipAudioLoopTrack private constructor(
                     samples = samples,
                     channels = channels,
                     sampleRate = sampleRate,
-                    loopMs = loopMs,
+                    loopUs = loopUs,
                     startUs = startUs,
                 ) ?: return null
                 val loopFrames = prepared.loopFrames
@@ -307,7 +386,7 @@ internal class ClipAudioLoopTrack private constructor(
 
                 DivineVideoPlayerLog.debug(
                     "Looping clip audio outside ExoPlayer: ${loopFrames} frames " +
-                        "at ${sampleRate}Hz for ${loopMs} ms presented, " +
+                        "at ${sampleRate}Hz for ${loopUs} us presented, " +
                         "${samples.size / channels} decoded from ${startUs} us, " +
                         "${fadeFrames} frame ${if (fromPast) "crossfade" else "ramp"}",
                     name = "DivineVideoPlayer.AudioLoop",
