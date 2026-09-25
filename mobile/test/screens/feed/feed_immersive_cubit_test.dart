@@ -19,7 +19,7 @@ void main() {
       'enter hides the chrome',
       build: FeedImmersiveCubit.new,
       act: (cubit) => cubit.enter(),
-      expect: () => const [FeedImmersiveState(isImmersive: true)],
+      expect: () => const [FeedImmersiveState(isHolding: true)],
     );
 
     blocTest<FeedImmersiveCubit, FeedImmersiveState>(
@@ -29,7 +29,7 @@ void main() {
         ..enter()
         ..exit(),
       expect: () => const [
-        FeedImmersiveState(isImmersive: true),
+        FeedImmersiveState(isHolding: true),
         FeedImmersiveState(),
       ],
     );
@@ -40,7 +40,7 @@ void main() {
       act: (cubit) => cubit
         ..enter()
         ..enter(),
-      expect: () => const [FeedImmersiveState(isImmersive: true)],
+      expect: () => const [FeedImmersiveState(isHolding: true)],
     );
 
     blocTest<FeedImmersiveCubit, FeedImmersiveState>(
@@ -55,7 +55,7 @@ void main() {
       build: FeedImmersiveCubit.new,
       act: (cubit) => cubit.pin(),
       expect: () => const [
-        FeedImmersiveState(isImmersive: true, isPinned: true),
+        FeedImmersiveState(isPinned: true),
       ],
     );
 
@@ -66,7 +66,7 @@ void main() {
         ..pin()
         ..unpin(),
       expect: () => const [
-        FeedImmersiveState(isImmersive: true, isPinned: true),
+        FeedImmersiveState(isPinned: true),
         FeedImmersiveState(),
       ],
     );
@@ -79,7 +79,9 @@ void main() {
         ..enter()
         ..exit(),
       expect: () => const [
-        FeedImmersiveState(isImmersive: true, isPinned: true),
+        FeedImmersiveState(isPinned: true),
+        FeedImmersiveState(isHolding: true, isPinned: true),
+        FeedImmersiveState(isPinned: true),
       ],
       verify: (cubit) {
         expect(cubit.state.isImmersive, isTrue);
@@ -95,9 +97,9 @@ void main() {
         ..pin()
         ..unpin(),
       expect: () => const [
-        FeedImmersiveState(isImmersive: true),
-        FeedImmersiveState(isImmersive: true, isPinned: true),
-        FeedImmersiveState(isImmersive: true),
+        FeedImmersiveState(isHolding: true),
+        FeedImmersiveState(isHolding: true, isPinned: true),
+        FeedImmersiveState(isHolding: true),
       ],
       verify: (cubit) {
         expect(cubit.state.isImmersive, isTrue);
@@ -112,7 +114,7 @@ void main() {
         ..pin()
         ..pin(),
       expect: () => const [
-        FeedImmersiveState(isImmersive: true, isPinned: true),
+        FeedImmersiveState(isPinned: true),
       ],
     );
 
