@@ -244,11 +244,10 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized plural loop label at the floor', (
+    testWidgets('author line uses the localized total loops label', (
       tester,
     ) async {
-      // Totals below the visibility floor are hidden, so visible totals use
-      // the plural ICU form.
+      // The author's lifetime total renders through the "Total loops:" label.
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [
@@ -281,9 +280,8 @@ void main() {
       final l10n = _l10n(tester);
       expect(
         find.textContaining(
-          l10n.videoFeedLoopCountLine(
+          l10n.videoFeedTotalLoopsLine(
             StringUtils.formatCompactNumber(10000),
-            10000,
           ),
         ),
         findsOneWidget,
