@@ -1930,7 +1930,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String videoFeedTotalLoopsLine(String compactCount) {
-    return 'Tổng số vòng lặp: $compactCount';
+    return 'Tổng số loop: $compactCount';
   }
 
   @override
