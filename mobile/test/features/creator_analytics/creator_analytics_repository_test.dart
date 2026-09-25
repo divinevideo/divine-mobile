@@ -986,6 +986,26 @@ void main() {
         expect(sounds[1].id, equals('older'));
       });
 
+      test(
+        'skips entries without an id and still reads the next page',
+        () async {
+          final fullPage = List.generate(
+            FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
+            (index) => _sound(index == 0 ? '' : 'recent-$index', usageCount: 1),
+          );
+          stubPage(0, fullPage);
+          stubPage(100, [_sound('older', usageCount: 5)]);
+
+          final sounds = await FunnelcakeCreatorAnalyticsRepository(
+            api,
+          ).fetchCreatorSounds(pubkey);
+
+          expect(sounds.map((sound) => sound.id), isNot(contains('')));
+          expect(sounds, hasLength(100));
+          expect(sounds.first.id, equals('older'));
+        },
+      );
+
       test('stops after the maximum number of pages', () async {
         final fullPage = List.generate(
           FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,

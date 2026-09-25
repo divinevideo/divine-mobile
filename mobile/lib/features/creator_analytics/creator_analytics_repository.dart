@@ -247,6 +247,9 @@ class FunnelcakeCreatorAnalyticsRepository
   /// The endpoint pages by creation time, so a sound published between two
   /// requests shifts every row and a page can repeat one. A repeated sound is
   /// kept once, with its highest count, so it never takes two rank slots.
+  ///
+  /// An entry without an id cannot be opened, so it is skipped. The page
+  /// length is read before that, so a skipped entry never ends paging early.
   Future<List<SoundStats>> _fetchAllCreatorSounds(String pubkey) async {
     final byId = <String, SoundStats>{};
     for (var page = 0; page < creatorSoundsMaxPages; page++) {
@@ -256,6 +259,7 @@ class FunnelcakeCreatorAnalyticsRepository
         offset: page * creatorSoundsPageSize,
       );
       for (final sound in batch) {
+        if (sound.id.isEmpty) continue;
         final seen = byId[sound.id];
         if (seen == null || sound.usageCount > seen.usageCount) {
           byId[sound.id] = sound;
