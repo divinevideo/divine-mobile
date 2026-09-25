@@ -525,12 +525,8 @@ class _AppealSupportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = context.l10n.supportContactSupport;
     if (isUnder13Path) {
-      return DivineButton(
-        label: label,
-        leadingIcon: DivineIconName.headphones,
-        expanded: true,
+      return _ContactSupportButton(
         onPressed: () =>
             context.push(MinorAccountReviewUnder13SupportScreen.path),
       );
@@ -538,13 +534,31 @@ class _AppealSupportButton extends StatelessWidget {
     return SupportContactAction(
       openSupportMessages: openSupportMessages,
       composeEmail: composeEmail,
-      builder: (context, isOpening, openSupport) => DivineButton(
-        label: label,
-        leadingIcon: DivineIconName.headphones,
-        expanded: true,
-        isLoading: isOpening,
-        onPressed: openSupport,
-      ),
+      builder: (context, isOpening, openSupport) =>
+          _ContactSupportButton(isLoading: isOpening, onPressed: openSupport),
+    );
+  }
+}
+
+/// The appeal's "Contact Support" button, shared by both paths so they cannot
+/// drift apart in label, icon or layout.
+class _ContactSupportButton extends StatelessWidget {
+  const _ContactSupportButton({
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
+  final VoidCallback onPressed;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DivineButton(
+      label: context.l10n.supportContactSupport,
+      leadingIcon: DivineIconName.headphones,
+      expanded: true,
+      isLoading: isLoading,
+      onPressed: onPressed,
     );
   }
 }

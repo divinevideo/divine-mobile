@@ -706,9 +706,9 @@ void main() {
 
     // The appeal is how a restricted account contests the decision, so it must
     // reach a person. Outside the under-13 path it opens private support
-    // directly, as Account Status does. Under-13 stays on the parent-email
-    // screen: a support conversation is filed against the signed-in account,
-    // which here is the child's.
+    // directly, as Account Status does. Under-13 goes to the parent-email
+    // screen instead: a support conversation is filed against the signed-in
+    // account, which here is the child's.
     group('appeal support contact', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -799,6 +799,35 @@ void main() {
           await _pumpAppeal(
             tester,
             ageBand: SuspectedAgeBand.under13,
+            goRouter: goRouter,
+            openSupportMessages: () async {
+              openCalls++;
+              return true;
+            },
+          );
+          await tester.tap(find.text(l10n.supportContactSupport));
+          await tester.pumpAndSettle();
+
+          expect(openCalls, 0);
+          verify(
+            () => goRouter.push(MinorAccountReviewUnder13SupportScreen.path),
+          ).called(1);
+        },
+      );
+
+      // The under-13 path is the band OR a support-email resolution. Keying the
+      // appeal on the band alone would send this case into messaging as a child.
+      testWidgets(
+        'a support-email case with an unknown band still goes to parent support',
+        (tester) async {
+          final goRouter = MockGoRouter();
+          when(() => goRouter.push(any())).thenAnswer((_) async => null);
+          var openCalls = 0;
+
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.unknown,
+            allowedResolution: MinorReviewResolutionType.supportEmailOnly,
             goRouter: goRouter,
             openSupportMessages: () async {
               openCalls++;
