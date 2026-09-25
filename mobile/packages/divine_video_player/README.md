@@ -157,9 +157,10 @@ enabled and falls back to the platform view otherwise.
 - Android: API 28+
 - iOS: 16.0+
 - macOS: 13.0+
-- Linux: `libmpv` is bundled through `media_kit_libs_linux`; install the
-  system packages `libfontconfig1` and `libass9` if your distro does not
-  already provide them.
+- Linux: plays through `media_kit` against the system `libmpv`;
+  `media_kit_libs_linux` enables that backend but bundles no libraries.
+  Install `libmpv-dev` and `libepoxy-dev` before building (see
+  `mobile/docs/LINUX_SUPPORT.md`).
 
 ## Linux Backend Notes
 
