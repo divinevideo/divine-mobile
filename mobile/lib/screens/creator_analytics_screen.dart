@@ -16,6 +16,8 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
+import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
 import 'package:openvine/screens/creator_analytics/social_counts_info_sheet.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -63,6 +65,7 @@ class _CreatorAnalyticsScreenState
     final snapshot = await repository.fetchCreatorAnalytics(pubkey);
 
     return _CreatorAnalyticsData(
+      pubkey: pubkey,
       videos: snapshot.videos,
       socialCounts: snapshot.socialCounts,
       diagnostics: snapshot.diagnostics,
@@ -92,7 +95,7 @@ class _CreatorAnalyticsScreenState
       ),
       if (!summary.hasViewData && summary.hasEngagementData) ...[
         const SizedBox(height: 12),
-        _AnalyticsCard(
+        AnalyticsCard(
           title: context.l10n.analyticsViewDataTitle,
           child: Text(
             context.l10n.analyticsViewDataUnavailable,
@@ -112,6 +115,8 @@ class _CreatorAnalyticsScreenState
       const SizedBox(height: 16),
       _TopVideosList(summary: summary, onTapPerformance: _openPostAnalytics),
       const SizedBox(height: 16),
+      CreatorSoundsSection(pubkey: data.pubkey, loadedAt: data.fetchedAt),
+      const SizedBox(height: 16),
       _DailyTrendCard(summary: summary),
       const SizedBox(height: 16),
       _buildAudienceSnapshotCard(data),
@@ -121,7 +126,7 @@ class _CreatorAnalyticsScreenState
   }
 
   Widget _buildAudienceSnapshotCard(_CreatorAnalyticsData data) {
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsAudienceSnapshot,
       info: (
         onPressed: () => SocialCountsInfoSheet.show(context),
@@ -168,7 +173,7 @@ class _CreatorAnalyticsScreenState
   }
 
   Widget _buildRetentionCard(_CreatorAnalyticsSummary summary) {
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsRetention,
       child: Text(
         summary.hasViewData
@@ -361,13 +366,7 @@ String _analyticsErrorMessage(BuildContext context, Object? error) {
     return l10n.analyticsSignInRequired;
   }
   if (error is CreatorAnalyticsLoadException) {
-    return switch (error.kind) {
-      CreatorAnalyticsFailureKind.serverUnavailable =>
-        l10n.analyticsServerUnavailable,
-      CreatorAnalyticsFailureKind.connectionIssue =>
-        l10n.analyticsConnectionIssue,
-      CreatorAnalyticsFailureKind.unableToLoad => l10n.analyticsUnableToLoad,
-    };
+    return error.kind.localizedMessage(l10n);
   }
   return l10n.analyticsUnableToLoad;
 }
@@ -435,7 +434,7 @@ class _DiagnosticsPanel extends StatelessWidget {
         ? 'none'
         : diagnostics.failedSources.map(sourceLabel).join(', ');
 
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsDiagnostics,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,7 +667,7 @@ class _EngagementBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!summary.hasEngagementData) {
-      return _AnalyticsCard(
+      return AnalyticsCard(
         title: context.l10n.analyticsInteractionMix,
         child: Text(
           context.l10n.analyticsNa,
@@ -684,7 +683,7 @@ class _EngagementBreakdown extends StatelessWidget {
     final commentsShare = total == 0 ? 0.0 : summary.totalComments / total;
     final repostsShare = total == 0 ? 0.0 : summary.totalReposts / total;
 
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsInteractionMix,
       child: Column(
         children: [
@@ -772,7 +771,7 @@ class _PerformanceHighlights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsPerformanceHighlights,
       child: Column(
         children: [
@@ -897,7 +896,7 @@ class _TopVideosList extends StatelessWidget {
   Widget build(BuildContext context) {
     final topVideos = summary.topVideos.take(5).toList();
 
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsTopContent,
       child: topVideos.isEmpty
           ? Text(
@@ -971,21 +970,7 @@ class _TopVideoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
         child: Row(
           children: [
-            Container(
-              width: 24,
-              height: 24,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: VineTheme.vineGreen.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '$rank',
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.primaryText,
-                ),
-              ),
-            ),
+            AnalyticsRankBadge(rank: rank),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1177,7 +1162,7 @@ class _PostAnalyticsDetailView extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
             children: [
-              _AnalyticsCard(
+              AnalyticsCard(
                 title: performance.displayTitle,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1318,7 +1303,7 @@ class _DailyTrendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!summary.hasEngagementData) {
-      return _AnalyticsCard(
+      return AnalyticsCard(
         title: context.l10n.analyticsRecentDailyInteractions,
         child: Text(
           context.l10n.analyticsNa,
@@ -1338,7 +1323,7 @@ class _DailyTrendCard extends StatelessWidget {
           : maxInteractions,
     );
 
-    return _AnalyticsCard(
+    return AnalyticsCard(
       title: context.l10n.analyticsRecentDailyInteractions,
       child: points.isEmpty
           ? Text(
@@ -1414,59 +1399,6 @@ class _DailyTrendCard extends StatelessWidget {
   }
 }
 
-class _AnalyticsCard extends StatelessWidget {
-  const _AnalyticsCard({required this.title, required this.child, this.info});
-
-  final String title;
-  final Widget child;
-
-  /// Optional info affordance rendered as a trailing icon button in the title
-  /// row. [label] is its accessibility label and tooltip. #8276.
-  final ({VoidCallback onPressed, String label})? info;
-
-  @override
-  Widget build(BuildContext context) {
-    final info = this.info;
-    final titleText = Text(
-      title,
-      style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.vineColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.vineColors.outlineMuted),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (info == null)
-            titleText
-          else
-            Row(
-              children: [
-                Expanded(child: titleText),
-                DivineIconButton(
-                  icon: DivineIconName.info,
-                  onPressed: info.onPressed,
-                  semanticLabel: info.label,
-                  tooltip: info.label,
-                  type: DivineIconButtonType.ghostSecondary,
-                  size: DivineIconButtonSize.small,
-                  showShadow: false,
-                ),
-              ],
-            ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
 enum _AnalyticsWindow {
   last7Days(Duration(days: 7)),
   last28Days(Duration(days: 28)),
@@ -1492,12 +1424,15 @@ extension on _AnalyticsWindow {
 
 class _CreatorAnalyticsData {
   const _CreatorAnalyticsData({
+    required this.pubkey,
     required this.videos,
     required this.socialCounts,
     required this.diagnostics,
     required this.fetchedAt,
   });
 
+  /// The creator these analytics were loaded for.
+  final String pubkey;
   final List<VideoEvent> videos;
   final SocialCounts? socialCounts;
   final CreatorAnalyticsDiagnostics diagnostics;

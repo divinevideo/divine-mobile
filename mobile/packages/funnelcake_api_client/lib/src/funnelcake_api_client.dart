@@ -2204,6 +2204,67 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the sounds a user has published, newest first, each with its
+  /// [SoundStats.usageCount].
+  ///
+  /// [pubkey] is the user's public key (hex format).
+  /// [limit] is the maximum number of results; the server caps it at 100.
+  /// [offset] is the pagination offset (defaults to 0).
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not
+  ///   configured.
+  /// - [FunnelcakeException] if the pubkey is empty.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
+  Future<List<SoundStats>> getUserSounds({
+    required String pubkey,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    if (pubkey.isEmpty) {
+      throw const FunnelcakeException('Pubkey cannot be empty');
+    }
+
+    final queryParams = <String, String>{'limit': limit.toString()};
+    if (offset > 0) {
+      queryParams['offset'] = offset.toString();
+    }
+
+    final uri = Uri.parse(
+      '$_baseUrl/api/users/$pubkey/sounds',
+    ).replace(queryParameters: queryParams);
+
+    try {
+      final response = await _get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(SoundStats.fromJson)
+            .toList();
+      } else {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch user sounds',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to fetch user sounds: $e', cause: e);
+    }
+  }
+
   /// Fetches a paginated list of followers for a user.
   ///
   /// [pubkey] is the user's public key (hex format).

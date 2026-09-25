@@ -2947,6 +2947,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get analyticsPublishPrompt => 'Đăng vài video để xem bảng xếp hạng.';
 
   @override
+  String get analyticsYourSounds => 'Âm thanh của bạn';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Số video dùng từng âm thanh của bạn, từ trước đến nay. Dùng nhiều nhất xếp trước.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Chưa có âm thanh nào. Tải một âm thanh lên hoặc cho phép dùng lại âm thanh của bạn, rồi xem nó lan xa đến đâu.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       '% bên phải = Tỷ lệ tương tác (tương tác chia cho lượt xem).';
 

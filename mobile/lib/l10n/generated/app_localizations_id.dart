@@ -2908,6 +2908,17 @@ class AppLocalizationsId extends AppLocalizations {
       'Publikasikan beberapa video untuk melihat peringkat.';
 
   @override
+  String get analyticsYourSounds => 'Suara Kamu';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Video yang memakai setiap suaramu, sepanjang waktu. Yang paling sering dipakai tampil lebih dulu.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Belum ada suara. Unggah satu atau jadikan audiomu bisa dipakai ulang, lalu lihat seberapa jauh ia menyebar.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Sisi kanan % = Tingkat Keterlibatan (interaksi dibagi tontonan).';
 

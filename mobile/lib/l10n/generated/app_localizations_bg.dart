@@ -3023,6 +3023,17 @@ class AppLocalizationsBg extends AppLocalizations {
       'Публикувай няколко видеа, за да видиш класациите.';
 
   @override
+  String get analyticsYourSounds => 'Твоите звуци';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Видеа, които използват всеки от твоите звуци, за цялото време. Най-използваните са първи.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Още няма звуци. Качи един или направи аудиото си достъпно за повторна употреба и виж докъде ще стигне.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       '% от дясната страна = процент на ангажираност (взаимодействия, разделени на показвания).';
 

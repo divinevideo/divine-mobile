@@ -20,18 +20,22 @@ class _MockCreatorAnalyticsRepository extends Mock
     implements CreatorAnalyticsRepository {}
 
 void main() {
-  Future<void> pumpAnalyticsScreen(
+  Future<CreatorAnalyticsRepository> pumpAnalyticsScreen(
     WidgetTester tester, {
     required List<VideoEvent> videos,
     SocialCounts? socialCounts,
     bool hasSocialCounts = true,
     Set<AnalyticsDataSource> failedSources = const {},
+    List<CreatorSound> sounds = const [],
   }) async {
     final authService = _MockAuthService();
     final repository = _MockCreatorAnalyticsRepository();
     final now = DateTime.now();
 
     when(() => authService.currentPublicKeyHex).thenReturn('a' * 64);
+    when(
+      () => repository.fetchCreatorSounds('a' * 64),
+    ).thenAnswer((_) async => sounds);
     when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
       (_) async => CreatorAnalyticsSnapshot(
         videos: videos,
@@ -71,6 +75,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    return repository;
   }
 
   Future<void> pumpAnalyticsSignedOutScreen(WidgetTester tester) async {
@@ -178,6 +183,113 @@ void main() {
         expect(listViewWidth, moreOrLessEquals(600));
       },
     );
+
+    testWidgets('lists the creator sounds with their video counts', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(600, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await pumpAnalyticsScreen(
+        tester,
+        videos: [analyticsVideo(id: 'video-1', views: 120)],
+        sounds: [
+          CreatorSound(
+            id: 'sound-hit',
+            title: 'Test sound',
+            createdAt: DateTime.now().toUtc(),
+            videoCount: 42,
+          ),
+        ],
+      );
+
+      expect(find.text(l10n.analyticsYourSounds), findsOneWidget);
+      expect(find.text('Test sound'), findsOneWidget);
+      expect(find.text(l10n.soundVideoCount(42)), findsOneWidget);
+    });
+
+    testWidgets('keeps the sounds card loaded while it is scrolled away', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      final repository = await pumpAnalyticsScreen(
+        tester,
+        videos: [analyticsVideo(id: 'video-1', views: 120)],
+        sounds: [
+          CreatorSound(
+            id: 'sound-hit',
+            title: 'Hit sound',
+            createdAt: DateTime.now().toUtc(),
+            videoCount: 42,
+          ),
+        ],
+      );
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+
+      await tester.scrollUntilVisible(
+        find.text(l10n.analyticsYourSounds),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      final cardOffset = scrollable.position.pixels;
+      expect(find.text('Hit sound'), findsOneWidget);
+
+      scrollable.position.jumpTo(0);
+      await tester.pumpAndSettle();
+      scrollable.position.jumpTo(cardOffset);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hit sound'), findsOneWidget);
+      verify(() => repository.fetchCreatorSounds('a' * 64)).called(1);
+    });
+
+    testWidgets('reloads the sounds when the dashboard is refreshed', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(600, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final repository = await pumpAnalyticsScreen(
+        tester,
+        videos: [analyticsVideo(id: 'video-1', views: 120)],
+      );
+      when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
+        (_) async => CreatorAnalyticsSnapshot(
+          videos: [analyticsVideo(id: 'video-1', views: 120)],
+          socialCounts: null,
+          diagnostics: CreatorAnalyticsDiagnostics(
+            totalVideos: 1,
+            videosWithAnyViews: 1,
+            videosMissingViews: 0,
+            videosHydratedByBulkStats: 1,
+            videosHydratedByViewsEndpoint: 0,
+            sourcesUsed: const {AnalyticsDataSource.bulkVideoStats},
+            fetchedAt: DateTime.now().add(const Duration(minutes: 1)),
+          ),
+        ),
+      );
+
+      final refresh = tester
+          .state<RefreshIndicatorState>(find.byType(RefreshIndicator))
+          .show();
+      await tester.pumpAndSettle();
+      await refresh;
+
+      verify(() => repository.fetchCreatorSounds('a' * 64)).called(2);
+    });
 
     testWidgets('counts native Divine engagement in creator analytics', (
       tester,

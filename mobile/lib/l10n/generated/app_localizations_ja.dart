@@ -2779,6 +2779,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get analyticsPublishPrompt => 'ランキングを見るには動画をいくつか公開してみて。';
 
   @override
+  String get analyticsYourSounds => 'あなたのサウンド';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      '各サウンドを使った動画の数（全期間）。よく使われている順に表示します。';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'まだサウンドがありません。サウンドをアップロードするか、音声の再利用を許可して、どこまで広がるか見てみましょう。';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       '右の % = エンゲージメント率 (インタラクション数 ÷ 視聴数)。';
 

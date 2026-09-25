@@ -2966,6 +2966,17 @@ class AppLocalizationsMs extends AppLocalizations {
       'Terbitkan beberapa video untuk melihat kedudukan.';
 
   @override
+  String get analyticsYourSounds => 'Bunyi Anda';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Video yang menggunakan setiap bunyi anda, sepanjang masa. Paling banyak digunakan dahulu.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Belum ada bunyi. Muat naik satu atau benarkan audio anda digunakan semula, kemudian lihat sejauh mana ia tersebar.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       '% sebelah kanan = Kadar Penglibatan (interaksi dibahagi dengan tontonan).';
 

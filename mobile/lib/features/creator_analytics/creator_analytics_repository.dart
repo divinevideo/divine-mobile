@@ -4,6 +4,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:collection/collection.dart';
+import 'package:equatable/equatable.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:openvine/utils/expected_network_error.dart';
@@ -76,9 +78,44 @@ class CreatorAnalyticsSnapshot {
   final CreatorAnalyticsDiagnostics diagnostics;
 }
 
+/// One of the creator's sounds with the number of videos that use it.
+class CreatorSound extends Equatable {
+  const CreatorSound({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+    required this.videoCount,
+  });
+
+  /// The audio event id.
+  final String id;
+
+  /// The sound's title; empty when the event carries none.
+  final String title;
+
+  /// When the audio event was created.
+  final DateTime createdAt;
+
+  /// The videos using the sound, counted the way the sound page counts them,
+  /// so the two screens always agree.
+  final int videoCount;
+
+  @override
+  List<Object?> get props => [id, title, createdAt, videoCount];
+}
+
+/// Counts the videos that use the sound with [soundId], or returns `null`
+/// when no count is available.
+typedef SoundVideoCounter = Future<int?> Function(String soundId);
+
 /// Repository used by creator analytics screens.
 abstract class CreatorAnalyticsRepository {
   Future<CreatorAnalyticsSnapshot> fetchCreatorAnalytics(String pubkey);
+
+  /// The sounds [pubkey] has published, most used first.
+  ///
+  /// Throws [CreatorAnalyticsLoadException] when the sounds cannot be loaded.
+  Future<List<CreatorSound>> fetchCreatorSounds(String pubkey);
 }
 
 /// Funnelcake-backed implementation with layered fallbacks.
@@ -91,10 +128,41 @@ class FunnelcakeCreatorAnalyticsRepository
   FunnelcakeCreatorAnalyticsRepository(
     this._client, {
     Duration socialCountsCacheDuration = const Duration(minutes: 5),
-  }) : _socialCountsCacheDuration = socialCountsCacheDuration;
+    Set<String> Function()? locallyDeletedEventIds,
+    SoundVideoCounter? countVideosUsingSound,
+  }) : _socialCountsCacheDuration = socialCountsCacheDuration,
+       _locallyDeletedEventIds = locallyDeletedEventIds ?? _noDeletedEventIds,
+       _countVideosUsingSound = countVideosUsingSound ?? _noVideoCount;
+
+  /// Sounds requested per page by [fetchCreatorSounds].
+  static const creatorSoundsPageSize = 100;
+
+  /// Pages [fetchCreatorSounds] reads at most, so a creator with a long
+  /// history still costs a bounded number of requests.
+  static const creatorSoundsMaxPages = 4;
+
+  /// Sounds whose videos [fetchCreatorSounds] counts, and so the most it
+  /// returns.
+  static const creatorSoundsRecountLimit = 10;
 
   final FunnelcakeApiClient _client;
   final Duration _socialCountsCacheDuration;
+
+  /// Event ids this device has deleted, read at call time.
+  ///
+  /// The sounds endpoint still lists a sound after its NIP-09 deletion, so
+  /// without this a creator would keep seeing a sound they just removed.
+  final Set<String> Function() _locallyDeletedEventIds;
+
+  /// Counts a sound's videos the way the sound page does.
+  ///
+  /// Without one, [fetchCreatorSounds] can count nothing and fails with a
+  /// connection issue for any creator who has sounds.
+  final SoundVideoCounter _countVideosUsingSound;
+
+  static Set<String> _noDeletedEventIds() => const {};
+
+  static Future<int?> _noVideoCount(String soundId) async => null;
 
   final _socialCountsCache = <String, SocialCounts?>{};
   final _socialCountsCachedAt = <String, DateTime>{};
@@ -195,6 +263,108 @@ class FunnelcakeCreatorAnalyticsRepository
         videoCatalogTruncated: authorResult.truncated,
       ),
     );
+  }
+
+  /// Funnelcake's `usage_count` adds one for every video event version it
+  /// stores and never subtracts, so a republished or deleted video keeps
+  /// counting and the figure runs ahead of the sound page. It is still an
+  /// upper bound, so it picks the [creatorSoundsRecountLimit] likeliest
+  /// sounds; those are then counted the way the sound page counts them and
+  /// ranked by that count.
+  ///
+  /// A sound whose count is unavailable is left out rather than shown with
+  /// Funnelcake's figure.
+  @override
+  Future<List<CreatorSound>> fetchCreatorSounds(String pubkey) async {
+    final List<SoundStats> sounds;
+    try {
+      sounds = await _fetchAllCreatorSounds(pubkey);
+    } on Exception catch (e) {
+      throw CreatorAnalyticsLoadException(
+        _classifyRequiredLoadFailure(e),
+        cause: e,
+      );
+    }
+
+    final deleted = _locallyDeletedEventIds();
+    final candidates =
+        sounds.where((sound) => !deleted.contains(sound.id)).toList()
+          ..sort((a, b) {
+            final byUsage = b.usageCount.compareTo(a.usageCount);
+            return byUsage != 0 ? byUsage : b.createdAt.compareTo(a.createdAt);
+          });
+
+    // TODO(funnelcake#1314): Show usage_count and drop this recount once it
+    // counts only live videos.
+    final counted = await Future.wait(
+      candidates.take(creatorSoundsRecountLimit).map(_countCreatorSound),
+    );
+    // Stable, so sounds that tie on both keep Funnelcake's order.
+    final ranked = counted.nonNulls.toList();
+    mergeSort(
+      ranked,
+      compare: (a, b) {
+        final byCount = b.videoCount.compareTo(a.videoCount);
+        return byCount != 0 ? byCount : b.createdAt.compareTo(a.createdAt);
+      },
+    );
+    if (ranked.isEmpty && candidates.isNotEmpty) {
+      throw const CreatorAnalyticsLoadException(
+        CreatorAnalyticsFailureKind.connectionIssue,
+      );
+    }
+    return ranked;
+  }
+
+  Future<CreatorSound?> _countCreatorSound(SoundStats sound) async {
+    final int? videoCount;
+    try {
+      videoCount = await _countVideosUsingSound(sound.id);
+    } on Exception catch (e) {
+      Log.warning(
+        'Failed to count videos using sound ${sound.id}: $e',
+        name: 'CreatorAnalyticsRepository',
+        category: LogCategory.api,
+      );
+      return null;
+    }
+    if (videoCount == null) return null;
+    return CreatorSound(
+      id: sound.id,
+      title: sound.title,
+      createdAt: sound.createdAt,
+      videoCount: videoCount,
+    );
+  }
+
+  /// Reads the creator's sounds newest first, stopping at a short page or
+  /// after [creatorSoundsMaxPages], so the most used sounds are ranked across
+  /// the whole bounded window rather than just the newest page.
+  ///
+  /// The endpoint pages by creation time, so a sound published between two
+  /// requests shifts every row and a page can repeat one. A repeated sound is
+  /// kept once, with its highest count, so it never takes two rank slots.
+  ///
+  /// An entry without an id cannot be opened, so it is skipped. The page
+  /// length is read before that, so a skipped entry never ends paging early.
+  Future<List<SoundStats>> _fetchAllCreatorSounds(String pubkey) async {
+    final byId = <String, SoundStats>{};
+    for (var page = 0; page < creatorSoundsMaxPages; page++) {
+      final batch = await _client.getUserSounds(
+        pubkey: pubkey,
+        limit: creatorSoundsPageSize,
+        offset: page * creatorSoundsPageSize,
+      );
+      for (final sound in batch) {
+        if (sound.id.isEmpty) continue;
+        final seen = byId[sound.id];
+        if (seen == null || sound.usageCount > seen.usageCount) {
+          byId[sound.id] = sound;
+        }
+      }
+      if (batch.length < creatorSoundsPageSize) break;
+    }
+    return byId.values.toList();
   }
 
   Future<_AuthorVideosResult> _fetchAuthorVideos(

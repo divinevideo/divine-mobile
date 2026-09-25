@@ -1930,6 +1930,18 @@
   },
   "analyticsTopContent": "Top Content",
   "analyticsPublishPrompt": "Publish a few videos to see rankings.",
+  "analyticsYourSounds": "Your Sounds",
+  "@analyticsYourSounds": {
+    "description": "Title of the Creator Analytics card that lists the signed-in creator's own published sounds."
+  },
+  "analyticsYourSoundsExplainer": "Videos using each of your sounds, all time. Most used first.",
+  "@analyticsYourSoundsExplainer": {
+    "description": "Explains the per-sound number in the Your Sounds card: lifetime count of videos using each sound, sorted most used first."
+  },
+  "analyticsYourSoundsEmpty": "No sounds yet. Upload one or make your audio available for reuse, then watch it travel.",
+  "@analyticsYourSoundsEmpty": {
+    "description": "Shown in the Your Sounds card when the creator has not published any sounds yet."
+  },
   "analyticsEngagementRateExplainer": "Right-side % = Engagement Rate (interactions divided by views).",
   "analyticsEngagementRateNoViews": "Engagement Rate needs view data; values show as N/A until views are available.",
   "analyticsEngagementLabel": "Engagement",

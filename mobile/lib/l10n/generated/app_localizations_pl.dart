@@ -3074,6 +3074,17 @@ class AppLocalizationsPl extends AppLocalizations {
       'Opublikuj kilka filmów, żeby zobaczyć rankingi.';
 
   @override
+  String get analyticsYourSounds => 'Twoje dźwięki';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Filmy korzystające z każdego z twoich dźwięków, od początku. Najczęściej używane na górze.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Nie masz jeszcze dźwięków. Prześlij jakiś albo udostępnij swoje audio do ponownego użycia i zobacz, jak daleko zajdzie.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Prawa strona % = Wskaźnik zaangażowania (interakcje podzielone przez wyświetlenia).';
 

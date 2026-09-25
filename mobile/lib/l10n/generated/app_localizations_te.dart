@@ -3103,6 +3103,17 @@ class AppLocalizationsTe extends AppLocalizations {
       'ర్యాంకింగ్‌లను చూడటానికి కొన్ని వీడియోలను ప్రచురించండి.';
 
   @override
+  String get analyticsYourSounds => 'మీ సౌండ్స్';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'మీ ప్రతి సౌండ్‌ను ఉపయోగించిన వీడియోలు, మొత్తం కాలానికి. ఎక్కువగా ఉపయోగించినవి ముందు.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'ఇంకా సౌండ్స్ లేవు. ఒకటి అప్‌లోడ్ చేయండి లేదా మీ ఆడియోను తిరిగి ఉపయోగించడానికి అందుబాటులో ఉంచండి, ఆపై అది ఎంత దూరం వెళ్తుందో చూడండి.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'కుడివైపు % = ఎంగేజ్‌మెంట్ రేటు (ఇంటరాక్షన్‌లు వీక్షణల ద్వారా విభజించబడ్డాయి).';
 

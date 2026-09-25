@@ -2,6 +2,7 @@
 // ABOUTME: Tests API calls, error handling, and edge cases.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
@@ -1280,10 +1281,8 @@ void main() {
         await client.getVideosByAuthor(pubkey: testPubkey);
 
         final captured = verify(
-          () => mockHttpClient.get(
-            any(),
-            headers: captureAny(named: 'headers'),
-          ),
+          () =>
+              mockHttpClient.get(any(), headers: captureAny(named: 'headers')),
         ).captured;
         final headers = captured.whereType<Map<String, String>>().first;
         expect(headers['Accept'], 'application/json');
@@ -4340,6 +4339,174 @@ void main() {
         expect(
           () => client.getSocialCounts(testPubkey),
           throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+    });
+
+    group('getUserSounds', () {
+      test('parses every sound with its usage count', () async {
+        const validResponse =
+            '''
+[
+  {"id": "sound-a", "pubkey": "$testPubkey", "title": "Test sound",
+   "created_at": 1780000000, "usage_count": 12, "kind": 1063},
+  {"id": "sound-b", "pubkey": "$testPubkey", "title": "Original sound",
+   "created_at": 1780100000, "usage_count": 1}
+]
+''';
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(validResponse, 200));
+
+        final sounds = await client.getUserSounds(pubkey: testPubkey);
+
+        expect(
+          sounds,
+          equals([
+            SoundStats(
+              id: 'sound-a',
+              pubkey: testPubkey,
+              title: 'Test sound',
+              createdAt: DateTime.fromMillisecondsSinceEpoch(
+                1780000000000,
+                isUtc: true,
+              ),
+              usageCount: 12,
+            ),
+            SoundStats(
+              id: 'sound-b',
+              pubkey: testPubkey,
+              title: 'Original sound',
+              createdAt: DateTime.fromMillisecondsSinceEpoch(
+                1780100000000,
+                isUtc: true,
+              ),
+              usageCount: 1,
+            ),
+          ]),
+        );
+      });
+
+      test('requests the user sounds path with limit and offset', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('[]', 200));
+
+        await client.getUserSounds(pubkey: testPubkey, limit: 100, offset: 20);
+
+        final captured = verify(
+          () =>
+              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
+        ).captured;
+
+        final uri = captured.first as Uri;
+        expect(uri.path, equals('/api/users/$testPubkey/sounds'));
+        expect(uri.queryParameters, equals({'limit': '100', 'offset': '20'}));
+      });
+
+      test('omits offset on the first page', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('[]', 200));
+
+        await client.getUserSounds(pubkey: testPubkey);
+
+        final captured = verify(
+          () =>
+              mockHttpClient.get(captureAny(), headers: any(named: 'headers')),
+        ).captured;
+
+        final uri = captured.first as Uri;
+        expect(uri.queryParameters, equals({'limit': '50'}));
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+
+        expect(
+          () => emptyClient.getUserSounds(pubkey: testPubkey),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+
+        emptyClient.dispose();
+      });
+
+      test('throws FunnelcakeException when pubkey is empty', () {
+        expect(
+          () => client.getUserSounds(pubkey: ''),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.message,
+              'message',
+              contains('Pubkey cannot be empty'),
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeApiException on error status codes', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('Internal Server Error', 500));
+
+        expect(
+          () => client.getUserSounds(pubkey: testPubkey),
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              500,
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException on timeout', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => throw TimeoutException('Request timed out'));
+
+        expect(
+          () => client.getUserSounds(pubkey: testPubkey),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('throws FunnelcakeException when the body is not a list', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"error": "nope"}', 200));
+
+        expect(
+          () => client.getUserSounds(pubkey: testPubkey),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.message,
+              'message',
+              contains('Failed to fetch user sounds'),
+            ),
+          ),
+        );
+      });
+
+      test('keeps the transport failure as the exception cause', () async {
+        const failure = SocketException('Failed host lookup');
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => throw failure);
+
+        expect(
+          () => client.getUserSounds(pubkey: testPubkey),
+          throwsA(
+            isA<FunnelcakeException>().having(
+              (e) => e.cause,
+              'cause',
+              same(failure),
+            ),
+          ),
         );
       });
     });

@@ -2971,6 +2971,17 @@ class AppLocalizationsSv extends AppLocalizations {
       'Publicera några videor för att se rankningar.';
 
   @override
+  String get analyticsYourSounds => 'Dina ljud';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Videor som använder vart och ett av dina ljud, sedan start. Mest använda först.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Inga ljud än. Ladda upp ett eller gör ditt ljud tillgängligt för återanvändning, och se hur långt det når.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Högersidig % = engagemangsgrad (interaktioner delat med visningar).';
 

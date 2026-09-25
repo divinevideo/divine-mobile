@@ -3082,6 +3082,17 @@ class AppLocalizationsRo extends AppLocalizations {
       'Publică câteva videoclipuri ca să vezi clasamentele.';
 
   @override
+  String get analyticsYourSounds => 'Sunetele tale';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Videoclipuri care folosesc fiecare dintre sunetele tale, de la început. Cele mai folosite sunt primele.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'Încă niciun sunet. Încarcă unul sau fă-ți audio-ul disponibil pentru reutilizare și vezi cât de departe ajunge.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Procentul din dreapta = Rata de implicare (interacțiuni împărțite la vizualizări).';
 

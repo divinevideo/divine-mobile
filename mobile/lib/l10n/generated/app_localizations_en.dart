@@ -3037,6 +3037,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPublishPrompt => 'Publish a few videos to see rankings.';
 
   @override
+  String get analyticsYourSounds => 'Your Sounds';
+
+  @override
+  String get analyticsYourSoundsExplainer =>
+      'Videos using each of your sounds, all time. Most used first.';
+
+  @override
+  String get analyticsYourSoundsEmpty =>
+      'No sounds yet. Upload one or make your audio available for reuse, then watch it travel.';
+
+  @override
   String get analyticsEngagementRateExplainer =>
       'Right-side % = Engagement Rate (interactions divided by views).';
 
