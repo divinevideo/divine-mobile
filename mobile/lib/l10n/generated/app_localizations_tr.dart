@@ -7439,7 +7439,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Buraya gönderdiğin her şey, geliştiricilerin ilgilenebilmesi için GitHub\'daki açık kaynak depomuzda yayınlanacak. Gönderi ve giriş yaptığın hesap herkes tarafından görülebilecek.';
+      'Buraya yazdıkların, telefon modelin ve uygulama sürümü gibi temel cihaz bilgileriyle birlikte GitHub\'da yayınlanacak; böylece ekip herkese açık depolarımızdaki sorunlar üzerinde çalışabilecek. Hesabın da uygulamanın tanılama günlükleri de destek ekibimizde gizli kalır. Herkese açık olmasını istemediğin hiçbir şeyi ekleme.';
 
   @override
   String get supportRequiredHelper => 'Zorunlu';

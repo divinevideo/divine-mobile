@@ -3257,7 +3257,7 @@
     "bugReportSendReport": "Raporu Gönder",
     "supportSubjectRequiredLabel": "Konu *",
     "supportPublicSubmissionTitle": "Herkese açık GitHub gönderisi",
-    "supportPublicSubmissionMessage": "Buraya gönderdiğin her şey, geliştiricilerin ilgilenebilmesi için GitHub'daki açık kaynak depomuzda yayınlanacak. Gönderi ve giriş yaptığın hesap herkes tarafından görülebilecek.",
+    "supportPublicSubmissionMessage": "Buraya yazdıkların, telefon modelin ve uygulama sürümü gibi temel cihaz bilgileriyle birlikte GitHub'da yayınlanacak; böylece ekip herkese açık depolarımızdaki sorunlar üzerinde çalışabilecek. Hesabın da uygulamanın tanılama günlükleri de destek ekibimizde gizli kalır. Herkese açık olmasını istemediğin hiçbir şeyi ekleme.",
     "supportRequiredHelper": "Zorunlu",
     "supportFieldLimitReached": "Bu, izin verilen en fazla uzunluk. Bundan sonrası eklenmedi.",
     "bugReportSubjectHint": "Sorunun kısa özeti",

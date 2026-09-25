@@ -3257,7 +3257,7 @@
     "bugReportSendReport": "Skicka rapport",
     "supportSubjectRequiredLabel": "Ämne *",
     "supportPublicSubmissionTitle": "Offentligt GitHub-inlägg",
-    "supportPublicSubmissionMessage": "Allt du skickar in här publiceras i vårt öppna GitHub-arkiv så att utvecklare kan ta hand om det. Inlägget och kontot du är inloggad med blir offentligt synliga för alla.",
+    "supportPublicSubmissionMessage": "Det du skriver här publiceras på GitHub tillsammans med grundläggande enhetsinformation som din telefonmodell och appversion, så att teamet kan jobba med ärenden i våra offentliga arkiv. Ditt konto och appens diagnostikloggar förblir privata hos vårt supportteam. Ta inte med något du inte vill ska bli offentligt.",
     "supportRequiredHelper": "Obligatoriskt",
     "supportFieldLimitReached": "Det är maxlängden. Allt därutöver lades inte till.",
     "bugReportSubjectHint": "Kort sammanfattning av problemet",

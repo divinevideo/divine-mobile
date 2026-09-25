@@ -7549,7 +7549,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Alles wat je hier indient, wordt in onze opensource-repository op GitHub geplaatst, zodat ontwikkelaars ermee aan de slag kunnen. Het bericht en het account waarmee je bent ingelogd zijn voor iedereen openbaar zichtbaar.';
+      'Wat je hier schrijft, wordt samen met basisgegevens over je apparaat, zoals het model van je telefoon en de appversie, op GitHub geplaatst, zodat het team in onze openbare repositories aan de problemen kan werken. Je account en de diagnostische logs van de app blijven privé bij ons supportteam. Zet er niets in wat je niet openbaar wilt maken.';
 
   @override
   String get supportRequiredHelper => 'Verplicht';

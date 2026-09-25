@@ -2598,7 +2598,7 @@
     "bugReportSendReport": "ሪፖርት ላክ",
     "supportSubjectRequiredLabel": "ርዕስ *",
     "supportPublicSubmissionTitle": "ይፋዊ የGitHub ልጥፍ",
-    "supportPublicSubmissionMessage": "እዚህ የምታስገባው ሁሉ ገንቢዎች እንዲሰሩበት በGitHub ላይ ባለው ክፍት ምንጭ ማከማቻችን ውስጥ ይለጠፋል። ልጥፉንና የገባህበትን መለያ ማንኛውም ሰው በይፋ ማየት ይችላል።",
+    "supportPublicSubmissionMessage": "እዚህ የሚጽፉት፣ እንደ የስልክዎ ሞዴልና የመተግበሪያው ስሪት ካሉ መሠረታዊ የመሣሪያ መረጃዎች ጋር፣ ቡድኑ በይፋዊ ማከማቻዎቻችን ውስጥ ባሉ ችግሮች ላይ እንዲሰራ በGitHub ላይ ይለጠፋል። መለያዎና የመተግበሪያው የምርመራ መዝገቦች በድጋፍ ቡድናችን ዘንድ በግል ይቆያሉ። በይፋ እንዲታይ የማይፈልጉትን ምንም ነገር አያካትቱ።",
     "supportRequiredHelper": "ያስፈልጋል",
     "supportFieldLimitReached": "ይህ ከፍተኛው ርዝመት ነው። ከዚህ በኋላ ያለው አልተጨመረም።",
     "bugReportSubjectHint": "የችግሩ አጭር ማጠቃለያ",

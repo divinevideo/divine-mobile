@@ -7155,7 +7155,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      '여기에 제출하는 모든 내용은 개발자가 작업을 맡을 수 있도록 GitHub의 오픈 소스 저장소에 게시됩니다. 게시물과 로그인한 계정은 누구나 공개적으로 볼 수 있습니다.';
+      '여기에 작성한 내용은 휴대폰 모델과 앱 버전 같은 기본 기기 정보와 함께 GitHub에 게시되어, 팀이 공개 저장소에서 이슈를 처리할 수 있어요. 계정과 앱의 진단 로그는 공개되지 않고 지원팀만 볼 수 있어요. 공개되길 원하지 않는 내용은 포함하지 마세요.';
 
   @override
   String get supportRequiredHelper => '필수';

@@ -7139,7 +7139,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'ここで送信した内容はすべて、開発者が対応できるよう GitHub 上のオープンソースリポジトリに投稿されます。投稿とログイン中のアカウントは誰でも閲覧できます。';
+      'ここに書いた内容は、スマートフォンの機種やアプリのバージョンなどの基本的な端末情報と一緒に GitHub に投稿され、チームが公開リポジトリで課題に対応できるようになります。アカウントとアプリの診断ログは公開されず、サポートチーム内で非公開のまま扱われます。公開されて困る内容は書かないでください。';
 
   @override
   String get supportRequiredHelper => '必須';

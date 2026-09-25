@@ -7440,7 +7440,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Semua yang kamu kirim di sini akan diposting ke repositori sumber terbuka kami di GitHub agar pengembang dapat menanganinya. Kiriman tersebut dan akun yang kamu gunakan untuk masuk dapat dilihat secara publik oleh siapa saja.';
+      'Apa yang kamu tulis di sini, bersama info dasar perangkat seperti model ponsel dan versi aplikasimu, akan diposting di GitHub agar tim bisa menangani masalah di repositori publik kami. Akunmu dan log diagnostik aplikasi tetap privat di tim dukungan kami. Jangan sertakan apa pun yang tidak ingin kamu jadikan publik.';
 
   @override
   String get supportRequiredHelper => 'Wajib';

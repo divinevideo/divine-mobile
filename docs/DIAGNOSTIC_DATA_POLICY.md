@@ -6,19 +6,31 @@ reports, and support flows that collect mobile diagnostics.
 ## Public Support Flows
 
 Bug reports, feature requests, and content reports submitted through Zendesk
-may be mirrored into public GitHub issues. Treat every field sent through that
-path as public.
+may be mirrored into public GitHub issues by the Zendesk-to-GitHub bridge.
+Since 25 September 2026 the bridge publishes the report and keeps diagnostic
+logs and account identity in Zendesk, as decided in #2636 and #6940.
 
-Public Zendesk/GitHub payloads may include:
+Reaches the public GitHub issue:
 
 - User-entered subject, description, reproduction steps, and expected behavior.
-- App version and coarse platform/device details needed for triage.
-- Error counts.
-- A bounded summary of recent logs.
-- The signed-in public Nostr account identifier when support needs to connect
-  the report to an account. See #6940.
-- User-selected attachments only when the user intentionally includes them and
-  the UI makes clear that attachments can be mirrored publicly.
+- For bug reports: app version, the Device Information block (platform, model,
+  OS version, locale, and local-storage counts such as draft and clip rows), the
+  current screen, and error counts.
+- A link to the Zendesk ticket, its intake channel, and how many attachments it
+  had, with their types.
+
+Stays in Zendesk (the bridge removes it from the public issue):
+
+- The recent-log summary, and fenced or app-formatted log output elsewhere in
+  the report.
+- The signed-in account identifier, the other account fields the app labels, and
+  Nostr identifiers the bridge recognizes by shape anywhere in the text.
+- The list of screens visited before the report.
+- The Zendesk requester's display name.
+- Attachment links.
+
+The client still treats everything it sends as potentially public. The bridge is
+a second layer, not a reason to send more.
 
 Zendesk requester identity fields are intentionally not redacted: name, email,
 and `external_id` must stay intact so Zendesk can connect the ticket to the
@@ -141,12 +153,9 @@ requests before adding that collection path. See #6941.
 
 ## Open Decisions
 
-Two policy details need product and support-owner confirmation before
+One policy detail needs product and support-owner confirmation before
 broadening the implementation:
 
-- Whether public GitHub issues should continue to include the signed-in Nostr
-  public key, or whether Zendesk-only private metadata is enough for support
-  (#6940).
 - Which private log store, retention period, and access controls apply if
-  support needs full diagnostic archives beyond the bounded public summary
-  (#6941).
+  support needs full diagnostic archives beyond the bounded summary kept in
+  Zendesk (#6941).

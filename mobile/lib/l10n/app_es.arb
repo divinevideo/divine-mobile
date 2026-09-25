@@ -3261,7 +3261,7 @@
     "bugReportSendReport": "Enviar reporte",
     "supportSubjectRequiredLabel": "Asunto *",
     "supportPublicSubmissionTitle": "Publicación pública en GitHub",
-    "supportPublicSubmissionMessage": "Todo lo que envíes aquí se publicará en nuestro repositorio de código abierto en GitHub para que los desarrolladores puedan encargarse. La publicación y la cuenta con la que has iniciado sesión serán visibles para todo el mundo.",
+    "supportPublicSubmissionMessage": "Lo que escribas acá, junto con información básica del dispositivo como el modelo de tu teléfono y la versión de la app, se va a publicar en GitHub para que el equipo pueda trabajar en los problemas de nuestros repositorios públicos. Tu cuenta y los logs de diagnóstico de la app quedan en privado con nuestro equipo de soporte. No pongas nada que no quieras que sea público.",
     "supportRequiredHelper": "Obligatorio",
     "supportFieldLimitReached": "Esa es la longitud máxima. Lo que pasa de ahí no se añadió.",
     "bugReportSubjectHint": "Resumen breve del problema",

@@ -7613,7 +7613,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get supportPublicSubmissionMessage =>
-      'Tout ce que tu envoies ici sera publié dans notre dépôt open source sur GitHub afin que les développeurs puissent s\'en charger. La publication et le compte avec lequel tu es connecté seront visibles par tout le monde.';
+      'Ce que tu écris ici, avec des infos de base sur ton appareil comme le modèle de ton téléphone et la version de l\'app, sera publié sur GitHub pour que l\'équipe puisse traiter les problèmes dans nos dépôts publics. Ton compte et les logs de diagnostic de l\'app restent privés auprès de notre équipe d\'assistance. N\'inclus rien que tu ne voudrais pas rendre public.';
 
   @override
   String get supportRequiredHelper => 'Requis';

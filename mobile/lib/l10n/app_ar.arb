@@ -3257,7 +3257,7 @@
     "bugReportSendReport": "إرسال التقرير",
     "supportSubjectRequiredLabel": "الموضوع *",
     "supportPublicSubmissionTitle": "منشور عام على GitHub",
-    "supportPublicSubmissionMessage": "سيُنشر كل ما ترسله هنا في مستودعنا مفتوح المصدر على GitHub ليتمكن المطورون من العمل عليه. سيكون المنشور والحساب الذي سجّلت الدخول به متاحين للجميع علنًا.",
+    "supportPublicSubmissionMessage": "يُنشر كل ما يُكتب هنا على GitHub، مع معلومات أساسية عن الجهاز مثل طراز الهاتف وإصدار التطبيق، ليتمكن الفريق من العمل على المشكلات في مستودعاتنا العامة. أما الحساب وسجلات التشخيص الخاصة بالتطبيق فتبقى خاصة لدى فريق الدعم لدينا. يُرجى عدم تضمين أي شيء لا يُراد نشره علنًا.",
     "supportRequiredHelper": "مطلوب",
     "supportFieldLimitReached": "هذا هو الحد الأقصى للطول. لم تُضَف أي أحرف بعده.",
     "bugReportSubjectHint": "ملخّص قصير للمشكلة",
