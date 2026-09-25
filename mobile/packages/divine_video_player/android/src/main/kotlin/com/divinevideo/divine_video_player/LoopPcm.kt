@@ -122,7 +122,7 @@ internal object LoopPcm {
     ): Prepared? {
         if (channels <= 0 || sampleRate <= 0 || loopUs <= 0) return null
         val loopFrames = Math.round(loopUs.toDouble() * sampleRate / 1_000_000.0)
-            .coerceAtMost(Int.MAX_VALUE / channels.toLong())
+            .coerceAtMost(Int.MAX_VALUE / (channels.toLong() * BYTES_PER_SAMPLE))
             .toInt()
         if (loopFrames <= 0) return null
         val placed = placeOnTimeline(samples, channels, sampleRate, startUs, loopFrames)
@@ -304,18 +304,24 @@ internal object LoopPcm {
          */
         private fun bestMatchLag(endFrame: Int, window: Int, minLag: Int, maxLag: Int): Int? {
             if (minLag < 1 || minLag > maxLag || endFrame - window - maxLag < 0) return null
+            // mono(frame) for the (fixed) window being matched never depends
+            // on the lag under trial, unlike mono(frame - lag); precomputed
+            // once, it turns the coarse pass's ~thousands of lag trials from
+            // that many redundant recomputations into one each.
+            val ownStart = endFrame - window
+            val own = DoubleArray(window) { mono(ownStart + it) }
             fun score(lag: Int, step: Int): Double {
                 var dot = 0.0
                 var ownEnergy = 0.0
                 var lagEnergy = 0.0
-                var frame = endFrame - window
-                while (frame < endFrame) {
-                    val own = mono(frame)
-                    val earlier = mono(frame - lag)
-                    dot += own * earlier
-                    ownEnergy += own * own
+                var offset = 0
+                while (offset < window) {
+                    val ownValue = own[offset]
+                    val earlier = mono(ownStart + offset - lag)
+                    dot += ownValue * earlier
+                    ownEnergy += ownValue * ownValue
                     lagEnergy += earlier * earlier
-                    frame += step
+                    offset += step
                 }
                 if (ownEnergy <= 0.0 || lagEnergy <= 0.0) return Double.NEGATIVE_INFINITY
                 return dot / Math.sqrt(ownEnergy * lagEnergy)
@@ -369,6 +375,15 @@ internal object LoopPcm {
     private const val MAX_LAP_LAG_MS = 1_000L
 
     private const val COARSE_STEP = 4
+
+    /**
+     * Bytes per 16-bit PCM sample [ClipAudioLoopTrack.create] packs [prepare]'s
+     * result into. [prepare]'s own `loopFrames * channels` bound isn't enough
+     * on its own: that caller's `loopFrames * channels * 2` byte-buffer size
+     * needs the extra factor accounted for here too, or a pathologically long
+     * [loopUs] can overflow it into a negative `ByteArray` size.
+     */
+    private const val BYTES_PER_SAMPLE = 2L
 
     /**
      * Shifts [samples] so that frame zero is the clip's time zero rather than
