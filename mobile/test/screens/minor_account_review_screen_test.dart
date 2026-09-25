@@ -731,7 +731,7 @@ void main() {
         await tester.tap(find.text(l10n.supportContactSupport));
         await tester.pumpAndSettle();
 
-        expect(openCalls, 1);
+        expect(openCalls, equals(1));
         verifyNever(() => goRouter.push(any()));
       });
 
@@ -779,7 +779,7 @@ void main() {
         await tester.pump();
         await tester.tap(find.text(l10n.supportContactSupport));
 
-        expect(openCalls, 1);
+        expect(openCalls, equals(1));
         expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
 
         opening.complete(true);
@@ -808,7 +808,7 @@ void main() {
           await tester.tap(find.text(l10n.supportContactSupport));
           await tester.pumpAndSettle();
 
-          expect(openCalls, 0);
+          expect(openCalls, isZero);
           verify(
             () => goRouter.push(MinorAccountReviewUnder13SupportScreen.path),
           ).called(1);
@@ -837,7 +837,7 @@ void main() {
           await tester.tap(find.text(l10n.supportContactSupport));
           await tester.pumpAndSettle();
 
-          expect(openCalls, 0);
+          expect(openCalls, isZero);
           verify(
             () => goRouter.push(MinorAccountReviewUnder13SupportScreen.path),
           ).called(1);

@@ -257,6 +257,9 @@ class _LoadedView extends ConsumerWidget {
         : l10n.minorAccountReviewDefaultBody;
     final supportEmail = reviewCase?.supportEmail ?? AppConstants.supportEmail;
     final caseId = reviewCase?.id;
+    // One decision drives both the appeal copy and where its button goes, so
+    // the two cannot disagree.
+    final isUnder13Path = reviewCase?.isUnder13Path == true;
     final primaryAction = _primaryAction(reviewCase, l10n);
     final infoCard = _infoCardForCase(reviewCase, supportEmail, l10n);
     final responseClockCard = reviewCase == null
@@ -352,13 +355,13 @@ class _LoadedView extends ConsumerWidget {
         ],
         _InfoCard(
           title: l10n.minorAccountReviewAppealTitle,
-          body: reviewCase?.isUnder13Path == true
+          body: isUnder13Path
               ? l10n.minorAccountReviewAppealUnder13Body
               : l10n.minorAccountReviewAppealTeenBody,
         ),
         const SizedBox(height: 12),
         _AppealSupportButton(
-          isUnder13Path: reviewCase?.isUnder13Path == true,
+          isUnder13Path: isUnder13Path,
           openSupportMessages: openSupportMessages,
           composeEmail: composeEmail,
         ),
