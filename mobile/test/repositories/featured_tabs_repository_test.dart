@@ -1,11 +1,12 @@
-// ABOUTME: Tests for FeaturedTabsRepository cache TTL and eligibility gating.
-// ABOUTME: Covers the visibility matrix and stale-serve-then-drop behavior.
+// ABOUTME: Tests for FeaturedTabsRepository cache TTL, eligibility and paging.
+// ABOUTME: Covers the visibility matrix, stale-serve-then-drop and Vine loops.
 
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/repositories/featured_tabs_repository.dart';
 
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
@@ -342,6 +343,89 @@ void main() {
         );
 
         expect(snapshot.hasTab, isFalse);
+      });
+    });
+
+    group('loadVideos', () {
+      const tabId = 'ft_a1b2c3d4';
+
+      // Featured-tab rows arrive without event tags, and `loops` is the
+      // live Divine count.
+      VideoStats featuredRow(String id, {String? platform}) {
+        return VideoStats.fromJson({
+          'id': id,
+          'pubkey': 'a' * 64,
+          'created_at': 1457922740,
+          'kind': 34236,
+          'd_tag': 'd-$id',
+          'title': 'Featured video',
+          'video_url': 'https://media.divine.video/$id.mp4',
+          'platform': ?platform,
+          'loops': 2564,
+          'views': 8664,
+          'reactions': 0,
+          'comments': 0,
+          'reposts': 0,
+          'engagement_score': 0,
+        });
+      }
+
+      void stubPage(List<VideoStats> videos) {
+        when(
+          () => apiClient.getFeaturedTabVideos(
+            id: tabId,
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => FeaturedTabVideosResponse(videos: videos));
+      }
+
+      test('restores the archived loops of a classic Vine', () async {
+        stubPage([featuredRow('vine-1', platform: 'vine')]);
+        when(() => apiClient.getBulkVideoStats(['vine-1'])).thenAnswer(
+          (_) async => const BulkVideoStatsResponse(
+            stats: {
+              'vine-1': BulkVideoStatsEntry(
+                eventId: 'vine-1',
+                reactions: 0,
+                comments: 0,
+                reposts: 0,
+                loops: 2564,
+                embeddedLoops: 123411921,
+                views: 8664,
+              ),
+            },
+          ),
+        );
+
+        final page = await buildRepository().loadVideos(tabId: tabId);
+
+        expect(page.videos.single.originalLoops, equals(123411921));
+        expect(page.videos.single.totalLoops, equals(123411921 + 8664));
+      });
+
+      test(
+        'does not look up archived loops for videos made on Divine',
+        () async {
+          stubPage([featuredRow('native-1')]);
+
+          final page = await buildRepository().loadVideos(tabId: tabId);
+
+          expect(page.videos.single.originalLoops, isNull);
+          expect(page.videos.single.totalLoops, equals(8664));
+          verifyNever(() => apiClient.getBulkVideoStats(any()));
+        },
+      );
+
+      test('serves the page as-is when the archive lookup fails', () async {
+        stubPage([featuredRow('vine-1', platform: 'vine')]);
+        when(
+          () => apiClient.getBulkVideoStats(['vine-1']),
+        ).thenThrow(const FunnelcakeTimeoutException('bulk'));
+
+        final page = await buildRepository().loadVideos(tabId: tabId);
+
+        expect(page.videos.single.id, equals('vine-1'));
+        expect(page.videos.single.originalLoops, isNull);
       });
     });
   });

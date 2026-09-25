@@ -132,7 +132,8 @@ class FeaturedTabsRepository {
   /// REST ingress boundary like every other feed.
   ///
   /// Throws [FunnelcakeException] subclasses on failure; unlike [refresh],
-  /// paging errors are surfaced so the tab can show a retry affordance.
+  /// paging errors are surfaced so the tab can show a retry affordance. A
+  /// failed lookup of classic Vines' archived loops does not fail the page.
   Future<FeaturedTabVideosPage> loadVideos({
     required String tabId,
     String? cursor,
@@ -142,10 +143,37 @@ class FeaturedTabsRepository {
       cursor: cursor,
     );
     return FeaturedTabVideosPage(
-      videos: response.videos.toVideoEvents(),
+      videos: await _withVineArchives(response.videos.toVideoEvents()),
       nextCursor: response.nextCursor,
       hasMore: response.hasMore ?? response.nextCursor != null,
     );
+  }
+
+  /// Fills in the archived loop count of the classic Vines on a page.
+  ///
+  /// Featured-tab rows carry no event tags and their `loops` is a live count,
+  /// so a Vine's archive arrives only as bulk stats' `embedded_loops`
+  /// (#9554). A failed lookup serves the page as it came.
+  Future<List<VideoEvent>> _withVineArchives(List<VideoEvent> videos) async {
+    final vineIds = [
+      for (final video in videos)
+        if (video.isOriginalVine && video.originalLoops == null) video.id,
+    ];
+    if (vineIds.isEmpty) return videos;
+
+    final BulkVideoStatsResponse bulk;
+    try {
+      bulk = await _apiClient.getBulkVideoStats(vineIds);
+    } on FunnelcakeException {
+      return videos;
+    }
+    return [
+      for (final video in videos)
+        switch (bulk.stats[video.id]?.embeddedLoops) {
+          final int archived => video.copyWith(originalLoops: archived),
+          null => video,
+        },
+    ];
   }
 
   /// Drops any cached config, so the next [refresh] must reach the network.
