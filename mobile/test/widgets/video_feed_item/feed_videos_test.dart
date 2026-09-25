@@ -1969,6 +1969,30 @@ void main() {
       expect(immersiveCubit.state.isImmersive, isFalse);
     });
 
+    testWidgets('tearing the feed down clears the pin', (tester) async {
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'a cubit outliving the overlay must not stay pinned',
+      );
+    });
+
     testWidgets('replacing the video under a pin clears it', (tester) async {
       // A blocklist sweep or a silent list refresh can put a different video at
       // the item's index without unmounting the item, so the pin outlives the
