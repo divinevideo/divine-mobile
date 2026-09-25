@@ -204,41 +204,44 @@ class _CreatorSoundRow extends StatelessWidget {
       child: InkWell(
         onTap: openSound,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-          child: Row(
-            spacing: 10,
-            children: [
-              AnalyticsRankBadge(rank: rank),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 3,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.primaryText,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Row(
+              spacing: 10,
+              children: [
+                AnalyticsRankBadge(rank: rank),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 3,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
                       ),
-                    ),
-                    Text(
-                      age,
-                      style: VineTheme.bodySmallFont(
-                        color: context.vineColors.onSurfaceMuted,
+                      Text(
+                        age,
+                        style: VineTheme.bodySmallFont(
+                          color: context.vineColors.onSurfaceMuted,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                countText,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.accentBrand,
+                Text(
+                  countText,
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.accentBrand,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

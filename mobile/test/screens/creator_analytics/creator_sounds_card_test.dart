@@ -15,6 +15,7 @@ import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 
+import '../../helpers/accessibility_guidelines.dart';
 import '../../helpers/go_router.dart';
 
 class _MockCreatorSoundsCubit extends MockCubit<CreatorSoundsState>
@@ -106,6 +107,24 @@ void main() {
         expect(find.text(l10n.soundVideoCount(1)), findsOneWidget);
         expect(find.text(l10n.soundNoVideoCount), findsOneWidget);
         expect(find.text('3'), findsOneWidget);
+      });
+
+      testWidgets('sound rows large enough to tap', (tester) async {
+        await pumpCard(
+          tester,
+          CreatorSoundsState(
+            status: CreatorSoundsStatus.success,
+            sounds: [
+              sound('sound-a', 'Test sound', 42),
+              sound('sound-b', 'Original sound', 1),
+            ],
+          ),
+        );
+
+        await expectMeetsAccessibilityGuidelines(
+          tester,
+          guidelines: const [androidTapTargetGuideline],
+        );
       });
 
       testWidgets('the localized failure message', (tester) async {
