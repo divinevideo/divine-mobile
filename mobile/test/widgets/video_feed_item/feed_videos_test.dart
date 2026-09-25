@@ -428,6 +428,27 @@ void main() {
     InfiniteVideoFeed.debugIsSupportedOverride = null;
   });
 
+  // Reads the fade the [FeedImmersiveChrome] around [of] applies. Anchored
+  // on the wrapped widget rather than on FeedImmersiveChrome itself: each
+  // chrome layer has its own wrapper, and the overlay actions carry an
+  // unrelated AnimatedOpacity of their own further down.
+  double chromeOpacity(WidgetTester tester, {required Type of}) => tester
+      .widget<AnimatedOpacity>(
+        find
+            .ancestor(
+              of: find.byType(of),
+              matching: find.byType(AnimatedOpacity),
+            )
+            .first,
+      )
+      .opacity;
+
+  // pumpAndSettle can't be used here: InfiniteVideoFeed keeps its own
+  // timers running, so settle never arrives. The fade is a fixed duration.
+  Future<void> pumpFade(WidgetTester tester) => tester.pump(
+    kFeedImmersiveFadeDuration + const Duration(milliseconds: 50),
+  );
+
   // -------------------------------------------------------------------------
   // _FeedLoadingOrRestrictedOverlayView modes
   // -------------------------------------------------------------------------
@@ -1363,27 +1384,6 @@ void main() {
   // Immersive (hold-to-peek) viewing — #6234
   // -------------------------------------------------------------------------
   group('hold to peek', () {
-    // Reads the fade the [FeedImmersiveChrome] around [of] applies. Anchored
-    // on the wrapped widget rather than on FeedImmersiveChrome itself: each
-    // chrome layer has its own wrapper, and the overlay actions carry an
-    // unrelated AnimatedOpacity of their own further down.
-    double chromeOpacity(WidgetTester tester, {required Type of}) => tester
-        .widget<AnimatedOpacity>(
-          find
-              .ancestor(
-                of: find.byType(of),
-                matching: find.byType(AnimatedOpacity),
-              )
-              .first,
-        )
-        .opacity;
-
-    // pumpAndSettle can't be used here: InfiniteVideoFeed keeps its own
-    // timers running, so settle never arrives. The fade is a fixed duration.
-    Future<void> pumpFade(WidgetTester tester) => tester.pump(
-      kFeedImmersiveFadeDuration + const Duration(milliseconds: 50),
-    );
-
     testWidgets('hides the overlay chrome while held and restores on release', (
       tester,
     ) async {
@@ -1737,23 +1737,8 @@ void main() {
   // Pinch to pin — chrome hidden until tap or a second pinch
   // -------------------------------------------------------------------------
   group('pinch to pin', () {
-    double chromeOpacity(WidgetTester tester, {required Type of}) => tester
-        .widget<AnimatedOpacity>(
-          find
-              .ancestor(
-                of: find.byType(of),
-                matching: find.byType(AnimatedOpacity),
-              )
-              .first,
-        )
-        .opacity;
-
-    Future<void> pumpFade(WidgetTester tester) => tester.pump(
-      kFeedImmersiveFadeDuration + const Duration(milliseconds: 50),
-    );
-
-    // Lands two fingers [_spread] apart and drags them [_spread * 3] apart.
-    // Measured from the landing separation so it matches the production rule.
+    // Lands two fingers 40 apart and drags them 280 apart. Measured from the
+    // landing separation, so it matches the production rule.
     Future<void> pinch(
       WidgetTester tester,
       Offset center, {
