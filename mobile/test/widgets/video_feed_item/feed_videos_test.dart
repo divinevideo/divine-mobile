@@ -1934,6 +1934,31 @@ void main() {
         );
       },
     );
+    testWidgets('swiping to the next video clears the pin', (tester) async {
+      final videos = [_makeVideo(), _makeVideo(id: 'b' * 64)];
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: videos,
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await tester.fling(
+        find.byType(InfiniteVideoFeed),
+        const Offset(0, -500),
+        2000,
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+      expect(immersiveCubit.state.isImmersive, isFalse);
+    });
   });
 
   group('playback length cap', () {
