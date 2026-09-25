@@ -26,6 +26,7 @@ import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/utils/await_push_transition.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Closes the video recorder.
@@ -70,10 +71,13 @@ void closeVideoRecorder(BuildContext context, WidgetRef ref) {
 /// case recovery is for.
 void discardRecorderSession(WidgetRef ref) {
   final isAutosavedDraft = ref.read(videoEditorProvider).isAutosavedDraft;
-  unawaited(
+  runDetached(
     ref
         .read(videoPublishProvider.notifier)
         .clearAll(keepAutosavedDraft: !isAutosavedDraft),
+    'discard recorder session',
+    logName: 'VideoRecorderNavigation',
+    category: LogCategory.video,
   );
 }
 
@@ -120,8 +124,15 @@ Future<void> openVideoEditorFromRecorder(
     ref.read(clipManagerProvider.notifier).muteAllClips();
   }
 
+  // Classic renders while the metadata screen is up: that screen shows the
+  // render's progress and owns its retry, so do not hold the recorder here.
   if (!recorderMode.hasVideoEditor) {
-    ref.read(videoEditorProvider.notifier).startRenderVideo();
+    runDetached(
+      ref.read(videoEditorProvider.notifier).startRenderVideo(),
+      'start classic-mode render',
+      logName: 'VideoRecorderNavigation',
+      category: LogCategory.video,
+    );
   }
 
   // Lock recording before the push so a volume / Bluetooth trigger that races
@@ -258,10 +269,16 @@ Future<void> offerAutosavedSession(
       await openVideoEditorFromRecorder(context, ref);
     },
     secondaryButtonText: context.l10n.videoRecorderAutosaveDiscardButton,
-    onSecondaryPressed: () {
-      ref.read(videoEditorProvider.notifier).removeAutosavedDraft();
-      context.pop();
-    },
+    onSecondaryPressed: () => runDetached(
+      () async {
+        await ref.read(videoEditorProvider.notifier).removeAutosavedDraft();
+        if (!context.mounted) return;
+        context.pop();
+      }(),
+      'discard autosaved recorder draft',
+      logName: 'VideoRecorderNavigation',
+      category: LogCategory.video,
+    ),
   );
 }
 

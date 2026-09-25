@@ -7,6 +7,8 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Horizontal picker-wheel mode selector.
 ///
@@ -111,18 +113,21 @@ class _VideoRecorderModeSelectorWheelState
     if (!_scrollController.hasClients) return;
     _isSnapping = true;
 
-    // Jump rather than animate to a zero duration — `animateTo` asserts on
-    // `Duration.zero`, so `autoReduceMotion` is not usable on this one.
-    if (context.reduceMotion) {
-      _scrollController.jumpTo(_snapOffsets[index]);
-    } else {
-      await _scrollController.animateTo(
-        _snapOffsets[index],
-        duration: _animationDuration,
-        curve: Curves.easeInOut,
-      );
+    try {
+      // Jump rather than animate to a zero duration — `animateTo` asserts on
+      // `Duration.zero`, so `autoReduceMotion` is not usable on this one.
+      if (context.reduceMotion) {
+        _scrollController.jumpTo(_snapOffsets[index]);
+      } else {
+        await _scrollController.animateTo(
+          _snapOffsets[index],
+          duration: _animationDuration,
+          curve: Curves.easeInOut,
+        );
+      }
+    } finally {
+      _isSnapping = false;
     }
-    _isSnapping = false;
   }
 
   void _snapToNearest() {
@@ -156,10 +161,22 @@ class _VideoRecorderModeSelectorWheelState
   }
 
   void _selectIndex(int index, {bool animate = false}) {
-    if (animate) _moveTo(index);
+    if (animate) {
+      runDetached(
+        _moveTo(index),
+        'animate recorder mode selector',
+        logName: 'VideoRecorderModeSelectorWheel',
+        category: LogCategory.ui,
+      );
+    }
     if (index == _selectedIndex) return;
     setState(() => _selectedIndex = index);
-    HapticFeedback.selectionClick();
+    runDetached(
+      HapticFeedback.selectionClick(),
+      'play recorder mode selection haptic',
+      logName: 'VideoRecorderModeSelectorWheel',
+      category: LogCategory.ui,
+    );
     widget.onModeChanged(VideoRecorderMode.values[index]);
   }
 
