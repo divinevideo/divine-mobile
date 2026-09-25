@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -144,6 +146,23 @@ void main() {
         ],
         errors: () => [isA<CreatorAnalyticsLoadException>()],
       );
+
+      test('ignores a load requested while one is running', () async {
+        final pending = Completer<List<SoundStats>>();
+        when(
+          () => repository.fetchCreatorSounds(_pubkey),
+        ).thenAnswer((_) => pending.future);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        final first = cubit.load();
+        final second = cubit.load();
+        pending.complete([_sound('s0', 3)]);
+        await Future.wait([first, second]);
+
+        verify(() => repository.fetchCreatorSounds(_pubkey)).called(1);
+        expect(cubit.state.status, equals(CreatorSoundsStatus.success));
+      });
     });
   });
 }

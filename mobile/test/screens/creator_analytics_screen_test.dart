@@ -257,6 +257,43 @@ void main() {
       verify(() => repository.fetchCreatorSounds('a' * 64)).called(1);
     });
 
+    testWidgets('reloads the sounds when the dashboard is refreshed', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(600, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final repository = await pumpAnalyticsScreen(
+        tester,
+        videos: [analyticsVideo(id: 'video-1', views: 120)],
+      );
+      when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
+        (_) async => CreatorAnalyticsSnapshot(
+          videos: [analyticsVideo(id: 'video-1', views: 120)],
+          socialCounts: null,
+          diagnostics: CreatorAnalyticsDiagnostics(
+            totalVideos: 1,
+            videosWithAnyViews: 1,
+            videosMissingViews: 0,
+            videosHydratedByBulkStats: 1,
+            videosHydratedByViewsEndpoint: 0,
+            sourcesUsed: const {AnalyticsDataSource.bulkVideoStats},
+            fetchedAt: DateTime.now().add(const Duration(minutes: 1)),
+          ),
+        ),
+      );
+
+      final refresh = tester
+          .state<RefreshIndicatorState>(find.byType(RefreshIndicator))
+          .show();
+      await tester.pumpAndSettle();
+      await refresh;
+
+      verify(() => repository.fetchCreatorSounds('a' * 64)).called(2);
+    });
+
     testWidgets('counts native Divine engagement in creator analytics', (
       tester,
     ) async {
