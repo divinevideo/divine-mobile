@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart'
     show kDoubleTapTimeout, kLongPressTimeout;
 import 'package:flutter/semantics.dart';
@@ -309,7 +310,8 @@ List _buildOverrides({
 
 /// Pumps [FeedVideos] wrapped in all required bloc providers and Riverpod
 /// overrides. [videoPlaybackStatusCubit] drives the overlay mode tests;
-/// [moderationService] drives the loading/restricted overlay tests.
+/// [moderationService] drives the loading/restricted overlay tests;
+/// [videosListenable] replaces the list under the mounted feed.
 Future<ProviderContainer> _pumpFeedVideos(
   WidgetTester tester, {
   required List<VideoEvent> videos,
@@ -330,6 +332,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   void Function(VideoEvent, int)? onActiveVideoChanged,
   List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
   List<dynamic> additionalOverrides = const [],
+  ValueListenable<List<VideoEvent>>? videosListenable,
 }) async {
   final mockPlaybackCubit =
       videoPlaybackStatusCubit ??
@@ -345,6 +348,14 @@ Future<ProviderContainer> _pumpFeedVideos(
   // tests assert the chrome that reacts to it.
   final immersiveCubit = feedImmersiveCubit ?? FeedImmersiveCubit();
   addTearDown(immersiveCubit.close);
+  Widget buildFeed(List<VideoEvent> list) => FeedVideos(
+    videos: list,
+    onNearEnd: () {},
+    isActive: isActive,
+    hasMore: hasMore,
+    isLoadingMore: isLoadingMore,
+    onActiveVideoChanged: onActiveVideoChanged,
+  );
   final container = ProviderContainer(
     overrides: [
       ..._buildOverrides(
@@ -380,14 +391,12 @@ Future<ProviderContainer> _pumpFeedVideos(
             BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
           ],
           child: Scaffold(
-            body: FeedVideos(
-              videos: videos,
-              onNearEnd: () {},
-              isActive: isActive,
-              hasMore: hasMore,
-              isLoadingMore: isLoadingMore,
-              onActiveVideoChanged: onActiveVideoChanged,
-            ),
+            body: videosListenable == null
+                ? buildFeed(videos)
+                : ValueListenableBuilder<List<VideoEvent>>(
+                    valueListenable: videosListenable,
+                    builder: (context, list, _) => buildFeed(list),
+                  ),
           ),
         ),
       ),
@@ -1958,6 +1967,37 @@ void main() {
 
       expect(immersiveCubit.state.isPinned, isFalse);
       expect(immersiveCubit.state.isImmersive, isFalse);
+    });
+
+    testWidgets('replacing the video under a pin clears it', (tester) async {
+      // A blocklist sweep or a silent list refresh can put a different video at
+      // the item's index without unmounting the item, so the pin outlives the
+      // video it was made on.
+      final videos = ValueNotifier<List<VideoEvent>>([_makeVideo()]);
+      addTearDown(videos.dispose);
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: videos.value,
+        videosListenable: videos,
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      videos.value = [_makeVideo(id: 'b' * 64)];
+      await tester.pump();
+      await pumpFade(tester);
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'the pin was made on a video the viewer no longer sees',
+      );
     });
 
     testWidgets('a spread after the feed paged away does not pin', (

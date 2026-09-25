@@ -701,6 +701,8 @@ class __OverlayState extends ConsumerState<_Overlay> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.video.id != widget.video.id) {
       _prefetchCommunityLabels();
+      // A pin belongs to the video it was made on, not to the item's index.
+      _clearPinnedImmersive();
     }
     // Swiping away from this item must not leave the next video's chrome
     // pinned hidden — the cubit is shared across the feed page, so the pin is
