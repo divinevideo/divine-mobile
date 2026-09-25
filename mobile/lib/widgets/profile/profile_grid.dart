@@ -34,6 +34,7 @@ import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
 import 'package:openvine/widgets/profile/profile_saved_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bar.dart';
+import 'package:openvine/widgets/profile/profile_tab_bloc_lifetime.dart';
 import 'package:openvine/widgets/profile/profile_tab_kind.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
 
@@ -160,6 +161,11 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
   /// Own profile only: this is the viewer's own bookmark list, so another
   /// user's profile has neither the tab nor the bloc behind it.
   ProfileSavedVideosBloc? _savedVideosBloc;
+
+  /// Keeps a tab bloc alive if a fullscreen feed still leases it after this
+  /// grid replaces its captured repository dependencies.
+  final Map<BlocBase<Object?>, ProfileTabBlocLifetime> _blocLifetimes =
+      Map<BlocBase<Object?>, ProfileTabBlocLifetime>.identity();
 
   /// Mirrors each cached tab's `isRefreshing` so the pinned tab bar can show a
   /// sticky cache-revalidation bar directly under the tabs while that grid
@@ -433,8 +439,36 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
   void _closeBloc(BlocBase<Object?>? bloc, String name) {
     if (bloc == null) return;
-    _runDetached(bloc.close(), 'close $name BLoC');
+    final lifetime = _blocLifetimes.remove(bloc);
+    if (lifetime == null) {
+      _runDetached(bloc.close(), 'close $name BLoC');
+      return;
+    }
+    lifetime.releaseOwner();
   }
+
+  T _ownBloc<T extends BlocBase<Object?>>(T bloc, String name) {
+    _blocLifetimes[bloc] = ProfileTabBlocLifetime(
+      bloc: bloc,
+      observeClose: (close) => _runDetached(close, 'close $name BLoC'),
+    );
+    return bloc;
+  }
+
+  VoidCallback? _acquireFeedLease(BlocBase<Object?> bloc) =>
+      _blocLifetimes[bloc]?.acquire();
+
+  VoidCallback? _acquireLikedFeedLease() =>
+      _acquireFeedLease(_likedVideosBloc!);
+
+  VoidCallback? _acquireRepostsFeedLease() =>
+      _acquireFeedLease(_repostedVideosBloc!);
+
+  VoidCallback? _acquireCollabsFeedLease() =>
+      _acquireFeedLease(_collabVideosBloc!);
+
+  VoidCallback? _acquireSavedFeedLease() =>
+      _acquireFeedLease(_savedVideosBloc!);
 
   /// The grid widget for a given tab [kind].
   Widget _gridForKind(ProfileTabKind kind) {
@@ -449,19 +483,25 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         return ProfileCollabsGrid(
           isOwnProfile: widget.isOwnProfile,
           userIdHex: widget.userIdHex,
+          acquireFeedLease: _acquireCollabsFeedLease,
         );
       case ProfileTabKind.liked:
         return ProfileLikedGrid(
           isOwnProfile: widget.isOwnProfile,
           userIdHex: widget.userIdHex,
+          acquireFeedLease: _acquireLikedFeedLease,
         );
       case ProfileTabKind.reposts:
         return ProfileRepostsGrid(
           isOwnProfile: widget.isOwnProfile,
           userIdHex: widget.userIdHex,
+          acquireFeedLease: _acquireRepostsFeedLease,
         );
       case ProfileTabKind.bookmarks:
-        return ProfileSavedGrid(userIdHex: widget.userIdHex);
+        return ProfileSavedGrid(
+          userIdHex: widget.userIdHex,
+          acquireFeedLease: _acquireSavedFeedLease,
+        );
       case ProfileTabKind.lists:
         return const ProfileListsGrid();
       case ProfileTabKind.comments:
@@ -568,15 +608,18 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
       // Create BLoCs but DON'T sync yet - lazy load when tab is viewed
       // VideosRepository handles cache-first lookups via SQLite localStorage
-      _likedVideosBloc = ProfileLikedVideosBloc(
-        likesRepository: likesRepository,
-        videosRepository: videosRepository,
-        contentBlocklistRepository: contentBlocklistRepository,
-        currentUserPubkey: currentUserPubkey,
-        targetUserPubkey: widget.userIdHex,
-        removedVideoIds: videosRepository.removedVideoIds,
-        deletedVideoFilter: videosRepository.isVideoKnownDeleted,
-      )..add(const ProfileLikedVideosSubscriptionRequested());
+      _likedVideosBloc = _ownBloc(
+        ProfileLikedVideosBloc(
+          likesRepository: likesRepository,
+          videosRepository: videosRepository,
+          contentBlocklistRepository: contentBlocklistRepository,
+          currentUserPubkey: currentUserPubkey,
+          targetUserPubkey: widget.userIdHex,
+          removedVideoIds: videosRepository.removedVideoIds,
+          deletedVideoFilter: videosRepository.isVideoKnownDeleted,
+        )..add(const ProfileLikedVideosSubscriptionRequested()),
+        'liked videos',
+      );
       // Sync deferred until user views Liked tab
 
       // Mirror the Liked bloc's refreshing flag so the pinned tab bar can
@@ -592,14 +635,17 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
         }
       });
 
-      _repostedVideosBloc = ProfileRepostedVideosBloc(
-        repostsRepository: repostsRepository,
-        videosRepository: videosRepository,
-        currentUserPubkey: currentUserPubkey,
-        targetUserPubkey: widget.userIdHex,
-        removedVideoIds: videosRepository.removedVideoIds,
-        deletedVideoFilter: videosRepository.isVideoKnownDeleted,
-      )..add(const ProfileRepostedVideosSubscriptionRequested());
+      _repostedVideosBloc = _ownBloc(
+        ProfileRepostedVideosBloc(
+          repostsRepository: repostsRepository,
+          videosRepository: videosRepository,
+          currentUserPubkey: currentUserPubkey,
+          targetUserPubkey: widget.userIdHex,
+          removedVideoIds: videosRepository.removedVideoIds,
+          deletedVideoFilter: videosRepository.isVideoKnownDeleted,
+        )..add(const ProfileRepostedVideosSubscriptionRequested()),
+        'reposted videos',
+      );
       // Sync deferred until user views Reposts tab
 
       _observeCancellation(
@@ -615,11 +661,14 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
       // Collabs render on every profile (#5213); Bookmarks and Lists are
       // own-profile only.
-      _collabVideosBloc = ProfileCollabVideosBloc(
-        videosRepository: videosRepository,
-        targetUserPubkey: widget.userIdHex,
-        removedVideoIds: videosRepository.removedVideoIds,
-        deletedVideoFilter: videosRepository.isVideoKnownDeleted,
+      _collabVideosBloc = _ownBloc(
+        ProfileCollabVideosBloc(
+          videosRepository: videosRepository,
+          targetUserPubkey: widget.userIdHex,
+          removedVideoIds: videosRepository.removedVideoIds,
+          deletedVideoFilter: videosRepository.isVideoKnownDeleted,
+        ),
+        'collab videos',
       );
       _observeCancellation(
         _collabsRefreshSub?.cancel(),
@@ -634,10 +683,13 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
 
       // Sync deferred until the user views the Collabs tab.
 
-      _commentsBloc = ProfileCommentsBloc(
-        commentsRepository: commentsRepository,
-        targetUserPubkey: widget.userIdHex,
-        includeVideoReplies: includeVideoReplies,
+      _commentsBloc = _ownBloc(
+        ProfileCommentsBloc(
+          commentsRepository: commentsRepository,
+          targetUserPubkey: widget.userIdHex,
+          includeVideoReplies: includeVideoReplies,
+        ),
+        'profile comments',
       );
       // Sync deferred until user views Comments tab
 
@@ -648,12 +700,15 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
       _savedRefreshing = false;
       _savedVideosBloc = bookmarksRepository == null
           ? null
-          : ProfileSavedVideosBloc(
-              bookmarksRepository: bookmarksRepository,
-              videosRepository: videosRepository,
-              currentUserPubkey: currentUserPubkey,
-              removedVideoIds: videosRepository.removedVideoIds,
-              deletedVideoFilter: videosRepository.isVideoKnownDeleted,
+          : _ownBloc(
+              ProfileSavedVideosBloc(
+                bookmarksRepository: bookmarksRepository,
+                videosRepository: videosRepository,
+                currentUserPubkey: currentUserPubkey,
+                removedVideoIds: videosRepository.removedVideoIds,
+                deletedVideoFilter: videosRepository.isVideoKnownDeleted,
+              ),
+              'saved videos',
             );
       // Sync deferred until user views Bookmarks tab
       _savedRefreshSub = _savedVideosBloc?.stream.listen((savedState) {

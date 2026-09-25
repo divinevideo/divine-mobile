@@ -32,6 +32,7 @@ class ProfileLikedGrid extends StatefulWidget {
   const ProfileLikedGrid({
     required this.isOwnProfile,
     required this.userIdHex,
+    this.acquireFeedLease,
     super.key,
   });
 
@@ -40,6 +41,9 @@ class ProfileLikedGrid extends StatefulWidget {
 
   /// The hex public key of the profile being viewed.
   final String userIdHex;
+
+  /// Retains the tab bloc until the pushed fullscreen feed returns.
+  final VoidCallback? Function()? acquireFeedLease;
 
   @override
   State<ProfileLikedGrid> createState() => _ProfileLikedGridState();
@@ -146,6 +150,7 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid>
                   index: index,
                   allVideos: likedVideos,
                   userIdHex: widget.userIdHex,
+                  acquireFeedLease: widget.acquireFeedLease,
                 );
               }, childCount: likedVideos.length),
             ),
@@ -164,12 +169,14 @@ class _LikedGridTile extends ConsumerWidget {
     required this.index,
     required this.allVideos,
     required this.userIdHex,
+    required this.acquireFeedLease,
   });
 
   final VideoEvent videoEvent;
   final int index;
   final List<VideoEvent> allVideos;
   final String userIdHex;
+  final VoidCallback? Function()? acquireFeedLease;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Semantics(
@@ -184,26 +191,31 @@ class _LikedGridTile extends ConsumerWidget {
           category: LogCategory.video,
         );
         final bloc = context.read<ProfileLikedVideosBloc>();
+        final releaseFeedLease = acquireFeedLease?.call();
         runDetached(
-          context.push<void>(
-            PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
-            extra: PooledFullscreenVideoFeedArgs(
-              source: LikedViewSource(userIdHex),
-              feedRepository: StreamFeedRepository(
-                videos: bloc.stream
-                    .map((state) => state.videos)
-                    .startWith(allVideos),
-                hasMore: bloc.stream
-                    .map((state) => state.hasMoreContent)
-                    .startWith(bloc.state.hasMoreContent),
-                onLoadMore: () async =>
-                    bloc.add(const ProfileLikedVideosLoadMoreRequested()),
-              ),
-              initialIndex: index,
-              initialVideoId: videoEvent.id,
-              trafficSource: ViewTrafficSource.profile,
-            ),
-          ),
+          context
+              .push<void>(
+                PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
+                extra: PooledFullscreenVideoFeedArgs(
+                  source: LikedViewSource(userIdHex),
+                  feedRepository: StreamFeedRepository(
+                    videos: bloc.stream
+                        .map((state) => state.videos)
+                        .startWith(allVideos)
+                        // go() can drop the route without completing push.
+                        .doOnCancel(() => releaseFeedLease?.call()),
+                    hasMore: bloc.stream
+                        .map((state) => state.hasMoreContent)
+                        .startWith(bloc.state.hasMoreContent),
+                    onLoadMore: () async =>
+                        bloc.add(const ProfileLikedVideosLoadMoreRequested()),
+                  ),
+                  initialIndex: index,
+                  initialVideoId: videoEvent.id,
+                  trafficSource: ViewTrafficSource.profile,
+                ),
+              )
+              .whenComplete(() => releaseFeedLease?.call()),
           'open liked video',
           logName: 'ProfileLikedGrid',
           category: LogCategory.ui,
