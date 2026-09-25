@@ -4,6 +4,7 @@
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 
 enum PendingCollaboratorInviteBannerFeedback {
   none,
@@ -54,7 +55,8 @@ class PendingCollaboratorInviteBannerState extends Equatable {
 }
 
 class PendingCollaboratorInviteBannerCubit
-    extends Cubit<PendingCollaboratorInviteBannerState> {
+    extends Cubit<PendingCollaboratorInviteBannerState>
+    with CloseGuardedEmit<PendingCollaboratorInviteBannerState> {
   PendingCollaboratorInviteBannerCubit(this._dmRepository)
     : super(const PendingCollaboratorInviteBannerState());
 
@@ -82,7 +84,9 @@ class PendingCollaboratorInviteBannerCubit
       group.invites,
     );
 
-    emit(
+    // The banner can close mid-retry (tab switch, group cleared); the invites
+    // were still retried, so there is only a result left to drop.
+    emitIfOpen(
       state.copyWith(
         isRetrying: false,
         feedback: PendingCollaboratorInviteBannerFeedback.retryCompleted,

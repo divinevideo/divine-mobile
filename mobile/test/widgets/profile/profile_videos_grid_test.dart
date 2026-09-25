@@ -152,6 +152,7 @@ void main() {
       List<model.VideoEvent> videos = const [],
       bool isLoading = false,
       List<PendingCollaboratorInviteGroup> pendingInviteGroups = const [],
+      Stream<List<PendingCollaboratorInviteGroup>>? pendingInviteGroupsStream,
       Locale? locale,
       List<Override> additionalOverrides = const [],
       ProfileFeedCubit? profileFeedCubit,
@@ -164,7 +165,8 @@ void main() {
             mockDmRepository,
           ),
           pendingCollaboratorInviteGroupsProvider.overrideWith(
-            (ref) => Stream.value(pendingInviteGroups),
+            (ref) =>
+                pendingInviteGroupsStream ?? Stream.value(pendingInviteGroups),
           ),
         ],
         mockAuthService: mockAuth,
@@ -986,6 +988,98 @@ void main() {
         expect(
           find.text(l10n.profileCollaboratorInviteRetryResult(0)),
           findsNothing,
+        );
+      });
+
+      testWidgets('an in-flight retry stays on its own banner when another '
+          'invite group clears', (tester) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final retryResult = Completer<CollaboratorInviteRetrySummary>();
+        when(
+          () => mockDmRepository.retryPendingCollaboratorInvites(any()),
+        ).thenAnswer((_) => retryResult.future);
+        final groups = StreamController<List<PendingCollaboratorInviteGroup>>();
+        addTearDown(groups.close);
+        PendingCollaboratorInviteGroup inviteGroup(String dTag, String title) {
+          final address = '34236:$_ownPubkey:$dTag';
+          return PendingCollaboratorInviteGroup(
+            creatorPubkey: _ownPubkey,
+            videoAddress: address,
+            title: title,
+            invites: [
+              PendingCollaboratorInvite(
+                rumorId: 'rumor-$dTag',
+                collaboratorPubkey: _otherPubkey,
+                creatorPubkey: _ownPubkey,
+                videoAddress: address,
+                recipientWrapStatus: OutgoingWrapStatus.failed,
+                selfWrapStatus: OutgoingWrapStatus.failed,
+                retryCount: 1,
+                queuedAt: DateTime.utc(2026, 5, 22, 13),
+              ),
+            ],
+          );
+        }
+
+        final beach = inviteGroup('video-1', 'Beach post');
+        final park = inviteGroup('video-2', 'Park post');
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _ownPubkey,
+            videos: _createTestVideos(pubkey: _ownPubkey),
+            pendingInviteGroupsStream: groups.stream,
+          ),
+        );
+        groups.add([beach, park]);
+        await tester.pump();
+
+        await tester.tap(
+          find.text(l10n.profileCollaboratorInviteRetryAction).at(1),
+        );
+        await tester.pump();
+        verify(
+          () => mockDmRepository.retryPendingCollaboratorInvites(
+            any(
+              that: predicate<Iterable<PendingCollaboratorInvite>>(
+                (invites) => invites.single.rumorId == 'rumor-video-2',
+              ),
+            ),
+          ),
+        ).called(1);
+
+        groups.add([park]);
+        await tester.pump();
+
+        expect(
+          find.text(
+            l10n.profileCollaboratorInvitePendingDetailWithTitle('Park post'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.profileCollaboratorInviteRetryingAction),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.profileCollaboratorInviteRetryAction),
+          findsNothing,
+        );
+
+        retryResult.complete(
+          const CollaboratorInviteRetrySummary(
+            attemptedCount: 1,
+            successCount: 1,
+            failureCount: 0,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(
+          find.text(l10n.profileCollaboratorInviteRetryResult(0)),
+          findsOneWidget,
         );
       });
     });

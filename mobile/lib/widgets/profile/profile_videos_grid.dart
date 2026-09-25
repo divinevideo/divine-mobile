@@ -396,6 +396,9 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                 children: [
                   for (final group in pendingInviteGroups)
                     Padding(
+                      // Each banner owns a retry cubit; keep it with its group
+                      // when another group clears or a newer one is inserted.
+                      key: ValueKey(group.videoAddress),
                       padding: const EdgeInsets.only(bottom: 8),
                       child: _PendingCollaboratorInviteBanner(group: group),
                     ),
