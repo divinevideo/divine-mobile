@@ -1,6 +1,7 @@
 // ABOUTME: Tests for the in-app consent capture screen's confirm-and-submit
 // ABOUTME: step, covering the accepted clip, the submitted email, and failures.
 
+import 'dart:async' show Completer;
 import 'dart:io' show Directory, File, SocketException;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,6 +29,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _FakeRepository implements MinorAccountReviewRepository {
   bool throwOnSubmit = false;
   Object? submitError;
+
+  /// When set, the upload does not return until this completes, so a test can
+  /// act while it is in flight.
+  Completer<void>? uploadGate;
   String? submittedCaseId;
   String? submittedEmail;
   String? submittedVideoPath;
@@ -50,6 +55,7 @@ class _FakeRepository implements MinorAccountReviewRepository {
     required String videoPath,
     MinorReviewInstructions? localReceipt,
   }) async {
+    await uploadGate?.future;
     if (throwOnSubmit) {
       throw Exception('submit failed');
     }
@@ -697,6 +703,83 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        expect(reviewStatusReads, greaterThan(reviewReadsBefore));
+        expect(protectedStatusReads, greaterThan(protectedReadsBefore));
+      },
+    );
+
+    testWidgets(
+      'refreshes both review status providers when the upload succeeds after '
+      'the parent left the screen',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final repository = _FakeRepository()..uploadGate = Completer<void>();
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final showSubmitView = ValueNotifier<bool>(true);
+        addTearDown(showSubmitView.dispose);
+        var reviewStatusReads = 0;
+        var protectedStatusReads = 0;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              minorAccountReviewOverrideServiceProvider.overrideWithValue(
+                MinorAccountReviewOverrideService(prefs: prefs),
+              ),
+              currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+                reviewStatusReads++;
+                return _statusWithCase();
+              }),
+              protectedMinorStatusProvider.overrideWith((ref) async {
+                protectedStatusReads++;
+                return ProtectedMinorStatus.notProtected();
+              }),
+              minorAccountReviewRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: _ProviderWatcher(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: showSubmitView,
+                    builder: (context, show, _) => show
+                        ? MinorConsentSubmitView(
+                            videoPath: '/tmp/consent.mp4',
+                            onUseEmailFallback: () {},
+                          )
+                        : const SizedBox(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'parent@example.com',
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+        );
+        await tester.pump();
+
+        // The parent leaves while the upload is still in flight.
+        showSubmitView.value = false;
+        await tester.pumpAndSettle();
+        final reviewReadsBefore = reviewStatusReads;
+        final protectedReadsBefore = protectedStatusReads;
+
+        repository.uploadGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(repository.submittedVideoPath, '/tmp/consent.mp4');
         expect(reviewStatusReads, greaterThan(reviewReadsBefore));
         expect(protectedStatusReads, greaterThan(protectedReadsBefore));
       },

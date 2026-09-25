@@ -325,12 +325,16 @@ class MinorConsentSubmitView extends ConsumerWidget {
     // Watched, and keyed on identity, so an account switch that rebuilds the
     // repository replaces the cubit rather than leaving it on the old one.
     final repository = ref.watch(minorAccountReviewRepositoryProvider);
+    // The upload can outlive this widget: the parent may leave while it is in
+    // flight. A WidgetRef throws once its widget unmounts, so the refresh goes
+    // through the container, which lives as long as the app's ProviderScope.
+    final container = ProviderScope.containerOf(context, listen: false);
     return BlocProvider<MinorConsentSubmitCubit>(
       key: ValueKey(repository),
       create: (_) => MinorConsentSubmitCubit(
         repository: repository,
         onSubmitted: () {
-          ref
+          container
             ..invalidate(currentMinorAccountReviewStatusProvider)
             ..invalidate(protectedMinorStatusProvider);
         },
