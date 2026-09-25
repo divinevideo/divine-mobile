@@ -52,33 +52,6 @@ internal class ClipAudioLoopTrack private constructor(
     private val sync = LoopAudioSync(frameCount.toLong(), sampleRate)
     private val timestamp = AudioTimestamp()
 
-    /** The last raw (wrapping, unsigned 32-bit) consumed-frame reading. */
-    private var lastRawHeadFrame = 0L
-
-    /** How many times [lastRawHeadFrame] has wrapped, times its own range. */
-    private var headFrameWrapBase = 0L
-
-    /**
-     * [track]'s consumed-frame counter, unwrapped.
-     *
-     * `getPlaybackHeadPosition` is a 32-bit counter — masked to unsigned by
-     * [UNSIGNED_INT_MASK], it still wraps every ~13.5–27 h depending on
-     * sample rate — while [AudioTimestamp.framePosition], which [sync]
-     * compares it against, does not. Left unwrapped, a wrap between an
-     * anchor and a later measurement mixes a small wrapped value with a
-     * large cumulative one and throws the arithmetic off by whatever the
-     * wrap span is modulo the loop length. A wrap is detected the standard
-     * way for a monotonic hardware counter: a new raw reading smaller than
-     * the last one. `sync()` runs far more often than the wrap period, so a
-     * wrap can never land between two reads.
-     */
-    private fun unwrappedHeadFrame(): Long {
-        val raw = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK
-        if (raw < lastRawHeadFrame) headFrameWrapBase += UNSIGNED_INT_MASK + 1
-        lastRawHeadFrame = raw
-        return headFrameWrapBase + raw
-    }
-
     /**
      * Whether the gap has been measured since the head was last placed. Until
      * it has, the caller checks often: a start that came out wrong is heard
@@ -195,7 +168,7 @@ internal class ClipAudioLoopTrack private constructor(
                     // is what the new head waits behind — whatever the start
                     // being replaced cost.
                     val pipelineUs = sync.pipelineLatencyUs(
-                        headFrame = unwrappedHeadFrame(),
+                        headFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK,
                         presentedFrame = timestamp.framePosition,
                         presentedNanos = timestamp.nanoTime,
                         nowNanos = System.nanoTime(),
@@ -224,7 +197,7 @@ internal class ClipAudioLoopTrack private constructor(
                         // Muted, so moving it now cannot be heard; steering
                         // it in while audible would take seconds.
                         val pipelineUs = sync.pipelineLatencyUs(
-                            headFrame = unwrappedHeadFrame(),
+                            headFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK,
                             presentedFrame = timestamp.framePosition,
                             presentedNanos = timestamp.nanoTime,
                             nowNanos = System.nanoTime(),
@@ -276,7 +249,7 @@ internal class ClipAudioLoopTrack private constructor(
         latencyUs: Long = LoopAudioSync.startLatencyUs,
     ) {
         measuredSinceStart = false
-        val counterFrame = unwrappedHeadFrame()
+        val counterFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK
         val bufferFrame = sync.anchor(
             positionUs,
             counterFrame,
