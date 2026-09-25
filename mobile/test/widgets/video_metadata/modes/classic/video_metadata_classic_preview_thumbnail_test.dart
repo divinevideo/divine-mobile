@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoMetadataClassicPreviewThumbnail widget
 // ABOUTME: Verifies warning icon, player initialization, and resource disposal
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -281,6 +282,76 @@ void main() {
         expect(find.byType(VideoMetadataClassicPreviewThumbnail), findsNothing);
         expect(tester.takeException(), isNull);
       });
+
+      testWidgets('disposes a player that finishes starting after unmount', (
+        tester,
+      ) async {
+        final methodCalls = <String>[];
+        final releasePlay = Completer<void>();
+        _registerMockPlayerChannel(methodCalls, holdPlay: releasePlay.future);
+
+        final tmpDir = Directory.systemTemp.createTempSync('test_clip_');
+        final tmpFile = File('${tmpDir.path}/rendered.mp4')
+          ..writeAsBytesSync([0]);
+        addTearDown(() => tmpDir.deleteSync(recursive: true));
+
+        final finalClip = DivineVideoClip(
+          id: 'final-clip',
+          video: EditorVideo.file(tmpFile.path),
+          duration: const Duration(seconds: 15),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: models.AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        );
+        final state = VideoEditorProviderState(finalRenderedClip: finalClip);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              clipManagerProvider.overrideWith(
+                () => _MockClipManagerNotifier([testClip]),
+              ),
+              videoEditorProvider.overrideWith(
+                () => _MockVideoEditorNotifier(state),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: VideoMetadataClassicPreviewThumbnail()),
+            ),
+          ),
+        );
+        await _waitForMethodCall(
+          tester: tester,
+          methodCalls: methodCalls,
+          method: 'play',
+        );
+        expect(DivineVideoPlayerController.liveControllerCount, equals(1));
+
+        // Leave while the native play() call is still outstanding.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              clipManagerProvider.overrideWith(
+                () => _MockClipManagerNotifier([testClip]),
+              ),
+              videoEditorProvider.overrideWith(
+                () => _MockVideoEditorNotifier(state),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: SizedBox()),
+            ),
+          ),
+        );
+        releasePlay.complete();
+        await tester.pumpAndSettle();
+
+        expect(DivineVideoPlayerController.liveControllerCount, equals(0));
+      });
     });
   });
 }
@@ -316,10 +387,12 @@ Future<void> _waitForMethodCall({
 ///
 /// The global channel handles `create` / `dispose`; the per-player channel
 /// handles `setClips`, `play`, `setLooping`, etc. Both record into
-/// [methodCalls].
+/// [methodCalls]. When [holdPlay] is given, `play` answers only once it
+/// completes.
 void _registerMockPlayerChannel(
   List<String> methodCalls, {
   List<Map<Object?, Object?>>? setClipsArguments,
+  Future<void>? holdPlay,
 }) {
   const globalChannel = MethodChannel('divine_video_player');
   final messenger =
@@ -334,6 +407,7 @@ void _registerMockPlayerChannel(
           call.arguments! as Map<Object?, Object?>,
         );
       }
+      if (call.method == 'play' && holdPlay != null) await holdPlay;
       return null;
     },
   );

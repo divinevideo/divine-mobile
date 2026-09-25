@@ -125,6 +125,10 @@ class _VideoMetadataClassicPreviewThumbnailState
         return;
       }
       await controller.play();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
     } catch (e, stackTrace) {
       Log.error(
         'Classic metadata preview player failed to load',
@@ -141,7 +145,6 @@ class _VideoMetadataClassicPreviewThumbnailState
       );
       return;
     }
-    if (!mounted) return;
 
     setState(() {
       _controller = controller;
