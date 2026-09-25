@@ -201,7 +201,9 @@ class _LikedGridTile extends ConsumerWidget {
                   feedRepository: StreamFeedRepository(
                     videos: bloc.stream
                         .map((state) => state.videos)
-                        .startWith(allVideos),
+                        .startWith(allVideos)
+                        // go() can drop the route without completing push.
+                        .doOnCancel(() => releaseFeedLease?.call()),
                     hasMore: bloc.stream
                         .map((state) => state.hasMoreContent)
                         .startWith(bloc.state.hasMoreContent),

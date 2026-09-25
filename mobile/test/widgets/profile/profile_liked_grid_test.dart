@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
@@ -9,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_liked_videos/profile_liked_videos_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile/profile_liked_grid.dart';
 
@@ -53,6 +56,7 @@ void main() {
     Widget buildSubject({
       bool isOwnProfile = true,
       MockGoRouter? goRouter,
+      VoidCallback? Function()? acquireFeedLease,
     }) {
       final app = testProviderScope(
         additionalOverrides: [],
@@ -66,6 +70,7 @@ void main() {
               child: ProfileLikedGrid(
                 isOwnProfile: isOwnProfile,
                 userIdHex: 'test-user',
+                acquireFeedLease: acquireFeedLease,
               ),
             ),
           ),
@@ -292,6 +297,58 @@ void main() {
           ),
         ).called(1);
       });
+
+      testWidgets(
+        'releases the feed lease when the feed stops listening before the '
+        'push completes',
+        (tester) async {
+          final videos = _createTestVideos(count: 3);
+          final states = StreamController<ProfileLikedVideosState>.broadcast();
+          addTearDown(states.close);
+          whenListen(
+            mockBloc,
+            states.stream,
+            initialState: ProfileLikedVideosState(
+              status: ProfileLikedVideosStatus.success,
+              videos: videos,
+            ),
+          );
+          // A route removed by go() never completes its push future.
+          when(
+            () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) => Completer<void>().future);
+          var releases = 0;
+
+          await tester.pumpWidget(
+            buildSubject(
+              goRouter: mockGoRouter,
+              acquireFeedLease: () =>
+                  () => releases++,
+            ),
+          );
+          await tester.tap(find.byType(GestureDetector).first);
+          await tester.pump();
+
+          final args =
+              verify(
+                    () => mockGoRouter.push<void>(
+                      any(),
+                      extra: captureAny(named: 'extra'),
+                    ),
+                  ).captured.single
+                  as PooledFullscreenVideoFeedArgs;
+          final subscription = args.feedRepository
+              .watchView(args.source)
+              .listen((_) {});
+          await tester.pump();
+          expect(releases, isZero);
+
+          unawaited(subscription.cancel());
+          await tester.pump();
+
+          expect(releases, equals(1));
+        },
+      );
     });
 
     group('accessibility', () {
