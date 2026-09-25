@@ -14,6 +14,13 @@ cd mobile/packages/divine_camera
 flutter test
 ```
 
+iOS and macOS share one Swift implementation under `darwin/`
+(`sharedDarwinSource: true`), laid out as a Swift package so the app links it
+with Swift Package Manager. Platform differences sit behind `#if os(iOS)` /
+`#if os(macOS)`: the Mac has no `AVAudioSession`, no lens array, zoom or
+stabilization, no flash, and keeps its camera's landscape orientation instead
+of rotating frames to portrait.
+
 Android native unit tests (run in CI, see `.github/workflows/divine_camera.yaml`):
 
 ```bash
@@ -37,7 +44,7 @@ Ownership is bound to the UI lifecycle as closely as each platform allows:
   and released (ownership-guarded) in `onDetachedFromActivity`. A background
   engine attaches to the engine but never to an Activity, so it can never own
   the sink — not even transiently. `onMethodCall` re-claims as defense-in-depth.
-- **iOS** — `FlutterPlugin` has no Activity-attachment lifecycle, so the sink is
+- **iOS and macOS** — `FlutterPlugin` has no Activity-attachment lifecycle, so the sink is
   re-asserted at every UI-bound entry point: each method call, plus the
   native-only callbacks that fire without one — the volume/Bluetooth and
   suppression-timer callbacks (`VolumeKeyHandler`) and, in `CameraController`,
@@ -45,13 +52,9 @@ Ownership is bound to the UI lifecycle as closely as each platform allows:
   first-frame / writer-start breadcrumbs, the frame watchdog and init-timeout
   timers, and the max-duration auto-stop's recording-finalization breadcrumbs
   (including the #4779 "WITHOUT audio track" warning). Those native sources only
-  ever exist on the UI engine.
-- **macOS** — no native-only reclaim is needed, but not because every diagnostic
-  is method-driven (the init-timeout and max-duration auto-stop timers do emit
-  outside a method call). The reason is that desktop has no background
-  `FlutterEngine` (no FCM isolate) that could register the plugin and steal the
-  sink, so a single engine owns it from `register()` and re-asserting on each
-  method call is enough.
+  ever exist on the UI engine. macOS shares this code; desktop has no
+  background `FlutterEngine` that could steal the sink, so there the reclaims
+  are harmless rather than required.
 
 Teardown is always ownership-guarded: a plugin instance only clears the sink
 when it still points at that instance, so one engine cannot silence another's
@@ -80,3 +83,8 @@ per recording through CameraX. Three rules govern when the iOS mic is open:
 
 `attachAudioToSessionIfNeeded()` is the single reopen path for all three, and
 `ios_countdown_mic_release_contract_test.dart` pins the countdown rules.
+
+macOS runs the same dedicated audio session without an `AVAudioSession` to
+configure, and keeps the mic open through the countdown: the input-level
+recovery is an iPhone behaviour, and stopping the mic session makes macOS show
+a "Call Ended" notice.

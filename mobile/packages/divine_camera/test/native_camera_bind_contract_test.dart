@@ -15,8 +15,8 @@ void main() {
     setUpAll(() {
       androidPlugin = readAndroidNativeSource('DivineCameraPlugin.kt');
       androidController = readAndroidNativeSource('CameraController.kt');
-      iosPlugin = readIosNativeSource('DivineCameraPlugin.swift');
-      iosController = readIosNativeSource('CameraController.swift');
+      iosPlugin = readDarwinNativeSource('DivineCameraPlugin.swift');
+      iosController = readDarwinNativeSource('CameraController.swift');
     });
 
     group('initial stabilization mode', () {

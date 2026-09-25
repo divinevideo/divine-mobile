@@ -1,3 +1,4 @@
+import 'package:divine_camera/divine_camera.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -50,8 +51,8 @@ class VideoRecorderGhostFrame extends ConsumerWidget {
 
     // Stop-motion assembles at the end, so there are no clips during capture —
     // align the next pose against the last captured still instead. The overlay
-    // sits on top of the live preview, which is mirrored for the front camera,
-    // so mirror the ghost to match whenever the active lens is front-facing.
+    // sits on top of the live preview, which is mirrored for the front camera
+    // (and for every Mac camera), so mirror the ghost to match.
     final ghostData = capturesStills
         ? (stopMotionLastFrame != null
               ? (path: stopMotionLastFrame, isFrontCamera: isFrontCamera)
@@ -68,7 +69,9 @@ class VideoRecorderGhostFrame extends ConsumerWidget {
               child: Opacity(
                 opacity: 0.48,
                 child: Transform.flip(
-                  flipX: ghostData.isFrontCamera,
+                  flipX:
+                      ghostData.isFrontCamera ||
+                      DivineCameraLens.allCamerasFaceUser,
                   child: ClipThumbnailImage(
                     path: ghostData.path,
                     fit: .cover,

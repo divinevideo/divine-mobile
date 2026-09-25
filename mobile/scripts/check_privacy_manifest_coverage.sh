@@ -15,7 +15,7 @@
 # A manifest well-formedness check would have stayed green the whole time.
 #
 # Scope: mobile/ios/Runner, the two iOS extension targets,
-# mobile/ios/LocalPods/* and mobile/packages/*/ios. Third-party pods under
+# mobile/ios/LocalPods/* and mobile/packages/*/{ios,darwin}. Third-party pods under
 # mobile/ios/Pods are deliberately excluded -- we cannot fix upstream code, and
 # each of the 58 third-party manifests in the archive is shipped by its own
 # vendor.

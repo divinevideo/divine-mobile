@@ -1,4 +1,5 @@
 import 'package:divine_camera/src/models/camera_lens.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -213,6 +214,30 @@ void main() {
 
       test('returns true for macro', () {
         expect(DivineCameraLens.macro.isBackFacing, isTrue);
+      });
+    });
+
+    group('facesUser', () {
+      tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      test('is true only for the front lenses on iOS', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+        expect(DivineCameraLens.allCamerasFaceUser, isFalse);
+        expect(
+          DivineCameraLens.values.where((lens) => lens.facesUser),
+          equals([DivineCameraLens.front, DivineCameraLens.frontUltraWide]),
+        );
+      });
+
+      test('is true for every lens on macOS', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+
+        expect(DivineCameraLens.allCamerasFaceUser, isTrue);
+        expect(
+          DivineCameraLens.values.every((lens) => lens.facesUser),
+          isTrue,
+        );
       });
     });
 

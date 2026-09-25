@@ -1,6 +1,9 @@
 // ABOUTME: Handles volume button and media button events for remote recording (iOS)
 // ABOUTME: Supports Bluetooth accessories via MPRemoteCommandCenter and volume buttons
 
+// Volume keys and Bluetooth remote triggers exist only on iOS; the plugin
+// answers false for them on macOS.
+#if os(iOS)
 import AVFoundation
 import MediaPlayer
 import UIKit
@@ -448,3 +451,4 @@ class VolumeKeyHandler: NSObject {
         }
     }
 }
+#endif

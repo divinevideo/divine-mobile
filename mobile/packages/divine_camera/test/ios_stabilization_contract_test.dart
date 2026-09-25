@@ -10,8 +10,12 @@ void main() {
 
     setUpAll(() {
       final controllerFile = [
-        File('ios/Classes/CameraController.swift'),
-        File('packages/divine_camera/ios/Classes/CameraController.swift'),
+        File(
+          'darwin/divine_camera/Sources/divine_camera/CameraController.swift',
+        ),
+        File(
+          'packages/divine_camera/darwin/divine_camera/Sources/divine_camera/CameraController.swift',
+        ),
       ].firstWhere((file) => file.existsSync());
 
       controllerSource = controllerFile.readAsStringSync();

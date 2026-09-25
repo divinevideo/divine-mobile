@@ -1,9 +1,13 @@
-// ABOUTME: AVFoundation-based camera controller for iOS
+// ABOUTME: AVFoundation-based camera controller for iOS and macOS
 // ABOUTME: Handles camera initialization, preview, recording, and controls
 
 import AVFoundation
+#if os(iOS)
 import Flutter
 import UIKit
+#elseif os(macOS)
+import FlutterMacOS
+#endif
 
 /// Controller for AVFoundation-based camera operations.
 /// Handles camera initialization, preview, video recording, and camera controls.
@@ -52,10 +56,12 @@ class CameraController: NSObject {
     /// (#7796). Set once per session from `initialize(preferUnprocessedAudio:)`.
     private var prefersUnprocessedAudio = false
 
+    #if os(iOS)
     /// The AVAudioSession mode this controller wants for capture.
     private var desiredAudioSessionMode: AVAudioSession.Mode {
         prefersUnprocessedAudio ? .measurement : .videoRecording
     }
+    #endif
 
     /// Set by the AVAudioSession interruption observer. While true the
     /// audio capture path is known to be silent and we skip appending
@@ -235,10 +241,13 @@ class CameraController: NSObject {
     // Whether to mirror front camera video output
     private var mirrorFrontCameraOutput: Bool = true
 
+    #if os(iOS)
     // Requested video stabilization mode. Applied to the video connection,
     // so it affects both the live preview texture and the recorded file.
     // Defaults to .off to preserve existing behaviour until the user opts in.
+    // macOS has no stabilization API, so the mode only exists on iOS.
     private var requestedStabilizationMode: AVCaptureVideoStabilizationMode = .off
+    #endif
 
     /// True once `previewOutput` is wired and able to carry `.previewOptimized`.
     private var previewOptimizedActive = false
@@ -345,7 +354,9 @@ class CameraController: NSObject {
         self.reclaimLogSink = reclaimLogSink
         super.init()
         checkCameraAvailability()
+        #if os(iOS)
         registerAudioSessionInterruptionObserver()
+        #endif
         registerCaptureSessionInterruptionObserver()
     }
 
@@ -353,6 +364,42 @@ class CameraController: NSObject {
         NotificationCenter.default.removeObserver(self)
     }
     
+    #if os(macOS)
+    /// The cameras a Mac can record with, built-in camera first.
+    ///
+    /// Mac cameras report no position, so "front" and "back" are assigned by
+    /// order: "front" is the built-in camera (or the first external one on a
+    /// Mac without it) and "back" the next camera, such as a USB webcam or
+    /// an iPhone through Continuity Camera. Desk View is left out: it is a
+    /// cropped second view of the built-in camera.
+    private static func macCameras() -> [AVCaptureDevice] {
+        let deviceTypes: [AVCaptureDevice.DeviceType]
+        if #available(macOS 14.0, *) {
+            deviceTypes = [.builtInWideAngleCamera, .external, .continuityCamera]
+        } else {
+            deviceTypes = [.builtInWideAngleCamera, .externalUnknown]
+        }
+        let devices = AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
+            mediaType: .video,
+            position: .unspecified
+        ).devices
+        return devices.filter { $0.deviceType == .builtInWideAngleCamera }
+            + devices.filter { $0.deviceType != .builtInWideAngleCamera }
+    }
+
+    /// Checks which cameras are available on the Mac.
+    private func checkCameraAvailability() {
+        let cameras = Self.macCameras()
+        hasFrontCamera = !cameras.isEmpty
+        hasBackCamera = cameras.count > 1
+        DivineCameraLog.shared.debug(
+            "[DivineCameraController] Camera availability: "
+                + "front=\(hasFrontCamera), back=\(hasBackCamera), "
+                + "types=\(cameras.map(\.deviceType.rawValue))"
+        )
+    }
+    #else
     /// Checks which cameras are available on the device.
     private func checkCameraAvailability() {
         // Check front camera
@@ -440,7 +487,9 @@ class CameraController: NSObject {
                   "triple=\(hasTriple), dualWide=\(hasDualWide), dual=\(hasDual)")
         }
     }
-    
+    #endif
+
+    #if os(iOS)
     /// Configures the audio session for video recording with proper Bluetooth headphone routing.
     ///
     /// When AVCaptureSession has an audio input, iOS defaults to routing audio output to the
@@ -637,6 +686,7 @@ class CameraController: NSObject {
         default: return "raw(\(raw))"
         }
     }
+    #endif
 
     /// Observe `AVCaptureSession` interruptions — the OS's authoritative
     /// signal that camera hardware access was revoked, most commonly
@@ -734,6 +784,10 @@ class CameraController: NSObject {
     private static func captureInterruptionReasonDescription(
         _ userInfo: [AnyHashable: Any]?
     ) -> String {
+        #if os(macOS)
+        // macOS posts interruptions without a reason key.
+        return "unspecified"
+        #else
         guard
             let raw = userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int,
             let reason = AVCaptureSession.InterruptionReason(rawValue: raw)
@@ -752,6 +806,7 @@ class CameraController: NSObject {
         default:
             return "raw(\(raw))"
         }
+        #endif
     }
 
     /// Gets metadata for the currently active camera lens.
@@ -773,18 +828,19 @@ class CameraController: NSObject {
         // iOS doesn't expose physical focal length directly
         // This would need to come from EXIF data of captured images
         let focalLength: Double? = nil
-        
+
+        #if os(iOS)
         // Aperture IS available on iOS via lensAperture property
         let aperture: Double = Double(device.lensAperture)
-        
+
         var fieldOfView: Double? = nil
-        
+
         // Field of view is available on the format
         let fov = format.videoFieldOfView
         if fov > 0 {
             fieldOfView = Double(fov)
         }
-        
+
         // Try to get more accurate field of view from device formats
         if #available(iOS 13.0, *) {
             // Get geometric distortion corrected field of view if available
@@ -792,16 +848,26 @@ class CameraController: NSObject {
                 fieldOfView = Double(videoFormat.videoFieldOfView)
             }
         }
-        
+        #else
+        // macOS exposes no aperture, field of view or stabilization on the
+        // capture device; report them as unknown rather than estimating.
+        let aperture: Double = 0.0
+        let fieldOfView: Double? = nil
+        #endif
+
         // Min focus distance
         // Note: iOS doesn't expose actual minimum focus distance values.
         // For C2PA compliance, we leave this as nil rather than providing estimates.
         let minFocusDistance: Double? = nil
-        
+
         // Optical stabilization
+        #if os(iOS)
         let hasOpticalStabilization = device.activeFormat.isVideoStabilizationModeSupported(.cinematic) ||
                                       device.activeFormat.isVideoStabilizationModeSupported(.standard)
-        
+        #else
+        let hasOpticalStabilization = false
+        #endif
+
         // Sensor size - iOS doesn't expose actual sensor dimensions
         let sensorWidth: Double? = nil
         let sensorHeight: Double? = nil
@@ -819,6 +885,7 @@ class CameraController: NSObject {
         }
         
         // Check if this is a multi-camera logical device
+        #if os(iOS)
         var isLogicalCamera = false
         var physicalCameraIds: [String] = []
         if #available(iOS 13.0, *) {
@@ -826,16 +893,27 @@ class CameraController: NSObject {
             isLogicalCamera = physicalDevices.count > 1
             physicalCameraIds = physicalDevices.map { $0.uniqueID }
         }
+        #else
+        // macOS has no multi-camera logical devices.
+        let isLogicalCamera = false
+        let physicalCameraIds: [String] = []
+        #endif
         
         // Camera unique identifier
         let cameraId = device.uniqueID
         
+        #if os(iOS)
         // Exposure duration in seconds (live value)
         let exposureDuration = CMTimeGetSeconds(device.exposureDuration)
-        
+
         // ISO sensitivity (live value)
         let iso = Double(device.iso)
-        
+        #else
+        // macOS does not expose live exposure readings.
+        let exposureDuration: Double = 0.0
+        let iso: Double = 0.0
+        #endif
+
         return [
             "lensType": lensType,
             "cameraId": cameraId,
@@ -868,6 +946,21 @@ class CameraController: NSObject {
         return lenses
     }
     
+    #if os(macOS)
+    /// Gets the AVCaptureDevice for the specified lens type. Only "front"
+    /// and "back" exist on a Mac; see `macCameras()` for which is which.
+    private func getDeviceForLensType(_ lensType: String) -> AVCaptureDevice? {
+        let cameras = Self.macCameras()
+        switch lensType {
+        case "front":
+            return cameras.first
+        case "back":
+            return cameras.count > 1 ? cameras[1] : nil
+        default:
+            return nil
+        }
+    }
+    #else
     /// Gets the AVCaptureDevice for the specified lens type.
     private func getDeviceForLensType(_ lensType: String) -> AVCaptureDevice? {
         switch lensType {
@@ -918,7 +1011,8 @@ class CameraController: NSObject {
             return AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
         }
     }
-    
+    #endif
+
     /// Gets the position for the specified lens type.
     private func getPositionForLensType(_ lensType: String) -> AVCaptureDevice.Position {
         switch lensType {
@@ -927,6 +1021,18 @@ class CameraController: NSObject {
         default:
             return .back
         }
+    }
+
+    /// Rotates a capture connection's frames to portrait on iOS, where the
+    /// sensor is landscape while the phone is held upright. A Mac camera is
+    /// mounted landscape, so rotating there would turn the picture sideways;
+    /// macOS keeps the sensor orientation.
+    private static func applyCaptureOrientation(to connection: AVCaptureConnection) {
+        #if os(iOS)
+        if connection.isVideoOrientationSupported {
+            connection.videoOrientation = .portrait
+        }
+        #endif
     }
     
     /// Initializes the camera with the specified lens.
@@ -941,11 +1047,13 @@ class CameraController: NSObject {
     func initialize(lens: String, videoQuality: String, enableScreenFlash: Bool = true, mirrorFrontCameraOutput: Bool = true, enableAutoLensSwitch: Bool = true, preferUnprocessedAudio: Bool = false, videoStabilizationMode: String = "off", completion: @escaping ([String: Any]?, String?) -> Void) {
         self.autoLensSwitchRequested = enableAutoLensSwitch
         self.prefersUnprocessedAudio = preferUnprocessedAudio
+        #if os(iOS)
         // Applied when setupCamera configures the video connection, instead
         // of a separate reconfigure after the session is already running.
         // Unknown strings open with stabilization off.
         requestedStabilizationMode =
             Self.stabilizationMode(from: videoStabilizationMode) ?? .off
+        #endif
         currentLensType = lens
         currentLens = getPositionForLensType(lens)
         screenFlashFeatureEnabled = enableScreenFlash
@@ -1016,14 +1124,16 @@ class CameraController: NSObject {
         
         // Create capture session
         let session = AVCaptureSession()
-        
+
+        #if os(iOS)
         // CRITICAL: Disable automatic audio session configuration!
         // By default, AVCaptureSession automatically configures the audio session when
         // an audio input is added, which overrides our manual configuration and routes
         // audio output to the speaker instead of connected Bluetooth headphones.
         // Setting this to false lets us control the audio session ourselves.
         session.automaticallyConfiguresApplicationAudioSession = false
-        
+        #endif
+
         session.beginConfiguration()
         
         // Setup video input FIRST (before setting preset)
@@ -1110,9 +1220,7 @@ class CameraController: NSObject {
             // Set video orientation to portrait
             if let connection = videoOutput.connection(with: .video) {
                 DivineCameraLog.shared.debug("DivineCamera: Video connection established")
-                if connection.isVideoOrientationSupported {
-                    connection.videoOrientation = .portrait
-                }
+                Self.applyCaptureOrientation(to: connection)
                 // Mirror pixels only for front camera when mirrorFrontCameraOutput is enabled
                 // When mirrored here, Flutter doesn't need to apply preview transform
                 // When NOT mirrored here, Flutter applies visual transform for selfie preview
@@ -1132,9 +1240,7 @@ class CameraController: NSObject {
             session.addOutput(photoOutput)
             self.photoOutput = photoOutput
             if let connection = photoOutput.connection(with: .video) {
-                if connection.isVideoOrientationSupported {
-                    connection.videoOrientation = .portrait
-                }
+                Self.applyCaptureOrientation(to: connection)
                 if connection.isVideoMirroringSupported {
                     let isFront = currentLens == .front
                     connection.isVideoMirrored = isFront && mirrorFrontCameraOutput
@@ -1166,6 +1272,7 @@ class CameraController: NSObject {
         // Get camera properties
         updateCameraProperties(device: videoDevice)
 
+        #if os(iOS)
         // Apply the stabilization mode initialize asked for on the freshly
         // built video connection (a no-op while the mode is .off). A mode the
         // connection or format cannot take falls back to off, as a rejected
@@ -1188,7 +1295,8 @@ class CameraController: NSObject {
                 DivineCameraLog.shared.warning("DivineCamera: Failed to set initial zoom to 1.0x: \(error.localizedDescription)", name: "DivineCamera.Setup")
             }
         }
-        
+        #endif
+
         // Start session first so frames start flowing
         session.startRunning()
         self.captureSession = session
@@ -1303,6 +1411,16 @@ class CameraController: NSObject {
         if let existing = self.audioCaptureSession,
            self.audioInput != nil,
            self.audioOutput != nil {
+            #if os(macOS)
+            // macOS has no shared AVAudioSession to drift or be interrupted;
+            // the capture session only needs to be running.
+            self.lastAudioEntryRoute = "running=\(existing.isRunning)"
+            self.lastAudioAttachPath = existing.isRunning ? "warm" : "restart"
+            if !existing.isRunning {
+                existing.startRunning()
+            }
+            return true
+            #else
             let session = AVAudioSession.sharedInstance()
             // Mode is part of the contract, not just category: a session left
             // on .videoRecording would keep gating instruments away even
@@ -1359,8 +1477,13 @@ class CameraController: NSObject {
                 }
             }
             return true
+            #endif
         }
 
+        #if os(macOS)
+        self.lastAudioEntryRoute = "running=\(self.audioCaptureSession?.isRunning ?? false)"
+        self.lastAudioAttachPath = "build"
+        #else
         // Make sure the AVAudioSession category is set.
         // DivineCameraPlugin.preWarmFrameworks() runs at plugin registration
         // and should already have done this; calling it again is cheap when warm.
@@ -1379,9 +1502,12 @@ class CameraController: NSObject {
         if !configureAudioSessionForRecording() {
             return false
         }
+        #endif
 
         let session = self.audioCaptureSession ?? AVCaptureSession()
+        #if os(iOS)
         session.automaticallyConfiguresApplicationAudioSession = false
+        #endif
         session.beginConfiguration()
         
         // Audio input
@@ -1506,6 +1632,22 @@ class CameraController: NSObject {
     
     /// Updates camera properties from the device.
     private func updateCameraProperties(device: AVCaptureDevice) {
+        #if os(macOS)
+        // Mac cameras have no programmatic zoom and no flash; the front
+        // camera's screen flash is an iPhone feature.
+        nativeToUserZoomScale = 1.0
+        minZoom = 1.0
+        maxZoom = 1.0
+        currentZoom = 1.0
+        hasFlash = device.hasFlash
+        isFocusPointSupported = device.isFocusPointOfInterestSupported
+        isExposurePointSupported = device.isExposurePointOfInterestSupported
+
+        // Mac cameras are mounted landscape and frames are not rotated.
+        let dimensions = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+        aspectRatio = CGFloat(dimensions.width) / CGFloat(dimensions.height)
+        DivineCameraLog.shared.debug("Camera aspect ratio (landscape): \(aspectRatio) from dimensions: \(dimensions.width)x\(dimensions.height)")
+        #else
         if autoLensSwitchRequested {
             // Determine scale factor for virtual multi-camera devices.
             // builtInTripleCamera and builtInDualWideCamera include ultra-wide
@@ -1551,6 +1693,7 @@ class CameraController: NSObject {
         // For portrait mode, we swap to get 9:16 ratio
         aspectRatio = CGFloat(dimensions.height) / CGFloat(dimensions.width)
         DivineCameraLog.shared.debug("Camera aspect ratio (portrait): \(aspectRatio) from dimensions: \(dimensions.height)x\(dimensions.width)")
+        #endif
     }
     
     /// Switches to a different camera lens.
@@ -1633,30 +1776,24 @@ class CameraController: NSObject {
                 
                 // Update orientation and mirroring based on settings
                 if let videoConnection = self.videoOutput?.connection(with: .video) {
-                    if videoConnection.isVideoOrientationSupported {
-                        videoConnection.videoOrientation = .portrait
-                    }
+                    Self.applyCaptureOrientation(to: videoConnection)
                     // Mirror pixels for front camera when mirrorFrontCameraOutput is enabled
-                    let isFront = newDevice.position == .front
+                    let isFront = self.currentLens == .front
                     if videoConnection.isVideoMirroringSupported {
                         videoConnection.isVideoMirrored = isFront && self.mirrorFrontCameraOutput
                     }
                 }
                 if let photoConnection = self.photoOutput?.connection(with: .video) {
-                    if photoConnection.isVideoOrientationSupported {
-                        photoConnection.videoOrientation = .portrait
-                    }
-                    let isFront = newDevice.position == .front
+                    Self.applyCaptureOrientation(to: photoConnection)
+                    let isFront = self.currentLens == .front
                     if photoConnection.isVideoMirroringSupported {
                         photoConnection.isVideoMirrored = isFront && self.mirrorFrontCameraOutput
                     }
                 }
                 if self.previewOptimizedActive,
                     let previewConnection = self.previewOutput?.connection(with: .video) {
-                    if previewConnection.isVideoOrientationSupported {
-                        previewConnection.videoOrientation = .portrait
-                    }
-                    let isFront = newDevice.position == .front
+                    Self.applyCaptureOrientation(to: previewConnection)
+                    let isFront = self.currentLens == .front
                     if previewConnection.isVideoMirroringSupported {
                         previewConnection.isVideoMirrored = isFront && self.mirrorFrontCameraOutput
                     }
@@ -1673,6 +1810,7 @@ class CameraController: NSObject {
             
             session.commitConfiguration()
 
+            #if os(iOS)
             // The new device/format may support a different set of
             // stabilization modes, so re-apply the requested mode.
             self.applyVideoStabilization()
@@ -1690,7 +1828,8 @@ class CameraController: NSObject {
                     DivineCameraLog.shared.warning("DivineCamera: Failed to set zoom after camera switch: \(error.localizedDescription)", name: "DivineCamera.Setup")
                 }
             }
-            
+            #endif
+
             // Store completion to be called when first frame arrives from new camera.
             // This ensures Flutter gets the new lens state only after the texture
             // already shows a frame from the new camera, preventing mirror glitches.
@@ -1786,9 +1925,11 @@ class CameraController: NSObject {
     }
     
     /// Enables screen flash by setting brightness to maximum (for front camera).
+    /// iOS only: macOS reports no flash, so nothing reaches this there.
     private func enableScreenFlash() {
+        #if os(iOS)
         guard screenFlashFeatureEnabled else { return }
-        
+
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let wasActive = self.originalBrightness != nil
@@ -1802,10 +1943,12 @@ class CameraController: NSObject {
                 self.onScreenFlashChanged?(true)
             }
         }
+        #endif
     }
-    
+
     /// Disables screen flash by restoring original brightness.
     private func disableScreenFlash() {
+        #if os(iOS)
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             if let brightness = self.originalBrightness {
@@ -1815,14 +1958,19 @@ class CameraController: NSObject {
                 self.onScreenFlashChanged?(false)
             }
         }
+        #endif
     }
-    
+
     /// Checks if the current environment is dark based on camera exposure values.
     /// Uses ISO and exposure duration as indicators (same logic as Android).
     /// Front camera has lower thresholds since screen flash is less intrusive.
+    /// macOS exposes neither value, so auto flash never fires there.
     private func isEnvironmentDark() -> Bool {
+        #if os(macOS)
+        return false
+        #else
         guard let device = videoDevice else { return false }
-        
+
         let isoThreshold = currentLens == .front ? frontCameraIsoThreshold : backCameraIsoThreshold
         let exposureThreshold = currentLens == .front ? frontCameraExposureThreshold : backCameraExposureThreshold
         
@@ -1835,6 +1983,7 @@ class CameraController: NSObject {
         DivineCameraLog.shared.debug("DivineCamera: Auto flash: ISO=\(currentISO) (threshold=\(isoThreshold)), " +
               "ExposureTime=\(currentExposure * 1000)ms (threshold=\(exposureThreshold * 1000)ms) -> isDark=\(isDark)")
         return isDark
+        #endif
     }
     
     /// Checks the current exposure values and enables auto-flash if needed.
@@ -1906,6 +2055,25 @@ class CameraController: NSObject {
         autoFlashTorchEnabled = false
     }
     
+    /// Transforms a normalized display point (0.0-1.0) to the sensor's
+    /// point-of-interest coordinates.
+    ///
+    /// iOS sensor coordinate system is always landscape-oriented:
+    /// - (0,0) is top-left of sensor (in landscape)
+    /// - For portrait mode, we need to rotate the coordinates
+    /// Display (x, y) → Sensor (y, 1-x) for portrait orientation
+    ///
+    /// A Mac preview keeps the sensor orientation, so only a front camera
+    /// whose pixels are mirrored natively needs its x flipped back.
+    private func sensorPoint(displayX x: CGFloat, displayY y: CGFloat) -> CGPoint {
+        #if os(iOS)
+        return CGPoint(x: y, y: 1 - x)
+        #else
+        let isMirrored = currentLens == .front && mirrorFrontCameraOutput
+        return CGPoint(x: isMirrored ? 1 - x : x, y: y)
+        #endif
+    }
+
     /// Work item for auto-cancel focus timer
     private var focusAutoCancelWorkItem: DispatchWorkItem?
     
@@ -1926,14 +2094,9 @@ class CameraController: NSObject {
         
         // Cancel any pending auto-cancel timer from previous tap
         focusAutoCancelWorkItem?.cancel()
-        
-        // Transform display coordinates to sensor coordinates
-        // iOS sensor coordinate system is always landscape-oriented:
-        // - (0,0) is top-left of sensor (in landscape)
-        // - For portrait mode, we need to rotate the coordinates
-        // Display (x, y) → Sensor (y, 1-x) for portrait orientation
-        let sensorPoint = CGPoint(x: y, y: 1 - x)
-        
+
+        let sensorPoint = self.sensorPoint(displayX: x, displayY: y)
+
         do {
             try device.lockForConfiguration()
             
@@ -2011,9 +2174,8 @@ class CameraController: NSObject {
             return false
         }
         
-        // Transform display coordinates to sensor coordinates
-        let sensorPoint = CGPoint(x: y, y: 1 - x)
-        
+        let sensorPoint = self.sensorPoint(displayX: x, displayY: y)
+
         do {
             try device.lockForConfiguration()
             device.exposurePointOfInterest = sensorPoint
@@ -2070,6 +2232,10 @@ class CameraController: NSObject {
     /// Returns the applied zoom plus the live available range as a map for
     /// the platform channel, or nil when the device rejected the change.
     func setZoomLevel(level: CGFloat) -> [String: Double]? {
+        #if os(macOS)
+        // Mac cameras expose no programmatic zoom.
+        return nil
+        #else
         guard let device = videoDevice else { return nil }
 
         // Without auto lens switch the lower bound stays at 1.0 so the
@@ -2103,9 +2269,12 @@ class CameraController: NSObject {
             "minZoomLevel": Double(liveMin),
             "maxZoomLevel": Double(liveMax),
         ]
+        #endif
     }
 
     // MARK: - Video Stabilization
+
+    #if os(iOS)
 
     /// Maps a cross-platform stabilization mode string to its
     /// `AVCaptureVideoStabilizationMode`. Returns nil for unknown strings.
@@ -2433,6 +2602,28 @@ class CameraController: NSObject {
             from: connection.activeVideoStabilizationMode
         )
     }
+    #else
+    /// macOS has no video stabilization API. "off" is the only mode, so it
+    /// is the only one a set can succeed with.
+    func setVideoStabilizationMode(_ mode: String) -> Bool {
+        return mode == "off"
+    }
+
+    private func setupPreviewOptimizedOutputIfPossible(
+        session: AVCaptureSession
+    ) {
+        // Intentional no-op: the preview-optimized output only exists to
+        // carry `.previewOptimized` stabilization, which macOS lacks.
+    }
+
+    private func getAvailableStabilizationModes() -> [String] {
+        return ["off"]
+    }
+
+    private func reportedStabilizationString() -> String {
+        return "off"
+    }
+    #endif
 
     /// Starts video recording using AVAssetWriter.
     /// - Parameters:
@@ -2493,6 +2684,13 @@ class CameraController: NSObject {
             // One state line per recording so a silent clip can be traced
             // to its cause: no input in the route, a system-level input
             // mute, or a category another player stole.
+            #if os(macOS)
+            DivineCameraLog.shared.info(
+                "Recording audio state: ready=\(audioReady), "
+                    + "input=\(self.audioDevice?.localizedName ?? "none")",
+                name: "DivineCamera.Recording"
+            )
+            #else
             let session = AVAudioSession.sharedInstance()
             let inputs = session.currentRoute.inputs
                 .map(\.portType.rawValue).joined(separator: "+")
@@ -2511,6 +2709,7 @@ class CameraController: NSObject {
                     + "inputMuted=\(inputMuted)",
                 name: "DivineCamera.Recording"
             )
+            #endif
 
             self.videoOutputQueue.async { [weak self] in
                 guard let self = self else { return }
@@ -2567,11 +2766,17 @@ class CameraController: NSObject {
             }
 
             let dimensions = CMVideoFormatDescriptionGetDimensions(device.activeFormat.formatDescription)
+            #if os(macOS)
+            // Mac frames keep the camera's landscape orientation.
+            let videoWidth = Int(dimensions.width)
+            let videoHeight = Int(dimensions.height)
+            #else
             // The video connection is set to .portrait orientation, so frames come in portrait
             // dimensions.width is the longer side (1920), dimensions.height is shorter (1080)
             // After portrait orientation, the frame is 1080 wide x 1920 tall
             let videoWidth = Int(dimensions.height)  // 1080 (portrait width)
             let videoHeight = Int(dimensions.width)  // 1920 (portrait height)
+            #endif
 
             // Video input settings
             let videoSettings: [String: Any] = [
@@ -2587,11 +2792,11 @@ class CameraController: NSObject {
             let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
             videoInput.expectsMediaDataInRealTime = true
 
-            // Create pixel buffer adaptor - use the actual frame dimensions (before portrait rotation)
+            // Create pixel buffer adaptor with the frame dimensions the connection delivers
             let sourcePixelBufferAttributes: [String: Any] = [
                 kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-                kCVPixelBufferWidthKey as String: dimensions.height,  // Portrait width
-                kCVPixelBufferHeightKey as String: dimensions.width,  // Portrait height
+                kCVPixelBufferWidthKey as String: videoWidth,
+                kCVPixelBufferHeightKey as String: videoHeight,
             ]
             let adaptor = AVAssetWriterInputPixelBufferAdaptor(
                 assetWriterInput: videoInput,
@@ -2887,6 +3092,12 @@ class CameraController: NSObject {
     /// Must run on `sessionQueue`.
     private func releaseAudioForPause() {
         audioCaptureSession?.stopRunning()
+        #if os(macOS)
+        DivineCameraLog.shared.info(
+            "Released mic for pause (audio capture stopped)",
+            name: "DivineCamera.AudioSession"
+        )
+        #else
         do {
             try AVAudioSession.sharedInstance().setActive(
                 false,
@@ -2907,6 +3118,7 @@ class CameraController: NSObject {
             "Released mic for pause (audio capture stopped, session inactive)",
             name: "DivineCamera.AudioSession"
         )
+        #endif
     }
 
     /// Pauses the camera preview.
@@ -3009,6 +3221,12 @@ class CameraController: NSObject {
     /// `completion` fires on the main queue once the mic is actually closed,
     /// so the caller can start the beeps knowing nothing is listening.
     func suspendAudioCapture(completion: @escaping () -> Void) {
+        #if os(macOS)
+        // The input-gain recovery this works around is an iPhone behaviour,
+        // and stopping the mic session makes macOS show a "Call Ended"
+        // notice, so the Mac keeps the mic open through the countdown.
+        DispatchQueue.main.async(execute: completion)
+        #else
         sessionQueue.async { [weak self] in
             defer { DispatchQueue.main.async(execute: completion) }
             guard let self = self, !self.isRecording else { return }
@@ -3022,6 +3240,7 @@ class CameraController: NSObject {
                 name: "DivineCamera.AudioSession"
             )
         }
+        #endif
     }
 
     /// Reopens the microphone closed by `suspendAudioCapture()`.

@@ -11,7 +11,7 @@ void main() {
     late final String diagnostics;
 
     setUpAll(() {
-      source = readIosNativeSource('CameraController.swift');
+      source = readDarwinNativeSource('CameraController.swift');
       diagnostics = declarationAt(
         source,
         'private func logAudioAlignmentDiagnostics(',
