@@ -133,12 +133,16 @@ private class TrackEndCapturingOutput(
 
     private var videoEndUs = C.TIME_UNSET
     private var audioEndUs = C.TIME_UNSET
+    private var videoTrackCount = 0
+    private var audioTrackCount = 0
 
     override fun track(id: Int, type: Int): TrackOutput {
         val output = delegate.track(id, type)
         return when (type) {
-            C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO ->
+            C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO -> {
+                if (type == C.TRACK_TYPE_VIDEO) videoTrackCount++ else audioTrackCount++
                 DurationCapturingTrackOutput(output) { durationUs -> record(type, durationUs) }
+            }
             else -> output
         }
     }
@@ -155,16 +159,22 @@ private class TrackEndCapturingOutput(
     /**
      * The MP4 seek map starts from the first video sync sample, so asking it
      * for time zero answers with the time the first frame is shown — past
-     * zero when an empty edit delays the picture.
+     * zero when an empty edit delays the picture. By now every track of this
+     * parse has already registered, so a type with more than one track is
+     * discarded here rather than guessed: which one plays is decided
+     * downstream by track selection, after this extraction-time hook has
+     * already run.
      */
     override fun seekMap(seekMap: SeekMap) {
-        if (videoEndUs != C.TIME_UNSET && audioEndUs != C.TIME_UNSET) {
+        val effectiveVideoEndUs = if (videoTrackCount > 1) C.TIME_UNSET else videoEndUs
+        val effectiveAudioEndUs = if (audioTrackCount > 1) C.TIME_UNSET else audioEndUs
+        if (effectiveVideoEndUs != C.TIME_UNSET && effectiveAudioEndUs != C.TIME_UNSET) {
             val videoStartUs = if (seekMap.isSeekable) {
                 seekMap.getSeekPoints(0L).first.timeUs.coerceAtLeast(0L)
             } else {
                 0L
             }
-            onTrackEnds(videoEndUs, audioEndUs, videoStartUs)
+            onTrackEnds(effectiveVideoEndUs, effectiveAudioEndUs, videoStartUs)
         }
         delegate.seekMap(seekMap)
     }

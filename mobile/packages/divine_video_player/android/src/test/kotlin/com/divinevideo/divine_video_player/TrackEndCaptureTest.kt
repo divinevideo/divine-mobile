@@ -126,7 +126,11 @@ class TrackEndCaptureTest {
     }
 
     @Test
-    fun `the first track of each type is the one reported`() {
+    fun `two audio tracks report nothing, rather than guessing which plays`() {
+        // Which of two same-type tracks actually plays is decided by track
+        // selection, downstream of this extraction-time hook — so an
+        // ambiguous type falls back to the same "don't clip" path as a
+        // corrupt duration, rather than silently picking the first one.
         val reported = capture(
             FakeMp4Extractor(
                 listOf(
@@ -137,7 +141,22 @@ class TrackEndCaptureTest {
             ),
         )
 
-        assertEquals(listOf(listOf(6_290_000L, 6_336_000L, 0L)), reported)
+        assertEquals(emptyList<List<Long>>(), reported)
+    }
+
+    @Test
+    fun `two video tracks also report nothing`() {
+        val reported = capture(
+            FakeMp4Extractor(
+                listOf(
+                    C.TRACK_TYPE_VIDEO to 6_290_000L,
+                    C.TRACK_TYPE_VIDEO to 7_000_000L,
+                    C.TRACK_TYPE_AUDIO to 6_336_000L,
+                ),
+            ),
+        )
+
+        assertEquals(emptyList<List<Long>>(), reported)
     }
 
     @Test
