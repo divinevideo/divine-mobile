@@ -261,6 +261,7 @@ class _LoadedView extends ConsumerWidget {
     // the two cannot disagree.
     final isUnder13Path = reviewCase?.isUnder13Path == true;
     final primaryAction = _primaryAction(reviewCase, l10n);
+    final primaryOpensParentSupport = isUnder13Path && primaryAction != null;
     final infoCard = _infoCardForCase(reviewCase, supportEmail, l10n);
     final responseClockCard = reviewCase == null
         ? null
@@ -362,7 +363,7 @@ class _LoadedView extends ConsumerWidget {
         const SizedBox(height: 12),
         // On the under-13 path a primary action already opens parent support,
         // so a second button to the same screen would only add a choice.
-        if (!(isUnder13Path && primaryAction != null)) ...[
+        if (!primaryOpensParentSupport) ...[
           _AppealSupportButton(
             isUnder13Path: isUnder13Path,
             openSupportMessages: openSupportMessages,

@@ -995,7 +995,7 @@ void main() {
 
 /// Pumps a restricted case, by default one awaiting moderator review, which
 /// renders no primary action. [noCase] pumps a restriction with no case, in
-/// which [ageBand] is ignored.
+/// which [ageBand], [state] and [allowedResolution] are ignored.
 Future<void> _pumpAppeal(
   WidgetTester tester, {
   required SuspectedAgeBand ageBand,
