@@ -124,9 +124,15 @@ Future<void> openVideoEditorFromRecorder(
     ref.read(clipManagerProvider.notifier).muteAllClips();
   }
 
+  // Classic renders while the metadata screen is up: that screen shows the
+  // render's progress and owns its retry, so do not hold the recorder here.
   if (!recorderMode.hasVideoEditor) {
-    await ref.read(videoEditorProvider.notifier).startRenderVideo();
-    if (!context.mounted) return;
+    runDetached(
+      ref.read(videoEditorProvider.notifier).startRenderVideo(),
+      'start classic-mode render',
+      logName: 'VideoRecorderNavigation',
+      category: LogCategory.video,
+    );
   }
 
   // Lock recording before the push so a volume / Bluetooth trigger that races

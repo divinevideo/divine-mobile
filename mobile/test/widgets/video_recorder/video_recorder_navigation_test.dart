@@ -247,7 +247,7 @@ void main() {
         ).called(1);
       });
 
-      testWidgets('waits for classic-mode rendering before metadata', (
+      testWidgets('opens metadata while classic-mode rendering runs', (
         tester,
       ) async {
         final renderCompleter = Completer<void>();
@@ -260,14 +260,15 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.byKey(const Key('open-editor')));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(fakeEditor.startRenderVideoCalled, isTrue);
-        expect(find.text('metadata'), findsNothing);
+        expect(renderCompleter.isCompleted, isFalse);
+        expect(find.text('metadata'), findsOneWidget);
 
         renderCompleter.complete();
         await tester.pumpAndSettle();
-        expect(find.text('metadata'), findsOneWidget);
+        expect(tester.takeException(), isNull);
       });
 
       testWidgets('openRecorderLibrary proceeds to the library '
