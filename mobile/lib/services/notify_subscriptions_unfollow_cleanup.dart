@@ -11,8 +11,8 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// The service listens to committed follow removals rather than the
 /// optimistic [FollowRepository.followingStream]. It also reconciles once
-/// after the authoritative follow list is loaded, covering unfollows made on
-/// another device while this app was closed.
+/// after the follow list is loaded, when a relay confirmed it, covering
+/// unfollows made on another device while this app was closed.
 class NotifySubscriptionsUnfollowCleanup {
   NotifySubscriptionsUnfollowCleanup({
     required FollowRepository followRepository,
@@ -42,6 +42,17 @@ class NotifySubscriptionsUnfollowCleanup {
 
     try {
       await _followRepository.initialized;
+      // A failed relay read leaves only local caches, which may be empty or
+      // stale; diffing against them would delete live subscriptions.
+      if (!_followRepository.isFollowingConfirmedByRelay) {
+        Log.info(
+          'Skipping new-post subscription reconcile: follow list not '
+          'confirmed by a relay',
+          name: _logName,
+          category: LogCategory.relay,
+        );
+        return;
+      }
       final follows = _followRepository.followingPubkeys.toSet();
       final subscriptions = await _notifySubscriptionsRepository
           .readSubscriptions(ownerPubkey: _ownerPubkey);

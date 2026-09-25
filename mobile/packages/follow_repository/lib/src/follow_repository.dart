@@ -263,6 +263,10 @@ class FollowRepository {
   /// against this to know what the pending local change actually is.
   List<String> _adoptedFollows = const [];
 
+  /// Whether a relay has answered with the user's kind 3 this session, or
+  /// this session has published one. See [isFollowingConfirmedByRelay].
+  bool _followingConfirmedByRelay = false;
+
   /// Adopt [pubkeys] when [createdAt] makes its source the newest one seen.
   ///
   /// Returns whether the list was adopted. [createdAt] `null` means the source
@@ -387,6 +391,15 @@ class FollowRepository {
   /// missing. Never completes while the user has no keys, since
   /// [initialize] returns early and stays retryable.
   Future<void> get initialized => _initializedCompleter.future;
+
+  /// Whether [followingPubkeys] reflects a contact list a relay returned (or
+  /// that this session published), rather than only derived local caches.
+  ///
+  /// [initialized] also completes when the relay read times out or returns
+  /// nothing, leaving the list at whatever LocalStorage or the REST index
+  /// held — possibly empty on a fresh install. Anything that deletes data for
+  /// creators missing from the list must check this first.
+  bool get isFollowingConfirmedByRelay => _followingConfirmedByRelay;
 
   /// Drops entries that are not 32-byte hex pubkeys.
   ///
@@ -3014,6 +3027,7 @@ class FollowRepository {
     _followingProvenance = (createdAt: event.createdAt, id: event.id);
     _adoptedFollows = List<String>.from(_followingPubkeys);
     _contactListBroadcastPending = false;
+    _followingConfirmedByRelay = true;
 
     Log.debug(
       'Broadcasted contact list: ${event.id}',
@@ -3039,6 +3053,7 @@ class FollowRepository {
       source: 'network Kind 3 event ${event.id}',
     );
     _rememberContactListEvent(event);
+    _followingConfirmedByRelay = true;
     if (!adopted) return;
 
     unawaited(_saveToLocalStorage());

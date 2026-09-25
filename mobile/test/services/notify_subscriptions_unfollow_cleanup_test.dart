@@ -32,6 +32,7 @@ void main() {
       () => followRepository.confirmedUnfollowStream,
     ).thenAnswer((_) => confirmedUnfollows.stream);
     when(() => followRepository.initialized).thenAnswer((_) async {});
+    when(() => followRepository.isFollowingConfirmedByRelay).thenReturn(true);
     when(
       () => followRepository.followingPubkeys,
     ).thenReturn(const [followedCreator]);
@@ -87,6 +88,34 @@ void main() {
         ),
       );
     });
+
+    test(
+      'keeps subscriptions when the follow list was not confirmed by a relay',
+      () async {
+        when(
+          () => followRepository.isFollowingConfirmedByRelay,
+        ).thenReturn(false);
+        when(() => followRepository.followingPubkeys).thenReturn(const []);
+        when(
+          () => notifySubscriptionsRepository.readSubscriptions(
+            ownerPubkey: ownerPubkey,
+          ),
+        ).thenAnswer((_) async => const {followedCreator, removedCreator});
+
+        final cleanup = createCleanup();
+        addTearDown(cleanup.dispose);
+
+        await cleanup.start();
+
+        verify(() => followRepository.initialized).called(1);
+        verifyNever(
+          () => notifySubscriptionsRepository.unsubscribe(
+            ownerPubkey: any(named: 'ownerPubkey'),
+            creatorPubkey: any(named: 'creatorPubkey'),
+          ),
+        );
+      },
+    );
   });
 
   group('confirmed unfollows', () {

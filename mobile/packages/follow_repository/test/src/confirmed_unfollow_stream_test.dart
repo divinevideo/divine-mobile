@@ -152,6 +152,32 @@ void main() {
     });
   });
 
+  group('isFollowingConfirmedByRelay', () {
+    test('is false when the relay returned no contact list', () async {
+      await repository.initialize();
+
+      expect(repository.isFollowing(creatorPubkey), isTrue);
+      expect(repository.isFollowingConfirmedByRelay, isFalse);
+    });
+
+    test('is true once a relay contact list is processed', () async {
+      await repository.initialize();
+      contactListEvents.add(
+        Event(
+          ownerPubkey,
+          EventKind.contactList,
+          const [
+            ['p', creatorPubkey],
+          ],
+          '',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1,
+        ),
+      );
+
+      expect(repository.isFollowingConfirmedByRelay, isTrue);
+    });
+  });
+
   group('contact list adoption', () {
     test(
       'emits when a newer contact list removes a followed creator',
