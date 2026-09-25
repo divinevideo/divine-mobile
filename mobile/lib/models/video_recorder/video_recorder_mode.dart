@@ -1,11 +1,15 @@
 import 'package:models/models.dart' as model show AspectRatio;
 
+/// Recorder modes, declared in the mode wheel's left-to-right order.
+///
+/// [capture] is the leftmost entry and the default; [upload] sits at the far
+/// right.
 enum VideoRecorderMode {
-  upload,
   capture,
   stopMotion,
   lipSync,
-  classic;
+  classic,
+  upload;
 
   /// SharedPreferences key for the last-used recorder mode.
   ///
