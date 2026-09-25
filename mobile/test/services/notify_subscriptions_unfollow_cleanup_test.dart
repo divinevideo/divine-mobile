@@ -61,35 +61,36 @@ void main() {
         ownerPubkey: ownerPubkey,
       );
 
-  test('removes stale subscriptions once the follow list is ready', () async {
-    when(
-      () => notifySubscriptionsRepository.readSubscriptions(
-        ownerPubkey: ownerPubkey,
-      ),
-    ).thenAnswer((_) async => const {followedCreator, removedCreator});
+  group('start', () {
+    test('removes stale subscriptions once the follow list is ready', () async {
+      when(
+        () => notifySubscriptionsRepository.readSubscriptions(
+          ownerPubkey: ownerPubkey,
+        ),
+      ).thenAnswer((_) async => const {followedCreator, removedCreator});
 
-    final cleanup = createCleanup();
-    addTearDown(cleanup.dispose);
+      final cleanup = createCleanup();
+      addTearDown(cleanup.dispose);
 
-    await cleanup.start();
+      await cleanup.start();
 
-    verify(
-      () => notifySubscriptionsRepository.unsubscribe(
-        ownerPubkey: ownerPubkey,
-        creatorPubkey: removedCreator,
-      ),
-    ).called(1);
-    verifyNever(
-      () => notifySubscriptionsRepository.unsubscribe(
-        ownerPubkey: ownerPubkey,
-        creatorPubkey: followedCreator,
-      ),
-    );
+      verify(
+        () => notifySubscriptionsRepository.unsubscribe(
+          ownerPubkey: ownerPubkey,
+          creatorPubkey: removedCreator,
+        ),
+      ).called(1);
+      verifyNever(
+        () => notifySubscriptionsRepository.unsubscribe(
+          ownerPubkey: ownerPubkey,
+          creatorPubkey: followedCreator,
+        ),
+      );
+    });
   });
 
-  test(
-    'removes subscriptions for committed unfollows from any route',
-    () async {
+  group('confirmed unfollows', () {
+    test('removes subscriptions from any route', () async {
       final removed = Completer<void>();
       when(
         () => notifySubscriptionsRepository.unsubscribe(
@@ -114,6 +115,6 @@ void main() {
           creatorPubkey: removedCreator,
         ),
       ).called(1);
-    },
-  );
+    });
+  });
 }

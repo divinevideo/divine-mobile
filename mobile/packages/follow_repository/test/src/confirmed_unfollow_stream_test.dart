@@ -104,70 +104,79 @@ void main() {
     await contactListEvents.close();
   });
 
-  test('emits only after a local unfollow succeeds', () async {
-    final published = _MockEvent();
-    when(
-      () => nostrClient.sendContactList(
-        any(),
-        any(),
-        tempRelays: any(named: 'tempRelays'),
-        targetRelays: any(named: 'targetRelays'),
-      ),
-    ).thenAnswer((_) async => published);
+  group('unfollow', () {
+    test('emits only after a local unfollow succeeds', () async {
+      final published = _MockEvent();
+      when(
+        () => nostrClient.sendContactList(
+          any(),
+          any(),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => published);
 
-    final removals = <String>[];
-    final subscription = repository.confirmedUnfollowStream.listen(
-      removals.add,
-    );
-    addTearDown(subscription.cancel);
+      final removals = <String>[];
+      final subscription = repository.confirmedUnfollowStream.listen(
+        removals.add,
+      );
+      addTearDown(subscription.cancel);
 
-    await repository.initialize();
-    await repository.unfollow(creatorPubkey);
+      await repository.initialize();
+      await repository.unfollow(creatorPubkey);
 
-    expect(removals, [creatorPubkey]);
-  });
-
-  test('does not emit when an optimistic unfollow rolls back', () async {
-    when(
-      () => nostrClient.sendContactList(
-        any(),
-        any(),
-        tempRelays: any(named: 'tempRelays'),
-        targetRelays: any(named: 'targetRelays'),
-      ),
-    ).thenAnswer((_) async => null);
-
-    await repository.initialize();
-    final removals = <String>[];
-    final subscription = repository.confirmedUnfollowStream.listen(
-      removals.add,
-    );
-    addTearDown(subscription.cancel);
-
-    await expectLater(repository.unfollow(creatorPubkey), throwsException);
-
-    expect(repository.isFollowing(creatorPubkey), isTrue);
-    expect(removals, isEmpty);
-  });
-
-  test('emits when a newer contact list removes a followed creator', () async {
-    final removal = Completer<String>();
-    final subscription = repository.confirmedUnfollowStream.listen((pubkey) {
-      if (!removal.isCompleted) removal.complete(pubkey);
+      expect(removals, [creatorPubkey]);
     });
-    addTearDown(subscription.cancel);
 
-    await repository.initialize();
-    contactListEvents.add(
-      Event(
-        ownerPubkey,
-        EventKind.contactList,
-        const <List<String>>[],
-        '',
-        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1,
-      ),
+    test('does not emit when an optimistic unfollow rolls back', () async {
+      when(
+        () => nostrClient.sendContactList(
+          any(),
+          any(),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      await repository.initialize();
+      final removals = <String>[];
+      final subscription = repository.confirmedUnfollowStream.listen(
+        removals.add,
+      );
+      addTearDown(subscription.cancel);
+
+      await expectLater(repository.unfollow(creatorPubkey), throwsException);
+
+      expect(repository.isFollowing(creatorPubkey), isTrue);
+      expect(removals, isEmpty);
+    });
+  });
+
+  group('contact list adoption', () {
+    test(
+      'emits when a newer contact list removes a followed creator',
+      () async {
+        final removal = Completer<String>();
+        final subscription = repository.confirmedUnfollowStream.listen((
+          pubkey,
+        ) {
+          if (!removal.isCompleted) removal.complete(pubkey);
+        });
+        addTearDown(subscription.cancel);
+
+        await repository.initialize();
+        contactListEvents.add(
+          Event(
+            ownerPubkey,
+            EventKind.contactList,
+            const <List<String>>[],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1,
+          ),
+        );
+
+        expect(await removal.future, creatorPubkey);
+      },
     );
-
-    expect(await removal.future, creatorPubkey);
   });
 }
