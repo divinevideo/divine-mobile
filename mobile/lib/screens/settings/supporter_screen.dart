@@ -343,6 +343,13 @@ class _RestoreButton extends StatelessWidget {
   }
 }
 
+/// Whether plans on this platform are sold through Apple's App Store rather
+/// than Google Play.
+bool get _sellsThroughAppStore =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS);
+
 /// Links App Store Review requires beside auto-renewing subscription offers.
 abstract class SupporterLegalLinks {
   /// Apple's standard EULA, which covers the App Store subscriptions.
@@ -352,11 +359,8 @@ abstract class SupporterLegalLinks {
   static const privacyPolicy = 'https://divine.video/privacy';
 
   /// The Terms of Use that govern a purchase on the current platform.
-  static String get termsOfUse => switch (defaultTargetPlatform) {
-    _ when kIsWeb => divineTerms,
-    TargetPlatform.iOS || TargetPlatform.macOS => appleStandardEula,
-    _ => divineTerms,
-  };
+  static String get termsOfUse =>
+      _sellsThroughAppStore ? appleStandardEula : divineTerms;
 }
 
 class _SubscriptionTerms extends StatelessWidget {
@@ -370,7 +374,10 @@ class _SubscriptionTerms extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            l10n.supporterAutoRenewNotice,
+            // App Review rejects in-app text naming another store (2.3.10).
+            _sellsThroughAppStore
+                ? l10n.supporterAutoRenewNoticeAppStore
+                : l10n.supporterAutoRenewNoticeGooglePlay,
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

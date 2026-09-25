@@ -11691,8 +11691,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get supporterTermsOfUse => 'Условия за ползване';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Плановете се подновяват автоматично на показаната цена, докато не ги откажеш. Можеш да откажеш по всяко време от настройките за абонаменти в App Store или Google Play, поне 24 часа преди следващото подновяване.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Плановете се подновяват автоматично на показаната цена, докато не ги откажеш. Можеш да откажеш по всяко време от настройките за абонаменти в App Store, поне 24 часа преди следващото подновяване.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Плановете се подновяват автоматично на показаната цена, докато не ги откажеш. Можеш да откажеш по всяко време от настройките за абонаменти в Google Play, поне 24 часа преди следващото подновяване.';
 
   @override
   String get supporterDismissError => 'Отхвърли грешката';

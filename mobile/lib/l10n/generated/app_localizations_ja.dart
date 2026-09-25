@@ -11001,8 +11001,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterTermsOfUse => '利用規約';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'プランは解約するまで表示価格で自動更新されます。App Store または Google Play のサブスクリプション設定から、次回更新の24時間前までにいつでも解約できます。';
+  String get supporterAutoRenewNoticeAppStore =>
+      'プランは解約するまで表示価格で自動更新されます。App Store のサブスクリプション設定から、次回更新の24時間前までにいつでも解約できます。';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'プランは解約するまで表示価格で自動更新されます。Google Play のサブスクリプション設定から、次回更新の24時間前までにいつでも解約できます。';
 
   @override
   String get supporterDismissError => 'エラーを閉じる';

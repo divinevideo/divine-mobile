@@ -11278,8 +11278,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterTermsOfUse => 'የአጠቃቀም ውሎች';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'ዕቅዶች እስኪሰረዙ ድረስ በሚታየው ዋጋ በራስ-ሰር ይታደሳሉ። ከሚቀጥለው እድሳት ቢያንስ 24 ሰዓት በፊት በApp Store ወይም Google Play የደንበኝነት ምዝገባ ቅንብሮች ውስጥ በማንኛውም ጊዜ መሰረዝ ይቻላል።';
+  String get supporterAutoRenewNoticeAppStore =>
+      'ዕቅዶች እስኪሰረዙ ድረስ በሚታየው ዋጋ በራስ-ሰር ይታደሳሉ። ከሚቀጥለው እድሳት ቢያንስ 24 ሰዓት በፊት በApp Store የደንበኝነት ምዝገባ ቅንብሮች ውስጥ በማንኛውም ጊዜ መሰረዝ ይቻላል።';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'ዕቅዶች እስኪሰረዙ ድረስ በሚታየው ዋጋ በራስ-ሰር ይታደሳሉ። ከሚቀጥለው እድሳት ቢያንስ 24 ሰዓት በፊት በGoogle Play የደንበኝነት ምዝገባ ቅንብሮች ውስጥ በማንኛውም ጊዜ መሰረዝ ይቻላል።';
 
   @override
   String get supporterDismissError => 'ስህተቱን አሰናብት';

@@ -11019,8 +11019,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supporterTermsOfUse => '이용약관';
 
   @override
-  String get supporterAutoRenewNotice =>
-      '플랜은 해지할 때까지 표시된 가격으로 자동 갱신돼요. 다음 갱신 최소 24시간 전까지 App Store 또는 Google Play 구독 설정에서 언제든지 해지할 수 있어요.';
+  String get supporterAutoRenewNoticeAppStore =>
+      '플랜은 해지할 때까지 표시된 가격으로 자동 갱신돼요. 다음 갱신 최소 24시간 전까지 App Store 구독 설정에서 언제든지 해지할 수 있어요.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      '플랜은 해지할 때까지 표시된 가격으로 자동 갱신돼요. 다음 갱신 최소 24시간 전까지 Google Play 구독 설정에서 언제든지 해지할 수 있어요.';
 
   @override
   String get supporterDismissError => '오류 닫기';

@@ -11578,8 +11578,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get supporterTermsOfUse => 'Användarvillkor';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Planerna förnyas automatiskt till det visade priset tills du säger upp dem. Säg upp när som helst i prenumerationsinställningarna i App Store eller Google Play, minst 24 timmar före nästa förnyelse.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Planerna förnyas automatiskt till det visade priset tills du säger upp dem. Säg upp när som helst i prenumerationsinställningarna i App Store, minst 24 timmar före nästa förnyelse.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Planerna förnyas automatiskt till det visade priset tills du säger upp dem. Säg upp när som helst i prenumerationsinställningarna i Google Play, minst 24 timmar före nästa förnyelse.';
 
   @override
   String get supporterDismissError => 'Stäng felmeddelandet';

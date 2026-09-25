@@ -10874,8 +10874,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterTermsOfUse => '使用条款';
 
   @override
-  String get supporterAutoRenewNotice =>
-      '方案会按显示的价格自动续订，直到你取消为止。你可以随时在 App Store 或 Google Play 的订阅设置中取消，但需在下次续订前至少 24 小时操作。';
+  String get supporterAutoRenewNoticeAppStore =>
+      '方案会按显示的价格自动续订，直到你取消为止。你可以随时在 App Store 的订阅设置中取消，但需在下次续订前至少 24 小时操作。';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      '方案会按显示的价格自动续订，直到你取消为止。你可以随时在 Google Play 的订阅设置中取消，但需在下次续订前至少 24 小时操作。';
 
   @override
   String get supporterDismissError => '忽略错误';

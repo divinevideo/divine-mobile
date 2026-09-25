@@ -11561,8 +11561,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get supporterTermsOfUse => 'استعمال کی شرائط';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'پلان منسوخ کیے جانے تک دکھائی گئی قیمت پر خودکار طور پر تجدید ہوتے رہتے ہیں۔ آپ اگلی تجدید سے کم از کم 24 گھنٹے پہلے کسی بھی وقت App Store یا Google Play کی سبسکرپشن سیٹنگز میں منسوخ کر سکتے ہیں۔';
+  String get supporterAutoRenewNoticeAppStore =>
+      'پلان منسوخ کیے جانے تک دکھائی گئی قیمت پر خودکار طور پر تجدید ہوتے رہتے ہیں۔ آپ اگلی تجدید سے کم از کم 24 گھنٹے پہلے کسی بھی وقت App Store کی سبسکرپشن سیٹنگز میں منسوخ کر سکتے ہیں۔';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'پلان منسوخ کیے جانے تک دکھائی گئی قیمت پر خودکار طور پر تجدید ہوتے رہتے ہیں۔ آپ اگلی تجدید سے کم از کم 24 گھنٹے پہلے کسی بھی وقت Google Play کی سبسکرپشن سیٹنگز میں منسوخ کر سکتے ہیں۔';
 
   @override
   String get supporterDismissError => 'خرابی ہٹائیں';

@@ -11699,8 +11699,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get supporterTermsOfUse => 'Términos de uso';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Los planes se renuevan automáticamente al precio indicado hasta que los canceles. Cancelá cuando quieras desde la configuración de suscripciones de App Store o Google Play, al menos 24 horas antes de la próxima renovación.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Los planes se renuevan automáticamente al precio indicado hasta que los canceles. Cancelá cuando quieras desde la configuración de suscripciones de App Store, al menos 24 horas antes de la próxima renovación.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Los planes se renuevan automáticamente al precio indicado hasta que los canceles. Cancelá cuando quieras desde la configuración de suscripciones de Google Play, al menos 24 horas antes de la próxima renovación.';
 
   @override
   String get supporterDismissError => 'Descartar error';

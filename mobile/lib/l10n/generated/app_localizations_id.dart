@@ -11492,8 +11492,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get supporterTermsOfUse => 'Ketentuan Penggunaan';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Paket diperpanjang otomatis dengan harga yang ditampilkan sampai kamu membatalkannya. Batalkan kapan saja di pengaturan langganan App Store atau Google Play, paling lambat 24 jam sebelum perpanjangan berikutnya.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Paket diperpanjang otomatis dengan harga yang ditampilkan sampai kamu membatalkannya. Batalkan kapan saja di pengaturan langganan App Store, paling lambat 24 jam sebelum perpanjangan berikutnya.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Paket diperpanjang otomatis dengan harga yang ditampilkan sampai kamu membatalkannya. Batalkan kapan saja di pengaturan langganan Google Play, paling lambat 24 jam sebelum perpanjangan berikutnya.';
 
   @override
   String get supporterDismissError => 'Tutup kesalahan';

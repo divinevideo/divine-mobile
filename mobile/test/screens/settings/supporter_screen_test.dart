@@ -650,9 +650,14 @@ void main() {
     testWidgets('shows renewal notice and legal links beside the plans', (
       tester,
     ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
       await pumpScreen(tester);
 
-      expect(find.text(l10n.supporterAutoRenewNotice), findsOneWidget);
+      expect(
+        find.text(l10n.supporterAutoRenewNoticeGooglePlay),
+        findsOneWidget,
+      );
       expect(
         find.widgetWithText(DivineButton, l10n.supporterTermsOfUse),
         findsOneWidget,
@@ -661,6 +666,17 @@ void main() {
         find.widgetWithText(DivineButton, l10n.legalPrivacyPolicy),
         findsOneWidget,
       );
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('names only the App Store on iOS', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await pumpScreen(tester);
+
+      expect(find.text(l10n.supporterAutoRenewNoticeAppStore), findsOneWidget);
+      expect(find.textContaining('Google Play'), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
     });
 
     testWidgets('hides renewal notice when no plans are offered', (
@@ -668,7 +684,7 @@ void main() {
     ) async {
       await pumpScreen(tester, tiers: const []);
 
-      expect(find.text(l10n.supporterAutoRenewNotice), findsNothing);
+      expect(find.text(l10n.supporterAutoRenewNoticeGooglePlay), findsNothing);
       expect(find.text(l10n.supporterTermsOfUse), findsNothing);
     });
 
@@ -684,7 +700,7 @@ void main() {
       );
 
       expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
-      expect(find.text(l10n.supporterAutoRenewNotice), findsNothing);
+      expect(find.text(l10n.supporterAutoRenewNoticeGooglePlay), findsNothing);
     });
 
     testWidgets("opens Apple's standard EULA on iOS", (tester) async {

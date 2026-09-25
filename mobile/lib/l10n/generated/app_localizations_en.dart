@@ -11666,8 +11666,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterTermsOfUse => 'Terms of Use';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Plans renew automatically at the price shown until you cancel. Cancel anytime in your App Store or Google Play subscription settings, at least 24 hours before the next renewal.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Plans renew automatically at the price shown until you cancel. Cancel anytime in your App Store subscription settings, at least 24 hours before the next renewal.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Plans renew automatically at the price shown until you cancel. Cancel anytime in your Google Play subscription settings, at least 24 hours before the next renewal.';
 
   @override
   String get supporterDismissError => 'Dismiss error';

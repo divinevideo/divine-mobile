@@ -11719,8 +11719,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get supporterTermsOfUse => 'Nutzungsbedingungen';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Pläne verlängern sich automatisch zum angezeigten Preis, bis du kündigst. Du kannst jederzeit in deinen App-Store- oder Google-Play-Abo-Einstellungen kündigen, spätestens 24 Stunden vor der nächsten Verlängerung.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Pläne verlängern sich automatisch zum angezeigten Preis, bis du kündigst. Du kannst jederzeit in deinen App-Store-Abo-Einstellungen kündigen, spätestens 24 Stunden vor der nächsten Verlängerung.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Pläne verlängern sich automatisch zum angezeigten Preis, bis du kündigst. Du kannst jederzeit in deinen Google-Play-Abo-Einstellungen kündigen, spätestens 24 Stunden vor der nächsten Verlängerung.';
 
   @override
   String get supporterDismissError => 'Fehler ausblenden';

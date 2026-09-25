@@ -11801,8 +11801,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get supporterTermsOfUse => 'Warunki korzystania';
 
   @override
-  String get supporterAutoRenewNotice =>
-      'Plany odnawiają się automatycznie w podanej cenie, dopóki ich nie anulujesz. Możesz anulować w dowolnym momencie w ustawieniach subskrypcji App Store lub Google Play, co najmniej 24 godziny przed kolejnym odnowieniem.';
+  String get supporterAutoRenewNoticeAppStore =>
+      'Plany odnawiają się automatycznie w podanej cenie, dopóki ich nie anulujesz. Możesz anulować w dowolnym momencie w ustawieniach subskrypcji App Store, co najmniej 24 godziny przed kolejnym odnowieniem.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Plany odnawiają się automatycznie w podanej cenie, dopóki ich nie anulujesz. Możesz anulować w dowolnym momencie w ustawieniach subskrypcji Google Play, co najmniej 24 godziny przed kolejnym odnowieniem.';
 
   @override
   String get supporterDismissError => 'Zamknij błąd';

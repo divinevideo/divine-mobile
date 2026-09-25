@@ -19530,11 +19530,17 @@ abstract class AppLocalizations {
   /// **'Terms of Use'**
   String get supporterTermsOfUse;
 
-  /// Auto-renewal disclosure shown under the supporter plan buttons. Store policy requires telling people the plan renews until cancelled and where to cancel.
+  /// Auto-renewal disclosure shown under the supporter plan buttons on iOS. Store policy requires telling people the plan renews until cancelled and where to cancel; App Review rejects in-app text that names Google Play.
   ///
   /// In en, this message translates to:
-  /// **'Plans renew automatically at the price shown until you cancel. Cancel anytime in your App Store or Google Play subscription settings, at least 24 hours before the next renewal.'**
-  String get supporterAutoRenewNotice;
+  /// **'Plans renew automatically at the price shown until you cancel. Cancel anytime in your App Store subscription settings, at least 24 hours before the next renewal.'**
+  String get supporterAutoRenewNoticeAppStore;
+
+  /// Auto-renewal disclosure shown under the supporter plan buttons on Android. Store policy requires telling people the plan renews until cancelled and where to cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans renew automatically at the price shown until you cancel. Cancel anytime in your Google Play subscription settings, at least 24 hours before the next renewal.'**
+  String get supporterAutoRenewNoticeGooglePlay;
 
   /// Accessibility label for the button that dismisses the supporter error banner.
   ///

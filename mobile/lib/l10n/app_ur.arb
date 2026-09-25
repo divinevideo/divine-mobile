@@ -6191,7 +6191,8 @@
     "description": "Button label that re-checks the store for an existing supporter subscription."
   },
   "supporterTermsOfUse": "استعمال کی شرائط",
-  "supporterAutoRenewNotice": "پلان منسوخ کیے جانے تک دکھائی گئی قیمت پر خودکار طور پر تجدید ہوتے رہتے ہیں۔ آپ اگلی تجدید سے کم از کم 24 گھنٹے پہلے کسی بھی وقت App Store یا Google Play کی سبسکرپشن سیٹنگز میں منسوخ کر سکتے ہیں۔",
+  "supporterAutoRenewNoticeAppStore": "پلان منسوخ کیے جانے تک دکھائی گئی قیمت پر خودکار طور پر تجدید ہوتے رہتے ہیں۔ آپ اگلی تجدید سے کم از کم 24 گھنٹے پہلے کسی بھی وقت App Store کی سبسکرپشن سیٹنگز میں منسوخ کر سکتے ہیں۔",
+  "supporterAutoRenewNoticeGooglePlay": "پلان منسوخ کیے جانے تک دکھائی گئی قیمت پر خودکار طور پر تجدید ہوتے رہتے ہیں۔ آپ اگلی تجدید سے کم از کم 24 گھنٹے پہلے کسی بھی وقت Google Play کی سبسکرپشن سیٹنگز میں منسوخ کر سکتے ہیں۔",
   "supporterDismissError": "خرابی ہٹائیں",
   "@supporterDismissError": {
     "description": "Accessibility label for the button that dismisses the supporter error banner."

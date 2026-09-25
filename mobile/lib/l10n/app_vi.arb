@@ -6191,7 +6191,8 @@
     "description": "Button label that re-checks the store for an existing supporter subscription."
   },
   "supporterTermsOfUse": "Điều khoản sử dụng",
-  "supporterAutoRenewNotice": "Các gói sẽ tự động gia hạn với mức giá hiển thị cho đến khi bạn hủy. Bạn có thể hủy bất cứ lúc nào trong phần cài đặt gói đăng ký của App Store hoặc Google Play, ít nhất 24 giờ trước kỳ gia hạn tiếp theo.",
+  "supporterAutoRenewNoticeAppStore": "Các gói sẽ tự động gia hạn với mức giá hiển thị cho đến khi bạn hủy. Bạn có thể hủy bất cứ lúc nào trong phần cài đặt gói đăng ký của App Store, ít nhất 24 giờ trước kỳ gia hạn tiếp theo.",
+  "supporterAutoRenewNoticeGooglePlay": "Các gói sẽ tự động gia hạn với mức giá hiển thị cho đến khi bạn hủy. Bạn có thể hủy bất cứ lúc nào trong phần cài đặt gói đăng ký của Google Play, ít nhất 24 giờ trước kỳ gia hạn tiếp theo.",
   "supporterDismissError": "Bỏ qua lỗi",
   "@supporterDismissError": {
     "description": "Accessibility label for the button that dismisses the supporter error banner."
