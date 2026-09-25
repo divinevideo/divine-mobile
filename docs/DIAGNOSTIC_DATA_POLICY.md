@@ -6,19 +6,29 @@ reports, and support flows that collect mobile diagnostics.
 ## Public Support Flows
 
 Bug reports, feature requests, and content reports submitted through Zendesk
-may be mirrored into public GitHub issues. Treat every field sent through that
-path as public.
+may be mirrored into public GitHub issues by the Zendesk-to-GitHub bridge
+(`divinevideo/divine-zd-to-gh`). Since 25 September 2026 the bridge publishes
+the report and keeps diagnostics and account identity in Zendesk, as decided in
+#2636 and #6940.
 
-Public Zendesk/GitHub payloads may include:
+Reaches the public GitHub issue:
 
 - User-entered subject, description, reproduction steps, and expected behavior.
 - App version and coarse platform/device details needed for triage.
 - Error counts.
-- A bounded summary of recent logs.
-- The signed-in public Nostr account identifier when support needs to connect
-  the report to an account. See #6940.
-- User-selected attachments only when the user intentionally includes them and
-  the UI makes clear that attachments can be mirrored publicly.
+- How many attachments the ticket had, and their types.
+
+Stays in Zendesk (the bridge removes it from the public issue):
+
+- The recent-log summary and any other log output.
+- The signed-in account identifier, and any other Nostr identifier, whole or
+  truncated.
+- The list of screens visited before the report.
+- The Zendesk requester's display name.
+- Attachment links.
+
+The client still treats everything it sends as potentially public. The bridge is
+a second layer, not a reason to send more.
 
 Zendesk requester identity fields are intentionally not redacted: name, email,
 and `external_id` must stay intact so Zendesk can connect the ticket to the
