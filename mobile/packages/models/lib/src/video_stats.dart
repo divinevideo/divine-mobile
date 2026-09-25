@@ -112,20 +112,15 @@ class VideoStats {
       createdAt = DateTime.now().toUtc();
     }
 
-    // Parse archival loops from multiple possible sources. embedded_loops /
-    // original_loops come first because nested stats objects also carry a
-    // live computed `loops` value that must not shadow the Vine-era count.
+    // Parse the archival Vine loop count. Only embedded_loops / original_loops
+    // and the event's `loops` tag carry it: Funnelcake's `loops`,
+    // `total_loops` and `computed_loops` are live Divine counts on most
+    // endpoints, and reading them here double-counts against `views` (#9554).
     int? loops;
     final directLoops =
         statsData['embedded_loops'] ??
         json['embedded_loops'] ??
-        json['original_loops'] ??
-        statsData['loops'] ??
-        statsData['total_loops'] ??
-        statsData['computed_loops'] ??
-        json['loops'] ??
-        json['total_loops'] ??
-        json['computed_loops'];
+        json['original_loops'];
     if (directLoops is int) {
       loops = directLoops;
     } else if (directLoops is double) {
@@ -523,7 +518,8 @@ class VideoStats {
   /// Trending score (if available).
   final double? trendingScore;
 
-  /// Original loop count for classic Vines.
+  /// Archived Vine loop count, from `embedded_loops`, `original_loops` or the
+  /// event's `loops` tag. Never Funnelcake's live loop count.
   final int? loops;
 
   /// Live/new view count from Funnelcake analytics.
@@ -669,7 +665,8 @@ class VideoStats {
         // Note: Do NOT inject engagement `loops` here — rawTags['loops']
         // must only exist when the original Nostr event contains a
         // ['loops', ...] tag (i.e., genuine Vine archive imports).
-        // The engagement loop count is stored in `originalLoops` instead.
+        // Funnelcake's live loop count is not kept at all: `views` already
+        // carries the Divine-era plays that totalLoops adds to the archive.
         if (views != null) 'views': views.toString(),
       },
       expirationTimestamp: expirationTimestamp,
