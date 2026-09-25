@@ -19,7 +19,8 @@ class FeedImmersiveState extends Equatable {
 
   /// Whether the viewer pinned the chrome hidden with a pinch. Unlike a hold,
   /// a pin survives the fingers lifting and is only cleared by a second pinch,
-  /// a tap, a swipe to another video, or leaving the feed.
+  /// a tap, or the item it was made on going away: a swipe to another video,
+  /// the video being replaced, or the feed being torn down.
   final bool isPinned;
 
   /// Whether the chrome over the video is currently hidden. True for either
@@ -63,8 +64,8 @@ class FeedImmersiveCubit extends Cubit<FeedImmersiveState> {
     emit(state.copyWith(isHolding: false));
   }
 
-  /// Pins the chrome hidden until a second pinch, a tap, a swipe, or leaving
-  /// the feed. Idempotent.
+  /// Pins the chrome hidden until it is cleared; see
+  /// [FeedImmersiveState.isPinned]. Idempotent.
   void pin() {
     if (state.isPinned) return;
     emit(state.copyWith(isPinned: true));

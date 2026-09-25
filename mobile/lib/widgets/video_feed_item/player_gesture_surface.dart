@@ -41,11 +41,10 @@ class PlayerGestureSurface extends StatelessWidget {
   final VoidCallback onLongPressStart;
 
   /// Restores pinned-hidden chrome on a tap while the player is not yet
-  /// interactive. [onTap] already restores it once the player is ready, but a
-  /// pinch can pin the chrome over a still-loading frame, and without this
-  /// the viewer would be stuck with no UI and no way to bring it back. Null
-  /// when nothing is pinned, so the surface still publishes no tap action
-  /// before the player is ready.
+  /// interactive. [onTap] does that once the player is ready, but a pinch can
+  /// pin the chrome over a still-loading frame, where a tap would otherwise do
+  /// nothing. Null when nothing is pinned, so the surface still publishes no
+  /// tap action before the player is ready.
   final VoidCallback? onRestoreChrome;
 
   @override
@@ -65,10 +64,8 @@ class PlayerGestureSurface extends StatelessWidget {
       hint: isOwnVideo ? null : context.l10n.videoPlayerTapHint,
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        // Once interactive, [onTap] itself restores a pinned chrome before it
-        // touches playback. Before then it is null, so the restore path stands
-        // in — and stays null when nothing is pinned, preserving the rule that
-        // an unready surface publishes no tap action.
+        // Once interactive, [onTap] restores a pinned chrome itself. Before
+        // then the restore path stands in, and is null when nothing is pinned.
         onTap: interactiveReady ? onTap : onRestoreChrome,
         onDoubleTapDown: interactiveReady ? onDoubleTapDown : null,
         child: GestureDetector(

@@ -17,8 +17,8 @@ import 'package:openvine/l10n/l10n.dart';
 ///
 /// It is deliberately small and quiet rather than sized like a control. This
 /// is the one chrome layer that survives immersive viewing, so it is the only
-/// thing on screen while the viewer holds the video — heavy enough to read on
-/// any frame, light enough not to become the subject.
+/// thing on screen while the chrome is hidden — heavy enough to read on any
+/// frame, light enough not to become the subject.
 class FullscreenSponsorDisclosure extends StatelessWidget {
   const FullscreenSponsorDisclosure({required this.sponsorName, super.key});
 

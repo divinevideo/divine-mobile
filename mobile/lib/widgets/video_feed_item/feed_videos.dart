@@ -756,8 +756,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
   }
 
   /// Drops a lifted/cancelled pointer, resets any in-progress pinch once the
-  /// gesture is no longer multi-touch, and, with none left, brings the chrome
-  /// back.
+  /// gesture is no longer multi-touch, and, with none left, ends the hold.
   ///
   /// Driven off the raw [Listener] rather than the gesture callbacks.
   /// `LongPressGestureRecognizer` does not report `onLongPressEnd` for a
@@ -846,8 +845,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
     cubit.unpin();
   }
 
-  /// Brings the chrome back. Idempotent — the no-op guard lets [dispose] and
-  /// the last-pointer-up path both call it unconditionally.
+  /// Ends a hold, which brings the chrome back unless a pin keeps it hidden.
+  /// Idempotent — the no-op guard lets [dispose] and the last-pointer-up path
+  /// both call it unconditionally.
   void _exitImmersive() {
     if (!_isHoldingForImmersive) return;
     _isHoldingForImmersive = false;
@@ -1251,8 +1251,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
                           // design: the hold reveals the frame the UI covers,
                           // and the caption is an overlay over that same frame,
                           // so keeping it up would re-cover exactly what the
-                          // peek exposes. It is gone only while the viewer
-                          // holds, and returns the instant they release.
+                          // peek exposes. It is gone while the viewer holds,
+                          // returns the instant they release, and stays gone
+                          // while a pinch keeps the chrome pinned hidden.
                           subtitleLayer:
                               video.hasSubtitles && widget.controller != null
                               ? _SubtitleLayer(

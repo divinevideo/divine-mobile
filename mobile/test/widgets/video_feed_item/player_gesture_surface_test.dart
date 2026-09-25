@@ -121,8 +121,8 @@ void main() {
       'restores pinned chrome on tap before the player is ready',
       (tester) async {
         // A pinch can pin the chrome over a still-loading frame, when the
-        // play/pause tap is not wired yet. Without a restore path the viewer
-        // would be stuck with no UI and no way to bring it back.
+        // play/pause tap is not wired yet. Without a restore path a tap would
+        // do nothing there.
         var restored = 0;
         var tapped = 0;
 
