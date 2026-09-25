@@ -421,12 +421,11 @@ void main() {
         );
 
         await cubit.start(outputDirectory: '/tmp');
-        // close() unsubscribes, so hold the callback the way the platform
-        // already holds one that is in flight when the screen is left.
-        final inFlight = recorder.onAutoStopped!;
         await cubit.close();
 
-        inFlight('/tmp/late-auto-stop.mp4');
+        // The provider looks the listener up when the platform calls back, so
+        // fire through the recorder rather than a callback held from before.
+        recorder.fireAutoStopped('/tmp/late-auto-stop.mp4');
         await pumpEventQueue();
 
         expect(deleted, [
@@ -445,15 +444,36 @@ void main() {
 
         await cubit.start(outputDirectory: '/tmp');
         await cubit.stop();
-        final inFlight = recorder.onAutoStopped!;
         await cubit.releaseRecorder();
 
-        inFlight('/tmp/accepted.mp4');
+        recorder.fireAutoStopped('/tmp/accepted.mp4');
         await pumpEventQueue();
 
         expect(deleted, isEmpty);
         await cubit.close();
       });
+
+      test(
+        'a late auto-stop after releaseRecorder deletes the orphaned clip',
+        () async {
+          final deleted = <String>[];
+          final recorder = _FakeRecorder(stopResult: '/tmp/accepted.mp4');
+          final cubit = MinorConsentCaptureCubit(
+            recorder: recorder,
+            deleteClip: (path) async => deleted.add(path),
+          );
+
+          await cubit.start(outputDirectory: '/tmp');
+          await cubit.stop();
+          await cubit.releaseRecorder();
+
+          recorder.fireAutoStopped('/tmp/late-auto-stop.mp4');
+          await pumpEventQueue();
+
+          expect(deleted, ['/tmp/late-auto-stop.mp4']);
+          await cubit.close();
+        },
+      );
 
       test('leaving while the camera starts deletes what it wrote', () async {
         final deleted = <String>[];
