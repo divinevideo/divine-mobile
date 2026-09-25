@@ -421,11 +421,13 @@ Future<void> _openLegalPage(
       Uri.parse(url),
       mode: LaunchMode.externalApplication,
     );
-  } catch (e) {
+  } catch (e, stackTrace) {
     Log.error(
-      'Failed to open $url: $e',
+      'Failed to open $url',
       name: 'SupporterScreen',
       category: LogCategory.ui,
+      error: e,
+      stackTrace: stackTrace,
     );
   }
   if (!opened && context.mounted) {
