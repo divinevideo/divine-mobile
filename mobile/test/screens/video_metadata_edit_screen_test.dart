@@ -70,5 +70,34 @@ void main() {
         await tester.pump();
       },
     );
+
+    testWidgets('shows the invalid-video route when the lookup throws', (
+      tester,
+    ) async {
+      final resolver = _MockVideoEventResolver();
+      when(
+        () => resolver.resolveById(
+          'event-id',
+          allowOwnContentBypass: true,
+          requireRawTags: true,
+        ),
+      ).thenThrow(StateError('resolver invariant'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: VideoMetadataEditScreen(videoId: 'event-id'),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
   });
 }
