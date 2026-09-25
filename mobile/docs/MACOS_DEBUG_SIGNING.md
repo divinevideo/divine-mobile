@@ -60,25 +60,16 @@ Two related changes make that signed debug build run:
    plugins behave consistently across debug, profile, and release once
    the runtime is hardened.
 
-2. **Embedded frameworks are signed with the Runner's identity** in the
-   `Codesign media_kit frameworks` build phase (`macos/Podfile`). The
-   old phase ad-hoc signed each framework with `--sign -` and no
-   runtime hardening. Once Hardened Runtime is on, that is no longer
-   sufficient — the loader rejects ad-hoc embedded frameworks whose
-   Team ID differs from the host app. The phase now resolves the
-   Runner's identity and signs each framework with the runtime option:
-
-   ```bash
-   sign_identity="${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY:--}}"
-   codesign --force --deep --options runtime --sign "$sign_identity" "$framework"
-   ```
-
-   `sign_identity` resolves to whatever the Runner is signed with, so the
-   app and its embedded frameworks always share one identity: ad-hoc `-`
-   for Debug, or the team identity for Profile/Release. The phase now
-   fails the build (instead of swallowing the error) if a framework cannot
-   be signed, since an unsigned framework would crash the app at launch
-   under Hardened Runtime.
+2. **Embedded frameworks are signed with the Runner's identity.** The
+   loader rejects an embedded framework whose Team ID differs from the
+   host app once Hardened Runtime is on. CocoaPods' `[CP] Embed Pods
+   Frameworks` phase signs every pod framework with the Runner's
+   `EXPANDED_CODE_SIGN_IDENTITY` and `OTHER_CODE_SIGN_FLAGS`, so app and
+   frameworks share one identity: ad-hoc `-` for Debug, or the team
+   identity for Profile/Release, each with the runtime option. A separate
+   `Codesign media_kit frameworks` phase used to re-sign media_kit's
+   prebuilt mpv/FFmpeg frameworks; macOS no longer bundles them (only the
+   Linux video backend uses media_kit), so that phase is gone.
 
 ## Local setup expectations
 

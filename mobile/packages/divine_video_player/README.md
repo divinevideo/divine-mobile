@@ -157,7 +157,7 @@ enabled and falls back to the platform view otherwise.
 - Android: API 28+
 - iOS: 16.0+
 - macOS: 13.0+
-- Linux: `libmpv` is bundled through `media_kit_libs_video`; install the
+- Linux: `libmpv` is bundled through `media_kit_libs_linux`; install the
   system packages `libfontconfig1` and `libass9` if your distro does not
   already provide them.
 
