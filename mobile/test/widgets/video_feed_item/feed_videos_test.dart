@@ -1959,6 +1959,57 @@ void main() {
       expect(immersiveCubit.state.isPinned, isFalse);
       expect(immersiveCubit.state.isImmersive, isFalse);
     });
+
+    testWidgets('a spread after the feed paged away does not pin', (
+      tester,
+    ) async {
+      // Two fingers swipe the feed past halfway, which makes the overlay under
+      // them inactive while both are still down; spreading them afterwards
+      // must not pin from an item that no longer owns the current video.
+      final videos = [_makeVideo(), _makeVideo(id: 'b' * 64)];
+      final immersiveCubit = FeedImmersiveCubit();
+      final activeIndexes = <int>[];
+
+      await _pumpFeedVideos(
+        tester,
+        videos: videos,
+        feedImmersiveCubit: immersiveCubit,
+        onActiveVideoChanged: (_, index) => activeIndexes.add(index),
+      );
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final upper = await tester.startGesture(
+        center - const Offset(0, 20),
+        pointer: 1,
+      );
+      final lower = await tester.startGesture(
+        center + const Offset(0, 20),
+        pointer: 2,
+      );
+      await tester.pump();
+      for (var i = 0; i < 9; i++) {
+        await upper.moveBy(const Offset(0, -40));
+        await lower.moveBy(const Offset(0, -40));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(
+        activeIndexes,
+        contains(1),
+        reason: 'the swipe must have made the next video the active one',
+      );
+      await upper.moveBy(const Offset(0, -120));
+      await tester.pump(const Duration(milliseconds: 16));
+      await upper.up();
+      await lower.up();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'no active item owns a pin set from the page that left',
+      );
+    });
   });
 
   group('playback length cap', () {

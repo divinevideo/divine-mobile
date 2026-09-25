@@ -816,6 +816,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
     final baseline = _pinchBaselineDistance;
     if (baseline == null || _pinchTriggeredForGesture) return;
     if (_immersivePointerPositions.length < 2) return;
+    // A page swipe can deactivate this item while its fingers are still down;
+    // a pin set from it would belong to no visible item.
+    if (!widget.isActive) return;
     if ((_pinchDistance() - baseline).abs() >= _pinchToggleDistance) {
       _pinchTriggeredForGesture = true;
       _togglePinnedImmersive();
