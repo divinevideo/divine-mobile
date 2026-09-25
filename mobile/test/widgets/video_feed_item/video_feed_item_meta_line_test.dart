@@ -15,7 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
@@ -89,10 +89,13 @@ void main() {
 
   /// Pumps the overlay for [video]. [authorTotalLoops] is the author's lifetime
   /// loop total; null means the stats are not known yet.
+  /// [authorTotalKnown] false models a cached stats row whose total never
+  /// arrived, which `ProfileStats` carries as a placeholder zero.
   Future<void> pump(
     WidgetTester tester, {
     required VideoEvent video,
     int? authorTotalLoops,
+    bool authorTotalKnown = true,
     bool isOgDiviner = false,
     bool eligibilityIsLoading = false,
   }) async {
@@ -113,6 +116,7 @@ void main() {
                     ProfileStats(
                       pubkey: video.pubkey,
                       totalViews: authorTotalLoops,
+                      hasKnownTotalViews: authorTotalKnown,
                     ),
                   ),
           ),
@@ -223,6 +227,26 @@ void main() {
       await pump(tester, video: _video(rawTags: {'views': '50000'}));
 
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+    });
+
+    testWidgets('hides the line when a cached row has no total yet', (
+      tester,
+    ) async {
+      // Follower counts are cached on their own, so a stats row can exist
+      // before its total does. With no floor, the known-total flag is the only
+      // thing keeping that placeholder zero off the card.
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 0,
+        authorTotalKnown: false,
+      );
+
+      expect(
+        find.text(UserProfile.generatedNameFor(_authorPubkey)),
+        findsOneWidget,
+      );
+      expect(find.textContaining(loopLine(tester, 0)), findsNothing);
     });
 
     testWidgets('never shows the post date, even beside a count', (
