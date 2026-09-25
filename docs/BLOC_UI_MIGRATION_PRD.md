@@ -64,6 +64,7 @@ a UI BLoC would be the wrong layer.
 | `lib/services/video_provenance_filter_service.dart` | Capture-verified-only filter preference. |
 | `lib/services/environment_service.dart` | Build environment (dev/staging/prod). |
 | `lib/services/feed_aspect_ratio_preference_service.dart` | Feed aspect-ratio preference. |
+| `lib/services/stats_visibility_preferences.dart` | Viewer-scoped stats visibility preference (total/video loops, publish date). |
 | `lib/services/nip05_verification_service.dart` | NIP-05 verification cache. |
 | `lib/services/og_viner_cache_service.dart` | OG Vine cache. |
 | `lib/services/pending_action_service.dart` | Offline action queue. |
