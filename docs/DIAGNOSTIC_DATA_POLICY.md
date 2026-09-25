@@ -6,23 +6,25 @@ reports, and support flows that collect mobile diagnostics.
 ## Public Support Flows
 
 Bug reports, feature requests, and content reports submitted through Zendesk
-may be mirrored into public GitHub issues by the Zendesk-to-GitHub bridge
-(`divinevideo/divine-zd-to-gh`). Since 25 September 2026 the bridge publishes
-the report and keeps diagnostics and account identity in Zendesk, as decided in
-#2636 and #6940.
+may be mirrored into public GitHub issues by the Zendesk-to-GitHub bridge.
+Since 25 September 2026 the bridge publishes the report and keeps diagnostic
+logs and account identity in Zendesk, as decided in #2636 and #6940.
 
 Reaches the public GitHub issue:
 
 - User-entered subject, description, reproduction steps, and expected behavior.
-- App version and coarse platform/device details needed for triage.
-- Error counts.
-- How many attachments the ticket had, and their types.
+- For bug reports: app version, the Device Information block (platform, model,
+  OS version, locale, and local-storage counts such as draft and clip rows), the
+  current screen, and error counts.
+- A link to the Zendesk ticket, its intake channel, and how many attachments it
+  had, with their types.
 
 Stays in Zendesk (the bridge removes it from the public issue):
 
-- The recent-log summary and any other log output.
-- The signed-in account identifier, and any other Nostr identifier, whole or
-  truncated.
+- The recent-log summary, and fenced or app-formatted log output elsewhere in
+  the report.
+- The signed-in account identifier, the other account fields the app labels, and
+  Nostr identifiers the bridge recognizes by shape anywhere in the text.
 - The list of screens visited before the report.
 - The Zendesk requester's display name.
 - Attachment links.
@@ -151,12 +153,9 @@ requests before adding that collection path. See #6941.
 
 ## Open Decisions
 
-Two policy details need product and support-owner confirmation before
+One policy detail needs product and support-owner confirmation before
 broadening the implementation:
 
-- Whether public GitHub issues should continue to include the signed-in Nostr
-  public key, or whether Zendesk-only private metadata is enough for support
-  (#6940).
 - Which private log store, retention period, and access controls apply if
-  support needs full diagnostic archives beyond the bounded public summary
-  (#6941).
+  support needs full diagnostic archives beyond the bounded summary kept in
+  Zendesk (#6941).
