@@ -18,6 +18,19 @@ void main() {
       expect(uri.queryParameters['identity'], equals('jack'));
     });
 
+    test('drops the Instagram #_ fragment and keeps the query', () {
+      // Instagram appends `#_` to its redirect URIs, and the native web-auth
+      // session can hand it to the app though the crossposter's own 302 back
+      // to us carries none. Rejecting it broke every mobile Instagram connect.
+      final uri = parseAppOAuthCallback(
+        '$appOAuthCallbackUrl?connection=connected&platform=instagram#_',
+      );
+
+      expect(uri.hasFragment, isFalse);
+      expect(uri.queryParameters['connection'], equals('connected'));
+      expect(uri.queryParameters['platform'], equals('instagram'));
+    });
+
     test('rejects another host', () {
       expect(
         () => parseAppOAuthCallback('https://evil.example/app/callback'),

@@ -93,7 +93,13 @@ Uri parseAppOAuthCallback(String callback) {
       uri.authority.contains('@')) {
     throw const FormatException(_invalidCallbackMessage);
   }
-  return uri;
+
+  // Instagram appends a `#_` fragment to its redirect URIs, and the native
+  // web-auth session can surface that fragment to the app even though the
+  // crossposter's own 302 back to us carries none. A fragment is client-only
+  // and holds no validated value, so drop it instead of rejecting a
+  // legitimate callback.
+  return uri.hasFragment ? uri.removeFragment() : uri;
 }
 
 bool _hasExactRawAuthority(String callback) {
