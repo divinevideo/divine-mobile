@@ -536,6 +536,31 @@ void main() {
           'content': 'encrypted-outgoing',
           'sig': '',
         });
+        // This account already stored the event, so ingesting the replay is a
+        // quiet duplicate skip instead of a persist that fails on unstubbed
+        // DAO calls and is swallowed.
+        when(
+          () => directMessagesDao.hasGiftWrap(outgoing.id),
+        ).thenAnswer((_) async => true);
+        when(
+          () => directMessagesDao.getMessageById(
+            outgoing.id,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) async => DirectMessageRow(
+            id: outgoing.id,
+            conversationId: 'stored-outgoing',
+            senderPubkey: _pubkey,
+            content: 'stored',
+            createdAt: 500,
+            giftWrapId: outgoing.id,
+            messageKind: 4,
+            ownerPubkey: _pubkey,
+            isDeleted: false,
+            twinCollapsed: false,
+          ),
+        );
         final pages = <String>[];
         var reads = 0;
         when(
