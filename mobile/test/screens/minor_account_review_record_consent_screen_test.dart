@@ -106,6 +106,7 @@ class _FakeRecorder implements MinorConsentRecorder {
 
   final String? stopResult;
   bool initialized = false;
+  bool disposed = false;
 
   @override
   void Function(String? path)? onAutoStopped;
@@ -125,7 +126,7 @@ class _FakeRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => stopResult;
 
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async => disposed = true;
 }
 
 class _FakePermissions implements PermissionsService {
@@ -912,6 +913,102 @@ void main() {
         await tester.pumpWidget(const SizedBox());
         await _pumpFrames(tester);
 
+        expect(clip.existsSync(), isFalse);
+      },
+    );
+
+    testWidgets('accepting the clip releases the camera', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final recorder = _FakeRecorder(stopResult: clip.path);
+      _useTallSurface(tester);
+
+      await _pumpRecordConsentScreen(
+        tester,
+        recorder: recorder,
+        permissions: _FakePermissions(),
+        settle: false,
+        overrides: [
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => _statusWithCase(),
+          ),
+          minorAccountReviewRepositoryProvider.overrideWithValue(
+            _FakeRepository(),
+          ),
+        ],
+      );
+
+      await tester.tap(
+        find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+      );
+      await _pumpFrames(tester);
+      await tester.tap(find.text(l10n.minorAccountReviewRecordConsentStopCta));
+      await _pumpFrames(tester);
+      expect(recorder.disposed, isFalse);
+
+      await tester.tap(
+        find.text(l10n.minorAccountReviewRecordConsentUseVideoCta),
+      );
+      await _pumpFrames(tester);
+
+      expect(recorder.disposed, isTrue);
+      expect(clip.existsSync(), isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      await _pumpFrames(tester);
+    });
+
+    testWidgets(
+      'keeps the clip while its upload is in flight and deletes it once the '
+      'upload returns after the screen closed',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final recorder = _FakeRecorder(stopResult: clip.path);
+        final repository = _FakeRepository()..uploadGate = Completer<void>();
+        _useTallSurface(tester);
+
+        await _pumpRecordConsentScreen(
+          tester,
+          recorder: recorder,
+          permissions: _FakePermissions(),
+          settle: false,
+          overrides: [
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => _statusWithCase(),
+            ),
+            minorAccountReviewRepositoryProvider.overrideWithValue(repository),
+          ],
+        );
+
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentStopCta),
+        );
+        await _pumpFrames(tester);
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentUseVideoCta),
+        );
+        await _pumpFrames(tester);
+        await tester.enterText(
+          find.byType(TextFormField),
+          'parent@example.com',
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+        );
+        await _pumpFrames(tester);
+
+        // The parent leaves while the upload is still reading the file.
+        await tester.pumpWidget(const SizedBox());
+        await _pumpFrames(tester);
+        expect(clip.existsSync(), isTrue);
+
+        repository.uploadGate!.complete();
+        await _pumpFrames(tester);
+
+        expect(repository.submittedVideoPath, clip.path);
         expect(clip.existsSync(), isFalse);
       },
     );
