@@ -121,6 +121,20 @@ void main() {
     closedRelayReasons: {'wss://refusing.example': 'error'},
   );
 
+  // A sweep no relay took: the drain defers with no refusal on record.
+  QueryResult unsettled() =>
+      const QueryResult(events: [], endedBy: QueryEnd.noRelay);
+
+  QueryResult answered() => const QueryResult(
+    events: [],
+    endedBy: QueryEnd.complete,
+    answeredNetworkRelayCount: 1,
+  );
+
+  void connectRelay(String url) {
+    relayStatus.add({url: RelayConnectionStatus.connected(url)});
+  }
+
   group('DM refusal confirmation retry budget', () {
     test('inbox opens preserve the original delayed confirmation slot', () {
       fakeAsync((async) {
@@ -558,6 +572,113 @@ void main() {
         // without ever reading page 1.
         expect(pages.last, endsWith('_0'));
         expect(syncState.historyDrainComplete(_pubkey), isFalse);
+      });
+    });
+  });
+
+  group('DM silent-relay retries', () {
+    void stubNip04Reads(Future<QueryResult> Function(int read) answer) {
+      var reads = 0;
+      when(
+        () => nostrClient.readEvents(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer((_) => answer(++reads));
+    }
+
+    test('a timer firing mid-drain queues no pass when no refusal awaits', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        final activeRead = Completer<QueryResult>();
+        var reads = 0;
+        stubNip04Reads((read) {
+          reads = read;
+          return read == 2 ? activeRead.future : Future.value(unsettled());
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        expect(reads, 2);
+
+        activeRead.complete(unsettled());
+        async.flushMicrotasks();
+
+        // The timer had no refusal to confirm, so nothing is queued: the
+        // active drain's own deferral arms the next slot instead.
+        expect(reads, 2);
+
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+          ..flushMicrotasks();
+        expect(reads, 3);
+
+        unawaited(repository.stopListening());
+        async.flushMicrotasks();
+      });
+    });
+
+    test('a reconnect that resumes a silent deferral cancels its timer', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        stubNip04Reads(
+          (read) async => read == 1 ? unsettled() : answered(),
+        );
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        expect(async.pendingTimers, hasLength(1));
+
+        connectRelay('wss://edge.example');
+        async.flushMicrotasks();
+
+        // The reconnect completed the drain, so the retry it replaced must
+        // not outlive it.
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+
+    test('an inbox open that defers replaces the retry with the next slot', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        stubNip04Reads((read) async {
+          reads = read;
+          return unsettled();
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 1));
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        expect(reads, 2);
+
+        // The first slot's deadline passes: the inbox open replaced it.
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        expect(reads, 2);
+
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+          ..flushMicrotasks();
+        expect(reads, 3);
+
+        unawaited(repository.stopListening());
+        async.flushMicrotasks();
       });
     });
   });

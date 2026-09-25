@@ -151,7 +151,8 @@ abstract class DmHistoryDrainConfig {
   static const int unsettledPageRetriesPerRun = 2;
 
   /// Automatic retries after a drain defers. A relay reconnect can resume the
-  /// drain sooner, but the retry stays armed either way.
+  /// drain sooner and cancels the retry, except while an ambiguous NIP-04
+  /// refusal awaits confirmation.
   static const List<Duration> deferredRetryDelays = [
     Duration(seconds: 5),
     Duration(seconds: 15),
@@ -656,11 +657,12 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
 
-  /// Backoff retry for deferred history drains. A relay reconnect can trigger
-  /// an earlier non-confirming sweep while this timer remains armed; the timer
-  /// is the only delayed opportunity that can confirm an ambiguous NIP-04
-  /// refusal. The finite delay list bounds consecutive no-progress deferrals;
-  /// durable cursor progress or completion replenishes the budget. #9030.
+  /// Backoff retry for deferred history drains. A relay reconnect cancels it,
+  /// except while an ambiguous NIP-04 refusal awaits confirmation: a
+  /// non-confirming sweep can then run while this timer remains armed, because
+  /// the timer is the only delayed opportunity that can confirm the refusal.
+  /// The finite delay list bounds consecutive no-progress deferrals; durable
+  /// cursor progress or completion replenishes the budget. #9030.
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
   bool _historyDrainCanConfirmNip04Refusal = false;
@@ -1772,8 +1774,9 @@ class DmRepository {
 
   /// [allowNip04RefusalConfirmation] is passed only by the bounded retry
   /// timer, whose delay is what separates two sightings of an ambiguous
-  /// refusal. If that timer fires during a non-confirming drain, its
-  /// confirmation pass is queued to run as soon as the active drain finishes.
+  /// refusal. If that timer fires during a non-confirming drain while a
+  /// refusal awaits confirmation, its confirmation pass is queued to run as
+  /// soon as the active drain finishes.
   Future<void> _backfillHistoryIfNeeded({
     bool allowNip04RefusalConfirmation = false,
   }) {
@@ -1781,12 +1784,20 @@ class DmRepository {
     if (existing != null) {
       if (allowNip04RefusalConfirmation &&
           !_historyDrainCanConfirmNip04Refusal) {
-        _pendingNip04RefusalConfirmation = true;
-        Log.info(
-          'DM history retry for ${pubkeyForLogs(_userPubkey)} will confirm a '
-          'relay refusal after the active drain finishes',
-          category: LogCategory.system,
-        );
+        if (_armedNip04Refusals.isNotEmpty) {
+          _pendingNip04RefusalConfirmation = true;
+          Log.info(
+            'DM history retry for ${pubkeyForLogs(_userPubkey)} will confirm '
+            'a relay refusal after the active drain finishes',
+            category: LogCategory.system,
+          );
+        } else {
+          Log.info(
+            'DM history retry for ${pubkeyForLogs(_userPubkey)} joined a '
+            'drain already in flight; no relay refusal awaits confirmation',
+            category: LogCategory.system,
+          );
+        }
       }
       return existing;
     }
@@ -2401,9 +2412,7 @@ class DmRepository {
     // A non-confirming sweep can defer while the delayed confirmation remains
     // pending. Keep its deadline and slot only for an ambiguous NIP-04 refusal;
     // other deferrals resume immediately on each reconnect as before.
-    final hasRefusalConfirmationWindow =
-        _armedNip04Refusals.isNotEmpty || _pendingNip04RefusalConfirmation;
-    if (hasRefusalConfirmationWindow &&
+    if (_armedNip04Refusals.isNotEmpty &&
         (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
       if (!_confirmationWindowRelayEdgeUsed) {
         _listenForDrainRelayReconnect(pubkey, generation);
@@ -2469,8 +2478,11 @@ class DmRepository {
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
-      if (_armedNip04Refusals.isNotEmpty || _pendingNip04RefusalConfirmation) {
+      if (_armedNip04Refusals.isNotEmpty) {
         _confirmationWindowRelayEdgeUsed = true;
+      } else {
+        _drainRetryTimer?.cancel();
+        _drainRetryTimer = null;
       }
       Log.info(
         'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after a relay '
