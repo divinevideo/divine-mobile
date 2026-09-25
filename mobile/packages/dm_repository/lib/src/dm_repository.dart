@@ -2482,7 +2482,9 @@ class DmRepository {
       return;
     }
     _confirmationWindowRelayEdgeUsed = false;
-    _armedNip04Refusals = Set<String>.of(_previousNip04Refusals);
+    // _previousNip04Refusals is only ever reassigned to a fresh set, never
+    // mutated in place, so aliasing it here needs no defensive copy.
+    _armedNip04Refusals = _previousNip04Refusals;
     _listenForDrainRelayReconnect(pubkey, generation);
     final delay =
         DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
