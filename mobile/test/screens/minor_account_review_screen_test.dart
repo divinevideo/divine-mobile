@@ -704,9 +704,10 @@ void main() {
     );
 
     // The appeal is how a restricted account contests the decision, so it must
-    // reach a person. Teens open private support directly, as Account Status
-    // does. Under-13 stays on the parent-email screen: a support conversation
-    // is filed against the signed-in account, which here is the child's.
+    // reach a person. Outside the under-13 path it opens private support
+    // directly, as Account Status does. Under-13 stays on the parent-email
+    // screen: a support conversation is filed against the signed-in account,
+    // which here is the child's.
     group('appeal support contact', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
 

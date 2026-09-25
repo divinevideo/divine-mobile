@@ -456,11 +456,10 @@ class _LoadedView extends ConsumerWidget {
       return null;
     }
 
-    // No primary action for a case with nothing left for the user to do.
-    // Support Center is already offered unconditionally below, directly under
-    // the reconsideration card (#8239); returning it here as well rendered the
-    // same button twice — as primary above the card and again beneath it — in
-    // `openReported`, `cleared`, `deniedClosed` and `unknown`.
+    // No primary action for a case with nothing left for the user to do. A
+    // support contact is already offered below the reconsideration card
+    // (#8239), so a primary one here would duplicate it in `openReported`,
+    // `cleared`, `deniedClosed` and `unknown`.
     if (!reviewCase.needsUserAction) {
       return null;
     }
@@ -484,9 +483,9 @@ class _LoadedView extends ConsumerWidget {
         context.push(MinorAccountReviewParentContactScreen.path);
       case MinorReviewResolutionType.supportEmailOnly:
         context.push(MinorAccountReviewUnder13SupportScreen.path);
-      // Neither resolution has a dedicated flow, so the next step is unknown and
-      // the general menu is the fallback. This is not the appeal, which routes
-      // through _AppealSupportButton.
+      // No dedicated flow exists for either resolution, so both fall back to the
+      // general menu. This is not the appeal, which routes through
+      // _AppealSupportButton.
       case MinorReviewResolutionType.supportReviewOnly:
       case MinorReviewResolutionType.unknown:
         context.push(SupportCenterScreen.path);
@@ -514,10 +513,11 @@ Future<void> _openExternalPage(
 
 /// The reconsideration card's contact action.
 ///
-/// Teens open private support directly, falling back to email, as Account
-/// Status does. Under-13 goes to the parent-support screen instead: a support
-/// conversation is filed against the signed-in account, and that path is built
-/// around a parent or guardian making contact, not the child.
+/// Outside the under-13 path this opens private support directly, falling back
+/// to email, as Account Status does. The under-13 path goes to the
+/// parent-support screen instead: a support conversation is filed against the
+/// signed-in account, and that path is built around a parent or guardian
+/// making contact, not the child.
 class _AppealSupportButton extends StatelessWidget {
   const _AppealSupportButton({
     required this.isUnder13Path,
