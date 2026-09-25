@@ -154,15 +154,19 @@ void main() {
       expect(
         body.replaceAll(RegExp(r'\s+'), ' '),
         contains(
-          'loopTimeRange = CMTimeRange(start: .zero, end: loopEnd) '
-          'playerItem.forwardPlaybackEndTime = loopEnd',
+          'if CMTimeCompare(loopEnd, assetDuration) < 0 { '
+          'playerItem.forwardPlaybackEndTime = loopEnd }',
         ),
         reason:
             'Trimming has no composition time range to live in, so the same '
-            'cut is applied as a forward playback end time wherever it is '
-            'applied as the looper range. A player that is not looping, or '
-            'stops looping later, has only the former to end the item where '
-            'Dart was told it ends.',
+            'end is applied as a forward playback end time wherever the looper '
+            'range ends early. A player that is not looping, or stops looping '
+            'later, has only the former to end the item where Dart was told '
+            'it ends.',
+      );
+      expect(
+        body,
+        contains('loopTimeRange = CMTimeRange(start: loopStart, end: loopEnd)'),
       );
       expect(
         body,
@@ -173,7 +177,10 @@ void main() {
       );
       expect(
         body,
-        contains('let mix = audioTrack.flatMap { Self.edgeDeclickMix(track:'),
+        contains(
+          r'Self.edgeDeclickMix(track: $0, loopStart: loopStart, '
+          'loopEnd: loopEnd)',
+        ),
         reason:
             "A direct item carries its own edge fades on its own asset's audio "
             'track. Without them the join is a click on every lap, and a mix '

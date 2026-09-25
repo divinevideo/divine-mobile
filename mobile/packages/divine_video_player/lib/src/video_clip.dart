@@ -150,7 +150,11 @@ class VideoClip {
   /// Support is per-platform, and the web and Linux backends ignore it:
   ///
   /// * Apple reads both tracks before it builds the composition, for local
-  ///   and remote sources alike.
+  ///   and remote sources alike. It also starts the clip at its first frame
+  ///   when an empty edit of at most 100 ms delays the picture: every Divine
+  ///   derivative carries one of 21–23 ms, and `AVPlayerLooper` held the last
+  ///   frame ~200 ms at every restart of such a clip. Only a clip starting at
+  ///   zero is started past it.
   /// * Android takes the track lengths from its own extractor as it parses
   ///   the container during prepare, and clips the source there — before the
   ///   first frame, on every source and every [VideoBufferProfile], with no

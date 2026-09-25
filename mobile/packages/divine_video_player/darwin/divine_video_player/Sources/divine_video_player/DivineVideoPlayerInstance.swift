@@ -61,6 +61,34 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// publishing its mix earlier would let prewarm stamp that mix onto the
     /// item still looping.
     private var setClipsGeneration = 0
+
+    /// The looping clip's audio, played outside the player once decoded; see
+    /// [ClipAudioLoop]. The player is muted while it plays.
+    private var clipAudioLoop: ClipAudioLoop?
+    private var clipAudioGeneration = 0
+    private var clipAudioSyncTimer: Timer?
+    private var clipAudioSyncTicks = 0
+    private var clipAudioStartRetry: DispatchWorkItem?
+    private var clipAudioTakeover: DispatchWorkItem?
+    private var timeControlObservation: NSKeyValueObservation?
+
+    /// The local file whose audio is decoded into the loop, with the stretch
+    /// of it one lap plays: the clip itself on the direct path, or the
+    /// download [remoteClipLoader] kept of a streamed one. `AVAssetReader`
+    /// refuses a remote asset.
+    private var clipLoopSource: ClipAudioLoop.Source?
+
+    /// Where the first lap starts on the item when the clip was cut to its
+    /// first frame (see [leadingEmptyEditEnd]), otherwise nil.
+    private var firstFrameStart: CMTime?
+
+    /// The longest empty edit ahead of the first frame that a looping clip is
+    /// started past — the same bound Android applies.
+    private static let maxLeadingEmptyEditSeconds = 0.1
+
+    /// Streams a single remote clip to the player through a download it
+    /// keeps; see [CachingAssetLoader].
+    private var remoteClipLoader: CachingAssetLoader?
     private var statusObservation: NSKeyValueObservation?
     private var bufferingObservation: NSKeyValueObservation?
     private var likelyToKeepUpObservation: NSKeyValueObservation?
@@ -125,28 +153,38 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         ).value / 2
     }
 
-    /// A mix that fades [track] in from zero and out to [loopEnd] over
+    /// A mix that fades [track] in from [loopStart] and out to [loopEnd] over
     /// [edgeDeclickFadeSeconds] each — the composition's edge fades, for a
     /// clip played straight from its asset. Nil for a clip too short to carry
     /// two fades.
-    private static func edgeDeclickMix(track: AVAssetTrack, loopEnd: CMTime) -> AVAudioMix? {
+    private static func edgeDeclickMix(
+        track: AVAssetTrack,
+        loopStart: CMTime,
+        loopEnd: CMTime
+    ) -> AVAudioMix? {
         let maxFadeTicks =
             Int64((edgeDeclickFadeSeconds * Double(audioMixTimescale)).rounded())
-        let fadeTicks = min(maxFadeTicks, halfFadeTicks(loopEnd))
+        let fadeTicks = min(maxFadeTicks, halfFadeTicks(CMTimeSubtract(loopEnd, loopStart)))
         guard fadeTicks > 0 else { return nil }
         let fade = CMTime(value: fadeTicks, timescale: audioMixTimescale)
+        let fadeInEnd = CMTimeAdd(loopStart, fade)
         let flatEnd = CMTimeSubtract(loopEnd, fade)
         let params = AVMutableAudioMixInputParameters(track: track)
+        // Silent up to the lap start, which a lap cut past an empty edit
+        // opens after zero; the fade-in starts where each lap does.
+        if CMTimeCompare(loopStart, .zero) > 0 {
+            params.setVolume(0, at: .zero)
+        }
         params.setVolumeRamp(
             fromStartVolume: 0,
             toEndVolume: 1,
-            timeRange: CMTimeRange(start: .zero, end: fade)
+            timeRange: CMTimeRange(start: loopStart, end: fadeInEnd)
         )
-        if CMTimeCompare(flatEnd, fade) > 0 {
+        if CMTimeCompare(flatEnd, fadeInEnd) > 0 {
             params.setVolumeRamp(
                 fromStartVolume: 1,
                 toEndVolume: 1,
-                timeRange: CMTimeRange(start: fade, end: flatEnd)
+                timeRange: CMTimeRange(start: fadeInEnd, end: flatEnd)
             )
         }
         // Ends exactly on loopEnd, the sample the looper joins.
@@ -330,6 +368,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         armSetClipsTimeout()
         setClipsGeneration += 1
         let callGeneration = setClipsGeneration
+        releaseClipAudioLoop()
+        clipLoopSource = nil
+        firstFrameStart = nil
+        remoteClipLoader?.cancel()
+        remoteClipLoader = nil
 
         // Build the player item asynchronously.
         Task { @MainActor [weak self] in
@@ -413,10 +456,15 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 //
                 // Backend-side fix (proper solution): trim leading
                 // black frames during transcoding. Tracked separately.
+                //
+                // A clip already cut to its first frame starts exactly there,
+                // where every later lap starts too.
                 let leadingBlackFrameSkip = CMTime(value: 1, timescale: 30)
                 let startTime: CMTime
                 if startPositionMs > 0 {
                     startTime = CMTime(value: startPositionMs, timescale: 1000)
+                } else if let firstFrameStart = self.firstFrameStart {
+                    startTime = firstFrameStart
                 } else {
                     startTime = leadingBlackFrameSkip
                 }
@@ -438,6 +486,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.player = newPlayer
                     self.textureOutput?.attachPlayer(newPlayer)
                     self.addTimeObserver()
+                    self.observeTimeControl()
                     self.observeCurrentItem()
                     self.configureQueue(with: playerItem)
                     await newPlayer.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
@@ -461,6 +510,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.errorMessage = nil
                 self.errorCode = nil
                 self.clearSetClipsTimeout()
+                self.startClipAudioLoop()
                 DivineVideoPlayerLog.shared.info(
                     "Player \(self.playerId) ready: \(self.clipCount) clip(s), "
                         + "totalMs=\(Int(self.totalDuration * 1000))",
@@ -591,7 +641,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Trimming has no composition time range to live in, so it is applied
     /// twice over: as `forwardPlaybackEndTime`, which bounds playback, and —
     /// when the trim is what decides the loop — as the looper's own range,
-    /// which is the only one honoured when it wraps.
+    /// which is the only one honoured when it wraps. That range also starts
+    /// each lap at the first frame; see [leadingEmptyEditEnd].
     ///
     /// `trimToCommonTrackEnd` cannot be honoured for an HLS asset: the common
     /// track end comes from `load(.timeRange)` on the asset's video and audio
@@ -644,16 +695,21 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             throw CompositionError.noPlayableVideoTracks
         }
 
-        // The same cut the composition makes: playback ends where the shorter
-        // of the two tracks runs out, not at the end of the container. Here it
-        // cannot be cut into a time range — the asset stays untouched — so the
-        // looper is given it as its range instead.
+        // The same cuts the composition makes: each lap starts at the first
+        // frame and ends where the shorter of the two tracks runs out, not at
+        // the end of the container. Here they cannot be cut into a time range
+        // — the asset stays untouched — so the looper is given them as its
+        // range instead.
+        var loopStart = CMTime.zero
         var loopEnd = endTime
         let trimToCommonTrackEnd =
             (clipMap["trimToCommonTrackEnd"] as? NSNumber)?.boolValue ?? false
         if trimToCommonTrackEnd {
             let videoTracks = try await asset.loadTracks(withMediaType: .video)
             let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+            if let videoTrack = videoTracks.first {
+                loopStart = await Self.leadingEmptyEditEnd(of: videoTrack)
+            }
             if let videoTrack = videoTracks.first, let audioTrack = audioTracks.first {
                 do {
                     let videoRange = try await videoTrack.load(.timeRange)
@@ -701,7 +757,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 )
             }
         }
-        let mix = audioTrack.flatMap { Self.edgeDeclickMix(track: $0, loopEnd: loopEnd) }
+        guard CMTimeCompare(loopStart, loopEnd) < 0 else {
+            throw CompositionError.noPlayableVideoTracks
+        }
+        let mix = audioTrack.flatMap {
+            Self.edgeDeclickMix(track: $0, loopStart: loopStart, loopEnd: loopEnd)
+        }
         // The shared mix is published only when this item is installed.
         // Writing it here would let a newer load stamp its fades onto the
         // item still looping, before that load replaces the queue.
@@ -711,13 +772,25 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         // when it wraps, while a player that is not looping — or stops looping
         // later — has only forwardPlaybackEndTime to end the item where Dart
         // was told it ends. loopEnd never exceeds endTime, so one comparison
-        // covers both trims.
+        // covers both trims. The start lives in the looper's range alone: a
+        // player that plays the clip once starts it wherever it is told to.
         if CMTimeCompare(loopEnd, assetDuration) < 0 {
-            loopTimeRange = CMTimeRange(start: .zero, end: loopEnd)
             playerItem.forwardPlaybackEndTime = loopEnd
+        }
+        if CMTimeCompare(loopStart, .zero) > 0 || CMTimeCompare(loopEnd, assetDuration) < 0 {
+            loopTimeRange = CMTimeRange(start: loopStart, end: loopEnd)
         } else {
             loopTimeRange = nil
         }
+        firstFrameStart = CMTimeCompare(loopStart, .zero) > 0 ? loopStart : nil
+        clipLoopSource = url.isFileURL
+            ? ClipAudioLoop.Source(
+                url: url,
+                fileStart: loopStart,
+                duration: CMTimeSubtract(loopEnd, loopStart),
+                itemStart: loopStart
+            )
+            : nil
         return (playerItem, [0], [loopEnd.seconds])
     }
 
@@ -725,10 +798,12 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private func makeCompositionPlayerItem(
         from clipsRaw: [[String: Any]]
     ) async throws -> (AVPlayerItem, [Double], [Double]) {
-        let (composition, videoComposition, offsets, durations, audioMix) =
+        let (composition, videoComposition, offsets, durations, audioMix, firstClipFileStart) =
             try await buildComposition(from: clipsRaw)
 
         loopTimeRange = nil
+        // A first clip cut past its empty edit shows a frame at zero.
+        firstFrameStart = CMTimeCompare(firstClipFileStart, .zero) > 0 ? .zero : nil
         let playerItem = AVPlayerItem(asset: composition)
         // Validate BEFORE assigning. -[AVPlayerItem setVideoComposition:]
         // throws an Objective-C NSInvalidArgumentException on an invalid
@@ -747,6 +822,21 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             playerItem.videoComposition = videoComposition
         }
         if let audioMix { playerItem.audioMix = audioMix }
+        if let loader = remoteClipLoader, offsets.count == 1 {
+            let lapDuration = composition.duration
+            loader.onDownloaded = { [weak self, weak loader] fileURL in
+                guard let self, let loader, loader === self.remoteClipLoader else { return }
+                self.clipLoopSource = ClipAudioLoop.Source(
+                    url: fileURL,
+                    fileStart: firstClipFileStart,
+                    duration: lapDuration,
+                    itemStart: .zero
+                )
+                if self.currentStatus == "ready", self.clipAudioLoop == nil {
+                    self.startClipAudioLoop()
+                }
+            }
+        }
         return (playerItem, offsets, durations)
     }
 
@@ -767,10 +857,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     }
 
     /// Builds an AVMutableComposition that stitches all clips into a
-    /// single continuous timeline.
+    /// single continuous timeline, and reports where in its file the first
+    /// clip starts.
     private func buildComposition(
         from clipsRaw: [[String: Any]]
-    ) async throws -> (AVMutableComposition, AVVideoComposition?, [Double], [Double], AVMutableAudioMix?) {
+    ) async throws -> (
+        AVMutableComposition, AVVideoComposition?, [Double], [Double], AVMutableAudioMix?, CMTime
+    ) {
         let composition = AVMutableComposition()
         guard
             let videoTrack = composition.addMutableTrack(
@@ -796,6 +889,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         var videoComposition: AVMutableVideoComposition?
         var layerInstruction: AVMutableVideoCompositionLayerInstruction?
         var clipVolumes: [Float] = []
+        var firstClipFileStart = CMTime.zero
 
         for clipMap in clipsRaw {
             guard let uri = clipMap["uri"] as? String else {
@@ -829,7 +923,20 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             let assetOptions: [String: Any]? = httpHeaders.map {
                 [Self.avURLAssetHTTPHeaderFieldsKey: $0]
             }
-            let asset = AVURLAsset(url: url, options: assetOptions)
+            let asset: AVURLAsset
+            // A single streamed clip loads through a download the player
+            // keeps, so its audio can be decoded into the loop without
+            // fetching the file a second time. Only a clip the loop can stand
+            // in for: whole, at full volume and normal speed, not HLS.
+            if clipsRaw.count == 1, startMs == 0, clipVol == 1.0, clipSpeed == 1.0,
+                url.pathExtension.lowercased() != "m3u8",
+                let loader = CachingAssetLoader(remoteURL: url, headers: httpHeaders ?? [:])
+            {
+                remoteClipLoader = loader
+                asset = loader.asset
+            } else {
+                asset = AVURLAsset(url: url, options: assetOptions)
+            }
 
             // Load duration and tracks.
             let assetDuration = try await asset.load(.duration)
@@ -856,7 +963,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
             let standardizedTransform = transform.standardized(for: naturalSize)
 
-            let startTime = CMTime(value: startMs, timescale: 1000)
+            var startTime = CMTime(value: startMs, timescale: 1000)
+            // A looping clip starts at its first frame, past the empty edit
+            // that holds it back. Only one that starts at zero, as on
+            // Android: an explicit start is the caller's own cut.
+            if trimToCommonTrackEnd, startMs == 0 {
+                startTime = await Self.leadingEmptyEditEnd(of: sourceVideoTrack)
+            }
             var endTime = Self.clampedEndTime(
                 requestedEndMs: endMs,
                 assetDuration: assetDuration
@@ -954,6 +1067,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 scaledDuration = clipDuration
             }
 
+            if offsets.isEmpty { firstClipFileStart = startTime }
             offsets.append(CMTimeGetSeconds(insertTime))
             durations.append(CMTimeGetSeconds(scaledDuration))
             scaledDurations.append(scaledDuration)
@@ -1050,7 +1164,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             audioMix = mix
         }
 
-        return (composition, videoComposition, offsets, durations, audioMix)
+        return (composition, videoComposition, offsets, durations, audioMix, firstClipFileStart)
     }
 
     // MARK: - Seek
@@ -1072,6 +1186,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
             self.textureOutput?.forceRefresh(for: time)
             self.syncAudioOverlays()
+            // The loop's sound runs on its own clock; the seek only moved
+            // the picture.
+            self.realignClipAudioLoop(force: true)
             // Preroll primes the output pipeline at the new position;
             // without it a paused player near a clip boundary keeps
             // returning the pre-seek buffer until play() is pressed.
@@ -1091,6 +1208,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         volume = vol
         player?.volume = Float(vol)
+        if clipAudioTakeover != nil { finishClipAudioTakeover() }
+        clipAudioLoop?.volume = Float(vol)
         result(nil)
     }
 
@@ -1105,6 +1224,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         speed = spd
         player?.rate = Float(spd)
         audioOverlayManager.setSpeed(spd)
+        // The loop plays the recording at its own rate and has no stretcher
+        // to follow a speed change with, so an off-speed player keeps its
+        // own sound.
+        if spd == 1.0 {
+            if clipAudioLoop == nil { startClipAudioLoop() }
+        } else {
+            releaseClipAudioLoop()
+        }
         result(nil)
     }
 
@@ -1117,6 +1244,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         isLooping = loop
         rebuildQueueForLoopingChange()
+        if loop {
+            if clipAudioLoop == nil { startClipAudioLoop() }
+        } else {
+            releaseClipAudioLoop()
+        }
         result(nil)
     }
 
@@ -1155,6 +1287,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         clearBufferingWatchdog(resetReported: true)
         // Pause and clear media so the surface goes blank.
         player?.pause()
+        releaseClipAudioLoop()
+        clipLoopSource = nil
+        remoteClipLoader?.cancel()
+        remoteClipLoader = nil
         playerLooper = nil
         templateItem = nil
         player?.removeAllItems()
@@ -1234,6 +1370,204 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
     }
 
+    // MARK: - Loop audio
+
+    /// Decodes the direct clip's audio into a loop that replaces the
+    /// player's own sound, when there is one to decode and it can follow the
+    /// player: a single looping local clip at normal speed.
+    private func startClipAudioLoop() {
+        releaseClipAudioLoop()
+        let generation = clipAudioGeneration
+        guard isLooping, speed == 1.0, clipCount == 1, let source = clipLoopSource else {
+            return
+        }
+        // make is nonisolated, so the decode runs off the main actor.
+        Task { @MainActor [weak self] in
+            let loop = await ClipAudioLoop.make(source: source)
+            guard let self, generation == self.clipAudioGeneration,
+                !self.diagnosticDisposed, let loop
+            else {
+                loop?.release()
+                return
+            }
+            self.adoptClipAudioLoop(loop)
+        }
+    }
+
+    /// Hands the sound from the player to [loop].
+    ///
+    /// A player that is not playing switches at once. A playing one — a
+    /// streamed clip whose download completes during its first lap — starts
+    /// the loop silent and in step, and the two cross over once it is heard:
+    /// two copies of the same sound a few milliseconds apart, so the crossing
+    /// is not heard, and there is no seam mid-lap to be heard either.
+    private func adoptClipAudioLoop(_ loop: ClipAudioLoop) {
+        clipAudioLoop = loop
+        DivineVideoPlayerLog.shared.info(
+            "Player \(playerId) loops its audio outside AVPlayer: \(loop.seamDescription)",
+            name: "DivineVideoPlayer.AudioLoop"
+        )
+        if player?.timeControlStatus == .playing {
+            loop.volume = 0
+            realignClipAudioLoop()
+            crossClipAudioOver(to: loop, step: 0)
+        } else {
+            loop.volume = Float(volume)
+            player?.isMuted = true
+            realignClipAudioLoop()
+        }
+        clipAudioSyncTicks = 0
+        clipAudioSyncTimer?.invalidate()
+        clipAudioSyncTimer = Timer.scheduledTimer(
+            withTimeInterval: Self.clipAudioSyncInterval,
+            repeats: true
+        ) { [weak self] _ in
+            DispatchQueue.main.async { self?.checkClipAudioLoop() }
+        }
+    }
+
+    /// Starts the loop against the picture while the player plays, and stops
+    /// it otherwise — keyed to the player's actual state, so its own pauses
+    /// (a buffering stall, backgrounding) stop the sound as well.
+    ///
+    /// A loop already playing is left alone unless [force]d by a seek: the
+    /// queue player reports `.playing` again every time `AVPlayerLooper`
+    /// moves on to its next item, and placing the loop again there stopped
+    /// the sound at every seam while the new item's clock was still stopped.
+    private func realignClipAudioLoop(attempt: Int = 0, force: Bool = false) {
+        clipAudioStartRetry?.cancel()
+        clipAudioStartRetry = nil
+        guard let loop = clipAudioLoop else { return }
+        guard player?.timeControlStatus == .playing, let item = player?.currentItem else {
+            if clipAudioTakeover != nil { finishClipAudioTakeover() }
+            loop.pause()
+            return
+        }
+        if force {
+            loop.pause()
+        } else if loop.isRunning {
+            return
+        }
+        clipAudioDriftChecks = 0
+        if loop.start(alignedTo: item) || attempt >= Self.clipAudioStartAttempts { return }
+        // The player says it plays before its clock moves; try again once it
+        // does.
+        let retry = DispatchWorkItem { [weak self] in
+            self?.realignClipAudioLoop(attempt: attempt + 1)
+        }
+        clipAudioStartRetry = retry
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + Self.clipAudioStartRetryInterval,
+            execute: retry
+        )
+    }
+
+    /// Measures the loop against the picture and places it again when the
+    /// two have separated.
+    ///
+    /// The usual cause is the picture holding at the seam: `AVPlayerLooper`
+    /// starts its next item a little after the last one ends — ~10 ms on an
+    /// iPad Air (M4) for some clips, ~200 ms for others, whatever the clip's
+    /// sound does meanwhile — while the loop runs on without a gap. An output
+    /// route change, or the host clock drifting from the audio hardware's,
+    /// separates them too.
+    private func checkClipAudioLoop() {
+        guard let loop = clipAudioLoop, player?.timeControlStatus == .playing,
+            let item = player?.currentItem
+        else { return }
+        guard let offset = loop.offset(from: item) else { return }
+        let offsetMs = Int((offset * 1000).rounded())
+        clipAudioSyncTicks += 1
+        if clipAudioSyncTicks % Self.clipAudioSyncLogEvery == 1 {
+            DivineVideoPlayerLog.shared.info(
+                "Player \(playerId) loop audio \(offsetMs) ms from the picture",
+                name: "DivineVideoPlayer.AudioLoop"
+            )
+        }
+        guard abs(offset) > Self.clipAudioReplaceThreshold else {
+            clipAudioDriftChecks = 0
+            return
+        }
+        // One reading is not enough: a single late render time reads as
+        // drift that is not there.
+        clipAudioDriftChecks += 1
+        guard clipAudioDriftChecks >= Self.clipAudioDriftChecksToReplace else { return }
+        clipAudioDriftChecks = 0
+        if loop.start(alignedTo: item) {
+            DivineVideoPlayerLog.shared.info(
+                "Player \(playerId) loop audio \(offsetMs) ms off the picture; placed it again",
+                name: "DivineVideoPlayer.AudioLoop"
+            )
+        }
+    }
+
+    /// Moves the sound from the player to [loop] over
+    /// [clipAudioTakeoverSteps], starting when the loop is first heard.
+    private func crossClipAudioOver(to loop: ClipAudioLoop, step: Int) {
+        guard loop === clipAudioLoop else { return }
+        let nominal = Float(volume)
+        let progress = Float(step) / Float(Self.clipAudioTakeoverSteps)
+        loop.volume = nominal * progress
+        player?.volume = nominal * (1 - progress)
+        if step >= Self.clipAudioTakeoverSteps {
+            finishClipAudioTakeover()
+            return
+        }
+        let next = DispatchWorkItem { [weak self] in
+            self?.crossClipAudioOver(to: loop, step: step + 1)
+        }
+        clipAudioTakeover = next
+        let delay = step == 0 ? loop.startToHeardSeconds : Self.clipAudioTakeoverStepInterval
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: next)
+    }
+
+    /// Completes a takeover at once: the loop has the sound at full level
+    /// and the player is muted. Also the way out when playback pauses or the
+    /// volume changes mid-takeover, so the two never sound together.
+    private func finishClipAudioTakeover() {
+        clipAudioTakeover?.cancel()
+        clipAudioTakeover = nil
+        guard let loop = clipAudioLoop else { return }
+        loop.volume = Float(volume)
+        player?.isMuted = true
+        player?.volume = Float(volume)
+    }
+
+    /// Gives the sound back to the player, and drops any decode still
+    /// running.
+    private func releaseClipAudioLoop() {
+        clipAudioGeneration += 1
+        clipAudioSyncTimer?.invalidate()
+        clipAudioSyncTimer = nil
+        clipAudioStartRetry?.cancel()
+        clipAudioStartRetry = nil
+        clipAudioTakeover?.cancel()
+        clipAudioTakeover = nil
+        guard let loop = clipAudioLoop else { return }
+        loop.release()
+        clipAudioLoop = nil
+        player?.isMuted = false
+        player?.volume = Float(volume)
+    }
+
+    private func observeTimeControl() {
+        timeControlObservation?.invalidate()
+        timeControlObservation = player?.observe(\.timeControlStatus, options: [.new]) {
+            [weak self] _, _ in
+            DispatchQueue.main.async { self?.realignClipAudioLoop() }
+        }
+    }
+
+    private var clipAudioDriftChecks = 0
+    private static let clipAudioSyncInterval: TimeInterval = 0.5
+    private static let clipAudioSyncLogEvery = 20
+    private static let clipAudioDriftChecksToReplace = 2
+    private static let clipAudioReplaceThreshold = 0.030
+    private static let clipAudioStartRetryInterval: TimeInterval = 0.01
+    private static let clipAudioStartAttempts = 100
+    private static let clipAudioTakeoverSteps = 6
+    private static let clipAudioTakeoverStepInterval: TimeInterval = 0.01
+
     private func configureQueue(with item: AVPlayerItem) {
         guard let player else { return }
         playerLooper = nil
@@ -1277,6 +1611,26 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.audioOverlayManager.resumeActive(speed: self.speed)
             }
         }
+    }
+
+    /// Where [track]'s first frame shows, when an empty edit of at most
+    /// [maxLeadingEmptyEditSeconds] holds it back; zero otherwise.
+    ///
+    /// Every Divine derivative opens its video track with a 21–23 ms empty
+    /// edit. `AVPlayerLooper` does not join such an item to the next one
+    /// gaplessly: each lap started ~200 ms late on an iPad Air (M4) and
+    /// ~400 ms late on macOS and the simulator, the last frame held all that
+    /// time, and a composition cut from zero held it ~55 ms. Started at the
+    /// first frame, both joined every lap on time.
+    private static func leadingEmptyEditEnd(of track: AVAssetTrack) async -> CMTime {
+        guard let segments = try? await track.load(.segments),
+            let first = segments.first, first.isEmpty
+        else { return .zero }
+        let end = first.timeMapping.target.end
+        guard end.isNumeric, end.seconds > 0, end.seconds <= maxLeadingEmptyEditSeconds else {
+            return .zero
+        }
+        return end
     }
 
     private func boundedCommonTrackEnd(
@@ -1889,6 +2243,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         currentItemObservation = nil
         pendingPrerollObservation?.invalidate()
         pendingPrerollObservation = nil
+        timeControlObservation?.invalidate()
+        timeControlObservation = nil
+        releaseClipAudioLoop()
+        remoteClipLoader?.cancel()
+        remoteClipLoader = nil
         clearSetClipsTimeout()
         clearBufferingWatchdog(resetReported: true)
         NotificationCenter.default.removeObserver(self)
