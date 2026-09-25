@@ -79,6 +79,55 @@ void main() {
       );
     });
 
+    test('Android and Apple agree on the trim bound and ratio', () {
+      // Each platform hand-codes this policy separately (there is no shared
+      // constant between the Kotlin and Swift sides of this plugin); the two
+      // tests above only pin each platform's own literal. Without this, a
+      // future one-sided retune of the tolerance would silently diverge the
+      // platforms while both stayed green on their own.
+      final apple = _appleSourceFile().readAsStringSync();
+      final android = _androidSourceFile(
+        'CommonTrackEndMediaSource.kt',
+      ).readAsStringSync();
+
+      final appleTrimMsMatch = RegExp(
+        r'maxCommonTrackEndTrimMs = ([\d.]+)',
+      ).firstMatch(apple);
+      final androidTrimUsMatch = RegExp(
+        r'MAX_COMMON_TRACK_END_TRIM_US = ([\d_]+)L',
+      ).firstMatch(android);
+      expect(appleTrimMsMatch, isNotNull);
+      expect(androidTrimUsMatch, isNotNull);
+      final appleTrimMs = double.parse(appleTrimMsMatch!.group(1)!);
+      final androidTrimUs = int.parse(
+        androidTrimUsMatch!.group(1)!.replaceAll('_', ''),
+      );
+      expect(
+        androidTrimUs,
+        (appleTrimMs * 1000).round(),
+        reason:
+            'The trim-bound tolerance must match across platforms so a '
+            'retune on one side cannot silently diverge from the other.',
+      );
+
+      final appleTrimRatioMatch = RegExp(
+        r'maxCommonTrackEndTrimRatio = ([\d.]+)',
+      ).firstMatch(apple);
+      final androidTrimRatioMatch = RegExp(
+        r'MAX_COMMON_TRACK_END_TRIM_RATIO = ([\d.]+)',
+      ).firstMatch(android);
+      expect(appleTrimRatioMatch, isNotNull);
+      expect(androidTrimRatioMatch, isNotNull);
+      expect(
+        double.parse(androidTrimRatioMatch!.group(1)!),
+        double.parse(appleTrimRatioMatch!.group(1)!),
+        reason:
+            'Same policy as the trim bound above: the ratio must match '
+            'across platforms so a retune on one side cannot silently '
+            'diverge from the other.',
+      );
+    });
+
     test('Android clips at the track end before the first frame', () {
       final instance = _androidSourceFile().readAsStringSync();
       final mediaSource = _androidSourceFile(
@@ -123,12 +172,30 @@ void main() {
             '~300 ms. Nothing may swap the item to clip it.',
       );
       expect(
+        mediaSource,
+        isNot(contains('replaceMediaItem')),
+        reason:
+            'The clipping media source is where a regression is most likely '
+            'to reintroduce a late-clamp item swap under a different name; '
+            'it must never swap the item to clip it either.',
+      );
+      expect(
         instance,
         isNot(contains('MediaExtractor()')),
         reason:
             'A second read of the container either delayed the load or landed '
             'after the video had started; the extractor already has the '
             'answer before the first frame.',
+      );
+      expect(
+        mediaSource,
+        isNot(contains('MediaExtractor()')),
+        reason:
+            'The clipping media source must never open a second extractor to '
+            'read track ends. ClipAudioLoopTrack.kt legitimately opens one, '
+            'but only to decode the separate loop-audio PCM track off the '
+            'platform thread — a different codepath from prepare()/clipping '
+            'that this file must stay free of.',
       );
     });
   });
