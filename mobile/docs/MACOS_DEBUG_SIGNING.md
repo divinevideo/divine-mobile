@@ -66,7 +66,10 @@ Two related changes make that signed debug build run:
    Frameworks` phase signs every pod framework with the Runner's
    `EXPANDED_CODE_SIGN_IDENTITY` and `OTHER_CODE_SIGN_FLAGS`, so app and
    frameworks share one identity: ad-hoc `-` for Debug, or the team
-   identity for Profile/Release, each with the runtime option. A separate
+   identity for Profile/Release, each with the runtime option. Flutter's
+   embed step signs `App.framework`, `FlutterMacOS.framework` and the
+   native-asset frameworks with the same identity, but without the
+   runtime option. A separate
    `Codesign media_kit frameworks` phase used to re-sign media_kit's
    prebuilt mpv/FFmpeg frameworks; macOS no longer bundles them (only the
    Linux video backend uses media_kit), so that phase is gone.
@@ -155,8 +158,9 @@ flutter build macos --debug
 
 ## Verifying the signature
 
-After a debug build, confirm the app and its embedded frameworks carry
-the runtime flag:
+After a debug build, confirm the app carries the runtime flag and the
+whole bundle verifies. Pod frameworks carry the flag too; the frameworks
+Flutter embeds itself do not, and that is expected:
 
 ```bash
 APP=mobile/build/macos/Build/Products/Debug/Divine.app
