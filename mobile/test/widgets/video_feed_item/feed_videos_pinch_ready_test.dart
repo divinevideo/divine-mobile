@@ -191,6 +191,14 @@ class _Rig {
   final _MockLikesRepository likes;
 }
 
+/// The like publish the feed asks of [likes], for any video.
+Future<bool> _toggleLike(_MockLikesRepository likes) => likes.toggleLike(
+  eventId: any(named: 'eventId'),
+  authorPubkey: any(named: 'authorPubkey'),
+  addressableId: any(named: 'addressableId'),
+  targetKind: any(named: 'targetKind'),
+);
+
 /// Pumps a one-video [FeedVideos] whose player has rendered its first frame,
 /// so the tap and double-tap recognizers exist before any finger lands.
 Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
@@ -210,6 +218,7 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
   when(
     () => likes.getLikeCount(any(), addressableId: any(named: 'addressableId')),
   ).thenAnswer((_) async => 0);
+  when(() => _toggleLike(likes)).thenAnswer((_) async => true);
   final comments = _MockCommentsRepository();
   when(
     () => comments.getCommentsCount(
@@ -352,6 +361,85 @@ void main() {
   });
 
   group('pinch on a ready player', () {
+    testWidgets('a pinch anchored by a still finger keeps its pin', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester);
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+
+      await _pinch(tester, center, anchored: true);
+      expect(
+        rig.immersive.state.isPinned,
+        isTrue,
+        reason: 'the spread itself must pin the chrome',
+      );
+
+      await _settle(tester);
+
+      expect(
+        rig.immersive.state.isPinned,
+        isTrue,
+        reason: "the still finger's leftover tap must not clear the pin",
+      );
+      await _unmount(tester);
+    });
+
+    testWidgets('a pinch anchored by a still finger that restores the chrome '
+        'toggles no playback', (tester) async {
+      final rig = await _pumpReadyFeed(tester);
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+
+      await _pinch(tester, center, anchored: false);
+      await _settle(tester);
+      expect(rig.immersive.state.isPinned, isTrue);
+      final playsBefore = rig.harness.countCalls('play');
+      final pausesBefore = rig.harness.countCalls('pause');
+
+      await _pinch(tester, center, anchored: true, basePointer: 3);
+      await _settle(tester);
+
+      expect(rig.immersive.state.isPinned, isFalse);
+      expect(
+        rig.harness.countCalls('pause') - pausesBefore,
+        isZero,
+        reason: 'a pinch must not pause the video',
+      );
+      expect(
+        rig.harness.countCalls('play') - playsBefore,
+        isZero,
+        reason: 'a pinch must not resume the video',
+      );
+      await _unmount(tester);
+    });
+
+    testWidgets('a quick tap after a pinch publishes no like', (tester) async {
+      final rig = await _pumpReadyFeed(tester);
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+
+      await _pinch(tester, center, anchored: true);
+      await tester.pump(const Duration(milliseconds: 100));
+      // Inside the double-tap window and slop, so the still finger's leftover
+      // tap and this one would read as a double tap.
+      await _tap(tester, center - const Offset(20, 0), pointer: 5);
+      await _settle(tester);
+
+      verifyNever(() => _toggleLike(rig.likes));
+      await _unmount(tester);
+    });
+
+    testWidgets('a double tap still publishes a like', (tester) async {
+      final rig = await _pumpReadyFeed(tester);
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+
+      await _tap(tester, center, pointer: 1);
+      await tester.pump(const Duration(milliseconds: 100));
+      await _tap(tester, center, pointer: 2);
+      await _settle(tester);
+
+      verify(() => _toggleLike(rig.likes)).called(1);
+      await _unmount(tester);
+    });
+
     testWidgets('a tap restores the chrome without toggling playback', (
       tester,
     ) async {

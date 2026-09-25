@@ -679,6 +679,12 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// state another item owns.
   bool _isPinnedForImmersive = false;
 
+  /// Whether the touch in progress, or the one that just ended, ever had two
+  /// fingers down. A tap recognizer follows its first finger through a second
+  /// one landing, so a pinch whose first finger stayed inside touch slop still
+  /// ends as a tap; that tap must not act on the pin, playback or a like.
+  bool _touchWasMultiTouch = false;
+
   /// How far the pinch fingers must spread or squeeze from their landing
   /// separation before the pin toggles. Large enough to ignore a two-finger
   /// scroll settling, small enough to feel deliberate.
@@ -784,8 +790,12 @@ class __OverlayState extends ConsumerState<_Overlay> {
     // it owns is stale — its terminal event was lost (a touch dropped on
     // backgrounding, a platform view taking over). Without this the item could
     // never peek again.
-    if (_immersivePointers.isEmpty) _exitImmersive();
+    if (_immersivePointers.isEmpty) {
+      _touchWasMultiTouch = false;
+      _exitImmersive();
+    }
     _immersivePointers.add(event.pointer);
+    if (_immersivePointers.length > 1) _touchWasMultiTouch = true;
     _immersivePointerPositions[event.pointer] = event.localPosition;
     if (_immersivePointerPositions.length == 2) {
       _pinchBaselineDistance = _pinchDistance();
@@ -884,6 +894,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
     TapDownDetails details, {
     required bool isOwnVideo,
   }) {
+    // Fires while the previous touch's flag is still set, so a tap that lands
+    // within the double-tap window of a pinch cannot read as a double tap.
+    if (_touchWasMultiTouch) return;
     final contentWarningBlocking =
         shouldShowContentWarningOverlay(
           contentWarningLabels: widget.video.contentWarningLabels,
@@ -913,7 +926,14 @@ class __OverlayState extends ConsumerState<_Overlay> {
     );
   }
 
+  /// Restores pinned chrome on a tap while the player cannot yet play or pause.
+  void _handleRestoreTap() {
+    if (_touchWasMultiTouch) return;
+    _clearPinnedImmersive();
+  }
+
   void _handlePlayerTap() {
+    if (_touchWasMultiTouch) return;
     // A tap while pinned restores the chrome instead of toggling playback.
     // Otherwise the first tap after a pinch both un-hid the controls and
     // paused the video, so the viewer could not bring the UI back without
@@ -1215,7 +1235,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             ),
                             onLongPressStart: _enterImmersive,
                             onRestoreChrome: isChromePinned
-                                ? _clearPinnedImmersive
+                                ? _handleRestoreTap
                                 : null,
                           ),
                         ),
