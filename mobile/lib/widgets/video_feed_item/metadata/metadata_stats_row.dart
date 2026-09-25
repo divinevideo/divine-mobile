@@ -3,10 +3,12 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/utils/string_utils.dart';
 
 /// Horizontal stats row displaying engagement counts for a video.
@@ -16,19 +18,28 @@ import 'package:openvine/utils/string_utils.dart';
 /// combined totals (archival Vine + live Divine); classic Vines additionally
 /// get a per-source breakdown underneath.
 ///
-/// Loops sits last rather than first. Video cards hide small public counts
-/// because they discourage viewing, so this sheet is where the number stays
-/// reachable — present, but not leading the row.
+/// The Loops column trails the row and is shown only when the viewer asked for
+/// video loops ([StatsVisibilityPreferences.showVideoLoops], off by default).
 ///
 /// Layout follows Figma node `I11251:226991;9113:176278`:
 /// four stat columns separated by vertical dividers.
-class MetadataStatsRow extends StatelessWidget {
+class MetadataStatsRow extends ConsumerWidget {
   const MetadataStatsRow({required this.video, super.key});
 
   final VideoEvent video;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
+
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) =>
+          _buildRow(context, statsVisibility.showVideoLoops),
+    );
+  }
+
+  Widget _buildRow(BuildContext context, bool showVideoLoops) {
     return BlocBuilder<VideoInteractionsBloc, VideoInteractionsState>(
       builder: (context, state) {
         final isLoading = state.isLoading;
@@ -83,21 +94,23 @@ class MetadataStatsRow extends StatelessWidget {
                             label: context.l10n.metadataRepostsLabel,
                             isLoading: isLoading,
                           ),
-                          const _VerticalDivider(),
-                          // Loops trails the interaction stats: the count
-                          // stays available to anyone who wants it without
-                          // leading the row. A video whose event carries no
-                          // loop metadata shows the same dash as an unknown
-                          // interaction count instead of a fabricated zero.
-                          _StatColumn(
-                            count: video.hasLoopMetadata
-                                ? video.totalLoops
-                                : null,
-                            label: context.l10n.metadataLoopsLabel(
-                              video.totalLoops,
+                          // Loops trails the interaction stats and is shown
+                          // only when the viewer asked for video loops. A
+                          // video whose event carries no loop metadata shows
+                          // the same dash as an unknown interaction count
+                          // instead of a fabricated zero.
+                          if (showVideoLoops) ...[
+                            const _VerticalDivider(),
+                            _StatColumn(
+                              count: video.hasLoopMetadata
+                                  ? video.totalLoops
+                                  : null,
+                              label: context.l10n.metadataLoopsLabel(
+                                video.totalLoops,
+                              ),
+                              isLoading: false,
                             ),
-                            isLoading: false,
-                          ),
+                          ],
                         ],
                       ),
                     ),

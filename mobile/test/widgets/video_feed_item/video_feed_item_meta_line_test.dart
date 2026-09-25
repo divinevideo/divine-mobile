@@ -95,9 +95,11 @@ void main() {
     int? authorTotalLoops,
     bool isOgDiviner = false,
     bool eligibilityIsLoading = false,
+    MockSharedPreferences? prefs,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
+        mockSharedPreferences: prefs,
         additionalOverrides: [
           repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
@@ -195,16 +197,19 @@ void main() {
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('hides a lifetime total below the visibility floor', (
+    testWidgets('hides the line when the viewer turns total loops off', (
       tester,
     ) async {
+      final prefs = MockSharedPreferences();
+      when(() => prefs.getBool(any())).thenReturn(false);
       await pump(
         tester,
-        video: _video(rawTags: {'views': '7'}),
-        authorTotalLoops: 7,
+        video: _video(rawTags: {'views': '50000'}),
+        authorTotalLoops: 50000,
+        prefs: prefs,
       );
 
-      expect(find.textContaining(loopLine(tester, 7)), findsNothing);
+      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
     testWidgets('hides a zero lifetime total', (tester) async {
@@ -213,9 +218,7 @@ void main() {
       expect(find.textContaining(loopLine(tester, 0)), findsNothing);
     });
 
-    testWidgets('shows a lifetime total at the visibility floor', (
-      tester,
-    ) async {
+    testWidgets('shows the author lifetime total', (tester) async {
       await pump(tester, video: _video(), authorTotalLoops: 10000);
 
       expect(find.textContaining(loopLine(tester, 10000)), findsOneWidget);

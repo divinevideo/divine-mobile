@@ -12,7 +12,6 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
@@ -355,13 +354,6 @@ class _ProfileContent extends StatelessWidget {
     final followerCount = (stats?.followers ?? 0) > 0 ? stats!.followers : null;
     final videoCount = (stats?.videoCount ?? 0) > 0 ? stats!.videoCount : null;
 
-    // The sender of a message request is never the viewer, so the owner
-    // exemption the profile header applies does not exist here — the floor
-    // always applies.
-    final loopCount = (stats?.totalViews ?? 0) >= profileLoopsVisibilityFloor
-        ? stats!.totalViews
-        : null;
-
     return ColoredBox(
       color: VineTheme.scrim15,
       child: Center(
@@ -411,18 +403,12 @@ class _ProfileContent extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-              if (statsPending ||
-                  followerCount != null ||
-                  videoCount != null ||
-                  loopCount != null) ...[
-                const SizedBox(height: 4),
-                _StatsLine(
-                  followerCount: followerCount,
-                  videoCount: videoCount,
-                  loopCount: loopCount,
-                  isLoading: statsPending,
-                ),
-              ],
+              _RequestStatsLine(
+                followerCount: followerCount,
+                videoCount: videoCount,
+                totalViews: stats?.totalViews,
+                isLoading: statsPending,
+              ),
               const SizedBox(height: 16),
               _OutlinedActionButton(
                 label: context.l10n.messageRequestViewProfileButton,
@@ -484,6 +470,59 @@ class _InvitePreview extends StatelessWidget {
             inviteMessage.message.senderPubkey == currentPubkey,
         senderDisplayName: senderDisplayName,
       ),
+    );
+  }
+}
+
+/// The follower · videos · loops line for a request, gated by the viewer's
+/// stats visibility choice.
+///
+/// The sender of a message request is never the viewer, so there is no owner
+/// exemption here: whether the loops total appears is the viewer's choice
+/// alone, and it is withheld entirely when that choice is off.
+class _RequestStatsLine extends ConsumerWidget {
+  const _RequestStatsLine({
+    required this.followerCount,
+    required this.videoCount,
+    required this.totalViews,
+    required this.isLoading,
+  });
+
+  final int? followerCount;
+  final int? videoCount;
+  final int? totalViews;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
+
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) {
+        // A zero is not data (see [_ProfileContent]), so it is withheld the
+        // same way a missing count is.
+        final loopCount =
+            statsVisibility.showTotalLoops && (totalViews ?? 0) > 0
+            ? totalViews
+            : null;
+        if (!isLoading &&
+            followerCount == null &&
+            videoCount == null &&
+            loopCount == null) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: _StatsLine(
+            followerCount: followerCount,
+            videoCount: videoCount,
+            loopCount: loopCount,
+            isLoading: isLoading,
+          ),
+        );
+      },
     );
   }
 }
@@ -596,10 +635,7 @@ class _StatsLineState extends State<_StatsLine> {
       }
       if (videoCount != null) {
         parts.add(
-          StringUtils.compactPlural(
-            videoCount,
-            l10n.messageRequestVideosCount,
-          ),
+          StringUtils.compactPlural(videoCount, l10n.messageRequestVideosCount),
         );
       }
       if (loopCount != null) {
