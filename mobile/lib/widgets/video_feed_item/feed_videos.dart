@@ -663,14 +663,11 @@ class __OverlayState extends ConsumerState<_Overlay> {
   final Map<int, Offset> _immersivePointers = <int, Offset>{};
 
   /// Separation between the two pinch fingers when the second one landed, in
-  /// logical pixels. `null` until at least two pointers are down; a pinch is
-  /// measured against this so only a real spread or squeeze toggles the pin,
-  /// not the incidental placement of two fingers.
+  /// logical pixels. `null` until at least two pointers are down, and again
+  /// once the pinch has toggled the pin so one continuous pinch cannot fire
+  /// repeatedly. A pinch is measured against this so only a real spread or
+  /// squeeze toggles the pin, not the incidental placement of two fingers.
   double? _pinchBaselineDistance;
-
-  /// Whether the current multi-pointer gesture has already toggled the pin, so
-  /// one continuous pinch cannot fire repeatedly.
-  bool _pinchTriggeredForGesture = false;
 
   /// Whether *this* item pinned the chrome. Mirrors
   /// [_isHoldingForImmersive] so a pin can be cleared without un-pinning a
@@ -773,7 +770,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
   void _handleImmersivePointerEnd(int pointer) {
     _immersivePointers.remove(pointer);
     if (_immersivePointers.length < 2) {
-      _resetPinchGesture();
+      _pinchBaselineDistance = null;
     } else if (_pinchBaselineDistance != null) {
       // A third finger was down, so the measured pair may now be a different
       // one. Re-measure from here rather than compare against the old pair.
@@ -796,7 +793,6 @@ class __OverlayState extends ConsumerState<_Overlay> {
     if (_immersivePointers.length > 1) _touchWasMultiTouch = true;
     if (_immersivePointers.length == 2) {
       _pinchBaselineDistance = _pinchDistance();
-      _pinchTriggeredForGesture = false;
     }
   }
 
@@ -805,47 +801,35 @@ class __OverlayState extends ConsumerState<_Overlay> {
   ///
   /// Measured from the landing separation, not an absolute distance, so a
   /// two-finger scroll whose fingers drift keeps roughly the same separation
-  /// and never trips it. Only the first crossing per gesture toggles; the
-  /// flag resets when the fingers lift.
+  /// and never trips it. Only the first crossing per gesture toggles; the next
+  /// pair of fingers is measured afresh.
   void _handleImmersivePointerMove(PointerMoveEvent event) {
     if (!_immersivePointers.containsKey(event.pointer)) return;
     _immersivePointers[event.pointer] = event.localPosition;
     final baseline = _pinchBaselineDistance;
-    if (baseline == null || _pinchTriggeredForGesture) return;
-    if (_immersivePointers.length < 2) return;
     // A page swipe can deactivate this item while its fingers are still down;
     // a pin set from it would belong to no visible item.
-    if (!widget.isActive) return;
-    if ((_pinchDistance() - baseline).abs() >= _pinchToggleDistance) {
-      _pinchTriggeredForGesture = true;
-      _togglePinnedImmersive();
-    }
+    if (baseline == null || !widget.isActive) return;
+    if ((_pinchDistance() - baseline).abs() < _pinchToggleDistance) return;
+    _pinchBaselineDistance = null;
+    _togglePinnedImmersive();
   }
 
   /// Separation between the first two down pointers, in logical pixels.
   double _pinchDistance() {
     final points = _immersivePointers.values.toList(growable: false);
-    if (points.length < 2) return 0;
     return (points[0] - points[1]).distance;
-  }
-
-  /// Forgets the pinch baseline so the next multi-touch gesture is measured
-  /// afresh.
-  void _resetPinchGesture() {
-    _pinchBaselineDistance = null;
-    _pinchTriggeredForGesture = false;
   }
 
   /// Toggles the persistent pin. A second pinch restores the chrome, as does
   /// tapping the video.
   void _togglePinnedImmersive() {
-    final cubit = _immersiveCubit;
-    if (cubit == null || cubit.isClosed) return;
     if (_isPinnedForImmersive) {
-      _isPinnedForImmersive = false;
-      cubit.unpin();
+      _clearPinnedImmersive();
       return;
     }
+    final cubit = _immersiveCubit;
+    if (cubit == null || cubit.isClosed) return;
     _isPinnedForImmersive = true;
     // Confirms the pinch registered — the gesture has no other affordance.
     unawaited(HapticService.immersiveModeFeedback());
