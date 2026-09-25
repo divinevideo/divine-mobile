@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -311,23 +310,17 @@ class VideoOverlayActions extends ConsumerWidget {
                         .watch(userProfileReactiveProvider(authorPubkey))
                         .value;
                     // The card's second line reports the author's lifetime
-                    // loops, not this video's. The figure is social proof for
-                    // the creator, and a per-video number beside every card
-                    // reads as a verdict on one clip rather than a body of
-                    // work. Null while the total is unknown or below the
-                    // shared visibility floor, so the card never flashes
-                    // "0 loops" on first paint or discourages a new creator.
+                    // loops when the viewer asked for total loops. The figure
+                    // is social proof for the creator, and a per-video number
+                    // beside every card reads as a verdict on one clip rather
+                    // than a body of work. Null while the total is unknown, so
+                    // the card never flashes "0 loops" on first paint.
                     final authorStats = ref
                         .watch(videoCardAuthorStatsProvider(authorPubkey))
                         .value;
                     final authorTotalLoops =
                         authorStats?.hasKnownTotalViews == true
                         ? authorStats!.totalViews
-                        : null;
-                    final visibleAuthorLoops =
-                        authorTotalLoops != null &&
-                            authorTotalLoops >= profileLoopsVisibilityFloor
-                        ? authorTotalLoops
                         : null;
                     // Use embedded author data from REST API as fallback
                     // This avoids WebSocket profile fetches for videos
@@ -502,7 +495,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                               ],
                                             ),
                                             _VideoCardMetaLine(
-                                              totalLoops: visibleAuthorLoops,
+                                              totalLoops: authorTotalLoops,
                                             ),
                                           ],
                                         ),
@@ -710,25 +703,38 @@ class VideoOverlayActions extends ConsumerWidget {
 /// deliberately omitted, so an old timestamp cannot make the feed read as
 /// inactive; the metadata sheet carries it.
 ///
-/// Renders nothing while the total is unknown (`null`), rather than an empty
-/// row or a placeholder zero.
-class _VideoCardMetaLine extends StatelessWidget {
+/// Rendered only when the viewer has total loops on
+/// ([StatsVisibilityPreferences.showTotalLoops], on by default), and only
+/// while the total is known (`null`), rather than an empty row or a
+/// placeholder zero.
+class _VideoCardMetaLine extends ConsumerWidget {
   const _VideoCardMetaLine({required this.totalLoops});
 
   final int? totalLoops;
 
   @override
-  Widget build(BuildContext context) {
-    final totalLoops = this.totalLoops;
-    if (totalLoops == null) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
 
-    return Text(
-      context.l10n.videoFeedLoopCountLine(
-        StringUtils.formatCompactNumber(totalLoops),
-        totalLoops,
-      ),
-      // Sits on the video next to the white author name.
-      style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) {
+        final totalLoops = this.totalLoops;
+        if (!statsVisibility.showTotalLoops ||
+            totalLoops == null ||
+            totalLoops <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        return Text(
+          context.l10n.videoFeedLoopCountLine(
+            StringUtils.formatCompactNumber(totalLoops),
+            totalLoops,
+          ),
+          // Sits on the video next to the white author name.
+          style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
+        );
+      },
     );
   }
 }

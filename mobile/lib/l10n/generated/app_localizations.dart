@@ -656,6 +656,42 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
+  /// No description provided for @generalSettingsShowTotalLoops.
+  ///
+  /// In en, this message translates to:
+  /// **'Show total loops'**
+  String get generalSettingsShowTotalLoops;
+
+  /// No description provided for @generalSettingsShowTotalLoopsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The creator\'s loop count across all their videos'**
+  String get generalSettingsShowTotalLoopsSubtitle;
+
+  /// No description provided for @generalSettingsShowVideoLoops.
+  ///
+  /// In en, this message translates to:
+  /// **'Show video loops'**
+  String get generalSettingsShowVideoLoops;
+
+  /// No description provided for @generalSettingsShowVideoLoopsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How many times the video you\'re watching has looped'**
+  String get generalSettingsShowVideoLoopsSubtitle;
+
+  /// No description provided for @generalSettingsShowPublishedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Show publish date'**
+  String get generalSettingsShowPublishedDate;
+
+  /// No description provided for @generalSettingsShowPublishedDateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When the video you\'re watching was published'**
+  String get generalSettingsShowPublishedDateSubtitle;
+
   /// Content preferences screen app bar title
   ///
   /// In en, this message translates to:

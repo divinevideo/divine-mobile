@@ -294,6 +294,27 @@ class AppLocalizationsJa extends AppLocalizations {
       'クラシックな正方形フォーマットでフィードを保つ';
 
   @override
+  String get generalSettingsShowTotalLoops => 'Show total loops';
+
+  @override
+  String get generalSettingsShowTotalLoopsSubtitle =>
+      'The creator\'s loop count across all their videos';
+
+  @override
+  String get generalSettingsShowVideoLoops => 'Show video loops';
+
+  @override
+  String get generalSettingsShowVideoLoopsSubtitle =>
+      'How many times the video you\'re watching has looped';
+
+  @override
+  String get generalSettingsShowPublishedDate => 'Show publish date';
+
+  @override
+  String get generalSettingsShowPublishedDateSubtitle =>
+      'When the video you\'re watching was published';
+
+  @override
   String get contentPreferencesTitle => 'コンテンツ設定';
 
   @override

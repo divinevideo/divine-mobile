@@ -272,6 +272,12 @@
   "generalSettingsClosedCaptionsSubtitle": "Show captions when videos include them",
   "generalSettingsVideoShapeSquareOnly": "Square videos only",
   "generalSettingsVideoShapeSquareOnlySubtitle": "Keep feeds in the classic square format",
+  "generalSettingsShowTotalLoops": "Show total loops",
+  "generalSettingsShowTotalLoopsSubtitle": "The creator's loop count across all their videos",
+  "generalSettingsShowVideoLoops": "Show video loops",
+  "generalSettingsShowVideoLoopsSubtitle": "How many times the video you're watching has looped",
+  "generalSettingsShowPublishedDate": "Show publish date",
+  "generalSettingsShowPublishedDateSubtitle": "When the video you're watching was published",
   "contentPreferencesTitle": "Content Preferences",
   "@contentPreferencesTitle": {
     "description": "Content preferences screen app bar title"

@@ -23,6 +23,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -38,6 +39,7 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_verification_
 import 'package:openvine/widgets/video_feed_item/metadata/video_reposters_cubit.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/upload_explainer_constants.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -153,11 +155,21 @@ void main() {
   late _MockVideosRepository mockVideosRepository;
   late UrlLauncherPlatform originalUrlLauncherPlatform;
   late UrlLauncherTestDouble urlLauncher;
+  late SharedPreferences statsPrefs;
 
-  setUp(() {
+  setUp(() async {
     originalUrlLauncherPlatform = UrlLauncherPlatform.instance;
     urlLauncher = UrlLauncherTestDouble();
     UrlLauncherPlatform.instance = urlLauncher;
+
+    // Stats visibility defaults to total loops only; these suites exercise the
+    // sheet's date and loops content, so all three switches are turned on.
+    SharedPreferences.setMockInitialValues({
+      StatsVisibilityPreferences.showTotalLoopsKey: true,
+      StatsVisibilityPreferences.showVideoLoopsKey: true,
+      StatsVisibilityPreferences.showPublishedDateKey: true,
+    });
+    statsPrefs = await SharedPreferences.getInstance();
 
     mockVideosRepository = _MockVideosRepository();
     mockInteractionsBloc = _MockVideoInteractionsBloc();
@@ -195,6 +207,7 @@ void main() {
     required Widget child,
     List<Override> providerOverrides = const [],
     VideoRepostersState? repostersState,
+    SharedPreferences? sharedPreferences,
   }) {
     if (repostersState != null) {
       when(() => mockRepostersCubit.state).thenReturn(repostersState);
@@ -204,7 +217,7 @@ void main() {
       container: ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(
-            createMockSharedPreferences(),
+            sharedPreferences ?? statsPrefs,
           ),
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           ...providerOverrides,
@@ -484,6 +497,31 @@ void main() {
         } finally {
           semantics.dispose();
         }
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'hides the posted date when the viewer turns publish date off',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showPublishedDateKey: false,
+        });
+        final dateOffPrefs = await SharedPreferences.getInstance();
+        final video = _makeVideo(title: 'Who knew?');
+
+        await tester.pumpWidget(
+          buildSubject(
+            child: MetadataExpandedSheet(video: video),
+            sharedPreferences: dateOffPrefs,
+          ),
+        );
+
+        final expectedDate = DateFormat.yMMMMd('en').format(
+          DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000, isUtc: true),
+        );
+        expect(find.text(expectedDate), findsNothing);
+        // The rest of the overview still renders.
+        expect(find.text('Who knew?'), findsOneWidget);
       },
     );
   });
@@ -1107,34 +1145,33 @@ void main() {
       },
     );
 
-    testWidgets(
-      'third-party view: unconfirmed collaborator is not rendered',
-      (tester) async {
-        // Pre-#6907 a creator-tagged pubkey rendered here regardless of
-        // whether they ever accepted, publicly crediting them.
-        await tester.pumpWidget(
-          buildSubject(
-            providerOverrides: [
-              fetchUserProfileProvider(_collaborator1).overrideWith(
-                (ref) async => _makeProfile(_collaborator1, 'Alice'),
-              ),
-            ],
-            child: const MetadataCollaboratorsSectionBody(
-              visibility: CollaboratorVisibility(
-                taggedPubkeys: [_collaborator1],
-                statusByPubkey: {_collaborator1: CollaboratorStatus.pending},
-                currentUserPubkey: _reposterPubkey,
-                creatorPubkey: _creatorPubkey,
-                isResolved: true,
-              ),
+    testWidgets('third-party view: unconfirmed collaborator is not rendered', (
+      tester,
+    ) async {
+      // Pre-#6907 a creator-tagged pubkey rendered here regardless of
+      // whether they ever accepted, publicly crediting them.
+      await tester.pumpWidget(
+        buildSubject(
+          providerOverrides: [
+            fetchUserProfileProvider(_collaborator1).overrideWith(
+              (ref) async => _makeProfile(_collaborator1, 'Alice'),
+            ),
+          ],
+          child: const MetadataCollaboratorsSectionBody(
+            visibility: CollaboratorVisibility(
+              taggedPubkeys: [_collaborator1],
+              statusByPubkey: {_collaborator1: CollaboratorStatus.pending},
+              currentUserPubkey: _reposterPubkey,
+              creatorPubkey: _creatorPubkey,
+              isResolved: true,
             ),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('Alice'), findsNothing);
-      },
-    );
+      expect(find.text('Alice'), findsNothing);
+    });
 
     testWidgetsWithSurfaceSize(
       'reveals fallback names after the profile grace window',
@@ -2215,118 +2252,114 @@ void main() {
   // Full sheet integration
   // ---------------------------------------------------------------------------
   group('$MetadataExpandedSheet full integration', () {
-    testWidgetsWithSurfaceSize(
-      'renders all sections for fully populated video',
-      (tester) async {
-        final video = _makeVideo(
-          title: 'Who knew?',
-          content:
-              'What really happens behind the scenes\n\n'
-              '${inspiredByAttributionLine(normalizeToNpub(_inspiredByPubkey)!)}',
-          hashtags: ['grease', 'take503'],
-          collaboratorPubkeys: [_collaborator1],
-          inspiredByVideo: const InspiredByInfo(
-            addressableId: '34236:$_inspiredByPubkey:some-dtag',
-          ),
-          audioEventId: _audioEventId,
-          rawTags: {'verification': 'verified_mobile'},
-        );
+    testWidgetsWithSurfaceSize('renders all sections for fully populated video', (
+      tester,
+    ) async {
+      final video = _makeVideo(
+        title: 'Who knew?',
+        content:
+            'What really happens behind the scenes\n\n'
+            '${inspiredByAttributionLine(normalizeToNpub(_inspiredByPubkey)!)}',
+        hashtags: ['grease', 'take503'],
+        collaboratorPubkeys: [_collaborator1],
+        inspiredByVideo: const InspiredByInfo(
+          addressableId: '34236:$_inspiredByPubkey:some-dtag',
+        ),
+        audioEventId: _audioEventId,
+        rawTags: {'verification': 'verified_mobile'},
+      );
 
-        await tester.pumpWidget(
-          buildSubject(
-            repostersState: const VideoRepostersState(
-              pubkeys: [_reposterPubkey],
-              isLoading: false,
+      await tester.pumpWidget(
+        buildSubject(
+          repostersState: const VideoRepostersState(
+            pubkeys: [_reposterPubkey],
+            isLoading: false,
+          ),
+          providerOverrides: [
+            fetchUserProfileProvider(_creatorPubkey).overrideWith(
+              (ref) async => _makeProfile(_creatorPubkey, 'Sebastian Heit'),
             ),
-            providerOverrides: [
-              fetchUserProfileProvider(_creatorPubkey).overrideWith(
-                (ref) async => _makeProfile(_creatorPubkey, 'Sebastian Heit'),
-              ),
-              fetchUserProfileProvider(_collaborator1).overrideWith(
-                (ref) async => _makeProfile(_collaborator1, 'Josh Musick'),
-              ),
-              fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
-                (ref) async =>
-                    _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
-              ),
-              fetchUserProfileProvider(_reposterPubkey).overrideWith(
-                (ref) async => _makeProfile(_reposterPubkey, 'Improvising'),
-              ),
-              soundByIdProvider(
-                _audioEventId,
-              ).overrideWith((ref) async => _testAudio),
-              userProfileReactiveProvider(_audioPubkey).overrideWith(
-                (ref) =>
-                    Stream.value(_makeProfile(_audioPubkey, 'Audio Creator')),
-              ),
-            ],
-            child: MetadataExpandedSheet(video: video),
-          ),
-        );
-        await tester.pumpAndSettle();
+            fetchUserProfileProvider(_collaborator1).overrideWith(
+              (ref) async => _makeProfile(_collaborator1, 'Josh Musick'),
+            ),
+            fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+              (ref) async =>
+                  _makeProfile(_inspiredByPubkey, 'Inspiring Creator'),
+            ),
+            fetchUserProfileProvider(_reposterPubkey).overrideWith(
+              (ref) async => _makeProfile(_reposterPubkey, 'Improvising'),
+            ),
+            soundByIdProvider(
+              _audioEventId,
+            ).overrideWith((ref) async => _testAudio),
+            userProfileReactiveProvider(_audioPubkey).overrideWith(
+              (ref) =>
+                  Stream.value(_makeProfile(_audioPubkey, 'Audio Creator')),
+            ),
+          ],
+          child: MetadataExpandedSheet(video: video),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Title + description
-        expect(find.text('Who knew?'), findsOneWidget);
-        // Exact match: an unstripped line would lengthen the caption text.
-        expect(
-          find.text('What really happens behind the scenes'),
-          findsOneWidget,
-        );
+      // Title + description
+      expect(find.text('Who knew?'), findsOneWidget);
+      // Exact match: an unstripped line would lengthen the caption text.
+      expect(
+        find.text('What really happens behind the scenes'),
+        findsOneWidget,
+      );
 
-        // Stats
-        final l10n = _l10n(tester);
-        expect(
-          find.text(l10n.metadataLoopsLabel(video.totalLoops)),
-          findsOneWidget,
-        );
-        expect(find.text(l10n.metadataLikesLabel), findsOneWidget);
+      // Stats
+      final l10n = _l10n(tester);
+      expect(
+        find.text(l10n.metadataLoopsLabel(video.totalLoops)),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.metadataLikesLabel), findsOneWidget);
 
-        // Badges row (Human-Made from verification, not Classic Vine).
-        // Tags now live inside the header section, so they're visible
-        // without scrolling.
-        expect(
-          find.textContaining(l10n.metadataBadgeHumanMade),
-          findsOneWidget,
-        );
-        expect(find.text('grease'), findsOneWidget);
+      // Badges row (Human-Made from verification, not Classic Vine).
+      // Tags now live inside the header section, so they're visible
+      // without scrolling.
+      expect(find.textContaining(l10n.metadataBadgeHumanMade), findsOneWidget);
+      expect(find.text('grease'), findsOneWidget);
 
-        // Top section labels
-        expect(find.text(l10n.metadataCreatorLabel), findsOneWidget);
+      // Top section labels
+      expect(find.text(l10n.metadataCreatorLabel), findsOneWidget);
 
-        // Scroll to reveal sections below the fold
-        final listFinder = find.byType(ListView);
-        await tester.drag(listFinder, const Offset(0, -300));
-        await tester.pumpAndSettle();
+      // Scroll to reveal sections below the fold
+      final listFinder = find.byType(ListView);
+      await tester.drag(listFinder, const Offset(0, -300));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Sebastian Heit'), findsOneWidget);
+      expect(find.text('Sebastian Heit'), findsOneWidget);
 
-        // Scroll further to reveal collaborators
-        await tester.drag(listFinder, const Offset(0, -300));
-        await tester.pumpAndSettle();
+      // Scroll further to reveal collaborators
+      await tester.drag(listFinder, const Offset(0, -300));
+      await tester.pumpAndSettle();
 
-        expect(find.text(l10n.metadataCollaboratorsLabel), findsOneWidget);
-        expect(find.text('Josh Musick'), findsOneWidget);
+      expect(find.text(l10n.metadataCollaboratorsLabel), findsOneWidget);
+      expect(find.text('Josh Musick'), findsOneWidget);
 
-        // Scroll further to reveal remaining sections including
-        // Verification, which now sits at the very bottom per Figma.
-        await tester.drag(listFinder, const Offset(0, -600));
-        await tester.pumpAndSettle();
+      // Scroll further to reveal remaining sections including
+      // Verification, which now sits at the very bottom per Figma.
+      await tester.drag(listFinder, const Offset(0, -600));
+      await tester.pumpAndSettle();
 
-        expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
-        expect(find.text('Inspiring Creator'), findsOneWidget);
-        expect(find.text(l10n.metadataRepostedByLabel), findsOneWidget);
-        expect(find.text('Improvising'), findsOneWidget);
-        // Sounds section label is still hardcoded English in lib code
-        // (metadata_sounds_section.dart) — flagged as pre-existing l10n debt.
-        expect(find.text('Sounds'), findsOneWidget);
-        expect(find.text('Test Sound'), findsOneWidget);
+      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+      expect(find.text('Inspiring Creator'), findsOneWidget);
+      expect(find.text(l10n.metadataRepostedByLabel), findsOneWidget);
+      expect(find.text('Improvising'), findsOneWidget);
+      // Sounds section label is still hardcoded English in lib code
+      // (metadata_sounds_section.dart) — flagged as pre-existing l10n debt.
+      expect(find.text('Sounds'), findsOneWidget);
+      expect(find.text('Test Sound'), findsOneWidget);
 
-        // Verification section moved to the bottom of the sheet.
-        await tester.drag(listFinder, const Offset(0, -300));
-        await tester.pumpAndSettle();
-        expect(find.text(l10n.metadataVerificationLabel), findsOneWidget);
-      },
-    );
+      // Verification section moved to the bottom of the sheet.
+      await tester.drag(listFinder, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.metadataVerificationLabel), findsOneWidget);
+    });
 
     testWidgetsWithSurfaceSize(
       'renders only populated sections for sparse video',

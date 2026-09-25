@@ -13,7 +13,6 @@ import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -183,10 +182,15 @@ void main() {
     // the archive importer writes as tags. Both were structurally null, so the
     // line was dead. Counts now come from the `profile_statistics` store.
     group('stats line', () {
-      Widget buildStatsSubject(ProfileStats? stats, {bool vanished = false}) {
+      Widget buildStatsSubject(
+        ProfileStats? stats, {
+        bool vanished = false,
+        MockSharedPreferences? prefs,
+      }) {
         return testMaterialApp(
           mockAuthService: mockAuthService,
           mockNostrService: mockNostrClient,
+          mockSharedPreferences: prefs,
           additionalOverrides: [
             goRouterProvider.overrideWithValue(mockGoRouter),
             videosRepositoryProvider.overrideWithValue(mockVideosRepository),
@@ -319,46 +323,19 @@ void main() {
         );
       });
 
-      testWidgets('omits loops below the visibility floor', (tester) async {
+      testWidgets('renders loops when the viewer shows total loops', (
+        tester,
+      ) async {
         await pumpStats(
           tester,
-          buildStatsSubject(
-            statsWith(
-              videoCount: 3,
-              totalViews: profileLoopsVisibilityFloor - 1,
-            ),
-          ),
+          buildStatsSubject(statsWith(videoCount: 3, totalViews: 250)),
         );
 
         expect(
           find.textContaining(
             l10n.videoFeedLoopCountLine(
-              StringUtils.formatCompactNumber(
-                profileLoopsVisibilityFloor - 1,
-              ),
-              profileLoopsVisibilityFloor - 1,
-            ),
-            findRichText: true,
-          ),
-          findsNothing,
-        );
-      });
-
-      // The sender is never the viewer, so the profile header's owner
-      // exemption does not apply — only the floor decides.
-      testWidgets('renders loops at the visibility floor', (tester) async {
-        await pumpStats(
-          tester,
-          buildStatsSubject(
-            statsWith(videoCount: 3, totalViews: profileLoopsVisibilityFloor),
-          ),
-        );
-
-        expect(
-          find.textContaining(
-            l10n.videoFeedLoopCountLine(
-              StringUtils.formatCompactNumber(profileLoopsVisibilityFloor),
-              profileLoopsVisibilityFloor,
+              StringUtils.formatCompactNumber(250),
+              250,
             ),
             findRichText: true,
           ),
@@ -366,12 +343,37 @@ void main() {
         );
       });
 
+      // The sender is never the viewer, so there is no owner exemption: the
+      // viewer's choice is the only thing that decides.
+      testWidgets('omits loops when the viewer hides total loops', (
+        tester,
+      ) async {
+        final prefs = MockSharedPreferences();
+        when(() => prefs.getBool(any())).thenReturn(false);
+        await pumpStats(
+          tester,
+          buildStatsSubject(
+            statsWith(videoCount: 3, totalViews: 250),
+            prefs: prefs,
+          ),
+        );
+
+        expect(
+          find.textContaining(
+            l10n.videoFeedLoopCountLine(
+              StringUtils.formatCompactNumber(250),
+              250,
+            ),
+            findRichText: true,
+          ),
+          findsNothing,
+        );
+      });
+
       // An ICU plural fuses its numeral and its noun, so there is no numeral
       // to swap for a dash the way the profile header's columns do. The line
       // shimmers, then gives up.
-      testWidgets('hides the line once the skeleton times out', (
-        tester,
-      ) async {
+      testWidgets('hides the line once the skeleton times out', (tester) async {
         final semantics = tester.ensureSemantics();
         try {
           await pumpStats(tester, buildStatsSubject(null));
