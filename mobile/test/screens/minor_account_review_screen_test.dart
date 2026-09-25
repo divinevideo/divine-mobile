@@ -927,17 +927,81 @@ void main() {
           expect(find.text(l10n.supportContactSupport), findsOneWidget);
         },
       );
+
+      // An under-13 case that still needs action already offers "Parent
+      // Support Instructions", which opens the same parent-support screen, so
+      // a second button to it would only add a choice with no difference.
+      testWidgets(
+        'an under-13 case that needs action shows one button to parent support',
+        (tester) async {
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.under13,
+            state: MinorReviewCaseState.restrictedPendingSupportEmail,
+          );
+
+          expect(
+            find.text(l10n.minorAccountReviewParentSupportInstructions),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.supportContactSupport), findsNothing);
+        },
+      );
+
+      // Only the under-13 duplicate is hidden. A teen on the parent-contact
+      // step has a Continue, and must still be able to contest the decision.
+      testWidgets('a parent-contact case keeps the appeal beside Continue', (
+        tester,
+      ) async {
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.age13To15,
+          state: MinorReviewCaseState.restrictedPendingUserResponse,
+        );
+
+        expect(find.text(l10n.minorAccountReviewContinue), findsOneWidget);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+      });
+
+      // With no case the account's age is unknown. Support chat puts it in
+      // front of a person who can find out; the parent-email screen would be a
+      // dead end for an adult.
+      testWidgets('an appeal with no review case opens support messages', (
+        tester,
+      ) async {
+        final goRouter = MockGoRouter();
+        when(() => goRouter.push(any())).thenAnswer((_) async => null);
+        var openCalls = 0;
+
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.unknown,
+          noCase: true,
+          goRouter: goRouter,
+          openSupportMessages: () async {
+            openCalls++;
+            return true;
+          },
+        );
+        await tester.tap(find.text(l10n.supportContactSupport));
+        await tester.pumpAndSettle();
+
+        expect(openCalls, equals(1));
+        verifyNever(() => goRouter.push(any()));
+      });
     });
   });
 }
 
 /// Pumps a restricted case, by default one awaiting moderator review, which
-/// renders no primary action.
+/// renders no primary action. [noCase] pumps a restriction with no case, in
+/// which [ageBand] is ignored.
 Future<void> _pumpAppeal(
   WidgetTester tester, {
   required SuspectedAgeBand ageBand,
   MinorReviewCaseState state = MinorReviewCaseState.submittedForReview,
   MinorReviewResolutionType? allowedResolution,
+  bool noCase = false,
   MockGoRouter? goRouter,
   OpenSupportMessages? openSupportMessages,
   ComposeSupportEmail? composeEmail,
@@ -962,21 +1026,23 @@ Future<void> _pumpAppeal(
         currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
           return MinorAccountReviewStatus(
             restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
-            currentCase: MinorReviewCase(
-              id: 'case-appeal',
-              state: state,
-              suspectedAgeBand: ageBand,
-              allowedResolution:
-                  allowedResolution ??
-                  (ageBand == SuspectedAgeBand.under13
-                      ? MinorReviewResolutionType.supportEmailOnly
-                      : MinorReviewResolutionType.parentVideoOrEmail),
-              instructions: const MinorReviewInstructions(
-                title: 'Submission received',
-                body: 'We are reviewing this case.',
-              ),
-              supportEmail: 'support@divine.video',
-            ),
+            currentCase: noCase
+                ? null
+                : MinorReviewCase(
+                    id: 'case-appeal',
+                    state: state,
+                    suspectedAgeBand: ageBand,
+                    allowedResolution:
+                        allowedResolution ??
+                        (ageBand == SuspectedAgeBand.under13
+                            ? MinorReviewResolutionType.supportEmailOnly
+                            : MinorReviewResolutionType.parentVideoOrEmail),
+                    instructions: const MinorReviewInstructions(
+                      title: 'Submission received',
+                      body: 'We are reviewing this case.',
+                    ),
+                    supportEmail: 'support@divine.video',
+                  ),
           );
         }),
       ],

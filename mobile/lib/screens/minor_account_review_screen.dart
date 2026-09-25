@@ -360,12 +360,16 @@ class _LoadedView extends ConsumerWidget {
               : l10n.minorAccountReviewAppealTeenBody,
         ),
         const SizedBox(height: 12),
-        _AppealSupportButton(
-          isUnder13Path: isUnder13Path,
-          openSupportMessages: openSupportMessages,
-          composeEmail: composeEmail,
-        ),
-        const SizedBox(height: 12),
+        // On the under-13 path a primary action already opens parent support,
+        // so a second button to the same screen would only add a choice.
+        if (!(isUnder13Path && primaryAction != null)) ...[
+          _AppealSupportButton(
+            isUnder13Path: isUnder13Path,
+            openSupportMessages: openSupportMessages,
+            composeEmail: composeEmail,
+          ),
+          const SizedBox(height: 12),
+        ],
         DivineButton(
           label: l10n.minorAccountReviewOpenModerationMessage,
           type: DivineButtonType.secondary,
