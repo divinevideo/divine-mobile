@@ -4688,5 +4688,17 @@
   "savedSoundDeleteFailed": "Der Sound konnte nicht gelöscht werden. Versuch es erneut.",
   "savedSoundDeleteFailedNotOwner": "Du kannst nur Sounds löschen, die du geteilt hast.",
   "audioPickerTypeGroup": "Audio",
-  "soundUploadRetrySaveAction": "Erneut in Sounds speichern"
+  "soundUploadRetrySaveAction": "Erneut in Sounds speichern",
+  "crosspostingBenefitTitle": "Bring deine Loops überall hin",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Einmal auf Divine posten, direkt auf Instagram teilen. Deine Leute sind schon dort — geh sie treffen. Jeder Loop, den du sendest, trägt einen kleinen Link nach Hause, damit auch der nächste Creator uns findet.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Mit {platform} verbinden",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Einmal einstellen",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Jeder neue Loop, den du postest, geht für dich an {platform} — ohne zusätzliche Taps. Gilt nur für Loops, die du veröffentlichst, nachdem du es eingeschaltet hast.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Automatik einschalten",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

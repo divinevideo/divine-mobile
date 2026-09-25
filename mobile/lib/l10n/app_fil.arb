@@ -3680,5 +3680,17 @@
   "savedSoundDeleteFailed": "Hindi na-delete ang sound na iyon. Subukan ulit.",
   "savedSoundDeleteFailedNotOwner": "Mga sound lang na ikaw ang nag-share ang puwede mong i-delete.",
   "audioPickerTypeGroup": "Audio",
-  "soundUploadRetrySaveAction": "Subukan ulit i-save sa Sounds"
+  "soundUploadRetrySaveAction": "Subukan ulit i-save sa Sounds",
+  "crosspostingBenefitTitle": "Dalhin ang loops mo kahit saan",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Mag-post nang isang beses sa Divine, i-share direkta sa Instagram. Nandiyan na ang mga tao mo — puntahan mo sila. Bawat loop na ipadala mo may dalang maliit na link pauwi, para makita rin tayo ng susunod na creator.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "I-connect ang {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "I-set nang isang beses",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Bawat bagong loop na ipi-post mo, awtomatikong napupunta sa {platform} para sa'yo — walang dagdag na tap. Para lang ito sa mga loop na ipi-publish mo pagkatapos mong i-on ito.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "I-on ang awtomatiko",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

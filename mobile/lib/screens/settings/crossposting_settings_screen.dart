@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
+import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/oauth/app_oauth_callback.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
@@ -16,6 +17,8 @@ import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/crossposting/crossposting_auto_card.dart';
+import 'package:openvine/widgets/crossposting/crossposting_benefit_card.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Wires authenticated dependencies for the crossposting settings view.
@@ -34,7 +37,8 @@ class CrosspostingSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!ref.watch(crosspostingEligibleProvider)) {
+    if (ref.watch(crosspostingAvailabilityProvider) ==
+        CrosspostingAvailability.unavailable) {
       return _CrosspostingScaffold(
         child: Center(
           child: Text(
@@ -182,38 +186,47 @@ class _LoadedSettingsList extends StatelessWidget {
     final refreshLabel = MaterialLocalizations.of(
       context,
     ).refreshIndicatorSemanticLabel;
+    CrosspostingPlatformSettings? autoTarget;
+    for (final entry in state.entries) {
+      if (entry.isConnected &&
+          entry.supportsAutomatic &&
+          entry.mode != CrosspostingMode.automatic) {
+        autoTarget = entry;
+        break;
+      }
+    }
     return RefreshIndicator(
       color: context.vineColors.accentPositive,
       backgroundColor: context.vineColors.surfaceContainer,
       onRefresh: context.read<CrosspostingSettingsCubit>().refresh,
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: state.entries.length + 1,
-        separatorBuilder: (_, _) =>
-            Divider(height: 1, color: context.vineColors.outlineMuted),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: DivineButton(
-                  label: refreshLabel,
-                  size: DivineButtonSize.small,
-                  type: DivineButtonType.secondary,
-                  leadingIcon: DivineIconName.arrowClockwise,
-                  onPressed: state.hasPendingAction
-                      ? null
-                      : context.read<CrosspostingSettingsCubit>().refresh,
-                ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: DivineButton(
+                label: refreshLabel,
+                size: DivineButtonSize.small,
+                type: DivineButtonType.secondary,
+                leadingIcon: DivineIconName.arrowClockwise,
+                onPressed: state.hasPendingAction
+                    ? null
+                    : context.read<CrosspostingSettingsCubit>().refresh,
               ),
-            );
-          }
-          return _PlatformSection(
-            entry: state.entries[index - 1],
-            state: state,
-          );
-        },
+            ),
+          ),
+          if (state.entries.isNotEmpty &&
+              state.entries.every((entry) => !entry.isConnected))
+            CrosspostingBenefitCard(platform: state.entries.first.platform),
+          if (autoTarget != null)
+            CrosspostingAutoCard(platform: autoTarget.platform),
+          for (final entry in state.entries) ...[
+            Divider(height: 1, color: context.vineColors.outlineMuted),
+            _PlatformSection(entry: entry, state: state),
+          ],
+        ],
       ),
     );
   }
@@ -452,10 +465,20 @@ class _ConnectionAction extends StatelessWidget {
               if (entry.isConnected) {
                 unawaited(cubit.disconnect(entry.platform));
               } else {
-                unawaited(cubit.connect(entry.platform));
+                unawaited(_connect(context, cubit));
               }
             },
     );
+  }
+
+  Future<void> _connect(
+    BuildContext context,
+    CrosspostingSettingsCubit cubit,
+  ) async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    if (await openCrosspostingWebSetupIfRequired(container)) return;
+    if (!context.mounted) return;
+    await cubit.connect(entry.platform);
   }
 }
 

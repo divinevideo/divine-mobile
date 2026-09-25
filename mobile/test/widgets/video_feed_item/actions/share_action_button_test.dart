@@ -16,16 +16,22 @@ import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/add_to_list_dialog.dart';
+import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/test_provider_overrides.dart';
@@ -35,6 +41,9 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockVideoSharingService extends Mock implements VideoSharingService {}
+
+class _MockCrosspostingApiClient extends Mock
+    implements CrosspostingApiClient {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -374,17 +383,23 @@ void main() {
         Future<void> pumpOwnerSheet(
           WidgetTester tester, {
           MockGoRouter? goRouter,
+          List<Override>? additionalOverrides,
+          bool isRegistered = true,
         }) async {
           final mockAuth = createMockAuthService(
             authState: AuthState.authenticated,
             currentPublicKeyHex: ownPubkey,
           );
+          when(() => mockAuth.isRegistered).thenReturn(isRegistered);
           final app = testMaterialApp(
             home: Scaffold(body: ShareActionButton(video: testVideo)),
             additionalOverrides: [
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
+              if (goRouter != null)
+                goRouterProvider.overrideWithValue(goRouter),
+              ...?additionalOverrides,
             ],
             mockAuthService: mockAuth,
             mockProfileRepository: mockProfileRepository,
@@ -470,6 +485,92 @@ void main() {
 
           expect(ownerCubit.isClosed, isTrue);
           expect(crosspostCubit.isClosed, isTrue);
+        });
+
+        testWidgets('offers Crosspost when nothing is connected', (
+          tester,
+        ) async {
+          await pumpOwnerSheet(tester);
+
+          expect(find.text(l10n.shareSheetCrosspost), findsOneWidget);
+        });
+
+        testWidgets(
+          'hides Crosspost for an identity the crossposter cannot serve',
+          (tester) async {
+            await pumpOwnerSheet(tester, isRegistered: false);
+
+            expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
+            expect(find.text(l10n.shareSheetCrosspost), findsNothing);
+          },
+        );
+
+        testWidgets(
+          'Crosspost waits for connections instead of routing to setup',
+          (tester) async {
+            final goRouter = MockGoRouter();
+            when(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            ).thenAnswer((_) async {});
+            final client = _MockCrosspostingApiClient();
+            final connections = Completer<List<CrosspostingConnection>>();
+            when(client.getConnections).thenAnswer((_) => connections.future);
+
+            await pumpOwnerSheet(
+              tester,
+              goRouter: goRouter,
+              additionalOverrides: [
+                crossposterApiClientProvider.overrideWithValue(client),
+              ],
+            );
+
+            await tester.tap(find.text(l10n.shareSheetCrosspost));
+            await tester.pump();
+            verifyNever(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            );
+
+            connections.complete(const [
+              CrosspostingConnection(
+                id: 'connection-1',
+                platform: CrosspostingPlatform.instagram,
+                status: CrosspostingConnectionStatus.connected,
+              ),
+            ]);
+            await tester.pumpAndSettle();
+
+            expect(find.byType(CrosspostSheetView), findsOneWidget);
+            verifyNever(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            );
+          },
+        );
+
+        testWidgets('Crosspost routes to settings with no connections', (
+          tester,
+        ) async {
+          final goRouter = MockGoRouter();
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
+
+          // Deliberately not pre-warmed: the async resolver must await the
+          // support lookup and still route native on a cold read.
+          await pumpOwnerSheet(
+            tester,
+            goRouter: goRouter,
+            additionalOverrides: [
+              appOAuthSupportProvider.overrideWith((ref) async => true),
+            ],
+          );
+
+          await tester.tap(find.text(l10n.shareSheetCrosspost));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+
+          verify(
+            () => goRouter.push<void>(RoutePaths.crosspostingSettings),
+          ).called(1);
         });
       });
 

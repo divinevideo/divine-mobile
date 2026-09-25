@@ -114,6 +114,34 @@ void main() {
         ],
         errors: () => [isA<CrosspostingApiException>()],
       );
+
+      blocTest<VideoCrosspostCubit, VideoCrosspostState>(
+        'drops connections for platforms that are not visible in the app',
+        build: () {
+          when(client.getConnections).thenAnswer(
+            (_) async => const [
+              CrosspostingConnection(
+                id: 'ig',
+                platform: CrosspostingPlatform.instagram,
+                status: CrosspostingConnectionStatus.connected,
+              ),
+              CrosspostingConnection(
+                id: 'x',
+                platform: CrosspostingPlatform.x,
+                status: CrosspostingConnectionStatus.connected,
+              ),
+            ],
+          );
+          return buildCubit();
+        },
+        act: (cubit) => cubit.loadConnections(),
+        verify: (cubit) {
+          expect(
+            cubit.state.connections.map((c) => c.platform),
+            equals([CrosspostingPlatform.instagram]),
+          );
+        },
+      );
     });
 
     group('togglePlatform', () {

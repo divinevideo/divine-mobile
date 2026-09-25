@@ -12503,4 +12503,27 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'Опитай пак да запазиш в Звуци';
+
+  @override
+  String get crosspostingBenefitTitle => 'Отнеси лууповете си навсякъде';
+
+  @override
+  String get crosspostingBenefitBody =>
+      'Публикувай веднъж в Divine и сподели директно в Instagram. Хората ти вече са там — отиди да се запознаете. Всеки луп, който изпратиш, носи малка връзка обратно, за да ни намери и следващият творец.';
+
+  @override
+  String crosspostingBenefitConnect(String platform) {
+    return 'Свържи $platform';
+  }
+
+  @override
+  String get crosspostingAutoTitle => 'Настрой веднъж';
+
+  @override
+  String crosspostingAutoBody(String platform) {
+    return 'Всеки нов луп, който публикуваш, се изпраща към $platform вместо теб — без допълнителни докосвания. Важи само за луповете, които публикуваш, след като го включиш.';
+  }
+
+  @override
+  String get crosspostingAutoEnable => 'Включи автоматичното';
 }

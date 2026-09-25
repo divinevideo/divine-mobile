@@ -6447,5 +6447,17 @@
   "savedSoundDeleteFailed": "无法删除该声音。请重试。",
   "savedSoundDeleteFailedNotOwner": "你只能删除自己分享的声音。",
   "audioPickerTypeGroup": "音频",
-  "soundUploadRetrySaveAction": "重新保存到声音库"
+  "soundUploadRetrySaveAction": "重新保存到声音库",
+  "crosspostingBenefitTitle": "把你的循环带到各处",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "在 Divine 发一次，直接分享到 Instagram。你的人早就在那儿了 —— 去和他们见面吧。你发出的每个循环都带着一个小小的链接回家，让下一位创作者也能找到我们。",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "连接 {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "设置一次即可",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "你发布的每个新循环都会替你发到 {platform} —— 无需额外点击。仅适用于你开启之后发布的循环。",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "开启自动",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

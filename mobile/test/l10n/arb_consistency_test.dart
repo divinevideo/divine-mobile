@@ -725,6 +725,16 @@ const _knownUntranslatedDebt = <String>{
   'soundsImportAccountChanged',
   // The four social-proof keys and searchUserVideoCount left this list when
   // this branch translated them into every locale.
+  // Crossposting CTA copy. Every locale except Amharic and Telugu received a
+  // translation in this change; those two are deferred to a speaker pass
+  // rather than guessed, because the body's "carries a little link home"
+  // metaphor and the automatic-mode nuance need a native reviewer.
+  'crosspostingBenefitTitle',
+  'crosspostingBenefitBody',
+  'crosspostingBenefitConnect',
+  'crosspostingAutoTitle',
+  'crosspostingAutoBody',
+  'crosspostingAutoEnable',
 };
 
 const _profileBadgeSheetKeys = <String>{

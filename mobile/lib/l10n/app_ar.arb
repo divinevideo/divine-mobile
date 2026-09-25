@@ -4688,5 +4688,17 @@
   "savedSoundDeleteFailed": "تعذّر حذف هذا الصوت. حاول مرة أخرى.",
   "savedSoundDeleteFailedNotOwner": "لا يمكن حذف سوى الأصوات التي شاركتها بنفسك.",
   "audioPickerTypeGroup": "صوت",
-  "soundUploadRetrySaveAction": "إعادة محاولة الحفظ في الأصوات"
+  "soundUploadRetrySaveAction": "إعادة محاولة الحفظ في الأصوات",
+  "crosspostingBenefitTitle": "خُذ تكراراتك إلى كل مكان",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "انشر مرة واحدة على Divine، وشارك مباشرة إلى Instagram. جمهورك موجود هناك بالفعل — اذهب وقابلهم. كل تكرار ترسله يحمل معه رابطًا صغيرًا يعود إلى Divine، حتى يجدنا المبدع التالي أيضًا.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "ربط {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "اضبطها مرة واحدة",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "كل تكرار جديد تنشره يُرسَل إلى {platform} نيابة عنك — دون نقرات إضافية. ينطبق فقط على التكرارات التي تنشرها بعد تفعيله.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "تفعيل التلقائي",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

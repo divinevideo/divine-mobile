@@ -20819,6 +20819,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry saving to Sounds'**
   String get soundUploadRetrySaveAction;
+
+  /// Headline of the crossposting benefit card in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Take your loops everywhere'**
+  String get crosspostingBenefitTitle;
+
+  /// Body of the crossposting benefit card in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.'**
+  String get crosspostingBenefitBody;
+
+  /// Primary action on the crossposting benefit card
+  ///
+  /// In en, this message translates to:
+  /// **'Connect {platform}'**
+  String crosspostingBenefitConnect(String platform);
+
+  /// Headline of the automatic crossposting encouragement card
+  ///
+  /// In en, this message translates to:
+  /// **'Set it once'**
+  String get crosspostingAutoTitle;
+
+  /// Body of the automatic crossposting encouragement card
+  ///
+  /// In en, this message translates to:
+  /// **'Every new loop you post goes out to {platform} for you — no extra taps. Only applies to loops you publish after you turn it on.'**
+  String crosspostingAutoBody(String platform);
+
+  /// Action that switches a platform to automatic crossposting
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on automatic'**
+  String get crosspostingAutoEnable;
 }
 
 class _AppLocalizationsDelegate

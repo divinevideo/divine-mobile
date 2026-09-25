@@ -11777,4 +11777,27 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'サウンドへの保存を再試行';
+
+  @override
+  String get crosspostingBenefitTitle => 'ループをどこへでも';
+
+  @override
+  String get crosspostingBenefitBody =>
+      'Divine に一度投稿すれば、そのまま Instagram へシェア。みんなはもう向こうにいるよ — 会いに行こう。送るループには小さなリンクがついてくるから、次のクリエイターにも Divine が見つけてもらえるよ。';
+
+  @override
+  String crosspostingBenefitConnect(String platform) {
+    return '$platform に接続';
+  }
+
+  @override
+  String get crosspostingAutoTitle => '一度設定するだけ';
+
+  @override
+  String crosspostingAutoBody(String platform) {
+    return '新しく投稿するループは自動で $platform にも届くよ — 余計なタップなし。オンにしたあとに公開したループだけが対象だよ。';
+  }
+
+  @override
+  String get crosspostingAutoEnable => '自動をオンにする';
 }

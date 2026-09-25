@@ -122,7 +122,7 @@ void main() {
     );
 
     testWidgets(
-      'shows the Integrations header when crossposting is eligible',
+      'shows the Integrations header when crossposting is available',
       (tester) async {
         final labels = await l10n();
 
@@ -130,7 +130,9 @@ void main() {
           wrap(
             const GeneralSettingsScreen(),
             overrides: [
-              crosspostingEligibleProvider.overrideWithValue(true),
+              crosspostingAvailabilityProvider.overrideWithValue(
+                CrosspostingAvailability.native,
+              ),
             ],
           ),
         );

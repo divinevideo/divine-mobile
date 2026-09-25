@@ -22,6 +22,7 @@ import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/upload_failure_sheet.dart';
+import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Listens for background upload completions and shows the appropriate UI.
@@ -290,10 +291,25 @@ void _onConfirmationShare(
   String stableId,
 ) {
   unawaited(container.read(postPublishExperimentProvider).shareTapped(offer));
-  // The platform sheet rather than the in-app one: that needs a hydrated
-  // VideoEvent, and seconds after publish the event is often not yet
-  // resolvable from Funnelcake or any relay. The rich sheet stays one tap
-  // away on the video detail screen.
+  // The in-app share menu needs a hydrated VideoEvent, which a relay usually
+  // cannot serve seconds after publish. The publisher already wrote the signed
+  // event into VideoEventService (video_event_publisher.dart), so resolve it
+  // locally — scoped to the current pubkey so a colliding `d` tag on another
+  // account cannot resolve — and fall back to the OS sheet only when it is
+  // genuinely absent.
+  final pubkey = container
+      .read(authServiceProvider)
+      .currentPublicKeyHex
+      ?.toLowerCase();
+  final video = pubkey == null
+      ? null
+      : container
+            .read(videoEventServiceProvider)
+            .getVideoEventByAddressable(pubkey, stableId);
+  if (video != null) {
+    ShareActionButton.showShareSheet(context, video);
+    return;
+  }
   unawaited(
     showShareSheet(
       context,

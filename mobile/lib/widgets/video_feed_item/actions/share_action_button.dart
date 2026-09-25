@@ -2,6 +2,8 @@
 // ABOUTME: Opens unified share sheet: tap a contact to select it (never an
 // ABOUTME: instant send), compose an optional message, send explicitly.
 
+import 'dart:async';
+
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -16,13 +18,18 @@ import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
+import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/crossposting/crossposting_analytics.dart';
+import 'package:openvine/features/crossposting/crossposting_navigation.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
+import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
@@ -165,15 +172,20 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      final crosspostCubit = VideoCrosspostCubit(
-        client: ref.read(crossposterApiClientProvider),
-        eventId: widget.video.id,
-      );
-      _crosspostCubit = crosspostCubit;
-      _runShareDetached(
-        crosspostCubit.loadConnections(),
-        'load crosspost connections',
-      );
+      // The Crosspost row is offered even with nothing connected, so it must
+      // not appear for an identity the crossposter cannot serve at all.
+      if (ref.read(crosspostingAvailabilityProvider) !=
+          CrosspostingAvailability.unavailable) {
+        final crosspostCubit = VideoCrosspostCubit(
+          client: ref.read(crossposterApiClientProvider),
+          eventId: widget.video.id,
+        );
+        _crosspostCubit = crosspostCubit;
+        _runShareDetached(
+          crosspostCubit.loadConnections(),
+          'load crosspost connections',
+        );
+      }
     }
     _shareSheetBloc =
         ShareSheetBloc(
@@ -558,16 +570,33 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   }
 
   Future<void> _handleCrosspost() async {
-    final connections = _crosspostCubit?.state.connectedConnections;
-    if (connections == null || connections.isEmpty) return;
-    await _presentAfterDismiss<void>((hostContext) {
-      return showCrosspostSheet(
-        context: hostContext,
-        ref: ref,
-        video: widget.video,
-        connections: connections,
-      );
-    });
+    final cubit = _crosspostCubit;
+    if (cubit == null) return;
+    // The row is offered before connections load; wait for them rather than
+    // sending a creator who is already connected to setup.
+    final state = cubit.state.status == VideoCrosspostStatus.loadingConnections
+        ? await cubit.stream.firstWhere(
+            (state) => state.status != VideoCrosspostStatus.loadingConnections,
+            orElse: () => cubit.state,
+          )
+        : cubit.state;
+    if (!mounted) return;
+    final connections = state.connectedConnections;
+    if (connections.isNotEmpty) {
+      await _presentAfterDismiss<void>((hostContext) {
+        return showCrosspostSheet(
+          context: hostContext,
+          ref: ref,
+          video: widget.video,
+          connections: connections,
+        );
+      });
+      return;
+    }
+
+    final container = ProviderScope.containerOf(context, listen: false);
+    _safePop(context);
+    await openCrosspostingSetup(container);
   }
 
   Future<void> _handleSaveOriginal() async {

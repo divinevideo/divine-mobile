@@ -8612,5 +8612,35 @@
   "audioPickerTypeGroup": "Audio",
   "@audioPickerTypeGroup": {"description": "Name of the audio file-type filter in the system file picker (desktop pickers show it as the filter label)."},
   "soundUploadRetrySaveAction": "Retry saving to Sounds",
-  "@soundUploadRetrySaveAction": {"description": "Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save."}
+  "@soundUploadRetrySaveAction": {"description": "Button on the sound upload screen after the sound was published but saving it to the Library Sounds tab failed; tapping retries that save."},
+  "crosspostingBenefitTitle": "Take your loops everywhere",
+  "@crosspostingBenefitTitle": {
+    "description": "Headline of the crossposting benefit card in settings"
+  },
+  "crosspostingBenefitBody": "Post once on Divine, share straight to Instagram. Your people are already out there — go meet them. Every loop you send carries a little link home, so the next creator finds us too.",
+  "@crosspostingBenefitBody": {
+    "description": "Body of the crossposting benefit card in settings"
+  },
+  "crosspostingBenefitConnect": "Connect {platform}",
+  "@crosspostingBenefitConnect": {
+    "description": "Primary action on the crossposting benefit card",
+    "placeholders": {
+      "platform": { "type": "String", "example": "Instagram" }
+    }
+  },
+  "crosspostingAutoTitle": "Set it once",
+  "@crosspostingAutoTitle": {
+    "description": "Headline of the automatic crossposting encouragement card"
+  },
+  "crosspostingAutoBody": "Every new loop you post goes out to {platform} for you — no extra taps. Only applies to loops you publish after you turn it on.",
+  "@crosspostingAutoBody": {
+    "description": "Body of the automatic crossposting encouragement card",
+    "placeholders": {
+      "platform": { "type": "String", "example": "Instagram" }
+    }
+  },
+  "crosspostingAutoEnable": "Turn on automatic",
+  "@crosspostingAutoEnable": {
+    "description": "Action that switches a platform to automatic crossposting"
+  }
 }

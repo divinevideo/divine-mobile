@@ -4688,5 +4688,17 @@
   "savedSoundDeleteFailed": "Kunde inte ta bort det ljudet. Försök igen.",
   "savedSoundDeleteFailedNotOwner": "Du kan bara ta bort ljud som du själv har delat.",
   "audioPickerTypeGroup": "Ljud",
-  "soundUploadRetrySaveAction": "Försök spara i Ljud igen"
+  "soundUploadRetrySaveAction": "Försök spara i Ljud igen",
+  "crosspostingBenefitTitle": "Ta med dina loopar överallt",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Publicera en gång på Divine, dela direkt till Instagram. Dina människor är redan där — gå och möt dem. Varje loop du skickar bär med sig en liten länk hem, så nästa kreatör också hittar oss.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Anslut {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Ställ in en gång",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Varje ny loop du publicerar går till {platform} åt dig — utan extra tryck. Gäller bara loopar du publicerar efter att du slår på det här.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Slå på automatiskt",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

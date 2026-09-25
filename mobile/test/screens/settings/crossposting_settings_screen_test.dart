@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
@@ -22,6 +23,7 @@ import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -65,6 +67,7 @@ void main() {
     Widget buildApp({
       CrosspostingOAuthLauncher launchOAuth = _cancelOAuth,
       TextScaler textScaler = TextScaler.noScaling,
+      List<Override> additionalOverrides = const [],
     }) {
       final router = GoRouter(
         initialLocation: CrosspostingSettingsScreen.path,
@@ -84,6 +87,7 @@ void main() {
           authServiceProvider.overrideWithValue(authService),
           currentAuthStateProvider.overrideWith(_TestCurrentAuthState.new),
           crosspostingRepositoryProvider.overrideWithValue(repository),
+          ...additionalOverrides,
         ],
         child: MaterialApp.router(
           localizationsDelegates: appLocalizationsDelegates,
@@ -891,6 +895,212 @@ void main() {
 
       verify(repository.loadSettings).called(2);
     });
+
+    testWidgets('shows the benefit card when nothing is connected', (
+      tester,
+    ) async {
+      when(repository.loadSettings).thenAnswer(
+        (_) async => const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.disabled,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingBenefitTitle), findsOneWidget);
+      expect(
+        find.text(l10n.crosspostingBenefitConnect('Instagram')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides the benefit card when a platform is connected', (
+      tester,
+    ) async {
+      when(repository.loadSettings).thenAnswer(
+        (_) async => [
+          _connected(),
+          _disconnected(platform: CrosspostingPlatform.x),
+        ],
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingBenefitTitle), findsNothing);
+      expect(
+        find.text(l10n.crosspostingBenefitConnect('Instagram')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+      'routes the benefit card connect through the awaited resolver',
+      (tester) async {
+        when(repository.loadSettings).thenAnswer(
+          (_) async => [_disconnected()],
+        );
+        when(
+          () => repository.startConnection(
+            any(),
+            returnUrl: any(named: 'returnUrl'),
+          ),
+        ).thenAnswer(
+          (_) async => CrosspostingStart(
+            authorizationUrl: Uri.parse('https://provider.example/oauth'),
+            state: 'oauth-state',
+          ),
+        );
+        var webOpened = false;
+        var oauthLaunched = false;
+
+        await tester.pumpWidget(
+          buildApp(
+            launchOAuth: (_) async {
+              oauthLaunched = true;
+              return null;
+            },
+            additionalOverrides: [
+              appOAuthSupportProvider.overrideWith((ref) async => true),
+              crosspostingWebOpenerProvider.overrideWithValue((_) async {
+                webOpened = true;
+                return true;
+              }),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.crosspostingBenefitTitle), findsOneWidget);
+        await tester.tap(
+          find.text(l10n.crosspostingBenefitConnect('Instagram')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(webOpened, isFalse);
+        expect(oauthLaunched, isTrue);
+        verify(
+          () => repository.startConnection(
+            CrosspostingPlatform.instagram,
+            returnUrl: any(named: 'returnUrl'),
+          ),
+        ).called(1);
+      },
+    );
+
+    testWidgets(
+      'sends a platform row connect to the web when in-app OAuth is '
+      'unsupported',
+      (tester) async {
+        when(repository.loadSettings).thenAnswer(
+          (_) async => [_disconnected()],
+        );
+        var webOpened = false;
+        var oauthLaunched = false;
+
+        await tester.pumpWidget(
+          buildApp(
+            launchOAuth: (_) async {
+              oauthLaunched = true;
+              return null;
+            },
+            additionalOverrides: [
+              appOAuthSupportProvider.overrideWith((ref) async => false),
+              crosspostingWebOpenerProvider.overrideWithValue((_) async {
+                webOpened = true;
+                return true;
+              }),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byKey(const ValueKey('crossposting-action-instagram')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(webOpened, isTrue);
+        expect(oauthLaunched, isFalse);
+        verifyNever(
+          () => repository.startConnection(
+            any(),
+            returnUrl: any(named: 'returnUrl'),
+          ),
+        );
+      },
+    );
+
+    testWidgets('encourages automatic mode for a connected manual platform', (
+      tester,
+    ) async {
+      when(repository.loadSettings).thenAnswer(
+        (_) async => const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.manual,
+            connection: CrosspostingConnection(
+              id: 'ig',
+              platform: CrosspostingPlatform.instagram,
+              status: CrosspostingConnectionStatus.connected,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingAutoTitle), findsOneWidget);
+      await tester.tap(find.text(l10n.crosspostingAutoEnable));
+      await tester.pump();
+      verify(
+        () => repository.setMode(
+          CrosspostingPlatform.instagram,
+          CrosspostingMode.automatic,
+        ),
+      ).called(1);
+    });
+
+    testWidgets('hides the auto card when the platform is already automatic', (
+      tester,
+    ) async {
+      when(repository.loadSettings).thenAnswer(
+        (_) async => [_connected(mode: CrosspostingMode.automatic)],
+      );
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.crosspostingAutoTitle), findsNothing);
+      expect(find.text(l10n.crosspostingAutoEnable), findsNothing);
+    });
+
+    testWidgets(
+      'hides the auto card when the platform does not support automatic',
+      (tester) async {
+        when(repository.loadSettings).thenAnswer(
+          (_) async => [
+            _connected(
+              platform: CrosspostingPlatform.x,
+              supportsAutomatic: false,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(buildApp());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.crosspostingAutoTitle), findsNothing);
+        expect(find.text(l10n.crosspostingAutoEnable), findsNothing);
+      },
+    );
   });
 
   group(GeneralSettingsScreen, () {

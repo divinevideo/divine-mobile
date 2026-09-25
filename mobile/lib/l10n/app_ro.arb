@@ -4688,5 +4688,17 @@
   "savedSoundDeleteFailed": "Nu am putut șterge acel sunet. Încearcă din nou.",
   "savedSoundDeleteFailedNotOwner": "Poți șterge doar sunetele pe care le-ai împărtășit tu.",
   "audioPickerTypeGroup": "Audio",
-  "soundUploadRetrySaveAction": "Încearcă din nou să salvezi în Sunete"
+  "soundUploadRetrySaveAction": "Încearcă din nou să salvezi în Sunete",
+  "crosspostingBenefitTitle": "Du-ți buclele peste tot",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Postează o dată pe Divine, distribuie direct pe Instagram. Oamenii tăi sunt deja acolo — du-te și cunoaște-i. Fiecare buclă pe care o trimiți poartă un mic link acasă, ca următorul creator să ne găsească și el.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Conectează {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Setează o dată",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Fiecare buclă nouă pe care o postezi merge la {platform} pentru tine — fără atingere extra. Se aplică doar buclelor pe care le publici după ce activezi asta.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Activează automat",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

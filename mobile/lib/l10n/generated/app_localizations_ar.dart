@@ -12308,4 +12308,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'إعادة محاولة الحفظ في الأصوات';
+
+  @override
+  String get crosspostingBenefitTitle => 'خُذ تكراراتك إلى كل مكان';
+
+  @override
+  String get crosspostingBenefitBody =>
+      'انشر مرة واحدة على Divine، وشارك مباشرة إلى Instagram. جمهورك موجود هناك بالفعل — اذهب وقابلهم. كل تكرار ترسله يحمل معه رابطًا صغيرًا يعود إلى Divine، حتى يجدنا المبدع التالي أيضًا.';
+
+  @override
+  String crosspostingBenefitConnect(String platform) {
+    return 'ربط $platform';
+  }
+
+  @override
+  String get crosspostingAutoTitle => 'اضبطها مرة واحدة';
+
+  @override
+  String crosspostingAutoBody(String platform) {
+    return 'كل تكرار جديد تنشره يُرسَل إلى $platform نيابة عنك — دون نقرات إضافية. ينطبق فقط على التكرارات التي تنشرها بعد تفعيله.';
+  }
+
+  @override
+  String get crosspostingAutoEnable => 'تفعيل التلقائي';
 }

@@ -6447,5 +6447,17 @@
   "savedSoundDeleteFailed": "وہ ساؤنڈ حذف نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
   "savedSoundDeleteFailedNotOwner": "آپ صرف وہی ساؤنڈز حذف کر سکتے ہیں جو آپ نے خود شیئر کیے ہوں۔",
   "audioPickerTypeGroup": "آڈیو",
-  "soundUploadRetrySaveAction": "آوازوں میں دوبارہ محفوظ کریں"
+  "soundUploadRetrySaveAction": "آوازوں میں دوبارہ محفوظ کریں",
+  "crosspostingBenefitTitle": "اپنے لوپس کو ہر جگہ لے جائیں",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Divine پر ایک بار پوسٹ کریں، سیدھا Instagram پر شیئر کریں۔ آپ کے لوگ وہاں پہلے سے موجود ہیں — جا کر ان سے ملیں۔ آپ کا بھیجا ہوا ہر لوپ ساتھ ایک چھوٹا لنک گھر لے کر جاتا ہے، تاکہ اگلا تخلیق کار بھی ہمیں ڈھونڈ سکے۔",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "{platform} منسلک کریں",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "ایک بار سیٹ کریں",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "آپ کا ہر نیا لوپ آپ کی طرف سے {platform} پر چلا جاتا ہے — بغیر کسی اضافی ٹیپ کے۔ صرف اُن لوپس پر لاگو ہوتا ہے جو آپ اسے آن کرنے کے بعد شائع کریں۔",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "خودکار آن کریں",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

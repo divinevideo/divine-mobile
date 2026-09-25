@@ -4812,5 +4812,17 @@
   "savedSoundDeleteFailed": "Този звук не можа да се изтрие. Опитай пак.",
   "savedSoundDeleteFailedNotOwner": "Можеш да изтриваш само звуци, които си споделил.",
   "audioPickerTypeGroup": "Аудио",
-  "soundUploadRetrySaveAction": "Опитай пак да запазиш в Звуци"
+  "soundUploadRetrySaveAction": "Опитай пак да запазиш в Звуци",
+  "crosspostingBenefitTitle": "Отнеси лууповете си навсякъде",
+  "@crosspostingBenefitTitle": {"description": "Headline of the crossposting benefit card in settings"},
+  "crosspostingBenefitBody": "Публикувай веднъж в Divine и сподели директно в Instagram. Хората ти вече са там — отиди да се запознаете. Всеки луп, който изпратиш, носи малка връзка обратно, за да ни намери и следващият творец.",
+  "@crosspostingBenefitBody": {"description": "Body of the crossposting benefit card in settings"},
+  "crosspostingBenefitConnect": "Свържи {platform}",
+  "@crosspostingBenefitConnect": {"description": "Primary action on the crossposting benefit card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoTitle": "Настрой веднъж",
+  "@crosspostingAutoTitle": {"description": "Headline of the automatic crossposting encouragement card"},
+  "crosspostingAutoBody": "Всеки нов луп, който публикуваш, се изпраща към {platform} вместо теб — без допълнителни докосвания. Важи само за луповете, които публикуваш, след като го включиш.",
+  "@crosspostingAutoBody": {"description": "Body of the automatic crossposting encouragement card", "placeholders": {"platform": {"type": "String"}}},
+  "crosspostingAutoEnable": "Включи автоматичното",
+  "@crosspostingAutoEnable": {"description": "Action that switches a platform to automatic crossposting"}
 }

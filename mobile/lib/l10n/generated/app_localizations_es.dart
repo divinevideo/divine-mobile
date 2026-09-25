@@ -12516,4 +12516,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get soundUploadRetrySaveAction => 'Volver a guardar en Sonidos';
+
+  @override
+  String get crosspostingBenefitTitle => 'Lleva tus loops a todas partes';
+
+  @override
+  String get crosspostingBenefitBody =>
+      'Publica una vez en Divine y comparte directo en Instagram. Tu gente ya está ahí afuera — sal a conocerla. Cada loop que envías lleva un pequeño enlace a casa, para que el próximo creador también nos encuentre.';
+
+  @override
+  String crosspostingBenefitConnect(String platform) {
+    return 'Conectar $platform';
+  }
+
+  @override
+  String get crosspostingAutoTitle => 'Configúralo una vez';
+
+  @override
+  String crosspostingAutoBody(String platform) {
+    return 'Cada loop nuevo que publicas se envía a $platform por ti — sin toques extra. Solo aplica a los loops que publiques después de activarlo.';
+  }
+
+  @override
+  String get crosspostingAutoEnable => 'Activar automático';
 }
