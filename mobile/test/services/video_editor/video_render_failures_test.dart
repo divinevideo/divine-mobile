@@ -127,6 +127,89 @@ void main() {
           'native_render:video_frame_processing_failed',
         );
       });
+
+      test('marks a failure the plugin reports on an HDR source', () {
+        final failure = VideoRenderFailedException.native(
+          PlatformException(
+            code: 'RENDER_ERROR',
+            message: 'Video frame processing error',
+            details: <Object?, Object?>{
+              'domain': 'androidx.media3.transformer.ExportException',
+              'code': 5001,
+              'codeName': 'ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED',
+              'sources': <Object?>[
+                <Object?, Object?>{'mime': 'video/avc', 'transfer': 'sdr'},
+                <Object?, Object?>{'mime': 'video/hevc', 'transfer': 'hlg'},
+              ],
+            },
+          ),
+        );
+
+        expect(
+          failure.traceValue,
+          'native_render:video_frame_processing_failed:hdr',
+        );
+      });
+
+      test('leaves a failure on SDR sources unmarked', () {
+        final failure = VideoRenderFailedException.native(
+          PlatformException(
+            code: 'RENDER_ERROR',
+            message: 'Video frame processing error',
+            details: <Object?, Object?>{
+              'domain': 'androidx.media3.transformer.ExportException',
+              'codeName': 'ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED',
+              'sources': <Object?>[
+                <Object?, Object?>{'mime': 'video/avc', 'transfer': 'sdr'},
+              ],
+            },
+          ),
+        );
+
+        expect(
+          failure.traceValue,
+          'native_render:video_frame_processing_failed',
+        );
+      });
+
+      test('still classifies a full disk behind an HDR source', () {
+        final failure = VideoRenderFailedException.native(
+          PlatformException(
+            code: 'RENDER_ERROR',
+            message: 'Muxer error',
+            details: <Object?, Object?>{
+              'domain': 'androidx.media3.transformer.ExportException',
+              'codeName': 'ERROR_CODE_MUXING_FAILED',
+              'sources': <Object?>[
+                <Object?, Object?>{'mime': 'video/hevc', 'transfer': 'pq'},
+              ],
+              'cause': 'java.io.IOException: write failed: ENOSPC',
+            },
+          ),
+        );
+
+        expect(failure.reason, VideoRenderFailureReason.insufficientStorage);
+        expect(failure.traceValue, 'insufficient_storage:disk_full:hdr');
+      });
+
+      test('marks a stall on an HDR source', () {
+        final failure = VideoRenderFailedException.native(
+          PlatformException(
+            code: 'RENDER_ERROR',
+            message:
+                'Render export stalled after 20s with no progress '
+                '[progress=0.00 format=mp4 bitrate=preset]',
+            details: <Object?, Object?>{
+              'domain': 'java.lang.IllegalStateException',
+              'sources': <Object?>[
+                <Object?, Object?>{'mime': 'video/hevc', 'transfer': 'pq'},
+              ],
+            },
+          ),
+        );
+
+        expect(failure.traceValue, 'native_render:stalled:hdr');
+      });
     });
   });
 

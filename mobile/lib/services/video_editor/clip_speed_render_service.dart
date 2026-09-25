@@ -357,7 +357,9 @@ class ClipSpeedRenderService {
   /// v2: pro_video_editor 2.13.2 stops concurrent renders on iOS/macOS sharing
   /// one compositor config (#9338), so a body that 2.13.1 rendered next to
   /// another render can carry that render's crop, filters or overlays.
-  static const _cacheVersion = 2;
+  /// v3: pro_video_editor 2.14.1 fixes an HDR color cast on iOS/macOS, so a
+  /// body rendered from an HDR clip by an earlier build carries it.
+  static const _cacheVersion = 3;
 
   /// Keyed by what the render actually bakes in — source file, trims and speed
   /// — and deliberately **not** by [DivineVideoClip.id]. Duplicating a clip,

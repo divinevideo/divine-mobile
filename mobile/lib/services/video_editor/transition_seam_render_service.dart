@@ -447,7 +447,9 @@ class TransitionSeamRenderService {
   /// v6: pro_video_editor 2.13.2 stops concurrent renders on iOS/macOS sharing
   /// one compositor config (#9338), so a seam that 2.13.1 rendered next to
   /// another render can carry that render's crop, filters or overlays.
-  static const _seamCacheVersion = 6;
+  /// v7: pro_video_editor 2.14.1–2.15.0 fix an HDR color cast on iOS/macOS and
+  /// a dip transition under a letterbox, so an earlier seam can carry either.
+  static const _seamCacheVersion = 7;
 
   String _key(
     DivineVideoClip clipA,
