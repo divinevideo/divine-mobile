@@ -12,6 +12,7 @@ import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
@@ -83,6 +84,7 @@ class AppRootSideEffects extends ConsumerWidget {
     ref.watch(reportRetryServiceProvider);
     ref.watch(productEventQueueProvider);
     ref.watch(profileSaveRetryServiceProvider);
+    ref.watch(scheduledPostCoordinatorProvider);
 
     // The one owner of connectivity-driven relay repair (#3161, #8990). The
     // pool has to self-heal on a real network change app-wide, including on

@@ -166,6 +166,38 @@ void main() {
       );
     }
 
+    group('scheduled section (#3538)', () {
+      testWidgets('is off in the recorder library', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(tabsMode: LibraryTabsMode.withoutSounds),
+        );
+        await tester.pump();
+
+        expect(
+          tester.widget<DraftsTab>(find.byType(DraftsTab)).showScheduledSection,
+          isFalse,
+        );
+      });
+
+      testWidgets('is on in the standalone $DraftsTab', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(
+          tester.widget<DraftsTab>(find.byType(DraftsTab)).showScheduledSection,
+          isTrue,
+        );
+      });
+
+      testWidgets('never adds a fourth tab', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pump();
+
+        expect(find.text(en.libraryScheduledSectionTitle), findsNothing);
+        expect(find.byType(Tab), findsNWidgets(3));
+      });
+    });
+
     group('renders', () {
       testWidgets('screen with tabs and My library title', (tester) async {
         await tester.pumpWidget(buildWidget());

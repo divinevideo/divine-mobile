@@ -6167,6 +6167,80 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryTabClips => 'Klipler';
 
   @override
+  String get libraryScheduledSectionTitle => 'Zamanlanmış';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$time çıkıyor';
+  }
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Sunucu bekleniyor';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Çıkmadı';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Yükleniyor';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Başka bir cihazda zamanlandı';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return '$title için diğer işlemler';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Saati değiştir';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Şimdi paylaş';
+
+  @override
+  String get libraryScheduledActionRetry => 'Tekrar dene';
+
+  @override
+  String get libraryScheduledActionCancel => 'Paylaşımı iptal et';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Bu paylaşımı iptal edelim mi?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Taslaklarına geri döner. Hiçbir şey yayınlanmaz.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Evet, iptal et';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Kalsın';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'İptal edildi. Taslaklarına geri döndü.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Yeni saate taşındı.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Paylaşıldı.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Tekrar deniyoruz.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Çok geç, o çoktan çıktı.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Relay’e ulaşılamadı. Birazdan tekrar dene.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar => 'Olmadı. Tekrar dene.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Seçili klipleri sil';
 
   @override
@@ -7217,6 +7291,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Bu video başka bir hesaba ait. Paylaşmak için o hesaba geri dön.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Relay bu paylaşımı sonrası için tutamadı. Başka bir saat seç ya da şimdi paylaş.';
 
   @override
   String get publishErrorGeneric =>
@@ -9549,6 +9627,59 @@ class AppLocalizationsTr extends AppLocalizations {
       'Son kullanma zamanını seç';
 
   @override
+  String get videoMetadataScheduleLabel => 'Paylaşım saati';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Paylaşım saatini seç';
+
+  @override
+  String get videoMetadataScheduleNow => 'Şimdi';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Bu akşam $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Yarın $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Tarih ve saat seç';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Ne zaman çıksın?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'En az $minutes dakika bırak.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Bu $days günden uzak. Daha yakın bir şey seç.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Zamanla';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Bu videoyu $time için zamanlar';
+  }
+
+  @override
   String get videoMetadataTitleLabel => 'Başlık';
 
   @override
@@ -9637,6 +9768,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Videoyu akışa yayınla';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Videon hazırlanıyor';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Akışımda da paylaş';

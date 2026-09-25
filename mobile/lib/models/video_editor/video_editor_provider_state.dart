@@ -27,6 +27,7 @@ class VideoEditorProviderState {
     this.renderFailureReason,
     this.c2paSigningFailed = false,
     this.isSavingDraft = false,
+    this.isPosting = false,
     this.isAutosavedDraft = true,
     this.allowAudioReuse = false,
     this.audioShareAttribution,
@@ -35,6 +36,7 @@ class VideoEditorProviderState {
     this.description = '',
     this.tags = const {},
     this.expiration = .notExpire,
+    this.scheduledAt,
     this.metadataLimitReached = false,
     this.finalRenderedClip,
     this.editorStateHistory = const {},
@@ -93,6 +95,13 @@ class VideoEditorProviderState {
   /// Whether a draft save operation is currently in progress.
   final bool isSavingDraft;
 
+  /// Whether a post is being handed off, from the gallery copy through to the
+  /// upload starting in the background.
+  ///
+  /// Covers the gallery copy deliberately: materializing a stop-motion render
+  /// takes seconds, and without this the button sits there looking untapped.
+  final bool isPosting;
+
   /// Whether this session is an autosaved draft (vs. a user-saved draft).
   final bool isAutosavedDraft;
 
@@ -125,6 +134,9 @@ class VideoEditorProviderState {
 
   /// Expiration setting determining when the video post expires.
   final VideoMetadataExpiration expiration;
+
+  /// When the post should go live (UTC), or null to post right away.
+  final DateTime? scheduledAt;
 
   /// Whether the 64KB metadata limit was reached during the last update.
   final bool metadataLimitReached;
@@ -259,6 +271,7 @@ class VideoEditorProviderState {
     VideoRenderFailureReason? renderFailureReason,
     bool? c2paSigningFailed,
     bool? isSavingDraft,
+    bool? isPosting,
     bool? isAutosavedDraft,
     bool? allowAudioReuse,
     AudioShareAttribution? audioShareAttribution,
@@ -269,6 +282,8 @@ class VideoEditorProviderState {
     String? description,
     Set<String>? tags,
     VideoMetadataExpiration? expiration,
+    DateTime? scheduledAt,
+    bool clearScheduledAt = false,
     bool? metadataLimitReached,
     DivineVideoClip? finalRenderedClip,
     bool clearFinalRenderedClip = false,
@@ -316,6 +331,7 @@ class VideoEditorProviderState {
           !clearFinalRenderedClip &&
           (c2paSigningFailed ?? this.c2paSigningFailed),
       isSavingDraft: isSavingDraft ?? this.isSavingDraft,
+      isPosting: isPosting ?? this.isPosting,
       isAutosavedDraft: isAutosavedDraft ?? this.isAutosavedDraft,
       allowAudioReuse: allowAudioReuse ?? this.allowAudioReuse,
       audioShareAttribution: clearAudioShareAttribution
@@ -327,6 +343,7 @@ class VideoEditorProviderState {
       description: description ?? this.description,
       tags: tags ?? this.tags,
       expiration: expiration ?? this.expiration,
+      scheduledAt: clearScheduledAt ? null : (scheduledAt ?? this.scheduledAt),
       metadataLimitReached: metadataLimitReached ?? this.metadataLimitReached,
       finalRenderedClip: clearFinalRenderedClip
           ? null

@@ -11,6 +11,7 @@ import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_s
 import 'package:openvine/widgets/video_metadata/video_metadata_expiration_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_limit_warning_banner.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_schedule_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
 
 class VideoMetadataFormFields extends ConsumerStatefulWidget {
@@ -18,6 +19,7 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
     super.key,
     this.enableTags = true,
     this.enableExpiration = true,
+    this.enableSchedule = true,
     this.enableContentWarning = true,
     this.enableCollaborators = true,
     this.enableInspiredBy = true,
@@ -28,6 +30,10 @@ class VideoMetadataFormFields extends ConsumerStatefulWidget {
 
   final bool enableTags;
   final bool enableExpiration;
+
+  /// Whether the "Post time" tile is offered. Off when editing a published
+  /// video; a video reply hides it too.
+  final bool enableSchedule;
   final bool enableContentWarning;
   final bool enableCollaborators;
   final bool enableInspiredBy;
@@ -120,6 +126,9 @@ class _VideoMetadataFormFieldsState
           if (widget.enableExpiration)
             const _InputWrapper(child: VideoMetadataExpirationSelector()),
 
+          if (widget.enableSchedule)
+            const _InputWrapper(child: _ScheduleSelectorGate()),
+
           if (widget.enableCollaborators)
             const _InputWrapper(child: VideoMetadataCollaboratorsInput()),
 
@@ -139,6 +148,20 @@ class _VideoMetadataFormFieldsState
         ],
       ),
     );
+  }
+}
+
+/// Shows the "Post time" tile unless the recording is a video reply — a
+/// reply belongs to its thread now, and scheduled replies are out of scope
+/// (#3538).
+class _ScheduleSelectorGate extends ConsumerWidget {
+  const _ScheduleSelectorGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final replyContext = ref.watch(videoReplyContextProvider);
+    if (replyContext != null) return const SizedBox.shrink();
+    return const VideoMetadataScheduleSelector();
   }
 }
 

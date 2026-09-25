@@ -19,6 +19,7 @@ void main() {
       bool enableContentWarning = true,
       bool enableCollaborators = true,
       bool enableInspiredBy = true,
+      bool enableSchedule = true,
       VideoReplyContext? replyContext,
     }) {
       return ProviderScope(
@@ -41,6 +42,7 @@ void main() {
                 enableContentWarning: enableContentWarning,
                 enableCollaborators: enableCollaborators,
                 enableInspiredBy: enableInspiredBy,
+                enableSchedule: enableSchedule,
               ),
             ),
           ),
@@ -86,7 +88,9 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [videoEditorProvider.overrideWith(() => mockNotifier)],
+          overrides: [
+            videoEditorProvider.overrideWith(() => mockNotifier),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -116,7 +120,9 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [videoEditorProvider.overrideWith(() => mockNotifier)],
+          overrides: [
+            videoEditorProvider.overrideWith(() => mockNotifier),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -135,6 +141,39 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mockNotifier.lastDescription, equals('A description'));
+    });
+
+    group('post time tile (#3538)', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      testWidgets('renders when scheduling is on', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsOneWidget);
+      });
+
+      testWidgets('hides when enableSchedule is false', (tester) async {
+        await tester.pumpWidget(buildWidget(enableSchedule: false));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+      });
+
+      testWidgets('hides for a video reply', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            replyContext: const VideoReplyContext(
+              rootEventId: 'root-id',
+              rootEventKind: 34236,
+              rootAuthorPubkey: 'root-author',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoMetadataScheduleLabel), findsNothing);
+      });
     });
 
     testWidgets('hides tags section when enableTags is false', (tester) async {

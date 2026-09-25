@@ -22,7 +22,15 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
     this.includeAutosaveDraft = true,
   }) : _draftStorageService = draftStorageService,
        super(const DraftsLibraryInitial()) {
-    on<DraftsLibraryLoadRequested>(_onLoadRequested, transformer: droppable());
+    // Restartable, not droppable: a reload asked for *after* a write has to
+    // run, and droppable discarded exactly that one whenever a load was
+    // already in flight — which is the norm here, because the writes that
+    // reclaim a draft land right as the library reopens. The handler only
+    // reads and emits, so losing an older one mid-await costs nothing.
+    on<DraftsLibraryLoadRequested>(
+      _onLoadRequested,
+      transformer: restartable(),
+    );
     // Duplicate and delete share ONE sequential queue so their handlers never
     // interleave; separate buckets would let one finish mid-flight and emit a
     // stale draft list (see [DraftsLibraryMutationEvent]).
@@ -40,15 +48,17 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
 
   /// Whether [draft] belongs in the library list.
   ///
-  /// Drops published and publishing drafts, plus the autosave when it holds
-  /// nothing yet or [includeAutosaveDraft] is off.
+  /// Drops published, publishing and scheduled drafts (the last belong to
+  /// the Scheduled tab), plus the autosave when it holds nothing yet or
+  /// [includeAutosaveDraft] is off.
   bool _isListable(DivineVideoDraft draft) {
     if (draft.id == VideoEditorConstants.autoSaveId &&
         (!includeAutosaveDraft || draft.clips.isEmpty)) {
       return false;
     }
     return draft.publishStatus != PublishStatus.published &&
-        draft.publishStatus != PublishStatus.publishing;
+        draft.publishStatus != PublishStatus.publishing &&
+        draft.publishStatus != PublishStatus.scheduled;
   }
 
   Future<void> _onMutation(

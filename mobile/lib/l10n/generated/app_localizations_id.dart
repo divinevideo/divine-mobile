@@ -6165,6 +6165,81 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryTabClips => 'Klip';
 
   @override
+  String get libraryScheduledSectionTitle => 'Terjadwal';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Tayang $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Menunggu server';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Nggak tayang';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Mengunggah';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Dijadwalkan di perangkat lain';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Aksi lain untuk $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Ubah waktu';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Posting sekarang';
+
+  @override
+  String get libraryScheduledActionRetry => 'Coba lagi';
+
+  @override
+  String get libraryScheduledActionCancel => 'Batalkan posting';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Batalkan posting ini?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Balik lagi ke draf kamu. Nggak ada yang dipublikasikan.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Ya, batalkan';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Biarkan';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Dibatalkan. Sudah balik ke draf kamu.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Dipindah ke waktu baru.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Diposting.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Mencoba lagi.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Telat — yang itu sudah tayang.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Nggak bisa menghubungi relay. Coba lagi sebentar.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Nggak berhasil. Coba lagi.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Hapus klip terpilih';
 
   @override
@@ -7218,6 +7293,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Video ini milik akun lain. Balik ke akun itu untuk mempostingnya.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Relay nggak bisa menyimpan posting ini untuk nanti. Pilih waktu lain atau posting sekarang.';
 
   @override
   String get publishErrorGeneric => 'Terjadi kesalahan. Silakan coba lagi.';
@@ -9552,6 +9631,59 @@ class AppLocalizationsId extends AppLocalizations {
       'Pilih waktu kedaluwarsa';
 
   @override
+  String get videoMetadataScheduleLabel => 'Waktu posting';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Pilih waktu posting';
+
+  @override
+  String get videoMetadataScheduleNow => 'Sekarang';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Malam ini pukul $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Besok pukul $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Pilih tanggal dan waktu';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Kapan mau tayang?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Kasih jarak minimal $minutes menit.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Itu lebih dari $days hari lagi. Pilih yang lebih dekat.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Jadwalkan';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Menjadwalkan video ini untuk $time';
+  }
+
+  @override
   String get videoMetadataTitleLabel => 'Judul';
 
   @override
@@ -9641,6 +9773,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Publikasikan video ke feed';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Menyiapkan videomu';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Bagikan juga ke feed saya';

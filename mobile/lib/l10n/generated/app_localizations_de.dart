@@ -6315,6 +6315,82 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryTabClips => 'Clips';
 
   @override
+  String get libraryScheduledSectionTitle => 'Geplant';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Geht raus $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Wartet auf Server';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Nicht rausgegangen';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Wird hochgeladen';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Auf einem anderen Gerät geplant';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Weitere Aktionen für $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Zeit ändern';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Jetzt posten';
+
+  @override
+  String get libraryScheduledActionRetry => 'Nochmal versuchen';
+
+  @override
+  String get libraryScheduledActionCancel => 'Post abbrechen';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Diesen Post abbrechen?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Er landet wieder in deinen Entwürfen. Veröffentlicht wird nichts.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Ja, abbrechen';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Behalten';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Abgebrochen. Liegt wieder in deinen Entwürfen.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar =>
+      'Auf die neue Zeit verschoben.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Gepostet.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Wird nochmal versucht.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Zu spät – der ist schon raus.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Relay nicht erreichbar. Versuch es gleich nochmal.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Hat nicht geklappt. Versuch es nochmal.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Ausgewählte Clips löschen';
 
   @override
@@ -7384,6 +7460,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Dieses Video gehört zu einem anderen Konto. Wechsle zurück zu diesem Konto, um es zu posten.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Das Relay konnte diesen Post nicht für später aufheben. Wähl eine andere Zeit oder poste ihn jetzt.';
 
   @override
   String get publishErrorGeneric =>
@@ -9754,6 +9834,61 @@ class AppLocalizationsDe extends AppLocalizations {
       'Verfallszeit auswählen';
 
   @override
+  String get videoMetadataScheduleLabel => 'Post-Zeit';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Post-Zeit wählen';
+
+  @override
+  String get videoMetadataScheduleNow => 'Jetzt';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Heute Abend um $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Morgen um $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Datum und Uhrzeit wählen';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Wann soll es rausgehen?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Lass mindestens $minutes Minuten Vorlauf.',
+      one: 'Lass mindestens $minutes Minute Vorlauf.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Das ist mehr als $days Tage entfernt. Wähl was Früheres.',
+      one: 'Das ist mehr als $days Tag entfernt. Wähl was Früheres.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Planen';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Plant dieses Video für $time';
+  }
+
+  @override
   String get videoMetadataTitleLabel => 'Titel';
 
   @override
@@ -9844,6 +9979,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Video im Feed veröffentlichen';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Dein Video wird vorbereitet';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Auch in meinem Feed teilen';

@@ -27,6 +27,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_metadata/schedule_time_policy.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -443,6 +444,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     triggerAutosave();
   }
 
+  /// Set when the post should go live; null posts it right away (#3538).
+  void setScheduledAt(DateTime? scheduledAt) {
+    Log.debug(
+      '📅 Set scheduled time: ${scheduledAt?.toIso8601String() ?? 'now'}',
+      name: 'VideoEditorNotifier',
+      category: .video,
+    );
+    state = scheduledAt == null
+        ? state.copyWith(clearScheduledAt: true)
+        : state.copyWith(scheduledAt: scheduledAt.toUtc());
+    triggerAutosave();
+  }
+
   /// Set NIP-32 content warning labels for the current video.
   void setContentWarnings(Set<ContentLabel> labels) {
     state = state.copyWith(contentWarnings: Set<ContentLabel>.of(labels));
@@ -653,6 +667,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       allowAudioReuse: state.allowAudioReuse,
       audioShareAttribution: state.audioShareAttribution,
       expireTime: state.expiration.value,
+      scheduledAt: state.scheduledAt,
       selectedApproach: 'video',
       editorStateHistory: state.editorStateHistory,
       editorEditingParameters: state.editorEditingParameters?.toMap(),
@@ -1213,6 +1228,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       }
     }
 
+    // A saved publish time that has since come too close is dropped rather
+    // than restored: the picker could not have chosen it now either.
+    final savedScheduledAt = draft.scheduledAt;
+    final restoredScheduledAt =
+        savedScheduledAt != null &&
+            ScheduleTimePolicy.validate(
+                  savedScheduledAt.toLocal(),
+                  DateTime.now(),
+                ) ==
+                ScheduleTimeValidation.ok
+        ? savedScheduledAt
+        : null;
+
     state = state.copyWith(
       title: draft.title,
       description: draft.description,
@@ -1221,6 +1249,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       audioShareAttribution: draft.audioShareAttribution,
       shareReplyToFeed: draft.shareReplyToFeed,
       expiration: VideoMetadataExpiration.fromDuration(draft.expireTime),
+      scheduledAt: restoredScheduledAt,
+      clearScheduledAt: restoredScheduledAt == null,
       editorStateHistory: draft.editorStateHistory,
       editorEditingParameters: completeParametersFromDraftMap(
         draft.editorEditingParameters,
@@ -1641,6 +1671,17 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
   }
 
+  /// Marks a post handoff as in flight so the button can show it.
+  ///
+  /// Set around the whole handoff by the caller, because the slow part — the
+  /// gallery copy — runs before [postVideo]. Guarded the way
+  /// [saveDraftForLater] guards its own flag: the handoff navigates away and
+  /// can outlive this notifier.
+  void setPosting({required bool value}) {
+    if (!ref.mounted) return;
+    state = state.copyWith(isPosting: value);
+  }
+
   /// Publish the video to the Nostr network.
   ///
   /// Requires [VideoEditorProviderState.finalRenderedClip] to be available.
@@ -1663,6 +1704,19 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         category: .video,
       );
       throw StateError('Cannot post video with invalid metadata');
+    }
+
+    // The user may have sat on the metadata screen past the earliest slot
+    // they picked; move it to the next one rather than fail or post now.
+    final scheduledAt = state.scheduledAt;
+    if (scheduledAt != null) {
+      final now = DateTime.now();
+      if (ScheduleTimePolicy.validate(scheduledAt.toLocal(), now) ==
+          ScheduleTimeValidation.tooSoon) {
+        state = state.copyWith(
+          scheduledAt: ScheduleTimePolicy.minScheduleTime(now).toUtc(),
+        );
+      }
     }
 
     Log.info(

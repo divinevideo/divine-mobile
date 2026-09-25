@@ -2008,3 +2008,66 @@ class SavedTitleStyles extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+/// Outbox of posts scheduled for a future publish time (#3538).
+///
+/// One row per pre-signed kind-34236 event. The event is signed on the device
+/// with `created_at` equal to the chosen publish time, submitted to the relay's
+/// hold queue (`POST /api/schedule`), and broadcast by the relay at that time.
+/// The app keeps the signed blob so it can retry the submission when it was
+/// offline, publish the event itself when it is open at the publish time, and
+/// re-sign it for a reschedule. This table is the blob's only home: the
+/// future-dated event must never enter the regular publish-retry channel,
+/// which would re-broadcast it as "now".
+@TableIndex.sql(
+  'CREATE INDEX IF NOT EXISTS idx_scheduled_posts_owner_status '
+  'ON scheduled_posts (owner_pubkey, status)',
+)
+@DataClassName('ScheduledPostRow')
+class ScheduledPosts extends Table {
+  @override
+  String get tableName => 'scheduled_posts';
+
+  /// Signed event id. A reschedule signs a new event, so it is a new row.
+  TextColumn get eventId => text().named('event_id')();
+
+  /// Hex public key of the account that scheduled the post.
+  TextColumn get ownerPubkey => text().named('owner_pubkey')();
+
+  /// The publish-copy draft holding the video until the post is live.
+  TextColumn get draftId => text().named('draft_id')();
+
+  /// The `PendingUpload` whose media the event references, when still known.
+  TextColumn get uploadId => text().nullable().named('upload_id')();
+
+  IntColumn get kind => integer()();
+
+  /// Full signed event (`Event.toJson`).
+  TextColumn get signedEventJson => text().named('signed_event_json')();
+
+  /// Unix seconds; always equal to the signed event's `created_at`.
+  IntColumn get publishAt => integer().named('publish_at')();
+
+  /// NIP-40 expiration relative to the publish time, so a reschedule can
+  /// recompute the absolute `expiration` tag. Null when the post never expires.
+  IntColumn get expireAfterSecs =>
+      integer().nullable().named('expire_after_secs')();
+
+  /// `pendingSubmit` | `scheduled` | `published` | `failed` | `cancelled`
+  /// (parsed throw-on-unknown).
+  TextColumn get status => text()();
+
+  /// Why the post failed, from the relay or the app.
+  TextColumn get failureReason => text().nullable().named('failure_reason')();
+
+  /// Submission attempts made so far; drives the retry backoff.
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+
+  DateTimeColumn get lastAttemptAt =>
+      dateTime().nullable().named('last_attempt_at')();
+
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+
+  @override
+  Set<Column> get primaryKey => {eventId};
+}

@@ -457,6 +457,25 @@ class DraftStorageService {
     );
   }
 
+  /// Points the draft's remembered publish time at [scheduledAt].
+  ///
+  /// The draft mirrors the intent the creator last expressed, so a move
+  /// rewrites it and a withdrawal clears it. Left alone, a post moved from
+  /// Thursday to Friday and then cancelled comes back as a draft still
+  /// offering Thursday — a time the creator had already moved away from.
+  Future<void> updateScheduledAt({
+    required String draftId,
+    DateTime? scheduledAt,
+  }) async {
+    final draft = await getDraftById(draftId);
+    if (draft == null) return;
+    await saveDraft(
+      scheduledAt == null
+          ? draft.copyWith(clearScheduledAt: true)
+          : draft.copyWith(scheduledAt: scheduledAt),
+    );
+  }
+
   /// Whether the draft [id] exists but is owned by a different account.
   ///
   /// Returns `false` for an unknown id (a draft that was never persisted) and

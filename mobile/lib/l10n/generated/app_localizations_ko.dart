@@ -5931,6 +5931,77 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryTabClips => '클립';
 
   @override
+  String get libraryScheduledSectionTitle => '예약';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return '$time에 나가요';
+  }
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => '서버 기다리는 중';
+
+  @override
+  String get libraryScheduledBadgeFailed => '안 나갔어요';
+
+  @override
+  String get libraryScheduledBadgeUploading => '업로드 중';
+
+  @override
+  String get libraryScheduledRemoteTitle => '다른 기기에서 예약했어요';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return '$title 추가 작업';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => '시간 바꾸기';
+
+  @override
+  String get libraryScheduledActionPublishNow => '지금 올리기';
+
+  @override
+  String get libraryScheduledActionRetry => '다시 시도';
+
+  @override
+  String get libraryScheduledActionCancel => '예약 취소';
+
+  @override
+  String get libraryScheduledCancelTitle => '이 게시물을 취소할까요?';
+
+  @override
+  String get libraryScheduledCancelMessage => '임시 저장으로 돌아가요. 아무것도 올라가지 않아요.';
+
+  @override
+  String get libraryScheduledCancelConfirm => '네, 취소할게요';
+
+  @override
+  String get libraryScheduledCancelKeep => '그대로 둘게요';
+
+  @override
+  String get libraryScheduledCancelledSnackbar => '취소했어요. 임시 저장으로 돌아갔어요.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => '새 시간으로 옮겼어요.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => '올렸어요.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => '다시 시도하고 있어요.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar => '늦었어요. 그건 이미 나갔어요.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      '릴레이에 연결하지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar => '잘 안 됐어요. 다시 시도해 주세요.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => '선택한 클립 삭제';
 
   @override
@@ -6941,6 +7012,10 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       '이 영상은 다른 계정 거예요. 올리려면 그 계정으로 다시 전환해 주세요.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      '릴레이가 이 게시물을 나중까지 보관하지 못했어요. 다른 시간을 고르거나 지금 올려 주세요.';
 
   @override
   String get publishErrorGeneric => '문제가 생겼어요. 다시 시도해주세요.';
@@ -9170,6 +9245,59 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoMetadataSelectExpirationSemanticLabel => '만료 시간 선택';
 
   @override
+  String get videoMetadataScheduleLabel => '올릴 시간';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => '올릴 시간 고르기';
+
+  @override
+  String get videoMetadataScheduleNow => '지금';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return '오늘 밤 $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return '내일 $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => '날짜와 시간 고르기';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => '언제 나갈까요?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '최소 $minutes분은 남겨 주세요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days일보다 먼 시간이에요. 더 가까운 시간을 골라 주세요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => '예약';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return '이 영상을 $time에 예약해요';
+  }
+
+  @override
   String get videoMetadataTitleLabel => '제목';
 
   @override
@@ -9256,6 +9384,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => '피드에 동영상 게시';
+
+  @override
+  String get videoMetadataPostingVideoHint => '영상을 준비하고 있어요';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => '내 피드에도 공유';

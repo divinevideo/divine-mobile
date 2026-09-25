@@ -94,6 +94,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     VanishedProfiles,
     SavedCaptionStyles,
     SavedTitleStyles,
+    ScheduledPosts,
   ],
   daos: [
     UserProfilesDao,
@@ -128,6 +129,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     VanishedProfilesDao,
     SavedCaptionStylesDao,
     SavedTitleStylesDao,
+    ScheduledPostsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -138,7 +140,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -238,6 +240,12 @@ class AppDatabase extends _$AppDatabase {
         // `createTable` does not emit `@TableIndex.sql` indexes; see the
         // `from < 13` step above.
         await _createSavedTitleStyleIndexes();
+      }
+      if (from < 18) {
+        await m.createTable(scheduledPosts);
+        // `createTable` does not emit `@TableIndex.sql` indexes; see the
+        // `from < 13` step above.
+        await _createScheduledPostIndexes();
       }
     },
     beforeOpen: (details) async {
@@ -525,6 +533,15 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_saved_title_style_owner_pubkey '
       'ON saved_title_styles (owner_pubkey)',
+    );
+  }
+
+  /// Creates the `scheduled_posts` index (#3538), for the same reason as
+  /// [_createSavedCaptionStyleIndexes].
+  Future<void> _createScheduledPostIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_posts_owner_status '
+      'ON scheduled_posts (owner_pubkey, status)',
     );
   }
 

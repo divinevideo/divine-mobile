@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
+import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -68,6 +70,35 @@ class PublishSuccess extends PublishResult {
 
   @override
   List<Object?> get props => [stableId, inviteWarnings, audioReuseDegraded];
+}
+
+/// The media is up and the signed event waits for its publish time (#3538).
+///
+/// [submitted] says whether the relay's hold queue has accepted the event;
+/// when false the app keeps it and retries the hand-off in the background.
+class PublishScheduled extends PublishResult {
+  const PublishScheduled({
+    required this.eventId,
+    required this.publishAt,
+    required this.submitted,
+    this.audioReuseDegraded = false,
+  });
+
+  final String eventId;
+  final DateTime publishAt;
+  final bool submitted;
+
+  /// As [PublishSuccess.audioReuseDegraded]. The signed event is final, so
+  /// unlike a failed immediate publish no retry can restore the sound.
+  final bool audioReuseDegraded;
+
+  @override
+  List<Object?> get props => [
+    eventId,
+    publishAt,
+    submitted,
+    audioReuseDegraded,
+  ];
 }
 
 /// A failed publish, classified by [kind] so the UI can localize it.
@@ -182,6 +213,7 @@ class VideoPublishService {
     this.languagePreferenceService,
     this.mentionResolutionService,
     this.rerenderDraft,
+    this.scheduledPostsRepository,
     PerformanceTraceMonitor? performanceMonitor,
     DraftUploadMaterializer draftMaterializer = const DraftUploadMaterializer(),
     Duration subtitlePublishTimeout = _defaultSubtitlePublishTimeout,
@@ -207,6 +239,11 @@ class VideoPublishService {
 
   /// Sends encrypted collaborator invites after a video publish succeeds.
   final CollaboratorInviteService? collaboratorInviteService;
+
+  /// Holds pre-signed events for a later publish time (#3538). Without it a
+  /// draft with a `scheduledAt` fails as [PublishErrorKind.scheduleRejected]
+  /// rather than posting now.
+  final ScheduledPostsRepository? scheduledPostsRepository;
 
   /// Callback when upload progress changes.
   final OnProgressChanged onProgressChanged;
@@ -297,6 +334,7 @@ class VideoPublishService {
       timeline.finish(
         outcome: switch (result) {
           PublishSuccess() => 'success',
+          PublishScheduled() => 'scheduled',
           PublishError(:final kind) => 'error:${kind.name}',
           null => 'threw',
         },
@@ -454,7 +492,22 @@ class VideoPublishService {
 
       onProgressChanged(draftId: draft.id, progress: _progressAfterMetadata);
 
+      if (draft.scheduledAt != null && scheduledPostsRepository == null) {
+        // No outbox to hold the signed event: the session cannot schedule
+        // yet. Posting now would publish something the creator timed for
+        // later, so refuse and leave the choice to them.
+        Log.warning(
+          'Draft ${draft.id} has a publish time but no scheduled-post outbox; '
+          'refusing to post it now',
+          category: .video,
+        );
+        return const PublishError(PublishErrorKind.scheduleRejected);
+      }
+
       var audioReuseDegraded = false;
+      final scheduledAt = _effectiveScheduledAt(draft);
+      final expireTime = draft.expireTime;
+      Event? scheduledEvent;
       final published = await timeline.measure(
         PublishPhases.nostr,
         () => videoEventPublisher.publishVideoEvent(
@@ -462,9 +515,11 @@ class VideoPublishService {
           title: draft.title,
           description: draft.description,
           hashtags: draft.hashtags.toList(),
-          expirationTimestamp: draft.expireTime != null
-              ? DateTime.now().millisecondsSinceEpoch ~/ 1000 +
-                    draft.expireTime!.inSeconds
+          // Relative to the moment the post goes live, which for a scheduled
+          // post is its publish time rather than now.
+          expirationTimestamp: expireTime != null
+              ? (scheduledAt ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000 +
+                    expireTime.inSeconds
               : null,
           allowAudioReuse: draft.allowAudioReuse,
           collaboratorPubkeys: collaboratorPubkeys.toList(),
@@ -491,6 +546,10 @@ class VideoPublishService {
             progress: _progressAfterSigning,
           ),
           onAudioReuseDegraded: () => audioReuseDegraded = true,
+          scheduledAt: scheduledAt,
+          onScheduledEventSigned: scheduledAt == null
+              ? null
+              : (event) => scheduledEvent = event,
         ),
       );
 
@@ -504,6 +563,28 @@ class VideoPublishService {
       }
 
       onProgressChanged(draftId: draft.id, progress: _progressAfterNostr);
+
+      if (scheduledAt != null) {
+        // The publisher hands a scheduled event over before it returns true.
+        // Without it nothing was broadcast or queued, and carrying on would
+        // report the post live and let the caller delete its draft; failing
+        // keeps the draft for a retry.
+        final signedForLater = scheduledEvent!;
+        // Collaborator invites link to the live video, so they go out when
+        // the post does, from the scheduled-post coordinator.
+        final result = await timeline.measure(
+          PublishPhases.schedule,
+          () => _scheduleSignedEvent(
+            draft: draft,
+            upload: pendingUpload,
+            event: signedForLater,
+            publishAt: scheduledAt,
+            audioReuseDegraded: audioReuseDegraded,
+          ),
+        );
+        onProgressChanged(draftId: draft.id, progress: 1);
+        return result;
+      }
 
       final inviteWarnings = await timeline.measure(
         PublishPhases.invites,
@@ -529,6 +610,74 @@ class VideoPublishService {
       );
     } catch (e, stackTrace) {
       return _handleUploadError(e, stackTrace, draft);
+    }
+  }
+
+  /// The publish time a draft asks for, or null to post now.
+  ///
+  /// A time the relay would refuse as "not far enough in the future" — an
+  /// upload that took longer than the lead, or a schedule resumed late — is
+  /// posted immediately, which is what the relay's own sweep would have done.
+  DateTime? _effectiveScheduledAt(DivineVideoDraft draft) {
+    final scheduledAt = draft.scheduledAt;
+    final repository = scheduledPostsRepository;
+    if (scheduledAt == null || repository == null) return null;
+    final lead = repository.config.directPublishLead;
+    if (!scheduledAt.isAfter(DateTime.now().add(lead))) {
+      Log.info(
+        'Scheduled time ${scheduledAt.toIso8601String()} is within '
+        '${lead.inMinutes} min; posting now instead',
+        category: .video,
+      );
+      return null;
+    }
+    return scheduledAt;
+  }
+
+  /// Stores the signed [event] and hands it to the relay's hold queue.
+  Future<PublishResult> _scheduleSignedEvent({
+    required DivineVideoDraft draft,
+    required PendingUpload upload,
+    required Event event,
+    required DateTime publishAt,
+    required bool audioReuseDegraded,
+  }) async {
+    final repository = scheduledPostsRepository!;
+    await repository.enqueue(
+      event: event,
+      draftId: draft.id,
+      uploadId: upload.id,
+      expireAfterSecs: draft.expireTime?.inSeconds,
+    );
+    final submit = await repository.submit(event.id);
+    switch (submit.outcome) {
+      case ScheduledPostSubmitOutcome.submitted:
+        Log.info('📝 Scheduled ${event.id} for $publishAt', category: .video);
+        return PublishScheduled(
+          eventId: event.id,
+          publishAt: publishAt,
+          submitted: true,
+          audioReuseDegraded: audioReuseDegraded,
+        );
+      case ScheduledPostSubmitOutcome.retryLater:
+        Log.warning(
+          '📝 Relay hold queue unreachable; keeping ${event.id} for a later '
+          'hand-off (${submit.message})',
+          category: .video,
+        );
+        return PublishScheduled(
+          eventId: event.id,
+          publishAt: publishAt,
+          submitted: false,
+          audioReuseDegraded: audioReuseDegraded,
+        );
+      case ScheduledPostSubmitOutcome.rejected:
+        Log.error(
+          '❌ Relay refused to schedule ${event.id}: ${submit.message}',
+          category: .video,
+        );
+        await repository.delete(event.id);
+        return const PublishError(PublishErrorKind.scheduleRejected);
     }
   }
 
@@ -1120,6 +1269,12 @@ class VideoPublishService {
     }
     if (e is AudioReuseNotPermittedException) {
       return PublishErrorKind.audioReuseNotPermitted;
+    }
+    if (e is ScheduledSignatureTimestampException) {
+      // The media is up and the event is signed for the wrong moment: not a
+      // transport failure, and not something a plain retry fixes. The user
+      // picks another time or posts now (#3538).
+      return PublishErrorKind.scheduleRejected;
     }
     return null;
   }

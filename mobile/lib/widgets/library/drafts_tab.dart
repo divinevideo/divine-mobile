@@ -17,7 +17,9 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
+import 'package:openvine/widgets/library/draft_status_badge.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
+import 'package:openvine/widgets/library/scheduled_section.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -25,11 +27,43 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Uses [DraftsLibraryBloc] for state management and handles draft actions
 /// (post, edit, delete) internally.
-class DraftsTab extends ConsumerWidget {
+class DraftsTab extends StatelessWidget {
   /// Creates a drafts tab.
-  const DraftsTab({required this.showRecordButton, super.key});
+  const DraftsTab({
+    required this.showRecordButton,
+    this.showScheduledSection = false,
+    super.key,
+  });
 
   final bool showRecordButton;
+
+  /// Whether upcoming scheduled posts are listed above the drafts (#3538).
+  ///
+  /// Off in the recorder's library: that session is for picking up clips, and
+  /// a scheduled post is not something it can use.
+  final bool showScheduledSection;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showScheduledSection) {
+      return _DraftsList(showRecordButton: showRecordButton);
+    }
+    return ScheduledPostsScope(
+      builder: (context, {required available}) => _DraftsList(
+        showRecordButton: showRecordButton,
+        scheduled: available ? const ScheduledSectionSliver() : null,
+      ),
+    );
+  }
+}
+
+class _DraftsList extends ConsumerWidget {
+  const _DraftsList({required this.showRecordButton, this.scheduled});
+
+  final bool showRecordButton;
+
+  /// Sliver shown above the drafts, if any.
+  final Widget? scheduled;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,27 +139,35 @@ class DraftsTab extends ConsumerWidget {
           DraftsLibraryDraftDuplicated(:final drafts) ||
           DraftsLibraryDuplicateFailed(:final drafts) ||
           DraftsLibraryDraftDeleted(:final drafts) ||
-          DraftsLibraryDeleteFailed(:final drafts) => () {
-            if (drafts.isEmpty) {
-              return EmptyLibraryState(
-                showRecordButton: showRecordButton,
-                icon: DivineIconName.pencilSimple,
-                title: context.l10n.libraryNoDraftsYetTitle,
-                subtitle: context.l10n.libraryNoDraftsYetSubtitle,
-              );
-            }
-            return ListView.builder(
-              itemCount: drafts.length,
-              itemBuilder: (context, index) {
-                final draft = drafts[index];
-                return DraftListTile(
-                  draft: draft,
-                  onTap: () => _openDraft(context, ref, draft),
-                  onOpenMore: () => _openDraftOptions(context, ref, draft),
-                );
-              },
-            );
-          }(),
+          DraftsLibraryDeleteFailed(:final drafts) => CustomScrollView(
+            slivers: [
+              ?scheduled,
+              if (drafts.isEmpty)
+                // Keeps the scroll body: EmptyLibraryState carries a
+                // LayoutBuilder, which cannot answer the intrinsic height
+                // `hasScrollBody: false` would ask it for.
+                SliverFillRemaining(
+                  child: EmptyLibraryState(
+                    showRecordButton: showRecordButton,
+                    icon: DivineIconName.pencilSimple,
+                    title: context.l10n.libraryNoDraftsYetTitle,
+                    subtitle: context.l10n.libraryNoDraftsYetSubtitle,
+                  ),
+                )
+              else
+                SliverList.builder(
+                  itemCount: drafts.length,
+                  itemBuilder: (context, index) {
+                    final draft = drafts[index];
+                    return DraftListTile(
+                      draft: draft,
+                      onTap: () => _openDraft(context, ref, draft),
+                      onOpenMore: () => _openDraftOptions(context, ref, draft),
+                    );
+                  },
+                ),
+            ],
+          ),
         };
       },
     );
@@ -412,7 +454,7 @@ class DraftListTile extends StatelessWidget {
           ),
           if (isAutosaveDraft) ...[
             const SizedBox(width: 8),
-            _DraftStatusBadge(label: context.l10n.libraryDraftInProgressBadge),
+            DraftStatusBadge(label: context.l10n.libraryDraftInProgressBadge),
           ],
         ],
       ),
@@ -430,36 +472,6 @@ class DraftListTile extends StatelessWidget {
                 size: 28,
               ),
             ),
-    );
-  }
-}
-
-class _DraftStatusBadge extends StatelessWidget {
-  const _DraftStatusBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: VineTheme.vineGreen.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: context.vineColors.accentPositive.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Text(
-          label,
-          style: VineTheme.labelSmallFont(
-            color: context.vineColors.accentPositive,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
     );
   }
 }

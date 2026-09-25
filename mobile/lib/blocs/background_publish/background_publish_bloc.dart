@@ -103,6 +103,25 @@ class BackgroundPublishBloc
         // publish finished, so losing the process first makes resume offer a
         // retry for an already-published video.
         await _deletePublishedDrafts(event.draft);
+      } else if (result is PublishScheduled) {
+        // The media is up and the signed event waits for its time (#3538).
+        // The publish copy stays as the scheduled draft the section above the
+        // drafts shows and a cancel parks; only the source it was copied from
+        // is reclaimed, as it would be after an immediate publish.
+        //
+        // Both writes run *before* the emit, unlike the success branch above:
+        // scheduling leaves the creator on the drafts list, so the emit is the
+        // signal that list reloads on. Emitting first would race the writes
+        // and redraw the reclaimed draft next to the post it became.
+        await _persistPublishStatus(
+          draftId: event.draft.id,
+          status: PublishStatus.scheduled,
+        );
+        await _deleteSourceDraft(event.draft);
+        final updatedUploads = state.uploads
+            .where((upload) => upload.draft.id != event.draft.id)
+            .toList();
+        emit(state.copyWith(uploads: updatedUploads));
       } else {
         // Update the upload with the result
         final updatedUploads = state.uploads.map((upload) {
@@ -376,10 +395,15 @@ class BackgroundPublishBloc
   /// [VideoPublishService.publishVideo]).
   Future<void> _deletePublishedDrafts(DivineVideoDraft publishedDraft) async {
     await _deleteDraft(publishedDraft.id);
+    await _deleteSourceDraft(publishedDraft);
+  }
 
-    final sourceDraftId = publishedDraft.sourceDraftId;
+  /// Reclaims the draft a publish copy was made from, never the autosave
+  /// slot (see [_park]).
+  Future<void> _deleteSourceDraft(DivineVideoDraft publishCopy) async {
+    final sourceDraftId = publishCopy.sourceDraftId;
     if (sourceDraftId != null &&
-        sourceDraftId != publishedDraft.id &&
+        sourceDraftId != publishCopy.id &&
         sourceDraftId != VideoEditorConstants.autoSaveId) {
       await _deleteDraft(sourceDraftId);
     }

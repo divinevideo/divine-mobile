@@ -6262,6 +6262,82 @@ class AppLocalizationsNl extends AppLocalizations {
   String get libraryTabClips => 'Clips';
 
   @override
+  String get libraryScheduledSectionTitle => 'Gepland';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Gaat online $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Wacht op server';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Niet geplaatst';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Uploaden';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Gepland op een ander apparaat';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Meer acties voor $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Tijd wijzigen';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Nu plaatsen';
+
+  @override
+  String get libraryScheduledActionRetry => 'Opnieuw proberen';
+
+  @override
+  String get libraryScheduledActionCancel => 'Post annuleren';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Deze post annuleren?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Hij gaat terug naar je concepten. Er wordt niets geplaatst.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Ja, annuleren';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Laten staan';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Geannuleerd. Hij staat weer bij je concepten.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar =>
+      'Verplaatst naar de nieuwe tijd.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Geplaatst.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'We proberen het opnieuw.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Te laat, die is al online.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Relay niet bereikbaar. Probeer het zo nog eens.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar =>
+      'Dat werkte niet. Probeer het opnieuw.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip =>
       'Geselecteerde clips verwijderen';
 
@@ -7324,6 +7400,10 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Deze video hoort bij een ander account. Ga terug naar dat account om hem te posten.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'De relay kon deze post niet bewaren voor later. Kies een andere tijd of plaats hem nu.';
 
   @override
   String get publishErrorGeneric => 'Er ging iets mis. Probeer het opnieuw.';
@@ -9678,6 +9758,61 @@ class AppLocalizationsNl extends AppLocalizations {
       'Vervaltijd selecteren';
 
   @override
+  String get videoMetadataScheduleLabel => 'Plaatstijd';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Plaatstijd kiezen';
+
+  @override
+  String get videoMetadataScheduleNow => 'Nu';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Vanavond om $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Morgen om $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Datum en tijd kiezen';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Wanneer moet hij online?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Houd minstens $minutes minuten aan.',
+      one: 'Houd minstens $minutes minuut aan.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Dat is meer dan $days dagen vooruit. Kies iets eerder.',
+      one: 'Dat is meer dan $days dag vooruit. Kies iets eerder.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Inplannen';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Plant deze video in voor $time';
+  }
+
+  @override
   String get videoMetadataTitleLabel => 'Titel';
 
   @override
@@ -9768,6 +9903,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Video publiceren naar feed';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Je video wordt klaargemaakt';
 
   @override
   String get videoMetadataShareReplyToFeedTitle => 'Ook delen in mijn feed';

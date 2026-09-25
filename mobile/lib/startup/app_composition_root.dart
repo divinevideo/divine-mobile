@@ -28,6 +28,7 @@ import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -60,34 +61,9 @@ class AppCompositionRoot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    /// Creates the publish service with callbacks wired to this notifier.
     Future<VideoPublishService> createPublishService({
       required OnProgressChanged onProgress,
-    }) async {
-      final profileRepository = ref.read(profileRepositoryProvider);
-      return VideoPublishService(
-        rerenderDraft: DraftRenderParametersService(
-          rasterizer: ref.read(layerRasterizerProvider),
-        ).renderDraft,
-        uploadManager: ref.read(uploadManagerProvider),
-        authService: ref.read(authServiceProvider),
-        videoEventPublisher: ref.read(videoEventPublisherProvider),
-        blossomService: ref.read(blossomUploadServiceProvider),
-        draftService: ref.read(draftStorageServiceProvider),
-        mentionResolutionService: profileRepository == null
-            ? null
-            : MentionResolutionService(profileRepository: profileRepository),
-        collaboratorInviteService: CollaboratorInviteService(
-          dmRepository: ref.read(dmRepositoryProvider),
-          l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
-        ),
-        performanceMonitor: ref.read(performanceMonitoringServiceProvider),
-        onProgressChanged:
-            ({required String draftId, required double progress}) {
-              onProgress(draftId: draftId, progress: progress);
-            },
-      );
-    }
+    }) async => createBackgroundPublishService(ref, onProgress: onProgress);
 
     final oauthClient = ref.watch(oauthClientProvider);
     final authService = ref.watch(authServiceProvider);
@@ -247,4 +223,39 @@ class AppCompositionRoot extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Builds the [VideoPublishService] a [BackgroundPublishBloc] retry runs on.
+///
+/// A retried draft keeps its `scheduledAt`, so it needs the scheduled-post
+/// outbox as much as the first attempt did; without it the service would
+/// post the video straight away (#3538).
+@visibleForTesting
+VideoPublishService createBackgroundPublishService(
+  WidgetRef ref, {
+  required OnProgressChanged onProgress,
+}) {
+  final profileRepository = ref.read(profileRepositoryProvider);
+  return VideoPublishService(
+    rerenderDraft: DraftRenderParametersService(
+      rasterizer: ref.read(layerRasterizerProvider),
+    ).renderDraft,
+    uploadManager: ref.read(uploadManagerProvider),
+    authService: ref.read(authServiceProvider),
+    videoEventPublisher: ref.read(videoEventPublisherProvider),
+    blossomService: ref.read(blossomUploadServiceProvider),
+    draftService: ref.read(draftStorageServiceProvider),
+    mentionResolutionService: profileRepository == null
+        ? null
+        : MentionResolutionService(profileRepository: profileRepository),
+    collaboratorInviteService: CollaboratorInviteService(
+      dmRepository: ref.read(dmRepositoryProvider),
+      l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
+    ),
+    scheduledPostsRepository: ref.read(scheduledPostsRepositoryProvider),
+    performanceMonitor: ref.read(performanceMonitoringServiceProvider),
+    onProgressChanged: ({required String draftId, required double progress}) {
+      onProgress(draftId: draftId, progress: progress);
+    },
+  );
 }

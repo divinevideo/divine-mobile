@@ -6204,6 +6204,80 @@ class AppLocalizationsVi extends AppLocalizations {
   String get libraryTabClips => 'Clip';
 
   @override
+  String get libraryScheduledSectionTitle => 'Đã lên lịch';
+
+  @override
+  String libraryScheduledGoesOutAt(String time) {
+    return 'Lên sóng $time';
+  }
+
+  @override
+  String get libraryScheduledBadgeWaitingForServer => 'Đang chờ máy chủ';
+
+  @override
+  String get libraryScheduledBadgeFailed => 'Chưa lên sóng';
+
+  @override
+  String get libraryScheduledBadgeUploading => 'Đang tải lên';
+
+  @override
+  String get libraryScheduledRemoteTitle => 'Được lên lịch trên thiết bị khác';
+
+  @override
+  String libraryScheduledMoreActionsSemanticLabel(String title) {
+    return 'Thêm thao tác cho $title';
+  }
+
+  @override
+  String get libraryScheduledActionReschedule => 'Đổi giờ';
+
+  @override
+  String get libraryScheduledActionPublishNow => 'Đăng ngay';
+
+  @override
+  String get libraryScheduledActionRetry => 'Thử lại';
+
+  @override
+  String get libraryScheduledActionCancel => 'Hủy bài đăng';
+
+  @override
+  String get libraryScheduledCancelTitle => 'Hủy bài đăng này?';
+
+  @override
+  String get libraryScheduledCancelMessage =>
+      'Nó quay lại bản nháp của bạn. Không có gì được đăng.';
+
+  @override
+  String get libraryScheduledCancelConfirm => 'Ừ, hủy đi';
+
+  @override
+  String get libraryScheduledCancelKeep => 'Giữ lại';
+
+  @override
+  String get libraryScheduledCancelledSnackbar =>
+      'Đã hủy. Nó đã về lại bản nháp của bạn.';
+
+  @override
+  String get libraryScheduledRescheduledSnackbar => 'Đã dời sang giờ mới.';
+
+  @override
+  String get libraryScheduledPublishedNowSnackbar => 'Đã đăng.';
+
+  @override
+  String get libraryScheduledRetryQueuedSnackbar => 'Đang thử lại.';
+
+  @override
+  String get libraryScheduledAlreadyPublishedSnackbar =>
+      'Muộn rồi — bài đó đã lên sóng.';
+
+  @override
+  String get libraryScheduledUnavailableSnackbar =>
+      'Không kết nối được với relay. Thử lại sau một lát.';
+
+  @override
+  String get libraryScheduledActionFailedSnackbar => 'Không được. Thử lại nhé.';
+
+  @override
   String get libraryDeleteSelectedClipsTooltip => 'Xóa clip đã chọn';
 
   @override
@@ -7262,6 +7336,10 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get publishErrorAccountChanged =>
       'Video này thuộc về một tài khoản khác. Chuyển lại tài khoản đó để đăng nhé.';
+
+  @override
+  String get publishErrorScheduleRejected =>
+      'Relay không giữ được bài này cho lần sau. Chọn giờ khác hoặc đăng ngay.';
 
   @override
   String get publishErrorGeneric => 'Có gì đó không ổn. Vui lòng thử lại.';
@@ -9590,6 +9668,59 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chọn thời gian hết hạn';
 
   @override
+  String get videoMetadataScheduleLabel => 'Giờ đăng';
+
+  @override
+  String get videoMetadataSelectScheduleSemanticLabel => 'Chọn giờ đăng';
+
+  @override
+  String get videoMetadataScheduleNow => 'Bây giờ';
+
+  @override
+  String videoMetadataScheduleTonight(String time) {
+    return 'Tối nay lúc $time';
+  }
+
+  @override
+  String videoMetadataScheduleTomorrowMorning(String time) {
+    return 'Ngày mai lúc $time';
+  }
+
+  @override
+  String get videoMetadataSchedulePickDateTime => 'Chọn ngày và giờ';
+
+  @override
+  String get videoMetadataSchedulePickerTitle => 'Khi nào thì lên sóng?';
+
+  @override
+  String videoMetadataScheduleTooSoon(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Để cách ít nhất $minutes phút.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoMetadataScheduleTooFar(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Cái đó cách hơn $days ngày. Chọn sớm hơn đi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoMetadataScheduleButton => 'Lên lịch';
+
+  @override
+  String videoMetadataScheduleVideoHint(String time) {
+    return 'Lên lịch video này vào $time';
+  }
+
+  @override
   String get videoMetadataTitleLabel => 'Tiêu đề';
 
   @override
@@ -9678,6 +9809,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoMetadataPublishVideoHint => 'Đăng video lên bảng tin';
+
+  @override
+  String get videoMetadataPostingVideoHint => 'Đang chuẩn bị video của bạn';
 
   @override
   String get videoMetadataShareReplyToFeedTitle =>

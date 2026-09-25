@@ -85,6 +85,11 @@ enum PublishErrorKind {
   /// A previous upload was interrupted (surfaced on resume).
   interrupted,
 
+  /// The relay refused to hold a scheduled post (#3538): wrong kind, too
+  /// close or too far in the future, too many pending posts, rate limited or
+  /// not entitled. The media is up; the user picks another time or posts now.
+  scheduleRejected,
+
   /// The draft belongs to a different account than the one signed in now —
   /// the user switched accounts while the upload was in flight. Publishing
   /// would post the video under the wrong identity.

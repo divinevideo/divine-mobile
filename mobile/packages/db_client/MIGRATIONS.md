@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 17** (see `app_database.dart`).
+**Version: 18** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -101,6 +101,22 @@ get separate tables rather than a discriminator column: their payloads are
 different models. Same JSON-blob shape, same owner scoping, same legacy-row
 claim and destructive-sign-out delete, and the `from < 17` step creates the
 owner index by hand for the same reason v13 and v16 do.
+
+Version 18 adds `scheduled_posts` (#3538), the outbox for posts scheduled for
+a future publish time. The kind-34236 event is signed on the device with
+`created_at` set to the chosen time and handed to the relay's hold queue,
+which broadcasts it then; the row keeps the signed blob so the app can retry
+the hand-off after being offline, publish the event itself when it is open at
+that time, and re-sign it for a reschedule. It is deliberately a table of its
+own rather than a status on `drafts`: the future-dated event must never reach
+the regular publish-retry channel, which would broadcast it as "now", and the
+submission backoff, server-state mirror and failure reason are queue state,
+not draft content. Rows are owner-scoped and deleted on destructive sign-out;
+a plain account switch keeps them: the relay publishes the held ones
+regardless, and a row not yet handed off waits on this device for its account
+to sign back in. The
+`from < 18` step creates the `(owner_pubkey, status)` index by hand for the
+same reason v13, v16 and v17 do.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

@@ -6,21 +6,25 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:db_client/db_client.dart' show ScheduledPost;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AspectRatio;
+import 'package:nostr_sdk/event.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
+import 'package:openvine/services/schedule_api_client.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_publish/draft_upload_materializer.dart';
@@ -48,6 +52,11 @@ class MockCollaboratorInviteService extends Mock
 
 class MockMentionResolutionService extends Mock
     implements MentionResolutionService {}
+
+class _MockScheduledPostsRepository extends Mock
+    implements ScheduledPostsRepository {}
+
+class _FakeEvent extends Fake implements Event {}
 
 /// Captures what a publish would report to Firebase, without any Firebase.
 class _MockDraftUploadMaterializer extends Mock
@@ -115,6 +124,7 @@ void main() {
       ),
     );
     registerFallbackValue(_createPendingUpload(status: UploadStatus.pending));
+    registerFallbackValue(_FakeEvent());
   });
 
   setUp(() {
@@ -2928,6 +2938,420 @@ void main() {
       );
     });
 
+    group('scheduled posts', () {
+      late _MockScheduledPostsRepository repository;
+      final publishAt = DateTime.now().toUtc().add(const Duration(hours: 5));
+      final publishAtSecs = publishAt.millisecondsSinceEpoch ~/ 1000;
+
+      VideoPublishService scheduledService() => VideoPublishService(
+        draftMaterializer: mockDraftMaterializer,
+        uploadManager: mockUploadManager,
+        authService: mockAuthService,
+        videoEventPublisher: mockVideoEventPublisher,
+        blossomService: mockBlossomService,
+        draftService: mockDraftService,
+        collaboratorInviteService: mockCollaboratorInviteService,
+        scheduledPostsRepository: repository,
+        onProgressChanged: ({required draftId, required progress}) {},
+      );
+
+      /// Answers `publishVideoEvent` the way the real publisher does for a
+      /// scheduled post: signs for the requested time and hands it back.
+      /// [handsOver] false breaks that contract: true, but no event.
+      /// [degradesAudio] reports the sound dropped, as the publisher does
+      /// before handing the event over.
+      Event stubScheduledSigning({
+        bool handsOver = true,
+        bool degradesAudio = false,
+      }) {
+        final signed = Event(
+          'a' * 64,
+          34236,
+          const [
+            ['d', 'test_video_id'],
+          ],
+          'Test description',
+          createdAt: publishAtSecs,
+        );
+        when(
+          () => mockVideoEventPublisher.publishVideoEvent(
+            upload: any(named: 'upload'),
+            title: any(named: 'title'),
+            description: any(named: 'description'),
+            hashtags: any(named: 'hashtags'),
+            expirationTimestamp: any(named: 'expirationTimestamp'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+            collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+            mentionedPubkeys: any(named: 'mentionedPubkeys'),
+            inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+            inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+            inspiredByNpubs: any(named: 'inspiredByNpubs'),
+            clipSourceCredits: any(named: 'clipSourceCredits'),
+            selectedAudio: any(named: 'selectedAudio'),
+            audioShareAttribution: any(named: 'audioShareAttribution'),
+            selectedAudioEventId: any(named: 'selectedAudioEventId'),
+            selectedAudioRelay: any(named: 'selectedAudioRelay'),
+            language: any(named: 'language'),
+            contentWarning: any(named: 'contentWarning'),
+            thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+            replyContext: any(named: 'replyContext'),
+            addReplyToFeed: any(named: 'addReplyToFeed'),
+            textTrackRefs: any(named: 'textTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+            onEventSigned: any(named: 'onEventSigned'),
+            onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+            scheduledAt: any(named: 'scheduledAt'),
+            onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
+          ),
+        ).thenAnswer((invocation) async {
+          if (degradesAudio) {
+            (invocation.namedArguments[#onAudioReuseDegraded]
+                    as void Function()?)
+                ?.call();
+          }
+          final onSigned =
+              invocation.namedArguments[#onScheduledEventSigned]
+                  as void Function(Event)?;
+          if (handsOver) onSigned?.call(signed);
+          return true;
+        });
+        return signed;
+      }
+
+      Map<Symbol, dynamic> capturedPublishArguments() {
+        final captured = verify(
+          () => mockVideoEventPublisher.publishVideoEvent(
+            upload: any(named: 'upload'),
+            title: any(named: 'title'),
+            description: any(named: 'description'),
+            hashtags: any(named: 'hashtags'),
+            expirationTimestamp: captureAny(named: 'expirationTimestamp'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+            collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+            mentionedPubkeys: any(named: 'mentionedPubkeys'),
+            inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+            inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+            inspiredByNpubs: any(named: 'inspiredByNpubs'),
+            clipSourceCredits: any(named: 'clipSourceCredits'),
+            selectedAudio: any(named: 'selectedAudio'),
+            audioShareAttribution: any(named: 'audioShareAttribution'),
+            selectedAudioEventId: any(named: 'selectedAudioEventId'),
+            selectedAudioRelay: any(named: 'selectedAudioRelay'),
+            language: any(named: 'language'),
+            contentWarning: any(named: 'contentWarning'),
+            thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+            replyContext: any(named: 'replyContext'),
+            addReplyToFeed: any(named: 'addReplyToFeed'),
+            textTrackRefs: any(named: 'textTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+            onEventSigned: any(named: 'onEventSigned'),
+            onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+            scheduledAt: captureAny(named: 'scheduledAt'),
+            onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
+          ),
+        ).captured;
+        return {#expirationTimestamp: captured[0], #scheduledAt: captured[1]};
+      }
+
+      setUp(() {
+        repository = _MockScheduledPostsRepository();
+        when(
+          () => repository.config,
+        ).thenReturn(const ScheduledPostRetryConfig());
+        when(
+          () => repository.enqueue(
+            event: any(named: 'event'),
+            draftId: any(named: 'draftId'),
+            uploadId: any(named: 'uploadId'),
+            expireAfterSecs: any(named: 'expireAfterSecs'),
+          ),
+        ).thenAnswer((invocation) async {
+          final event = invocation.namedArguments[#event] as Event;
+          return ScheduledPost(
+            eventId: event.id,
+            ownerPubkey: 'a' * 64,
+            draftId: invocation.namedArguments[#draftId] as String,
+            kind: event.kind,
+            signedEventJson: '{}',
+            publishAt: event.createdAt,
+            createdAt: DateTime.now(),
+          );
+        });
+        when(() => repository.delete(any())).thenAnswer((_) async {});
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+      });
+
+      test(
+        'hands the signed event to the outbox and reports it scheduled',
+        () async {
+          final signed = stubScheduledSigning();
+          when(
+            () => repository.submit(signed.id),
+          ).thenAnswer(
+            (_) async => const ScheduledPostSubmitResult.submitted(),
+          );
+          final draft =
+              _createTestDraft(
+                collaboratorPubkeys: {
+                  'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                },
+              ).copyWith(
+                scheduledAt: publishAt,
+                expireTime: const Duration(days: 1),
+                skipUpdateLastModified: true,
+              );
+
+          final result = await scheduledService().publishVideo(draft: draft);
+
+          expect(
+            result,
+            isA<PublishScheduled>()
+                .having((r) => r.eventId, 'eventId', signed.id)
+                .having((r) => r.publishAt, 'publishAt', publishAt)
+                .having((r) => r.submitted, 'submitted', isTrue),
+          );
+          final arguments = capturedPublishArguments();
+          expect(arguments[#scheduledAt], publishAt);
+          expect(arguments[#expirationTimestamp], publishAtSecs + 86400);
+          verify(
+            () => repository.enqueue(
+              event: signed,
+              draftId: draft.id,
+              uploadId: 'test_upload_id',
+              expireAfterSecs: 86400,
+            ),
+          ).called(1);
+          // Invites link to the live video, so they wait for the publish.
+          verifyNever(
+            () => mockCollaboratorInviteService.sendInvites(
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              creatorPubkey: any(named: 'creatorPubkey'),
+              videoAddress: any(named: 'videoAddress'),
+              title: any(named: 'title'),
+              thumbnailUrl: any(named: 'thumbnailUrl'),
+              relayHint: any(named: 'relayHint'),
+            ),
+          );
+        },
+      );
+
+      test('reports a sound the scheduled event had to drop', () async {
+        final signed = stubScheduledSigning(degradesAudio: true);
+        when(
+          () => repository.submit(signed.id),
+        ).thenAnswer((_) async => const ScheduledPostSubmitResult.submitted());
+        final draft = _createTestDraft().copyWith(
+          scheduledAt: publishAt,
+          skipUpdateLastModified: true,
+        );
+
+        final result = await scheduledService().publishVideo(draft: draft);
+
+        expect(
+          result,
+          isA<PublishScheduled>().having(
+            (r) => r.audioReuseDegraded,
+            'audioReuseDegraded',
+            isTrue,
+          ),
+        );
+      });
+
+      test('keeps the post locally when the relay cannot be reached', () async {
+        final signed = stubScheduledSigning();
+        when(() => repository.submit(signed.id)).thenAnswer(
+          (_) async => const ScheduledPostSubmitResult.retryLater('http_404'),
+        );
+        final draft = _createTestDraft().copyWith(
+          scheduledAt: publishAt,
+          skipUpdateLastModified: true,
+        );
+
+        final result = await scheduledService().publishVideo(draft: draft);
+
+        expect(
+          result,
+          isA<PublishScheduled>().having(
+            (r) => r.submitted,
+            'submitted',
+            isFalse,
+          ),
+        );
+        verifyNever(() => repository.delete(any()));
+      });
+
+      test(
+        'a relay refusal is a scheduleRejected error and drops the row',
+        () async {
+          final signed = stubScheduledSigning();
+          when(() => repository.submit(signed.id)).thenAnswer(
+            (_) async => const ScheduledPostSubmitResult.rejected(
+              kind: ScheduleRejectionKind.overCap,
+              message: 'author already has 100 posts pending',
+            ),
+          );
+          final draft = _createTestDraft().copyWith(
+            scheduledAt: publishAt,
+            skipUpdateLastModified: true,
+          );
+
+          final result = await scheduledService().publishVideo(draft: draft);
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (e) => e.kind,
+              'kind',
+              PublishErrorKind.scheduleRejected,
+            ),
+          );
+          verify(() => repository.delete(signed.id)).called(1);
+        },
+      );
+
+      test(
+        'a signer that moves created_at fails as a schedule rejection',
+        () async {
+          stubScheduledSigning();
+          _stubPublishVideoEventThrows(
+            mockVideoEventPublisher,
+            const ScheduledSignatureTimestampException(
+              requestedCreatedAt: 1800000000,
+              signedCreatedAt: 1700000000,
+            ),
+          );
+          final draft = _createTestDraft().copyWith(
+            scheduledAt: publishAt,
+            skipUpdateLastModified: true,
+          );
+
+          final result = await scheduledService().publishVideo(draft: draft);
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (e) => e.kind,
+              'kind',
+              PublishErrorKind.scheduleRejected,
+            ),
+          );
+          verifyNever(() => repository.submit(any()));
+        },
+      );
+
+      test(
+        'keeps the draft when the publisher returns without the signed event',
+        () async {
+          stubScheduledSigning(handsOver: false);
+          final draft = _createTestDraft(
+            collaboratorPubkeys: {'b' * 64},
+          ).copyWith(scheduledAt: publishAt, skipUpdateLastModified: true);
+
+          final result = await scheduledService().publishVideo(draft: draft);
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (e) => e.rawFallback,
+              'no raw text for the user',
+              isNull,
+            ),
+          );
+          verifyNever(
+            () => mockCollaboratorInviteService.sendInvites(
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              creatorPubkey: any(named: 'creatorPubkey'),
+              videoAddress: any(named: 'videoAddress'),
+              title: any(named: 'title'),
+              thumbnailUrl: any(named: 'thumbnailUrl'),
+              relayHint: any(named: 'relayHint'),
+            ),
+          );
+          final saved =
+              verify(
+                    () => mockDraftService.saveDraft(captureAny()),
+                  ).captured.last
+                  as DivineVideoDraft;
+          expect(saved.publishStatus, PublishStatus.failed);
+        },
+      );
+
+      test(
+        'posts now when the time is inside the direct-publish lead',
+        () async {
+          stubScheduledSigning();
+          final draft = _createTestDraft().copyWith(
+            scheduledAt: DateTime.now().toUtc().add(const Duration(minutes: 1)),
+            skipUpdateLastModified: true,
+          );
+
+          final result = await scheduledService().publishVideo(draft: draft);
+
+          expect(result, isA<PublishSuccess>());
+          expect(capturedPublishArguments()[#scheduledAt], isNull);
+          verifyNever(() => repository.submit(any()));
+        },
+      );
+
+      test(
+        'refuses to post a timed draft now when no outbox is wired',
+        () async {
+          stubScheduledSigning();
+          final draft = _createTestDraft().copyWith(
+            scheduledAt: publishAt,
+            skipUpdateLastModified: true,
+          );
+
+          final result = await service.publishVideo(draft: draft);
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (e) => e.kind,
+              'kind',
+              PublishErrorKind.scheduleRejected,
+            ),
+          );
+          verifyNever(
+            () => mockVideoEventPublisher.publishVideoEvent(
+              upload: any(named: 'upload'),
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+              hashtags: any(named: 'hashtags'),
+              expirationTimestamp: any(named: 'expirationTimestamp'),
+              allowAudioReuse: any(named: 'allowAudioReuse'),
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              mentionedPubkeys: any(named: 'mentionedPubkeys'),
+              inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+              inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+              inspiredByNpubs: any(named: 'inspiredByNpubs'),
+              clipSourceCredits: any(named: 'clipSourceCredits'),
+              selectedAudio: any(named: 'selectedAudio'),
+              audioShareAttribution: any(named: 'audioShareAttribution'),
+              selectedAudioEventId: any(named: 'selectedAudioEventId'),
+              selectedAudioRelay: any(named: 'selectedAudioRelay'),
+              language: any(named: 'language'),
+              contentWarning: any(named: 'contentWarning'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              replyContext: any(named: 'replyContext'),
+              addReplyToFeed: any(named: 'addReplyToFeed'),
+              textTrackRefs: any(named: 'textTrackRefs'),
+              textTrackLang: any(named: 'textTrackLang'),
+              onEventSigned: any(named: 'onEventSigned'),
+              onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+              scheduledAt: any(named: 'scheduledAt'),
+              onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
+            ),
+          );
+        },
+      );
+    });
+
     group('content language self-labelling', () {
       VideoPublishService buildServiceWithLanguage(
         LanguagePreferenceService languageService,
@@ -3107,6 +3531,8 @@ void _stubPublishVideoEventThrows(
       textTrackLang: any(named: 'textTrackLang'),
       onEventSigned: any(named: 'onEventSigned'),
       onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+      scheduledAt: any(named: 'scheduledAt'),
+      onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
     ),
   ).thenThrow(error);
 }

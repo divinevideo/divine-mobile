@@ -185,6 +185,7 @@ class _LibraryView extends ConsumerStatefulWidget {
   final int initialTabIndex;
   final bool selectionMode;
   final LibraryTabsMode tabsMode;
+
   final List<DivineVideoClip> editorClips;
   final ScrollController? scrollController;
 
@@ -203,7 +204,7 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
   List<_LibraryTab> get _tabs {
     if (widget.selectionMode) return const [_LibraryTab.clips];
     return switch (widget.tabsMode) {
-      LibraryTabsMode.allTabs => const [
+      LibraryTabsMode.allTabs => [
         _LibraryTab.drafts,
         _LibraryTab.clips,
         _LibraryTab.sounds,
@@ -743,6 +744,11 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             targetAspectRatio: targetAspectRatio,
                             sortedClips: sortedClips,
                             selectionEnabled: selectionEnabled,
+                            // Standalone library only: the recorder's library
+                            // is for picking up clips, and a scheduled post is
+                            // not something that session can use (#3538).
+                            showScheduledSection:
+                                widget.tabsMode == LibraryTabsMode.allTabs,
                             onCreateVideo: () => _createVideoFromSelected(
                               context,
                               selectedClips: clipsState.selectedClips,
@@ -818,6 +824,7 @@ double? libraryTargetAspectRatioForSelection({
 
 class _LibraryContent extends StatelessWidget {
   const _LibraryContent({
+    required this.showScheduledSection,
     required this.tabs,
     required this.tabController,
     required this.selectionMode,
@@ -828,6 +835,8 @@ class _LibraryContent extends StatelessWidget {
     this.targetAspectRatio,
   });
 
+  /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
+  final bool showScheduledSection;
   final List<_LibraryTab> tabs;
   final TabController tabController;
   final bool selectionMode;
@@ -889,6 +898,7 @@ class _LibraryContent extends StatelessWidget {
                   tabController: tabController,
                   targetAspectRatio: targetAspectRatio,
                   backgroundColor: tabBackgroundColor,
+                  showScheduledSection: showScheduledSection,
                 ),
         ),
       ],
@@ -1052,6 +1062,7 @@ class _SelectionBody extends StatelessWidget {
 
 class _TabBody extends StatefulWidget {
   const _TabBody({
+    required this.showScheduledSection,
     required this.tabController,
     required this.tabs,
     required this.clips,
@@ -1065,6 +1076,9 @@ class _TabBody extends StatefulWidget {
   final List<DivineVideoClip> clips;
   final bool selectionEnabled;
   final Color backgroundColor;
+
+  /// Forwarded to [DraftsTab.showScheduledSection] (#3538).
+  final bool showScheduledSection;
   final double? targetAspectRatio;
 
   @override
@@ -1111,7 +1125,10 @@ class _TabBodyState extends State<_TabBody> {
         children: [
           for (final tab in widget.tabs)
             switch (tab) {
-              _LibraryTab.drafts => const DraftsTab(showRecordButton: false),
+              _LibraryTab.drafts => DraftsTab(
+                showRecordButton: false,
+                showScheduledSection: widget.showScheduledSection,
+              ),
               _LibraryTab.clips => ClipsTab(
                 clips: widget.clips,
                 selectionEnabled: widget.selectionEnabled,

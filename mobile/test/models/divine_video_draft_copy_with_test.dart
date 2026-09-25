@@ -201,6 +201,68 @@ void main() {
       });
     });
 
+    group('scheduledAt', () {
+      final scheduledAt = DateTime.utc(2026, 10, 1, 9, 30);
+
+      test('round-trips through JSON as UTC', () {
+        final draft = _createDraft().copyWith(
+          scheduledAt: scheduledAt,
+          skipUpdateLastModified: true,
+        );
+
+        final json = draft.toJson();
+        expect(json['scheduledAt'], '2026-10-01T09:30:00.000Z');
+
+        final restored = DivineVideoDraft.fromJson(json, '/tmp');
+        expect(restored.scheduledAt, scheduledAt);
+        expect(restored.scheduledAt!.isUtc, isTrue);
+      });
+
+      test('is omitted from JSON and null when never set', () {
+        final draft = _createDraft();
+
+        expect(draft.scheduledAt, isNull);
+        expect(draft.toJson().containsKey('scheduledAt'), isFalse);
+        expect(
+          DivineVideoDraft.fromJson(draft.toJson(), '/tmp').scheduledAt,
+          isNull,
+        );
+      });
+
+      test('clearScheduledAt drops the time; copyWith otherwise keeps it', () {
+        final draft = _createDraft().copyWith(
+          scheduledAt: scheduledAt,
+          skipUpdateLastModified: true,
+        );
+
+        expect(
+          draft.copyWith(skipUpdateLastModified: true).scheduledAt,
+          scheduledAt,
+        );
+        expect(
+          draft
+              .copyWith(clearScheduledAt: true, skipUpdateLastModified: true)
+              .scheduledAt,
+          isNull,
+        );
+      });
+
+      test('duplicate starts as an unscheduled draft', () {
+        final draft = _createDraft().copyWith(
+          scheduledAt: scheduledAt,
+          publishStatus: PublishStatus.scheduled,
+          skipUpdateLastModified: true,
+        );
+        expect(draft.isScheduled, isTrue);
+
+        final copy = draft.duplicate();
+
+        expect(copy.scheduledAt, isNull);
+        expect(copy.publishStatus, PublishStatus.draft);
+        expect(copy.isScheduled, isFalse);
+      });
+    });
+
     group('copyWith clearProofManifestJson', () {
       test('clears proofManifestJson when flag is true', () {
         final draft = _createDraft();

@@ -131,7 +131,7 @@ void main() {
 
         await tester.pumpWidget(buildWidget());
 
-        expect(find.byType(ListView), findsOneWidget);
+        expect(find.byType(CustomScrollView), findsOneWidget);
         expect(find.byType(DraftListTile), findsNWidgets(2));
       });
 

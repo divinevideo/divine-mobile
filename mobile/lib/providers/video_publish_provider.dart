@@ -31,6 +31,7 @@ import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/post_publish_providers.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -39,6 +40,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/router/navigator_keys.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
@@ -153,6 +155,22 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     }
   }
 
+  /// Whether this publish will be held rather than posted now.
+  ///
+  /// The hand-off is dispatched before its result is known, so the
+  /// destination is decided here on the same rule the service applies: a
+  /// time the relay would refuse as too close is posted immediately, and
+  /// that post belongs on the profile like any other. Read from the
+  /// repository rather than restated, so the two cannot drift.
+  bool _willBeScheduled(DivineVideoDraft draft) {
+    final scheduledAt = draft.scheduledAt;
+    final repository = ref.read(scheduledPostsRepositoryProvider);
+    if (scheduledAt == null || repository == null) return false;
+    return scheduledAt.isAfter(
+      DateTime.now().add(repository.config.directPublishLead),
+    );
+  }
+
   /// Creates the publish service with callbacks wired to this notifier.
   Future<VideoPublishService> _createPublishService({
     required OnProgressChanged onProgressChanged,
@@ -174,6 +192,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         l10n: currentAppL10n(ref.read(sharedPreferencesProvider)),
       ),
       languagePreferenceService: ref.read(languagePreferenceServiceProvider),
+      scheduledPostsRepository: ref.read(scheduledPostsRepositoryProvider),
       performanceMonitor: ref.read(performanceMonitoringServiceProvider),
       onProgressChanged: ({required String draftId, required double progress}) {
         setUploadProgress(draftId: draftId, progress: progress);
@@ -614,7 +633,13 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       var didNavigate = false;
       final postPublishExperiment = ref.read(postPublishExperimentProvider);
 
-      if (context.mounted && videoReplyContext != null) {
+      if (context.mounted && _willBeScheduled(publishDraft)) {
+        // The post is not live yet, so the profile has nothing to show; the
+        // Scheduled section above the drafts is where it can be watched,
+        // moved or withdrawn.
+        context.go(RoutePaths.libraryDrafts);
+        didNavigate = true;
+      } else if (context.mounted && videoReplyContext != null) {
         final destination = videoReplyPublishDestinationFor(videoReplyContext);
         context.go(destination.path, extra: destination.extra);
         unawaited(
@@ -671,6 +696,21 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
             _showCollaboratorInviteWarning(warnings: result.inviteWarnings);
           }
           if (result.audioReuseDegraded) {
+            _showAudioReuseDegradedWarning();
+          }
+
+        case PublishScheduled(
+          :final eventId,
+          :final publishAt,
+          :final audioReuseDegraded,
+        ):
+          await creationTracker.publishSucceeded(recorderMode);
+          Log.info(
+            '📅 Video scheduled: $eventId for ${publishAt.toIso8601String()}',
+            name: 'VideoPublishNotifier',
+            category: .video,
+          );
+          if (audioReuseDegraded) {
             _showAudioReuseDegradedWarning();
           }
 

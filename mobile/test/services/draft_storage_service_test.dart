@@ -1301,6 +1301,58 @@ void main() {
       });
     });
 
+    group('updateScheduledAt', () {
+      final thursday = DateTime.utc(2026, 10);
+      final friday = DateTime.utc(2026, 10, 2);
+
+      Future<DivineVideoDraft> saveScheduledDraft() async {
+        final draft = DivineVideoDraft.create(
+          clips: [
+            DivineVideoClip(
+              id: 'test_clip',
+              video: EditorVideo.file('/path/to/video.mp4'),
+              duration: const Duration(seconds: 6),
+              recordedAt: DateTime.now(),
+              targetAspectRatio: AspectRatio.square,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+          title: 'Test Vine',
+          description: '',
+          hashtags: {},
+          selectedApproach: 'hybrid',
+          scheduledAt: thursday,
+        );
+        await service.saveDraft(draft);
+        expect((await service.getDraftById(draft.id))!.scheduledAt, thursday);
+        return draft;
+      }
+
+      test('moves the draft onto the time it is given', () async {
+        final draft = await saveScheduledDraft();
+
+        await service.updateScheduledAt(draftId: draft.id, scheduledAt: friday);
+
+        expect((await service.getDraftById(draft.id))!.scheduledAt, friday);
+      });
+
+      test('clears the time when none is given', () async {
+        final draft = await saveScheduledDraft();
+
+        await service.updateScheduledAt(draftId: draft.id);
+
+        expect((await service.getDraftById(draft.id))!.scheduledAt, isNull);
+      });
+
+      test('ignores a draft that no longer exists', () async {
+        await expectLater(
+          service.updateScheduledAt(draftId: 'missing', scheduledAt: friday),
+          completes,
+        );
+        expect(await service.getDraftById('missing'), isNull);
+      });
+    });
+
     group('getDraftsByPublishStatuses', () {
       DivineVideoDraft createDraftWithStatus(String id, PublishStatus status) {
         final now = DateTime.now();
