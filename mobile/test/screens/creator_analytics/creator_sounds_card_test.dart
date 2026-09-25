@@ -98,7 +98,8 @@ void main() {
         expect(find.text(l10n.analyticsYourSoundsExplainer), findsOneWidget);
         expect(
           find.bySemanticsLabel(
-            'Birks crew, ${l10n.soundVideoCount(42)}, 3d ago',
+            'Birks crew, ${l10n.soundVideoCount(42)}, '
+            '${l10n.timeAgo(l10n.timeShortDays(3))}',
           ),
           findsOneWidget,
         );
