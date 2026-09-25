@@ -39,6 +39,7 @@ class VideoRecorderBlocState extends Equatable {
     this.isSwitchingCamera = false,
     this.previewTextureId,
     this.hasFlash = true,
+    this.isScreenFlashActive = false,
     this.countdownValue = 0,
     this.cameraRebuildCount = 0,
     this.aspectRatio = model.AspectRatio.vertical,
@@ -104,6 +105,12 @@ class VideoRecorderBlocState extends Equatable {
 
   /// Whether the camera has flash capability.
   final bool hasFlash;
+
+  /// Whether the front-camera screen flash has the display at full
+  /// brightness right now, as reported by the native camera. While it is on,
+  /// the recorder paints the area around the preview white to light the
+  /// face.
+  final bool isScreenFlashActive;
 
   /// Current zoom level (user-facing, e.g. 0.5× ultra-wide, 1.0× wide).
   final double zoomLevel;
@@ -266,6 +273,7 @@ class VideoRecorderBlocState extends Equatable {
     bool? isSwitchingCamera,
     int? previewTextureId,
     bool? hasFlash,
+    bool? isScreenFlashActive,
     int? countdownValue,
     int? cameraRebuildCount,
     model.AspectRatio? aspectRatio,
@@ -307,6 +315,7 @@ class VideoRecorderBlocState extends Equatable {
       isSwitchingCamera: isSwitchingCamera ?? this.isSwitchingCamera,
       previewTextureId: previewTextureId ?? this.previewTextureId,
       hasFlash: hasFlash ?? this.hasFlash,
+      isScreenFlashActive: isScreenFlashActive ?? this.isScreenFlashActive,
       countdownValue: countdownValue ?? this.countdownValue,
       cameraRebuildCount: cameraRebuildCount ?? this.cameraRebuildCount,
       aspectRatio: aspectRatio ?? this.aspectRatio,
@@ -357,6 +366,7 @@ class VideoRecorderBlocState extends Equatable {
     isSwitchingCamera,
     previewTextureId,
     hasFlash,
+    isScreenFlashActive,
     countdownValue,
     cameraRebuildCount,
     aspectRatio,

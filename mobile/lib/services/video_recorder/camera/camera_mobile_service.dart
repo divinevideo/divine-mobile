@@ -18,6 +18,7 @@ class CameraMobileService extends CameraService {
   CameraMobileService({
     required super.onUpdateState,
     required super.onAutoStopped,
+    super.onScreenFlashChanged,
   });
 
   bool _isInitialized = false;
@@ -55,6 +56,7 @@ class CameraMobileService extends CameraService {
           result == null ? null : EditorVideo.file(result.filePath),
         );
       };
+      _camera.onScreenFlashChanged = onScreenFlashChanged;
       // Re-apply remote record trigger callback (gets cleared on dispose)
       if (_remoteRecordTriggerCallback != null) {
         final callback = _remoteRecordTriggerCallback!;

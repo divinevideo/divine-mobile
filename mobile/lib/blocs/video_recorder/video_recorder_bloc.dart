@@ -74,6 +74,7 @@ typedef AudioPlaybackServiceFactory = AudioPlaybackService Function();
 typedef CameraServiceFactory = CameraService Function({
   required void Function({bool? forceCameraRebuild}) onUpdateState,
   required void Function(EditorVideo? video) onAutoStopped,
+  ValueChanged<bool>? onScreenFlashChanged,
 });
 
 /// Accessor for the [ClipManagerNotifier] (method-call + public-getter
@@ -153,8 +154,8 @@ class VideoRecorderBloc
   ///
   /// [cameraService] and [cameraServiceFactory] are test seams. When the
   /// service override is omitted, the factory creates the platform-appropriate
-  /// [CameraService] and wires its update / auto-stop callbacks to internal
-  /// events.
+  /// [CameraService] and wires its update / auto-stop / screen-flash callbacks
+  /// to internal events.
   ///
   /// [countdownSoundServiceFactory] and [audioPlaybackServiceFactory]
   /// are optional test overrides. Defaults preserve the iOS
@@ -200,6 +201,9 @@ class VideoRecorderBloc
             if (isClosed) return;
             add(_VideoRecorderAutoStopped(video));
           },
+          onScreenFlashChanged: (isActive) => addIfOpen(
+            _VideoRecorderScreenFlashChanged(isActive: isActive),
+          ),
         );
 
     on<VideoRecorderInitializeRequested>(_onInitializeRequested);
@@ -268,6 +272,7 @@ class VideoRecorderBloc
     on<_VideoRecorderCameraStateChanged>(_onCameraStateChanged);
     on<_VideoRecorderRemoteRecordTriggered>(_onRemoteRecordTriggered);
     on<_VideoRecorderAutoStopped>(_onAutoStopped);
+    on<_VideoRecorderScreenFlashChanged>(_onScreenFlashChanged);
     on<_VideoRecorderFocusPointTimerFired>(_onFocusPointTimerFired);
     on<_VideoRecorderZoomIndicatorTimerFired>(_onZoomIndicatorTimerFired);
   }
@@ -1918,11 +1923,19 @@ class VideoRecorderBloc
     _emitCameraSync(emit, cameraRebuildCount: event.cameraRebuildCount);
   }
 
+  void _onScreenFlashChanged(
+    _VideoRecorderScreenFlashChanged event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(state.copyWith(isScreenFlashActive: event.isActive));
+  }
+
   /// Rebuilds [state] from the current [CameraService] values.
   ///
   /// Only the rebuild count, aspect ratio, recorder mode, overlay and grid
-  /// toggles and the stop-motion session carry over; flash resets to `off`
-  /// and every other field to its default.
+  /// toggles, the stop-motion session and, while the camera is initialized,
+  /// the screen flash carry over; flash resets to `off` and every other field
+  /// to its default.
   void _emitCameraSync(
     Emitter<VideoRecorderBlocState> emit, {
     int? cameraRebuildCount,
@@ -1939,6 +1952,12 @@ class VideoRecorderBloc
         canRecord: _cameraService.canRecord,
         isCameraInitialized: _cameraService.isInitialized,
         hasFlash: _cameraService.hasFlash,
+        // Only the native camera turns the screen flash on or off, so a
+        // re-sync keeps its last report. A disposed camera has restored the
+        // brightness, but that report can arrive after the camera callbacks
+        // were cleared.
+        isScreenFlashActive:
+            _cameraService.isInitialized && state.isScreenFlashActive,
         canSwitchCamera: _cameraService.canSwitchCamera,
         isFrontCamera: _cameraService.currentLens.isFrontFacing,
         previewTextureId: _cameraService.textureId,

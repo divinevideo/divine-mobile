@@ -248,6 +248,10 @@ class DivineCameraPlugin :
                 channel.invokeMethod("onRecordingAutoStopped", recordingResult)
             }
 
+            cameraController?.onScreenFlashChangedListener = { isActive ->
+                channel.invokeMethod("onScreenFlashChanged", isActive)
+            }
+
             cameraController?.initialize(lens, videoQuality, enableScreenFlash, mirrorFrontCameraOutput, enableAutoLensSwitch, preferUnprocessedAudio, videoStabilizationMode) { state, error ->
                 if (error != null) {
                     result.error("INIT_ERROR", error, null)

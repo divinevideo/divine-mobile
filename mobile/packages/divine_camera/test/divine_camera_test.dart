@@ -53,6 +53,9 @@ class MockDivineCameraPlatform
   }
 
   @override
+  ValueChanged<bool>? onScreenFlashChanged;
+
+  @override
   Future<bool> setRemoteRecordControlEnabled({required bool enabled}) async {
     return true;
   }
@@ -276,6 +279,20 @@ void main() {
       test('onRemoteRecordTrigger setter throws', () {
         expect(
           () => basePlatform.onRemoteRecordTrigger = (_) {},
+          throwsUnimplementedError,
+        );
+      });
+
+      test('onScreenFlashChanged getter throws', () {
+        expect(
+          () => basePlatform.onScreenFlashChanged,
+          throwsUnimplementedError,
+        );
+      });
+
+      test('onScreenFlashChanged setter throws', () {
+        expect(
+          () => basePlatform.onScreenFlashChanged = (_) {},
           throwsUnimplementedError,
         );
       });
@@ -1011,6 +1028,20 @@ void main() {
         );
 
         expect(receivedTrigger, equals(RemoteRecordTrigger.volumeDown));
+      });
+
+      test('onScreenFlashChanged forwards native changes', () async {
+        await DivineCamera.instance.initialize();
+
+        final changes = <bool>[];
+        DivineCamera.instance.onScreenFlashChanged = changes.add;
+
+        final mockPlatform =
+            DivineCameraPlatform.instance as MockDivineCameraPlatform;
+        mockPlatform.onScreenFlashChanged?.call(true);
+        mockPlatform.onScreenFlashChanged?.call(false);
+
+        expect(changes, equals([true, false]));
       });
 
       test('remoteRecordControlEnabled defaults to false', () async {
@@ -1752,12 +1783,14 @@ void main() {
     test('dispose clears callbacks', () async {
       DivineCamera.instance.onStateChanged = (_) {};
       DivineCamera.instance.onRecordingAutoStopped = (_) {};
+      DivineCamera.instance.onScreenFlashChanged = (_) {};
 
       await DivineCamera.instance.initialize();
       await DivineCamera.instance.dispose();
 
       expect(DivineCamera.instance.onStateChanged, isNull);
       expect(DivineCamera.instance.onRecordingAutoStopped, isNull);
+      expect(DivineCamera.instance.onScreenFlashChanged, isNull);
     });
   });
 
@@ -2211,6 +2244,12 @@ void _runMethodChannelTests() {
       expect(methodChannelImpl.onRemoteRecordTrigger, isNull);
     });
 
+    test('onScreenFlashChanged setter sets callback', () {
+      final changes = <bool>[];
+      methodChannelImpl.onScreenFlashChanged = changes.add;
+      expect(methodChannelImpl.onScreenFlashChanged, equals(changes.add));
+    });
+
     test('setRemoteRecordControlEnabled invokes method channel', () async {
       final result = await methodChannelImpl.setRemoteRecordControlEnabled(
         enabled: true,
@@ -2361,6 +2400,27 @@ void _runMethodChannelTests() {
 
         // Callback should NOT be invoked when trigger type is null
         expect(callbackInvoked, isFalse);
+      });
+
+      test('handles onScreenFlashChanged callback', () async {
+        final changes = <bool>[];
+        methodChannelImpl.onScreenFlashChanged = changes.add;
+
+        final binaryMessenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        const codec = StandardMethodCodec();
+
+        for (final isActive in [true, false]) {
+          await binaryMessenger.handlePlatformMessage(
+            'divine_camera',
+            codec.encodeMethodCall(
+              MethodCall('onScreenFlashChanged', isActive),
+            ),
+            (_) {},
+          );
+        }
+
+        expect(changes, equals([true, false]));
       });
 
       test('handles unknown method call gracefully', () async {

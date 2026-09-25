@@ -357,6 +357,17 @@ final class _VideoRecorderAutoStopped extends VideoRecorderEvent {
   List<Object?> get props => [video];
 }
 
+/// Internal event: the native front-camera screen flash turned on or off.
+/// Dispatched from the `CameraService.onScreenFlashChanged` callback.
+final class _VideoRecorderScreenFlashChanged extends VideoRecorderEvent {
+  const _VideoRecorderScreenFlashChanged({required this.isActive});
+
+  final bool isActive;
+
+  @override
+  List<Object?> get props => [isActive];
+}
+
 /// Internal event: the focus-point auto-hide timer fired. Resets
 /// [VideoRecorderBlocState.focusPoint] back to [Offset.zero].
 final class _VideoRecorderFocusPointTimerFired extends VideoRecorderEvent {

@@ -393,6 +393,12 @@ class CameraController(
     var onAutoStopListener: ((Map<String, Any?>) -> Unit)? = null
 
     /**
+     * Listener called on the main thread whenever the screen flash turns on or
+     * off, so Flutter can light the UI around the preview while it is on.
+     */
+    var onScreenFlashChangedListener: ((Boolean) -> Unit)? = null
+
+    /**
      * Initializes the camera with the specified lens and video quality.
      */
     fun initialize(
@@ -1505,8 +1511,10 @@ class CameraController(
                 // Set brightness to maximum (1.0 = 100%)
                 layoutParams.screenBrightness = 1.0f
                 window.attributes = layoutParams
+                val wasEnabled = isScreenFlashEnabled
                 isScreenFlashEnabled = true
-                
+                if (!wasEnabled) onScreenFlashChangedListener?.invoke(true)
+
                 DivineCameraLog.d(TAG, "Screen flash enabled (brightness set to 100%)")
             } catch (e: Exception) {
                 DivineCameraLog.e(TAG, "Failed to enable screen flash", e)
@@ -1534,9 +1542,11 @@ class CameraController(
                 
                 layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
                 window.attributes = layoutParams
-                
+
+                val wasEnabled = isScreenFlashEnabled
                 isScreenFlashEnabled = false
-                
+                if (wasEnabled) onScreenFlashChangedListener?.invoke(false)
+
                 DivineCameraLog.d(TAG, "Screen flash disabled (brightness restored to system control)")
             } catch (e: Exception) {
                 DivineCameraLog.e(TAG, "Failed to disable screen flash", e)

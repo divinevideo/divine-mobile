@@ -26,6 +26,9 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
   void Function(RemoteRecordTrigger trigger)? onRemoteRecordTrigger;
 
   @override
+  ValueChanged<bool>? onScreenFlashChanged;
+
+  @override
   Future<CameraState> initializeCamera({
     DivineCameraLens lens = DivineCameraLens.back,
     DivineVideoQuality videoQuality = DivineVideoQuality.fhd,
