@@ -30,7 +30,7 @@ discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
 discarded_futures|lib/screens/feed/video_feed_page/feed_error_widget.dart	1
 discarded_futures|lib/screens/hashtag_feed_screen.dart	2
 discarded_futures|lib/screens/library_screen.dart	1
-discarded_futures|lib/screens/minor_account_review_screen.dart	5
+discarded_futures|lib/screens/minor_account_review_screen.dart	1
 discarded_futures|lib/screens/other_profile_screen.dart	1
 discarded_futures|lib/screens/profile_screen_router.dart	1
 discarded_futures|lib/screens/profile_setup/view/profile_setup_view.dart	2

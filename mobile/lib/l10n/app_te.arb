@@ -6446,20 +6446,10 @@
     }
   },
   "minorAccountReviewResponseClockExpiredTitle": "ప్రతిస్పందన గడువు ముగిసింది",
-  "minorAccountReviewResponseClockExpiredBody": "ప్రతిస్పందన గడువు ముగిసింది. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.",
   "minorAccountReviewResponseClockUnavailableTitle": "గడువు అందుబాటులో లేదు",
-  "minorAccountReviewResponseClockUnavailableBody": "మేము ప్రస్తుతం మీ ప్రతిస్పందన గడువును చూపలేము. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.",
   "minorAccountReviewAppealTitle": "మేము దీన్ని తప్పుగా అర్థం చేసుకున్నామని అనుకుంటున్నారా?",
   "@minorAccountReviewAppealTitle": {
     "description": "Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision."
-  },
-  "minorAccountReviewAppealTeenBody": "మద్దతు కేంద్రాన్ని సంప్రదించండి మరియు ఏమి జరిగిందో మాకు తెలియజేయండి. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.",
-  "@minorAccountReviewAppealTeenBody": {
-    "description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim."
-  },
-  "minorAccountReviewAppealUnder13Body": "మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.",
-  "@minorAccountReviewAppealUnder13Body": {
-    "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."
   },
   "minorAccountReviewOpenModerationMessage": "మోడరేషన్ సందేశాన్ని తెరవండి",
   "minorAccountReviewOpenReviewPage": "సమీక్ష పేజీని తెరవండి",

@@ -17637,7 +17637,7 @@ abstract class AppLocalizations {
   /// No description provided for @minorAccountReviewResponseClockExpiredBody.
   ///
   /// In en, this message translates to:
-  /// **'The response deadline has passed. Contact Support Center if you need help.'**
+  /// **'The response deadline has passed. Contact support if you need help.'**
   String get minorAccountReviewResponseClockExpiredBody;
 
   /// No description provided for @minorAccountReviewResponseClockUnavailableTitle.
@@ -17649,7 +17649,7 @@ abstract class AppLocalizations {
   /// No description provided for @minorAccountReviewResponseClockUnavailableBody.
   ///
   /// In en, this message translates to:
-  /// **'We can\'t show your response deadline right now. Contact Support Center if you need help.'**
+  /// **'We can\'t show your response deadline right now. Contact support if you need help.'**
   String get minorAccountReviewResponseClockUnavailableBody;
 
   /// Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision.
@@ -17658,16 +17658,16 @@ abstract class AppLocalizations {
   /// **'Think we got this wrong?'**
   String get minorAccountReviewAppealTitle;
 
-  /// Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim.
+  /// Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. The approved #8239 wording with only the routing clause changed to name the Contact Support action (#9176); the promise language is unchanged.
   ///
   /// In en, this message translates to:
-  /// **'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
+  /// **'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealTeenBody;
 
-  /// Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged.
+  /// Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian, and the routing clause changed to email because this path opens the parent-support email screen (#9176); the promise language is unchanged.
   ///
   /// In en, this message translates to:
-  /// **'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
+  /// **'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealUnder13Body;
 
   /// No description provided for @minorAccountReviewOpenModerationMessage.
