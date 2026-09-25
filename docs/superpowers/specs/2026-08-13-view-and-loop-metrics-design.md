@@ -7,8 +7,8 @@
 > **Superseded in part, 2026-09-23 (#9431):** the feed card no longer applies
 > `publicLoopCountFloor` and no longer reads
 > `mobile/lib/widgets/video_feed_item/video_card_meta.dart`, both of which this
-> design references; the card now shows the author's lifetime total gated by
-> `profileLoopsVisibilityFloor`. Everything else here — the view/loop definitions and the ranking
+> design references; the card now shows the author's lifetime total with no
+> floor (#9453). Everything else here — the view/loop definitions and the ranking
 > discussion — is unaffected.
 
 ## Problem
