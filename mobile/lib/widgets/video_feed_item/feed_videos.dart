@@ -1087,13 +1087,6 @@ class __OverlayState extends ConsumerState<_Overlay> {
     final isVerifyingAge = context.select(
       (VideoPlaybackStatusCubit cubit) => cubit.state.isVerifying(video.id),
     );
-    // Watched, not read from the local flag: pinning does not call setState,
-    // so the gesture surface must rebuild off the cubit to learn that a tap
-    // should now restore the chrome.
-    final isChromePinned = context.select<FeedImmersiveCubit?, bool>(
-      (cubit) => cubit?.state.isPinned ?? false,
-    );
-
     final isReady =
         widget.controller != null &&
         widget.controller?.state.isFirstFrameRendered == true &&
@@ -1237,7 +1230,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               _handleImmersivePointerEnd(event.pointer),
                           onPointerCancel: (event) =>
                               _handleImmersivePointerEnd(event.pointer),
-                          child: PlayerGestureSurface(
+                          child: _PinAwareGestureSurface(
                             interactiveReady: interactiveReady,
                             isOwnVideo: isOwnVideo,
                             onTap: _handlePlayerTap,
@@ -1247,9 +1240,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               isOwnVideo: isOwnVideo,
                             ),
                             onLongPressStart: _enterImmersive,
-                            onRestoreChrome: isChromePinned
-                                ? _handleRestoreTap
-                                : null,
+                            onRestoreChrome: _handleRestoreTap,
                           ),
                         ),
                       ),
@@ -1304,6 +1295,42 @@ class __OverlayState extends ConsumerState<_Overlay> {
           ),
         );
     }
+  }
+}
+
+/// [PlayerGestureSurface] that offers the restore tap only while the chrome is
+/// pinned. It watches the pin itself, so a pin rebuilds this surface alone
+/// rather than the whole item.
+class _PinAwareGestureSurface extends StatelessWidget {
+  const _PinAwareGestureSurface({
+    required this.interactiveReady,
+    required this.isOwnVideo,
+    required this.onTap,
+    required this.onDoubleTapDown,
+    required this.onLongPressStart,
+    required this.onRestoreChrome,
+  });
+
+  final bool interactiveReady;
+  final bool isOwnVideo;
+  final VoidCallback onTap;
+  final void Function(TapDownDetails details) onDoubleTapDown;
+  final VoidCallback onLongPressStart;
+  final VoidCallback onRestoreChrome;
+
+  @override
+  Widget build(BuildContext context) {
+    final isChromePinned = context.select<FeedImmersiveCubit?, bool>(
+      (cubit) => cubit?.state.isPinned ?? false,
+    );
+    return PlayerGestureSurface(
+      interactiveReady: interactiveReady,
+      isOwnVideo: isOwnVideo,
+      onTap: onTap,
+      onDoubleTapDown: onDoubleTapDown,
+      onLongPressStart: onLongPressStart,
+      onRestoreChrome: isChromePinned ? onRestoreChrome : null,
+    );
   }
 }
 
