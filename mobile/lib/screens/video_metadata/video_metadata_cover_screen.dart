@@ -335,7 +335,7 @@ class _VideoMetadataCoverScreenState
                 .read(videoEditorProvider.notifier)
                 .updateCover(
                   thumbnailPath: result.path,
-                  thumbnailTimestamp: _selectedPosition,
+                  thumbnailTimestamp: result.timestamp,
                 );
             didSucceed = true;
           }

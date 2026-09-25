@@ -2,6 +2,7 @@
 // ABOUTME: Verifies rendering, semantics, navigation, and failure handling
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
@@ -23,11 +24,13 @@ import 'package:openvine/screens/video_metadata/video_metadata_cover_screen.dart
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/core/platform/native_method_channel.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
+import '../mocks/mock_path_provider_platform.dart';
 
 class _MockVideoEditorNotifier extends VideoEditorNotifier {
   _MockVideoEditorNotifier(this._state);
@@ -36,6 +39,19 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
 
   @override
   VideoEditorProviderState build() => _state;
+}
+
+class _RecordingVideoEditorNotifier extends VideoEditorNotifier {
+  final coverTimestamps = <Duration>[];
+
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  void updateCover({
+    required String thumbnailPath,
+    required Duration thumbnailTimestamp,
+  }) => coverTimestamps.add(thumbnailTimestamp);
 }
 
 /// Fresh ProVideoEditor-compatible instance for tests.
@@ -177,11 +193,12 @@ void main() {
       when(() => mockGoRouter.pop<Object?>(any())).thenAnswer((_) async {});
     });
 
-    Widget buildWidget({DivineVideoClip? clip}) {
+    Widget buildWidget({DivineVideoClip? clip, VideoEditorNotifier? editor}) {
       return ProviderScope(
         overrides: [
           videoEditorProvider.overrideWith(
-            () => _MockVideoEditorNotifier(VideoEditorProviderState()),
+            () =>
+                editor ?? _MockVideoEditorNotifier(VideoEditorProviderState()),
           ),
         ],
         child: MockGoRouterProvider(
@@ -887,6 +904,100 @@ void main() {
         semanticsHandle.dispose();
       },
     );
+
+    group('confirming a draft cover', () {
+      late PathProviderPlatform originalPathProvider;
+      late Directory tempDir;
+
+      setUp(() {
+        originalPathProvider = PathProviderPlatform.instance;
+        tempDir = Directory.systemTemp.createTempSync('cover_confirm_');
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(tempDir.path);
+      });
+
+      tearDown(() {
+        PathProviderPlatform.instance = originalPathProvider;
+        tempDir.deleteSync(recursive: true);
+      });
+
+      testWidgets(
+        'saves the timestamp of the extracted frame, not a later cursor move',
+        (tester) async {
+          setUpPlayerChannel();
+          addTearDown(tearDownPlayerChannel);
+          final semanticsHandle = tester.ensureSemantics();
+          final videoFile = File('${tempDir.path}/draft.mp4')
+            ..writeAsBytesSync([0]);
+          var thumbnailRequests = 0;
+          _setHandler(const MethodChannel('pro_video_editor'), (call) async {
+            if (call.method == 'getMetadata') {
+              return <String, Object?>{
+                'duration': 3000000,
+                'extension': 'mp4',
+                'fileSize': 1024000,
+                'width': 1920,
+                'height': 1080,
+                'rotation': 0,
+                'bitrate': 3000000,
+              };
+            }
+            if (call.method == 'getThumbnails') {
+              thumbnailRequests++;
+              return <Uint8List>[
+                Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9]),
+              ];
+            }
+            return null;
+          });
+          VideoThumbnailService.resetStripQueueForTesting();
+          final editor = _RecordingVideoEditorNotifier();
+
+          await tester.pumpWidget(
+            buildWidget(
+              clip:
+                  _createTestClip(
+                    video: EditorVideo.file(videoFile.path),
+                  ).copyWith(
+                    thumbnailTimestamp: const Duration(milliseconds: 1500),
+                  ),
+              editor: editor,
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 400));
+
+          final confirm = tester.widget<DivineIconButton>(
+            find.byWidgetPredicate(
+              (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+            ),
+          );
+          confirm.onPressed!();
+          await tester.pump();
+
+          // The 1.5 s frame is extracted and its file is still being written:
+          // scrub on before that write lands.
+          expect(thumbnailRequests, equals(1));
+          expect(editor.coverTimestamps, isEmpty);
+          final increase = find.semantics.byAction(SemanticsAction.increase);
+          tester.semantics.increase(increase);
+          await tester.pump();
+          tester.semantics.increase(increase);
+          await tester.pump();
+
+          for (var i = 0; i < 20 && editor.coverTimestamps.isEmpty; i++) {
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+          }
+
+          expect(
+            editor.coverTimestamps,
+            equals([const Duration(milliseconds: 1500)]),
+          );
+
+          semanticsHandle.dispose();
+        },
+      );
+    });
 
     group('crash reporting', () {
       late CrashReporter originalReporter;
