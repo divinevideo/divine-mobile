@@ -813,15 +813,54 @@ void main() {
           ).called(1);
         },
       );
+
+      // A support-review resolution means the next step is asking support to
+      // review, which is the appeal. "Continue" used to reach it by way of the
+      // Support Center menu, the Report a Bug path this issue closes.
+      testWidgets('a support-review case offers no Continue into the menu', (
+        tester,
+      ) async {
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.age13To15,
+          state: MinorReviewCaseState.restrictedPendingUserResponse,
+          allowedResolution: MinorReviewResolutionType.supportReviewOnly,
+        );
+
+        expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+      });
+
+      testWidgets(
+        'an under-13 support-review case keeps its parent instructions',
+        (
+          tester,
+        ) async {
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.under13,
+            state: MinorReviewCaseState.restrictedPendingUserResponse,
+            allowedResolution: MinorReviewResolutionType.supportReviewOnly,
+          );
+
+          expect(
+            find.text(l10n.minorAccountReviewParentSupportInstructions),
+            findsOneWidget,
+          );
+        },
+      );
     });
   });
 }
 
-/// Pumps a case awaiting moderator review, which renders no primary action, so
-/// the appeal button is the only "Contact Support" on screen.
+/// Pumps a restricted case, by default one awaiting moderator review, which
+/// renders no primary action, so the appeal button is the only "Contact
+/// Support" on screen.
 Future<void> _pumpAppeal(
   WidgetTester tester, {
   required SuspectedAgeBand ageBand,
+  MinorReviewCaseState state = MinorReviewCaseState.submittedForReview,
+  MinorReviewResolutionType? allowedResolution,
   MockGoRouter? goRouter,
   OpenSupportMessages? openSupportMessages,
   ComposeSupportEmail? composeEmail,
@@ -848,11 +887,13 @@ Future<void> _pumpAppeal(
             restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
             currentCase: MinorReviewCase(
               id: 'case-appeal',
-              state: MinorReviewCaseState.submittedForReview,
+              state: state,
               suspectedAgeBand: ageBand,
-              allowedResolution: ageBand == SuspectedAgeBand.under13
-                  ? MinorReviewResolutionType.supportEmailOnly
-                  : MinorReviewResolutionType.parentVideoOrEmail,
+              allowedResolution:
+                  allowedResolution ??
+                  (ageBand == SuspectedAgeBand.under13
+                      ? MinorReviewResolutionType.supportEmailOnly
+                      : MinorReviewResolutionType.parentVideoOrEmail),
               instructions: const MinorReviewInstructions(
                 title: 'Submission received',
                 body: 'We are reviewing this case.',

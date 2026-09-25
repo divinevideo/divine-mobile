@@ -464,6 +464,15 @@ class _LoadedView extends ConsumerWidget {
       return null;
     }
 
+    // Support review is the appeal itself, which the button below the
+    // reconsideration card already opens. "Continue" would reach it through
+    // the Support Center menu instead.
+    if (!reviewCase.isUnder13Path &&
+        reviewCase.allowedResolution ==
+            MinorReviewResolutionType.supportReviewOnly) {
+      return null;
+    }
+
     return _MinorReviewPrimaryAction(
       label: reviewCase.isUnder13Path
           ? l10n.minorAccountReviewParentSupportInstructions
@@ -483,9 +492,10 @@ class _LoadedView extends ConsumerWidget {
         context.push(MinorAccountReviewParentContactScreen.path);
       case MinorReviewResolutionType.supportEmailOnly:
         context.push(MinorAccountReviewUnder13SupportScreen.path);
-      // No dedicated flow exists for either resolution, so both fall back to the
-      // general menu. This is not the appeal, which routes through
-      // _AppealSupportButton.
+      // An unrecognised resolution has no dedicated flow, so it falls back to
+      // the general menu. supportReviewOnly never reaches here: _primaryAction
+      // offers no Continue for it, because the appeal button already opens
+      // support.
       case MinorReviewResolutionType.supportReviewOnly:
       case MinorReviewResolutionType.unknown:
         context.push(SupportCenterScreen.path);
