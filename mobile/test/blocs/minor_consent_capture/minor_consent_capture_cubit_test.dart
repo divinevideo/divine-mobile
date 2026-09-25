@@ -270,6 +270,57 @@ void main() {
       await cubit.close();
     });
 
+    group('stop racing the 60-second auto-stop', () {
+      test('an auto-stop landing while stop awaits keeps its clip', () async {
+        final deleted = <String>[];
+        final recorder = _FakeRecorder()..stopGate = Completer<String?>();
+        final cubit = MinorConsentCaptureCubit(
+          recorder: recorder,
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        final stopping = cubit.stop();
+        recorder.fireAutoStopped('/tmp/auto-stopped.mp4');
+        recorder.stopGate!.complete(null);
+        await stopping;
+        await pumpEventQueue();
+
+        expect(cubit.state, isA<MinorConsentCaptureReview>());
+        expect(
+          (cubit.state as MinorConsentCaptureReview).filePath,
+          '/tmp/auto-stopped.mp4',
+        );
+        expect(deleted, isEmpty);
+        await cubit.close();
+      });
+
+      test(
+        'an auto-stop arriving after an empty stop keeps its clip',
+        () async {
+          final deleted = <String>[];
+          final recorder = _FakeRecorder(stopResult: null);
+          final cubit = MinorConsentCaptureCubit(
+            recorder: recorder,
+            deleteClip: (path) async => deleted.add(path),
+          );
+
+          await cubit.start(outputDirectory: '/tmp');
+          await cubit.stop();
+          recorder.fireAutoStopped('/tmp/auto-stopped.mp4');
+          await pumpEventQueue();
+
+          expect(cubit.state, isA<MinorConsentCaptureReview>());
+          expect(
+            (cubit.state as MinorConsentCaptureReview).filePath,
+            '/tmp/auto-stopped.mp4',
+          );
+          expect(deleted, isEmpty);
+          await cubit.close();
+        },
+      );
+    });
+
     test('auto-stop after close is ignored and does not throw', () async {
       final recorder = _FakeRecorder();
       final cubit = MinorConsentCaptureCubit(recorder: recorder);
