@@ -26,8 +26,9 @@ import 'package:permissions_service/permissions_service.dart';
 
 /// Records the parent-consent video in-app, then lets the parent review it.
 ///
-/// This is the primary consent path; the email route on
-/// [MinorAccountReviewParentConsentScreen] stays available as a fallback.
+/// Reachable only while `FeatureFlag.minorConsentInAppRecording` is on; the
+/// email route on [MinorAccountReviewParentConsentScreen] stays available as a
+/// fallback either way.
 class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
   /// Route name for this screen.
   static const routeName = 'minor-account-review-record-consent';
@@ -36,13 +37,7 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
   static const String path = RoutePaths.minorAccountReviewConsentRecord;
 
   /// Creates the capture screen.
-  const MinorAccountReviewRecordConsentScreen({super.key, this.onUseVideo});
-
-  /// Called with the recorded clip's path when the parent accepts it.
-  ///
-  /// Submission is wired by the following task; leaving it null keeps the
-  /// review screen renderable on its own.
-  final ValueChanged<String>? onUseVideo;
+  const MinorAccountReviewRecordConsentScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,15 +46,13 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
     final recorder = ref.watch(minorConsentRecorderProvider);
     return BlocProvider(
       create: (_) => MinorConsentCaptureCubit(recorder: recorder),
-      child: _RecordConsentView(onUseVideo: onUseVideo),
+      child: const _RecordConsentView(),
     );
   }
 }
 
 class _RecordConsentView extends ConsumerStatefulWidget {
-  const _RecordConsentView({this.onUseVideo});
-
-  final ValueChanged<String>? onUseVideo;
+  const _RecordConsentView();
 
   @override
   ConsumerState<_RecordConsentView> createState() => _RecordConsentViewState();
@@ -156,14 +149,9 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView> {
   void _onRetake() => context.read<MinorConsentCaptureCubit>().retake();
 
   void _onUseVideo(String filePath) {
-    final callback = widget.onUseVideo;
-    if (callback != null) {
-      callback(filePath);
-      return;
-    }
-    // No injected seam: this screen owns the confirm-and-submit step. Release
-    // the camera as soon as the clip is accepted — the file stays usable for
-    // upload while the parent confirms their email — then swap the view.
+    // Release the camera as soon as the clip is accepted — the file stays
+    // usable for upload while the parent confirms their email — then swap the
+    // view to the confirm-and-submit step.
     unawaited(_acceptVideo(filePath));
   }
 
