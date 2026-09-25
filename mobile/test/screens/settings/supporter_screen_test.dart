@@ -18,7 +18,6 @@ import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
-
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../helpers/l10n.dart';
@@ -699,7 +698,7 @@ void main() {
         ),
       );
 
-      expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
+      expect(find.text(l10n.supporterActiveBadge), findsOneWidget);
       expect(find.text(l10n.supporterAutoRenewNoticeGooglePlay), findsNothing);
     });
 
