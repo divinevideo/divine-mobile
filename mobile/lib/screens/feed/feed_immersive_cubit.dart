@@ -1,6 +1,6 @@
-// ABOUTME: Feed-scoped state for immersive (hold-to-peek) video viewing.
-// ABOUTME: While held, every chrome layer over the video fades out so the
-// ABOUTME: frame can be seen unobstructed; releasing brings it straight back.
+// ABOUTME: Feed-scoped state for immersive video viewing. Chrome hides either
+// ABOUTME: transiently (hold-to-peek, restored on release) or persistently
+// ABOUTME: (a pinch pins it hidden until the viewer taps or swipes away).
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,35 +12,76 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// header, app bar) and the per-item overlay chrome all fade against the
 /// same signal.
 class FeedImmersiveState extends Equatable {
-  const FeedImmersiveState({this.isImmersive = false});
+  const FeedImmersiveState({this.isImmersive = false, this.isPinned = false});
 
-  /// Whether the chrome over the video is currently hidden.
+  /// Whether the chrome over the video is currently hidden. True for either
+  /// source: a transient hold or a persistent [isPinned].
   final bool isImmersive;
 
+  /// Whether the viewer pinned the chrome hidden with a pinch. Unlike a hold,
+  /// a pin survives the fingers lifting and is only cleared by a second pinch,
+  /// a tap, a swipe to another video, or leaving the feed.
+  final bool isPinned;
+
   @override
-  List<Object?> get props => [isImmersive];
+  List<Object?> get props => [isImmersive, isPinned];
 }
 
 /// Feed-scoped Cubit that owns the immersive-viewing flag.
 ///
-/// The flag is transient by design — it is raised while the viewer holds a
-/// finger on the video and lowered the moment they let go, so it is never
-/// persisted and never survives leaving the feed.
+/// Two independent sources feed [FeedImmersiveState.isImmersive]: the
+/// transient hold ([enter]/[exit]) and the persistent pin ([pin]/[unpin]).
+/// They are tracked separately so releasing a hold cannot clear a pin, and
+/// un-pinning cannot end a hold the viewer is still making.
 class FeedImmersiveCubit extends Cubit<FeedImmersiveState> {
   FeedImmersiveCubit() : super(const FeedImmersiveState());
 
-  /// Hides the chrome. Idempotent — `emit` already drops a state equal to the
-  /// current one once anything has been emitted.
-  void enter() => emit(const FeedImmersiveState(isImmersive: true));
+  /// Whether a finger is currently held on the video.
+  bool _isHolding = false;
 
-  /// Restores the chrome. Idempotent, so the several exit paths that guard
-  /// against a stuck overlay can all call it unconditionally.
-  ///
-  /// The guard is load-bearing here in a way it is not in [enter]: `emit`
-  /// only suppresses an equal state after the first emission, so without it
-  /// an `exit()` on an untouched cubit would emit the initial state.
+  /// Whether the viewer pinned the chrome hidden with a pinch.
+  bool _isPinned = false;
+
+  /// Republish the state for the current sources. `emit` drops an equal state,
+  /// so this is safe to call unconditionally.
+  void _emit() {
+    emit(
+      FeedImmersiveState(
+        isImmersive: _isHolding || _isPinned,
+        isPinned: _isPinned,
+      ),
+    );
+  }
+
+  /// Hides the chrome for as long as the finger stays down. Idempotent.
+  void enter() {
+    if (_isHolding) return;
+    _isHolding = true;
+    _emit();
+  }
+
+  /// Ends a hold and restores the chrome, unless a pin still keeps it hidden.
+  /// Idempotent, so the several exit paths that guard against a stuck overlay
+  /// can all call it unconditionally.
   void exit() {
-    if (!state.isImmersive) return;
-    emit(const FeedImmersiveState());
+    if (!_isHolding) return;
+    _isHolding = false;
+    _emit();
+  }
+
+  /// Pins the chrome hidden until a second pinch, a tap, a swipe, or leaving
+  /// the feed. Idempotent.
+  void pin() {
+    if (_isPinned) return;
+    _isPinned = true;
+    _emit();
+  }
+
+  /// Clears a pin. Idempotent; a hold still in progress keeps the chrome
+  /// hidden.
+  void unpin() {
+    if (!_isPinned) return;
+    _isPinned = false;
+    _emit();
   }
 }

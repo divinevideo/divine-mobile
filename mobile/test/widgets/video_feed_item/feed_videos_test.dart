@@ -6,7 +6,8 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
-import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/gestures.dart'
+    show kDoubleTapTimeout, kLongPressTimeout;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1719,6 +1720,177 @@ void main() {
           isFalse,
           reason: 'releasing after a mid-hold mode flip must restore chrome',
         );
+      },
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Pinch to pin — chrome hidden until tap or a second pinch
+  // -------------------------------------------------------------------------
+  group('pinch to pin', () {
+    double chromeOpacity(WidgetTester tester, {required Type of}) => tester
+        .widget<AnimatedOpacity>(
+          find
+              .ancestor(
+                of: find.byType(of),
+                matching: find.byType(AnimatedOpacity),
+              )
+              .first,
+        )
+        .opacity;
+
+    Future<void> pumpFade(WidgetTester tester) => tester.pump(
+      kFeedImmersiveFadeDuration + const Duration(milliseconds: 50),
+    );
+
+    // Lands two fingers [_spread] apart and drags them [_spread * 3] apart.
+    // Measured from the landing separation so it matches the production rule.
+    Future<void> pinch(
+      WidgetTester tester,
+      Offset center, {
+      int basePointer = 1,
+    }) async {
+      const landing = 20.0;
+      const spread = 140.0;
+      final a = await tester.startGesture(
+        center - const Offset(landing, 0),
+        pointer: basePointer,
+      );
+      final b = await tester.startGesture(
+        center + const Offset(landing, 0),
+        pointer: basePointer + 1,
+      );
+      await tester.pump();
+      await a.moveTo(center - const Offset(spread, 0));
+      await b.moveTo(center + const Offset(spread, 0));
+      await tester.pump();
+      await a.up();
+      await b.up();
+    }
+
+    testWidgets('hides the chrome and keeps it hidden after the fingers lift', (
+      tester,
+    ) async {
+      final video = _makeVideo();
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+
+      await pinch(
+        tester,
+        tester.getCenter(find.byType(InfiniteVideoFeed)),
+        basePointer: 1,
+      );
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isTrue);
+      expect(
+        immersiveCubit.state.isImmersive,
+        isTrue,
+        reason: 'a pin must outlive the fingers that made it',
+      );
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(0.0));
+    });
+
+    testWidgets('a second pinch restores the chrome', (tester) async {
+      final video = _makeVideo();
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      await pinch(tester, center, basePointer: 1);
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await pinch(tester, center, basePointer: 3);
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+      expect(immersiveCubit.state.isImmersive, isFalse);
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+    });
+
+    testWidgets('a tap restores the chrome', (tester) async {
+      final video = _makeVideo();
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(
+        tester,
+        tester.getCenter(find.byType(InfiniteVideoFeed)),
+        basePointer: 1,
+      );
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await tester.tap(find.byType(InfiniteVideoFeed));
+      // The tap action sits beside a double-tap recognizer, so it resolves
+      // only once the double-tap window closes.
+      await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+    });
+
+    testWidgets(
+      'a two-finger touch that does not spread leaves the chrome up',
+      (
+        tester,
+      ) async {
+        final video = _makeVideo();
+        final immersiveCubit = FeedImmersiveCubit();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [video],
+          feedImmersiveCubit: immersiveCubit,
+        );
+        await tester.pump();
+
+        final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+        final a = await tester.startGesture(
+          center - const Offset(20, 0),
+          pointer: 1,
+        );
+        final b = await tester.startGesture(
+          center + const Offset(20, 0),
+          pointer: 2,
+        );
+        await tester.pump();
+        // A small parallel drift, as a two-finger scroll would produce.
+        await a.moveBy(const Offset(6, 30));
+        await b.moveBy(const Offset(6, 30));
+        await tester.pump();
+        await a.up();
+        await b.up();
+        await pumpFade(tester);
+
+        expect(
+          immersiveCubit.state.isPinned,
+          isFalse,
+          reason: 'only a deliberate pinch may hide the chrome',
+        );
+        expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
       },
     );
   });

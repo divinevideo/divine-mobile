@@ -2,6 +2,7 @@
 // ABOUTME: Pins that the LABEL and the TAP ACTION land on the same semantics
 // ABOUTME: node, which is what shipped broken and what a device caught.
 
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,23 +14,28 @@ import '../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(PlayerGestureSurface, () {
-    Widget host({required bool interactiveReady, bool isOwnVideo = false}) =>
-        testMaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: SizedBox.square(
-                dimension: 200,
-                child: PlayerGestureSurface(
-                  interactiveReady: interactiveReady,
-                  isOwnVideo: isOwnVideo,
-                  onTap: () {},
-                  onDoubleTapDown: (_) {},
-                  onLongPressStart: () {},
-                ),
-              ),
+    Widget host({
+      required bool interactiveReady,
+      bool isOwnVideo = false,
+      VoidCallback? onTap,
+      VoidCallback? onRestoreChrome,
+    }) => testMaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: SizedBox.square(
+            dimension: 200,
+            child: PlayerGestureSurface(
+              interactiveReady: interactiveReady,
+              isOwnVideo: isOwnVideo,
+              onTap: onTap ?? () {},
+              onDoubleTapDown: (_) {},
+              onLongPressStart: () {},
+              onRestoreChrome: onRestoreChrome,
             ),
           ),
-        );
+        ),
+      ),
+    );
 
     testWidgets('the labelled node is the one that owns the tap action', (
       tester,
@@ -109,6 +115,60 @@ void main() {
       } finally {
         handle.dispose();
       }
+    });
+
+    testWidgets(
+      'restores pinned chrome on tap before the player is ready',
+      (tester) async {
+        // A pinch can pin the chrome over a still-loading frame, when the
+        // play/pause tap is not wired yet. Without a restore path the viewer
+        // would be stuck with no UI and no way to bring it back.
+        var restored = 0;
+        var tapped = 0;
+
+        await tester.pumpWidget(
+          host(
+            interactiveReady: false,
+            onTap: () => tapped++,
+            onRestoreChrome: () => restored++,
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(PlayerGestureSurface));
+        await tester.pump(
+          kDoubleTapTimeout + const Duration(milliseconds: 50),
+        );
+
+        expect(restored, equals(1));
+        expect(
+          tapped,
+          isZero,
+          reason: 'play/pause must stay unwired until the player is ready',
+        );
+      },
+    );
+
+    testWidgets('uses the play/pause tap once interactive, not the restore', (
+      tester,
+    ) async {
+      var restored = 0;
+      var tapped = 0;
+
+      await tester.pumpWidget(
+        host(
+          interactiveReady: true,
+          onTap: () => tapped++,
+          onRestoreChrome: () => restored++,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byType(PlayerGestureSurface));
+      await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+
+      expect(tapped, equals(1));
+      expect(restored, isZero);
     });
   });
 }
