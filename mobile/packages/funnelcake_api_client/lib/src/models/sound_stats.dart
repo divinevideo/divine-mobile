@@ -40,8 +40,12 @@ class SoundStats {
   /// When the audio event was created.
   final DateTime createdAt;
 
-  /// How many video events reference this sound as their audio, including
-  /// the video an original sound was extracted from.
+  /// How many video events referencing this sound as their audio FunnelCake
+  /// has stored, including the video an original sound was extracted from.
+  ///
+  /// Every stored version of a republished video counts again, and a deleted
+  /// video is never subtracted, so this can exceed the videos still using
+  /// the sound. Treat it as an upper bound, not a figure to show.
   final int usageCount;
 
   @override

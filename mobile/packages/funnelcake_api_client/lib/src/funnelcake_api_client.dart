@@ -2204,8 +2204,8 @@ class FunnelcakeApiClient {
     }
   }
 
-  /// Fetches the sounds a user has published, newest first, each with the
-  /// number of videos that use it.
+  /// Fetches the sounds a user has published, newest first, each with its
+  /// [SoundStats.usageCount].
   ///
   /// [pubkey] is the user's public key (hex format).
   /// [limit] is the maximum number of results; the server caps it at 100.
