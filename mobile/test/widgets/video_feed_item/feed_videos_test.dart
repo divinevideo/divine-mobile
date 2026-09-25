@@ -1859,47 +1859,123 @@ void main() {
       expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
     });
 
+    // Lands two fingers 40 apart and drags them [apart] further from each other
+    // while both also drift down, as a two-finger scroll settling would. The
+    // separation changes by exactly [apart], whatever the drift.
+    Future<void> driftApart(
+      WidgetTester tester,
+      Offset center, {
+      required double apart,
+    }) async {
+      final a = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
+      final b = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
+      await tester.pump();
+      await a.moveBy(Offset(-apart / 2, 40));
+      await b.moveBy(Offset(apart / 2, 40));
+      await tester.pump();
+      await a.up();
+      await b.up();
+    }
+
+    testWidgets('fingers drifting just under the pinch distance leave the '
+        'chrome up', (tester) async {
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await driftApart(
+        tester,
+        tester.getCenter(find.byType(InfiniteVideoFeed)),
+        apart: 56,
+      );
+      await pumpFade(tester);
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'only a deliberate pinch may hide the chrome',
+      );
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+    });
+
     testWidgets(
-      'a two-finger touch that does not spread leaves the chrome up',
+      'fingers drifting just past the pinch distance pin the chrome',
       (
         tester,
       ) async {
-        final video = _makeVideo();
         final immersiveCubit = FeedImmersiveCubit();
 
         await _pumpFeedVideos(
           tester,
-          videos: [video],
+          videos: [_makeVideo()],
           feedImmersiveCubit: immersiveCubit,
         );
         await tester.pump();
 
-        final center = tester.getCenter(find.byType(InfiniteVideoFeed));
-        final a = await tester.startGesture(
-          center - const Offset(20, 0),
-          pointer: 1,
+        await driftApart(
+          tester,
+          tester.getCenter(find.byType(InfiniteVideoFeed)),
+          apart: 72,
         );
-        final b = await tester.startGesture(
-          center + const Offset(20, 0),
-          pointer: 2,
-        );
-        await tester.pump();
-        // A small parallel drift, as a two-finger scroll would produce.
-        await a.moveBy(const Offset(6, 30));
-        await b.moveBy(const Offset(6, 30));
-        await tester.pump();
-        await a.up();
-        await b.up();
         await pumpFade(tester);
 
-        expect(
-          immersiveCubit.state.isPinned,
-          isFalse,
-          reason: 'only a deliberate pinch may hide the chrome',
-        );
-        expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+        expect(immersiveCubit.state.isPinned, isTrue);
+        expect(chromeOpacity(tester, of: VideoOverlayActions), equals(0.0));
       },
     );
+
+    testWidgets('ending a hold that a pinch pinned leaves the pin', (
+      tester,
+    ) async {
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final holding = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      expect(immersiveCubit.state.isHolding, isTrue);
+
+      final spreading = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
+      await tester.pump();
+      await spreading.moveTo(center + const Offset(140, 0));
+      await tester.pump();
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await spreading.up();
+      await holding.up();
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isHolding, isFalse);
+      expect(
+        immersiveCubit.state.isPinned,
+        isTrue,
+        reason: 'releasing the hold must not release the pin',
+      );
+    });
+
     testWidgets(
       'lifting one of three fingers does not toggle the pin',
       (tester) async {
