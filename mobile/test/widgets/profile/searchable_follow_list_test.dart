@@ -127,6 +127,22 @@ void main() {
       expect(find.text(_alicePubkey), findsNothing);
     });
 
+    testWidgets('announces the no-results copy to screen readers', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pump(_pastDebounce);
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        tester.takeAnnouncements().map((announcement) => announcement.message),
+        equals([l10n.searchNoResultsFound('zzz')]),
+      );
+    });
+
     testWidgets('keeps pull-to-refresh reachable when nothing matches', (
       tester,
     ) async {

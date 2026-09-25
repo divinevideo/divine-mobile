@@ -6,16 +6,23 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/screens/auth/secure_account_screen.dart';
+import 'package:openvine/screens/profile_setup/profile_setup.dart';
+import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_actions_sheet.dart';
+
+import '../../../helpers/go_router.dart';
 
 void main() {
   group(ProfileActionsSheetContent, () {
     Widget buildApp({
       required List<ProfileActionType> actions,
       void Function(ProfileActionType action)? onMaybeLater,
+      MockGoRouter? goRouter,
     }) {
-      return MaterialApp(
+      final app = MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -23,15 +30,17 @@ void main() {
             builder: (context) {
               return ElevatedButton(
                 onPressed: () {
-                  VineBottomSheet.show<void>(
-                    context: context,
-                    scrollable: false,
-                    showHeaderDivider: false,
-                    body: ProfileActionsSheetContent(
-                      actions: actions,
-                      onMaybeLater: onMaybeLater,
+                  unawaited(
+                    VineBottomSheet.show<void>(
+                      context: context,
+                      scrollable: false,
+                      showHeaderDivider: false,
+                      body: ProfileActionsSheetContent(
+                        actions: actions,
+                        onMaybeLater: onMaybeLater,
+                      ),
                     ),
-                  ).ignore();
+                  );
                 },
                 child: const Text('Open'),
               );
@@ -39,7 +48,57 @@ void main() {
           ),
         ),
       );
+      if (goRouter == null) return app;
+      return MockGoRouterProvider(goRouter: goRouter, child: app);
     }
+
+    group('primary action', () {
+      late MockGoRouter goRouter;
+
+      setUp(() {
+        goRouter = MockGoRouter();
+        when(() => goRouter.push<void>(any())).thenAnswer((_) async {});
+      });
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final destinations = [
+        (
+          action: ProfileActionType.accountRestricted,
+          title: l10n.profileAccountRestricted,
+          primaryLabel: l10n.accountStatusTitle,
+          route: AccountStatusScreen.path,
+        ),
+        (
+          action: ProfileActionType.secureAccount,
+          title: l10n.profileSecureYourAccount,
+          primaryLabel: l10n.profileSecurePrimaryButton,
+          route: SecureAccountScreen.path,
+        ),
+        (
+          action: ProfileActionType.completeProfile,
+          title: l10n.profileCompleteYourProfile,
+          primaryLabel: l10n.profileCompletePrimaryButton,
+          route: ProfileSetupScreen.setupPath,
+        ),
+      ];
+
+      for (final destination in destinations) {
+        testWidgets('${destination.action.name} closes the sheet and opens '
+            '${destination.route}', (tester) async {
+          await tester.pumpWidget(
+            buildApp(actions: [destination.action], goRouter: goRouter),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(destination.primaryLabel));
+          await tester.pumpAndSettle();
+
+          expect(find.text(destination.title), findsNothing);
+          verify(() => goRouter.push<void>(destination.route)).called(1);
+        });
+      }
+    });
 
     group('secureAccount only', () {
       testWidgets('renders secure account prompt', (tester) async {
