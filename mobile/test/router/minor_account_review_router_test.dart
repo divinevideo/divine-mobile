@@ -678,6 +678,39 @@ void main() {
       },
     );
 
+    testWidgets('redirects under-13 cases away from the record consent route', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          ...routerOverrides(),
+          nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => restrictedStatus(
+              state: MinorReviewCaseState.restrictedPendingSupportEmail,
+              ageBand: SuspectedAgeBand.under13,
+              resolution: MinorReviewResolutionType.supportEmailOnly,
+            ),
+          ),
+          isFeatureEnabledProvider(
+            FeatureFlag.minorConsentInAppRecording,
+          ).overrideWithValue(true),
+        ],
+      );
+      registerContainerTearDown(tester, container);
+      await container.read(currentMinorAccountReviewStatusProvider.future);
+      await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+      final router = container.read(goRouterProvider);
+      router.go(MinorAccountReviewRecordConsentScreen.path);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        MinorAccountReviewUnder13SupportScreen.path,
+      );
+    });
+
     testWidgets('redirects under-13 cases away from parent contact', (
       tester,
     ) async {
