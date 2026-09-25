@@ -518,15 +518,7 @@ class _CapturePane extends StatelessWidget {
           style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
         ),
         const SizedBox(height: 16),
-        _PromptCard(
-          title: context.l10n.minorAccountReviewRecordConsentPromptTitle,
-          items: [
-            context.l10n.minorAccountReviewParentConsentChecklistKid,
-            context.l10n.minorAccountReviewParentConsentChecklistPermission,
-            context.l10n.minorAccountReviewParentConsentChecklistAgeBand,
-            context.l10n.minorAccountReviewParentConsentChecklistSupervision,
-          ],
-        ),
+        const _ConsentPromptCard(),
         const SizedBox(height: 24),
         DivineButton(
           label: context.l10n.minorAccountReviewRecordConsentRecordCta,
@@ -539,7 +531,27 @@ class _CapturePane extends StatelessWidget {
   }
 }
 
-/// Recording state: live preview plus the stop control.
+/// What the parent says on camera, shown before and during recording.
+class _ConsentPromptCard extends StatelessWidget {
+  const _ConsentPromptCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PromptCard(
+      title: context.l10n.minorAccountReviewRecordConsentPromptTitle,
+      items: [
+        context.l10n.minorAccountReviewParentConsentChecklistKid,
+        context.l10n.minorAccountReviewParentConsentChecklistPermission,
+        context.l10n.minorAccountReviewParentConsentChecklistAgeBand,
+        context.l10n.minorAccountReviewParentConsentChecklistSupervision,
+      ],
+    );
+  }
+}
+
+/// Recording state: live preview, the stop control, and the prompt card the
+/// parent reads from while recording. Stop sits above the card so it stays in
+/// view on a short screen.
 class _RecordingPane extends StatelessWidget {
   const _RecordingPane({required this.cameraReady, required this.onStop});
 
@@ -557,6 +569,8 @@ class _RecordingPane extends StatelessWidget {
           expanded: true,
           onPressed: onStop,
         ),
+        const SizedBox(height: 16),
+        const _ConsentPromptCard(),
       ],
     );
   }
