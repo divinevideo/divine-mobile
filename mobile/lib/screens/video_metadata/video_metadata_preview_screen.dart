@@ -14,6 +14,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/feed/feed_mode_switch.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
@@ -65,13 +66,25 @@ class _VideoMetadataPreviewScreenState
   void initState() {
     super.initState();
     // Start video playback
-    unawaited(_initializePlayer());
+    runDetached(
+      _initializePlayer(),
+      'initialize metadata preview player',
+      logName: 'VideoMetadataPreviewScreen',
+      category: LogCategory.video,
+    );
 
     ref.listenManual(
       videoPublishProvider.select((state) => state.publishState),
       (previous, next) {
         if (previous != next && _controller?.state.isPlaying == true) {
-          _controller?.pause();
+          final controller = _controller;
+          if (controller == null) return;
+          runDetached(
+            controller.pause(),
+            'pause metadata preview',
+            logName: 'VideoMetadataPreviewScreen',
+            category: LogCategory.video,
+          );
         }
       },
     );
@@ -159,14 +172,27 @@ class _VideoMetadataPreviewScreenState
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(controller.dispose());
+      runDetached(
+        controller.dispose(),
+        'dispose failed metadata preview player',
+        logName: 'VideoMetadataPreviewScreen',
+        category: LogCategory.video,
+      );
     }
   }
 
   @override
   void dispose() {
     _routeAnimation?.removeStatusListener(_onRouteAnimationStatus);
-    unawaited(_controller?.dispose());
+    final controller = _controller;
+    if (controller != null) {
+      runDetached(
+        controller.dispose(),
+        'dispose metadata preview player',
+        logName: 'VideoMetadataPreviewScreen',
+        category: LogCategory.video,
+      );
+    }
     _isPreviewReady.dispose();
     super.dispose();
   }
@@ -364,7 +390,15 @@ class _FittedVideoSurfaceState extends State<_FittedVideoSurface> {
   void didUpdateWidget(_FittedVideoSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      unawaited(_sub?.cancel());
+      if (_sub != null) {
+        runDetached(
+          _sub!.cancel(),
+          'cancel metadata preview listener',
+          logName: 'VideoMetadataPreviewScreen',
+          category: LogCategory.video,
+        );
+        _sub = null;
+      }
       _subscribeToController(widget.controller);
     }
   }
@@ -381,7 +415,15 @@ class _FittedVideoSurfaceState extends State<_FittedVideoSurface> {
 
   @override
   void dispose() {
-    unawaited(_sub?.cancel());
+    if (_sub != null) {
+      runDetached(
+        _sub!.cancel(),
+        'cancel metadata preview listener',
+        logName: 'VideoMetadataPreviewScreen',
+        category: LogCategory.video,
+      );
+      _sub = null;
+    }
     super.dispose();
   }
 

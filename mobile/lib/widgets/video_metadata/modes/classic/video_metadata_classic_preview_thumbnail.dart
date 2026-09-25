@@ -5,8 +5,10 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_editor/video_editor_processing_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -39,9 +41,12 @@ class _VideoMetadataClassicPreviewThumbnailState
       clip,
     ) {
       if (clip != null && _controller == null) {
-        clip.requireVideo.safeFilePath().then((path) {
-          if (mounted) _initPlayer(path);
-        });
+        runDetached(
+          _loadPlayer(clip),
+          'load classic metadata preview',
+          logName: 'VideoMetadataClassicPreviewThumbnail',
+          category: LogCategory.video,
+        );
       }
     }, fireImmediately: true);
   }
@@ -50,8 +55,22 @@ class _VideoMetadataClassicPreviewThumbnailState
   void dispose() {
     _hideTimer?.cancel();
     _iconVisible.dispose();
-    _controller?.dispose();
+    final controller = _controller;
+    if (controller != null) {
+      runDetached(
+        controller.dispose(),
+        'dispose classic metadata preview player',
+        logName: 'VideoMetadataClassicPreviewThumbnail',
+        category: LogCategory.video,
+      );
+    }
     super.dispose();
+  }
+
+  Future<void> _loadPlayer(DivineVideoClip clip) async {
+    final path = await clip.requireVideo.safeFilePath();
+    if (!mounted) return;
+    await _initPlayer(path);
   }
 
   Future<void> _togglePlayPause() async {
@@ -114,7 +133,12 @@ class _VideoMetadataClassicPreviewThumbnailState
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(controller.dispose());
+      runDetached(
+        controller.dispose(),
+        'dispose failed classic metadata preview player',
+        logName: 'VideoMetadataClassicPreviewThumbnail',
+        category: LogCategory.video,
+      );
       return;
     }
     if (!mounted) return;
