@@ -1998,7 +1998,8 @@ class DmRepository {
     // restart on this instance clears it again under an in-flight drain.
     final gen = _resetGeneration;
     // A run in progress supersedes a resume armed by an earlier deferral; if
-    // this run defers too it arms a fresh one against the pool it saw.
+    // this run defers too it arms a fresh one against the pool it saw, unless
+    // a refusal window's one reconnect sweep is already spent.
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     // Run this before the ordinary version stamp: that ordering distinguishes
@@ -2416,6 +2417,12 @@ class DmRepository {
         (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
       if (!_confirmationWindowRelayEdgeUsed) {
         _listenForDrainRelayReconnect(pubkey, generation);
+      } else {
+        Log.info(
+          'DM history drain for ${pubkeyForLogs(pubkey)} keeps its delayed '
+          'retry to confirm a relay refusal; further reconnects wait for it',
+          category: LogCategory.system,
+        );
       }
       return;
     }

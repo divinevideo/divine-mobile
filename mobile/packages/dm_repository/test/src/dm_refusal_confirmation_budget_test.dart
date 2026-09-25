@@ -13,6 +13,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -736,6 +737,36 @@ void main() {
 
         expect(reads, 3);
         expect(syncState.historyDrainComplete(_peerPubkey), isFalse);
+      });
+    });
+
+    test('a spent reconnect leaves a log saying the kept retry covers it', () {
+      fakeAsync((async) {
+        unawaited(LogCaptureService().clearAllLogs());
+        async.flushMicrotasks();
+        stubAnsweredHistory();
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async => refusal());
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        connectRelay('wss://first.example');
+        async.flushMicrotasks();
+
+        // The reconnect sweep deferred inside the window with its one
+        // reconnect spent: nothing is armed, and the log must say why.
+        final logs = LogCaptureService()
+            .getRecentLogs()
+            .where((e) => e.message.contains('further reconnects wait'))
+            .toList();
+        expect(logs, hasLength(1));
       });
     });
 
