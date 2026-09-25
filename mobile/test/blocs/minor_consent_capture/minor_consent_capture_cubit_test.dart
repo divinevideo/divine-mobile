@@ -1,6 +1,8 @@
 // ABOUTME: Tests for MinorConsentCaptureCubit driving the in-app consent clip
 // ABOUTME: Covers start, stop, retake, the 60-second cap, and failure states
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_capture_cubit.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
@@ -18,7 +20,15 @@ class _FakeRecorder implements MinorConsentRecorder {
   String? lastOutputDirectory;
   bool initialized = false;
   bool disposed = false;
+  int startCount = 0;
   int stopCount = 0;
+
+  /// When set, [start] does not return until this completes.
+  Completer<bool>? startGate;
+
+  /// When set, [stop] does not return until this completes, and returns its
+  /// value instead of [stopResult].
+  Completer<String?>? stopGate;
 
   @override
   void Function(String? path)? onAutoStopped;
@@ -37,14 +47,19 @@ class _FakeRecorder implements MinorConsentRecorder {
     required Duration maxDuration,
     required String outputDirectory,
   }) async {
+    startCount++;
     lastMaxDuration = maxDuration;
     lastOutputDirectory = outputDirectory;
+    final gate = startGate;
+    if (gate != null) return gate.future;
     return startResult;
   }
 
   @override
   Future<String?> stop() async {
     stopCount++;
+    final gate = stopGate;
+    if (gate != null) return gate.future;
     return stopResult;
   }
 
@@ -85,6 +100,32 @@ void main() {
 
       expect(recorder.lastMaxDuration, const Duration(seconds: 60));
       expect(recorder.lastOutputDirectory, '/tmp');
+    });
+
+    test('a second start while the first is in flight is ignored', () async {
+      final recorder = _FakeRecorder()..startGate = Completer<bool>();
+      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+      final first = cubit.start(outputDirectory: '/tmp');
+      final second = cubit.start(outputDirectory: '/tmp');
+      recorder.startGate!.complete(true);
+      await Future.wait([first, second]);
+
+      expect(recorder.startCount, 1);
+      expect(cubit.state, isA<MinorConsentCaptureRecording>());
+      await cubit.close();
+    });
+
+    test('start while already recording is ignored', () async {
+      final recorder = _FakeRecorder();
+      final cubit = MinorConsentCaptureCubit(recorder: recorder);
+
+      await cubit.start(outputDirectory: '/tmp');
+      await cubit.start(outputDirectory: '/tmp');
+
+      expect(recorder.startCount, 1);
+      expect(cubit.state, isA<MinorConsentCaptureRecording>());
+      await cubit.close();
     });
 
     test('a denied start surfaces denied state', () async {
