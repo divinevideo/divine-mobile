@@ -20,6 +20,8 @@ class _MockDirectMessagesDao extends Mock implements DirectMessagesDao {}
 
 class _MockConversationsDao extends Mock implements ConversationsDao {}
 
+class _MockNip17MessageService extends Mock implements NIP17MessageService {}
+
 class _FakeEvent extends Fake implements Event {}
 
 const _pubkey =
@@ -45,6 +47,8 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'dm.oldestSyncedAt.$_pubkey': 100,
       'dm.historyDrainVersion.$_pubkey': DmSyncState.currentDrainVersion,
+      'dm.oldestSyncedAt.$_peerPubkey': 100,
+      'dm.historyDrainVersion.$_peerPubkey': DmSyncState.currentDrainVersion,
     });
     syncState = DmSyncState(await SharedPreferences.getInstance());
     nostrClient = _MockNostrClient();
@@ -119,6 +123,13 @@ void main() {
     endedBy: QueryEnd.relayClosed,
     answeredNetworkRelayCount: 1,
     closedRelayReasons: {'wss://refusing.example': 'error'},
+  );
+
+  QueryResult refusalFrom(String relay) => QueryResult(
+    events: const [],
+    endedBy: QueryEnd.relayClosed,
+    answeredNetworkRelayCount: 1,
+    closedRelayReasons: {relay: 'error'},
   );
 
   // A sweep no relay took: the drain defers with no refusal on record.
@@ -434,7 +445,8 @@ void main() {
     );
 
     test(
-      'stopListening clears a confirmation queued behind an active drain',
+      'a confirmation queued behind an active drain does not run after '
+      'stopListening',
       () {
         fakeAsync((async) {
           stubAnsweredHistory();
@@ -597,6 +609,173 @@ void main() {
         // without ever reading page 1.
         expect(pages.last, endsWith('_0'));
         expect(syncState.historyDrainComplete(_pubkey), isFalse);
+      });
+    });
+
+    test('a queued confirmation that defers hands over to the next slot', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        final activeRead = Completer<QueryResult>();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) {
+          reads++;
+          return switch (reads) {
+            2 => activeRead.future,
+            3 || 4 => Future.value(refusalFrom('wss://other.example')),
+            // A runaway chain of passes ends here instead of hanging.
+            > 4 => Future.value(answered()),
+            _ => Future.value(refusal()),
+          };
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        activeRead.complete(refusal());
+        async.flushMicrotasks();
+
+        // The queued pass saw a different refusal, so it defers once instead
+        // of queueing another pass behind itself.
+        expect(reads, 3);
+        expect(syncState.historyDrainComplete(_pubkey), isFalse);
+
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays[1])
+          ..flushMicrotasks();
+
+        expect(reads, 4);
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+      });
+    });
+
+    test('a queued confirmation leaves no retry armed once it settles', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        final activeRead = Completer<QueryResult>();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) {
+          reads++;
+          return reads == 2 ? activeRead.future : Future.value(refusal());
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        activeRead.complete(refusal());
+        async.flushMicrotasks();
+
+        // The active drain's deferral took no slot while the pass was queued,
+        // so nothing is left armed once the pass confirms the refusal.
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+
+    test('an account switch drops a confirmation queued for the old one', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        final activeRead = Completer<QueryResult>();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) {
+          reads++;
+          return reads == 2 ? activeRead.future : Future.value(refusal());
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        repository.setCredentials(
+          userPubkey: _peerPubkey,
+          signer: LocalNostrSigner(_privateKey),
+          messageService: _MockNip17MessageService(),
+        );
+        activeRead.complete(refusal());
+        async.flushMicrotasks();
+
+        // The new account's first sweep meets the same refusal. It must arm
+        // its own delayed retry instead of confirming on the old account's
+        // queued pass and armed refusal.
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+
+        expect(reads, 3);
+        expect(syncState.historyDrainComplete(_peerPubkey), isFalse);
+      });
+    });
+
+    test('a later refusal window keeps its own reconnect sweep', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return reads <= 2 ? refusal() : refusalFrom('wss://other.example');
+        });
+        final repository = makeRepository();
+
+        // Window one: its reconnect sweep spends the window's one reconnect.
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        connectRelay('wss://first.example');
+        async.flushMicrotasks();
+        expect(reads, 2);
+
+        // The timer meets a different refusal, so it defers into window two.
+        async
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+        expect(reads, 3);
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        expect(reads, 4);
+
+        connectRelay('wss://second.example');
+        async.flushMicrotasks();
+        expect(reads, 5);
       });
     });
   });
