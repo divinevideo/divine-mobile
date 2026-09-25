@@ -6,9 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// being copied into an `AVMutableComposition`, for two separate reasons. An
 /// HLS `AVURLAsset` exposes no tracks — `loadTracks(withMediaType:)` returns an
 /// empty array — so a composition built from one always ends in
-/// `CompositionError.noPlayableVideoTracks` and can never play. A local file
-/// has nothing to compose, and `AVPlayerLooper` closes the loop seam over an
-/// asset while it does not over a composition of the same file.
+/// `CompositionError.noPlayableVideoTracks` and can never play. Any other
+/// single clip, local or remote, has nothing to compose, and `AVPlayerLooper`
+/// closes the loop seam over an asset while it does not over a composition of
+/// the same file.
 ///
 /// None of this has a Dart runtime surface, and the package has no Swift test
 /// harness, so the invariants are pinned as a source contract the same way the
@@ -37,12 +38,13 @@ void main() {
             'extra load to discover the asset has no tracks.',
       );
       expect(
-        source,
-        contains('return !uri.hasPrefix("http")'),
+        _functionBody(source, 'private static func soleDirectItemClip('),
+        isNot(contains('hasPrefix("http")')),
         reason:
-            'A remote non-HLS URL keeps taking the composition, which owns the '
-            'buffering and header handling for it; only a local file joins HLS '
-            'on the direct path.',
+            'A remote progressive clip takes the direct path too. On the '
+            'composition AVPlayerLooper does not close the seam, and every '
+            'video the feed opened from the network rather than its cache '
+            'kept it.',
       );
       expect(
         source,
@@ -172,11 +174,21 @@ void main() {
       );
       expect(
         body,
-        contains('loopAudioMix = nil'),
+        contains('loopAudioMix = audioTrack.flatMap'),
         reason:
-            'A direct item has no audio mix, so a mix left behind by an '
-            'earlier composition would be re-applied to every item the looper '
-            'builds - with input parameters addressing another asset.',
+            "A direct item carries its own edge fades on its own asset's audio "
+            'track. Without them the join is a click on every lap, and a mix '
+            'left behind by an earlier composition would be re-applied to '
+            'every item the looper builds - with input parameters addressing '
+            'another asset.',
+      );
+      expect(
+        body,
+        isNot(contains('audioTapProcessor')),
+        reason:
+            'A processing tap on the looping items held playback ~360 ms at '
+            'every start and ~420 ms at every join under AVPlayerLooper; a '
+            'volume mix keeps the joins gapless.',
       );
     });
   });

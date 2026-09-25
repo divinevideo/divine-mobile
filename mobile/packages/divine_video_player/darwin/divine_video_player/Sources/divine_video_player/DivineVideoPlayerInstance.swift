@@ -48,8 +48,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var timeObserver: Any?
     private var currentItemObservation: NSKeyValueObservation?
 
-    /// The edge-declick mix built for the loaded composition, kept so it can be
-    /// re-applied to every item `AVPlayerLooper` makes.
+    /// The edge-declick mix built for the loaded item — composition or direct —
+    /// kept so it can be re-applied to every item `AVPlayerLooper` makes.
     ///
     /// The looper does not replay the template item — it builds its own copies,
     /// and a copy does not carry the template's `audioMix`. Setting it once at
@@ -118,6 +118,41 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             timescale: audioMixTimescale,
             method: .roundTowardZero
         ).value / 2
+    }
+
+    /// A mix that fades [track] in from zero and out to [loopEnd] over
+    /// [edgeDeclickFadeSeconds] each — the composition's edge fades, for a
+    /// clip played straight from its asset. Nil for a clip too short to carry
+    /// two fades.
+    private static func edgeDeclickMix(track: AVAssetTrack, loopEnd: CMTime) -> AVAudioMix? {
+        let maxFadeTicks =
+            Int64((edgeDeclickFadeSeconds * Double(audioMixTimescale)).rounded())
+        let fadeTicks = min(maxFadeTicks, halfFadeTicks(loopEnd))
+        guard fadeTicks > 0 else { return nil }
+        let fade = CMTime(value: fadeTicks, timescale: audioMixTimescale)
+        let flatEnd = CMTimeSubtract(loopEnd, fade)
+        let params = AVMutableAudioMixInputParameters(track: track)
+        params.setVolumeRamp(
+            fromStartVolume: 0,
+            toEndVolume: 1,
+            timeRange: CMTimeRange(start: .zero, end: fade)
+        )
+        if CMTimeCompare(flatEnd, fade) > 0 {
+            params.setVolumeRamp(
+                fromStartVolume: 1,
+                toEndVolume: 1,
+                timeRange: CMTimeRange(start: fade, end: flatEnd)
+            )
+        }
+        // Ends exactly on loopEnd, the sample the looper joins.
+        params.setVolumeRamp(
+            fromStartVolume: 1,
+            toEndVolume: 0,
+            timeRange: CMTimeRange(start: flatEnd, end: loopEnd)
+        )
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [params]
+        return mix
     }
 
     /// AVFoundation's asset-option key for per-asset HTTP request headers.
@@ -468,30 +503,22 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
     }
 
-    /// Whether [uri] may skip the composition and be played from the asset.
-    ///
-    /// A single unchanged clip has nothing to compose, and `AVPlayerLooper`
-    /// only closes the seam over the asset itself — over a composition of the
-    /// same file it does not. Remote URLs stay on the composition path, which
-    /// owns the buffering and header handling for them.
-    ///
-    /// Rotation is decided later, against the loaded asset, in
-    /// [directItemSuitsRotation] — it cannot be read from the URL.
-    private static func takesDirectItemPath(_ uri: String) -> Bool {
-        if URL(string: uri)?.pathExtension.lowercased() == "m3u8" { return true }
-        return !uri.hasPrefix("http")
-    }
-
     /// The single clip of [clipsRaw] the direct-item path can represent
     /// exactly, otherwise nil.
     ///
-    /// Two sources qualify, for different reasons. An HLS `AVURLAsset` exposes
-    /// **no** tracks — `loadTracks` returns an empty array — so a composition
-    /// built from one always ends in
-    /// [CompositionError.noPlayableVideoTracks] and can never play. A local
-    /// file qualifies because there is nothing to compose: `AVPlayerLooper`
-    /// closes the seam over the asset itself and does not over a composition
-    /// of the same file.
+    /// Every source qualifies, for one of two reasons. An HLS `AVURLAsset`
+    /// exposes **no** tracks — `loadTracks` returns an empty array — so a
+    /// composition built from one always ends in
+    /// [CompositionError.noPlayableVideoTracks] and can never play. Any other
+    /// single unchanged clip — a local file or a remote one — has nothing to
+    /// compose, and `AVPlayerLooper` closes the seam over the asset itself and
+    /// does not over a composition of the same file. Remote progressive clips
+    /// used to stay on the composition, which kept the seam on every video the
+    /// feed opened from the network rather than from its cache; the asset
+    /// carries the same header options on either path.
+    ///
+    /// Rotation is decided later, against the loaded asset, in
+    /// [directItemSuitsRotation] — it cannot be read from the URL.
     ///
     /// The diversion is deliberately narrow. A composition can start a clip
     /// part-way in and rescale it; an `AVPlayerItem` carries the whole asset
@@ -504,8 +531,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         in clipsRaw: [[String: Any]]
     ) -> [String: Any]? {
         guard clipsRaw.count == 1, let clip = clipsRaw.first,
-            let uri = clip["uri"] as? String,
-            Self.takesDirectItemPath(uri),
+            clip["uri"] is String,
             (clip["startMs"] as? NSNumber)?.int64Value ?? 0 == 0,
             (clip["volume"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0,
             (clip["playbackSpeed"] as? NSNumber)?.doubleValue ?? 1.0 == 1.0
@@ -532,9 +558,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     ///
     /// A rotated clip cannot come here at all; [directItemSuitsRotation] sends
     /// it back to the composition, which rights it with a layer instruction.
-    /// Per-clip volume changes likewise stay on the composition path, because a
-    /// direct item has no audio mix. The cost is that the audio-mix edge
-    /// de-click fades do not apply, so the loop seam can click.
+    /// Per-clip volume changes likewise stay on the composition path; a direct
+    /// item's audio mix only fades its two edges, like the composition's.
     ///
     /// Throws [CompositionError.directItemNotApplicable] when the loaded asset
     /// turns out to need the composition after all.
@@ -610,10 +635,21 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
 
         let playerItem = AVPlayerItem(asset: asset)
-        // A direct item has no audio mix, so anything the last composition left
-        // behind has to go — otherwise every item the looper builds is handed a
-        // mix whose input parameters address a different asset's tracks.
-        loopAudioMix = nil
+        // The looper joins the last sample before loopEnd straight to the
+        // first, and loopEnd is where the picture ends — usually a few
+        // milliseconds into sound that carries on — so the join is a click on
+        // every lap unless both edges fade. The mix addresses this asset's own
+        // audio track, which every copy the looper makes shares; it replaces
+        // whatever the last composition left, whose input parameters address
+        // another asset's tracks. An HLS asset has no track to address.
+        //
+        // A processing tap that blended the material past loopEnd into each
+        // lap's head was tried and measured under AVPlayerLooper: it held
+        // playback ~360 ms at every start and ~420 ms at every join with a
+        // tap per item. A volume mix leaves the looper's joins gapless.
+        let audioTrack = isHls ? nil : try? await asset.loadTracks(withMediaType: .audio).first
+        loopAudioMix = audioTrack.flatMap { Self.edgeDeclickMix(track: $0, loopEnd: loopEnd) }
+        playerItem.audioMix = loopAudioMix
         // forwardPlaybackEndTime and the looper describe the same boundary two
         // ways, and both are needed: the looper honours only its own range
         // when it wraps, while a player that is not looping — or stops looping
@@ -1340,6 +1376,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// off, instead of holding them until dispose.
     private func prewarmLoopingOutputs() {
         textureOutput?.prewarm(items: playerLooper?.loopingPlayerItems ?? [])
+        // The looper prerolls the next lap's audio ahead of the join, so an
+        // edge fade handed over only when an item becomes current misses the
+        // very samples it exists for.
+        if let loopAudioMix {
+            playerLooper?.loopingPlayerItems.forEach { item in
+                if item.audioMix !== loopAudioMix { item.audioMix = loopAudioMix }
+            }
+        }
     }
 
     private func attachCurrentItemOutputs() {
