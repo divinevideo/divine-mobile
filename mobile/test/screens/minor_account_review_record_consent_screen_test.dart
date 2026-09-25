@@ -787,6 +787,42 @@ void main() {
     );
   });
 
+  group('MinorAccountReviewRecordConsentScreen recording', () {
+    testWidgets('keeps the prompt card on screen while recording', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      _useTallSurface(tester);
+
+      await _pumpRecordConsentScreen(
+        tester,
+        recorder: _FakeRecorder(),
+        permissions: _FakePermissions(),
+        settle: false,
+      );
+      await tester.tap(
+        find.text(l10n.minorAccountReviewRecordConsentRecordCta),
+      );
+      await _pumpFrames(tester);
+
+      expect(
+        find.text(l10n.minorAccountReviewRecordConsentStopCta),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.minorAccountReviewRecordConsentPromptTitle),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.minorAccountReviewParentConsentChecklistKid),
+        findsOneWidget,
+      );
+
+      await tester.pumpWidget(const SizedBox());
+      await _pumpFrames(tester);
+    });
+  });
+
   group('MinorAccountReviewRecordConsentScreen clip cleanup', () {
     late Directory tempDir;
     late File clip;
