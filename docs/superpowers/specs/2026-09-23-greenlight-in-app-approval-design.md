@@ -4,6 +4,20 @@
 **Date:** 2026-09-23
 **Tracking:** divinevideo/support-trust-safety#230 (decision), #173 (epic)
 
+> **As built (divinevideo/divine-mobile#9451).** Where the code differs from
+> this document:
+>
+> - The whole flow sits behind `FeatureFlag.minorConsentInAppRecording`
+>   (`FF_MINOR_CONSENT_IN_APP_RECORDING`), off by default until the
+>   relay-manager route and its request-signing contract ship.
+> - Submission runs in `MinorConsentSubmitCubit`; the widget only renders its
+>   state.
+> - The upload sends no body digest. The NIP-98 token signs the URL and method,
+>   and its `payload` tag is the hash of an empty body.
+> - The only cap is the 60-second length. There is no client size cap. At the
+>   camera's default 1080p and 8 Mbps, a full clip is about 60 MB, so
+>   "oversize cannot occur" does not hold.
+
 ---
 
 ## Context
