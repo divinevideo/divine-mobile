@@ -1891,6 +1891,49 @@ void main() {
         expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
       },
     );
+    testWidgets(
+      'lifting one of three fingers does not toggle the pin',
+      (tester) async {
+        final video = _makeVideo();
+        final immersiveCubit = FeedImmersiveCubit();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [video],
+          feedImmersiveCubit: immersiveCubit,
+        );
+        await tester.pump();
+
+        final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+        final a = await tester.startGesture(
+          center - const Offset(20, 0),
+          pointer: 1,
+        );
+        final b = await tester.startGesture(
+          center + const Offset(20, 0),
+          pointer: 2,
+        );
+        final c = await tester.startGesture(
+          center + const Offset(160, 0),
+          pointer: 3,
+        );
+        await tester.pump();
+        // Lifting one of the first two fingers leaves a pair that is much
+        // further apart than the pair the pinch was measured from.
+        await a.up();
+        await b.moveBy(const Offset(1, 0));
+        await tester.pump();
+        await b.up();
+        await c.up();
+        await pumpFade(tester);
+
+        expect(
+          immersiveCubit.state.isPinned,
+          isFalse,
+          reason: 'a changed finger pair is not a pinch',
+        );
+      },
+    );
   });
 
   group('playback length cap', () {

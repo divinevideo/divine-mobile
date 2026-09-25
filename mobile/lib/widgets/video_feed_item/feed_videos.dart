@@ -768,7 +768,13 @@ class __OverlayState extends ConsumerState<_Overlay> {
   void _handleImmersivePointerEnd(int pointer) {
     _immersivePointers.remove(pointer);
     _immersivePointerPositions.remove(pointer);
-    if (_immersivePointerPositions.length < 2) _resetPinchGesture();
+    if (_immersivePointerPositions.length < 2) {
+      _resetPinchGesture();
+    } else if (_pinchBaselineDistance != null) {
+      // A third finger was down, so the measured pair may now be a different
+      // one. Re-measure from here rather than compare against the old pair.
+      _pinchBaselineDistance = _pinchDistance();
+    }
     if (_immersivePointers.isEmpty) _exitImmersive();
   }
 
