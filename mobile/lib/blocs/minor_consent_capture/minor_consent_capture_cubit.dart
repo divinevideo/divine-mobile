@@ -193,7 +193,8 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   Future<void> releaseRecorder() async {
     if (_disposed || isClosed) return;
     _disposed = true;
-    _recorder.onAutoStopped = null;
+    // The auto-stop listener stays attached: a clip the platform delivers
+    // after this point is deleted by [_handleAutoStopped], not dropped.
     if (state is MinorConsentCaptureRecording) {
       await _discardClip(await _safeStop());
     }
@@ -211,7 +212,8 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   Future<void> close() async {
     if (_disposed) return super.close();
     _disposed = true;
-    _recorder.onAutoStopped = null;
+    // See [releaseRecorder]: the listener stays attached so a late clip is
+    // deleted rather than left in temporary storage.
     if (state is MinorConsentCaptureRecording) {
       await _discardClip(await _safeStop());
     }
