@@ -8,6 +8,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import java.io.ByteArrayOutputStream
@@ -50,6 +51,33 @@ internal class ClipAudioLoopTrack private constructor(
 
     private val sync = LoopAudioSync(frameCount.toLong(), sampleRate)
     private val timestamp = AudioTimestamp()
+
+    /** The last raw (wrapping, unsigned 32-bit) consumed-frame reading. */
+    private var lastRawHeadFrame = 0L
+
+    /** How many times [lastRawHeadFrame] has wrapped, times its own range. */
+    private var headFrameWrapBase = 0L
+
+    /**
+     * [track]'s consumed-frame counter, unwrapped.
+     *
+     * `getPlaybackHeadPosition` is a 32-bit counter — masked to unsigned by
+     * [UNSIGNED_INT_MASK], it still wraps every ~13.5–27 h depending on
+     * sample rate — while [AudioTimestamp.framePosition], which [sync]
+     * compares it against, does not. Left unwrapped, a wrap between an
+     * anchor and a later measurement mixes a small wrapped value with a
+     * large cumulative one and throws the arithmetic off by whatever the
+     * wrap span is modulo the loop length. A wrap is detected the standard
+     * way for a monotonic hardware counter: a new raw reading smaller than
+     * the last one. `sync()` runs far more often than the wrap period, so a
+     * wrap can never land between two reads.
+     */
+    private fun unwrappedHeadFrame(): Long {
+        val raw = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK
+        if (raw < lastRawHeadFrame) headFrameWrapBase += UNSIGNED_INT_MASK + 1
+        lastRawHeadFrame = raw
+        return headFrameWrapBase + raw
+    }
 
     /**
      * Whether the gap has been measured since the head was last placed. Until
@@ -167,7 +195,7 @@ internal class ClipAudioLoopTrack private constructor(
                     // is what the new head waits behind — whatever the start
                     // being replaced cost.
                     val pipelineUs = sync.pipelineLatencyUs(
-                        headFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK,
+                        headFrame = unwrappedHeadFrame(),
                         presentedFrame = timestamp.framePosition,
                         presentedNanos = timestamp.nanoTime,
                         nowNanos = System.nanoTime(),
@@ -177,7 +205,18 @@ internal class ClipAudioLoopTrack private constructor(
                             "(${pipelineUs?.div(1000) ?: "?"} ms in flight)",
                         name = "DivineVideoPlayer.AudioLoop",
                     )
-                    placeOnRunningOutput(videoPositionUs, nowNanos, pipelineUs, learn = true)
+                    // Silent right now either way: a takeover's opening
+                    // anchor (targetVolume <= 0f, see play()) or a cold-start
+                    // anchor still waiting to be revealed (aligning) must not
+                    // teach a latency nothing has heard yet — this is the
+                    // exact "output waking from standby" case the docs on
+                    // [LoopAudioSync.anchor] warn about.
+                    placeOnRunningOutput(
+                        videoPositionUs,
+                        nowNanos,
+                        pipelineUs,
+                        learn = !aligning && targetVolume > 0f,
+                    )
                 }
                 LoopAudioSync.Correction.STEER -> {
                     measuredSinceStart = true
@@ -185,7 +224,7 @@ internal class ClipAudioLoopTrack private constructor(
                         // Muted, so moving it now cannot be heard; steering
                         // it in while audible would take seconds.
                         val pipelineUs = sync.pipelineLatencyUs(
-                            headFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK,
+                            headFrame = unwrappedHeadFrame(),
                             presentedFrame = timestamp.framePosition,
                             presentedNanos = timestamp.nanoTime,
                             nowNanos = System.nanoTime(),
@@ -237,7 +276,7 @@ internal class ClipAudioLoopTrack private constructor(
         latencyUs: Long = LoopAudioSync.startLatencyUs,
     ) {
         measuredSinceStart = false
-        val counterFrame = track.playbackHeadPosition.toLong() and UNSIGNED_INT_MASK
+        val counterFrame = unwrappedHeadFrame()
         val bufferFrame = sync.anchor(
             positionUs,
             counterFrame,
@@ -282,6 +321,18 @@ internal class ClipAudioLoopTrack private constructor(
 
     companion object {
 
+        /**
+         * Test-only seam: [create] is the only production path because it is
+         * the only one that hands over a decoded, loop-ready [AudioTrack].
+         * Unit tests drive the state machine directly against a fake track.
+         */
+        @VisibleForTesting
+        internal fun forTesting(
+            track: AudioTrack,
+            sampleRate: Int,
+            frameCount: Int,
+        ): ClipAudioLoopTrack = ClipAudioLoopTrack(track, sampleRate, frameCount)
+
         /** The consumed-frame counter is an unsigned 32-bit value in an `int`. */
         private const val UNSIGNED_INT_MASK = 0xFFFF_FFFFL
 
@@ -292,6 +343,17 @@ internal class ClipAudioLoopTrack private constructor(
          */
         @Volatile
         private var lastOutputNanos = Long.MIN_VALUE / 2
+
+        /**
+         * Test-only seam for [lastOutputNanos]: process-shared and
+         * real-clock-driven in production, so a test that needs a
+         * deterministic warm/cold output for [play]'s `aligning` decision
+         * sets it explicitly here rather than racing the real clock.
+         */
+        @VisibleForTesting
+        internal fun setLastOutputNanosForTesting(nanos: Long) {
+            lastOutputNanos = nanos
+        }
 
         /**
          * How long an output may have had nothing to play and still be taken
@@ -395,7 +457,14 @@ internal class ClipAudioLoopTrack private constructor(
                     if (!sawInputEnd) {
                         val inputIndex = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT_US)
                         if (inputIndex >= 0) {
-                            val buffer = codec.getInputBuffer(inputIndex)!!
+                            val buffer = codec.getInputBuffer(inputIndex) ?: run {
+                                DivineVideoPlayerLog.warning(
+                                    "Could not build looping audio for $uri: " +
+                                        "no input buffer at index $inputIndex",
+                                    name = "DivineVideoPlayer.AudioLoop",
+                                )
+                                return null
+                            }
                             val size = extractor.readSampleData(buffer, 0)
                             if (size < 0) {
                                 codec.queueInputBuffer(
@@ -419,7 +488,14 @@ internal class ClipAudioLoopTrack private constructor(
                         }
                         MediaCodec.INFO_TRY_AGAIN_LATER -> Unit
                         else -> if (out >= 0) {
-                            val buffer = codec.getOutputBuffer(out)!!
+                            val buffer = codec.getOutputBuffer(out) ?: run {
+                                DivineVideoPlayerLog.warning(
+                                    "Could not build looping audio for $uri: " +
+                                        "no output buffer at index $out",
+                                    name = "DivineVideoPlayer.AudioLoop",
+                                )
+                                return null
+                            }
                             if (info.size > 0) {
                                 if (firstPresentationUs == null) {
                                     firstPresentationUs = info.presentationTimeUs
