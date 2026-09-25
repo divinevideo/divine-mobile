@@ -64,6 +64,10 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   final MinorConsentClipDeleter _deleteClip;
   bool _disposed = false;
 
+  /// True while [start] awaits the camera, so a second tap cannot start a
+  /// second recording.
+  bool _starting = false;
+
   /// Path of the clip the parent can still act on — the one in review, or the
   /// one they accepted for upload. [_discardClip] never deletes this one.
   String? _retainedPath;
@@ -77,13 +81,21 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   /// Starts recording under [outputDirectory], capping at [maxDuration].
   ///
   /// Emits [MinorConsentCaptureDenied] when the camera refuses to start, so the
-  /// screen can route the parent to the email fallback.
+  /// screen can route the parent to the email fallback. Only starts from idle,
+  /// and ignores a call while a start is already in flight.
   Future<void> start({required String outputDirectory}) async {
     if (_disposed || isClosed) return;
-    final started = await _recorder.start(
-      maxDuration: maxDuration,
-      outputDirectory: outputDirectory,
-    );
+    if (_starting || state is! MinorConsentCaptureIdle) return;
+    _starting = true;
+    final bool started;
+    try {
+      started = await _recorder.start(
+        maxDuration: maxDuration,
+        outputDirectory: outputDirectory,
+      );
+    } finally {
+      _starting = false;
+    }
     if (isClosed || _disposed) {
       // The screen was left while the camera was starting. Discard the clip
       // rather than leaving a recording running with no owner.
