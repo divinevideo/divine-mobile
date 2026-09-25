@@ -173,13 +173,21 @@ void main() {
       );
       expect(
         body,
-        contains('loopAudioMix = audioTrack.flatMap'),
+        contains('let mix = audioTrack.flatMap { Self.edgeDeclickMix(track:'),
         reason:
             "A direct item carries its own edge fades on its own asset's audio "
             'track. Without them the join is a click on every lap, and a mix '
             'left behind by an earlier composition would be re-applied to '
             'every item the looper builds - with input parameters addressing '
             'another asset.',
+      );
+      expect(
+        body,
+        contains('loopAudioMix = mix'),
+        reason:
+            'The freshly built mix must reach the shared property the looper '
+            're-applies to every later item, not stay a local the function '
+            'discards.',
       );
       expect(
         body,
