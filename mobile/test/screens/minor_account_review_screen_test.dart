@@ -12,6 +12,7 @@ import 'package:openvine/models/protected_minor_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
+import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
@@ -814,39 +815,87 @@ void main() {
         },
       );
 
-      // A support-review resolution means the next step is asking support to
-      // review, which is the appeal. "Continue" used to reach it by way of the
-      // Support Center menu, the Report a Bug path this issue closes.
-      testWidgets('a support-review case offers no Continue into the menu', (
-        tester,
-      ) async {
-        await _pumpAppeal(
-          tester,
-          ageBand: SuspectedAgeBand.age13To15,
-          state: MinorReviewCaseState.restrictedPendingUserResponse,
-          allowedResolution: MinorReviewResolutionType.supportReviewOnly,
-        );
-
-        expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
-        expect(find.text(l10n.supportContactSupport), findsOneWidget);
-      });
-
+      // The server gives an account claiming 16+ a support-review resolution:
+      // its next step is asking support to review, which is the appeal.
+      // "Continue" used to reach that through the Support Center menu, the
+      // Report a Bug path this issue closes.
       testWidgets(
-        'an under-13 support-review case keeps its parent instructions',
+        'a 16+ support-review case offers no Continue into the menu',
         (
           tester,
         ) async {
           await _pumpAppeal(
             tester,
-            ageBand: SuspectedAgeBand.under13,
+            ageBand: SuspectedAgeBand.age16PlusClaimed,
             state: MinorReviewCaseState.restrictedPendingUserResponse,
             allowedResolution: MinorReviewResolutionType.supportReviewOnly,
           );
 
-          expect(
-            find.text(l10n.minorAccountReviewParentSupportInstructions),
-            findsOneWidget,
+          expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
+          expect(find.text(l10n.supportContactSupport), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'an under-13 case that needs action offers parent instructions',
+        (tester) async {
+          final goRouter = MockGoRouter();
+          when(() => goRouter.push(any())).thenAnswer((_) async => null);
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.under13,
+            state: MinorReviewCaseState.restrictedPendingSupportEmail,
+            goRouter: goRouter,
           );
+
+          await tester.tap(
+            find.text(l10n.minorAccountReviewParentSupportInstructions),
+          );
+          await tester.pumpAndSettle();
+
+          verify(
+            () => goRouter.push(MinorAccountReviewUnder13SupportScreen.path),
+          ).called(1);
+        },
+      );
+
+      testWidgets('a parent-contact case continues to parent contact', (
+        tester,
+      ) async {
+        final goRouter = MockGoRouter();
+        when(() => goRouter.push(any())).thenAnswer((_) async => null);
+        await _pumpAppeal(
+          tester,
+          ageBand: SuspectedAgeBand.age13To15,
+          state: MinorReviewCaseState.restrictedPendingUserResponse,
+          goRouter: goRouter,
+        );
+
+        await tester.tap(find.text(l10n.minorAccountReviewContinue));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => goRouter.push(MinorAccountReviewParentContactScreen.path),
+        ).called(1);
+      });
+
+      // An unrecognised or missing resolution parses to unknown. The appeal
+      // button is already the right next step, so there is no Continue into
+      // the Support Center menu for it either.
+      testWidgets(
+        'an unrecognised resolution offers no Continue into the menu',
+        (
+          tester,
+        ) async {
+          await _pumpAppeal(
+            tester,
+            ageBand: SuspectedAgeBand.age13To15,
+            state: MinorReviewCaseState.restrictedPendingUserResponse,
+            allowedResolution: MinorReviewResolutionType.unknown,
+          );
+
+          expect(find.text(l10n.minorAccountReviewContinue), findsNothing);
+          expect(find.text(l10n.supportContactSupport), findsOneWidget);
         },
       );
     });
@@ -854,8 +903,7 @@ void main() {
 }
 
 /// Pumps a restricted case, by default one awaiting moderator review, which
-/// renders no primary action, so the appeal button is the only "Contact
-/// Support" on screen.
+/// renders no primary action.
 Future<void> _pumpAppeal(
   WidgetTester tester, {
   required SuspectedAgeBand ageBand,

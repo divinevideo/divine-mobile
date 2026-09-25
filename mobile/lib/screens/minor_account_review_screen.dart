@@ -18,7 +18,6 @@ import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
-import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/widgets/support_contact_action.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -464,42 +463,27 @@ class _LoadedView extends ConsumerWidget {
       return null;
     }
 
-    // Support review is the appeal itself, which the button below the
-    // reconsideration card already opens. "Continue" would reach it through
-    // the Support Center menu instead.
-    if (!reviewCase.isUnder13Path &&
-        reviewCase.allowedResolution ==
-            MinorReviewResolutionType.supportReviewOnly) {
+    if (reviewCase.isUnder13Path) {
+      return _MinorReviewPrimaryAction(
+        label: l10n.minorAccountReviewParentSupportInstructions,
+        onPressed: (context) =>
+            context.push(MinorAccountReviewUnder13SupportScreen.path),
+      );
+    }
+
+    // Only the parent-contact resolution has a next step of its own. For any
+    // other, including support review and an unrecognised value, the next step
+    // is asking support, which the appeal button below the reconsideration
+    // card already opens.
+    if (!reviewCase.allowsParentVideoOrEmail) {
       return null;
     }
 
     return _MinorReviewPrimaryAction(
-      label: reviewCase.isUnder13Path
-          ? l10n.minorAccountReviewParentSupportInstructions
-          : l10n.minorAccountReviewContinue,
-      onPressed: (context) => _continueToNextStep(context, reviewCase),
+      label: l10n.minorAccountReviewContinue,
+      onPressed: (context) =>
+          context.push(MinorAccountReviewParentContactScreen.path),
     );
-  }
-
-  void _continueToNextStep(BuildContext context, MinorReviewCase reviewCase) {
-    if (reviewCase.isUnder13Path) {
-      context.push(MinorAccountReviewUnder13SupportScreen.path);
-      return;
-    }
-
-    switch (reviewCase.allowedResolution) {
-      case MinorReviewResolutionType.parentVideoOrEmail:
-        context.push(MinorAccountReviewParentContactScreen.path);
-      case MinorReviewResolutionType.supportEmailOnly:
-        context.push(MinorAccountReviewUnder13SupportScreen.path);
-      // An unrecognised resolution has no dedicated flow, so it falls back to
-      // the general menu. supportReviewOnly never reaches here: _primaryAction
-      // offers no Continue for it, because the appeal button already opens
-      // support.
-      case MinorReviewResolutionType.supportReviewOnly:
-      case MinorReviewResolutionType.unknown:
-        context.push(SupportCenterScreen.path);
-    }
   }
 }
 
