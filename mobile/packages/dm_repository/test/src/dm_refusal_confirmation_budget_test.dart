@@ -686,6 +686,35 @@ void main() {
       });
     });
 
+    test('a reconnect that completes restore cancels the kept retry', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return reads == 1 ? refusal() : answered();
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        expect(async.pendingTimers, hasLength(1));
+
+        connectRelay('wss://edge.example');
+        async.flushMicrotasks();
+
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
+
     test('a queued confirmation that defers hands over to the next slot', () {
       fakeAsync((async) {
         stubAnsweredHistory();

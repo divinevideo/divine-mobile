@@ -2326,6 +2326,12 @@ class DmRepository {
           await syncState.setDrainCoveredOwnInbox(pubkey);
           await syncState.markHistoryDrainComplete(pubkey);
           _resetAutomaticDrainRetriesAfterProgress();
+          if (!_ingestSessionEnded(pubkey, gen)) {
+            // A retry kept to confirm a refusal would only re-enter a drain
+            // that is now complete.
+            _drainRetryTimer?.cancel();
+            _drainRetryTimer = null;
+          }
           // Restore read state now that the full conversation set is present:
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
