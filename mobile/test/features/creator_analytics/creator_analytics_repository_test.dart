@@ -963,6 +963,29 @@ void main() {
         expect(sounds.first.id, equals('old-hit'));
       });
 
+      test('lists a sound once when a shifted page repeats it', () async {
+        final fullPage = List.generate(
+          FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,
+          (index) => index == 99
+              ? _sound('hit', usageCount: 50)
+              : _sound('recent-$index', usageCount: 1),
+        );
+        stubPage(0, fullPage);
+        stubPage(100, [
+          _sound('hit', usageCount: 51),
+          _sound('older', usageCount: 5),
+        ]);
+
+        final sounds = await FunnelcakeCreatorAnalyticsRepository(
+          api,
+        ).fetchCreatorSounds(pubkey);
+
+        expect(sounds, hasLength(101));
+        expect(sounds.where((sound) => sound.id == 'hit'), hasLength(1));
+        expect(sounds.first.usageCount, equals(51));
+        expect(sounds[1].id, equals('older'));
+      });
+
       test('stops after the maximum number of pages', () async {
         final fullPage = List.generate(
           FunnelcakeCreatorAnalyticsRepository.creatorSoundsPageSize,

@@ -243,18 +243,27 @@ class FunnelcakeCreatorAnalyticsRepository
   /// Reads the creator's sounds newest first, stopping at a short page or
   /// after [creatorSoundsMaxPages], so the most used sounds are ranked across
   /// the whole bounded window rather than just the newest page.
+  ///
+  /// The endpoint pages by creation time, so a sound published between two
+  /// requests shifts every row and a page can repeat one. A repeated sound is
+  /// kept once, with its highest count, so it never takes two rank slots.
   Future<List<SoundStats>> _fetchAllCreatorSounds(String pubkey) async {
-    final collected = <SoundStats>[];
+    final byId = <String, SoundStats>{};
     for (var page = 0; page < creatorSoundsMaxPages; page++) {
       final batch = await _client.getUserSounds(
         pubkey: pubkey,
         limit: creatorSoundsPageSize,
         offset: page * creatorSoundsPageSize,
       );
-      collected.addAll(batch);
+      for (final sound in batch) {
+        final seen = byId[sound.id];
+        if (seen == null || sound.usageCount > seen.usageCount) {
+          byId[sound.id] = sound;
+        }
+      }
       if (batch.length < creatorSoundsPageSize) break;
     }
-    return collected;
+    return byId.values.toList();
   }
 
   Future<_AuthorVideosResult> _fetchAuthorVideos(
