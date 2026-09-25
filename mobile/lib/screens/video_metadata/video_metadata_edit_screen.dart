@@ -85,16 +85,10 @@ class _VideoMetadataEditScreenState
         _resolved = video;
         _resolveFailed = video == null;
       });
-    } catch (error, stackTrace) {
-      Log.error(
-        'Failed to resolve video for metadata editing',
-        name: 'VideoMetadataEditScreen',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
-      setState(() => _resolveFailed = true);
+    } catch (_) {
+      if (mounted) setState(() => _resolveFailed = true);
+      // runDetached logs the failure and reports the reportable ones.
+      rethrow;
     }
   }
 
