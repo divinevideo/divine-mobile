@@ -22,7 +22,10 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 ///
 /// Keyed on [loadedAt] as well as the repository and [pubkey], so every
 /// dashboard load — pull-to-refresh included — reloads the sounds with it.
-class CreatorSoundsSection extends ConsumerWidget {
+///
+/// Kept alive so scrolling the dashboard away and back does not rebuild the
+/// cubit and fetch the sounds again.
+class CreatorSoundsSection extends ConsumerStatefulWidget {
   const CreatorSoundsSection({
     required this.pubkey,
     required this.loadedAt,
@@ -36,10 +39,22 @@ class CreatorSoundsSection extends ConsumerWidget {
   final DateTime loadedAt;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CreatorSoundsSection> createState() =>
+      _CreatorSoundsSectionState();
+}
+
+class _CreatorSoundsSectionState extends ConsumerState<CreatorSoundsSection>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final repository = ref.watch(creatorAnalyticsRepositoryProvider);
+    final pubkey = widget.pubkey;
     return BlocProvider(
-      key: ValueKey((repository, pubkey, loadedAt)),
+      key: ValueKey((repository, pubkey, widget.loadedAt)),
       create: (_) {
         final cubit = CreatorSoundsCubit(
           repository: repository,

@@ -21,7 +21,7 @@ class _MockCreatorAnalyticsRepository extends Mock
     implements CreatorAnalyticsRepository {}
 
 void main() {
-  Future<void> pumpAnalyticsScreen(
+  Future<CreatorAnalyticsRepository> pumpAnalyticsScreen(
     WidgetTester tester, {
     required List<VideoEvent> videos,
     SocialCounts? socialCounts,
@@ -76,6 +76,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    return repository;
   }
 
   Future<void> pumpAnalyticsSignedOutScreen(WidgetTester tester) async {
@@ -210,6 +211,50 @@ void main() {
       expect(find.text(l10n.analyticsYourSounds), findsOneWidget);
       expect(find.text('Birks crew'), findsOneWidget);
       expect(find.text(l10n.soundVideoCount(42)), findsOneWidget);
+    });
+
+    testWidgets('keeps the sounds card loaded while it is scrolled away', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      final repository = await pumpAnalyticsScreen(
+        tester,
+        videos: [analyticsVideo(id: 'video-1', views: 120)],
+        sounds: [
+          SoundStats(
+            id: 'sound-hit',
+            pubkey: 'a' * 64,
+            title: 'Hit sound',
+            createdAt: DateTime.now().toUtc(),
+            usageCount: 42,
+          ),
+        ],
+      );
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+
+      await tester.scrollUntilVisible(
+        find.text(l10n.analyticsYourSounds),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      final cardOffset = scrollable.position.pixels;
+      expect(find.text('Hit sound'), findsOneWidget);
+
+      scrollable.position.jumpTo(0);
+      await tester.pumpAndSettle();
+      scrollable.position.jumpTo(cardOffset);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hit sound'), findsOneWidget);
+      verify(() => repository.fetchCreatorSounds('a' * 64)).called(1);
     });
 
     testWidgets('counts native Divine engagement in creator analytics', (
