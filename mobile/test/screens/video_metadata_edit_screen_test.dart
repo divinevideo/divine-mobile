@@ -12,6 +12,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/video_event_resolver.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockVideoEventResolver extends Mock implements VideoEventResolver {}
 
@@ -101,6 +102,37 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.routeInvalidVideoId), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('logs a failed lookup with the full video id', (tester) async {
+      const videoId =
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+      final logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      addTearDown(logCapture.clearAllLogs);
+      final resolver = _MockVideoEventResolver();
+      when(
+        () => resolver.resolveById(
+          videoId,
+          allowOwnContentBypass: true,
+          requireRawTags: true,
+        ),
+      ).thenThrow(StateError('resolver invariant'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoEventResolverProvider.overrideWithValue(resolver)],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: VideoMetadataEditScreen(videoId: videoId),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final errorLogs = logCapture.getRecentLogs(minLevel: LogLevel.error);
+      expect(errorLogs.map((log) => log.message), contains(contains(videoId)));
     });
 
     group('crash reporting', () {

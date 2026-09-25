@@ -65,7 +65,7 @@ class _VideoMetadataEditScreenState
     } else {
       runDetached(
         _resolve(),
-        'resolve video for metadata editing',
+        'resolve video ${widget.videoId} for metadata editing',
         logName: 'VideoMetadataEditScreen',
         category: LogCategory.video,
       );
