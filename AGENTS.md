@@ -168,7 +168,7 @@ results influence work.
 
 ### Zendesk-sourced issues
 
-An issue authored by `divine-zendesk-github-integration[bot]` is a **rendering** of a support ticket's first message. Routing tags, later replies from the requester, and attachment contents stay behind on the ticket; the issue shows only the intake channel and an attachment count taken at filing. Pull it before triaging:
+An issue authored by `divine-zendesk-github-integration[bot]` is a **rendering** of a support ticket's first message. Routing tags, later replies from the requester, and attachment contents stay behind on the ticket; the issue shows the intake channel and an attachment count and types taken at filing. Pull it before triaging:
 
 ```bash
 ZENDESK_TOOLING_DIR="${DIVINE_ZENDESK_TOOLING_ROOT:-$HOME/divine-zendesk-tooling}"
