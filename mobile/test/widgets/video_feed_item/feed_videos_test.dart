@@ -1786,7 +1786,6 @@ void main() {
       await pinch(
         tester,
         tester.getCenter(find.byType(InfiniteVideoFeed)),
-        basePointer: 1,
       );
       await pumpFade(tester);
 
@@ -1811,7 +1810,7 @@ void main() {
       await tester.pump();
 
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
-      await pinch(tester, center, basePointer: 1);
+      await pinch(tester, center);
       await pumpFade(tester);
       expect(immersiveCubit.state.isPinned, isTrue);
 
@@ -1837,7 +1836,6 @@ void main() {
       await pinch(
         tester,
         tester.getCenter(find.byType(InfiniteVideoFeed)),
-        basePointer: 1,
       );
       await pumpFade(tester);
       expect(immersiveCubit.state.isPinned, isTrue);
