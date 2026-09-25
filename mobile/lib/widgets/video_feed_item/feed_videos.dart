@@ -1105,6 +1105,14 @@ class __OverlayState extends ConsumerState<_Overlay> {
       isReady: isReady,
     );
 
+    // Only the interactive subtree holds a surface that can restore a pin, and
+    // the cubit cannot change mid-build, so the pin comes down after the frame.
+    if (mode is! _OverlayInteractiveMode && _isPinnedForImmersive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _clearPinnedImmersive();
+      });
+    }
+
     switch (mode) {
       case _OverlayForbiddenMode():
         return ModeratedContentOverlay(

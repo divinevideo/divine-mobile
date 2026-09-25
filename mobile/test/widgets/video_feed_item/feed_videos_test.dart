@@ -2000,6 +2000,60 @@ void main() {
       );
     });
 
+    testWidgets('a content warning arriving under a pin clears it', (
+      tester,
+    ) async {
+      // The blur replaces the interactive subtree, and with it the only tap
+      // surface, so nothing on screen could restore chrome pinned before the
+      // label arrived.
+      final video = _makeVideo();
+      final labels = Completer<Set<String>>();
+      final repository = _MockCommunityContentLabelRepository();
+      when(
+        () => repository.communityLabelsForVideo(video),
+      ).thenAnswer((_) => labels.future);
+      final filter = _MockContentFilterService();
+      when(
+        () => filter.getPreference(ContentLabel.gambling),
+      ).thenReturn(ContentFilterPreference.warn);
+      final service = CommunityContentLabelService(
+        repository: repository,
+        contentFilterService: filter,
+      );
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+        additionalOverrides: [
+          communityContentLabelServiceProvider.overrideWith((ref) => service),
+          featureFlagServiceProvider.overrideWithValue(_communityFlagsOn()),
+        ],
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      labels.complete({'gambling'});
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.byType(ContentWarningBlurOverlay),
+        findsOneWidget,
+        reason: 'the flip must actually replace the interactive subtree',
+      );
+      await pumpFade(tester);
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'a pin must not outlive the surface that could restore it',
+      );
+    });
+
     testWidgets('a spread after the feed paged away does not pin', (
       tester,
     ) async {
