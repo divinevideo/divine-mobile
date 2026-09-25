@@ -1055,6 +1055,19 @@ class DmRepository {
     unawaited(_ensurePostAuthMaintenance());
   }
 
+  /// Clears the delayed NIP-04 refusal-confirmation retry and its armed
+  /// state. Shared by [_resetState] and [stopListening].
+  void _resetNip04RefusalConfirmationState() {
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
+    _automaticDrainRetryCount = 0;
+    _historyDrainCanConfirmNip04Refusal = false;
+    _pendingNip04RefusalConfirmation = false;
+    _confirmationWindowRelayEdgeUsed = false;
+    _armedNip04Refusals = {};
+    _previousNip04Refusals = {};
+  }
+
   /// Reset internal state so the repository can be re-initialized for a
   /// different user. Stops the relay subscription and clears credentials.
   ///
@@ -1073,14 +1086,7 @@ class DmRepository {
     _eventLock = null;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
-    _drainRetryTimer?.cancel();
-    _drainRetryTimer = null;
-    _automaticDrainRetryCount = 0;
-    _historyDrainCanConfirmNip04Refusal = false;
-    _pendingNip04RefusalConfirmation = false;
-    _confirmationWindowRelayEdgeUsed = false;
-    _armedNip04Refusals = {};
-    _previousNip04Refusals = {};
+    _resetNip04RefusalConfirmationState();
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -2560,14 +2566,7 @@ class DmRepository {
     _resetGeneration++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    _drainRetryTimer?.cancel();
-    _drainRetryTimer = null;
-    _automaticDrainRetryCount = 0;
-    _historyDrainCanConfirmNip04Refusal = false;
-    _pendingNip04RefusalConfirmation = false;
-    _confirmationWindowRelayEdgeUsed = false;
-    _armedNip04Refusals = {};
-    _previousNip04Refusals = {};
+    _resetNip04RefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass
