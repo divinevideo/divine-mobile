@@ -9256,7 +9256,7 @@ void main() {
         );
       });
 
-      test('logs a deferred retry that joins a drain in flight', () {
+      test('queues a deferred retry that joins a non-confirming drain', () {
         fakeAsync((async) {
           unawaited(LogCaptureService().clearAllLogs());
           async.flushMicrotasks();
@@ -9306,17 +9306,17 @@ void main() {
 
           final joinLogs = LogCaptureService()
               .getRecentLogs()
-              .where((e) => e.message.contains('joined a drain'))
+              .where((e) => e.message.contains('after the active drain'))
               .toList();
           expect(joinLogs, hasLength(1));
           expect(
             joinLogs.single.message,
-            contains('that run cannot confirm a relay refusal'),
+            contains('will confirm a relay refusal after the active drain'),
           );
 
           heldRead.complete(refusal);
           async.flushMicrotasks();
-          expect(syncState.markedCompletePubkeys, isEmpty);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
         });
       });
 

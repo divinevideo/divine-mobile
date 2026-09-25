@@ -150,7 +150,9 @@ abstract class DmHistoryDrainConfig {
   /// page in a large history. See #9030.
   static const int unsettledPageRetriesPerRun = 2;
 
-  /// Automatic retries after a drain defers without a relay status edge.
+  /// Automatic retries after a drain defers. A relay reconnect can resume the
+  /// drain sooner and cancels the retry, except while an ambiguous NIP-04
+  /// refusal awaits confirmation.
   static const List<Duration> deferredRetryDelays = [
     Duration(seconds: 5),
     Duration(seconds: 15),
@@ -338,6 +340,9 @@ typedef _OwnDmInboxRead = ({
   List<String>? relays,
   Event? advertisedMissing,
 });
+
+/// What one NIP-04 recovery sweep heard back about one page.
+typedef _Nip04PageAnswer = ({bool anyRelaySentEose, Set<String> closedRelays});
 
 /// Why a recipient's NIP-17 DM inbox lookup returned what it did.
 ///
@@ -655,12 +660,22 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
   Timer? _reconnectTimer;
 
-  /// Backoff retry paired with [_drainRelayReadySubscription]. Whichever fires
-  /// first cancels the other. The finite delay list bounds consecutive
-  /// no-progress deferrals; durable cursor progress or completion replenishes
-  /// the budget for a later, independent outage. #9030.
+  /// Backoff retry for deferred history drains. A relay reconnect cancels it,
+  /// except while an ambiguous NIP-04 refusal awaits confirmation: a
+  /// non-confirming sweep can then run while this timer remains armed, because
+  /// the timer is the only delayed opportunity that can confirm the refusal.
+  /// The finite delay list bounds consecutive no-progress deferrals; durable
+  /// cursor progress or completion replenishes the budget. #9030.
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
+  bool _historyDrainCanConfirmNip04Refusal = false;
+  bool _pendingNip04RefusalConfirmation = false;
+  bool _confirmationWindowRelayEdgeUsed = false;
+
+  /// Refusal signatures captured when the confirmation timer was armed.
+  /// A later non-confirming sweep can replace [_previousNip04Refusals]; the
+  /// armed timer must not treat that new signature as already delayed.
+  Set<String> _armedNip04Refusals = {};
 
   /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
   /// sweep. A matching refusal must recur after a deferred drain retry before
@@ -1040,6 +1055,19 @@ class DmRepository {
     unawaited(_ensurePostAuthMaintenance());
   }
 
+  /// Clears the delayed NIP-04 refusal-confirmation retry and its armed
+  /// state. Shared by [_resetState] and [stopListening].
+  void _resetNip04RefusalConfirmationState() {
+    _drainRetryTimer?.cancel();
+    _drainRetryTimer = null;
+    _automaticDrainRetryCount = 0;
+    _historyDrainCanConfirmNip04Refusal = false;
+    _pendingNip04RefusalConfirmation = false;
+    _confirmationWindowRelayEdgeUsed = false;
+    _armedNip04Refusals = {};
+    _previousNip04Refusals = {};
+  }
+
   /// Reset internal state so the repository can be re-initialized for a
   /// different user. Stops the relay subscription and clears credentials.
   ///
@@ -1058,10 +1086,7 @@ class DmRepository {
     _eventLock = null;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
-    _drainRetryTimer?.cancel();
-    _drainRetryTimer = null;
-    _automaticDrainRetryCount = 0;
-    _previousNip04Refusals = {};
+    _resetNip04RefusalConfirmationState();
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -1541,8 +1566,15 @@ class DmRepository {
     int generation, {
     required bool allowRefusalConfirmation,
   }) async {
-    final priorRefusals = _previousNip04Refusals;
+    // A delayed pass confirms only a refusal seen both when its timer armed
+    // and on the latest sweep that heard back about its page. A page answered
+    // in between did not recur across the delay, and confirming it would end
+    // restore early. A sweep that got no answer says nothing either way.
+    final priorRefusals = allowRefusalConfirmation
+        ? _armedNip04Refusals.intersection(_previousNip04Refusals)
+        : const <String>{};
     final currentRefusals = <String>{};
+    final pageAnswers = <int, _Nip04PageAnswer>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       var sawUnansweredPage = false;
@@ -1568,6 +1600,10 @@ class DmRepository {
               '$page|${entry.key}|${entry.value}',
         };
         currentRefusals.addAll(ambiguousRefusals);
+        pageAnswers[page] = (
+          anyRelaySentEose: result.answeredNetworkRelayCount > 0,
+          closedRelays: result.closedRelayReasons.keys.toSet(),
+        );
         final refusalOnly =
             result.endedBy == QueryEnd.relayClosed &&
             result.answeredNetworkRelayCount > 0 &&
@@ -1653,9 +1689,27 @@ class DmRepository {
       // _resetState clears this memory for the next session; do not let the
       // stale sweep repopulate it with another account's refusal signatures.
       if (!_ingestSessionEnded(pubkey, generation)) {
-        _previousNip04Refusals = currentRefusals;
+        _previousNip04Refusals = {
+          ...currentRefusals,
+          for (final sighting in _previousNip04Refusals)
+            if (!_nip04SightingAnswered(sighting, pageAnswers)) sighting,
+        };
       }
     }
+  }
+
+  /// Whether this sweep heard back about [sighting]'s page from its relay.
+  /// The relay closing the page again answers it; so does any relay sending
+  /// EOSE, since the result counts EOSE without naming the relay.
+  static bool _nip04SightingAnswered(
+    String sighting,
+    Map<int, _Nip04PageAnswer> pageAnswers,
+  ) {
+    final parts = sighting.split('|');
+    final answer = pageAnswers[int.parse(parts.first)];
+    if (answer == null) return false;
+    final relay = parts.sublist(1, parts.length - 1).join('|');
+    return answer.anyRelaySentEose || answer.closedRelays.contains(relay);
   }
 
   /// Whether a DM history recovery (the backfill drain or a failed-decrypt
@@ -1751,21 +1805,32 @@ class DmRepository {
     return _backfillHistoryIfNeeded();
   }
 
-  /// [allowNip04RefusalConfirmation] is passed only by the bounded retry
-  /// timer, whose delay is what separates two sightings of an ambiguous
-  /// refusal. An inbox open or a relay reconnect can follow the first sighting
-  /// within moments, so neither may confirm one.
+  /// [allowNip04RefusalConfirmation] is passed only for the bounded retry
+  /// timer's pass, whose delay is what separates two sightings of an ambiguous
+  /// refusal. If that timer fires during a non-confirming drain while a
+  /// refusal awaits confirmation, its confirmation pass is queued to run as
+  /// soon as the active drain finishes.
   Future<void> _backfillHistoryIfNeeded({
     bool allowNip04RefusalConfirmation = false,
   }) {
     final existing = _historyDrain;
     if (existing != null) {
-      if (allowNip04RefusalConfirmation) {
-        Log.info(
-          'DM history retry for ${pubkeyForLogs(_userPubkey)} joined a drain '
-          'already in flight; that run cannot confirm a relay refusal',
-          category: LogCategory.system,
-        );
+      if (allowNip04RefusalConfirmation &&
+          !_historyDrainCanConfirmNip04Refusal) {
+        if (_armedNip04Refusals.isNotEmpty) {
+          _pendingNip04RefusalConfirmation = true;
+          Log.info(
+            'DM history retry for ${pubkeyForLogs(_userPubkey)} will confirm '
+            'a relay refusal after the active drain finishes',
+            category: LogCategory.system,
+          );
+        } else {
+          Log.info(
+            'DM history retry for ${pubkeyForLogs(_userPubkey)} joined a '
+            'drain already in flight; no relay refusal awaits confirmation',
+            category: LogCategory.system,
+          );
+        }
       }
       return existing;
     }
@@ -1773,9 +1838,18 @@ class DmRepository {
       allowNip04RefusalConfirmation: allowNip04RefusalConfirmation,
     );
     _historyDrain = drain;
+    _historyDrainCanConfirmNip04Refusal = allowNip04RefusalConfirmation;
     unawaited(
       drain.whenComplete(() {
-        if (identical(_historyDrain, drain)) _historyDrain = null;
+        if (!identical(_historyDrain, drain)) return;
+        _historyDrain = null;
+        _historyDrainCanConfirmNip04Refusal = false;
+        if (!_pendingNip04RefusalConfirmation) return;
+        _pendingNip04RefusalConfirmation = false;
+        if (_syncState?.historyDrainComplete(_userPubkey) ?? false) return;
+        unawaited(
+          _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
+        );
       }),
     );
     return drain;
@@ -1956,7 +2030,8 @@ class DmRepository {
     // restart on this instance clears it again under an in-flight drain.
     final gen = _resetGeneration;
     // A run in progress supersedes a resume armed by an earlier deferral; if
-    // this run defers too it arms a fresh one against the pool it saw.
+    // this run defers too it arms a fresh one against the pool it saw, unless
+    // a refusal window's one reconnect sweep is already spent.
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     // Run this before the ordinary version stamp: that ordering distinguishes
@@ -2257,6 +2332,12 @@ class DmRepository {
           await syncState.setDrainCoveredOwnInbox(pubkey);
           await syncState.markHistoryDrainComplete(pubkey);
           _resetAutomaticDrainRetriesAfterProgress();
+          if (!_ingestSessionEnded(pubkey, gen)) {
+            // A retry kept to confirm a refusal would only re-enter a drain
+            // that is now complete.
+            _drainRetryTimer?.cancel();
+            _drainRetryTimer = null;
+          }
           // Restore read state now that the full conversation set is present:
           // last-sent floor + any read markers stashed during the drain. #4977.
           await _restoreReadStateAfterDrain(pubkey, gen);
@@ -2356,16 +2437,38 @@ class DmRepository {
   /// banner stayed up until a manual retry (verified against a paused relay,
   /// #8643). A relay merely reporting again while still connected is not an
   /// edge. A relay that repeatedly reconnects without answering can therefore
-  /// re-drive the bounded drain. At most one listener is armed at a time, a
-  /// new run supersedes it, and teardown cancels it. A page-cap pause
-  /// deliberately does not arm one: that budget resumes on the next inbox
-  /// open by design. See #8550.
+  /// re-drive the bounded drain, at most once per armed refusal-confirmation
+  /// window. Other deferrals keep their reconnect behavior. At most
+  /// one listener is armed at a time, a new run supersedes it, and teardown
+  /// cancels it. A page-cap pause deliberately does not arm one: that budget
+  /// resumes on the next inbox open by design. See #8550.
   void _resumeDrainWhenRelayConnects(String pubkey, int generation) {
     // A drain that outlived its session must not cancel the retry the current
     // session armed; _resetState already cancelled the stale session's own.
     if (_ingestSessionEnded(pubkey, generation)) return;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
+    // A non-confirming sweep can defer while the delayed confirmation remains
+    // pending. While an ambiguous NIP-04 refusal awaits confirmation, any
+    // deferral keeps that deadline and slot, whatever made it defer; with none
+    // awaiting, each reconnect resumes the drain as before.
+    if (_armedNip04Refusals.isNotEmpty &&
+        (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
+      // A queued confirmation starts as this drain ends and cancels any
+      // listener armed here, so only a kept timer needs one.
+      if (_drainRetryTimer != null) {
+        if (!_confirmationWindowRelayEdgeUsed) {
+          _listenForDrainRelayReconnect(pubkey, generation);
+        } else {
+          Log.info(
+            'DM history drain for ${pubkeyForLogs(pubkey)} keeps its delayed '
+            'retry to confirm a relay refusal; further reconnects wait for it',
+            category: LogCategory.system,
+          );
+        }
+      }
+      return;
+    }
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     if (_automaticDrainRetryCount >=
@@ -2378,6 +2481,28 @@ class DmRepository {
       );
       return;
     }
+    _confirmationWindowRelayEdgeUsed = false;
+    // _previousNip04Refusals is only ever reassigned to a fresh set, never
+    // mutated in place, so aliasing it here needs no defensive copy.
+    _armedNip04Refusals = _previousNip04Refusals;
+    _listenForDrainRelayReconnect(pubkey, generation);
+    final delay =
+        DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
+    _drainRetryTimer = Timer(delay, () {
+      _drainRetryTimer = null;
+      unawaited(_drainRelayReadySubscription?.cancel());
+      _drainRelayReadySubscription = null;
+      if (_ingestSessionEnded(pubkey, generation)) return;
+      Log.info(
+        'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
+        'bounded retry delay',
+        category: LogCategory.system,
+      );
+      unawaited(_backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true));
+    });
+  }
+
+  void _listenForDrainRelayReconnect(String pubkey, int generation) {
     final lastConnected = <String>{
       for (final entry in _nostrClient.relayStatuses.entries)
         if (entry.value.isConnected) entry.key,
@@ -2404,31 +2529,19 @@ class DmRepository {
       if (!newlyConnected) return;
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
-      _drainRetryTimer?.cancel();
-      _drainRetryTimer = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
+      if (_armedNip04Refusals.isNotEmpty) {
+        _confirmationWindowRelayEdgeUsed = true;
+      } else {
+        _drainRetryTimer?.cancel();
+        _drainRetryTimer = null;
+      }
       Log.info(
         'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after a relay '
         'connected',
         category: LogCategory.system,
       );
       unawaited(backfillHistoryIfNeeded());
-    });
-    final delay =
-        DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
-    _drainRetryTimer = Timer(delay, () {
-      _drainRetryTimer = null;
-      unawaited(_drainRelayReadySubscription?.cancel());
-      _drainRelayReadySubscription = null;
-      if (_ingestSessionEnded(pubkey, generation)) return;
-      Log.info(
-        'Resuming DM history drain for ${pubkeyForLogs(pubkey)} after the '
-        'bounded retry delay',
-        category: LogCategory.system,
-      );
-      unawaited(
-        _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
-      );
     });
   }
 
@@ -2455,10 +2568,7 @@ class DmRepository {
     _resetGeneration++;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    _drainRetryTimer?.cancel();
-    _drainRetryTimer = null;
-    _automaticDrainRetryCount = 0;
-    _previousNip04Refusals = {};
+    _resetNip04RefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass
