@@ -68,6 +68,11 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
   /// second recording.
   bool _starting = false;
 
+  /// True after a manual stop returned no file. At the 60-second cap the
+  /// platform may answer that stop empty and deliver the clip through the
+  /// auto-stop callback just after, so that clip is still accepted.
+  bool _stopReturnedEmpty = false;
+
   /// Path of the clip the parent can still act on — the one in review, or the
   /// one they accepted for upload. [_discardClip] never deletes this one.
   String? _retainedPath;
@@ -122,7 +127,13 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
       await _discardClip(path);
       return;
     }
+    if (state is MinorConsentCaptureReview) {
+      // The auto-stop landed while this stop was awaiting; its clip wins.
+      unawaited(_discardClip(path));
+      return;
+    }
     if (path == null) {
+      _stopReturnedEmpty = true;
       emit(const MinorConsentCaptureError());
       return;
     }
@@ -138,6 +149,7 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
       _retainedPath = null;
       unawaited(_deleteClip(current.filePath));
     }
+    _stopReturnedEmpty = false;
     emit(const MinorConsentCaptureIdle());
   }
 
@@ -148,17 +160,23 @@ class MinorConsentCaptureCubit extends Cubit<MinorConsentCaptureState> {
     emit(const MinorConsentCaptureError());
   }
 
-  /// Transitions to review when the platform camera stops on its own.
+  /// Transitions to review when the platform camera stops on its own, or when
+  /// its clip arrives just after a manual stop at the cap returned nothing.
   ///
   /// A late callback — after the cubit is closed, or after the recording was
   /// already finalised — cannot emit past [close], so the clip it carries has
   /// no owner and is deleted instead of being left in temporary storage. The
   /// clip already in review, or already accepted, is retained.
   void _handleAutoStopped(String? path) {
-    if (_disposed || isClosed || state is! MinorConsentCaptureRecording) {
+    final awaitingClip =
+        state is MinorConsentCaptureRecording ||
+        (state is MinorConsentCaptureError && _stopReturnedEmpty);
+    if (_disposed || isClosed || !awaitingClip) {
       unawaited(_discardClip(path));
       return;
     }
+    if (path == null && state is MinorConsentCaptureError) return;
+    _stopReturnedEmpty = false;
     if (path == null) {
       emit(const MinorConsentCaptureError());
       return;
