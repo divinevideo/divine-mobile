@@ -2443,8 +2443,9 @@ class DmRepository {
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     // A non-confirming sweep can defer while the delayed confirmation remains
-    // pending. Keep its deadline and slot only for an ambiguous NIP-04 refusal;
-    // other deferrals resume immediately on each reconnect as before.
+    // pending. While an ambiguous NIP-04 refusal awaits confirmation, any
+    // deferral keeps that deadline and slot, whatever made it defer; with none
+    // awaiting, each reconnect resumes the drain as before.
     if (_armedNip04Refusals.isNotEmpty &&
         (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
       // A queued confirmation starts as this drain ends and cancels any
