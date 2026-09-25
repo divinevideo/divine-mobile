@@ -613,6 +613,79 @@ void main() {
       });
     });
 
+    test(
+      'a sweep no relay answered keeps the refusal it cannot contradict',
+      () {
+        fakeAsync((async) {
+          stubAnsweredHistory();
+          var reads = 0;
+          when(
+            () => nostrClient.readEvents(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            return reads == 2 ? unsettled() : refusal();
+          });
+          final repository = makeRepository();
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          unawaited(repository.backfillHistoryIfNeeded());
+          async
+            ..flushMicrotasks()
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          // The inbox open's sweep heard nothing about the page, so the
+          // refusal the timer armed on still stands and the timer confirms it.
+          expect(reads, 3);
+          expect(syncState.historyDrainComplete(_pubkey), isTrue);
+        });
+      },
+    );
+
+    test('another relay closing the page keeps this relay refusal', () {
+      fakeAsync((async) {
+        stubAnsweredHistory();
+        var reads = 0;
+        when(
+          () => nostrClient.readEvents(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          // The refusing relay stays silent while a second relay closes.
+          return reads == 2
+              ? const QueryResult(
+                  events: [],
+                  endedBy: QueryEnd.relayClosed,
+                  unansweredRelayCount: 1,
+                  closedRelayReasons: {'wss://other.example': 'error'},
+                )
+              : refusal();
+        });
+        final repository = makeRepository();
+
+        unawaited(repository.backfillHistoryIfNeeded());
+        async.flushMicrotasks();
+        unawaited(repository.backfillHistoryIfNeeded());
+        async
+          ..flushMicrotasks()
+          ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+          ..flushMicrotasks();
+
+        expect(reads, 3);
+        expect(syncState.historyDrainComplete(_pubkey), isTrue);
+      });
+    });
+
     test('a queued confirmation that defers hands over to the next slot', () {
       fakeAsync((async) {
         stubAnsweredHistory();

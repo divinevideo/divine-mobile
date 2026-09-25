@@ -341,6 +341,9 @@ typedef _OwnDmInboxRead = ({
   Event? advertisedMissing,
 });
 
+/// What one NIP-04 recovery sweep heard back about one page.
+typedef _Nip04PageAnswer = ({bool anyRelaySentEose, Set<String> closedRelays});
+
 /// Why a recipient's NIP-17 DM inbox lookup returned what it did.
 ///
 /// The relay list alone cannot answer this: [DmInboxResolution.absent] and
@@ -1558,12 +1561,14 @@ class DmRepository {
     required bool allowRefusalConfirmation,
   }) async {
     // A delayed pass confirms only a refusal seen both when its timer armed
-    // and on the latest sweep. A page answered in between did not recur
-    // across the delay, and confirming it would end restore early.
+    // and on the latest sweep that heard back about its page. A page answered
+    // in between did not recur across the delay, and confirming it would end
+    // restore early. A sweep that got no answer says nothing either way.
     final priorRefusals = allowRefusalConfirmation
         ? _armedNip04Refusals.intersection(_previousNip04Refusals)
         : const <String>{};
     final currentRefusals = <String>{};
+    final pageAnswers = <int, _Nip04PageAnswer>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       var sawUnansweredPage = false;
@@ -1589,6 +1594,10 @@ class DmRepository {
               '$page|${entry.key}|${entry.value}',
         };
         currentRefusals.addAll(ambiguousRefusals);
+        pageAnswers[page] = (
+          anyRelaySentEose: result.answeredNetworkRelayCount > 0,
+          closedRelays: result.closedRelayReasons.keys.toSet(),
+        );
         final refusalOnly =
             result.endedBy == QueryEnd.relayClosed &&
             result.answeredNetworkRelayCount > 0 &&
@@ -1674,9 +1683,27 @@ class DmRepository {
       // _resetState clears this memory for the next session; do not let the
       // stale sweep repopulate it with another account's refusal signatures.
       if (!_ingestSessionEnded(pubkey, generation)) {
-        _previousNip04Refusals = currentRefusals;
+        _previousNip04Refusals = {
+          ...currentRefusals,
+          for (final sighting in _previousNip04Refusals)
+            if (!_nip04SightingAnswered(sighting, pageAnswers)) sighting,
+        };
       }
     }
+  }
+
+  /// Whether this sweep heard back about [sighting]'s page from its relay.
+  /// The relay closing the page again answers it; so does any relay sending
+  /// EOSE, since the result counts EOSE without naming the relay.
+  static bool _nip04SightingAnswered(
+    String sighting,
+    Map<int, _Nip04PageAnswer> pageAnswers,
+  ) {
+    final parts = sighting.split('|');
+    final answer = pageAnswers[int.parse(parts.first)];
+    if (answer == null) return false;
+    final relay = parts.sublist(1, parts.length - 1).join('|');
+    return answer.anyRelaySentEose || answer.closedRelays.contains(relay);
   }
 
   /// Whether a DM history recovery (the backfill drain or a failed-decrypt
