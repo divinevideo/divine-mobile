@@ -656,13 +656,11 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// unrelated pointer can't clear a hold we never started.
   bool _isHoldingForImmersive = false;
 
-  /// Pointers currently down over this item. The peek ends only when the last
-  /// one lifts, so an incidental second finger (a resting thumb, a pinch
-  /// attempt) can't restore the chrome while the hold finger is still down.
-  final Set<int> _immersivePointers = <int>{};
-
-  /// Latest local position of each down pointer, used to measure a pinch.
-  final Map<int, Offset> _immersivePointerPositions = <int, Offset>{};
+  /// Pointers currently down over this item, with each one's latest local
+  /// position. The peek ends only when the last one lifts, so an incidental
+  /// second finger (a resting thumb, a pinch attempt) can't restore the chrome
+  /// while the hold finger is still down; the positions measure a pinch.
+  final Map<int, Offset> _immersivePointers = <int, Offset>{};
 
   /// Separation between the two pinch fingers when the second one landed, in
   /// logical pixels. `null` until at least two pointers are down; a pinch is
@@ -744,9 +742,8 @@ class __OverlayState extends ConsumerState<_Overlay> {
     _clearPinnedImmersive();
     _exitImmersive();
     // [didUpdateWidget] re-points this State at a different video, so the
-    // pointer set must not outlive the item that filled it.
+    // pointers must not outlive the item that filled them.
     _immersivePointers.clear();
-    _immersivePointerPositions.clear();
     _heartTrigger.dispose();
     super.dispose();
   }
@@ -775,8 +772,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// so this stays the reliable exit.
   void _handleImmersivePointerEnd(int pointer) {
     _immersivePointers.remove(pointer);
-    _immersivePointerPositions.remove(pointer);
-    if (_immersivePointerPositions.length < 2) {
+    if (_immersivePointers.length < 2) {
       _resetPinchGesture();
     } else if (_pinchBaselineDistance != null) {
       // A third finger was down, so the measured pair may now be a different
@@ -788,7 +784,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
 
   /// Records a down pointer and seeds the pinch baseline once two are down.
   void _handleImmersivePointerDown(PointerDownEvent event) {
-    // An empty set means nothing is down, so any hold this item still believes
+    // No pointers means nothing is down, so any hold this item still believes
     // it owns is stale — its terminal event was lost (a touch dropped on
     // backgrounding, a platform view taking over). Without this the item could
     // never peek again.
@@ -796,10 +792,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
       _touchWasMultiTouch = false;
       _exitImmersive();
     }
-    _immersivePointers.add(event.pointer);
+    _immersivePointers[event.pointer] = event.localPosition;
     if (_immersivePointers.length > 1) _touchWasMultiTouch = true;
-    _immersivePointerPositions[event.pointer] = event.localPosition;
-    if (_immersivePointerPositions.length == 2) {
+    if (_immersivePointers.length == 2) {
       _pinchBaselineDistance = _pinchDistance();
       _pinchTriggeredForGesture = false;
     }
@@ -813,11 +808,11 @@ class __OverlayState extends ConsumerState<_Overlay> {
   /// and never trips it. Only the first crossing per gesture toggles; the
   /// flag resets when the fingers lift.
   void _handleImmersivePointerMove(PointerMoveEvent event) {
-    if (!_immersivePointerPositions.containsKey(event.pointer)) return;
-    _immersivePointerPositions[event.pointer] = event.localPosition;
+    if (!_immersivePointers.containsKey(event.pointer)) return;
+    _immersivePointers[event.pointer] = event.localPosition;
     final baseline = _pinchBaselineDistance;
     if (baseline == null || _pinchTriggeredForGesture) return;
-    if (_immersivePointerPositions.length < 2) return;
+    if (_immersivePointers.length < 2) return;
     // A page swipe can deactivate this item while its fingers are still down;
     // a pin set from it would belong to no visible item.
     if (!widget.isActive) return;
@@ -829,7 +824,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
 
   /// Separation between the first two down pointers, in logical pixels.
   double _pinchDistance() {
-    final points = _immersivePointerPositions.values.toList(growable: false);
+    final points = _immersivePointers.values.toList(growable: false);
     if (points.length < 2) return 0;
     return (points[0] - points[1]).distance;
   }
