@@ -465,10 +465,13 @@ class VideosRepository {
           (video) =>
               video.id.isNotEmpty &&
               (replaceInteractionCounts ||
-                  video.originalLoops == null ||
-                  // Relay-sourced zeroes are frequently stale placeholders;
-                  // treat them as missing so Funnelcake can reconcile counts.
-                  video.originalLoops == 0 ||
+                  // Only a classic Vine has an archived loop count to fetch;
+                  // a video made on Divine has none to be missing (#9554).
+                  // Relay-sourced zeroes are frequently stale placeholders,
+                  // so a zero archive counts as missing too.
+                  (video.isOriginalVine &&
+                      (video.originalLoops == null ||
+                          video.originalLoops == 0)) ||
                   video.rawTags['views'] == null ||
                   video.nostrLikeCount == null ||
                   video.nostrCommentCount == null ||

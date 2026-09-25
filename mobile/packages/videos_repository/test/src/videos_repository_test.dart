@@ -2380,7 +2380,7 @@ void main() {
         });
 
         test(
-          'hydrates missing loops without replacing existing views',
+          "hydrates a Vine row's missing archived loops, keeping its views",
           () async {
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
             when(
@@ -2398,6 +2398,7 @@ void main() {
                     dTag: 'dtag-1',
                     videoUrl: 'https://example.com/video.mp4',
                     views: 7,
+                    rawTags: const {'platform': 'vine'},
                   ),
                 ],
               ),
@@ -2513,7 +2514,7 @@ void main() {
         });
 
         test(
-          'skips bulk stats when API results already include loops and views',
+          'skips bulk stats when a Vine row already has its archive and views',
           () async {
             when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
             when(
@@ -2532,6 +2533,7 @@ void main() {
                     videoUrl: 'https://example.com/video.mp4',
                     loops: 5,
                     views: 7,
+                    rawTags: const {'platform': 'vine'},
                   ),
                 ],
               ),
@@ -2554,6 +2556,100 @@ void main() {
             verifyNever(() => mockNostrClient.queryEvents(any()));
           },
         );
+
+        test(
+          'skips bulk stats for a native video that has views and counts',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getHomeFeed(
+                pubkey: any(named: 'pubkey'),
+                limit: any(named: 'limit'),
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer(
+              (_) async => HomeFeedResponse(
+                videos: [
+                  _createVideoStats(
+                    id: 'event-1',
+                    pubkey: 'followed-user',
+                    dTag: 'dtag-1',
+                    videoUrl: 'https://example.com/video.mp4',
+                    views: 56,
+                  ),
+                ],
+              ),
+            );
+
+            final repositoryWithApi = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repositoryWithApi.getHomeFeedVideos(
+              authors: ['followed-user'],
+              userPubkey: 'my-pubkey',
+            );
+
+            expect(result.videos.single.originalLoops, isNull);
+            expect(result.videos.single.totalLoops, equals(56));
+            verifyNever(() => mockFunnelcakeClient.getBulkVideoStats(any()));
+          },
+        );
+
+        test("treats a Vine row's zero archived loops as missing", () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockFunnelcakeClient.getHomeFeed(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResponse(
+              videos: [
+                _createVideoStats(
+                  id: 'event-1',
+                  pubkey: 'followed-user',
+                  dTag: 'dtag-1',
+                  videoUrl: 'https://example.com/video.mp4',
+                  loops: 0,
+                  views: 7,
+                  rawTags: const {'platform': 'vine'},
+                ),
+              ],
+            ),
+          );
+          when(
+            () => mockFunnelcakeClient.getBulkVideoStats(['event-1']),
+          ).thenAnswer(
+            (_) async => const BulkVideoStatsResponse(
+              stats: {
+                'event-1': BulkVideoStatsEntry(
+                  eventId: 'event-1',
+                  reactions: 0,
+                  comments: 0,
+                  reposts: 0,
+                  embeddedLoops: 5,
+                  views: 7,
+                ),
+              },
+            ),
+          );
+
+          final repositoryWithApi = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repositoryWithApi.getHomeFeedVideos(
+            authors: ['followed-user'],
+            userPubkey: 'my-pubkey',
+          );
+
+          expect(result.videos.single.originalLoops, equals(5));
+          expect(result.videos.single.totalLoops, equals(12));
+        });
 
         test(
           'leaves videos unchanged when bulk stats omit their event id',
