@@ -44,6 +44,7 @@ import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
+import 'package:openvine/services/notify_subscriptions_unfollow_cleanup.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/utils/search_utils.dart';
@@ -581,6 +582,35 @@ NotifySubscriptionsRepository notifySubscriptionsRepository(Ref ref) {
   return repository;
 }
 
+/// Keeps the app-managed new-post list in sync with the signed-in user's
+/// confirmed follow changes, independent of which route initiated them.
+final ProviderListenable<NotifySubscriptionsUnfollowCleanup?>
+notifySubscriptionsUnfollowCleanupProvider = Provider.autoDispose((ref) {
+  final ownerPubkey = ref.watch(nostrServiceProvider).publicKey;
+  if (ownerPubkey.isEmpty) return null;
+
+  final cleanup = NotifySubscriptionsUnfollowCleanup(
+    followRepository: ref.watch(followRepositoryProvider),
+    notifySubscriptionsRepository: ref.watch(
+      notifySubscriptionsRepositoryProvider,
+    ),
+    ownerPubkey: ownerPubkey,
+  );
+  runProviderDetached(
+    cleanup.start(),
+    'reconcile new-post subscriptions with follows',
+    logName: 'NotifySubscriptionsUnfollowCleanup',
+  );
+  ref.onDispose(
+    () => runProviderDetached(
+      cleanup.dispose(),
+      'dispose new-post subscription cleanup listener',
+      logName: 'NotifySubscriptionsUnfollowCleanup',
+    ),
+  );
+  return cleanup;
+});
+
 /// Bookmark service for NIP-51 bookmarks.
 ///
 /// Long-lived so both consumers share one instance. Each repository owns a
@@ -771,11 +801,7 @@ DmRepository dmRepository(Ref ref) {
       unawaited(
         ref
             .read(crashReportingServiceProvider)
-            .recordError(
-              error,
-              stackTrace,
-              reason: 'DmRepository.$site',
-            ),
+            .recordError(error, stackTrace, reason: 'DmRepository.$site'),
       );
     },
   );

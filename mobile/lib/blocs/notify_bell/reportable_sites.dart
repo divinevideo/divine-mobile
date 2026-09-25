@@ -10,11 +10,6 @@ abstract class NotifyBellReportableSites {
   /// from a malformed relay event, not a network fault.
   static const String toggle = 'toggle';
 
-  /// `clearForUnfollow` generic-catch arm. Same coverage as [toggle], kept
-  /// distinct because the failure is invisible to the user (the unfollow
-  /// itself succeeded) and so only shows up here.
-  static const String clearForUnfollow = 'clearForUnfollow';
-
   /// `load` generic-catch arm around the outstanding-teardown retry. Same
   /// coverage as [toggle]; a publish failure here is reported as a `failed`
   /// status, not a throw.

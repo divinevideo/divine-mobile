@@ -8,11 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/notify_bell/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 part 'notify_bell_state.dart';
-
-const String _logName = 'NotifyBellCubit';
 
 /// Drives the bell on a creator's profile.
 ///
@@ -133,41 +130,6 @@ class NotifyBellCubit extends Cubit<NotifyBellState> {
           status: NotifyBellStatus.failure,
           isSubscribed: wasSubscribed,
         ),
-      );
-    }
-  }
-
-  /// Drops the subscription because the viewer unfollowed this creator.
-  ///
-  /// The bell is follow-gated, so leaving the subscription behind would keep
-  /// pushing videos from someone the viewer no longer follows, with no UI
-  /// left to turn it off.
-  ///
-  /// Safe to call unconditionally — the repository treats removing a
-  /// non-member as a no-op.
-  Future<void> clearForUnfollow() async {
-    try {
-      final result = await _repository.unsubscribe(
-        ownerPubkey: _viewerPubkey,
-        creatorPubkey: _creatorPubkey,
-      );
-      if (result.status == PeopleListPublishStatus.failed) {
-        // Deliberately not surfaced: the user asked to unfollow, and that
-        // succeeded. The repository retains the removal and reapplies it on
-        // its next publish for this viewer, or on the next bell mount via
-        // load(), so an abandoned subscription cannot keep pushing unseen.
-        Log.warning(
-          'Notify teardown publish failed; retained for retry: '
-          '${result.error}',
-          name: _logName,
-          category: LogCategory.relay,
-        );
-      }
-    } on Object catch (error, stackTrace) {
-      if (isClosed) return;
-      addError(
-        Reportable(error, context: NotifyBellReportableSites.clearForUnfollow),
-        stackTrace,
       );
     }
   }
