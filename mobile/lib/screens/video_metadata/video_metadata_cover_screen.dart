@@ -176,14 +176,7 @@ class _VideoMetadataCoverScreenState
     // MediaMetadataRetriever strip frames would otherwise contend with the
     // player's decoder init and can leave the preview stuck on
     // DECODER_INIT_FAILED (a scarce hardware-decoder pool).
-    if (mounted) {
-      runDetached(
-        _startStripGeneration(localPath),
-        'generate cover thumbnail strip',
-        logName: 'VideoMetadataCoverScreen',
-        category: LogCategory.video,
-      );
-    }
+    if (mounted) _startStripGeneration(localPath);
   }
 
   /// Probes [localPath] for its duration, falling back to the clip's own when
@@ -206,7 +199,7 @@ class _VideoMetadataCoverScreenState
     }
   }
 
-  Future<void> _startStripGeneration(String videoPath) async {
+  void _startStripGeneration(String videoPath) {
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
     final pixelRatio = view.devicePixelRatio;
     final screenWidth = view.physicalSize.width / pixelRatio;
