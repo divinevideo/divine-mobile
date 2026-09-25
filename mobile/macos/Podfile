@@ -45,16 +45,6 @@ post_install do |installer|
   host_arch = `uname -m`.strip
   exclude_x86_64_for_macos = host_arch == 'arm64'
 
-  # Add script phase to codesign media_kit frameworks (fixes unsigned library crash)
-  installer.pods_project.targets.each do |target|
-    if target.name == 'media_kit_libs_macos_video'
-      target.build_configurations.each do |config|
-        config.build_settings['CODE_SIGN_IDENTITY'] = '-'
-      end
-    end
-  end
-
-  # Also add codesigning to the main project's frameworks
   main_project = installer.aggregate_targets.first.user_project
   main_project.targets.each do |target|
     if target.name == 'Runner'
@@ -64,37 +54,6 @@ post_install do |installer|
           config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES' if config.name == 'Debug'
         end
       end
-
-      # Check if script phase already exists
-      phase_name = 'Codesign media_kit frameworks'
-      existing_phase = target.shell_script_build_phases.find { |p| p.name == phase_name }
-
-      phase = existing_phase || target.new_shell_script_build_phase(phase_name)
-      phase.shell_script = <<-SCRIPT
-# Verify media_kit's mpv runtime was embedded before codesigning.
-mpv_framework="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Frameworks/Mpv.framework/Mpv"
-if [ ! -f "$mpv_framework" ]; then
-  echo "error: Mpv.framework is missing from ${PRODUCT_NAME}.app. Clean the macOS build and verify [CP] Embed Pods Frameworks completed successfully." >&2
-  exit 1
-fi
-
-# Codesign embedded frameworks with the same identity as Runner. Hardened
-# Runtime rejects ad-hoc embedded frameworks with "different Team IDs".
-sign_identity="${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY:--}}"
-if [ -z "$sign_identity" ]; then
-  sign_identity="-"
-fi
-
-for framework in "${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Frameworks"/*.framework; do
-  if [ -d "$framework" ]; then
-    codesign --force --deep --options runtime --sign "$sign_identity" "$framework" || {
-      echo "error: Failed to codesign $framework" >&2
-      exit 1
-    }
-  fi
-done
-      SCRIPT
-      phase.shell_path = '/bin/bash'
     end
   end
   main_project.save

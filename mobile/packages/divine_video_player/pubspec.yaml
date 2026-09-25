@@ -17,7 +17,12 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   media_kit: ^1.2.6
-  media_kit_libs_video: ^1.0.7
+  # Only the Linux backend plays through media_kit; Android uses Media3 and
+  # iOS/macOS use AVFoundation. The other platforms' libs packages shipped
+  # libmpv and FFmpeg that nothing called, yet loaded them at every launch
+  # (#9493, #9548). Without one, media_kit_video builds a stub on Darwin and
+  # Windows; on Android it registers its Java plugin but loads no native code.
+  media_kit_libs_linux: ^1.2.1
   media_kit_video: ^2.0.1
   path_provider: ^2.1.5
   unified_logger:
