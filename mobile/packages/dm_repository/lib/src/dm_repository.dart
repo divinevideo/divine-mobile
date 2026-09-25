@@ -1562,7 +1562,7 @@ class DmRepository {
     // across the delay, and confirming it would end restore early.
     final priorRefusals = allowRefusalConfirmation
         ? _armedNip04Refusals.intersection(_previousNip04Refusals)
-        : _previousNip04Refusals;
+        : const <String>{};
     final currentRefusals = <String>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -1772,8 +1772,8 @@ class DmRepository {
     return _backfillHistoryIfNeeded();
   }
 
-  /// [allowNip04RefusalConfirmation] is passed only by the bounded retry
-  /// timer, whose delay is what separates two sightings of an ambiguous
+  /// [allowNip04RefusalConfirmation] is passed only for the bounded retry
+  /// timer's pass, whose delay is what separates two sightings of an ambiguous
   /// refusal. If that timer fires during a non-confirming drain while a
   /// refusal awaits confirmation, its confirmation pass is queued to run as
   /// soon as the active drain finishes.
@@ -1813,7 +1813,6 @@ class DmRepository {
         _historyDrainCanConfirmNip04Refusal = false;
         if (!_pendingNip04RefusalConfirmation) return;
         _pendingNip04RefusalConfirmation = false;
-        if (_disposed || _userPubkey.isEmpty) return;
         if (_syncState?.historyDrainComplete(_userPubkey) ?? false) return;
         unawaited(
           _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
