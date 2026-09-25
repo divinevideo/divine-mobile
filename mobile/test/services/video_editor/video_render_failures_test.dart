@@ -191,6 +191,25 @@ void main() {
         expect(failure.reason, VideoRenderFailureReason.insufficientStorage);
         expect(failure.traceValue, 'insufficient_storage:disk_full:hdr');
       });
+
+      test('marks a stall on an HDR source', () {
+        final failure = VideoRenderFailedException.native(
+          PlatformException(
+            code: 'RENDER_ERROR',
+            message:
+                'Render export stalled after 20s with no progress '
+                '[progress=0.00 format=mp4 bitrate=preset]',
+            details: <Object?, Object?>{
+              'domain': 'java.lang.IllegalStateException',
+              'sources': <Object?>[
+                <Object?, Object?>{'mime': 'video/hevc', 'transfer': 'pq'},
+              ],
+            },
+          ),
+        );
+
+        expect(failure.traceValue, 'native_render:stalled:hdr');
+      });
     });
   });
 
