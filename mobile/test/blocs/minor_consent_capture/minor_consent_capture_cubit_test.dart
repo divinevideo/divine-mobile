@@ -26,8 +26,9 @@ class _FakeRecorder implements MinorConsentRecorder {
   /// When set, [start] does not return until this completes.
   Completer<bool>? startGate;
 
-  /// When set, [stop] does not return until this completes, and returns its
-  /// value instead of [stopResult].
+  /// When set, the first [stop] does not return until this completes, and
+  /// returns its value instead of [stopResult]. Later stops return
+  /// [stopResult], as a camera that has already stopped would.
   Completer<String?>? stopGate;
 
   @override
@@ -59,7 +60,7 @@ class _FakeRecorder implements MinorConsentRecorder {
   Future<String?> stop() async {
     stopCount++;
     final gate = stopGate;
-    if (gate != null) return gate.future;
+    if (gate != null && stopCount == 1) return gate.future;
     return stopResult;
   }
 
@@ -474,6 +475,27 @@ void main() {
           await cubit.close();
         },
       );
+
+      test('leaving while a manual stop awaits deletes its clip', () async {
+        final deleted = <String>[];
+        final recorder = _FakeRecorder(stopResult: null)
+          ..stopGate = Completer<String?>();
+        final cubit = MinorConsentCaptureCubit(
+          recorder: recorder,
+          deleteClip: (path) async => deleted.add(path),
+        );
+
+        await cubit.start(outputDirectory: '/tmp');
+        final stopping = cubit.stop();
+        // The screen is left while the stop awaits. close()'s own stop gets
+        // nothing back, so only stop() knows this clip's path.
+        final closing = cubit.close();
+        recorder.stopGate!.complete('/tmp/left-mid-stop.mp4');
+        await Future.wait([stopping, closing]);
+        await pumpEventQueue();
+
+        expect(deleted, contains('/tmp/left-mid-stop.mp4'));
+      });
 
       test('leaving while the camera starts deletes what it wrote', () async {
         final deleted = <String>[];

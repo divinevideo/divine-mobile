@@ -87,6 +87,18 @@ void main() {
       expect(config.getDefault(FeatureFlag.integratedApps), isFalse);
     });
 
+    test('in-app parent consent recording defaults to off', () {
+      // It stays off until the relay-manager upload route and its storage,
+      // access and request-signing rules ship; turning it on by default would
+      // offer a recording nobody can submit.
+      const config = BuildConfiguration();
+
+      expect(
+        config.getDefault(FeatureFlag.minorConsentInAppRecording),
+        isFalse,
+      );
+    });
+
     test('curatedLists should default to true', () {
       const config = BuildConfiguration();
 
