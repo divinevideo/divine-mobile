@@ -469,6 +469,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.sendStateUpdate()
                 result(nil)
             } catch {
+                // A newer setClips already owns the player. Reporting this
+                // load's failure would mark that video errored and clear its
+                // timeout.
+                guard callGeneration == self.setClipsGeneration else {
+                    self.answerCancelledSetClips(result)
+                    return
+                }
                 self.currentStatus = "error"
                 self.errorMessage = error.localizedDescription
                 self.errorCode = self.errorCode(for: error as NSError)

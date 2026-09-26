@@ -216,6 +216,21 @@ void main() {
             'It may be published only after this call is still the latest, '
             'and only from the item about to be installed.',
       );
+      final catchAt = install.indexOf('} catch {');
+      final errorStatus = install.indexOf('self.currentStatus = "error"');
+      final catchGuard = install.indexOf(
+        'callGeneration == self.setClipsGeneration',
+        catchAt,
+      );
+      expect(catchAt, greaterThanOrEqualTo(0));
+      expect(
+        catchGuard,
+        lessThan(errorStatus),
+        reason:
+            'A superseded load that throws must not mark the player errored. '
+            'The newer call may already be playing, and this catch would '
+            'clear its timeout and broadcast a failure for that video.',
+      );
       expect(
         body,
         isNot(contains('audioTapProcessor')),
