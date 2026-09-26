@@ -13,6 +13,7 @@ import 'package:openvine/services/hold_to_record_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/nostr_signature_verification_preference_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'preferences_providers.g.dart';
@@ -22,6 +23,15 @@ final feedAspectRatioPreferenceServiceProvider =
       final prefs = ref.watch(sharedPreferencesProvider);
       return FeedAspectRatioPreferenceService(prefs);
     });
+
+/// Viewer-scoped stats visibility switches. Non-autoDispose so the choice
+/// outlives the settings screen that wrote it.
+final statsVisibilityPreferencesProvider = Provider<StatsVisibilityPreferences>(
+  (ref) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return StatsVisibilityPreferences(prefs);
+  },
+);
 
 /// Audio sharing preference service for managing whether audio is available
 /// for reuse by default. keepAlive ensures setting persists across widget rebuilds.

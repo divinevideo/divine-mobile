@@ -249,13 +249,11 @@ class _BannerImage extends StatelessWidget {
 /// shimmering indefinitely or collapsing the row (which would shift the
 /// surrounding profile layout).
 ///
-/// One shift is unavoidable and accepted: whether Loops is shown depends on
-/// the count, which is not known until stats load. A visitor to a profile
-/// under [profileLoopsVisibilityFloor] therefore sees four skeleton columns
-/// resolve to three. Reserving the slot only for owners would move that shift
-/// onto popular profiles instead of removing it, so the loading state stays
-/// uniform and the settle is where the column count changes.
-class _ProfileStatsRow extends StatefulWidget {
+/// Whether Loops is shown is the viewer's choice ([StatsVisibilityPreferences]
+/// `showTotalLoops`, on by default), applied to every profile including the
+/// viewer's own. Whether it is shown is known before stats load, so the row no
+/// longer changes its column count when the total arrives.
+class _ProfileStatsRow extends ConsumerStatefulWidget {
   const _ProfileStatsRow({
     required this.userIdHex,
     required this.displayName,
@@ -267,19 +265,18 @@ class _ProfileStatsRow extends StatefulWidget {
 
   /// Whether the signed-in viewer owns this profile.
   ///
-  /// Owners always see their own loop total, however small. A visitor only
-  /// sees it once it is large enough to impress — see
-  /// [profileLoopsVisibilityFloor].
+  /// Owners get the tap-through to the creator dashboard when the Loops column
+  /// is visible; visibility itself is governed by the viewer's stats choice.
   final bool isOwnProfile;
 
   final String? displayName;
   final ProfileStats? profileStats;
 
   @override
-  State<_ProfileStatsRow> createState() => _ProfileStatsRowState();
+  ConsumerState<_ProfileStatsRow> createState() => _ProfileStatsRowState();
 }
 
-class _ProfileStatsRowState extends State<_ProfileStatsRow> {
+class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
   static const _skeletonTimeout = Duration(seconds: 7);
 
   /// Two-digit placeholder painted behind the Skeletonizer shimmer while the
@@ -308,92 +305,98 @@ class _ProfileStatsRowState extends State<_ProfileStatsRow> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = widget.profileStats == null;
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
 
-    final hasLikes = widget.profileStats?.totalLikes != null;
-    final totalViews = widget.profileStats?.totalViews;
-    // A visitor landing on a new creator's profile should not be met by a
-    // discouraging headline number. Owners keep theirs, and a total large
-    // enough to impress still leads the row.
-    final loopsAreVisible =
-        totalViews != null &&
-        (widget.isOwnProfile || totalViews >= profileLoopsVisibilityFloor);
-    final hasLoops = loopsAreVisible;
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) {
+        final isLoading = widget.profileStats == null;
 
-    final l10n = context.l10n;
-    final columns = <Widget>[
-      if (hasLoops || isLoading)
-        ProfileStatColumn(
-          count: isLoading ? _skeletonPlaceholderCount : totalViews!,
-          label: l10n.profileLoopsLabel,
-          isLoading: isLoading && _timeoutExpired,
-          // Loops is the owner's own reach figure, so it is where a creator
-          // looks first for the detail behind it. Visitors get no tap: the
-          // dashboard is the owner's, and Settings keeps its own entry.
-          onTap: widget.isOwnProfile && !isLoading
-              ? () => context.push(RoutePaths.creatorAnalytics)
-              : null,
-        ),
-      if (hasLikes || isLoading)
-        ProfileStatColumn(
-          count: isLoading
-              ? _skeletonPlaceholderCount
-              : widget.profileStats!.totalLikes,
-          label: l10n.profileLikesLabel,
-          isLoading: isLoading && _timeoutExpired,
-        ),
-      // Followers / Following always render: the BLoC-backed columns own their
-      // own loading state, and a null cached count means "not known yet"
-      // rather than zero.
-      if (isLoading)
-        ProfileStatColumn(
-          count: _skeletonPlaceholderCount,
-          label: l10n.profileFollowingLabel,
-          isLoading: _timeoutExpired,
-          onTap: () => context.push(
-            FollowingScreenRouter.pathForPubkey(widget.userIdHex),
+        final hasLikes = widget.profileStats?.totalLikes != null;
+        final totalViews = widget.profileStats?.totalViews;
+        // Visibility is the viewer's choice, not the count's size: the Loops
+        // column is shown whenever the viewer asked for total loops and a
+        // total is known (or still loading). No owner exemption rides on top
+        // of that.
+        final showLoopsColumn =
+            statsVisibility.showTotalLoops && (isLoading || totalViews != null);
+
+        final l10n = context.l10n;
+        final columns = <Widget>[
+          if (showLoopsColumn)
+            ProfileStatColumn(
+              count: isLoading ? _skeletonPlaceholderCount : totalViews!,
+              label: l10n.profileLoopsLabel,
+              isLoading: isLoading && _timeoutExpired,
+              // Loops is the owner's own reach figure, so it is where a creator
+              // looks first for the detail behind it. Visitors get no tap: the
+              // dashboard is the owner's, and Settings keeps its own entry.
+              onTap: widget.isOwnProfile && !isLoading
+                  ? () => context.push(RoutePaths.creatorAnalytics)
+                  : null,
+            ),
+          if (hasLikes || isLoading)
+            ProfileStatColumn(
+              count: isLoading
+                  ? _skeletonPlaceholderCount
+                  : widget.profileStats!.totalLikes,
+              label: l10n.profileLikesLabel,
+              isLoading: isLoading && _timeoutExpired,
+            ),
+          // Followers / Following always render: the BLoC-backed columns own
+          // their own loading state, and a null cached count means "not known
+          // yet" rather than zero.
+          if (isLoading)
+            ProfileStatColumn(
+              count: _skeletonPlaceholderCount,
+              label: l10n.profileFollowingLabel,
+              isLoading: _timeoutExpired,
+              onTap: () => context.push(
+                FollowingScreenRouter.pathForPubkey(widget.userIdHex),
+              ),
+            )
+          else
+            ProfileFollowingStat(
+              pubkey: widget.userIdHex,
+              displayName: widget.displayName,
+              isOwnProfile: widget.isOwnProfile,
+              initialCount: widget.profileStats!.following,
+            ),
+          if (isLoading)
+            ProfileStatColumn(
+              count: _skeletonPlaceholderCount,
+              label: l10n.profileFollowersLabel,
+              isLoading: _timeoutExpired,
+              onTap: () => context.push(
+                FollowersScreenRouter.pathForPubkey(widget.userIdHex),
+              ),
+            )
+          else
+            ProfileFollowersStat(
+              pubkey: widget.userIdHex,
+              displayName: widget.displayName,
+              isOwnProfile: widget.isOwnProfile,
+              initialCount: widget.profileStats!.followers,
+            ),
+        ];
+
+        return Skeletonizer(
+          enabled: isLoading && !_timeoutExpired,
+          enableSwitchAnimation: true,
+          effect: vineSkeletonEffectOf(context),
+          child: Semantics(
+            identifier: SemanticIds.profileStatsRow,
+            child: Row(
+              children: [
+                for (int i = 0; i < columns.length; i++) ...[
+                  if (i > 0) const _StatDivider(),
+                  Expanded(child: columns[i]),
+                ],
+              ],
+            ),
           ),
-        )
-      else
-        ProfileFollowingStat(
-          pubkey: widget.userIdHex,
-          displayName: widget.displayName,
-          isOwnProfile: widget.isOwnProfile,
-          initialCount: widget.profileStats!.following,
-        ),
-      if (isLoading)
-        ProfileStatColumn(
-          count: _skeletonPlaceholderCount,
-          label: l10n.profileFollowersLabel,
-          isLoading: _timeoutExpired,
-          onTap: () => context.push(
-            FollowersScreenRouter.pathForPubkey(widget.userIdHex),
-          ),
-        )
-      else
-        ProfileFollowersStat(
-          pubkey: widget.userIdHex,
-          displayName: widget.displayName,
-          isOwnProfile: widget.isOwnProfile,
-          initialCount: widget.profileStats!.followers,
-        ),
-    ];
-
-    return Skeletonizer(
-      enabled: isLoading && !_timeoutExpired,
-      enableSwitchAnimation: true,
-      effect: vineSkeletonEffectOf(context),
-      child: Semantics(
-        identifier: SemanticIds.profileStatsRow,
-        child: Row(
-          children: [
-            for (int i = 0; i < columns.length; i++) ...[
-              if (i > 0) const _StatDivider(),
-              Expanded(child: columns[i]),
-            ],
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

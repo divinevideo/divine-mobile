@@ -22,7 +22,6 @@ import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -42,6 +41,7 @@ import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/secure_account_prompt_dismissal.dart';
@@ -561,24 +561,21 @@ void main() {
         },
       );
 
-      testWidgets(
-        'hides supporter entries on a vanished '
-        '${ownProfile ? 'own' : 'other'} profile',
-        (tester) async {
-          await tester.pumpWidget(
-            buildTestWidget(
-              userIdHex: testUserHex,
-              isOwnProfile: ownProfile,
-              suppliedProfile: createTestProfile(displayName: 'Supporter'),
-              isVanished: true,
-            ),
-          );
-          await tester.pump();
+      testWidgets('hides supporter entries on a vanished '
+          '${ownProfile ? 'own' : 'other'} profile', (tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: ownProfile,
+            suppliedProfile: createTestProfile(displayName: 'Supporter'),
+            isVanished: true,
+          ),
+        );
+        await tester.pump();
 
-          expect(find.byType(SupporterMembership), findsNothing);
-          expect(find.byType(PublicSupporterBadge), findsNothing);
-        },
-      );
+        expect(find.byType(SupporterMembership), findsNothing);
+        expect(find.byType(PublicSupporterBadge), findsNothing);
+      });
     }
 
     testWidgets('opens accepted NIP-58 badge details from profile header', (
@@ -1661,7 +1658,6 @@ void main() {
       tester,
     ) async {
       final testProfile = createTestProfile(displayName: 'Counted User');
-      // Above profileLoopsVisibilityFloor so a visitor still sees Loops.
       const profileStats = ProfileStats(
         pubkey: testUserHex,
         videoCount: 42,
@@ -1684,7 +1680,39 @@ void main() {
       expect(find.text('Loops'), findsOneWidget);
     });
 
-    testWidgets('hides Loops from a visitor when the total is small', (
+    testWidgets('hides Loops when the viewer turns total loops off', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final testProfile = createTestProfile(displayName: 'New Creator');
+      const profileStats = ProfileStats(
+        pubkey: testUserHex,
+        videoCount: 2,
+        totalLikes: 3,
+        totalViews: 7,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: testProfile,
+          profileStats: profileStats,
+          videoCount: 2,
+          sharedPreferences: prefs,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The rest of the row still renders; only Loops is withheld.
+      expect(find.text('Loops'), findsNothing);
+      expect(find.text('Likes'), findsOneWidget);
+    });
+
+    testWidgets('shows the viewer a small Loops total by default', (
       tester,
     ) async {
       final testProfile = createTestProfile(displayName: 'New Creator');
@@ -1706,32 +1734,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The rest of the row still renders; only the discouraging headline
-      // number is withheld.
-      expect(find.text('Loops'), findsNothing);
-      expect(find.text('Likes'), findsOneWidget);
-    });
-
-    testWidgets('shows an owner their own small Loops total', (tester) async {
-      final testProfile = createTestProfile(displayName: 'New Creator');
-      const profileStats = ProfileStats(
-        pubkey: testUserHex,
-        videoCount: 2,
-        totalLikes: 3,
-        totalViews: 7,
-      );
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          userIdHex: testUserHex,
-          isOwnProfile: true,
-          suppliedProfile: testProfile,
-          profileStats: profileStats,
-          videoCount: 2,
-        ),
-      );
-      await tester.pumpAndSettle();
-
+      // No visibility floor: the viewer's preference alone decides, so a
+      // small total is shown rather than withheld.
       expect(find.text('Loops'), findsOneWidget);
     });
 
@@ -1739,8 +1743,9 @@ void main() {
       tester,
     ) async {
       final mockGoRouter = MockGoRouter();
-      when(() => mockGoRouter.push<Object?>(any()))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockGoRouter.push<Object?>(any()),
+      ).thenAnswer((_) async => null);
       final testProfile = createTestProfile(displayName: 'Owner');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -1771,8 +1776,9 @@ void main() {
 
     testWidgets("leaves a visitor's Loops column untappable", (tester) async {
       final mockGoRouter = MockGoRouter();
-      when(() => mockGoRouter.push<Object?>(any()))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockGoRouter.push<Object?>(any()),
+      ).thenAnswer((_) async => null);
       final testProfile = createTestProfile(displayName: 'Counted User');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -1802,28 +1808,37 @@ void main() {
       );
     });
 
-    testWidgets('shows a visitor a total exactly at the floor', (tester) async {
-      final testProfile = createTestProfile(displayName: 'Counted User');
-      const profileStats = ProfileStats(
-        pubkey: testUserHex,
-        videoCount: 42,
-        totalLikes: 100,
-        totalViews: profileLoopsVisibilityFloor,
-      );
+    testWidgets(
+      "hides Loops on the owner's own profile when they turn it off",
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showTotalLoopsKey: false,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final testProfile = createTestProfile(displayName: 'Owner');
+        const profileStats = ProfileStats(
+          pubkey: testUserHex,
+          videoCount: 2,
+          totalLikes: 3,
+          totalViews: 7,
+        );
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          userIdHex: testUserHex,
-          isOwnProfile: false,
-          suppliedProfile: testProfile,
-          profileStats: profileStats,
-          videoCount: 3,
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: true,
+            suppliedProfile: testProfile,
+            profileStats: profileStats,
+            videoCount: 2,
+            sharedPreferences: prefs,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Loops'), findsOneWidget);
-    });
+        // The viewer's choice applies to their own profile too.
+        expect(find.text('Loops'), findsNothing);
+      },
+    );
 
     testWidgets('displays all four stat columns when stats are available', (
       tester,

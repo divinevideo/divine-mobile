@@ -133,103 +133,115 @@ class _MetadataContent extends StatelessWidget {
 /// The visible date drops the localized "Posted on" prefix to match
 /// the Figma copy; the prefix lives on the [Semantics] label so
 /// screen readers still announce it.
-class _OverviewSection extends StatelessWidget {
+///
+/// The date is shown only when the viewer asked for publish dates
+/// ([StatsVisibilityPreferences.showPublishedDate], off by default).
+class _OverviewSection extends ConsumerWidget {
   const _OverviewSection({required this.video});
 
   final VideoEvent video;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final title = video.displayTitle;
-    final description = video.displayContent;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
 
-    final formattedDate = video.hasUnknownOriginalDate
-        ? null
-        : TimeFormatter.formatLongDate(
-            int.tryParse(video.publishedAt ?? '') ?? video.createdAt,
-            locale: Localizations.localeOf(context).toString(),
-          );
-    final semanticDate = formattedDate == null
-        ? null
-        : l10n.metadataPostedDateSemantics(formattedDate);
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) {
+        final l10n = context.l10n;
+        final title = video.displayTitle;
+        final description = video.displayContent;
 
-    final hasTitle = title != null && title.isNotEmpty;
-    final hasDescription = description.isNotEmpty;
-    final hasBadges =
-        video.shouldShowProofModeBadge || video.shouldShowNotDivineBadge;
-    final hasTags = video.categories.isNotEmpty || video.allHashtags.isNotEmpty;
+        final formattedDate =
+            !statsVisibility.showPublishedDate || video.hasUnknownOriginalDate
+            ? null
+            : TimeFormatter.formatLongDate(
+                int.tryParse(video.publishedAt ?? '') ?? video.createdAt,
+                locale: Localizations.localeOf(context).toString(),
+              );
+        final semanticDate = formattedDate == null
+            ? null
+            : l10n.metadataPostedDateSemantics(formattedDate);
 
-    final titleCluster = <Widget>[
-      if (hasTitle)
-        LinkifiedText(
-          text: title,
-          style: VineTheme.headlineSmallFont(
-            color: context.vineColors.primaryText,
-          ),
-          linkStyle: VineTheme.headlineSmallFont(color: VineTheme.info),
-          mentionStyle: VineTheme.headlineSmallFont(color: VineTheme.info),
-          mentionProfilePubkeys: video.mentionedPubkeys,
-          dismissModalBeforeNavigation: true,
-        ),
-      if (hasBadges) MetadataBadgesRow(video: video),
-      if (hasDescription)
-        LinkifiedText(
-          text: description,
-          style: VineTheme.bodyLargeFont(
-            color: context.vineColors.onSurfaceVariant,
-          ),
-          mentionProfilePubkeys: video.mentionedPubkeys,
-          dismissModalBeforeNavigation: true,
-        ),
-    ];
+        final hasTitle = title != null && title.isNotEmpty;
+        final hasDescription = description.isNotEmpty;
+        final hasBadges =
+            video.shouldShowProofModeBadge || video.shouldShowNotDivineBadge;
+        final hasTags =
+            video.categories.isNotEmpty || video.allHashtags.isNotEmpty;
 
-    // ⚠ LOAD-BEARING bottom padding. 16 px (vs 20 px on top) only
-    // when tags are present — compensates for the hashtag chips' 4 px
-    // invisible tap-target padding below the last visible chip row so
-    // the section's visible bottom gap stays 20 px. One of three
-    // constants that conspire to keep the visible chip 40 dp tall
-    // while giving every tap target 48 dp; see the full dependency
-    // map in `MetadataTagsSection.build`
-    // (`metadata_tags_section.dart`). Changing this requires the
-    // other two as well.
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 20, 16, hasTags ? 16 : 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (formattedDate != null)
-            Semantics(
-              label: semanticDate,
-              child: ExcludeSemantics(
-                child: Text(
-                  formattedDate,
-                  style: VineTheme.labelSmallFont(
-                    color: context.vineColors.onSurfaceVariant,
+        final titleCluster = <Widget>[
+          if (hasTitle)
+            LinkifiedText(
+              text: title,
+              style: VineTheme.headlineSmallFont(
+                color: context.vineColors.primaryText,
+              ),
+              linkStyle: VineTheme.headlineSmallFont(color: VineTheme.info),
+              mentionStyle: VineTheme.headlineSmallFont(color: VineTheme.info),
+              mentionProfilePubkeys: video.mentionedPubkeys,
+              dismissModalBeforeNavigation: true,
+            ),
+          if (hasBadges) MetadataBadgesRow(video: video),
+          if (hasDescription)
+            LinkifiedText(
+              text: description,
+              style: VineTheme.bodyLargeFont(
+                color: context.vineColors.onSurfaceVariant,
+              ),
+              mentionProfilePubkeys: video.mentionedPubkeys,
+              dismissModalBeforeNavigation: true,
+            ),
+        ];
+
+        // ⚠ LOAD-BEARING bottom padding. 16 px (vs 20 px on top) only
+        // when tags are present — compensates for the hashtag chips' 4 px
+        // invisible tap-target padding below the last visible chip row so
+        // the section's visible bottom gap stays 20 px. One of three
+        // constants that conspire to keep the visible chip 40 dp tall
+        // while giving every tap target 48 dp; see the full dependency
+        // map in `MetadataTagsSection.build`
+        // (`metadata_tags_section.dart`). Changing this requires the
+        // other two as well.
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 20, 16, hasTags ? 16 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (formattedDate != null)
+                Semantics(
+                  label: semanticDate,
+                  child: ExcludeSemantics(
+                    child: Text(
+                      formattedDate,
+                      style: VineTheme.labelSmallFont(
+                        color: context.vineColors.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          if (formattedDate != null && titleCluster.isNotEmpty) ...[
-            const SizedBox(height: 16),
-          ],
-          if (titleCluster.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 8,
-              children: titleCluster,
-            ),
-          // ⚠ LOAD-BEARING 12 px (NOT 16). When content precedes the chip row,
-          // the first chip row's 4 px invisible top padding stacks on this to
-          // produce a visible 16 px gap. Sibling of the bottom-padding tweak
-          // above; see `MetadataTagsSection` for the full dependency map.
-          if (hasTags) ...[
-            if (formattedDate != null || titleCluster.isNotEmpty)
-              const SizedBox(height: 12),
-            MetadataTagsSection(video: video),
-          ],
-        ],
-      ),
+              if (formattedDate != null && titleCluster.isNotEmpty) ...[
+                const SizedBox(height: 16),
+              ],
+              if (titleCluster.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 8,
+                  children: titleCluster,
+                ),
+              // ⚠ LOAD-BEARING 12 px (NOT 16). When content precedes the chip row,
+              // the first chip row's 4 px invisible top padding stacks on this to
+              // produce a visible 16 px gap. Sibling of the bottom-padding tweak
+              // above; see `MetadataTagsSection` for the full dependency map.
+              if (hasTags) ...[
+                if (formattedDate != null || titleCluster.isNotEmpty)
+                  const SizedBox(height: 12),
+                MetadataTagsSection(video: video),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
