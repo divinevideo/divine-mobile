@@ -1,5 +1,5 @@
 // ABOUTME: Minor-account review Riverpod providers for auth restriction gating
-// ABOUTME: Wires API-backed status, repository, and developer override service
+// ABOUTME: Wires API-backed status, last-known cache, repository and overrides
 
 import 'dart:ui' show Rect;
 
@@ -7,11 +7,13 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
+import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/support_email_composer.dart';
 
 typedef MinorAccountReviewComposeEmail = Future<void> Function({
@@ -62,8 +64,24 @@ final currentMinorAccountReviewStatusProvider =
         }
       }
 
+      final pubkeyHex = ref.watch(authServiceProvider).currentPublicKeyHex;
+      final store = ref.watch(minorAccountReviewStatusStoreProvider);
       final repository = ref.watch(minorAccountReviewRepositoryProvider);
-      return repository.fetchCurrentStatus().timeout(
+      final status = await repository.fetchCurrentStatus().timeout(
         const Duration(seconds: 10),
       );
+      runProviderDetached(
+        store.remember(pubkeyHex, status),
+        'persist minor-account review status',
+        logName: 'MinorAccountReviewProviders',
+      );
+      return status;
     }, retry: (_, error) => null);
+
+/// Last-known review restriction per account, kept across launches.
+final minorAccountReviewStatusStoreProvider =
+    Provider<MinorAccountReviewStatusStore>((ref) {
+      return MinorAccountReviewStatusStore(
+        prefs: ref.watch(sharedPreferencesProvider),
+      );
+    });

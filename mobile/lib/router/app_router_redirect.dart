@@ -279,8 +279,7 @@ _MinorReviewRoutingSignature _minorReviewRoutingSignature(
 /// leaving an already-open reel untouched.
 ///
 /// [previous] is nullable only for defensiveness and the first-emission tests;
-/// the production `ref.listen` at [goRouterProvider] omits `fireImmediately`,
-/// so Riverpod only ever invokes it with a real prior [AsyncValue].
+/// [goRouterProvider] always passes the status it last routed on.
 @visibleForTesting
 bool minorAccountReviewStatusAffectsRouting(
   AsyncValue<MinorAccountReviewStatus>? previous,
@@ -288,6 +287,53 @@ bool minorAccountReviewStatusAffectsRouting(
 ) {
   return _minorReviewRoutingSignature(previous) !=
       _minorReviewRoutingSignature(next);
+}
+
+/// The review status [appRouterRedirect] gates on, given the [live] fetch.
+///
+/// While the fetch runs, [live] carries either no value, which holds the
+/// account on the loading screen for the whole request, or the value it had
+/// before. At cold start that is the `active()` resolved while auth was still
+/// restoring, which says nothing about this account. The account's
+/// [lastKnownRestricted] status decides instead, and is only read while
+/// fetching: an account last seen active routes without waiting, and one last
+/// seen restricted waits for the fetch rather than routing on the
+/// placeholder. A settled [live] always wins, so a status that could not be
+/// fetched still fails open, and a restriction is only routed on once fetched.
+@visibleForTesting
+AsyncValue<MinorAccountReviewStatus> minorAccountReviewRoutingStatus(
+  AsyncValue<MinorAccountReviewStatus> live, {
+  required bool? Function() lastKnownRestricted,
+}) {
+  if (!live.isLoading) return live;
+  return switch (lastKnownRestricted()) {
+    null => live,
+    // A background refetch keeps the fetched restriction, case included.
+    true when live.value?.isRestricted ?? false => live,
+    true => const AsyncLoading(),
+    false when live.hasValue => live,
+    false => AsyncData(MinorAccountReviewStatus.active()),
+  };
+}
+
+AsyncValue<MinorAccountReviewStatus> _routedReviewStatus(
+  Ref ref,
+  AsyncValue<MinorAccountReviewStatus> live,
+) {
+  final authService = ref.read(authServiceProvider);
+  return minorAccountReviewRoutingStatus(
+    live,
+    lastKnownRestricted: () {
+      final pubkeyHex = authService.currentPublicKeyHex;
+      if (authService.authState != AuthState.authenticated ||
+          pubkeyHex == null) {
+        return null;
+      }
+      return ref
+          .read(minorAccountReviewStatusStoreProvider)
+          .lastKnownRestrictedFor(pubkeyHex);
+    },
+  );
 }
 
 /// Top-level GoRouter redirect: divine:// scheme → universal-link rewrite →
@@ -382,7 +428,10 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     return deepLinkRewrite;
   }
 
-  final reviewStatusAsync = ref.read(currentMinorAccountReviewStatusProvider);
+  final reviewStatusAsync = _routedReviewStatus(
+    ref,
+    ref.read(currentMinorAccountReviewStatusProvider),
+  );
   final deletionAttemptAsync = ref.read(currentAccountDeletionAttemptProvider);
   final submittedDeletion =
       authState == AuthState.authenticated &&
@@ -445,7 +494,9 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         : WelcomeScreen.path;
   }
 
-  // Only bounce to the loading screen on a true cold load (no value yet).
+  // Only bounce to the loading screen on a true cold load: no value yet and
+  // no last-known status that lets this account through (see
+  // minorAccountReviewRoutingStatus).
   // Riverpod keeps the previous value during a background refetch
   // (isLoading == true while hasValue == true), e.g. when
   // currentAuthStateProvider publishes a new auth state.
