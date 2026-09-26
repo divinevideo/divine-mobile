@@ -30,7 +30,7 @@ Recorder modes ([`VideoRecorderMode`](../lib/models/video_recorder/video_recorde
 | Classic | No | Square by default, has a recording limit, goes straight to the post screen and renders in the background. |
 | Upload | No | Explainer screen only. |
 
-The editor also opens from the drafts tab, from the in-app clip library (with several clips selected), and for an already-published video.
+The editor also opens from the drafts tab and from the in-app clip library (with one or more clips selected). Editing an already-published video opens the post details screen and its cover editor, not the timeline.
 
 Drafts are stored in the local database. The editor saves the current session automatically into a single autosave slot and offers to restore it the next time the recorder opens. Creators can also save named drafts explicitly, and a draft can be rendered for publishing without reopening the editor.
 
