@@ -93,7 +93,12 @@ Uri parseAppOAuthCallback(String callback) {
       uri.authority.contains('@')) {
     throw const FormatException(_invalidCallbackMessage);
   }
-  return uri;
+
+  // Providers append junk fragments to their redirects (Instagram `#_`,
+  // Facebook `#_=_`), and a browser carries that fragment across the server's
+  // fragment-less 302 to this URL (RFC 9110 §10.2.2). Nothing reads a
+  // fragment, so drop it rather than reject the outcome the query carries.
+  return uri.hasFragment ? uri.removeFragment() : uri;
 }
 
 bool _hasExactRawAuthority(String callback) {
