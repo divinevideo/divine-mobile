@@ -206,8 +206,10 @@ void main() {
           broadcastVideoEvents.single.tags.where(
             (tag) => tag.first == 'allow_audio_reuse',
           ),
-          isEmpty,
-          reason: 'the event must not claim audio reuse that never published',
+          [
+            ['allow_audio_reuse', 'true'],
+          ],
+          reason: 'the creator preference survives a failed audio extraction',
         );
       },
     );

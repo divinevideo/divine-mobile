@@ -150,56 +150,69 @@ void main() {
     });
 
     group('resolveForPublish', () {
-      test('publishes without audio tags when no sound was selected', () async {
-        final resolution = await publisher().resolveForPublish(
-          upload: upload,
-          videoDTag: 'vine-1',
-          allowAudioReuse: false,
-        );
+      test(
+        'records the creator preference when no sound was selected',
+        () async {
+          final resolution = await publisher().resolveForPublish(
+            upload: upload,
+            videoDTag: 'vine-1',
+            allowAudioReuse: false,
+          );
 
-        expect(
-          resolution,
-          isA<VideoAudioResolved>()
-              .having((r) => r.tags, 'tags', isEmpty)
-              .having((r) => r.reuseDegraded, 'reuseDegraded', isFalse),
-        );
-      });
+          expect(
+            resolution,
+            isA<VideoAudioResolved>()
+                .having((r) => r.tags, 'tags', [
+                  ['allow_audio_reuse', 'false'],
+                ])
+                .having((r) => r.reuseDegraded, 'reuseDegraded', isFalse),
+          );
+        },
+      );
 
       test('references a reusable sound by its event id', () async {
-        final resolution = await publisher().resolveForPublish(
-          upload: upload,
-          videoDTag: 'vine-1',
-          allowAudioReuse: false,
-          selectedAudio: _publishedSound(pubkey: _other),
-          selectedAudioEventId: _soundEventId,
-          selectedAudioRelay: 'wss://relay.example',
-        );
+        final resolution =
+            await publisher(
+              consentChecker: (_) async => true,
+            ).resolveForPublish(
+              upload: upload,
+              videoDTag: 'vine-1',
+              allowAudioReuse: false,
+              selectedAudio: _publishedSound(pubkey: _other),
+              selectedAudioEventId: _soundEventId,
+              selectedAudioRelay: 'wss://relay.example',
+            );
 
         expect(
           resolution,
           isA<VideoAudioResolved>().having((r) => r.tags, 'tags', [
+            ['allow_audio_reuse', 'false'],
             ['e', _soundEventId, 'wss://relay.example', 'audio'],
           ]),
         );
       });
 
       test('recovers the event id behind a reused original-sound id', () async {
-        final resolution = await publisher().resolveForPublish(
-          upload: upload,
-          videoDTag: 'vine-1',
-          allowAudioReuse: false,
-          selectedAudio: AudioEvent(
-            id: 'video_$_soundEventId-1700000000',
-            pubkey: _other,
-            createdAt: 0,
-            url: 'https://cdn.example/sound.mp3',
-          ),
-          selectedAudioEventId: 'video_$_soundEventId-1700000000',
-        );
+        final resolution =
+            await publisher(
+              consentChecker: (_) async => true,
+            ).resolveForPublish(
+              upload: upload,
+              videoDTag: 'vine-1',
+              allowAudioReuse: false,
+              selectedAudio: AudioEvent(
+                id: 'video_$_soundEventId-1700000000',
+                pubkey: _other,
+                createdAt: 0,
+                url: 'https://cdn.example/sound.mp3',
+              ),
+              selectedAudioEventId: 'video_$_soundEventId-1700000000',
+            );
 
         expect(
           resolution,
           isA<VideoAudioResolved>().having((r) => r.tags, 'tags', [
+            ['allow_audio_reuse', 'false'],
             ['e', _soundEventId, 'wss://relay.divine.video', 'audio'],
           ]),
         );
@@ -252,7 +265,9 @@ void main() {
           expect(
             resolution,
             isA<VideoAudioResolved>()
-                .having((r) => r.tags, 'tags', isEmpty)
+                .having((r) => r.tags, 'tags', [
+                  ['allow_audio_reuse', 'true'],
+                ])
                 .having((r) => r.reuseDegraded, 'reuseDegraded', isTrue),
           );
         },

@@ -289,7 +289,6 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   bool _canReuseSound() {
     final sound = widget.sound;
     final knownTerms = audioReuseTermsFromEvent(sound);
-    if (knownTerms == true) return true;
     // Keep the synchronously knowable owner gate local so the button does not
     // disappear for a frame on the creator's own sound.
     ref.watch(currentAuthStateProvider);
@@ -305,8 +304,8 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   /// consent is still being verified.
   bool? _reuseTerms() {
     final sound = widget.sound;
-    return audioReuseTermsFromEvent(sound) ??
-        ref.watch(audioReuseTermsProvider(sound)).value;
+    if (audioReuseTermsFromEvent(sound) == false) return false;
+    return ref.watch(audioReuseTermsProvider(sound)).value;
   }
 
   void _navigateToVideo(String videoId, int index, List<VideoEvent> videos) {
