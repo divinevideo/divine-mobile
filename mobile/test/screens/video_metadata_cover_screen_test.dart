@@ -859,52 +859,6 @@ void main() {
       },
     );
 
-    testWidgets(
-      'keeps the picker working when the video metadata cannot be read',
-      (tester) async {
-        setUpPlayerChannel();
-        addTearDown(tearDownPlayerChannel);
-        var stripRequested = false;
-        _setHandler(const MethodChannel('pro_video_editor'), (call) async {
-          if (call.method == 'startThumbnailStream') {
-            stripRequested = true;
-            return null;
-          }
-          if (call.method == 'getMetadata') {
-            throw PlatformException(code: 'METADATA', message: 'unreadable');
-          }
-          return null;
-        });
-        final semanticsHandle = tester.ensureSemantics();
-        VideoThumbnailService.resetStripQueueForTesting();
-
-        await tester.pumpWidget(buildWidget());
-        await tester.pump(const Duration(milliseconds: 400));
-        for (var i = 0; i < 10; i++) {
-          await tester.pump();
-        }
-
-        expect(stripRequested, isTrue);
-        expect(find.byType(BrandedLoadingIndicator), findsNothing);
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        final stripFinder = find.bySemanticsLabel(
-          l10n.videoMetadataEditCoverStripSemanticLabel,
-        );
-        final before = tester.getSemantics(stripFinder).getSemanticsData();
-        final stripSemantics = find.semantics.byAction(
-          SemanticsAction.increase,
-        );
-        tester.semantics.increase(stripSemantics);
-        await tester.pump();
-        tester.semantics.increase(stripSemantics);
-        await tester.pump();
-        final after = tester.getSemantics(stripFinder).getSemanticsData();
-        expect(after.value, isNot(equals(before.value)));
-
-        semanticsHandle.dispose();
-      },
-    );
-
     group('confirming a draft cover', () {
       late PathProviderPlatform originalPathProvider;
       late Directory tempDir;

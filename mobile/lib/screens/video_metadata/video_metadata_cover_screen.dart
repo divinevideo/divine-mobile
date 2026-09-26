@@ -105,7 +105,10 @@ class _VideoMetadataCoverScreenState
     try {
       localPath = await video.safeFilePath();
       if (!mounted) return;
-      _videoDuration = await _readVideoDuration(localPath);
+      final metadata = await ProVideoEditor.instance.getMetadata(
+        EditorVideo.file(localPath),
+      );
+      _videoDuration = metadata.duration;
     } catch (_) {
       // Nothing left to load, but the cursor still works and confirm retries
       // the download. runDetached logs the failure and reports defects.
@@ -177,26 +180,6 @@ class _VideoMetadataCoverScreenState
     // player's decoder init and can leave the preview stuck on
     // DECODER_INIT_FAILED (a scarce hardware-decoder pool).
     if (mounted) _startStripGeneration(localPath);
-  }
-
-  /// Probes [localPath] for its duration, falling back to the clip's own when
-  /// the platform cannot read it, so the strip and scrubbing keep a timeline.
-  Future<Duration> _readVideoDuration(String localPath) async {
-    try {
-      final metadata = await ProVideoEditor.instance.getMetadata(
-        EditorVideo.file(localPath),
-      );
-      return metadata.duration;
-    } on Exception catch (e, stackTrace) {
-      Log.warning(
-        'Cover preview could not read the video duration',
-        name: 'VideoMetadataCoverScreen',
-        category: LogCategory.video,
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return widget.clip.duration;
-    }
   }
 
   void _startStripGeneration(String videoPath) {
