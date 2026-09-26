@@ -183,11 +183,38 @@ void main() {
       );
       expect(
         body,
-        contains('loopAudioMix = mix'),
+        contains('playerItem.audioMix = mix'),
         reason:
-            'The freshly built mix must reach the shared property the looper '
-            're-applies to every later item, not stay a local the function '
-            'discards.',
+            "A direct item carries its own edge fades on its own asset's audio "
+            'track. The item itself must hold them even if this load is never '
+            'installed.',
+      );
+      expect(
+        body,
+        isNot(contains('loopAudioMix =')),
+        reason:
+            'Publishing the shared mix inside the builder lets a newer load '
+            'write it before that load installs. prewarm would then stamp the '
+            'newer fades onto the item still looping.',
+      );
+      final install = _functionBody(
+        _appleSourceFile().readAsStringSync(),
+        'private func handleSetClips(',
+      );
+      final stillCurrent = install.indexOf(
+        'callGeneration == self.setClipsGeneration',
+      );
+      final publish = install.indexOf(
+        'self.loopAudioMix = playerItem.audioMix',
+      );
+      expect(stillCurrent, greaterThanOrEqualTo(0));
+      expect(
+        publish,
+        greaterThan(stillCurrent),
+        reason:
+            'The shared mix is what prewarm stamps onto every looping copy. '
+            'It may be published only after this call is still the latest, '
+            'and only from the item about to be installed.',
       );
       expect(
         body,
