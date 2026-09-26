@@ -57,6 +57,12 @@ final class ClipAudioLoop {
     /// A short summary of how the seam was closed, for the log.
     let seamDescription: String
 
+    /// Called on the main queue when the engine has stopped itself for a new
+    /// output configuration — a route change such as Bluetooth connecting —
+    /// and the loop has gone silent, so the owner can place it again.
+    var onStoppedByConfigurationChange: (() -> Void)?
+    private var configurationObserver: NSObjectProtocol?
+
     var volume: Float = 1 {
         didSet {
             guard !isCrossfading else { return }
@@ -91,6 +97,23 @@ final class ClipAudioLoop {
             )
         }
         engine.prepare()
+        // The engine stops itself on a new output configuration and drops
+        // what the nodes had scheduled, while the muted player plays on.
+        configurationObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isRunning else { return }
+            self.pause()
+            self.onStoppedByConfigurationChange?()
+        }
+    }
+
+    deinit {
+        if let configurationObserver {
+            NotificationCenter.default.removeObserver(configurationObserver)
+        }
     }
 
     /// Decodes [source]'s audio and prepares it as a loop, or nil when there
@@ -269,14 +292,19 @@ final class ClipAudioLoop {
         return difference / sampleRate
     }
 
+    /// Stops the loop and the audio hardware behind it. The engine keeps what
+    /// it prepared, so [start] brings it back quickly; a paused feed player
+    /// can sit in the pool a long time and should hold no running output.
     func pause() {
         crossfadeGeneration += 1
         nodes.forEach { $0.stop() }
         isRunning = false
         isCrossfading = false
+        if engine.isRunning { engine.pause() }
     }
 
     func release() {
+        onStoppedByConfigurationChange = nil
         pause()
         engine.stop()
     }

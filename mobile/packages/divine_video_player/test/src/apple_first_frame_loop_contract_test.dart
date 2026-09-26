@@ -65,7 +65,7 @@ void main() {
 
       expect(source, contains('fileStart: loopStart,'));
       expect(source, contains('itemStart: loopStart'));
-      expect(source, contains('fileStart: firstClipFileStart,'));
+      expect(source, contains('fileStart: build.firstClipFileStart,'));
       expect(
         _loopSource(),
         contains('(decoded.firstTime.seconds - source.fileStart.seconds)'),

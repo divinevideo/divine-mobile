@@ -82,6 +82,71 @@ void main() {
             'nothing at all.',
       );
     });
+
+    test('an output change places the stopped loop again', () {
+      expect(
+        _loopSource(),
+        contains('forName: .AVAudioEngineConfigurationChange'),
+        reason:
+            'The engine stops itself on a route change, such as Bluetooth '
+            'connecting, and drops what the nodes had scheduled. With the '
+            'player muted, the clip stays silent unless the loop is placed '
+            'again.',
+      );
+      expect(
+        _body(_instanceSource(), 'private func adoptClipAudioLoop('),
+        contains('loop.onStoppedByConfigurationChange = {'),
+      );
+    });
+
+    test('a paused loop holds no running output', () {
+      expect(
+        _body(_loopSource(), 'func pause()'),
+        contains('if engine.isRunning { engine.pause() }'),
+        reason:
+            'Feed players sit paused in the pool for a long time; a running '
+            'engine keeps the audio hardware busy for nothing.',
+      );
+    });
+
+    test('a superseded setClips installs nothing', () {
+      final source = _instanceSource();
+
+      expect(source, contains('setClipsGeneration += 1'));
+      expect(
+        source,
+        contains(
+          'guard !self.abandonsSetClips(callGeneration, built: built, '
+          'result: result) else {',
+        ),
+        reason:
+            'A build that awaited past a newer call must not leave its '
+            'loader, loop source or first-frame start on the newer item.',
+      );
+    });
+
+    test('only a looping feed clip streams through the kept download', () {
+      final source = _instanceSource();
+
+      expect(
+        source,
+        contains(
+          'if clipsRaw.count == 1, startMs == 0, clipVol == 1.0, '
+          'clipSpeed == 1.0,\n                trimToCommonTrackEnd,',
+        ),
+        reason:
+            'Only a surface that loops a finished clip declares '
+            'trimToCommonTrackEnd; any other single clip streams as '
+            'AVFoundation would.',
+      );
+      expect(
+        _sourceFile('CachingAssetLoader.swift').readAsStringSync(),
+        contains('static let maxKeptBytes: Int64 = 16 * 1024 * 1024'),
+        reason:
+            'A feed plays only the first seconds of a long video; keeping all '
+            'of it to loop them would waste the data.',
+      );
+    });
   });
 }
 

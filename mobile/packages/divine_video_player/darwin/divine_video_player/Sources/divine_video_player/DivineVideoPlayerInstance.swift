@@ -57,9 +57,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// exactly the lap nobody is listening for.
     private var loopAudioMix: AVAudioMix?
     /// Bumped at the start of each `setClips` call, before that call awaits.
-    /// A call that resumes after a newer one has started must not install:
+    /// A call that resumes after a newer one has started must not install —
     /// publishing its mix earlier would let prewarm stamp that mix onto the
-    /// item still looping.
+    /// item still looping — and answers CANCELLED, as on Android.
     private var setClipsGeneration = 0
 
     /// The looping clip's audio, played outside the player once decoded; see
@@ -89,6 +89,28 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Streams a single remote clip to the player through a download it
     /// keeps; see [CachingAssetLoader].
     private var remoteClipLoader: CachingAssetLoader?
+
+    /// A player item and everything the instance holds for it once it is
+    /// installed. Builders return this instead of writing the instance's
+    /// fields, so a build that overlaps another cannot leave its state behind
+    /// on an item it did not build.
+    private struct BuiltItem {
+        let item: AVPlayerItem
+        let offsets: [Double]
+        let durations: [Double]
+        var loopTimeRange: CMTimeRange?
+        var firstFrameStart: CMTime?
+        var loopSource: ClipAudioLoop.Source?
+        var streamedLoop: StreamedLoop?
+    }
+
+    /// A streamed clip's download, and the stretch of the file one lap plays
+    /// once it is written out.
+    private struct StreamedLoop {
+        let loader: CachingAssetLoader
+        let fileStart: CMTime
+        let duration: CMTime
+    }
     private var statusObservation: NSKeyValueObservation?
     private var bufferingObservation: NSKeyValueObservation?
     private var likelyToKeepUpObservation: NSKeyValueObservation?
@@ -345,14 +367,40 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// caller is unblocked without surfacing an error — the same contract the
     /// Android instance uses. Never drop the result: `await setClips()` would
     /// stay pending for the life of the process.
-    private func answerCancelledSetClips(_ result: @escaping FlutterResult) {
+    private func answerCancelledSetClips(
+        _ result: @escaping FlutterResult,
+        reason: String = "Disposed during setClips"
+    ) {
         result(
             FlutterError(
                 code: "CANCELLED",
-                message: "Disposed during setClips",
+                message: reason,
                 details: nil
             )
         )
+    }
+
+    /// Whether the setClips call numbered [generation] was overtaken by a
+    /// newer one, or the instance disposed, while it awaited — and if so
+    /// answers it, drops [built]'s download and reports true.
+    private func abandonsSetClips(
+        _ generation: Int,
+        built: BuiltItem? = nil,
+        result: @escaping FlutterResult
+    ) -> Bool {
+        if diagnosticDisposed {
+            if built?.streamedLoop?.loader !== remoteClipLoader {
+                built?.streamedLoop?.loader.cancel()
+            }
+            answerCancelledSetClips(result)
+            return true
+        }
+        guard generation != setClipsGeneration else { return false }
+        if built?.streamedLoop?.loader !== remoteClipLoader {
+            built?.streamedLoop?.loader.cancel()
+        }
+        answerCancelledSetClips(result, reason: "Superseded by a newer setClips")
+        return true
     }
 
     private func handleSetClips(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -370,9 +418,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         let callGeneration = setClipsGeneration
         releaseClipAudioLoop()
         clipLoopSource = nil
-        firstFrameStart = nil
-        remoteClipLoader?.cancel()
-        remoteClipLoader = nil
 
         // Build the player item asynchronously.
         Task { @MainActor [weak self] in
@@ -380,13 +425,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             self.diagnosticPendingLoads += 1
             defer { self.diagnosticPendingLoads -= 1 }
             do {
-                let playerItem: AVPlayerItem
-                let offsets: [Double]
-                let durations: [Double]
                 // The direct path is the better one, but it cannot represent
                 // every clip — a rotated video needs the composition's layer
                 // instruction. It reports that itself.
-                var direct: (AVPlayerItem, [Double], [Double])?
+                var direct: BuiltItem?
                 if let clip = Self.soleDirectItemClip(in: clipsRaw) {
                     do {
                         direct = try await self.makeDirectPlayerItem(from: clip)
@@ -399,26 +441,34 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                         )
                     }
                 }
+                let built: BuiltItem
                 if let direct {
-                    (playerItem, offsets, durations) = direct
+                    built = direct
                 } else {
-                    (playerItem, offsets, durations) =
-                        try await self.makeCompositionPlayerItem(from: clipsRaw)
+                    built = try await self.makeCompositionPlayerItem(from: clipsRaw)
                 }
                 // dispose() can run while the above await is suspended; a
                 // disposed instance must never resurrect a player/observers.
-                guard !self.diagnosticDisposed else {
-                    self.answerCancelledSetClips(result)
+                // A newer setClips may have started too, and owns the player
+                // from here.
+                // Installing it now would loop this item under the newer mix,
+                // or replace a queue the newer call already owns.
+                guard !self.abandonsSetClips(callGeneration, built: built, result: result) else {
                     return
                 }
-                // A newer setClips has started. Installing now would loop this
-                // item under the newer mix, or replace a queue the newer call
-                // already owns.
-                guard callGeneration == self.setClipsGeneration else {
-                    self.answerCancelledSetClips(result)
-                    return
-                }
+                let playerItem = built.item
+                let offsets = built.offsets
+                let durations = built.durations
                 self.loopAudioMix = playerItem.audioMix
+                self.loopTimeRange = built.loopTimeRange
+                self.firstFrameStart = built.firstFrameStart
+                self.clipLoopSource = built.loopSource
+                // The previous item keeps its download until this one takes
+                // over the player.
+                if self.remoteClipLoader !== built.streamedLoop?.loader {
+                    self.remoteClipLoader?.cancel()
+                }
+                self.remoteClipLoader = built.streamedLoop?.loader
                 self.clipOffsets = offsets
                 self.clipDurations = durations
                 self.clipCount = offsets.count
@@ -472,14 +522,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 if let existing = self.player {
                     self.configureQueue(with: playerItem)
                     await existing.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                    guard !self.diagnosticDisposed else {
-                        self.answerCancelledSetClips(result)
-                        return
-                    }
-                    guard callGeneration == self.setClipsGeneration else {
-                        self.answerCancelledSetClips(result)
-                        return
-                    }
+                    guard !self.abandonsSetClips(callGeneration, result: result) else { return }
                     self.textureOutput?.forceRefresh(for: startTime)
                 } else {
                     let newPlayer = AVQueuePlayer()
@@ -490,14 +533,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.observeCurrentItem()
                     self.configureQueue(with: playerItem)
                     await newPlayer.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                    guard !self.diagnosticDisposed else {
-                        self.answerCancelledSetClips(result)
-                        return
-                    }
-                    guard callGeneration == self.setClipsGeneration else {
-                        self.answerCancelledSetClips(result)
-                        return
-                    }
+                    guard !self.abandonsSetClips(callGeneration, result: result) else { return }
                     self.textureOutput?.forceRefresh(for: startTime)
                 }
 
@@ -511,6 +547,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.errorCode = nil
                 self.clearSetClipsTimeout()
                 self.startClipAudioLoop()
+                // After the direct start: a download already complete answers
+                // at once, and starting twice would decode twice.
+                if let streamedLoop = built.streamedLoop {
+                    self.decodeWhenDownloaded(streamedLoop)
+                }
                 DivineVideoPlayerLog.shared.info(
                     "Player \(self.playerId) ready: \(self.clipCount) clip(s), "
                         + "totalMs=\(Int(self.totalDuration * 1000))",
@@ -522,10 +563,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 // A newer setClips already owns the player. Reporting this
                 // load's failure would mark that video errored and clear its
                 // timeout.
-                guard callGeneration == self.setClipsGeneration else {
-                    self.answerCancelledSetClips(result)
-                    return
-                }
+                guard !self.abandonsSetClips(callGeneration, result: result) else { return }
                 self.currentStatus = "error"
                 self.errorMessage = error.localizedDescription
                 self.errorCode = self.errorCode(for: error as NSError)
@@ -658,7 +696,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// turns out to need the composition after all.
     private func makeDirectPlayerItem(
         from clipMap: [String: Any]
-    ) async throws -> (AVPlayerItem, [Double], [Double]) {
+    ) async throws -> BuiltItem {
         guard let uri = clipMap["uri"] as? String else {
             throw CompositionError.noPlayableVideoTracks
         }
@@ -777,33 +815,39 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         if CMTimeCompare(loopEnd, assetDuration) < 0 {
             playerItem.forwardPlaybackEndTime = loopEnd
         }
+        var built = BuiltItem(item: playerItem, offsets: [0], durations: [loopEnd.seconds])
         if CMTimeCompare(loopStart, .zero) > 0 || CMTimeCompare(loopEnd, assetDuration) < 0 {
-            loopTimeRange = CMTimeRange(start: loopStart, end: loopEnd)
-        } else {
-            loopTimeRange = nil
+            built.loopTimeRange = CMTimeRange(start: loopStart, end: loopEnd)
         }
-        firstFrameStart = CMTimeCompare(loopStart, .zero) > 0 ? loopStart : nil
-        clipLoopSource = url.isFileURL
-            ? ClipAudioLoop.Source(
+        if CMTimeCompare(loopStart, .zero) > 0 { built.firstFrameStart = loopStart }
+        if url.isFileURL {
+            built.loopSource = ClipAudioLoop.Source(
                 url: url,
                 fileStart: loopStart,
                 duration: CMTimeSubtract(loopEnd, loopStart),
                 itemStart: loopStart
             )
-            : nil
-        return (playerItem, [0], [loopEnd.seconds])
+        }
+        return built
     }
 
     /// Builds a player item backed by an AVMutableComposition of every clip.
     private func makeCompositionPlayerItem(
         from clipsRaw: [[String: Any]]
-    ) async throws -> (AVPlayerItem, [Double], [Double]) {
-        let (composition, videoComposition, offsets, durations, audioMix, firstClipFileStart) =
-            try await buildComposition(from: clipsRaw)
+    ) async throws -> BuiltItem {
+        let build = try await buildComposition(from: clipsRaw)
+        do {
+            return try makeCompositionPlayerItem(from: build)
+        } catch {
+            build.loader?.cancel()
+            throw error
+        }
+    }
 
-        loopTimeRange = nil
-        // A first clip cut past its empty edit shows a frame at zero.
-        firstFrameStart = CMTimeCompare(firstClipFileStart, .zero) > 0 ? .zero : nil
+    private func makeCompositionPlayerItem(from build: BuiltComposition) throws -> BuiltItem {
+        let composition = build.composition
+        let videoComposition = build.videoComposition
+        let audioMix = build.audioMix
         let playerItem = AVPlayerItem(asset: composition)
         // Validate BEFORE assigning. -[AVPlayerItem setVideoComposition:]
         // throws an Objective-C NSInvalidArgumentException on an invalid
@@ -822,22 +866,35 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             playerItem.videoComposition = videoComposition
         }
         if let audioMix { playerItem.audioMix = audioMix }
-        if let loader = remoteClipLoader, offsets.count == 1 {
-            let lapDuration = composition.duration
-            loader.onDownloaded = { [weak self, weak loader] fileURL in
-                guard let self, let loader, loader === self.remoteClipLoader else { return }
-                self.clipLoopSource = ClipAudioLoop.Source(
-                    url: fileURL,
-                    fileStart: firstClipFileStart,
-                    duration: lapDuration,
-                    itemStart: .zero
-                )
-                if self.currentStatus == "ready", self.clipAudioLoop == nil {
-                    self.startClipAudioLoop()
-                }
-            }
+        var built = BuiltItem(item: playerItem, offsets: build.offsets, durations: build.durations)
+        // A first clip cut past its empty edit shows a frame at zero.
+        if CMTimeCompare(build.firstClipFileStart, .zero) > 0 { built.firstFrameStart = .zero }
+        if let loader = build.loader {
+            built.streamedLoop = StreamedLoop(
+                loader: loader,
+                fileStart: build.firstClipFileStart,
+                duration: composition.duration
+            )
         }
-        return (playerItem, offsets, durations)
+        return built
+    }
+
+    /// Hands the loop the file [streamedLoop]'s download is written to, once
+    /// it is complete — at once if it already is.
+    private func decodeWhenDownloaded(_ streamedLoop: StreamedLoop) {
+        // Not the struct itself: it holds the loader, which holds this.
+        let fileStart = streamedLoop.fileStart
+        let duration = streamedLoop.duration
+        streamedLoop.loader.onDownloaded = { [weak self, weak loader = streamedLoop.loader] fileURL in
+            guard let self, let loader, loader === self.remoteClipLoader else { return }
+            self.clipLoopSource = ClipAudioLoop.Source(
+                url: fileURL,
+                fileStart: fileStart,
+                duration: duration,
+                itemStart: .zero
+            )
+            if self.clipAudioLoop == nil { self.startClipAudioLoop() }
+        }
     }
 
     /// Clamps a requested end time to the media that exists in the asset.
@@ -856,14 +913,28 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             : requestedEnd
     }
 
+    /// A composition, and what the item built from it needs besides.
+    private struct BuiltComposition {
+        let composition: AVMutableComposition
+        let videoComposition: AVVideoComposition?
+        let offsets: [Double]
+        let durations: [Double]
+        let audioMix: AVMutableAudioMix?
+        /// Where in its file the first clip starts.
+        let firstClipFileStart: CMTime
+        /// The download a single streamed looping clip loads through.
+        let loader: CachingAssetLoader?
+    }
+
     /// Builds an AVMutableComposition that stitches all clips into a
-    /// single continuous timeline, and reports where in its file the first
-    /// clip starts.
+    /// single continuous timeline.
     private func buildComposition(
         from clipsRaw: [[String: Any]]
-    ) async throws -> (
-        AVMutableComposition, AVVideoComposition?, [Double], [Double], AVMutableAudioMix?, CMTime
-    ) {
+    ) async throws -> BuiltComposition {
+        var loader: CachingAssetLoader?
+        var built = false
+        // A build that fails drops its download; one that succeeds hands it on.
+        defer { if !built { loader?.cancel() } }
         let composition = AVMutableComposition()
         guard
             let videoTrack = composition.addMutableTrack(
@@ -927,13 +998,17 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             // A single streamed clip loads through a download the player
             // keeps, so its audio can be decoded into the loop without
             // fetching the file a second time. Only a clip the loop can stand
-            // in for: whole, at full volume and normal speed, not HLS.
+            // in for — whole, at full volume and normal speed, not HLS — and
+            // only on a surface that loops a finished clip, which is what
+            // trimToCommonTrackEnd declares. isLooping cannot tell: the feed
+            // turns looping on only once the clip has loaded.
             if clipsRaw.count == 1, startMs == 0, clipVol == 1.0, clipSpeed == 1.0,
+                trimToCommonTrackEnd,
                 url.pathExtension.lowercased() != "m3u8",
-                let loader = CachingAssetLoader(remoteURL: url, headers: httpHeaders ?? [:])
+                let clipLoader = CachingAssetLoader(remoteURL: url, headers: httpHeaders ?? [:])
             {
-                remoteClipLoader = loader
-                asset = loader.asset
+                loader = clipLoader
+                asset = clipLoader.asset
             } else {
                 asset = AVURLAsset(url: url, options: assetOptions)
             }
@@ -1164,7 +1239,16 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             audioMix = mix
         }
 
-        return (composition, videoComposition, offsets, durations, audioMix, firstClipFileStart)
+        built = true
+        return BuiltComposition(
+            composition: composition,
+            videoComposition: videoComposition,
+            offsets: offsets,
+            durations: durations,
+            audioMix: audioMix,
+            firstClipFileStart: firstClipFileStart,
+            loader: loader
+        )
     }
 
     // MARK: - Seek
@@ -1403,6 +1487,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// is not heard, and there is no seam mid-lap to be heard either.
     private func adoptClipAudioLoop(_ loop: ClipAudioLoop) {
         clipAudioLoop = loop
+        loop.onStoppedByConfigurationChange = { [weak self, weak loop] in
+            guard let self, let loop, loop === self.clipAudioLoop else { return }
+            DivineVideoPlayerLog.shared.info(
+                "Player \(self.playerId) loop audio stopped by an output change; placing it again",
+                name: "DivineVideoPlayer.AudioLoop"
+            )
+            self.realignClipAudioLoop()
+        }
         DivineVideoPlayerLog.shared.info(
             "Player \(playerId) loops its audio outside AVPlayer: \(loop.seamDescription)",
             name: "DivineVideoPlayer.AudioLoop"

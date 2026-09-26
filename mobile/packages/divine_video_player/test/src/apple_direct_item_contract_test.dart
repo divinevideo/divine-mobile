@@ -204,12 +204,19 @@ void main() {
             'write it before that load installs. prewarm would then stamp the '
             'newer fades onto the item still looping.',
       );
-      final install = _functionBody(
-        _appleSourceFile().readAsStringSync(),
-        'private func handleSetClips(',
+      final source = _appleSourceFile().readAsStringSync();
+      expect(
+        _functionBody(source, 'private func abandonsSetClips('),
+        contains(
+          'guard generation != setClipsGeneration else { return false }',
+        ),
+        reason:
+            'The check a superseded call runs before it installs, before it '
+            'reports ready, and before it reports a failure.',
       );
+      final install = _functionBody(source, 'private func handleSetClips(');
       final stillCurrent = install.indexOf(
-        'callGeneration == self.setClipsGeneration',
+        'self.abandonsSetClips(callGeneration',
       );
       final publish = install.indexOf(
         'self.loopAudioMix = playerItem.audioMix',
@@ -226,10 +233,11 @@ void main() {
       final catchAt = install.indexOf('} catch {');
       final errorStatus = install.indexOf('self.currentStatus = "error"');
       final catchGuard = install.indexOf(
-        'callGeneration == self.setClipsGeneration',
+        'self.abandonsSetClips(callGeneration',
         catchAt,
       );
       expect(catchAt, greaterThanOrEqualTo(0));
+      expect(catchGuard, greaterThan(catchAt));
       expect(
         catchGuard,
         lessThan(errorStatus),
