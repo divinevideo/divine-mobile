@@ -279,7 +279,7 @@ _MinorReviewRoutingSignature _minorReviewRoutingSignature(
 /// leaving an already-open reel untouched.
 ///
 /// [previous] is nullable only for defensiveness and the first-emission tests;
-/// [goRouterProvider] always passes the status it last routed on.
+/// [goRouterProvider] passes the status routed at the previous emission.
 @visibleForTesting
 bool minorAccountReviewStatusAffectsRouting(
   AsyncValue<MinorAccountReviewStatus>? previous,
@@ -500,15 +500,12 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         : WelcomeScreen.path;
   }
 
-  // Only bounce to the loading screen on a true cold load: no value yet and
-  // no last-known status that lets this account through (see
-  // minorAccountReviewRoutingStatus).
-  // Riverpod keeps the previous value during a background refetch
-  // (isLoading == true while hasValue == true), e.g. when
-  // currentAuthStateProvider publishes a new auth state.
-  // Treating those transient refetches as "loading" would redirect away
-  // from the current route to the review loading screen and back, which
-  // tears down and rebuilds the video feed.
+  // Only bounce to the loading screen while the routed status has no value:
+  // a cold load, or an account last seen restricted whose only value is the
+  // signed-out placeholder (see minorAccountReviewRoutingStatus). Riverpod
+  // keeps the previous value through a background refetch (isLoading while
+  // hasValue), and bouncing on those would take the user to the loading
+  // screen and back, tearing down the video feed.
   if (authState == AuthState.authenticated &&
       reviewStatusAsync.isLoading &&
       !reviewStatusAsync.hasValue) {
