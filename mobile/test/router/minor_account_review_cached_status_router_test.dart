@@ -17,6 +17,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -138,7 +139,7 @@ void main() {
   });
 
   group('router gating with a last-known review status', () {
-    const cacheKey = 'minor_account_review_restricted_user-pubkey';
+    final cacheKey = MinorAccountReviewStatusStore.storageKey('user-pubkey');
 
     late AuthState authState;
     late StreamController<AuthState> authStates;

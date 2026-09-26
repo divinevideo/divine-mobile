@@ -11,14 +11,16 @@ class MinorAccountReviewStatusStore {
 
   final SharedPreferences _prefs;
 
-  static String _key(String pubkeyHex) =>
+  /// The preference holding [pubkeyHex]'s status, removed with the account's
+  /// data.
+  static String storageKey(String pubkeyHex) =>
       'minor_account_review_restricted_$pubkeyHex';
 
   /// Whether [pubkeyHex]'s last fetch found a restriction, or `null` when this
   /// device has never fetched a status for it.
   bool? lastKnownRestrictedFor(String? pubkeyHex) {
     if (pubkeyHex == null || pubkeyHex.isEmpty) return null;
-    return _prefs.getBool(_key(pubkeyHex));
+    return _prefs.getBool(storageKey(pubkeyHex));
   }
 
   /// Records [status] as the last one fetched for [pubkeyHex].
@@ -27,7 +29,7 @@ class MinorAccountReviewStatusStore {
     MinorAccountReviewStatus status,
   ) async {
     if (pubkeyHex == null || pubkeyHex.isEmpty) return;
-    final key = _key(pubkeyHex);
+    final key = storageKey(pubkeyHex);
     if (_prefs.getBool(key) == status.isRestricted) return;
     await _prefs.setBool(key, status.isRestricted);
   }
