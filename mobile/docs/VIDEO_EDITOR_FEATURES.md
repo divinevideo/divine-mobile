@@ -5,7 +5,7 @@ Validated against: `main` at `5b208c9911f347f78f82625d70036870ebbd550d` on 2026-
 
 What a creator can do in the video editor today, grouped by area, with the limits that apply. Use it to answer "can the editor already do X?" before filing or building a feature, and update it in the same pull request that adds, removes, or changes an editor capability.
 
-Numbers below come from the code. The source of truth for limits is [`VideoEditorConstants`](../lib/constants/video_editor_constants.dart) and [`TimelineConstants`](../lib/constants/video_editor_timeline_constants.dart); if this page and those files disagree, the files win.
+Numbers below come from the code. Most limits live in [`VideoEditorConstants`](../lib/constants/video_editor_constants.dart) and [`TimelineConstants`](../lib/constants/video_editor_timeline_constants.dart). A few sit next to the code that uses them: the split minimum in `VideoEditorSplitService`, and transition durations in the transition sheet. If this page and the code disagree, the code wins.
 
 None of the editor tools sit behind a feature flag.
 
