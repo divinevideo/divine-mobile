@@ -92,7 +92,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   // Compared against the status last routed on rather than Riverpod's
   // `previous`: a finished fetch records the account's last-known status
   // before the provider settles, so recomputing `previous` would already see
-  // the new value and could miss the change.
+  // the new value and could miss the change. Only the current fetch records,
+  // so every store write is followed by the provider's own emission.
   var routedReviewStatus = _routedReviewStatus(
     ref,
     ref.read(currentMinorAccountReviewStatusProvider),

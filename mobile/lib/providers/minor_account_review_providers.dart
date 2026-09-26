@@ -67,9 +67,16 @@ final currentMinorAccountReviewStatusProvider =
       final pubkeyHex = ref.watch(authServiceProvider).currentPublicKeyHex;
       final store = ref.watch(minorAccountReviewStatusStoreProvider);
       final repository = ref.watch(minorAccountReviewRepositoryProvider);
+      // A refetch disposes this build as soon as it is invalidated, while
+      // `ref.mounted` stays true until the rebuild runs.
+      var disposed = false;
+      ref.onDispose(() => disposed = true);
       final status = await repository.fetchCurrentStatus().timeout(
         const Duration(seconds: 10),
       );
+      // A superseded fetch must not overwrite what the newer one records; the
+      // router relies on every write preceding an emission.
+      if (disposed) return status;
       runProviderDetached(
         store.remember(pubkeyHex, status),
         'persist minor-account review status',

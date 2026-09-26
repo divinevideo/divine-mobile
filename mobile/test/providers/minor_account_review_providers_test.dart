@@ -1,6 +1,8 @@
 // ABOUTME: Tests that a review-status fetch records the account's last-known
 // ABOUTME: restriction, which the router gates on while the next fetch runs.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -53,6 +55,37 @@ void main() {
       final container = createContainer();
 
       await container.read(currentMinorAccountReviewStatusProvider.future);
+      await pumpEventQueue();
+
+      expect(
+        container
+            .read(minorAccountReviewStatusStoreProvider)
+            .lastKnownRestrictedFor(pubkey),
+        isTrue,
+      );
+    });
+
+    test('keeps the newer result when a superseded fetch lands last', () async {
+      final superseded = Completer<MinorAccountReviewStatus>();
+      final current = Completer<MinorAccountReviewStatus>();
+      final fetches = [superseded, current];
+      when(
+        repository.fetchCurrentStatus,
+      ).thenAnswer((_) => fetches.removeAt(0).future);
+      final container = createContainer()
+        ..listen(currentMinorAccountReviewStatusProvider, (_, _) {})
+        ..invalidate(currentMinorAccountReviewStatusProvider);
+
+      final settled = container.read(
+        currentMinorAccountReviewStatusProvider.future,
+      );
+      current.complete(
+        const MinorAccountReviewStatus(
+          restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+        ),
+      );
+      expect((await settled).isRestricted, isTrue);
+      superseded.complete(MinorAccountReviewStatus.active());
       await pumpEventQueue();
 
       expect(

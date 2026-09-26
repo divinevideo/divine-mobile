@@ -91,7 +91,9 @@ void main() {
     late StreamController<AuthState> authStates;
     late MockAuthService authService;
     late Completer<MinorAccountReviewStatus> fetch;
+    late Completer<MinorAccountReviewStatus> refetch;
     late _MockRepository repository;
+    late ProviderContainer container;
 
     setUp(() {
       resetNavigationState();
@@ -134,14 +136,18 @@ void main() {
       bool? cachedRestricted,
     }) async {
       authState = startState;
-      // Created inside the test body so it completes in the fake-async zone.
+      // Created inside the test body so they complete in the fake-async zone.
       fetch = Completer<MinorAccountReviewStatus>();
+      refetch = Completer<MinorAccountReviewStatus>();
       repository = _MockRepository();
-      when(repository.fetchCurrentStatus).thenAnswer((_) => fetch.future);
+      var fetches = 0;
+      when(
+        repository.fetchCurrentStatus,
+      ).thenAnswer((_) => (fetches++ == 0 ? fetch : refetch).future);
       SharedPreferences.setMockInitialValues({
         cacheKey: ?cachedRestricted,
       });
-      final container = ProviderContainer(
+      container = ProviderContainer(
         overrides: [
           ...getStandardTestOverrides(
             mockAuthService: authService,
@@ -180,6 +186,12 @@ void main() {
       authState = AuthState.authenticated;
       authStates.add(AuthState.authenticated);
       await tester.pump();
+      await tester.pump();
+    }
+
+    /// Refetches the status the way a resume or "check again" does.
+    Future<void> refetchStatus(WidgetTester tester) async {
+      container.invalidate(currentMinorAccountReviewStatusProvider);
       await tester.pump();
     }
 
@@ -229,6 +241,26 @@ void main() {
           fetch.complete(restrictedStatus());
           await tester.pumpAndSettle();
           expect(location(router), MinorAccountReviewScreen.path);
+        },
+      );
+
+      testWidgets(
+        'is not stranded on the loading screen by a superseded fetch',
+        (tester) async {
+          final router = await pumpRouter(
+            tester,
+            startState: AuthState.authenticated,
+            cachedRestricted: false,
+          );
+          await refetchStatus(tester);
+          fetch.complete(restrictedStatus());
+          await tester.pump();
+          router.refresh();
+          await tester.pumpAndSettle();
+
+          refetch.complete(MinorAccountReviewStatus.active());
+          await tester.pumpAndSettle();
+          expect(location(router), LegalScreen.path);
         },
       );
     });
