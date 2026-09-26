@@ -11681,6 +11681,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Абонаментите за поддръжници не са налични тук в момента.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Членствата в тази версия на Divine минават през Google Play или App Store. Идват и други начини да подкрепиш Divine.';
+
+  @override
   String get supporterRestorePurchases => 'Възстанови покупките';
 
   @override

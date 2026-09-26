@@ -16,6 +16,7 @@ import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/supporter_api_client.dart';
 import 'package:openvine/services/supporter_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/l10n.dart';
 
@@ -116,6 +117,11 @@ class _EmptyValidator extends Fake implements EntitlementValidator {
   Future<void> completePurchase(SupporterPurchaseProof proof) async {}
 }
 
+/// Whether the pumped build is offered store checkout; production derives it
+/// from the install source, which these tests do not resolve.
+Override _storeBilling({bool available = true}) =>
+    supporterStoreBillingAvailableProvider.overrideWithValue(available);
+
 void main() {
   group('checkout feedback', () {
     const tier = SupporterTier(
@@ -135,7 +141,10 @@ void main() {
         ..purchaseCompleter = purchase;
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -188,7 +197,10 @@ void main() {
         ..purchaseCompleter = purchase;
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -230,7 +242,10 @@ void main() {
           ..purchaseCompleter = purchase;
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+            overrides: [
+              _storeBilling(),
+              supporterRepositoryProvider.overrideWithValue(repo),
+            ],
             child: buildLocalizedWidget(const SupporterScreen()),
           ),
         );
@@ -270,6 +285,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            _storeBilling(),
             supporterRepositoryProvider.overrideWithValue(
               _FakeRepository(controller),
             ),
@@ -313,7 +329,10 @@ void main() {
       );
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -341,7 +360,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -371,7 +393,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -391,7 +416,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -402,6 +430,81 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'replaces plans and restore with a note on a build no store bills',
+      (tester) async {
+        final controller = StreamController<SupporterEntitlement>.broadcast();
+        addTearDown(controller.close);
+        final repo = _FakeRepository(
+          controller,
+          tiers: const [
+            SupporterTier(
+              productId: 'divine.supporter.monthly',
+              title: 'Monthly Supporter',
+              price: r'$6.99',
+              billingPeriod: SupporterBillingPeriod.monthly,
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _storeBilling(available: false),
+              supporterRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: buildLocalizedWidget(const SupporterScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.supporterStoreNotInThisBuild), findsOneWidget);
+        expect(find.textContaining('Monthly Supporter'), findsNothing);
+        expect(find.text(l10n.supporterRestorePurchases), findsNothing);
+        expect(find.text(l10n.supporterUnavailable), findsNothing);
+        expect(
+          find.text(
+            lookupAppLocalizations(
+              const Locale('de'),
+            ).supporterStoreNotInThisBuild,
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'still shows an active membership on a build no store bills',
+      (tester) async {
+        final controller = StreamController<SupporterEntitlement>.broadcast();
+        addTearDown(controller.close);
+        final repo = _FakeRepository(
+          controller,
+          initial: const SupporterEntitlement(
+            productId: 'divine.supporter.monthly',
+            source: EntitlementSource.server,
+          ),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _storeBilling(available: false),
+              supporterRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: buildLocalizedWidget(const SupporterScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.textContaining(l10n.supporterActiveBadge), findsOneWidget);
+        expect(find.text(l10n.supporterStoreNotInThisBuild), findsNothing);
+        expect(find.text(l10n.supporterPublicRecognition), findsOneWidget);
+      },
+    );
 
     testWidgets('labels each tier with its own billing period', (tester) async {
       final controller = StreamController<SupporterEntitlement>.broadcast();
@@ -431,7 +534,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [supporterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            _storeBilling(),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
           child: buildLocalizedWidget(const SupporterScreen()),
         ),
       );
@@ -463,6 +569,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            _storeBilling(),
             supporterRepositoryProvider.overrideWithValue(
               _FakeRepository(controller),
             ),

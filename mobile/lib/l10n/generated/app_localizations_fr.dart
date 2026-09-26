@@ -11738,6 +11738,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les abonnements supporter ne sont pas disponibles ici pour l\'instant.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Dans cette version de Divine, les adhésions passent par Google Play ou l\'App Store. D\'autres façons de soutenir Divine arrivent bientôt.';
+
+  @override
   String get supporterRestorePurchases => 'Restaurer les achats';
 
   @override

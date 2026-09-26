@@ -11791,6 +11791,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Subskrypcje wspierające nie są tu teraz dostępne.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'W tej wersji Divine członkostwa działają przez Google Play lub App Store. Inne sposoby wspierania Divine są w drodze.';
+
+  @override
   String get supporterRestorePurchases => 'Przywróć zakupy';
 
   @override

@@ -3113,6 +3113,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Supporter-prenumerationer är inte tillgängliga här just nu.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "I den här versionen av Divine går medlemskap via Google Play eller App Store. Fler sätt att stötta Divine är på väg.",
     "supporterRestorePurchases": "Återställ köp",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "Stäng felmeddelandet",

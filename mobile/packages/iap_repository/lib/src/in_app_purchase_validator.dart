@@ -39,6 +39,11 @@ Set<String> get supporterProductIds => supporterProducts.keys.toSet();
 /// product still has an unfinished transaction.
 const _unfinishedPurchaseCode = 'storekit_duplicate_product_object';
 
+/// How `in_app_purchase_android` names Google Play's `BILLING_UNAVAILABLE`
+/// in a failed purchase's error message: the build was not installed by Play
+/// (a Zapstore or GitHub APK), or this Play account cannot buy.
+const _playBillingUnavailable = 'BillingResponse.billingUnavailable';
+
 /// Reported when the store itself fails a restore (StoreKit finds an
 /// entitlement it cannot verify, or Google Play cannot query purchases).
 const _storeRestoreFailure = 'The store could not restore purchases.';
@@ -133,10 +138,12 @@ class InAppPurchaseValidator implements EntitlementValidator {
         // emit the canonical response after Worker verification.
         pending?.completer?.complete(SupporterEntitlement.inactive);
       case PurchaseStatus.error:
-        final exception = PurchaseFailedException(
-          purchase.error?.code,
-          purchase.error?.message ?? 'Purchase failed.',
-        );
+        final exception = purchase.error?.message == _playBillingUnavailable
+            ? const StoreUnavailableException()
+            : PurchaseFailedException(
+                purchase.error?.code,
+                purchase.error?.message ?? 'Purchase failed.',
+              );
         pending?.completer?.completeError(exception);
         if (context?.silent != true) {
           _entitlementController.addError(exception);

@@ -11268,6 +11268,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterUnavailable => 'የደጋፊ የደንበኝነት ምዝገባዎች እዚህ ለአሁኑ አይገኙም።';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'በዚህ የDivine ስሪት አባልነቶች በGoogle Play ወይም በApp Store በኩል ብቻ ናቸው። Divineን የሚደግፉበት ሌሎች መንገዶች በመምጣት ላይ ናቸው።';
+
+  @override
   String get supporterRestorePurchases => 'ግዢዎችን መልስ';
 
   @override

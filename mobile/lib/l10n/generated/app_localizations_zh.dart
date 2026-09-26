@@ -10864,6 +10864,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterUnavailable => '这里暂时无法使用支持者订阅。';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      '此版本的 Divine 只能通过 Google Play 或 App Store 成为会员。更多支持 Divine 的方式即将推出。';
+
+  @override
   String get supporterRestorePurchases => '恢复购买';
 
   @override

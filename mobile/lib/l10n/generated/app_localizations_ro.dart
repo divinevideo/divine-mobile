@@ -11812,6 +11812,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Abonamentele de susținător nu sunt disponibile aici momentan.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'În această versiune Divine, abonamentele merg prin Google Play sau App Store. Vin și alte moduri de a susține Divine.';
+
+  @override
   String get supporterRestorePurchases => 'Restaurează cumpărăturile';
 
   @override

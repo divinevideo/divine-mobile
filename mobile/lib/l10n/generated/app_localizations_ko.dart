@@ -11009,6 +11009,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supporterUnavailable => '지금은 여기서 서포터 구독을 사용할 수 없어요.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      '이 버전의 Divine에서는 멤버십을 Google Play나 App Store로만 이용할 수 있어요. Divine을 응원할 다른 방법도 곧 나와요.';
+
+  @override
   String get supporterRestorePurchases => '구매 복원';
 
   @override

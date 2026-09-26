@@ -6185,6 +6185,7 @@
   "@supporterUnavailable": {
     "description": "Note shown when no supporter subscription tiers are available on this device or storefront."
   },
+  "supporterStoreNotInThisBuild": "Trong phiên bản Divine này, gói thành viên chỉ có qua Google Play hoặc App Store. Những cách khác để ủng hộ Divine sắp ra mắt.",
   "supporterRestorePurchases": "Khôi phục giao dịch mua",
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."

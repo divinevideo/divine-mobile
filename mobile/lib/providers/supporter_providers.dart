@@ -1,12 +1,14 @@
 // ABOUTME: Riverpod providers wiring the supporter feature.
-// ABOUTME: Selects the store-backed EntitlementValidator on iOS/Android and a
-// ABOUTME: stub elsewhere, owned by an account-scoped SupporterRepository.
+// ABOUTME: Selects the store-backed EntitlementValidator for builds a store
+// ABOUTME: can bill and a stub elsewhere, owned by an account-scoped repository.
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -16,14 +18,36 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'supporter_providers.g.dart';
 
-/// True when this platform has a real in-app purchase store.
+/// Whether a store can bill this build for a supporter membership.
 ///
-/// Mirrors the [hasNativeVideoPlayer] gate: iOS/Android only, web-safe.
-bool get hasInAppPurchaseStore =>
-    !kIsWeb &&
-    defaultTargetPlatform != TargetPlatform.linux &&
-    defaultTargetPlatform != TargetPlatform.windows &&
-    defaultTargetPlatform != TargetPlatform.macOS;
+/// Google Play Billing answers `BILLING_UNAVAILABLE` for any build Play did not
+/// install, so on Android only a [InstallSource.playStore] install qualifies;
+/// a Zapstore or GitHub APK would otherwise open Play's own error dialog.
+/// iOS always qualifies: StoreKit bills App Store and TestFlight builds, and a
+/// failed install-source lookup there reports [InstallSource.sideload], which
+/// must not hide purchases from a paying user.
+bool supportsStoreBilling({
+  required TargetPlatform platform,
+  required InstallSource installSource,
+  bool isWeb = kIsWeb,
+}) {
+  if (isWeb) return false;
+  return switch (platform) {
+    TargetPlatform.iOS => true,
+    TargetPlatform.android => installSource == InstallSource.playStore,
+    _ => false,
+  };
+}
+
+/// Whether this build is offered store checkout for supporter memberships.
+///
+/// Kept alive because [entitlementValidatorProvider] is, and the install
+/// source never changes within a process.
+@Riverpod(keepAlive: true)
+bool supporterStoreBillingAvailable(Ref ref) => supportsStoreBilling(
+  platform: defaultTargetPlatform,
+  installSource: ref.watch(installSourceProvider),
+);
 
 /// Base URL of the divine-supporters Worker.
 ///
@@ -94,14 +118,14 @@ SupporterApiClient? supporterApiClient(Ref ref) {
   return client;
 }
 
-/// The store-backed [EntitlementValidator] for the current platform.
+/// The store-backed [EntitlementValidator] for this build.
 ///
-/// Returns an [InAppPurchaseValidator] on iOS/Android and a
-/// [StubEntitlementValidator] elsewhere so the rest of the app can treat the
-/// supporter feature uniformly.
+/// Returns an [InAppPurchaseValidator] when [supportsStoreBilling] holds and a
+/// [StubEntitlementValidator] otherwise, so a build no store can bill never
+/// starts a checkout, restore, or background recovery against one.
 @Riverpod(keepAlive: true)
 EntitlementValidator entitlementValidator(Ref ref) {
-  if (!hasInAppPurchaseStore) {
+  if (!ref.watch(supporterStoreBillingAvailableProvider)) {
     return StubEntitlementValidator();
   }
   final validator = InAppPurchaseValidator();

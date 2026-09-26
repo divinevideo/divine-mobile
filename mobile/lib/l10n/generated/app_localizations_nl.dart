@@ -11629,6 +11629,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Supporter-abonnementen zijn hier nu niet beschikbaar.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'In deze versie van Divine lopen lidmaatschappen via Google Play of de App Store. Andere manieren om Divine te steunen komen eraan.';
+
+  @override
   String get supporterRestorePurchases => 'Aankopen herstellen';
 
   @override

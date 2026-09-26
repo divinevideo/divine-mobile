@@ -11551,6 +11551,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'سپورٹر سبسکرپشنز ابھی یہاں دستیاب نہیں ہیں۔';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Divine کے اس ورژن میں ممبرشپ Google Play یا App Store کے ذریعے ہوتی ہے۔ Divine کو سپورٹ کرنے کے دوسرے طریقے جلد آ رہے ہیں۔';
+
+  @override
   String get supporterRestorePurchases => 'خریداریاں بحال کریں';
 
   @override

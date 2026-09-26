@@ -7807,6 +7807,10 @@
   "@supporterUnavailable": {
     "description": "Note shown when no supporter subscription tiers are available on this device or storefront."
   },
+  "supporterStoreNotInThisBuild": "Memberships in this version of Divine go through Google Play or the App Store. Other ways to back Divine are on the way.",
+  "@supporterStoreNotInThisBuild": {
+    "description": "Shown on the Supporter screen in place of the plan buttons when this build cannot be billed by a store, such as an Android build installed from Zapstore or a GitHub release."
+  },
   "supporterRestorePurchases": "Restore purchases",
   "@supporterRestorePurchases": {
     "description": "Button label that re-checks the store for an existing supporter subscription."

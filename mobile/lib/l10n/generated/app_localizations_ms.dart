@@ -11567,6 +11567,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Langganan penyokong tidak tersedia di sini sekarang.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Dalam versi Divine ini, keahlian hanya melalui Google Play atau App Store. Cara lain untuk menyokong Divine akan datang.';
+
+  @override
   String get supporterRestorePurchases => 'Pulihkan pembelian';
 
   @override

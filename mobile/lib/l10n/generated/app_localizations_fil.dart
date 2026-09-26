@@ -11668,6 +11668,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi available ang mga supporter subscription dito ngayon.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Sa bersyong ito ng Divine, dumadaan sa Google Play o App Store ang mga membership. Parating na ang iba pang paraan para suportahan ang Divine.';
+
+  @override
   String get supporterRestorePurchases => 'I-restore ang mga purchase';
 
   @override

@@ -1109,6 +1109,7 @@
     "@relayDiagnosticTitle": {
         "description": "Relay diagnostics screen app bar title"
     },
+    "supporterStoreNotInThisBuild": "በዚህ የDivine ስሪት አባልነቶች በGoogle Play ወይም በApp Store በኩል ብቻ ናቸው። Divineን የሚደግፉበት ሌሎች መንገዶች በመምጣት ላይ ናቸው።",
     "relayDiagnosticRefreshTooltip": "ምርመራዎችን ያድሱ",
     "relayDiagnosticLastRefresh": "የመጨረሻው መታደስ፡ {time}",
     "@relayDiagnosticLastRefresh": {

@@ -11568,6 +11568,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Supporter-prenumerationer är inte tillgängliga här just nu.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'I den här versionen av Divine går medlemskap via Google Play eller App Store. Fler sätt att stötta Divine är på väg.';
+
+  @override
   String get supporterRestorePurchases => 'Återställ köp';
 
   @override

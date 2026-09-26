@@ -11515,6 +11515,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Gói đăng ký ủng hộ hiện không khả dụng ở đây.';
 
   @override
+  String get supporterStoreNotInThisBuild =>
+      'Trong phiên bản Divine này, gói thành viên chỉ có qua Google Play hoặc App Store. Những cách khác để ủng hộ Divine sắp ra mắt.';
+
+  @override
   String get supporterRestorePurchases => 'Khôi phục giao dịch mua';
 
   @override

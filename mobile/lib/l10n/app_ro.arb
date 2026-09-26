@@ -3113,6 +3113,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Abonamentele de susținător nu sunt disponibile aici momentan.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "În această versiune Divine, abonamentele merg prin Google Play sau App Store. Vin și alte moduri de a susține Divine.",
     "supporterRestorePurchases": "Restaurează cumpărăturile",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "Închide eroarea",

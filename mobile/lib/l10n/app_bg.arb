@@ -3230,6 +3230,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Абонаментите за поддръжници не са налични тук в момента.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "Членствата в тази версия на Divine минават през Google Play или App Store. Идват и други начини да подкрепиш Divine.",
     "supporterRestorePurchases": "Възстанови покупките",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "Отхвърли грешката",

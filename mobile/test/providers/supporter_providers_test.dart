@@ -1,12 +1,16 @@
-// ABOUTME: Tests account and signer gates for automatic supporter recovery.
-// ABOUTME: Ensures recovery waits for NIP-98 signing capability.
+// ABOUTME: Tests account and signer gates for automatic supporter recovery,
+// ABOUTME: and which builds are offered store billing at all.
 
+import 'package:app_update_repository/app_update_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/supporter_repository.dart';
@@ -139,6 +143,108 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       verify(() => repository.recoverPurchases()).called(1);
+    });
+  });
+
+  group('supportsStoreBilling', () {
+    test(
+      'offers Google Play billing only to Play-installed Android builds',
+      () {
+        // Play Billing answers BILLING_UNAVAILABLE for any build it did not
+        // install, so a Zapstore or GitHub APK must never reach its checkout.
+        expect(
+          supportsStoreBilling(
+            platform: TargetPlatform.android,
+            installSource: InstallSource.playStore,
+            isWeb: false,
+          ),
+          isTrue,
+        );
+        for (final source in [InstallSource.zapstore, InstallSource.sideload]) {
+          expect(
+            supportsStoreBilling(
+              platform: TargetPlatform.android,
+              installSource: source,
+              isWeb: false,
+            ),
+            isFalse,
+            reason: '$source',
+          );
+        }
+      },
+    );
+
+    test('offers StoreKit on iOS whatever the install source reports', () {
+      // A failed iOS install-source lookup falls back to sideload; that must
+      // not hide App Store purchases from a paying user.
+      for (final source in InstallSource.values) {
+        expect(
+          supportsStoreBilling(
+            platform: TargetPlatform.iOS,
+            installSource: source,
+            isWeb: false,
+          ),
+          isTrue,
+          reason: '$source',
+        );
+      }
+    });
+
+    test('offers no store billing on web or desktop', () {
+      expect(
+        supportsStoreBilling(
+          platform: TargetPlatform.android,
+          installSource: InstallSource.playStore,
+          isWeb: true,
+        ),
+        isFalse,
+      );
+      for (final platform in [
+        TargetPlatform.macOS,
+        TargetPlatform.linux,
+        TargetPlatform.windows,
+      ]) {
+        expect(
+          supportsStoreBilling(
+            platform: platform,
+            installSource: InstallSource.sideload,
+            isWeb: false,
+          ),
+          isFalse,
+          reason: '$platform',
+        );
+      }
+    });
+  });
+
+  group('entitlementValidatorProvider', () {
+    setUp(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    ProviderContainer containerFor(InstallSource source) {
+      final container = ProviderContainer(
+        overrides: [installSourceProvider.overrideWithValue(source)],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    for (final source in [InstallSource.zapstore, InstallSource.sideload]) {
+      test('uses the stub validator for a $source Android build', () {
+        final container = containerFor(source);
+
+        expect(container.read(supporterStoreBillingAvailableProvider), isFalse);
+        expect(
+          container.read(entitlementValidatorProvider),
+          isA<StubEntitlementValidator>(),
+        );
+      });
+    }
+
+    test('reports store billing available for a Play-installed build', () {
+      final container = containerFor(InstallSource.playStore);
+
+      expect(container.read(supporterStoreBillingAvailableProvider), isTrue);
     });
   });
 

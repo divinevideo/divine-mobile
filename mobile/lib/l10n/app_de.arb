@@ -3113,6 +3113,7 @@
     "@supporterStoreChecking": {"description": "Loading note shown while supporter subscription tiers are fetched from the store."},
     "supporterUnavailable": "Supporter-Abos sind hier gerade nicht verfügbar.",
     "@supporterUnavailable": {"description": "Note shown when no supporter subscription tiers are available on this device or storefront."},
+    "supporterStoreNotInThisBuild": "Mitgliedschaften laufen in dieser Divine-Version über Google Play oder den App Store. Weitere Wege, Divine zu unterstützen, sind unterwegs.",
     "supporterRestorePurchases": "Käufe wiederherstellen",
     "@supporterRestorePurchases": {"description": "Button label that re-checks the store for an existing supporter subscription."},
     "supporterDismissError": "Fehler ausblenden",
