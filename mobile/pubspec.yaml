@@ -540,6 +540,7 @@ flutter:
       flavors: [DivineUITests]
     - assets/seed_media/classic_viner_avatars/brittany-furlan.png
     - assets/seed_media/classic_viner_avatars/jerome-jarre.png
+    - assets/divine_stickers/
     - assets/stickers/
     - assets/stickers/i18n/
     - shorebird.yaml
