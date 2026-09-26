@@ -5,6 +5,10 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Last-known minor-account review restriction per account on this device.
+///
+/// Kept in SharedPreferences rather than `cache_sync` because the router
+/// redirect reads it synchronously on every navigation and `CacheSync.read`
+/// is async. It is only a routing hint; a settled fetch always wins.
 class MinorAccountReviewStatusStore {
   MinorAccountReviewStatusStore({required SharedPreferences prefs})
     : _prefs = prefs;
