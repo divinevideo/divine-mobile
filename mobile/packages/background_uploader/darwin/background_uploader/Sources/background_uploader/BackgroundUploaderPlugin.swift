@@ -73,7 +73,16 @@ private final class BackgroundUploadCoordinator: NSObject {
   private var foregroundSessionOwners: [String: ObjectIdentifier] = [:]
   #endif
 
-  private lazy var session: URLSession = {
+  /// Guards `storedSession`: it is created by whichever thread asks first —
+  /// the warm-up that `attach` starts on a background queue, or a main-queue
+  /// method call or background relaunch that arrives before it finishes.
+  private let sessionLock = NSLock()
+  private var storedSession: URLSession?
+
+  private var session: URLSession {
+    sessionLock.lock()
+    defer { sessionLock.unlock() }
+    if let existing = storedSession { return existing }
     let configuration = URLSessionConfiguration.background(
       withIdentifier: BackgroundUploadCoordinator.sessionIdentifier
     )
@@ -81,20 +90,28 @@ private final class BackgroundUploadCoordinator: NSObject {
     configuration.sessionSendsLaunchEvents = true
     #endif
     configuration.isDiscretionary = false
-    return URLSession(
+    let created = URLSession(
       configuration: configuration,
       delegate: self,
       delegateQueue: nil
     )
-  }()
+    storedSession = created
+    return created
+  }
 
   func attach(_ channel: FlutterMethodChannel) {
     dispatchPrecondition(condition: .onQueue(.main))
     channels.append(channel)
-    // Touch the lazy session so its delegate is connected immediately. This
+    // Create the session now so its delegate is connected immediately. This
     // lets tasks that completed while the app was dead deliver their terminal
-    // events as soon as an engine attaches.
-    _ = session
+    // events as soon as an engine attaches. It is created off the main thread:
+    // a background session is a synchronous round trip to nsurlsessiond, and
+    // doing it here during plugin registration held every launch for ~6 ms
+    // before the Dart isolate could start (#9493). Delegate callbacks already
+    // hop to the main queue before touching `channels`.
+    DispatchQueue.global(qos: .userInitiated).async {
+      _ = self.session
+    }
   }
 
   /// Drops one engine's channel so upload events stop fanning out to it, and

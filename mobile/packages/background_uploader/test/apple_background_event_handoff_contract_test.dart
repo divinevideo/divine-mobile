@@ -94,6 +94,40 @@ void main() {
       },
     );
 
+    test('creates the background session off the main thread on attach', () {
+      final attach = source.indexOf(
+        'func attach(_ channel: FlutterMethodChannel)',
+      );
+      final attachBody = source.substring(
+        attach,
+        source.indexOf('\n  }\n', attach),
+      );
+
+      expect(attach, greaterThanOrEqualTo(0));
+      expect(
+        attachBody,
+        contains('DispatchQueue.global('),
+        reason:
+            'attach runs during plugin registration, on the main thread, '
+            'before the first frame. Creating a background URLSession is a '
+            'synchronous round trip to nsurlsessiond that held every launch '
+            'for ~6 ms (#9493).',
+      );
+      expect(
+        attachBody,
+        isNot(contains('\n    _ = session')),
+        reason: 'The session must not be created inline on the main thread.',
+      );
+      expect(
+        source,
+        isNot(contains('lazy var session')),
+        reason:
+            'The session is now created from a background queue and from '
+            'the main queue, and a lazy var is not safe to initialize from '
+            'two threads at once.',
+      );
+    });
+
     test('arms a watchdog that balances the app-delegate completion', () {
       final handleBackgroundEvents = source.indexOf(
         'func handleBackgroundEvents(',

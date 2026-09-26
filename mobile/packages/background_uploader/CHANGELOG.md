@@ -9,3 +9,5 @@
 - Android foreground-service implementation.
 - Keep iOS background-session wakes alive until Dart publish follow-up work
   explicitly finishes, with a native watchdog to balance the completion handler.
+- Create the Darwin background `URLSession` off the main thread when an engine
+  attaches, so plugin registration no longer blocks app launch on it.
