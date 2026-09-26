@@ -92,7 +92,7 @@ Every overlay below sits on the timeline, where it can be moved, trimmed to show
 - **Text:** 79 fonts (`VideoEditorConstants.textFontCatalogue`), left, center or right alignment, four background modes (none, solid, highlight, transparent), 11 preset colors plus a custom picker with recent colors, size from 0.5× to 4×. Saved title styles keep font, colors, background, alignment, size and animations; names are up to 40 characters.
 - **Drawing:** pencil, marker, arrow and eraser, each with a fixed width. Undo and redo inside the tool. Several drawing layers can be merged into one.
 - **Stickers:** 71 bundled OpenMoji stickers, searchable by keyword and by their localized names.
-- **Filters:** 56 looks plus "None" (40 classic presets, 8 styled looks, 8 color tints), one at a time, with a strength slider.
+- **Filters:** 56 looks plus "None" (40 classic presets, 8 styled looks, 8 color tints), picked one at a time with a strength slider. Each confirmed filter is kept, so several can stack.
 - **Adjustments:** brightness, contrast, saturation, exposure, hue, temperature, tint and fade. One adjustment session shares a single time window on the timeline.
 
 Enter and leave animations, per layer:
