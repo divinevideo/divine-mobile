@@ -123,7 +123,7 @@ Enter and leave animations, per layer:
 
 - 1080p at 8 Mbps. If the encoder fails, the render retries at 720p and 4 Mbps.
 - ProofMode signing, which can be retried if it fails.
-- One progress indicator for render, stop-motion assembly and signing, with cancel. A watchdog stops a render after 5 minutes.
+- One progress indicator for render, stop-motion assembly and signing, with a retry if it fails. A watchdog stops a render after 5 minutes.
 - Cover image picked from a frame of the video.
 - A preview of the post as it will look in the feed.
 - Save the finished video to the device.
