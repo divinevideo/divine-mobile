@@ -5,12 +5,14 @@ import 'package:creator_sync/creator_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/dm/conversation_mute/conversation_mute_cubit.dart';
+import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
@@ -21,6 +23,10 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockSyncIndexClient extends Mock implements SyncIndexClient {}
+
+const _restrictedReviewStatus = MinorAccountReviewStatus(
+  restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+);
 
 /// A [LocalSoundStore] that is always empty, standing in for a device whose
 /// saved-sounds bucket has already been wiped by cleanup.
@@ -188,6 +194,38 @@ void main() {
           prefs.getBool('adult_content_verified_$verificationPubkey'),
           isTrue,
         );
+      });
+
+      group('minor-account review status', () {
+        const otherPubkey =
+            'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+        late MinorAccountReviewStatusStore store;
+
+        setUp(() async {
+          store = MinorAccountReviewStatusStore(prefs: prefs);
+          await store.remember(verificationPubkey, _restrictedReviewStatus);
+          await store.remember(otherPubkey, _restrictedReviewStatus);
+        });
+
+        test('destructive sign-out forgets only that account', () async {
+          await service.clearUserSpecificData(
+            deleteUserData: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(store.lastKnownRestrictedFor(verificationPubkey), isNull);
+          expect(store.lastKnownRestrictedFor(otherPubkey), isTrue);
+        });
+
+        test('account switch keeps it', () async {
+          await service.clearUserSpecificData(
+            isIdentityChange: true,
+            userPubkey: verificationPubkey,
+          );
+
+          expect(store.lastKnownRestrictedFor(verificationPubkey), isTrue);
+        });
       });
 
       test('clears all user-specific keys from SharedPreferences', () async {
@@ -782,6 +820,23 @@ void main() {
           );
         },
       );
+
+      test("forgets only that account's minor-account review status", () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        final store = MinorAccountReviewStatusStore(prefs: prefs);
+        await store.remember(deletedPubkey, _restrictedReviewStatus);
+        await store.remember(otherPubkey, _restrictedReviewStatus);
+
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+
+        expect(store.lastKnownRestrictedFor(deletedPubkey), isNull);
+        expect(store.lastKnownRestrictedFor(otherPubkey), isTrue);
+      });
 
       test('deletes device-wide user data when no session is active', () async {
         final deletedPubkey = 'a' * 64;

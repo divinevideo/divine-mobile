@@ -279,8 +279,7 @@ _MinorReviewRoutingSignature _minorReviewRoutingSignature(
 /// leaving an already-open reel untouched.
 ///
 /// [previous] is nullable only for defensiveness and the first-emission tests;
-/// the production `ref.listen` at [goRouterProvider] omits `fireImmediately`,
-/// so Riverpod only ever invokes it with a real prior [AsyncValue].
+/// [goRouterProvider] passes the status routed at the previous emission.
 @visibleForTesting
 bool minorAccountReviewStatusAffectsRouting(
   AsyncValue<MinorAccountReviewStatus>? previous,
@@ -288,6 +287,59 @@ bool minorAccountReviewStatusAffectsRouting(
 ) {
   return _minorReviewRoutingSignature(previous) !=
       _minorReviewRoutingSignature(next);
+}
+
+/// The review status [appRouterRedirect] gates on, given the [live] fetch.
+///
+/// While the fetch runs, [live] carries either no value, which holds the
+/// account on the loading screen for the whole request, or the value it had
+/// before. At cold start that is the `active()` resolved while auth was still
+/// restoring, which says nothing about this account. The account's
+/// [lastKnownRestricted] status decides instead, and is only read while
+/// fetching: an account never seen restricted routes without waiting, and one
+/// seen restricted waits for the fetch rather than routing on the
+/// placeholder. A settled [live] always wins, and so does a result a refetch
+/// carries over, so a status that could not be fetched still fails open, and a
+/// restriction is only routed on once fetched.
+@visibleForTesting
+AsyncValue<MinorAccountReviewStatus> minorAccountReviewRoutingStatus(
+  AsyncValue<MinorAccountReviewStatus> live, {
+  required bool? Function() lastKnownRestricted,
+}) {
+  if (!live.isLoading) return live;
+  return switch (lastKnownRestricted()) {
+    null => live,
+    // A refetch keeps what this account's fetch already settled on: a
+    // result, a restriction's case included, or a failure that failed open.
+    true
+        when live.isRefreshing ||
+            live.hasError ||
+            (live.value?.isRestricted ?? false) =>
+      live,
+    true => const AsyncLoading(),
+    false when live.hasValue => live,
+    false => AsyncData(MinorAccountReviewStatus.active()),
+  };
+}
+
+AsyncValue<MinorAccountReviewStatus> _routedReviewStatus(
+  Ref ref,
+  AsyncValue<MinorAccountReviewStatus> live,
+) {
+  final authService = ref.read(authServiceProvider);
+  return minorAccountReviewRoutingStatus(
+    live,
+    lastKnownRestricted: () {
+      final pubkeyHex = authService.currentPublicKeyHex;
+      if (authService.authState != AuthState.authenticated ||
+          pubkeyHex == null) {
+        return null;
+      }
+      return ref
+          .read(minorAccountReviewStatusStoreProvider)
+          .lastKnownRestrictedFor(pubkeyHex);
+    },
+  );
 }
 
 /// Top-level GoRouter redirect: divine:// scheme → universal-link rewrite →
@@ -382,7 +434,10 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     return deepLinkRewrite;
   }
 
-  final reviewStatusAsync = ref.read(currentMinorAccountReviewStatusProvider);
+  final reviewStatusAsync = _routedReviewStatus(
+    ref,
+    ref.read(currentMinorAccountReviewStatusProvider),
+  );
   final deletionAttemptAsync = ref.read(currentAccountDeletionAttemptProvider);
   final submittedDeletion =
       authState == AuthState.authenticated &&
@@ -445,13 +500,12 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         : WelcomeScreen.path;
   }
 
-  // Only bounce to the loading screen on a true cold load (no value yet).
-  // Riverpod keeps the previous value during a background refetch
-  // (isLoading == true while hasValue == true), e.g. when
-  // currentAuthStateProvider publishes a new auth state.
-  // Treating those transient refetches as "loading" would redirect away
-  // from the current route to the review loading screen and back, which
-  // tears down and rebuilds the video feed.
+  // Only bounce to the loading screen while the routed status has no value:
+  // a cold load, or an account seen restricted whose only value is the
+  // signed-out placeholder (see minorAccountReviewRoutingStatus). Riverpod
+  // keeps the previous value through a background refetch (isLoading while
+  // hasValue), and bouncing on those would take the user to the loading
+  // screen and back, tearing down the video feed.
   if (authState == AuthState.authenticated &&
       reviewStatusAsync.isLoading &&
       !reviewStatusAsync.hasValue) {
