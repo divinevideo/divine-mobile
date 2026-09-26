@@ -68,7 +68,7 @@ Green screen (chroma key):
 
 - Key color: auto-detect, green, blue, or a custom color.
 - Controls for amount, edge softness and color spill.
-- Background: transparent (black in the exported video), a color, a camera photo, or a library clip.
+- Background on a timeline clip: transparent (black in the exported video), a color, a camera photo, or a library clip. On a detached layer, transparent shows whatever is underneath, and a library clip is not offered.
 - On a timeline clip the key is baked into the clip; on a detached layer it is applied live.
 
 Timeline:
