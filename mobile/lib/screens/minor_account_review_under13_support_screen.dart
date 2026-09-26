@@ -104,6 +104,26 @@ class _Under13SupportBody extends StatelessWidget {
           style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
         ),
         const SizedBox(height: 24),
+        // Contacting Divine is the whole point of this screen, so it leads.
+        // The address and case ID below are reference material for composing
+        // that message, not a step to clear before sending it.
+        DivineButton(
+          label: l10n.authOpenEmailApp,
+          expanded: true,
+          onPressed: () => _openMinorAccountReviewEmailApp(
+            context: context,
+            composeEmail: composeEmail,
+            supportEmail: supportEmail,
+            subject: emailSubject,
+            body: emailBody,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          l10n.minorAccountReviewUnder13Instructions,
+          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
+        ),
+        const SizedBox(height: 16),
         _ValueCard(
           title: l10n.minorAccountReviewSupportEmailLabel,
           value: supportEmail,
@@ -126,25 +146,9 @@ class _Under13SupportBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Text(
-          l10n.minorAccountReviewUnder13Instructions,
-          style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
-        ),
-        const SizedBox(height: 24),
-        DivineButton(
-          label: l10n.authOpenEmailApp,
-          expanded: true,
-          onPressed: () => _openMinorAccountReviewEmailApp(
-            context: context,
-            composeEmail: composeEmail,
-            supportEmail: supportEmail,
-            subject: emailSubject,
-            body: emailBody,
-          ),
-        ),
-        const SizedBox(height: 12),
         DivineButton(
           label: l10n.minorAccountReviewBackToReview,
+          type: DivineButtonType.secondary,
           expanded: true,
           onPressed: () => context.go(MinorAccountReviewScreen.path),
         ),
