@@ -298,8 +298,9 @@ bool minorAccountReviewStatusAffectsRouting(
 /// [lastKnownRestricted] status decides instead, and is only read while
 /// fetching: an account last seen active routes without waiting, and one last
 /// seen restricted waits for the fetch rather than routing on the
-/// placeholder. A settled [live] always wins, so a status that could not be
-/// fetched still fails open, and a restriction is only routed on once fetched.
+/// placeholder. A settled [live] always wins, and so does a result a refetch
+/// carries over, so a status that could not be fetched still fails open, and a
+/// restriction is only routed on once fetched.
 @visibleForTesting
 AsyncValue<MinorAccountReviewStatus> minorAccountReviewRoutingStatus(
   AsyncValue<MinorAccountReviewStatus> live, {
@@ -308,8 +309,13 @@ AsyncValue<MinorAccountReviewStatus> minorAccountReviewRoutingStatus(
   if (!live.isLoading) return live;
   return switch (lastKnownRestricted()) {
     null => live,
-    // A background refetch keeps the fetched restriction, case included.
-    true when live.value?.isRestricted ?? false => live,
+    // A refetch keeps what this account's fetch already settled on: a
+    // result, a restriction's case included, or a failure that failed open.
+    true
+        when live.isRefreshing ||
+            live.hasError ||
+            (live.value?.isRestricted ?? false) =>
+      live,
     true => const AsyncLoading(),
     false when live.hasValue => live,
     false => AsyncData(MinorAccountReviewStatus.active()),

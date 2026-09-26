@@ -29,22 +29,32 @@ class _NotReadyNostrSession extends NostrSession {
 
 class _MockRepository extends Mock implements MinorAccountReviewRepository {}
 
-/// The state a status provider holds while refetching after [previous]: a
-/// retained value, which is what a resume refetch carries.
+/// The state a status provider holds during a refetch, after it settled on
+/// [previous] and, with [thenFailed], on a failed fetch after that. The
+/// refetch is an invalidation, as a resume or "check again" makes, or with
+/// [reload] a dependency change, as an auth flip makes.
 Future<AsyncValue<MinorAccountReviewStatus>> _refetchingAfter(
-  MinorAccountReviewStatus previous,
-) async {
-  final fetches = [
-    Future.value(previous),
-    Completer<MinorAccountReviewStatus>().future,
+  MinorAccountReviewStatus previous, {
+  bool thenFailed = false,
+  bool reload = false,
+}) async {
+  final fetches = <Future<MinorAccountReviewStatus> Function()>[
+    () async => previous,
+    if (thenFailed) () async => throw StateError('status unavailable'),
+    () => Completer<MinorAccountReviewStatus>().future,
   ];
   final status = FutureProvider<MinorAccountReviewStatus>(
-    (ref) => fetches.removeAt(0),
+    (ref) => fetches.removeAt(0)(),
+    retry: (_, _) => null,
   );
   final container = ProviderContainer();
   addTearDown(container.dispose);
   await container.read(status.future);
-  container.invalidate(status);
+  if (thenFailed) {
+    container.invalidate(status, asReload: true);
+    await expectLater(container.read(status.future), throwsStateError);
+  }
+  container.invalidate(status, asReload: reload);
   return container.read(status);
 }
 
@@ -81,6 +91,49 @@ void main() {
 
       expect(routed.hasError, isTrue);
       expect(routed.value, isNull);
+    });
+
+    test('keeps failing open while a failed fetch is refetched', () async {
+      final live = await _refetchingAfter(
+        MinorAccountReviewStatus.active(),
+        thenFailed: true,
+      );
+      expect(live.isRefreshing && live.hasError, isTrue);
+
+      final routed = minorAccountReviewRoutingStatus(
+        live,
+        lastKnownRestricted: () => true,
+      );
+
+      expect(routed, same(live));
+    });
+
+    test('keeps failing open through a reload after a failed fetch', () async {
+      final live = await _refetchingAfter(
+        MinorAccountReviewStatus.active(),
+        thenFailed: true,
+        reload: true,
+      );
+      expect(live.isReloading && live.hasError, isTrue);
+
+      final routed = minorAccountReviewRoutingStatus(
+        live,
+        lastKnownRestricted: () => true,
+      );
+
+      expect(routed, same(live));
+    });
+
+    test('keeps routing on a settled result while it is refetched', () async {
+      final live = await _refetchingAfter(MinorAccountReviewStatus.active());
+      expect(live.isRefreshing, isTrue);
+
+      final routed = minorAccountReviewRoutingStatus(
+        live,
+        lastKnownRestricted: () => true,
+      );
+
+      expect(routed, same(live));
     });
   });
 
@@ -189,7 +242,9 @@ void main() {
       await tester.pump();
     }
 
-    /// Refetches the status the way a resume or "check again" does.
+    /// Refetches the status the way a resume or "check again" does. As in the
+    /// app, nothing watches the router, so the status only rebuilds when the
+    /// next redirect reads it.
     Future<void> refetchStatus(WidgetTester tester) async {
       container.invalidate(currentMinorAccountReviewStatusProvider);
       await tester.pump();
@@ -297,6 +352,30 @@ void main() {
         await tester.pumpAndSettle();
         expect(location(router), LegalScreen.path);
       });
+
+      testWidgets(
+        'stays on the destination while a timed-out fetch is retried',
+        (tester) async {
+          final router = await pumpRouter(
+            tester,
+            startState: AuthState.checking,
+            cachedRestricted: true,
+          );
+          await finishAuthRestore(tester);
+          await tester.pump(const Duration(seconds: 10));
+          await tester.pumpAndSettle();
+          expect(location(router), LegalScreen.path);
+
+          await refetchStatus(tester);
+          router.refresh();
+          await tester.pumpAndSettle();
+          expect(location(router), LegalScreen.path);
+
+          refetch.complete(MinorAccountReviewStatus.active());
+          await tester.pumpAndSettle();
+          expect(location(router), LegalScreen.path);
+        },
+      );
     });
   });
 }
