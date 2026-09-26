@@ -296,7 +296,7 @@ bool minorAccountReviewStatusAffectsRouting(
 /// before. At cold start that is the `active()` resolved while auth was still
 /// restoring, which says nothing about this account. The account's
 /// [lastKnownRestricted] status decides instead, and is only read while
-/// fetching: an account last seen active routes without waiting, and one last
+/// fetching: an account never seen restricted routes without waiting, and one
 /// seen restricted waits for the fetch rather than routing on the
 /// placeholder. A settled [live] always wins, and so does a result a refetch
 /// carries over, so a status that could not be fetched still fails open, and a
@@ -501,7 +501,7 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
   }
 
   // Only bounce to the loading screen while the routed status has no value:
-  // a cold load, or an account last seen restricted whose only value is the
+  // a cold load, or an account seen restricted whose only value is the
   // signed-out placeholder (see minorAccountReviewRoutingStatus). Riverpod
   // keeps the previous value through a background refetch (isLoading while
   // hasValue), and bouncing on those would take the user to the loading

@@ -1,5 +1,5 @@
-// ABOUTME: Tests for MinorAccountReviewStatusStore — the per-account last-known
-// ABOUTME: review restriction the router gates on while a fetch runs (#9495).
+// ABOUTME: Tests for MinorAccountReviewStatusStore — whether each account has
+// ABOUTME: been seen restricted, gating routing while a fetch runs (#9495).
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -41,11 +41,17 @@ void main() {
         expect(store.lastKnownRestrictedFor(otherPubkey), isNull);
       });
 
-      test('replaces a restriction once a fetch returns active', () async {
-        await store.remember(pubkey, restricted());
+      test('records active for an account never seen restricted', () async {
         await store.remember(pubkey, MinorAccountReviewStatus.active());
 
         expect(store.lastKnownRestrictedFor(pubkey), isFalse);
+      });
+
+      test('keeps a restriction when a later fetch returns active', () async {
+        await store.remember(pubkey, restricted());
+        await store.remember(pubkey, MinorAccountReviewStatus.active());
+
+        expect(store.lastKnownRestrictedFor(pubkey), isTrue);
       });
     });
   });

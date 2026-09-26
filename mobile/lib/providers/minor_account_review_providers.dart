@@ -85,7 +85,7 @@ final currentMinorAccountReviewStatusProvider =
       return status;
     }, retry: (_, error) => null);
 
-/// Last-known review restriction per account, kept across launches.
+/// Whether each account has been seen restricted, kept across launches.
 final minorAccountReviewStatusStoreProvider =
     Provider<MinorAccountReviewStatusStore>((ref) {
       return MinorAccountReviewStatusStore(

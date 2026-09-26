@@ -1,5 +1,5 @@
-// ABOUTME: Router gating with a last-known review status (#9495): last seen
-// ABOUTME: active skips the wait, last seen restricted ignores the placeholder.
+// ABOUTME: Router gating with a saved review status (#9495): an account never
+// ABOUTME: seen restricted skips the wait, one seen restricted does not.
 
 import 'dart:async';
 
