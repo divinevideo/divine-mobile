@@ -49,7 +49,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
 - **Save to library:** renders the trimmed clip, overlays included, into a standalone clip in the library.
 - **Add clips** from the library or the camera.
-- **Volume** per clip, or for all clips at once. Long-press on the header volume button mutes everything.
+- **Volume** per clip. Long-pressing any volume control mutes all clips and sound tracks, or unmutes them if everything is already muted.
 
 Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart)):
 
