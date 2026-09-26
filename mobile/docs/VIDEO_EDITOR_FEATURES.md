@@ -62,7 +62,7 @@ Detach (picture-in-picture):
 
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
-- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any shape, and green-screened. It has no enter or leave animation.
+- A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, and green-screened. It has no enter or leave animation.
 
 Green screen (chroma key):
 
