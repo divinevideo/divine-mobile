@@ -365,6 +365,39 @@ void main() {
         },
       );
 
+      test('signs a new token when reuseCached is false', () async {
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+
+        var callCount = 0;
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((invocation) async {
+          callCount++;
+          final tags =
+              invocation.namedArguments[#tags] as List<List<String>>? ?? [];
+          return _createMockEvent(tags: tags, idSuffix: callCount.toString());
+        });
+
+        final cached = await service.createAuthToken(
+          url: 'https://api.divine.video/api/account-deletion/attempts/current',
+          method: HttpMethod.get,
+        );
+        final fresh = await service.createAuthToken(
+          url: 'https://api.divine.video/api/account-deletion/attempts/current',
+          method: HttpMethod.get,
+          reuseCached: false,
+        );
+
+        expect(cached, isNotNull);
+        expect(fresh, isNotNull);
+        expect(fresh!.token, isNot(equals(cached!.token)));
+        expect(callCount, equals(2));
+      });
+
       test('clearTokenCache empties the cache', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(true);
         _stubSignEvent(mockAuthService);

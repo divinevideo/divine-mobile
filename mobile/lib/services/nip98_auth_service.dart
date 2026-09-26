@@ -79,10 +79,15 @@ class Nip98AuthService {
   Timer? _cleanupTimer;
 
   /// Create a NIP-98 authentication token for an HTTP request
+  ///
+  /// A cached token can be up to 45 s old when it is sent, so a device clock
+  /// running more than ~15 s slow pushes it past a 60 s server window. Pass
+  /// `reuseCached: false` to always sign a new event.
   Future<Nip98Token?> createAuthToken({
     required String url,
     required HttpMethod method,
     String? payload,
+    bool reuseCached = true,
   }) async {
     if (!_authService.isAuthenticated) {
       Log.error(
@@ -98,7 +103,7 @@ class Nip98AuthService {
       final cacheKey = _createCacheKey(url, method, payload);
 
       // Check cache first
-      final cachedToken = _tokenCache[cacheKey];
+      final cachedToken = reuseCached ? _tokenCache[cacheKey] : null;
       if (cachedToken != null && !cachedToken.isExpired) {
         Log.debug(
           'Using cached NIP-98 token',

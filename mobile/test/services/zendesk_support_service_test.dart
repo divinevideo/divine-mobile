@@ -2025,6 +2025,7 @@ class _RecordingUrlNip98AuthService implements Nip98AuthService {
     required String url,
     required HttpMethod method,
     String? payload,
+    bool reuseCached = true,
   }) async {
     signedUrl = url;
     final now = clock.now();

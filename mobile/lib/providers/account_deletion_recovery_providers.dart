@@ -314,7 +314,13 @@ final currentAccountDeletionAttemptProvider =
                 .fetchCurrent();
         }
       },
-      retry: (retryCount, error) => error is AccountDeletionStatusUnavailable
+      // Each request signs a fresh token, so a 401 means the device clock or
+      // the signature is wrong, and a retry repeats it. The default policy
+      // sent it ten more times.
+      retry: (retryCount, error) =>
+          error is AccountDeletionStatusUnavailable ||
+              (error is AccountDeletionRecoveryException &&
+                  error.statusCode == 401)
           ? null
           : ProviderContainer.defaultRetry(retryCount, error),
     );
