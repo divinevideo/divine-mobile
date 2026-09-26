@@ -103,7 +103,7 @@ Enter and leave animations, per layer:
 
 ## Captions
 
-- **Auto captions:** the audio is transcribed on Divine's server first, with an on-device fallback (Apple speech recognition on iOS and macOS; Android 14 or later with language packs installed). Clip audio is transcribed; music and voice-over are not. The language is the app's language.
+- **Auto captions:** the audio is transcribed on Divine's server first, with a fallback to the platform's speech recognition: Apple's on iOS, which runs on the device when it supports the language and on Apple's servers otherwise; Android 14 or later with language packs installed, on the device. Clip audio is transcribed; music and voice-over are not. The language is the app's language.
 - **Editing:** change a caption's text and timing, add and remove captions. Minimum caption length 200 ms. Captions can be typed by hand when recognition finds nothing.
 - **Styles:** 20 presets, a custom style (font, text color, background, animation: none, fade, pop or spring), and saved caption styles.
 - **Output:** burning captions into the picture is optional; they are always published as a separate subtitle track as well.
