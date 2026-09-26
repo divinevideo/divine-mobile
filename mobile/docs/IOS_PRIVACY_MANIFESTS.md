@@ -71,6 +71,7 @@ declaration described below.
 | Bundle | Category | Reason | Justification |
 |---|---|---|---|
 | `divine_camera` | `SystemBootTime` | `35F9.1` | `VolumeKeyHandler.swift` reads `ProcessInfo.systemUptime` at two sites purely to measure elapsed time for Bluetooth-trigger cooldown and debounce. Nothing derived from it leaves the device — the file has no method channel or event sink. |
+| `divine_video_player` | `SystemBootTime` | `35F9.1` | `ClipAudioLoop.swift` reads `mach_absolute_time()` to schedule a looping clip's sound a moment ahead on the audio engine and line it up with the picture's clock. The value only times playback on the device; nothing derived from it leaves it. |
 | `divine_device_attestation` | `UserDefaults` | `CA92.1` | App Attest key handles are cached in `UserDefaults.standard`, the app's own defaults domain, and are accessible only to this app. |
 | `LibProofMode` | `FileTimestamp` | `C617.1` | `MediaItem.withData` reads `URLResourceKey.contentModificationDateKey` / `.creationDateKey`. Every path Divine feeds to `MediaItem(mediaUrl:)` is a file the app wrote in its own container (editor render output or a recorded clip). |
 | App (`Runner`) | *(none)* | — | The Runner target's own Release code calls no required-reason API. Its single `UserDefaults` call is inside `#if DEBUG`. |

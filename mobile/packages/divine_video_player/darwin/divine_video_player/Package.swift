@@ -14,7 +14,10 @@ let package = Package(
   targets: [
     .target(
       name: "divine_video_player",
-      dependencies: []
+      dependencies: [],
+      resources: [
+        .process("Resources"),
+      ]
     ),
   ]
 )
