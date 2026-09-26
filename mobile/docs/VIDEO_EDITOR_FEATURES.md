@@ -15,7 +15,7 @@ These shape what the editor offers, and explain several things it deliberately d
 
 - **6.3 seconds maximum.** `VideoEditorConstants.maxDuration`. The timeline shades everything past it and the export truncates to it.
 - **Camera-first.** There is no import from the camera roll. The recorder's Upload mode only explains why (ProofMode verification of camera-captured content). Both photo picks in the editor, a green-screen backdrop and the still that fills a detached clip's gap, open the camera, not the gallery.
-- **No generative or ML effects.** Green screen is true chroma key by product decision; see issue [#8543](https://github.com/divinevideo/divine-mobile/issues/8543).
+- **No generative or ML effects.** Green screen is true chroma key; the decision is recorded, pending ratification, in issue [#8543](https://github.com/divinevideo/divine-mobile/issues/8543).
 - **Two aspect ratios,** square and 9:16, chosen when recording. The editor has no control to change it.
 
 ## Getting into the editor
