@@ -6,7 +6,9 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
-import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/gestures.dart'
+    show kDoubleTapTimeout, kLongPressTimeout;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -308,7 +310,8 @@ List _buildOverrides({
 
 /// Pumps [FeedVideos] wrapped in all required bloc providers and Riverpod
 /// overrides. [videoPlaybackStatusCubit] drives the overlay mode tests;
-/// [moderationService] drives the loading/restricted overlay tests.
+/// [moderationService] drives the loading/restricted overlay tests;
+/// [videosListenable] replaces the list under the mounted feed.
 Future<ProviderContainer> _pumpFeedVideos(
   WidgetTester tester, {
   required List<VideoEvent> videos,
@@ -329,6 +332,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   void Function(VideoEvent, int)? onActiveVideoChanged,
   List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
   List<dynamic> additionalOverrides = const [],
+  ValueListenable<List<VideoEvent>>? videosListenable,
 }) async {
   final mockPlaybackCubit =
       videoPlaybackStatusCubit ??
@@ -344,6 +348,14 @@ Future<ProviderContainer> _pumpFeedVideos(
   // tests assert the chrome that reacts to it.
   final immersiveCubit = feedImmersiveCubit ?? FeedImmersiveCubit();
   addTearDown(immersiveCubit.close);
+  Widget buildFeed(List<VideoEvent> list) => FeedVideos(
+    videos: list,
+    onNearEnd: () {},
+    isActive: isActive,
+    hasMore: hasMore,
+    isLoadingMore: isLoadingMore,
+    onActiveVideoChanged: onActiveVideoChanged,
+  );
   final container = ProviderContainer(
     overrides: [
       ..._buildOverrides(
@@ -379,14 +391,12 @@ Future<ProviderContainer> _pumpFeedVideos(
             BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
           ],
           child: Scaffold(
-            body: FeedVideos(
-              videos: videos,
-              onNearEnd: () {},
-              isActive: isActive,
-              hasMore: hasMore,
-              isLoadingMore: isLoadingMore,
-              onActiveVideoChanged: onActiveVideoChanged,
-            ),
+            body: videosListenable == null
+                ? buildFeed(videos)
+                : ValueListenableBuilder<List<VideoEvent>>(
+                    valueListenable: videosListenable,
+                    builder: (context, list, _) => buildFeed(list),
+                  ),
           ),
         ),
       ),
@@ -417,6 +427,27 @@ void main() {
   tearDown(() {
     InfiniteVideoFeed.debugIsSupportedOverride = null;
   });
+
+  // Reads the fade the [FeedImmersiveChrome] around [of] applies. Anchored
+  // on the wrapped widget rather than on FeedImmersiveChrome itself: each
+  // chrome layer has its own wrapper, and the overlay actions carry an
+  // unrelated AnimatedOpacity of their own further down.
+  double chromeOpacity(WidgetTester tester, {required Type of}) => tester
+      .widget<AnimatedOpacity>(
+        find
+            .ancestor(
+              of: find.byType(of),
+              matching: find.byType(AnimatedOpacity),
+            )
+            .first,
+      )
+      .opacity;
+
+  // pumpAndSettle can't be used here: InfiniteVideoFeed keeps its own
+  // timers running, so settle never arrives. The fade is a fixed duration.
+  Future<void> pumpFade(WidgetTester tester) => tester.pump(
+    kFeedImmersiveFadeDuration + const Duration(milliseconds: 50),
+  );
 
   // -------------------------------------------------------------------------
   // _FeedLoadingOrRestrictedOverlayView modes
@@ -1353,27 +1384,6 @@ void main() {
   // Immersive (hold-to-peek) viewing — #6234
   // -------------------------------------------------------------------------
   group('hold to peek', () {
-    // Reads the fade the [FeedImmersiveChrome] around [of] applies. Anchored
-    // on the wrapped widget rather than on FeedImmersiveChrome itself: each
-    // chrome layer has its own wrapper, and the overlay actions carry an
-    // unrelated AnimatedOpacity of their own further down.
-    double chromeOpacity(WidgetTester tester, {required Type of}) => tester
-        .widget<AnimatedOpacity>(
-          find
-              .ancestor(
-                of: find.byType(of),
-                matching: find.byType(AnimatedOpacity),
-              )
-              .first,
-        )
-        .opacity;
-
-    // pumpAndSettle can't be used here: InfiniteVideoFeed keeps its own
-    // timers running, so settle never arrives. The fade is a fixed duration.
-    Future<void> pumpFade(WidgetTester tester) => tester.pump(
-      kFeedImmersiveFadeDuration + const Duration(milliseconds: 50),
-    );
-
     testWidgets('hides the overlay chrome while held and restores on release', (
       tester,
     ) async {
@@ -1721,6 +1731,464 @@ void main() {
         );
       },
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // Pinch to pin — chrome hidden until tap or a second pinch
+  // -------------------------------------------------------------------------
+  group('pinch to pin', () {
+    // Lands two fingers 40 apart and drags them 280 apart. Measured from the
+    // landing separation, so it matches the production rule.
+    Future<void> pinch(
+      WidgetTester tester,
+      Offset center, {
+      int basePointer = 1,
+    }) async {
+      const landing = 20.0;
+      const spread = 140.0;
+      final a = await tester.startGesture(
+        center - const Offset(landing, 0),
+        pointer: basePointer,
+      );
+      final b = await tester.startGesture(
+        center + const Offset(landing, 0),
+        pointer: basePointer + 1,
+      );
+      await tester.pump();
+      await a.moveTo(center - const Offset(spread, 0));
+      await b.moveTo(center + const Offset(spread, 0));
+      await tester.pump();
+      await a.up();
+      await b.up();
+    }
+
+    testWidgets('hides the chrome and keeps it hidden after the fingers lift', (
+      tester,
+    ) async {
+      final video = _makeVideo();
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+
+      await pinch(
+        tester,
+        tester.getCenter(find.byType(InfiniteVideoFeed)),
+      );
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isTrue);
+      expect(
+        immersiveCubit.state.isImmersive,
+        isTrue,
+        reason: 'a pin must outlive the fingers that made it',
+      );
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(0.0));
+    });
+
+    testWidgets('a second pinch restores the chrome', (tester) async {
+      final video = _makeVideo();
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      await pinch(tester, center);
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await pinch(tester, center, basePointer: 3);
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+      expect(immersiveCubit.state.isImmersive, isFalse);
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+    });
+
+    testWidgets('a tap restores the chrome', (tester) async {
+      final video = _makeVideo();
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(
+        tester,
+        tester.getCenter(find.byType(InfiniteVideoFeed)),
+      );
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await tester.tap(find.byType(InfiniteVideoFeed));
+      // The tap action sits beside a double-tap recognizer, so it resolves
+      // only once the double-tap window closes.
+      await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+    });
+
+    // Lands two fingers 40 apart and drags them [apart] further from each other
+    // while both also drift down, as a two-finger scroll settling would. The
+    // separation changes by exactly [apart], whatever the drift.
+    Future<void> driftApart(
+      WidgetTester tester,
+      Offset center, {
+      required double apart,
+    }) async {
+      final a = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
+      final b = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
+      await tester.pump();
+      await a.moveBy(Offset(-apart / 2, 40));
+      await b.moveBy(Offset(apart / 2, 40));
+      await tester.pump();
+      await a.up();
+      await b.up();
+    }
+
+    testWidgets('fingers drifting just under the pinch distance leave the '
+        'chrome up', (tester) async {
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await driftApart(
+        tester,
+        tester.getCenter(find.byType(InfiniteVideoFeed)),
+        apart: 56,
+      );
+      await pumpFade(tester);
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'only a deliberate pinch may hide the chrome',
+      );
+      expect(chromeOpacity(tester, of: VideoOverlayActions), equals(1.0));
+    });
+
+    testWidgets(
+      'fingers drifting just past the pinch distance pin the chrome',
+      (
+        tester,
+      ) async {
+        final immersiveCubit = FeedImmersiveCubit();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [_makeVideo()],
+          feedImmersiveCubit: immersiveCubit,
+        );
+        await tester.pump();
+
+        await driftApart(
+          tester,
+          tester.getCenter(find.byType(InfiniteVideoFeed)),
+          apart: 72,
+        );
+        await pumpFade(tester);
+
+        expect(immersiveCubit.state.isPinned, isTrue);
+        expect(chromeOpacity(tester, of: VideoOverlayActions), equals(0.0));
+      },
+    );
+
+    testWidgets('ending a hold that a pinch pinned leaves the pin', (
+      tester,
+    ) async {
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final holding = await tester.startGesture(
+        center - const Offset(20, 0),
+        pointer: 1,
+      );
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      expect(immersiveCubit.state.isHolding, isTrue);
+
+      final spreading = await tester.startGesture(
+        center + const Offset(20, 0),
+        pointer: 2,
+      );
+      await tester.pump();
+      await spreading.moveTo(center + const Offset(140, 0));
+      await tester.pump();
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await spreading.up();
+      await holding.up();
+      await pumpFade(tester);
+
+      expect(immersiveCubit.state.isHolding, isFalse);
+      expect(
+        immersiveCubit.state.isPinned,
+        isTrue,
+        reason: 'releasing the hold must not release the pin',
+      );
+    });
+
+    testWidgets(
+      'lifting one of three fingers does not toggle the pin',
+      (tester) async {
+        final video = _makeVideo();
+        final immersiveCubit = FeedImmersiveCubit();
+
+        await _pumpFeedVideos(
+          tester,
+          videos: [video],
+          feedImmersiveCubit: immersiveCubit,
+        );
+        await tester.pump();
+
+        final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+        final a = await tester.startGesture(
+          center - const Offset(20, 0),
+          pointer: 1,
+        );
+        final b = await tester.startGesture(
+          center + const Offset(20, 0),
+          pointer: 2,
+        );
+        final c = await tester.startGesture(
+          center + const Offset(160, 0),
+          pointer: 3,
+        );
+        await tester.pump();
+        // Lifting one of the first two fingers leaves a pair that is much
+        // further apart than the pair the pinch was measured from.
+        await a.up();
+        await b.moveBy(const Offset(1, 0));
+        await tester.pump();
+        await b.up();
+        await c.up();
+        await pumpFade(tester);
+
+        expect(
+          immersiveCubit.state.isPinned,
+          isFalse,
+          reason: 'a changed finger pair is not a pinch',
+        );
+      },
+    );
+    testWidgets('swiping to the next video clears the pin', (tester) async {
+      final videos = [_makeVideo(), _makeVideo(id: 'b' * 64)];
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: videos,
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await tester.fling(
+        find.byType(InfiniteVideoFeed),
+        const Offset(0, -500),
+        2000,
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(immersiveCubit.state.isPinned, isFalse);
+      expect(immersiveCubit.state.isImmersive, isFalse);
+    });
+
+    testWidgets('tearing the feed down clears the pin', (tester) async {
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 4));
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'a cubit outliving the overlay must not stay pinned',
+      );
+    });
+
+    testWidgets('replacing the video under a pin clears it', (tester) async {
+      // A blocklist sweep or a silent list refresh can put a different video at
+      // the item's index without unmounting the item, so the pin outlives the
+      // video it was made on.
+      final videos = ValueNotifier<List<VideoEvent>>([_makeVideo()]);
+      addTearDown(videos.dispose);
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: videos.value,
+        videosListenable: videos,
+        feedImmersiveCubit: immersiveCubit,
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      videos.value = [_makeVideo(id: 'b' * 64)];
+      await tester.pump();
+      await pumpFade(tester);
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'the pin was made on a video the viewer no longer sees',
+      );
+    });
+
+    testWidgets('a content warning arriving under a pin clears it', (
+      tester,
+    ) async {
+      // The blur replaces the interactive subtree, and with it the only tap
+      // surface, so nothing on screen could restore chrome pinned before the
+      // label arrived.
+      final video = _makeVideo();
+      final labels = Completer<Set<String>>();
+      final repository = _MockCommunityContentLabelRepository();
+      when(
+        () => repository.communityLabelsForVideo(video),
+      ).thenAnswer((_) => labels.future);
+      final filter = _MockContentFilterService();
+      when(
+        () => filter.getPreference(ContentLabel.gambling),
+      ).thenReturn(ContentFilterPreference.warn);
+      final service = CommunityContentLabelService(
+        repository: repository,
+        contentFilterService: filter,
+      );
+      final immersiveCubit = FeedImmersiveCubit();
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [video],
+        feedImmersiveCubit: immersiveCubit,
+        additionalOverrides: [
+          communityContentLabelServiceProvider.overrideWith((ref) => service),
+          featureFlagServiceProvider.overrideWithValue(_communityFlagsOn()),
+        ],
+      );
+      await tester.pump();
+
+      await pinch(tester, tester.getCenter(find.byType(InfiniteVideoFeed)));
+      await pumpFade(tester);
+      expect(immersiveCubit.state.isPinned, isTrue);
+
+      labels.complete({'gambling'});
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.byType(ContentWarningBlurOverlay),
+        findsOneWidget,
+        reason: 'the flip must actually replace the interactive subtree',
+      );
+      await pumpFade(tester);
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'a pin must not outlive the surface that could restore it',
+      );
+    });
+
+    testWidgets('a spread after the feed paged away does not pin', (
+      tester,
+    ) async {
+      // Two fingers swipe the feed past halfway, which makes the overlay under
+      // them inactive while both are still down; spreading them afterwards
+      // must not pin from an item that no longer owns the current video.
+      final videos = [_makeVideo(), _makeVideo(id: 'b' * 64)];
+      final immersiveCubit = FeedImmersiveCubit();
+      final activeIndexes = <int>[];
+
+      await _pumpFeedVideos(
+        tester,
+        videos: videos,
+        feedImmersiveCubit: immersiveCubit,
+        onActiveVideoChanged: (_, index) => activeIndexes.add(index),
+      );
+      await tester.pump();
+
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      final upper = await tester.startGesture(
+        center - const Offset(0, 20),
+        pointer: 1,
+      );
+      final lower = await tester.startGesture(
+        center + const Offset(0, 20),
+        pointer: 2,
+      );
+      await tester.pump();
+      for (var i = 0; i < 9; i++) {
+        await upper.moveBy(const Offset(0, -40));
+        await lower.moveBy(const Offset(0, -40));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(
+        activeIndexes,
+        contains(1),
+        reason: 'the swipe must have made the next video the active one',
+      );
+      await upper.moveBy(const Offset(0, -120));
+      await tester.pump(const Duration(milliseconds: 16));
+      await upper.up();
+      await lower.up();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        immersiveCubit.state.isPinned,
+        isFalse,
+        reason: 'no active item owns a pin set from the page that left',
+      );
+    });
   });
 
   group('playback length cap', () {

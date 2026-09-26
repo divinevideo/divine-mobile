@@ -35,7 +35,7 @@ class _FeedImmersiveChromeState extends State<FeedImmersiveChrome> {
   ///
   /// Pointers stay blocked until this is true. Blocking is driven off the
   /// fade rather than off the flag alone because the flag drops the instant
-  /// the viewer lifts, while the chrome needs
+  /// the viewer lifts or taps to restore it, while the chrome needs
   /// [kFeedImmersiveFadeDuration] to become visible again — and a control
   /// that accepts a tap before the viewer can see it publishes a like or
   /// opens a report they never chose.

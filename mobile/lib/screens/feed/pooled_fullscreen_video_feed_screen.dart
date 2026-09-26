@@ -421,9 +421,9 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
   /// `BlocProvider.value` in [build].
   final FeedAutoAdvanceCubit _autoAdvanceCubit = FeedAutoAdvanceCubit();
 
-  /// Feed-scoped immersive (hold-to-peek) state. Owned here so it sits above
-  /// both [FeedVideos] — which raises it on a long press — and this screen's
-  /// app bar, which fades out against it.
+  /// Feed-scoped immersive (hold-to-peek and pinch-to-pin) state. Owned here
+  /// so it sits above both [FeedVideos] — which raises it on a long press or a
+  /// pinch — and this screen's app bar, which fades out against it.
   final FeedImmersiveCubit _immersiveCubit = FeedImmersiveCubit();
 
   @override
@@ -867,10 +867,10 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                 // [TextFieldTapRegion] inside [_FeedSettingsOverlay] so
                 // taps on the playback controls (which render outside
                 // this widget tree via [OverlayPortal]) are covered too.
-                // [FeedImmersiveChrome] fades the bar out while the viewer
-                // holds the video, matching the per-item overlay below. The
-                // slot keeps its height either way, which is what the
-                // already-`extendBodyBehindAppBar` body expects.
+                // [FeedImmersiveChrome] fades the bar out while the chrome is
+                // hidden (a hold or a pinch), matching the per-item overlay
+                // below. The slot keeps its height either way, which is what
+                // the already-`extendBodyBehindAppBar` body expects.
                 appBar: PreferredSize(
                   preferredSize: appBar.preferredSize,
                   child: Semantics(
@@ -1003,9 +1003,9 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                       ),
                     ),
                     // Deliberately not wrapped in [FeedImmersiveChrome]: every
-                    // other chrome layer fades while the viewer holds the
-                    // video, but a commercial disclosure has to stay up for
-                    // the whole reel. It keeps the app bar's slot height as
+                    // other chrome layer fades while the chrome is hidden, but
+                    // a commercial disclosure has to stay up for the whole
+                    // reel. It keeps the app bar's slot height as
                     // its offset even once that bar has faded, so the pill
                     // does not jump when immersive mode toggles.
                     if (widget.sponsorName case final sponsorName?)
