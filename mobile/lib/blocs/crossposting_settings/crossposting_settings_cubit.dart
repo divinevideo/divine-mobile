@@ -403,8 +403,7 @@ class CrosspostingSettingsCubit extends Cubit<CrosspostingSettingsState>
         callback.host != callbackBaseUrl.host ||
         callback.path != callbackBaseUrl.path ||
         callback.hasPort ||
-        callback.userInfo.isNotEmpty ||
-        callback.hasFragment) {
+        callback.userInfo.isNotEmpty) {
       throw const FormatException('Unexpected crossposting callback URL');
     }
 

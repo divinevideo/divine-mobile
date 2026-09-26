@@ -403,6 +403,31 @@ void main() {
       }
 
       test(
+        'surfaces the server failure when the provider added a fragment',
+        () async {
+          // Instagram appends `#_` to its redirect and the browser keeps it
+          // across the crossposter's 302, so the callback arrives with it.
+          callbackUri = Uri.parse(
+            'https://divine.video/app/callback'
+            '?app_state=test-nonce&connection=failed&platform=instagram'
+            '&reason=token_exchange_failed#_',
+          );
+          when(
+            () => repository.loadSettings(),
+          ).thenAnswer((_) async => const [instagramSettings]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+
+          await cubit.connect(CrosspostingPlatform.instagram);
+
+          expect(cubit.state.error, isNull);
+          expect(cubit.state.outcome, CrosspostingOAuthOutcome.failed);
+          expect(cubit.state.outcomePlatform, CrosspostingPlatform.instagram);
+          expect(cubit.reportedErrors, isEmpty);
+        },
+      );
+
+      test(
         'cancellation refreshes without surfacing an error or outcome',
         () async {
           callbackUri = null;
@@ -440,7 +465,6 @@ void main() {
         'duplicate platform': 'https://divine.video/app/callback?connection=connected&platform=instagram&platform=x',
         'explicit port': 'https://divine.video:8443/app/callback?connection=connected&platform=instagram',
         'user info': 'https://oauth-user@divine.video/app/callback?connection=connected&platform=instagram',
-        'fragment': 'https://divine.video/app/callback?connection=connected&platform=instagram#unexpected',
         'duplicate reason': 'https://divine.video/app/callback?connection=failed&platform=instagram&reason=provider_denied&reason=other',
       };
 

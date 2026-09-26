@@ -94,11 +94,10 @@ Uri parseAppOAuthCallback(String callback) {
     throw const FormatException(_invalidCallbackMessage);
   }
 
-  // Instagram appends a `#_` fragment to its redirect URIs, and the native
-  // web-auth session can surface that fragment to the app even though the
-  // crossposter's own 302 back to us carries none. A fragment is client-only
-  // and holds no validated value, so drop it instead of rejecting a
-  // legitimate callback.
+  // Providers append junk fragments to their redirects (Instagram `#_`,
+  // Facebook `#_=_`), and a browser carries that fragment across the server's
+  // fragment-less 302 to this URL (RFC 9110 §10.2.2). Nothing reads a
+  // fragment, so drop it rather than reject the outcome the query carries.
   return uri.hasFragment ? uri.removeFragment() : uri;
 }
 

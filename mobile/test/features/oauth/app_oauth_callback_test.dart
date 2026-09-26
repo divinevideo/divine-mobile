@@ -18,18 +18,28 @@ void main() {
       expect(uri.queryParameters['identity'], equals('jack'));
     });
 
-    test('drops the Instagram #_ fragment and keeps the query', () {
-      // Instagram appends `#_` to its redirect URIs, and the native web-auth
-      // session can hand it to the app though the crossposter's own 302 back
-      // to us carries none. Rejecting it broke every mobile Instagram connect.
-      final uri = parseAppOAuthCallback(
-        '$appOAuthCallbackUrl?connection=connected&platform=instagram#_',
-      );
+    for (final fragment in const ['#_', '#_=_']) {
+      test('drops a provider-added $fragment fragment', () {
+        // Instagram appends `#_` and Facebook `#_=_` to their redirect, and a
+        // browser carries that fragment across the server's own 302 to this
+        // callback. Nothing is read from a fragment, so it is not a reason to
+        // throw away the outcome the query carries.
+        final uri = parseAppOAuthCallback(
+          '$appOAuthCallbackUrl'
+          '?app_state=nonce&connection=failed&platform=instagram'
+          '$fragment',
+        );
 
-      expect(uri.hasFragment, isFalse);
-      expect(uri.queryParameters['connection'], equals('connected'));
-      expect(uri.queryParameters['platform'], equals('instagram'));
-    });
+        expect(uri.hasFragment, isFalse);
+        expect(
+          uri.toString(),
+          equals(
+            '$appOAuthCallbackUrl'
+            '?app_state=nonce&connection=failed&platform=instagram',
+          ),
+        );
+      });
+    }
 
     test('rejects another host', () {
       expect(
@@ -129,6 +139,20 @@ void main() {
         expect(uri?.queryParameters['ok'], equals('1'));
       },
     );
+
+    test('returns the callback without a provider-added fragment', () async {
+      final uri = await launchAppOAuth(
+        Uri.parse('https://crosspost.divine.video/connect/instagram'),
+        authenticate: ({
+          required String url,
+          required String callbackUrlScheme,
+          required FlutterWebAuth2Options options,
+        }) async => '$appOAuthCallbackUrl?connection=failed#_',
+      );
+
+      expect(uri?.hasFragment, isFalse);
+      expect(uri?.queryParameters['connection'], equals('failed'));
+    });
 
     test('reports a dismissed session as null', () async {
       final uri = await launchAppOAuth(
