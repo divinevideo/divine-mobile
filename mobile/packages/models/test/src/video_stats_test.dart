@@ -704,6 +704,9 @@ void main() {
           'thumbnail': 'https://example.com/thumb.jpg',
           'video_url': 'https://example.com/video.mp4',
           'loops': 142678928,
+          'tags': [
+            ['loops', '142678928'],
+          ],
           'embedded_likes': 459878,
           'embedded_comments': 15227,
           'embedded_reposts': 179996,
@@ -759,6 +762,53 @@ void main() {
         },
       );
 
+      test("does not read a native row's live loops as archival loops", () {
+        // Funnelcake list rows carry live watch-time loops in `loops`.
+        final stats = VideoStats.fromJson(const {
+          'id': 'test-id',
+          'pubkey': 'test-pubkey',
+          'created_at': 1758700000,
+          'kind': 34236,
+          'd_tag': 'native-1',
+          'title': 'Made on Divine',
+          'video_url': 'https://example.com/video.mp4',
+          'loops': 68,
+          'views': 56,
+          'reactions': 3,
+          'comments': 1,
+          'reposts': 0,
+          'engagement_score': 4,
+        });
+
+        expect(stats.loops, isNull);
+        expect(stats.views, equals(56));
+      });
+
+      test('prefers the loops tag over a live loops field on a Vine row', () {
+        final stats = VideoStats.fromJson(const {
+          'id': 'test-id',
+          'pubkey': 'test-pubkey',
+          'created_at': 1457922740,
+          'kind': 34236,
+          'd_tag': 'vine-1',
+          'title': 'Classic vine',
+          'video_url': 'https://example.com/video.mp4',
+          'platform': 'vine',
+          'loops': 119080,
+          'views': 133193,
+          'tags': [
+            ['d', 'vine-1'],
+            ['loops', '8443388'],
+          ],
+          'reactions': 0,
+          'comments': 0,
+          'reposts': 0,
+          'engagement_score': 0,
+        });
+
+        expect(stats.loops, equals(8443388));
+      });
+
       test(
         'keeps embedded_comments and embedded_reposts out of live counts',
         () {
@@ -785,7 +835,7 @@ void main() {
         },
       );
 
-      test('handles loops in different formats', () {
+      test('handles embedded_loops in different formats', () {
         // As int
         final jsonWithIntLoops = {
           'id': 'test-id',
@@ -796,7 +846,7 @@ void main() {
           'title': 'Test',
           'thumbnail': 'https://example.com/thumb.jpg',
           'video_url': 'https://example.com/video.mp4',
-          'loops': 1000,
+          'embedded_loops': 1000,
           'reactions': 0,
           'comments': 0,
           'reposts': 0,
@@ -815,7 +865,7 @@ void main() {
           'title': 'Test',
           'thumbnail': 'https://example.com/thumb.jpg',
           'video_url': 'https://example.com/video.mp4',
-          'loops': '2000',
+          'embedded_loops': '2000',
           'reactions': 0,
           'comments': 0,
           'reposts': 0,
@@ -883,7 +933,7 @@ void main() {
           'comments': 5.0,
           'reposts': 2.0,
           'engagement_score': 125.0,
-          'loops': 42.0,
+          'embedded_loops': 42.0,
           'views': 100.0,
         };
 
@@ -896,7 +946,7 @@ void main() {
         expect(stats.views, equals(100));
       });
 
-      test('parses total_loops and total_views field variants', () {
+      test('does not read total_loops or computed_loops as archival loops', () {
         final json = {
           'id': 'test-id',
           'pubkey': 'test-pubkey',
@@ -911,11 +961,12 @@ void main() {
           'reposts': 2,
           'engagement_score': 125,
           'total_loops': 42.0,
+          'computed_loops': 7,
           'total_views': 100.0,
         };
 
         final stats = VideoStats.fromJson(json);
-        expect(stats.loops, equals(42));
+        expect(stats.loops, isNull);
         expect(stats.views, equals(100));
       });
 
@@ -2146,11 +2197,35 @@ void main() {
           expect(videoEvent.nostrCommentCount, equals(10));
           expect(videoEvent.originalReposts, equals(179996));
           expect(videoEvent.nostrRepostCount, equals(42));
-          expect(videoEvent.originalLoops, equals(142678928));
-          expect(videoEvent.totalLoops, equals(142678928 + 3020));
+          // Without a loops tag or embedded_loops the row carries no archival
+          // loop count: `loops` is Funnelcake's live figure, never the archive.
+          expect(videoEvent.originalLoops, isNull);
+          expect(videoEvent.totalLoops, equals(3020));
           expect(videoEvent.totalLikes, equals(459878 + 387));
         },
       );
+
+      test("counts only a native video's views as its total loops", () {
+        final videoEvent = VideoStats.fromJson(const {
+          'id': 'test-id',
+          'pubkey': 'test-pubkey',
+          'created_at': 1758700000,
+          'kind': 34236,
+          'd_tag': 'native-1',
+          'title': 'Made on Divine',
+          'video_url': 'https://example.com/video.mp4',
+          'loops': 68,
+          'views': 56,
+          'reactions': 3,
+          'comments': 1,
+          'reposts': 0,
+          'engagement_score': 4,
+        }).toVideoEvent();
+
+        expect(videoEvent.hasLoopMetadata, isTrue);
+        expect(videoEvent.originalLoops, isNull);
+        expect(videoEvent.totalLoops, equals(56));
+      });
 
       test('prefers embedded_* fields over archival event tags', () {
         final stats = VideoStats.fromJson(const {

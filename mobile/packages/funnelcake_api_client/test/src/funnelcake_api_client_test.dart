@@ -553,7 +553,8 @@ void main() {
         expect(videos.first.id, equals('abc123'));
         expect(videos.first.title, equals('Top of the Week'));
         expect(videos.first.views, equals(50000));
-        expect(videos.first.loops, equals(37500));
+        // The leaderboard's `loops` is a live count, not the Vine archive.
+        expect(videos.first.loops, isNull);
       });
 
       test(
@@ -1176,7 +1177,7 @@ void main() {
       );
 
       test(
-        'parses total_loops and total_views from author videos response',
+        'parses total_views but not total_loops from author videos response',
         () async {
           const responseWithLoopMetrics =
               '''
@@ -1213,9 +1214,11 @@ void main() {
           final result = await client.getVideosByAuthor(pubkey: testPubkey);
           final video = result.videos.single.toVideoEvent();
 
-          expect(video.originalLoops, equals(42));
+          // total_loops is a live Divine count: only the views are kept, so a
+          // native video's total is not loops plus views (#9554).
+          expect(video.originalLoops, isNull);
           expect(video.rawTags['views'], equals('100'));
-          expect(video.totalLoops, equals(142));
+          expect(video.totalLoops, equals(100));
         },
       );
 
