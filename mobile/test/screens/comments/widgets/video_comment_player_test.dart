@@ -14,7 +14,6 @@ void main() {
   // divine_video_player, so tests can assert the migrated controller wiring
   // (create/play/pause/dispose) without a real native player.
   final methodCalls = <String>[];
-  final createArguments = <Map<Object?, Object?>>[];
   final setClipsArguments = <Map<Object?, Object?>>[];
 
   // Per-created-player event streams keyed by native player id. Emitting to a
@@ -64,7 +63,6 @@ void main() {
   setUp(() {
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
     methodCalls.clear();
-    createArguments.clear();
     setClipsArguments.clear();
     playerEvents = {};
     installedMethodChannels.clear();
@@ -82,7 +80,6 @@ void main() {
           methodCalls.add(call.method);
           if (call.method == 'create') {
             final arguments = call.arguments! as Map<Object?, Object?>;
-            createArguments.add(arguments);
             installPlayerChannels(arguments['id']! as int);
             return <String, Object?>{'textureId': 1};
           }
@@ -196,10 +193,6 @@ void main() {
       final clips = setClipsArguments.single['clips']! as List<Object?>;
       final clip = clips.single! as Map<Object?, Object?>;
       expect(clip['trimToCommonTrackEnd'], isTrue);
-      // On Android only a full-profile player reads a remote clip's track
-      // lengths before the load; a feed-profile player warms them behind it
-      // and the play just started would keep its loop seam (#8897).
-      expect(createArguments.single['bufferProfile'], 'full');
     });
 
     testWidgets('disposes the native controller when unmounted', (

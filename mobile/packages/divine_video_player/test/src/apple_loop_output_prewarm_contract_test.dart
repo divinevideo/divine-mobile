@@ -53,6 +53,20 @@ void main() {
       );
     });
 
+    test('the edge fades reach every looping item before it plays', () {
+      final source = _playerSourceFile().readAsStringSync();
+
+      expect(
+        _functionBody(source, 'private func prewarmLoopingOutputs('),
+        contains(
+          'if item.audioMix !== loopAudioMix { item.audioMix = loopAudioMix }',
+        ),
+        reason:
+            "The looper prerolls the next lap's audio ahead of the join; a "
+            'fade handed over only when an item becomes current misses it.',
+      );
+    });
+
     test("switching looping off drops the previous looper's items", () {
       final source = _playerSourceFile().readAsStringSync();
 

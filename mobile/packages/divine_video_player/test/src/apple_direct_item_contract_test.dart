@@ -41,8 +41,9 @@ void main() {
         contains('return !uri.hasPrefix("http")'),
         reason:
             'A remote non-HLS URL keeps taking the composition, which owns the '
-            'buffering and header handling for it; only a local file joins HLS '
-            'on the direct path.',
+            'buffering and header handling for it. Played straight from a '
+            'remote asset, every copy AVPlayerLooper made of the item stalled '
+            'picture and sound at each restart on an iPad.',
       );
       expect(
         source,
@@ -172,11 +173,71 @@ void main() {
       );
       expect(
         body,
-        contains('loopAudioMix = nil'),
+        contains('let mix = audioTrack.flatMap { Self.edgeDeclickMix(track:'),
         reason:
-            'A direct item has no audio mix, so a mix left behind by an '
-            'earlier composition would be re-applied to every item the looper '
-            'builds - with input parameters addressing another asset.',
+            "A direct item carries its own edge fades on its own asset's audio "
+            'track. Without them the join is a click on every lap, and a mix '
+            'left behind by an earlier composition would be re-applied to '
+            'every item the looper builds - with input parameters addressing '
+            'another asset.',
+      );
+      expect(
+        body,
+        contains('playerItem.audioMix = mix'),
+        reason:
+            "A direct item carries its own edge fades on its own asset's audio "
+            'track. The item itself must hold them even if this load is never '
+            'installed.',
+      );
+      expect(
+        body,
+        isNot(contains('loopAudioMix =')),
+        reason:
+            'Publishing the shared mix inside the builder lets a newer load '
+            'write it before that load installs. prewarm would then stamp the '
+            'newer fades onto the item still looping.',
+      );
+      final install = _functionBody(
+        _appleSourceFile().readAsStringSync(),
+        'private func handleSetClips(',
+      );
+      final stillCurrent = install.indexOf(
+        'callGeneration == self.setClipsGeneration',
+      );
+      final publish = install.indexOf(
+        'self.loopAudioMix = playerItem.audioMix',
+      );
+      expect(stillCurrent, greaterThanOrEqualTo(0));
+      expect(
+        publish,
+        greaterThan(stillCurrent),
+        reason:
+            'The shared mix is what prewarm stamps onto every looping copy. '
+            'It may be published only after this call is still the latest, '
+            'and only from the item about to be installed.',
+      );
+      final catchAt = install.indexOf('} catch {');
+      final errorStatus = install.indexOf('self.currentStatus = "error"');
+      final catchGuard = install.indexOf(
+        'callGeneration == self.setClipsGeneration',
+        catchAt,
+      );
+      expect(catchAt, greaterThanOrEqualTo(0));
+      expect(
+        catchGuard,
+        lessThan(errorStatus),
+        reason:
+            'A superseded load that throws must not mark the player errored. '
+            'The newer call may already be playing, and this catch would '
+            'clear its timeout and broadcast a failure for that video.',
+      );
+      expect(
+        body,
+        isNot(contains('audioTapProcessor')),
+        reason:
+            'A processing tap on the looping items held playback ~360 ms at '
+            'every start and ~420 ms at every join under AVPlayerLooper; a '
+            'volume mix keeps the joins gapless.',
       );
     });
   });

@@ -27,6 +27,9 @@ class LoopPcmTest {
             (((frame + offset) % 200 - 100) * 100 + channel * 7).toShort()
         }
 
+    private fun rms(samples: ShortArray, from: Int, until: Int): Double =
+        Math.sqrt((from until until).sumOf { samples[it].toDouble() * samples[it] } / (until - from))
+
     private fun seamStep(prepared: LoopPcm.Prepared, channels: Int): Int {
         val last = (prepared.loopFrames - 1) * channels
         return abs(prepared.samples[last] - prepared.samples[0])
@@ -39,7 +42,7 @@ class LoopPcmTest {
             samples = tone(frames = (3.1 * sampleRate).toInt()),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 3000,
+            loopUs = 3_000_000L,
         )!!
 
         assertEquals(3000 * sampleRate / 1000, prepared.loopFrames)
@@ -56,7 +59,7 @@ class LoopPcmTest {
             samples = tone(frames = decoded),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 2020,
+            loopUs = 2_020_000L,
         )!!
 
         assertEquals(2020 * sampleRate / 1000, prepared.loopFrames)
@@ -79,7 +82,7 @@ class LoopPcmTest {
             samples = tone(frames = decoded),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 7000,
+            loopUs = 7_000_000L,
         )!!
 
         assertEquals(7 * sampleRate, prepared.loopFrames)
@@ -96,7 +99,7 @@ class LoopPcmTest {
             samples = tone(frames = decoded),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1500,
+            loopUs = 1_500_000L,
         )!!
 
         assertTrue(prepared.loopFrames > decoded)
@@ -117,7 +120,7 @@ class LoopPcmTest {
             samples = tone(frames = loopFrames + sampleRate / 4),
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
         )!!
 
         assertTrue(prepared.blendedFromPastTheLoop)
@@ -128,7 +131,7 @@ class LoopPcmTest {
     fun `the blend shrinks the step at the wrap`() {
         val loopFrames = sampleRate
         val samples = tone(frames = loopFrames + sampleRate / 4)
-        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopMs = 1000)!!
+        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopUs = 1_000_000L)!!
 
         val before = abs(samples[loopFrames - 1] - samples[0])
         assertTrue(
@@ -138,22 +141,34 @@ class LoopPcmTest {
     }
 
     @Test
-    fun `ramps both ends when nothing lies past the loop point`() {
-        // Android's decoder applies the container's gapless trimming and hands
-        // back exactly the presented length, which is this case.
+    fun `carries a lap with nothing past its loop point on from earlier in it`() {
+        // The decode ends exactly at the loop point. Ramping both ends to
+        // silence removed the click and left a gap at every restart.
         val loopFrames = sampleRate
-        val prepared = LoopPcm.prepare(
-            samples = tone(frames = loopFrames),
-            channels = 1,
-            sampleRate = sampleRate,
-            loopMs = 1000,
-        )!!
+        val source = tone(frames = loopFrames)
+        val prepared = LoopPcm.prepare(source, 1, sampleRate, loopUs = 1_000_000L)!!
 
         assertEquals(false, prepared.blendedFromPastTheLoop)
-        assertEquals((LoopPcm.RAMP_MS * sampleRate / 1000).toInt(), prepared.fadeFrames)
-        // Both edges reach zero, so the wrap is silence to silence.
-        assertEquals(0, prepared.samples[0].toInt())
-        assertEquals(0, prepared.samples[(prepared.loopFrames - 1)].toInt())
+        assertTrue(prepared.lapLagFrames > 0)
+        // The tone carries on across the wrap as if it had never stopped.
+        assertEquals(tone(frames = loopFrames + 1)[loopFrames], prepared.samples[0])
+    }
+
+    @Test
+    fun `a seam whose past is only the decoder ringing out carries on from the lap`() {
+        // A DJ set cut to the picture: the decode runs 15 ms past the loop
+        // point, but at -45 dB and then silence. Blended with, the seam fell
+        // from full level to near-silence and back — a "blob" every restart.
+        val loopFrames = sampleRate
+        val source = tone(frames = loopFrames + 15 * sampleRate / 1000)
+        for (frame in loopFrames until source.size) source[frame] = (source[frame] / 200).toShort()
+        val prepared = LoopPcm.prepare(source, 1, sampleRate, loopUs = 1_000_000L)!!
+
+        assertEquals(false, prepared.blendedFromPastTheLoop)
+        assertTrue(prepared.lapLagFrames > 0)
+        val tailRms = rms(prepared.samples, loopFrames - 220, loopFrames)
+        val headRms = rms(prepared.samples, 0, 220)
+        assertTrue("head fell to $headRms against a tail of $tailRms", headRms > tailRms / 2)
     }
 
     @Test
@@ -166,7 +181,7 @@ class LoopPcmTest {
             samples = tone(frames = loopFrames + sampleRate / 4, channels = channels),
             channels = channels,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
         )!!
 
         // Channel 1 carries a +7 marker the blend has to preserve.
@@ -191,7 +206,7 @@ class LoopPcmTest {
             samples = source,
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 6000,
+            loopUs = 6_000_000L,
             startUs = startUs,
         )!!
 
@@ -220,7 +235,7 @@ class LoopPcmTest {
             samples = source,
             channels = 1,
             sampleRate = sampleRate,
-            loopMs = 1000,
+            loopUs = 1_000_000L,
             startUs = startUs,
         )!!
 
@@ -239,25 +254,127 @@ class LoopPcmTest {
                 samples = tone(frames = sampleRate),
                 channels = 1,
                 sampleRate = sampleRate,
-                loopMs = 1000,
+                loopUs = 1_000_000L,
                 startUs = 1_000_000L,
             ),
         )
     }
 
     @Test
+    fun `keeps the picture's period to the sample, not the millisecond`() {
+        // The clip end comes from the container in microseconds. Rounded down
+        // to 1000 ms, this loop would be 22 frames short of the picture's
+        // 1000.5 ms period at 44.1 kHz, and the sound would fall another half
+        // a millisecond behind it on every lap.
+        val prepared = LoopPcm.prepare(
+            samples = tone(frames = sampleRate * 2),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 1_000_500L,
+        )!!
+
+        assertEquals(44_122, prepared.loopFrames)
+    }
+
+    @Test
     fun `refuses input it cannot make a loop from`() {
-        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, sampleRate, loopMs = 0))
-        assertNull(LoopPcm.prepare(ShortArray(0), channels = 1, sampleRate, loopMs = 1000))
-        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 0, sampleRate, loopMs = 1000))
-        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, 0, loopMs = 1000))
+        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, sampleRate, loopUs = 0L))
+        assertNull(LoopPcm.prepare(ShortArray(0), channels = 1, sampleRate, loopUs = 1_000_000L))
+        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 0, sampleRate, loopUs = 1_000_000L))
+        assertNull(LoopPcm.prepare(tone(frames = 100), channels = 1, 0, loopUs = 1_000_000L))
+    }
+
+    /** [frames] of [tone] whose first [silentMs] are digital silence. */
+    private fun toneAfterSilence(frames: Int, silentMs: Int): ShortArray =
+        tone(frames).also { it.fill(0, 0, silentMs * sampleRate / 1000) }
+
+    @Test
+    fun `keeps the silence a late microphone leaves at the head`() {
+        // A 2013 Vine opens with 45 ms of exact zeros and runs 10 ms past its
+        // loop point. The silence is the loop's breath: every fill tried on
+        // device was heard as worse than leaving it.
+        val loopFrames = sampleRate
+        val source = toneAfterSilence(frames = loopFrames + sampleRate / 100, silentMs = 45)
+        val prepared = LoopPcm.prepare(source, 1, sampleRate, loopUs = 1_000_000L)!!
+
+        // The tail fades out over the 10 ms that follow it, and the rest of
+        // the silence stays silent.
+        assertTrue(prepared.blendedFromPastTheLoop)
+        assertTrue(prepared.fadeFrames in 1..sampleRate / 100)
+        for (frame in sampleRate / 100 until 45 * sampleRate / 1000) {
+            assertEquals("frame $frame", 0, prepared.samples[frame].toInt())
+        }
+    }
+
+    @Test
+    fun `ramps into a silent head when nothing live follows the loop point`() {
+        val loopFrames = sampleRate
+        val source = toneAfterSilence(frames = loopFrames + sampleRate / 4, silentMs = 45)
+        source.fill(0, loopFrames, source.size)
+        val prepared = LoopPcm.prepare(source, 1, sampleRate, loopUs = 1_000_000L)!!
+
+        assertEquals(false, prepared.blendedFromPastTheLoop)
+        assertEquals(0, prepared.lapLagFrames)
+        assertEquals(0, prepared.samples[loopFrames - 1].toInt())
+        for (frame in 0 until 45 * sampleRate / 1000) {
+            assertEquals("frame $frame", 0, prepared.samples[frame].toInt())
+        }
+    }
+
+    @Test
+    fun `the lap's end leads into what carries it on without a step`() {
+        // No earlier moment in a lap matches its end sample for sample, least
+        // of all a transient in its last milliseconds. Cut straight to the
+        // carried stretch, this lap stepped by thousands at every restart: a
+        // click.
+        val loopFrames = sampleRate
+        val frames = loopFrames + sampleRate / 4
+        val source = ShortArray(frames) { frame ->
+            val t = frame.toDouble() / sampleRate
+            (6_000 * Math.sin(2 * Math.PI * 97 * t) + 6_000 * Math.sin(2 * Math.PI * 151.3 * t + 1))
+                .toInt().toShort()
+        }
+        val edge = 3 * sampleRate / 1000
+        for (k in 0 until edge) {
+            val frame = loopFrames - edge + k
+            source[frame] = (source[frame] + 8_000 * (k + 1) / edge).toShort()
+        }
+        // Nothing live past the loop point, so the seam carries on from the lap.
+        source.fill(0, loopFrames, frames)
+        val prepared = LoopPcm.prepare(source, 1, sampleRate, loopUs = 1_000_000L)!!
+        assertTrue(prepared.lapLagFrames > 0)
+
+        val largestStepInTheSound = (loopFrames - 2000 until loopFrames - 200)
+            .maxOf { abs(source[it] - source[it - 1]) }
+        val played = (loopFrames - 300 until loopFrames).map { prepared.samples[it] } +
+            (0 until prepared.fadeFrames).map { prepared.samples[it] }
+        val largestStepAcrossTheWrap = played.zipWithNext { a, b -> abs(b - a) }.maxOrNull()!!
+
+        assertTrue(
+            "stepped $largestStepAcrossTheWrap, the sound itself at most $largestStepInTheSound",
+            largestStepAcrossTheWrap <= largestStepInTheSound * 2,
+        )
+    }
+
+    @Test
+    fun `carries the lap on in each channel's own lane`() {
+        val loopFrames = sampleRate
+        val source = tone(frames = loopFrames + sampleRate / 4, channels = 2)
+        source.fill(0, loopFrames * 2, source.size)
+        val prepared = LoopPcm.prepare(source, 2, sampleRate, loopUs = 1_000_000L)!!
+
+        assertTrue(prepared.lapLagFrames > 0)
+        val carriedOn = tone(frames = loopFrames + 1, channels = 2)
+        for (channel in 0 until 2) {
+            assertEquals(carriedOn[loopFrames * 2 + channel], prepared.samples[channel])
+        }
     }
 
     @Test
     fun `leaves the material outside the blend untouched`() {
         val loopFrames = sampleRate
         val samples = tone(frames = loopFrames + sampleRate / 4)
-        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopMs = 1000)!!
+        val prepared = LoopPcm.prepare(samples, 1, sampleRate, loopUs = 1_000_000L)!!
 
         for (frame in prepared.fadeFrames until loopFrames) {
             assertEquals(

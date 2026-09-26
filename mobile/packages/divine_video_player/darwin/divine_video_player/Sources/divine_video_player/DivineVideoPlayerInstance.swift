@@ -48,14 +48,19 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var timeObserver: Any?
     private var currentItemObservation: NSKeyValueObservation?
 
-    /// The edge-declick mix built for the loaded composition, kept so it can be
-    /// re-applied to every item `AVPlayerLooper` makes.
+    /// The edge-declick mix built for the loaded item — composition or direct —
+    /// kept so it can be re-applied to every item `AVPlayerLooper` makes.
     ///
     /// The looper does not replay the template item — it builds its own copies,
     /// and a copy does not carry the template's `audioMix`. Setting it once at
     /// load time therefore declicks the first lap and no other, which is
     /// exactly the lap nobody is listening for.
     private var loopAudioMix: AVAudioMix?
+    /// Bumped at the start of each `setClips` call, before that call awaits.
+    /// A call that resumes after a newer one has started must not install:
+    /// publishing its mix earlier would let prewarm stamp that mix onto the
+    /// item still looping.
+    private var setClipsGeneration = 0
     private var statusObservation: NSKeyValueObservation?
     private var bufferingObservation: NSKeyValueObservation?
     private var likelyToKeepUpObservation: NSKeyValueObservation?
@@ -118,6 +123,41 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             timescale: audioMixTimescale,
             method: .roundTowardZero
         ).value / 2
+    }
+
+    /// A mix that fades [track] in from zero and out to [loopEnd] over
+    /// [edgeDeclickFadeSeconds] each — the composition's edge fades, for a
+    /// clip played straight from its asset. Nil for a clip too short to carry
+    /// two fades.
+    private static func edgeDeclickMix(track: AVAssetTrack, loopEnd: CMTime) -> AVAudioMix? {
+        let maxFadeTicks =
+            Int64((edgeDeclickFadeSeconds * Double(audioMixTimescale)).rounded())
+        let fadeTicks = min(maxFadeTicks, halfFadeTicks(loopEnd))
+        guard fadeTicks > 0 else { return nil }
+        let fade = CMTime(value: fadeTicks, timescale: audioMixTimescale)
+        let flatEnd = CMTimeSubtract(loopEnd, fade)
+        let params = AVMutableAudioMixInputParameters(track: track)
+        params.setVolumeRamp(
+            fromStartVolume: 0,
+            toEndVolume: 1,
+            timeRange: CMTimeRange(start: .zero, end: fade)
+        )
+        if CMTimeCompare(flatEnd, fade) > 0 {
+            params.setVolumeRamp(
+                fromStartVolume: 1,
+                toEndVolume: 1,
+                timeRange: CMTimeRange(start: fade, end: flatEnd)
+            )
+        }
+        // Ends exactly on loopEnd, the sample the looper joins.
+        params.setVolumeRamp(
+            fromStartVolume: 1,
+            toEndVolume: 0,
+            timeRange: CMTimeRange(start: flatEnd, end: loopEnd)
+        )
+        let mix = AVMutableAudioMix()
+        mix.inputParameters = [params]
+        return mix
     }
 
     /// AVFoundation's asset-option key for per-asset HTTP request headers.
@@ -288,6 +328,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
 
         armSetClipsTimeout()
+        setClipsGeneration += 1
+        let callGeneration = setClipsGeneration
 
         // Build the player item asynchronously.
         Task { @MainActor [weak self] in
@@ -326,6 +368,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.answerCancelledSetClips(result)
                     return
                 }
+                // A newer setClips has started. Installing now would loop this
+                // item under the newer mix, or replace a queue the newer call
+                // already owns.
+                guard callGeneration == self.setClipsGeneration else {
+                    self.answerCancelledSetClips(result)
+                    return
+                }
+                self.loopAudioMix = playerItem.audioMix
                 self.clipOffsets = offsets
                 self.clipDurations = durations
                 self.clipCount = offsets.count
@@ -378,6 +428,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                         self.answerCancelledSetClips(result)
                         return
                     }
+                    guard callGeneration == self.setClipsGeneration else {
+                        self.answerCancelledSetClips(result)
+                        return
+                    }
                     self.textureOutput?.forceRefresh(for: startTime)
                 } else {
                     let newPlayer = AVQueuePlayer()
@@ -388,6 +442,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                     self.configureQueue(with: playerItem)
                     await newPlayer.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero)
                     guard !self.diagnosticDisposed else {
+                        self.answerCancelledSetClips(result)
+                        return
+                    }
+                    guard callGeneration == self.setClipsGeneration else {
                         self.answerCancelledSetClips(result)
                         return
                     }
@@ -411,6 +469,13 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 self.sendStateUpdate()
                 result(nil)
             } catch {
+                // A newer setClips already owns the player. Reporting this
+                // load's failure would mark that video errored and clear its
+                // timeout.
+                guard callGeneration == self.setClipsGeneration else {
+                    self.answerCancelledSetClips(result)
+                    return
+                }
                 self.currentStatus = "error"
                 self.errorMessage = error.localizedDescription
                 self.errorCode = self.errorCode(for: error as NSError)
@@ -473,10 +538,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// A single unchanged clip has nothing to compose, and `AVPlayerLooper`
     /// only closes the seam over the asset itself — over a composition of the
     /// same file it does not. Remote URLs stay on the composition path, which
-    /// owns the buffering and header handling for them.
-    ///
-    /// Rotation is decided later, against the loaded asset, in
-    /// [directItemSuitsRotation] — it cannot be read from the URL.
+    /// owns the buffering and header handling for them: played straight from a
+    /// remote asset, every copy the looper makes of the item stalled picture
+    /// and sound at each restart on an iPad Air (M4), though it looped cleanly
+    /// in the simulator.
     private static func takesDirectItemPath(_ uri: String) -> Bool {
         if URL(string: uri)?.pathExtension.lowercased() == "m3u8" { return true }
         return !uri.hasPrefix("http")
@@ -492,6 +557,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// file qualifies because there is nothing to compose: `AVPlayerLooper`
     /// closes the seam over the asset itself and does not over a composition
     /// of the same file.
+    ///
+    /// Rotation is decided later, against the loaded asset, in
+    /// [directItemSuitsRotation] — it cannot be read from the URL.
     ///
     /// The diversion is deliberately narrow. A composition can start a clip
     /// part-way in and rescale it; an `AVPlayerItem` carries the whole asset
@@ -532,9 +600,8 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     ///
     /// A rotated clip cannot come here at all; [directItemSuitsRotation] sends
     /// it back to the composition, which rights it with a layer instruction.
-    /// Per-clip volume changes likewise stay on the composition path, because a
-    /// direct item has no audio mix. The cost is that the audio-mix edge
-    /// de-click fades do not apply, so the loop seam can click.
+    /// Per-clip volume changes likewise stay on the composition path; a direct
+    /// item's audio mix only fades its two edges, like the composition's.
     ///
     /// Throws [CompositionError.directItemNotApplicable] when the loaded asset
     /// turns out to need the composition after all.
@@ -610,10 +677,35 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
 
         let playerItem = AVPlayerItem(asset: asset)
-        // A direct item has no audio mix, so anything the last composition left
-        // behind has to go — otherwise every item the looper builds is handed a
-        // mix whose input parameters address a different asset's tracks.
-        loopAudioMix = nil
+        // The looper joins the last sample before loopEnd straight to the
+        // first, and loopEnd is where the picture ends — usually a few
+        // milliseconds into sound that carries on — so the join is a click on
+        // every lap unless both edges fade. The mix addresses this asset's own
+        // audio track, which every copy the looper makes shares; it replaces
+        // whatever the last composition left, whose input parameters address
+        // another asset's tracks. An HLS asset has no track to address.
+        //
+        // A processing tap that blended the material past loopEnd into each
+        // lap's head was tried and measured under AVPlayerLooper: it held
+        // playback ~360 ms at every start and ~420 ms at every join with a
+        // tap per item. A volume mix leaves the looper's joins gapless.
+        var audioTrack: AVAssetTrack?
+        if !isHls {
+            do {
+                audioTrack = try await asset.loadTracks(withMediaType: .audio).first
+            } catch {
+                DivineVideoPlayerLog.shared.warning(
+                    "Player \(playerId) could not load audio track for edge-declick "
+                        + "mix: \(error.localizedDescription)",
+                    name: "DivineVideoPlayer.Load"
+                )
+            }
+        }
+        let mix = audioTrack.flatMap { Self.edgeDeclickMix(track: $0, loopEnd: loopEnd) }
+        // The shared mix is published only when this item is installed.
+        // Writing it here would let a newer load stamp its fades onto the
+        // item still looping, before that load replaces the queue.
+        playerItem.audioMix = mix
         // forwardPlaybackEndTime and the looper describe the same boundary two
         // ways, and both are needed: the looper honours only its own range
         // when it wraps, while a player that is not looping — or stops looping
@@ -654,7 +746,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             }
             playerItem.videoComposition = videoComposition
         }
-        loopAudioMix = audioMix
         if let audioMix { playerItem.audioMix = audioMix }
         return (playerItem, offsets, durations)
     }
@@ -1340,6 +1431,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// off, instead of holding them until dispose.
     private func prewarmLoopingOutputs() {
         textureOutput?.prewarm(items: playerLooper?.loopingPlayerItems ?? [])
+        // The looper prerolls the next lap's audio ahead of the join, so an
+        // edge fade handed over only when an item becomes current misses the
+        // very samples it exists for.
+        if let loopAudioMix {
+            playerLooper?.loopingPlayerItems.forEach { item in
+                if item.audioMix !== loopAudioMix { item.audioMix = loopAudioMix }
+            }
+        }
     }
 
     private func attachCurrentItemOutputs() {

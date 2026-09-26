@@ -51,33 +51,21 @@ void main() {
       );
     });
 
-    test('Android clamps the clipping configuration, not just endMs', () {
-      final source = _androidSourceFile().readAsStringSync();
+    test('Android bounds the clamp and only ever shortens a clip', () {
+      final source = _androidSourceFile(
+        'CommonTrackEndMediaSource.kt',
+      ).readAsStringSync();
 
       expect(
         source,
-        contains('boundedCommonTrackEndMs'),
+        contains('fun commonTrackEndUs('),
         reason:
             'Android must resolve the point where both tracks still have '
-            'content before building the clipping configuration.',
+            'content before it clips the source.',
       );
       expect(
         source,
-        contains('listOfNotNull(endMs, commonEndMs).minOrNull()'),
-        reason:
-            'Clamping may only ever shorten a clip — an explicit trim that '
-            'ends earlier still wins.',
-      );
-      expect(
-        source,
-        contains('buildMediaItem(uri, startMs, effectiveEndMs)'),
-        reason:
-            'The clamped end must reach ExoPlayer; setting the raw endMs '
-            'would leave the seam in place.',
-      );
-      expect(
-        source,
-        contains('MAX_COMMON_TRACK_END_TRIM_MS = 500L'),
+        contains('MAX_COMMON_TRACK_END_TRIM_US = 500_000L'),
         reason:
             'The clamp must be bounded so stub audio tracks do not collapse a '
             'normal-length video into a tiny loop.',
@@ -91,52 +79,123 @@ void main() {
       );
     });
 
-    test('Android probes remote sources too, off the platform thread', () {
-      final source = _androidSourceFile().readAsStringSync();
+    test('Android and Apple agree on the trim bound and ratio', () {
+      // Each platform hand-codes this policy separately (there is no shared
+      // constant between the Kotlin and Swift sides of this plugin); the two
+      // tests above only pin each platform's own literal. Without this, a
+      // future one-sided retune of the tolerance would silently diverge the
+      // platforms while both stayed green on their own.
+      final apple = _appleSourceFile().readAsStringSync();
+      final android = _androidSourceFile(
+        'CommonTrackEndMediaSource.kt',
+      ).readAsStringSync();
+
+      final appleTrimMsMatch = RegExp(
+        r'maxCommonTrackEndTrimMs = ([\d.]+)',
+      ).firstMatch(apple);
+      final androidTrimUsMatch = RegExp(
+        r'MAX_COMMON_TRACK_END_TRIM_US = ([\d_]+)L',
+      ).firstMatch(android);
+      expect(appleTrimMsMatch, isNotNull);
+      expect(androidTrimUsMatch, isNotNull);
+      final appleTrimMs = double.parse(appleTrimMsMatch!.group(1)!);
+      final androidTrimUs = int.parse(
+        androidTrimUsMatch!.group(1)!.replaceAll('_', ''),
+      );
+      expect(
+        androidTrimUs,
+        (appleTrimMs * 1000).round(),
+        reason:
+            'The trim-bound tolerance must match across platforms so a '
+            'retune on one side cannot silently diverge from the other.',
+      );
+
+      final appleTrimRatioMatch = RegExp(
+        r'maxCommonTrackEndTrimRatio = ([\d.]+)',
+      ).firstMatch(apple);
+      final androidTrimRatioMatch = RegExp(
+        r'MAX_COMMON_TRACK_END_TRIM_RATIO = ([\d.]+)',
+      ).firstMatch(android);
+      expect(appleTrimRatioMatch, isNotNull);
+      expect(androidTrimRatioMatch, isNotNull);
+      expect(
+        double.parse(androidTrimRatioMatch!.group(1)!),
+        double.parse(appleTrimRatioMatch!.group(1)!),
+        reason:
+            'Same policy as the trim bound above: the ratio must match '
+            'across platforms so a retune on one side cannot silently '
+            'diverge from the other.',
+      );
+    });
+
+    test('Android clips at the track end before the first frame', () {
+      final instance = _androidSourceFile().readAsStringSync();
+      final mediaSource = _androidSourceFile(
+        'CommonTrackEndMediaSource.kt',
+      ).readAsStringSync();
 
       expect(
-        source,
-        contains('MediaExtractor'),
+        instance,
+        contains('TrackEndCapturingExtractorsFactory('),
         reason:
-            'Per-track durations are not exposed by the ExoPlayer '
-            'timeline, which reports the longest track.',
+            "The track ends come from the player's own extractor as it parses "
+            'the container — no second read, and nothing in front of the load.',
       );
       expect(
-        source,
-        contains(RegExp(r'uri\.startsWith\("https://"\)')),
+        instance,
+        contains('buildCommonTrackEndItem(uri, endMs)'),
         reason:
-            'Remote clips are the ones the feed loops. Probing local files '
-            'only left every https source ending at the container duration, '
-            'so 46% of feed videos replayed a frozen last frame at every '
-            'loop restart on Android while iOS looped cleanly.',
+            'A clip that asks for the clamp must reach the player as an item '
+            'the clipping source recognises.',
       );
       expect(
-        source,
-        contains('metadataExecutor.execute'),
+        mediaSource,
+        contains('leadingVideoGapUs(videoStartUs = ends[2], endUs = endUs)'),
         reason:
-            'The probe blocks on I/O, so it may never run on the platform '
-            'thread — which is why it used to be skipped for remote sources.',
+            "An empty edit ahead of the first frame holds the last lap's final "
+            'frame at every restart; the clip has to start where the picture '
+            'does.',
       );
       expect(
-        source,
-        contains('warmTrackDurationsInBackground'),
+        mediaSource,
+        contains('updateClipping(periodStartUs, periodEndUs)'),
         reason:
-            'Uncached remote probes must warm the cache without serializing '
-            'the feed first-frame path ahead of ExoPlayer.',
+            'The end has to reach the period already being prepared: it is '
+            'the one that parses the container, and it plays the first lap.',
       );
       expect(
-        source,
-        matches(
-          RegExp(
-            r'mainHandler\.postDelayed\(\s*deferredSetClipsTimeout,\s*'
-            'TRACK_DURATION_RESOLVE_TIMEOUT_MS',
-          ),
-        ),
+        instance,
+        isNot(contains('replaceMediaItem')),
         reason:
-            'MediaHTTPConnection sets a connect timeout and no read timeout, '
-            'so a host that stalls mid-response would hold `await setClips()` '
-            'open forever. The wait has to be bounded, and expiring it plays '
-            'unclamped rather than not at all.',
+            'Installing a late clamp by swapping the item re-prepared the '
+            'source on a playing video and froze the first loop restart for '
+            '~300 ms. Nothing may swap the item to clip it.',
+      );
+      expect(
+        mediaSource,
+        isNot(contains('replaceMediaItem')),
+        reason:
+            'The clipping media source is where a regression is most likely '
+            'to reintroduce a late-clamp item swap under a different name; '
+            'it must never swap the item to clip it either.',
+      );
+      expect(
+        instance,
+        isNot(contains('MediaExtractor()')),
+        reason:
+            'A second read of the container either delayed the load or landed '
+            'after the video had started; the extractor already has the '
+            'answer before the first frame.',
+      );
+      expect(
+        mediaSource,
+        isNot(contains('MediaExtractor()')),
+        reason:
+            'The clipping media source must never open a second extractor to '
+            'read track ends. ClipAudioLoopTrack.kt legitimately opens one, '
+            'but only to decode the separate loop-audio PCM track off the '
+            'platform thread — a different codepath from prepare()/clipping '
+            'that this file must stay free of.',
       );
     });
   });
@@ -158,10 +217,9 @@ File _appleSourceFile() {
   );
 }
 
-File _androidSourceFile() {
+File _androidSourceFile([String name = 'DivineVideoPlayerInstance.kt']) {
   final packageRelative = File(
-    'android/src/main/kotlin/com/divinevideo/divine_video_player/'
-    'DivineVideoPlayerInstance.kt',
+    'android/src/main/kotlin/com/divinevideo/divine_video_player/$name',
   );
   if (packageRelative.existsSync()) {
     return packageRelative;
@@ -169,7 +227,6 @@ File _androidSourceFile() {
 
   return File(
     'packages/divine_video_player/'
-    'android/src/main/kotlin/com/divinevideo/divine_video_player/'
-    'DivineVideoPlayerInstance.kt',
+    'android/src/main/kotlin/com/divinevideo/divine_video_player/$name',
   );
 }
