@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +12,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_metadata/metadata_hero_corners.dart';
@@ -87,7 +88,12 @@ class _VideoMetadataCoverScreenState
   void initState() {
     super.initState();
     _selectedPosition = widget.clip.thumbnailTimestamp;
-    unawaited(_initializePlayer());
+    runDetached(
+      _initializePlayer(),
+      'initialize cover preview player',
+      logName: 'VideoMetadataCoverScreen',
+      category: LogCategory.video,
+    );
   }
 
   Future<void> _initializePlayer() async {
@@ -95,15 +101,26 @@ class _VideoMetadataCoverScreenState
     // captured frame (already set as the thumbnail).
     final video = widget.clip.video;
     if (video == null) return;
-    final localPath = await video.safeFilePath();
-
+    final String localPath;
+    try {
+      localPath = await video.safeFilePath();
+      if (!mounted) return;
+      final metadata = await ProVideoEditor.instance.getMetadata(
+        EditorVideo.file(localPath),
+      );
+      _videoDuration = metadata.duration;
+    } catch (_) {
+      // Nothing left to load, but the cursor still works and confirm retries
+      // the download. runDetached logs the failure and reports defects.
+      if (mounted) {
+        setState(() {
+          _videoDuration = widget.clip.duration;
+          _playerInitFailed = true;
+        });
+      }
+      rethrow;
+    }
     if (!mounted) return;
-
-    final metadata = await ProVideoEditor.instance.getMetadata(
-      EditorVideo.file(localPath),
-    );
-    if (!mounted) return;
-    _videoDuration = metadata.duration;
 
     final controller = DivineVideoPlayerController(
       useTexture: true,
@@ -147,7 +164,12 @@ class _VideoMetadataCoverScreenState
         error: e,
         stackTrace: stackTrace,
       );
-      unawaited(controller.dispose());
+      runDetached(
+        controller.dispose(),
+        'dispose failed cover preview player',
+        logName: 'VideoMetadataCoverScreen',
+        category: LogCategory.video,
+      );
       if (!mounted) return;
       setState(() => _playerInitFailed = true);
     }
@@ -160,7 +182,7 @@ class _VideoMetadataCoverScreenState
     if (mounted) _startStripGeneration(localPath);
   }
 
-  Future<void> _startStripGeneration(String videoPath) async {
+  void _startStripGeneration(String videoPath) {
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
     final pixelRatio = view.devicePixelRatio;
     final screenWidth = view.physicalSize.width / pixelRatio;
@@ -289,7 +311,7 @@ class _VideoMetadataCoverScreenState
                 .read(videoEditorProvider.notifier)
                 .updateCover(
                   thumbnailPath: result.path,
-                  thumbnailTimestamp: _selectedPosition,
+                  thumbnailTimestamp: result.timestamp,
                 );
             didSucceed = true;
           }
@@ -306,10 +328,11 @@ class _VideoMetadataCoverScreenState
 
     if (!mounted) return;
     if (didSucceed) {
-      SemanticsService.sendAnnouncement(
-        View.of(context),
+      announceDetached(
+        context,
         context.l10n.videoMetadataEditCoverSuccessAnnouncement,
-        Directionality.of(context),
+        description: 'announce cover update success',
+        logName: 'VideoMetadataCoverScreen',
       );
       context.pop();
       return;
@@ -317,10 +340,11 @@ class _VideoMetadataCoverScreenState
 
     // Stay on screen so the user can retry. Surface the failure.
     final message = context.l10n.videoMetadataEditCoverFailedSnackbar;
-    SemanticsService.sendAnnouncement(
-      View.of(context),
+    announceDetached(
+      context,
       message,
-      Directionality.of(context),
+      description: 'announce cover update failure',
+      logName: 'VideoMetadataCoverScreen',
     );
     ScaffoldMessenger.of(
       context,
@@ -330,8 +354,21 @@ class _VideoMetadataCoverScreenState
 
   @override
   void dispose() {
-    unawaited(_disposeStripResources());
-    unawaited(_controller?.dispose());
+    runDetached(
+      _disposeStripResources(),
+      'dispose cover thumbnail resources',
+      logName: 'VideoMetadataCoverScreen',
+      category: LogCategory.video,
+    );
+    final controller = _controller;
+    if (controller != null) {
+      runDetached(
+        controller.dispose(),
+        'dispose cover preview player',
+        logName: 'VideoMetadataCoverScreen',
+        category: LogCategory.video,
+      );
+    }
     super.dispose();
   }
 
@@ -439,7 +476,7 @@ class _VideoAreaState extends State<_VideoArea> {
   void didUpdateWidget(_VideoArea oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      _sub?.cancel();
+      _cancelSubscription();
       _subscribeToController(widget.controller);
     }
   }
@@ -454,9 +491,21 @@ class _VideoAreaState extends State<_VideoArea> {
     });
   }
 
+  void _cancelSubscription() {
+    final pending = _sub?.cancel();
+    _sub = null;
+    if (pending == null) return;
+    runDetached(
+      pending,
+      'cancel cover preview listener',
+      logName: 'VideoMetadataCoverScreen',
+      category: LogCategory.video,
+    );
+  }
+
   @override
   void dispose() {
-    _sub?.cancel();
+    _cancelSubscription();
     super.dispose();
   }
 
