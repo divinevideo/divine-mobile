@@ -79,7 +79,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var clipLoopSource: ClipAudioLoop.Source?
 
     /// Where the first lap starts on the item when the clip was cut to its
-    /// first frame (see [leadingEmptyEditEnd]), otherwise nil.
+    /// first frame (see [lapStartPastEmptyEdits]), otherwise nil.
     private var firstFrameStart: CMTime?
 
     /// The longest empty edit ahead of the first frame that a looping clip is
@@ -680,7 +680,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// twice over: as `forwardPlaybackEndTime`, which bounds playback, and —
     /// when the trim is what decides the loop — as the looper's own range,
     /// which is the only one honoured when it wraps. That range also starts
-    /// each lap at the first frame; see [leadingEmptyEditEnd].
+    /// each lap past the empty edits; see [lapStartPastEmptyEdits].
     ///
     /// `trimToCommonTrackEnd` cannot be honoured for an HLS asset: the common
     /// track end comes from `load(.timeRange)` on the asset's video and audio
@@ -746,7 +746,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             let videoTracks = try await asset.loadTracks(withMediaType: .video)
             let audioTracks = try await asset.loadTracks(withMediaType: .audio)
             if let videoTrack = videoTracks.first {
-                loopStart = await Self.leadingEmptyEditEnd(of: videoTrack)
+                loopStart = await Self.lapStartPastEmptyEdits(
+                    video: videoTrack,
+                    audio: audioTracks.first
+                )
             }
             if let videoTrack = videoTracks.first, let audioTrack = audioTracks.first {
                 do {
@@ -1039,11 +1042,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             let standardizedTransform = transform.standardized(for: naturalSize)
 
             var startTime = CMTime(value: startMs, timescale: 1000)
-            // A looping clip starts at its first frame, past the empty edit
-            // that holds it back. Only one that starts at zero, as on
-            // Android: an explicit start is the caller's own cut.
+            // A looping clip starts past the empty edits that open its
+            // tracks. Only one that starts at zero, as on Android: an
+            // explicit start is the caller's own cut.
             if trimToCommonTrackEnd, startMs == 0 {
-                startTime = await Self.leadingEmptyEditEnd(of: sourceVideoTrack)
+                startTime = await Self.lapStartPastEmptyEdits(
+                    video: sourceVideoTrack,
+                    audio: assetAudioTracks.first
+                )
             }
             var endTime = Self.clampedEndTime(
                 requestedEndMs: endMs,
@@ -1705,15 +1711,27 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
     }
 
-    /// Where [track]'s first frame shows, when an empty edit of at most
-    /// [maxLeadingEmptyEditSeconds] holds it back; zero otherwise.
+    /// Where a looping clip's laps start: past the empty edit that opens
+    /// [video] or [audio], whichever ends later; zero when neither has one.
     ///
     /// Every Divine derivative opens its video track with a 21–23 ms empty
-    /// edit. `AVPlayerLooper` does not join such an item to the next one
-    /// gaplessly: each lap started ~200 ms late on an iPad Air (M4) and
-    /// ~400 ms late on macOS and the simulator, the last frame held all that
-    /// time, and a composition cut from zero held it ~55 ms. Started at the
-    /// first frame, both joined every lap on time.
+    /// edit, and some open the audio track with one of a few milliseconds.
+    /// `AVPlayerLooper` does not join an item that starts with either to the
+    /// next one gaplessly: each lap started ~200 ms late on an iPad Air (M4)
+    /// and ~330–400 ms late on macOS and the simulator, the last frame held
+    /// all that time, and a composition cut from zero held it ~55 ms. Started
+    /// past both, every lap joined on time.
+    private static func lapStartPastEmptyEdits(
+        video: AVAssetTrack,
+        audio: AVAssetTrack?
+    ) async -> CMTime {
+        let videoStart = await leadingEmptyEditEnd(of: video)
+        guard let audio else { return videoStart }
+        return CMTimeMaximum(videoStart, await leadingEmptyEditEnd(of: audio))
+    }
+
+    /// Where [track]'s media starts, when an empty edit of at most
+    /// [maxLeadingEmptyEditSeconds] holds it back; zero otherwise.
     private static func leadingEmptyEditEnd(of track: AVAssetTrack) async -> CMTime {
         guard let segments = try? await track.load(.segments),
             let first = segments.first, first.isEmpty

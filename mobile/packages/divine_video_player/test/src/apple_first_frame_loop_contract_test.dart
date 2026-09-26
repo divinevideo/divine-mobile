@@ -2,12 +2,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Every Divine derivative opens its video track with a 21–23 ms empty edit.
-/// `AVPlayerLooper` does not join an item that starts with one to the next
-/// gaplessly: each lap started ~200 ms late on an iPad Air (M4) and ~400 ms
-/// late on macOS and the simulator, with the last frame held all that time,
-/// and a composition cut from zero held it ~55 ms. Started at the first frame,
-/// both paths joined every lap on time — the same start Android uses.
+/// Every Divine derivative opens its video track with a 21–23 ms empty edit,
+/// and some open the audio track with one of a few milliseconds.
+/// `AVPlayerLooper` does not join an item that starts with either to the next
+/// gaplessly: each lap started ~200 ms late on an iPad Air (M4) and
+/// ~330–400 ms late on macOS and the simulator, with the last frame held all
+/// that time, and a composition cut from zero held it ~55 ms. Started past
+/// both, every lap joined on time — the start Android uses for the picture.
 ///
 /// None of this has a Dart runtime surface and the package's Swift harness
 /// cannot run an `AVPlayer`, so the invariants are pinned as a source
@@ -26,12 +27,25 @@ void main() {
       expect(source, contains('let first = segments.first, first.isEmpty'));
     });
 
+    test('an empty edit on either track moves the lap start', () {
+      expect(
+        _instanceSource(),
+        contains(
+          'return CMTimeMaximum(videoStart, '
+          'await leadingEmptyEditEnd(of: audio))',
+        ),
+        reason:
+            'A 7 ms empty edit opening only the audio track held the picture '
+            '~330 ms at every restart, like the video track’s 23 ms one.',
+      );
+    });
+
     test('the direct path loops from the first frame', () {
       final source = _instanceSource();
 
       expect(
         source,
-        contains('loopStart = await Self.leadingEmptyEditEnd(of: videoTrack)'),
+        contains('loopStart = await Self.lapStartPastEmptyEdits('),
       );
       expect(
         source,
@@ -54,9 +68,7 @@ void main() {
       );
       expect(
         source,
-        contains(
-          'startTime = await Self.leadingEmptyEditEnd(of: sourceVideoTrack)',
-        ),
+        contains('startTime = await Self.lapStartPastEmptyEdits('),
       );
     });
 
