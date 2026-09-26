@@ -11659,6 +11659,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get supporterRestorePurchases => 'Restaurar compras';
 
   @override
+  String get supporterTermsOfUse => 'Termos de uso';
+
+  @override
+  String get supporterAutoRenewNoticeAppStore =>
+      'Os planos são renovados automaticamente pelo preço mostrado até você cancelar. Cancele quando quiser nas configurações de assinaturas da App Store, pelo menos 24 horas antes da próxima renovação.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Os planos são renovados automaticamente pelo preço mostrado até você cancelar. Cancele quando quiser nas configurações de assinaturas do Google Play, pelo menos 24 horas antes da próxima renovação.';
+
+  @override
   String get supporterDismissError => 'Dispensar erro';
 
   @override

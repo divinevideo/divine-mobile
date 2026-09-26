@@ -11574,6 +11574,17 @@ class AppLocalizationsMs extends AppLocalizations {
   String get supporterRestorePurchases => 'Pulihkan pembelian';
 
   @override
+  String get supporterTermsOfUse => 'Terma Penggunaan';
+
+  @override
+  String get supporterAutoRenewNoticeAppStore =>
+      'Pelan diperbaharui secara automatik pada harga yang ditunjukkan sehingga anda membatalkannya. Batalkan pada bila-bila masa dalam tetapan langganan App Store, sekurang-kurangnya 24 jam sebelum pembaharuan seterusnya.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Pelan diperbaharui secara automatik pada harga yang ditunjukkan sehingga anda membatalkannya. Batalkan pada bila-bila masa dalam tetapan langganan Google Play, sekurang-kurangnya 24 jam sebelum pembaharuan seterusnya.';
+
+  @override
   String get supporterDismissError => 'Ketepikan ralat';
 
   @override

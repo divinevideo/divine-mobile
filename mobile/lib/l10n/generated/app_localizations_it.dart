@@ -11707,6 +11707,17 @@ class AppLocalizationsIt extends AppLocalizations {
   String get supporterRestorePurchases => 'Ripristina gli acquisti';
 
   @override
+  String get supporterTermsOfUse => 'Termini d\'uso';
+
+  @override
+  String get supporterAutoRenewNoticeAppStore =>
+      'I piani si rinnovano automaticamente al prezzo indicato finché non li disdici. Puoi disdire in qualsiasi momento dalle impostazioni degli abbonamenti di App Store, almeno 24 ore prima del prossimo rinnovo.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'I piani si rinnovano automaticamente al prezzo indicato finché non li disdici. Puoi disdire in qualsiasi momento dalle impostazioni degli abbonamenti di Google Play, almeno 24 ore prima del prossimo rinnovo.';
+
+  @override
   String get supporterDismissError => 'Ignora l\'errore';
 
   @override

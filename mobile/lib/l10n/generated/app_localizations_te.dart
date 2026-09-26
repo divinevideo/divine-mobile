@@ -11895,6 +11895,17 @@ class AppLocalizationsTe extends AppLocalizations {
   String get supporterRestorePurchases => 'కొనుగోళ్లను పునరుద్ధరించండి';
 
   @override
+  String get supporterTermsOfUse => 'వినియోగ నిబంధనలు';
+
+  @override
+  String get supporterAutoRenewNoticeAppStore =>
+      'మీరు రద్దు చేసే వరకు ప్లాన్‌లు చూపిన ధరకు ఆటోమేటిక్‌గా పునరుద్ధరించబడతాయి. తదుపరి పునరుద్ధరణకు కనీసం 24 గంటల ముందు App Store సబ్‌స్క్రిప్షన్ సెట్టింగ్‌లలో మీరు ఎప్పుడైనా రద్దు చేయవచ్చు.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'మీరు రద్దు చేసే వరకు ప్లాన్‌లు చూపిన ధరకు ఆటోమేటిక్‌గా పునరుద్ధరించబడతాయి. తదుపరి పునరుద్ధరణకు కనీసం 24 గంటల ముందు Google Play సబ్‌స్క్రిప్షన్ సెట్టింగ్‌లలో మీరు ఎప్పుడైనా రద్దు చేయవచ్చు.';
+
+  @override
   String get supporterDismissError => 'దోషాన్ని తీసివేయండి';
 
   @override

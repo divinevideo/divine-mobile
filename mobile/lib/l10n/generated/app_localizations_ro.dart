@@ -11819,6 +11819,17 @@ class AppLocalizationsRo extends AppLocalizations {
   String get supporterRestorePurchases => 'Restaurează cumpărăturile';
 
   @override
+  String get supporterTermsOfUse => 'Termeni de utilizare';
+
+  @override
+  String get supporterAutoRenewNoticeAppStore =>
+      'Planurile se reînnoiesc automat la prețul afișat până când le anulezi. Poți anula oricând din setările abonamentelor din App Store, cu cel puțin 24 de ore înainte de următoarea reînnoire.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Planurile se reînnoiesc automat la prețul afișat până când le anulezi. Poți anula oricând din setările abonamentelor din Google Play, cu cel puțin 24 de ore înainte de următoarea reînnoire.';
+
+  @override
   String get supporterDismissError => 'Închide eroarea';
 
   @override

@@ -11636,6 +11636,17 @@ class AppLocalizationsNl extends AppLocalizations {
   String get supporterRestorePurchases => 'Aankopen herstellen';
 
   @override
+  String get supporterTermsOfUse => 'Gebruiksvoorwaarden';
+
+  @override
+  String get supporterAutoRenewNoticeAppStore =>
+      'Abonnementen worden automatisch verlengd tegen de getoonde prijs totdat je opzegt. Je kunt altijd opzeggen via je abonnementsinstellingen in de App Store, minstens 24 uur voor de volgende verlenging.';
+
+  @override
+  String get supporterAutoRenewNoticeGooglePlay =>
+      'Abonnementen worden automatisch verlengd tegen de getoonde prijs totdat je opzegt. Je kunt altijd opzeggen via je abonnementsinstellingen in Google Play, minstens 24 uur voor de volgende verlenging.';
+
+  @override
   String get supporterDismissError => 'Fout negeren';
 
   @override
