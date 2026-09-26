@@ -628,6 +628,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            _storeBilling(),
             supporterRepositoryProvider.overrideWithValue(
               _FakeRepository(controller, tiers: tiers, initial: initial),
             ),
