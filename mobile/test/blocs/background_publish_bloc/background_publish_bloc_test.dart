@@ -582,6 +582,118 @@ void main() {
           ],
         );
       });
+
+      // The caller starts `publishVideo` before dispatching the request, so
+      // a publish queued behind another is already uploading while the
+      // sequential handler still holds its event.
+      group('while another publish is still running', () {
+        late _MockVineDraft running;
+        late _MockVineDraft queued;
+        late Completer<PublishResult> runningProcess;
+        late Completer<PublishResult> queuedProcess;
+        late BackgroundPublishBloc bloc;
+
+        _MockVineDraft draftWithId(String id) {
+          final draft = _MockVineDraft();
+          when(() => draft.id).thenReturn(id);
+          when(() => draft.sourceDraftId).thenReturn(null);
+          return draft;
+        }
+
+        setUp(() {
+          running = draftWithId('running');
+          queued = draftWithId('queued');
+          runningProcess = Completer<PublishResult>();
+          queuedProcess = Completer<PublishResult>();
+          bloc = BackgroundPublishBloc(
+            videoPublishServiceFactory: defaultVieoPublishServiceFactory,
+            draftStorageService: mockDraftStorageService,
+          );
+          addTearDown(bloc.close);
+          // Registered after close so it runs first: close() waits for the
+          // handler that is still awaiting a publish.
+          addTearDown(() {
+            for (final process in [runningProcess, queuedProcess]) {
+              if (!process.isCompleted) {
+                process.complete(const PublishSuccess());
+              }
+            }
+          });
+        });
+
+        Future<void> requestBoth() async {
+          bloc
+            ..add(
+              BackgroundPublishRequested(
+                draft: running,
+                publishmentProcess: runningProcess.future,
+              ),
+            )
+            ..add(
+              BackgroundPublishRequested(
+                draft: queued,
+                publishmentProcess: queuedProcess.future,
+              ),
+            );
+          await pumpEventQueue();
+        }
+
+        test('lists the queued publish as soon as it is requested', () async {
+          await requestBoth();
+
+          expect(bloc.state.uploads.map((upload) => upload.draft.id), [
+            'running',
+            'queued',
+          ]);
+          expect(
+            bloc.state.uploads.every((upload) => upload.result == null),
+            isTrue,
+          );
+        });
+
+        test('never reports idle while the queued publish runs', () async {
+          final states = <BackgroundPublishState>[];
+          final subscription = bloc.stream.listen(states.add);
+          addTearDown(subscription.cancel);
+          await requestBoth();
+
+          runningProcess.complete(const PublishSuccess());
+          await pumpEventQueue();
+
+          expect(queuedProcess.isCompleted, isFalse);
+          expect(states, isNotEmpty);
+          expect(states.where((state) => !state.hasUploadInProgress), isEmpty);
+          expect(bloc.state.uploads.map((upload) => upload.draft.id), [
+            'queued',
+          ]);
+        });
+
+        test('keeps progress reported before the queued turn starts', () async {
+          await requestBoth();
+
+          bloc.add(
+            BackgroundPublishProgressChanged(draftId: 'queued', progress: 0.4),
+          );
+          await pumpEventQueue();
+          runningProcess.complete(const PublishSuccess());
+          await pumpEventQueue();
+
+          expect(bloc.state.uploads.single.progress, equals(0.4));
+        });
+
+        test('parks the queued publish with the running one', () async {
+          await requestBoth();
+
+          await bloc.parkInFlight();
+
+          verify(
+            () => mockDraftStorageService.updatePublishStatus(
+              draftId: 'queued',
+              status: PublishStatus.draft,
+            ),
+          ).called(greaterThanOrEqualTo(1));
+        });
+      });
     });
 
     group('BackgroundPublishProgressChanged', () {

@@ -5,6 +5,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/background_publish/publish_foreground_session.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -28,8 +29,9 @@ class BackgroundPublishBloc
        _draftStorageService = draftStorageService,
        _foregroundSession = foregroundSession,
        super(const BackgroundPublishState()) {
-    on<BackgroundPublishRequested>(
-      _onBackgroundPublishRequested,
+    on<BackgroundPublishRequested>(_onBackgroundPublishRequested);
+    on<_BackgroundPublishQueued>(
+      _onBackgroundPublishQueued,
       transformer: sequential(),
     );
     on<BackgroundPublishProgressChanged>(_onBackgroundPublishProgressChanged);
@@ -51,11 +53,14 @@ class BackgroundPublishBloc
   /// ended. Null disables the behaviour (e.g. in tests).
   final PublishForegroundSession? _foregroundSession;
 
-  Future<void> _onBackgroundPublishRequested(
+  /// Lists the upload as soon as it is requested, then waits its turn.
+  ///
+  /// The caller starts `publishVideo` before dispatching, so a publish queued
+  /// behind another is already uploading and must count as in progress.
+  void _onBackgroundPublishRequested(
     BackgroundPublishRequested event,
     Emitter<BackgroundPublishState> emit,
-  ) async {
-    // Check if the upload is already in progress
+  ) {
     final alreadyUploading = state.uploads.any(
       (upload) => upload.draft.id == event.draft.id,
     );
@@ -68,6 +73,18 @@ class BackgroundPublishBloc
       emit(state.copyWith(uploads: [...state.uploads, newUpload]));
     }
 
+    addIfOpen(
+      _BackgroundPublishQueued(
+        draft: event.draft,
+        publishmentProcess: event.publishmentProcess,
+      ),
+    );
+  }
+
+  Future<void> _onBackgroundPublishQueued(
+    _BackgroundPublishQueued event,
+    Emitter<BackgroundPublishState> emit,
+  ) async {
     await _beginForegroundSession(event.draft.id);
     try {
       final result = await _awaitPublishResult(event.publishmentProcess);
