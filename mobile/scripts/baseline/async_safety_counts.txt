@@ -38,9 +38,6 @@ discarded_futures|lib/screens/profile_setup/widgets/profile_setup_listeners.dart
 discarded_futures|lib/screens/relay_diagnostic_screen.dart	1
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
 discarded_futures|lib/screens/verify/verify_screen.dart	1
-discarded_futures|lib/screens/video_metadata/video_metadata_cover_screen.dart	2
-discarded_futures|lib/screens/video_metadata/video_metadata_edit_screen.dart	1
-discarded_futures|lib/screens/video_metadata/video_metadata_preview_screen.dart	1
 discarded_futures|lib/screens/web_auth_screen.dart	1
 discarded_futures|lib/utils/deferred_login_options_navigator.dart	3
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
@@ -75,8 +72,6 @@ discarded_futures|lib/widgets/upload_failure_sheet.dart	2
 discarded_futures|lib/widgets/user_avatar.dart	1
 discarded_futures|lib/widgets/user_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
-discarded_futures|lib/widgets/video_metadata/modes/classic/video_metadata_classic_preview_thumbnail.dart	3
-discarded_futures|lib/widgets/video_metadata/modes/edit/video_metadata_edit_bottom_bar.dart	1
 discarded_futures|lib/widgets/video_reply_parent_link.dart	1
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
@@ -139,13 +134,11 @@ discarded_futures|test/widgets/save_original_progress_sheet_test.dart	1
 discarded_futures|test/widgets/upload_failure_listener_test.dart	1
 discarded_futures|test/widgets/upload_progress_dialog_test.dart	1
 discarded_futures|test/widgets/video_feed_item/inline_comment_composer_bar_test.dart	2
-discarded_futures|test/widgets/video_metadata/video_metadata_help_sheet_test.dart	1
 discarded_futures|test/widgets/watermark_download_progress_sheet_test.dart	1
 unawaited_futures|integration_test/e2e/deleted_video_visible_to_other_users_test.dart	2
 unawaited_futures|lib/features/app/startup/startup_coordinator.dart	1
 unawaited_futures|lib/screens/feed/video_feed_page.dart	1
 unawaited_futures|lib/screens/verify/verify_screen.dart	1
-unawaited_futures|lib/screens/video_metadata/video_metadata_cover_screen.dart	3
 unawaited_futures|lib/screens/video_recorder_screen.dart	1
 unawaited_futures|lib/screens/web_auth_screen.dart	3
 unawaited_futures|lib/widgets/app_lifecycle_handler.dart	1

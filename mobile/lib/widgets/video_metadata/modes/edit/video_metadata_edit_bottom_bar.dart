@@ -18,6 +18,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/owner_video_cleanup_feedback.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -64,7 +65,12 @@ class _VideoMetadataEditBottomBarState
 
   @override
   void dispose() {
-    _ownerVideoActionsCubit.close();
+    runDetached(
+      _ownerVideoActionsCubit.close(),
+      'close video metadata actions',
+      logName: 'VideoMetadataEditBottomBar',
+      category: LogCategory.video,
+    );
     super.dispose();
   }
 

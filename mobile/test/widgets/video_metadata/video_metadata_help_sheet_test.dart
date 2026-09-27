@@ -63,8 +63,8 @@ void main() {
           builder: (context, state) => Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
-                onPressed: () {
-                  showModalBottomSheet<void>(
+                onPressed: () async {
+                  await showModalBottomSheet<void>(
                     context: context,
                     builder: (_) => DefaultAssetBundle(
                       bundle: bundle,

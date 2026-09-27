@@ -117,6 +117,7 @@ void main() {
   late SharedPreferences prefs;
   late _PlayerEventsStreamHandler playerEvents;
   late List<Map<Object?, Object?>> setClipsArguments;
+  late List<String> playerCalls;
 
   final createdPlayerIds = <int>{};
 
@@ -126,6 +127,7 @@ void main() {
     prefs = await SharedPreferences.getInstance();
     playerEvents = _PlayerEventsStreamHandler();
     setClipsArguments = [];
+    playerCalls = [];
     DivineVideoPlayerController.resetIdCounterForTesting();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(const MethodChannel('divine_video_player'), (
@@ -139,6 +141,7 @@ void main() {
                 .setMockMethodCallHandler(
                   MethodChannel('divine_video_player/player_$id'),
                   (call) async {
+                    playerCalls.add(call.method);
                     if (call.method == 'setClips') {
                       setClipsArguments.add(
                         call.arguments! as Map<Object?, Object?>,
@@ -301,6 +304,36 @@ void main() {
       expect(fittedBox.fit, equals(BoxFit.cover));
       // A cover-fit video occludes the backdrop, so the feed never mounts it.
       expect(find.byType(BlurredVideoBackdrop), findsNothing);
+    });
+
+    testWidgets('pauses the preview once publishing changes state', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump(const Duration(milliseconds: 400));
+      playerEvents.addState(<Object?, Object?>{
+        'status': 'playing',
+        'positionMs': 0,
+        'durationMs': 1000,
+        'bufferedPositionMs': 1000,
+        'currentClipIndex': 0,
+        'clipCount': 1,
+        'isLooping': true,
+        'volume': 1.0,
+        'playbackSpeed': 1.0,
+        'isFirstFrameRendered': true,
+        'videoWidth': 1080,
+        'videoHeight': 1920,
+      });
+      await tester.pump();
+      expect(playerCalls, isNot(contains('pause')));
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(VideoMetadataPreviewScreen)),
+      ).read(videoPublishProvider.notifier).setError('upload failed');
+      await tester.pump();
+
+      expect(playerCalls, contains('pause'));
     });
 
     testWidgets('sizes the fitted video from decoded source dimensions', (

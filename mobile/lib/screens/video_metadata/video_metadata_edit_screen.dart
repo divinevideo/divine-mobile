@@ -9,7 +9,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_metadata/modes/edit/video_metadata_edit_stack.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Screen entry-point for editing an already-published [VideoEvent].
 ///
@@ -61,22 +63,33 @@ class _VideoMetadataEditScreenState
         widget.prefetched!.nostrEventTags.isNotEmpty) {
       _resolved = widget.prefetched;
     } else {
-      _resolve();
+      runDetached(
+        _resolve(),
+        'resolve video ${widget.videoId} for metadata editing',
+        logName: 'VideoMetadataEditScreen',
+        category: LogCategory.video,
+      );
     }
   }
 
   Future<void> _resolve() async {
-    final resolver = ref.read(videoEventResolverProvider);
-    final video = await resolver.resolveById(
-      widget.videoId,
-      allowOwnContentBypass: true,
-      requireRawTags: true,
-    );
-    if (!mounted) return;
-    setState(() {
-      _resolved = video;
-      _resolveFailed = video == null;
-    });
+    try {
+      final resolver = ref.read(videoEventResolverProvider);
+      final video = await resolver.resolveById(
+        widget.videoId,
+        allowOwnContentBypass: true,
+        requireRawTags: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _resolved = video;
+        _resolveFailed = video == null;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _resolveFailed = true);
+      // runDetached logs the failure and reports the reportable ones.
+      rethrow;
+    }
   }
 
   @override
