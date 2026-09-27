@@ -154,15 +154,19 @@ void main() {
       expect(
         body.replaceAll(RegExp(r'\s+'), ' '),
         contains(
-          'loopTimeRange = CMTimeRange(start: .zero, end: loopEnd) '
-          'playerItem.forwardPlaybackEndTime = loopEnd',
+          'if CMTimeCompare(loopEnd, assetDuration) < 0 { '
+          'playerItem.forwardPlaybackEndTime = loopEnd }',
         ),
         reason:
             'Trimming has no composition time range to live in, so the same '
-            'cut is applied as a forward playback end time wherever it is '
-            'applied as the looper range. A player that is not looping, or '
-            'stops looping later, has only the former to end the item where '
-            'Dart was told it ends.',
+            'end is applied as a forward playback end time wherever the looper '
+            'range ends early. A player that is not looping, or stops looping '
+            'later, has only the former to end the item where Dart was told '
+            'it ends.',
+      );
+      expect(
+        body,
+        contains('loopTimeRange = CMTimeRange(start: loopStart, end: loopEnd)'),
       );
       expect(
         body,
@@ -173,7 +177,10 @@ void main() {
       );
       expect(
         body,
-        contains('let mix = audioTrack.flatMap { Self.edgeDeclickMix(track:'),
+        contains(
+          r'Self.edgeDeclickMix(track: $0, loopStart: loopStart, '
+          'loopEnd: loopEnd)',
+        ),
         reason:
             "A direct item carries its own edge fades on its own asset's audio "
             'track. Without them the join is a click on every lap, and a mix '
@@ -197,12 +204,19 @@ void main() {
             'write it before that load installs. prewarm would then stamp the '
             'newer fades onto the item still looping.',
       );
-      final install = _functionBody(
-        _appleSourceFile().readAsStringSync(),
-        'private func handleSetClips(',
+      final source = _appleSourceFile().readAsStringSync();
+      expect(
+        _functionBody(source, 'private func abandonsSetClips('),
+        contains(
+          'guard generation != setClipsGeneration else { return false }',
+        ),
+        reason:
+            'The check a superseded call runs before it installs, before it '
+            'reports ready, and before it reports a failure.',
       );
+      final install = _functionBody(source, 'private func handleSetClips(');
       final stillCurrent = install.indexOf(
-        'callGeneration == self.setClipsGeneration',
+        'self.abandonsSetClips(callGeneration',
       );
       final publish = install.indexOf(
         'self.loopAudioMix = playerItem.audioMix',
@@ -219,10 +233,11 @@ void main() {
       final catchAt = install.indexOf('} catch {');
       final errorStatus = install.indexOf('self.currentStatus = "error"');
       final catchGuard = install.indexOf(
-        'callGeneration == self.setClipsGeneration',
+        'self.abandonsSetClips(callGeneration',
         catchAt,
       );
       expect(catchAt, greaterThanOrEqualTo(0));
+      expect(catchGuard, greaterThan(catchAt));
       expect(
         catchGuard,
         lessThan(errorStatus),
