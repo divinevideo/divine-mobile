@@ -62,14 +62,20 @@ const String profileSearchSortFollowers =
 /// Callback to filter and sort profiles by search relevance.
 /// Takes a query and list of profiles, returns filtered/sorted profiles.
 typedef ProfileSearchFilter =
-    List<UserProfile> Function(String query, List<UserProfile> profiles);
+    List<UserProfile> Function(
+      String query,
+      List<UserProfile> profiles,
+    );
 
 bool _isSearchCancelled(SearchCancellationToken? token) =>
     token?.isCancelled ?? false;
 
 /// Bounded local identity lookup used by interactive people discovery.
 typedef LocalProfileSearch =
-    Future<List<UserProfile>> Function(String query, int limit);
+    Future<List<UserProfile>> Function(
+      String query,
+      int limit,
+    );
 
 /// Default indexer relays for kind 0 profile lookups.
 ///
@@ -218,12 +224,6 @@ class ProfileRepository implements ProfileReader {
   /// to recover fields that REST strips.
   final _rawKind0ConfirmedMissing = <String>{};
 
-  /// In-memory set of pubkeys known to have cached profiles.
-  /// Backs the synchronous [hasProfile] check. No production caller reads it
-  /// today; the subscription-manager filtering it was built for was removed
-  /// with the dead wiring in #9130.
-  final _knownCached = <String>{};
-
   /// Pubkeys with a NIP-62 request to vanish, mirroring the durable
   /// `vanished_profiles` table. Kept in memory so [isVanished] can answer
   /// synchronously and so the write paths can reject a resurrected profile
@@ -283,16 +283,31 @@ class ProfileRepository implements ProfileReader {
     return matches.length;
   }
 
-  Future<List<UserProfile>> _searchUsersForDiscovery({
+  /// Bounded local search over identity fields (name, display name, NIP-05,
+  /// exact pubkey) — never biography text, unlike [searchUsersLocally].
+  ///
+  /// Uses the DAO's indexed [LocalProfileSearch] when injected (the
+  /// production wiring, via `searchProfilesByIdentity`), falling back to
+  /// the unbounded [searchUsersLocally] scan otherwise. This is the primitive
+  /// for exact-match resolution — typed `@mention` resolution and mention-tap
+  /// navigation — where a candidate's bio content is never a legitimate
+  /// match. Applies the block filter itself: this is the only place that
+  /// does for these callers, so the filter belongs at the shared entry point
+  /// rather than duplicated at each call site.
+  Future<List<UserProfile>> searchCachedProfilesByIdentity({
     required String query,
     required int limit,
   }) async {
     final localSearch = _localProfileSearch;
-    if (localSearch == null) {
-      return searchUsersLocally(query: query, limit: limit);
-    }
-    final candidates = await localSearch(_localSearchTerm(query), limit);
-    return _profileSearchFilter?.call(query, candidates) ?? candidates;
+    final candidates = localSearch == null
+        ? await searchUsersLocally(query: query, limit: limit)
+        : await localSearch(_localSearchTerm(query), limit);
+    final filtered =
+        _profileSearchFilter?.call(query, candidates) ?? candidates;
+    final blockFilter = _blockFilter;
+    return blockFilter == null
+        ? filtered
+        : filtered.where((p) => !blockFilter(p.pubkey)).toList();
   }
 
   /// Translates a full `npub` query into the hex form the bounded local
@@ -311,26 +326,6 @@ class ProfileRepository implements ProfileReader {
   /// details are not preserved by the current relay query API.
   @override
   bool isConfirmedMissing(String pubkey) => _confirmedMissing.contains(pubkey);
-
-  /// Synchronous check for whether a profile is cached.
-  ///
-  /// Returns `true` if the pubkey was cached during this session. It reflects
-  /// only what this instance has written, because nothing calls
-  /// [loadKnownCachedPubkeys] to pre-populate it.
-  ///
-  /// Has no production caller. It fed the subscription manager's Kind 0
-  /// skip-list until that wiring was removed in #9130.
-  bool hasProfile(String pubkey) => _knownCached.contains(pubkey);
-
-  /// Pre-loads the in-memory [_knownCached] set from all profiles
-  /// currently in the Drift cache.
-  ///
-  /// No production caller. Note this reads the DAO directly, so it would
-  /// re-admit a vanished pubkey that [cacheProfile] deliberately keeps out.
-  Future<void> loadKnownCachedPubkeys() async {
-    final all = await _userProfilesDao.getAllProfiles();
-    _knownCached.addAll(all.map((p) => p.pubkey));
-  }
 
   /// Whether the account behind [pubkey] has requested NIP-62 deletion.
   ///
@@ -405,10 +400,10 @@ class ProfileRepository implements ProfileReader {
   /// Deliberately **not** gated on [_vanished]. That set is one mirror per
   /// repository instance, hydrated asynchronously, of a table every instance
   /// shares, so a miss does not prove the row is absent. Trusting one would
-  /// strand the tombstone, and [UserProfilesDao] would then drop every re-cache
-  /// while [cacheProfile] had already claimed the pubkey in [_knownCached] —
-  /// leaving [hasProfile] asserting a row that does not exist. A delete
-  /// matching nothing dirties no page; that disagreement is costlier.
+  /// strand the tombstone: [UserProfilesDao] would keep silently dropping
+  /// every re-cache attempt for that pubkey (the vanish guard in
+  /// `upsertProfile`) while nothing here would say so. A delete matching
+  /// nothing dirties no page; that disagreement is costlier.
   Future<void> _clearVanish(String pubkey) async {
     _vanished.remove(pubkey);
     _rawKind0ConfirmedMissing.remove(pubkey);
@@ -478,44 +473,30 @@ class ProfileRepository implements ProfileReader {
   ///
   /// Use this to cache profiles obtained from relay events or REST APIs.
   /// If a profile with the same pubkey already exists, it is updated.
-  /// Also clears the pubkey from the confirmed-missing set and adds
-  /// it to the known-cached set.
+  /// Also clears the pubkey from the confirmed-missing set.
   ///
   /// No-ops for an account that requested deletion. This is the fast path
   /// only — relay ingestion (`EventRouter`) and the classic-viner seed import
   /// write straight to the DAO, so the authoritative guard is the tombstone
-  /// check in [UserProfilesDao.upsertProfile]. Short-circuiting here also keeps
-  /// a vanished pubkey out of [_knownCached], which the DAO cannot do.
+  /// check in [UserProfilesDao.upsertProfile]. Short-circuiting here also
+  /// avoids an unnecessary DAO round trip for a pubkey already known to be
+  /// vanished this session.
   Future<void> cacheProfile(UserProfile profile) {
     if (_vanished.contains(profile.pubkey)) return Future.value();
     _confirmedMissing.remove(profile.pubkey);
     if (!profile.isRestProjection) {
       _rawKind0ConfirmedMissing.remove(profile.pubkey);
     }
-    _knownCached.add(profile.pubkey);
     return _userProfilesDao.upsertProfile(profile);
   }
 
   /// Deletes a cached profile from local storage.
   ///
-  /// Returns the number of rows deleted (0 or 1). On a successful delete
-  /// (rows > 0), also removes the pubkey from the in-memory known-cached
-  /// set so [hasProfile] returns `false` for the rest of the session.
-  /// Does not add the pubkey to the confirmed-missing set — a local
-  /// eviction does not prove remote absence.
-  Future<int> deleteCachedProfile({required String pubkey}) async {
-    final rowsAffected = await _userProfilesDao.deleteProfile(pubkey);
-    if (rowsAffected > 0) {
-      _knownCached.remove(pubkey);
-    }
-    return rowsAffected;
-  }
-
-  /// Returns all cached profiles from local storage.
-  ///
-  /// Used for bulk-loading profiles into memory on startup.
-  Future<List<UserProfile>> getAllCachedProfiles() {
-    return _userProfilesDao.getAllProfiles();
+  /// Returns the number of rows deleted (0 or 1). Does not add the pubkey
+  /// to the confirmed-missing set — a local eviction does not prove remote
+  /// absence.
+  Future<int> deleteCachedProfile({required String pubkey}) {
+    return _userProfilesDao.deleteProfile(pubkey);
   }
 
   /// Watches a profile by pubkey, emitting updates from local storage.
@@ -1029,7 +1010,6 @@ class ProfileRepository implements ProfileReader {
             // relays can still upgrade the cache.
             final existing = await _userProfilesDao.getProfile(pubkey);
             if (existing == null && !requireRawKind0) {
-              _knownCached.add(pubkey);
               await _userProfilesDao.upsertProfile(funnelcakeProfile);
               return funnelcakeProfile;
             }
@@ -1121,7 +1101,6 @@ class ProfileRepository implements ProfileReader {
     if (!profile.isRestProjection) {
       _rawKind0ConfirmedMissing.remove(profile.pubkey);
     }
-    _knownCached.add(profile.pubkey);
     await _userProfilesDao.upsertProfile(profile);
     return true;
   }
@@ -2190,7 +2169,7 @@ class ProfileRepository implements ProfileReader {
       final phase1Watch = Stopwatch()..start();
       final preCount = resultMap.length;
       try {
-        final local = await _searchUsersForDiscovery(
+        final local = await searchCachedProfilesByIdentity(
           query: trimmed,
           limit: limit,
         );
@@ -2473,9 +2452,13 @@ class ProfileRepository implements ProfileReader {
     final nip05Name = nip05.split('@').first;
 
     if (pubkey == queryHex ||
-        {pubkey, name, displayName, nip05, nip05Name}.contains(
-          normalizedQuery,
-        )) {
+        {
+          pubkey,
+          name,
+          displayName,
+          nip05,
+          nip05Name,
+        }.contains(normalizedQuery)) {
       return _exactMatchRelevance;
     }
     if (name.startsWith(normalizedQuery) ||
@@ -2798,8 +2781,8 @@ class ProfileRepository implements ProfileReader {
 
     // Step 4: Batch-write all freshly fetched to Drift.
     //
-    // Writes to the DAO directly rather than through cacheProfile, so both of
-    // that method's in-memory guards have to be applied here too. The vanish
+    // Writes to the DAO directly rather than through cacheProfile, so that
+    // method's in-memory guards have to be applied here too. The vanish
     // check, or a relay copy of an erased account slips back into the cache
     // via the batch path. The confirmed-missing clear, or a pubkey an earlier
     // batch recorded as having no Kind 0 keeps that verdict after this batch
@@ -2807,7 +2790,6 @@ class ProfileRepository implements ProfileReader {
     toCache.removeWhere((profile) => _vanished.contains(profile.pubkey));
     if (toCache.isNotEmpty) {
       final resolved = toCache.map((profile) => profile.pubkey).toList();
-      _knownCached.addAll(resolved);
       _confirmedMissing.removeAll(resolved);
       await _userProfilesDao.upsertProfiles(toCache);
     }
