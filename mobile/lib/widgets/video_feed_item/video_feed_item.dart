@@ -309,19 +309,6 @@ class VideoOverlayActions extends ConsumerWidget {
                     final profile = ref
                         .watch(userProfileReactiveProvider(authorPubkey))
                         .value;
-                    // The card's second line reports the author's lifetime
-                    // loops when the viewer asked for total loops. The figure
-                    // is social proof for the creator, and a per-video number
-                    // beside every card reads as a verdict on one clip rather
-                    // than a body of work. Null while the total is unknown, so
-                    // the card never flashes "0 loops" on first paint.
-                    final authorStats = ref
-                        .watch(videoCardAuthorStatsProvider(authorPubkey))
-                        .value;
-                    final authorTotalLoops =
-                        authorStats?.hasKnownTotalViews == true
-                        ? authorStats!.totalViews
-                        : null;
                     // Use embedded author data from REST API as fallback
                     // This avoids WebSocket profile fetches for videos
                     // that already have author_name/author_avatar embedded
@@ -495,7 +482,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                               ],
                                             ),
                                             _VideoCardMetaLine(
-                                              totalLoops: authorTotalLoops,
+                                              authorPubkey: authorPubkey,
                                             ),
                                           ],
                                         ),
@@ -706,11 +693,11 @@ class VideoOverlayActions extends ConsumerWidget {
 /// Rendered only when the viewer has total loops on
 /// ([StatsVisibilityPreferences.showTotalLoops], on by default), and only
 /// while the total is known (`null`), rather than an empty row or a
-/// placeholder zero.
+/// placeholder zero. The stats lookup starts only once the total is shown.
 class _VideoCardMetaLine extends ConsumerWidget {
-  const _VideoCardMetaLine({required this.totalLoops});
+  const _VideoCardMetaLine({required this.authorPubkey});
 
-  final int? totalLoops;
+  final String authorPubkey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -719,22 +706,36 @@ class _VideoCardMetaLine extends ConsumerWidget {
     return ListenableBuilder(
       listenable: statsVisibility,
       builder: (context, _) {
-        final totalLoops = this.totalLoops;
-        if (!statsVisibility.showTotalLoops ||
-            totalLoops == null ||
-            totalLoops <= 0) {
-          return const SizedBox.shrink();
-        }
+        if (!statsVisibility.showTotalLoops) return const SizedBox.shrink();
 
-        return Text(
-          context.l10n.videoFeedLoopCountLine(
-            StringUtils.formatCompactNumber(totalLoops),
-            totalLoops,
-          ),
-          // Sits on the video next to the white author name.
-          style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
-        );
+        return _AuthorTotalLoops(authorPubkey: authorPubkey);
       },
+    );
+  }
+}
+
+class _AuthorTotalLoops extends ConsumerWidget {
+  const _AuthorTotalLoops({required this.authorPubkey});
+
+  final String authorPubkey;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authorStats = ref
+        .watch(videoCardAuthorStatsProvider(authorPubkey))
+        .value;
+    final totalLoops = authorStats?.hasKnownTotalViews == true
+        ? authorStats!.totalViews
+        : null;
+    if (totalLoops == null || totalLoops <= 0) return const SizedBox.shrink();
+
+    return Text(
+      context.l10n.videoFeedLoopCountLine(
+        StringUtils.formatCompactNumber(totalLoops),
+        totalLoops,
+      ),
+      // Sits on the video next to the white author name.
+      style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),
     );
   }
 }

@@ -96,6 +96,7 @@ void main() {
     bool isOgDiviner = false,
     bool eligibilityIsLoading = false,
     MockSharedPreferences? prefs,
+    void Function()? onAuthorStatsLookup,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
@@ -108,16 +109,17 @@ void main() {
                 ? (ref, pubkey) => Completer<bool>().future
                 : (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
           ),
-          videoCardAuthorStatsProvider(video.pubkey).overrideWith(
-            (ref) => authorTotalLoops == null
+          videoCardAuthorStatsProvider(video.pubkey).overrideWith((ref) {
+            onAuthorStatsLookup?.call();
+            return authorTotalLoops == null
                 ? const Stream<ProfileStats?>.empty()
                 : Stream.value(
                     ProfileStats(
                       pubkey: video.pubkey,
                       totalViews: authorTotalLoops,
                     ),
-                  ),
-          ),
+                  );
+          }),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -210,6 +212,38 @@ void main() {
       );
 
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+    });
+
+    testWidgets('skips the author stats lookup while total loops are off', (
+      tester,
+    ) async {
+      final prefs = MockSharedPreferences();
+      when(() => prefs.getBool(any())).thenReturn(false);
+      var lookups = 0;
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 50000,
+        prefs: prefs,
+        onAuthorStatsLookup: () => lookups++,
+      );
+
+      expect(lookups, equals(0));
+    });
+
+    testWidgets('looks up the author stats when total loops are on', (
+      tester,
+    ) async {
+      var lookups = 0;
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 50000,
+        onAuthorStatsLookup: () => lookups++,
+      );
+
+      expect(lookups, equals(1));
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('hides a zero lifetime total', (tester) async {
