@@ -28,6 +28,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/screens/comments/widgets/widgets.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
 /// Maps any of the three per-bloc errors to a localized user-facing string.
@@ -322,7 +323,12 @@ abstract final class CommentsScreen {
           },
         )
         .whenComplete(() {
-          surfaceTelemetry.completeDismissed();
+          runDetached(
+            surfaceTelemetry.completeDismissed(),
+            'complete comments sheet telemetry',
+            logName: 'CommentsScreen',
+            category: LogCategory.ui,
+          );
           disposeCommentsSheetController(draggableController);
         });
   }

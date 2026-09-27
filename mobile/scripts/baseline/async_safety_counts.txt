@@ -18,9 +18,6 @@ discarded_futures|lib/screens/apps/apps_directory_screen.dart	1
 discarded_futures|lib/screens/apps/apps_permissions_screen.dart	1
 discarded_futures|lib/screens/apps/nostr_app_sandbox_screen.dart	1
 discarded_futures|lib/screens/category_gallery_screen.dart	2
-discarded_futures|lib/screens/comments/comments_screen.dart	1
-discarded_futures|lib/screens/comments/widgets/pending_video_reply_tile.dart	1
-discarded_futures|lib/screens/comments/widgets/video_comment_player.dart	2
 discarded_futures|lib/screens/content_filters_screen.dart	2
 discarded_futures|lib/screens/creator_analytics_screen.dart	1
 discarded_futures|lib/screens/explore/explore_screen.dart	1

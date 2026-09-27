@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -58,11 +59,25 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
     final controller = _controller;
     _stateSubscription = null;
     _controller = null;
-    unawaited(subscription?.cancel());
+    if (subscription != null) {
+      runDetached(
+        subscription.cancel(),
+        'cancel comment video player listener',
+        logName: 'VideoCommentPlayer',
+        category: LogCategory.video,
+      );
+    }
     // divine_video_player tears down its native player safely on dispose and
     // suspends frame delivery when backgrounded, so no manual pause-before-
     // dispose dance is needed (unlike the old video_player/FVP pipeline).
-    unawaited(controller?.dispose());
+    if (controller != null) {
+      runDetached(
+        controller.dispose(),
+        'dispose comment video player',
+        logName: 'VideoCommentPlayer',
+        category: LogCategory.video,
+      );
+    }
     super.dispose();
   }
 
@@ -72,7 +87,15 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
     // frame delivery safe, this just avoids burning battery on a hidden video.
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      _controller?.pause();
+      final controller = _controller;
+      if (controller != null) {
+        runDetached(
+          controller.pause(),
+          'pause comment video in background',
+          logName: 'VideoCommentPlayer',
+          category: LogCategory.video,
+        );
+      }
     }
   }
 
@@ -137,8 +160,20 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
       final subscription = _stateSubscription;
       _stateSubscription = null;
       _controller = null;
-      unawaited(subscription?.cancel());
-      unawaited(controller.dispose());
+      if (subscription != null) {
+        runDetached(
+          subscription.cancel(),
+          'cancel failed comment video player listener',
+          logName: 'VideoCommentPlayer',
+          category: LogCategory.video,
+        );
+      }
+      runDetached(
+        controller.dispose(),
+        'dispose failed comment video player',
+        logName: 'VideoCommentPlayer',
+        category: LogCategory.video,
+      );
       if (mounted) setState(() => _isInitializing = false);
     }
   }
@@ -165,7 +200,15 @@ class _VideoCommentPlayerState extends State<VideoCommentPlayer>
     // right after the tap would otherwise skip the pause and keep decoding
     // offscreen until a playing event that never re-checks visibility.
     if (info.visibleFraction < 0.35 && _isPlaying) {
-      _controller?.pause();
+      final controller = _controller;
+      if (controller != null) {
+        runDetached(
+          controller.pause(),
+          'pause offscreen comment video',
+          logName: 'VideoCommentPlayer',
+          category: LogCategory.video,
+        );
+      }
     }
   }
 
