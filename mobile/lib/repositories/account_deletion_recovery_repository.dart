@@ -440,8 +440,8 @@ class AccountDeletionRecoveryRepository {
     String? payload,
     AccountDeletionRecoveryStage? stage,
   }) async {
-    // Funnelcake rejects events older than 60 s. A cached token reused by a
-    // lookup, a cancellation poll, or a provider retry can exceed that.
+    // Funnelcake rejects NIP-98 events outside a 60 s window. Sign freshly
+    // before each operation so a cached event cannot arrive near that limit.
     final token = await _nip98AuthService.createAuthToken(
       url: uri.toString(),
       method: method,

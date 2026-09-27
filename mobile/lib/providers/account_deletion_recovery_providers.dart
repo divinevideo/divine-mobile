@@ -314,8 +314,8 @@ final currentAccountDeletionAttemptProvider =
                 .fetchCurrent();
         }
       },
-      // Each request signs a fresh token, so a 401 means the device clock or
-      // the signature is wrong, and a retry repeats it. The default policy
+      // A 401 is an auth rejection, so an immediate retry adds traffic without
+      // correcting a persistent clock or signing problem. The default policy
       // sent it ten more times.
       retry: (retryCount, error) =>
           error is AccountDeletionStatusUnavailable ||
