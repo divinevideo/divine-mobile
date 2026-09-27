@@ -635,7 +635,10 @@ class _StatsLineState extends State<_StatsLine> {
       }
       if (videoCount != null) {
         parts.add(
-          StringUtils.compactPlural(videoCount, l10n.messageRequestVideosCount),
+          StringUtils.compactPlural(
+            videoCount,
+            l10n.messageRequestVideosCount,
+          ),
         );
       }
       if (loopCount != null) {

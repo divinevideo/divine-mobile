@@ -307,7 +307,10 @@ class _MessageBubbleState extends State<MessageBubble> {
   }
 
   void _refreshContent() {
-    _displaySlice = sliceDmDisplayText(widget.message, _visibleCodeUnitLimit);
+    _displaySlice = sliceDmDisplayText(
+      widget.message,
+      _visibleCodeUnitLimit,
+    );
     _content = _DmBubbleContent.parse(
       _displaySlice.text,
       sharedVideoRef: widget.sharedVideoRef,
@@ -1445,9 +1448,7 @@ class _VideoCard extends ConsumerWidget {
     // browsing preference applies to feed and metadata surfaces; hiding the
     // count in a direct share would strip context from the conversation.
     final hasLoops = loops > 0;
-    final profileAsync = ref.watch(
-      userProfileReactiveProvider(video.pubkey),
-    );
+    final profileAsync = ref.watch(userProfileReactiveProvider(video.pubkey));
     final authorName = switch (profileAsync) {
       AsyncData(:final value) when value != null => value.bestDisplayName,
       AsyncData() ||

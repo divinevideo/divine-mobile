@@ -561,21 +561,24 @@ void main() {
         },
       );
 
-      testWidgets('hides supporter entries on a vanished '
-          '${ownProfile ? 'own' : 'other'} profile', (tester) async {
-        await tester.pumpWidget(
-          buildTestWidget(
-            userIdHex: testUserHex,
-            isOwnProfile: ownProfile,
-            suppliedProfile: createTestProfile(displayName: 'Supporter'),
-            isVanished: true,
-          ),
-        );
-        await tester.pump();
+      testWidgets(
+        'hides supporter entries on a vanished '
+        '${ownProfile ? 'own' : 'other'} profile',
+        (tester) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              userIdHex: testUserHex,
+              isOwnProfile: ownProfile,
+              suppliedProfile: createTestProfile(displayName: 'Supporter'),
+              isVanished: true,
+            ),
+          );
+          await tester.pump();
 
-        expect(find.byType(SupporterMembership), findsNothing);
-        expect(find.byType(PublicSupporterBadge), findsNothing);
-      });
+          expect(find.byType(SupporterMembership), findsNothing);
+          expect(find.byType(PublicSupporterBadge), findsNothing);
+        },
+      );
     }
 
     testWidgets('opens accepted NIP-58 badge details from profile header', (
@@ -1821,9 +1824,8 @@ void main() {
       tester,
     ) async {
       final mockGoRouter = MockGoRouter();
-      when(
-        () => mockGoRouter.push<Object?>(any()),
-      ).thenAnswer((_) async => null);
+      when(() => mockGoRouter.push<Object?>(any()))
+          .thenAnswer((_) async => null);
       final testProfile = createTestProfile(displayName: 'Owner');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -1854,9 +1856,8 @@ void main() {
 
     testWidgets("leaves a visitor's Loops column untappable", (tester) async {
       final mockGoRouter = MockGoRouter();
-      when(
-        () => mockGoRouter.push<Object?>(any()),
-      ).thenAnswer((_) async => null);
+      when(() => mockGoRouter.push<Object?>(any()))
+          .thenAnswer((_) async => null);
       final testProfile = createTestProfile(displayName: 'Counted User');
       const profileStats = ProfileStats(
         pubkey: testUserHex,

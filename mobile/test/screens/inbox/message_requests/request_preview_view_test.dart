@@ -436,7 +436,9 @@ void main() {
       // An ICU plural fuses its numeral and its noun, so there is no numeral
       // to swap for a dash the way the profile header's columns do. The line
       // shimmers, then gives up.
-      testWidgets('hides the line once the skeleton times out', (tester) async {
+      testWidgets('hides the line once the skeleton times out', (
+        tester,
+      ) async {
         final semantics = tester.ensureSemantics();
         try {
           await pumpStats(tester, buildStatsSubject(null));

@@ -95,7 +95,11 @@ void main() {
       tester,
     ) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+      );
 
       final loopsX = _labelX(tester, l10n.metadataLoopsLabel(2100000));
 
@@ -106,7 +110,11 @@ void main() {
 
     testWidgets('leads with likes', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+      );
 
       final likesX = _labelX(tester, l10n.metadataLikesLabel);
 
