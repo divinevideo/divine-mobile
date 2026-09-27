@@ -69,13 +69,11 @@ The codebase has **253 files in lib/** with an overall test coverage of **45.0%*
 ### 4. Hashtag Feed
 - **E2E test exists**: Yes (`test/integration/hashtag_filtering_integration_test.dart`, `hashtag_navigation_test.dart`)
 - **Service unit tests**:
-  - ❌ `hashtag_cache_service.dart` - **12.9% coverage**
   - ⚠️ `hashtag_service.dart` - Coverage unknown
 - **Screen coverage**: `hashtag_feed_screen.dart` - **36.0% coverage**
 - **Missing Scenarios**:
   - [ ] Invalid hashtag handling
   - [ ] Empty hashtag feed
-  - [ ] Hashtag cache miss scenarios
   - [ ] Multiple hashtag filtering
   - [ ] Hashtag search performance
 
@@ -114,7 +112,6 @@ The codebase has **253 files in lib/** with an overall test coverage of **45.0%*
 | 3.8% | 7/185 | `camera/enhanced_mobile_camera_interface.dart` | **HIGH** | **High** |
 | 4.1% | 6/147 | `content_reporting_service.dart` | Medium | Medium |
 | 8.0% | 9/112 | `camera_service_impl.dart` | **HIGH** | **High** |
-| 12.9% | 4/31 | `hashtag_cache_service.dart` | Medium | Low |
 
 ### Screens (<40% Coverage) - **HIGH PRIORITY**
 

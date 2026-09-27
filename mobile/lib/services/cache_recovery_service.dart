@@ -14,7 +14,11 @@ import 'package:unified_logger/unified_logger.dart';
 class CacheRecoveryService {
   static const String _logName = 'CacheRecoveryService';
 
-  static const Set<String> _disposableHiveBoxNames = {HiveBoxNames.peopleLists};
+  static const String _legacyHashtagStatsBoxName = 'hashtag_stats';
+  static const Set<String> _disposableHiveBoxNames = {
+    HiveBoxNames.peopleLists,
+    _legacyHashtagStatsBoxName,
+  };
 
   /// Clear all app caches and databases to recover from corruption
   /// This works on iOS devices, Android, and desktop platforms
@@ -272,10 +276,8 @@ class CacheRecoveryService {
     return cleared;
   }
 
-  static String _durableDatabasePath(Directory appSupportDir) => p.joinAll([
-    appSupportDir.path,
-    ..._durableDatabaseDirSegments,
-  ]);
+  static String _durableDatabasePath(Directory appSupportDir) =>
+      p.joinAll([appSupportDir.path, ..._durableDatabaseDirSegments]);
 
   static List<String> _durableHiveBoxPaths(Directory appSupportDir) => [
     for (final segments in _durableHiveBoxFileSegments)

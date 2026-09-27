@@ -102,9 +102,10 @@ justification must explain:
 
 Existing Hive-backed paths can stay while they are being retired
 incrementally, but new work should not expand Hive usage without a deliberate
-storage decision. Known legacy owners include the hashtag and personal-event
-cache services, notification preferences, pending/resumable upload state, the
-people-lists local cache, and cache recovery.
+storage decision. Known legacy owners include the personal-event cache service,
+notification preferences, pending/resumable upload state, the people-lists local
+cache, and cache recovery. The old hashtag stats box is retained only for
+one-time cleanup during cache recovery.
 
 ## Drift Schema Changes Use Real Migrations
 
