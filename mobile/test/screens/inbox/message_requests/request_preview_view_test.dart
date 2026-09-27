@@ -5,6 +5,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -13,7 +14,6 @@ import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
-import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -25,6 +25,7 @@ import 'package:openvine/screens/inbox/message_requests/request_preview_view.dar
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/finders.dart';
@@ -183,10 +184,15 @@ void main() {
     // the archive importer writes as tags. Both were structurally null, so the
     // line was dead. Counts now come from the `profile_statistics` store.
     group('stats line', () {
-      Widget buildStatsSubject(ProfileStats? stats, {bool vanished = false}) {
+      Widget buildStatsSubject(
+        ProfileStats? stats, {
+        bool vanished = false,
+        SharedPreferences? prefs,
+      }) {
         return testMaterialApp(
           mockAuthService: mockAuthService,
           mockNostrService: mockNostrClient,
+          mockSharedPreferences: prefs,
           additionalOverrides: [
             goRouterProvider.overrideWithValue(mockGoRouter),
             videosRepositoryProvider.overrideWithValue(mockVideosRepository),
@@ -319,50 +325,111 @@ void main() {
         );
       });
 
-      testWidgets('omits loops below the visibility floor', (tester) async {
+      testWidgets('renders loops when the viewer shows total loops', (
+        tester,
+      ) async {
         await pumpStats(
           tester,
-          buildStatsSubject(
-            statsWith(
-              videoCount: 3,
-              totalViews: profileLoopsVisibilityFloor - 1,
-            ),
-          ),
+          buildStatsSubject(statsWith(videoCount: 3, totalViews: 250)),
         );
 
         expect(
           find.textContaining(
             l10n.videoFeedLoopCountLine(
-              StringUtils.formatCompactNumber(
-                profileLoopsVisibilityFloor - 1,
-              ),
-              profileLoopsVisibilityFloor - 1,
+              StringUtils.formatCompactNumber(250),
+              250,
             ),
+            findRichText: true,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      // A zero is not data, so it is withheld like a missing count. The videos
+      // part is the control that proves the line rendered; `statsWith`
+      // defaults the loops total to zero.
+      testWidgets('omits loops when the total is zero', (tester) async {
+        await pumpStats(tester, buildStatsSubject(statsWith(videoCount: 3)));
+
+        expect(
+          find.textContaining(
+            l10n.messageRequestVideosCount(3, '3'),
+            findRichText: true,
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            l10n.videoFeedLoopCountLine('0', 0),
             findRichText: true,
           ),
           findsNothing,
         );
       });
 
-      // The sender is never the viewer, so the profile header's owner
-      // exemption does not apply — only the floor decides.
-      testWidgets('renders loops at the visibility floor', (tester) async {
+      testWidgets('follows the total-loops setting while mounted', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
         await pumpStats(
           tester,
           buildStatsSubject(
-            statsWith(videoCount: 3, totalViews: profileLoopsVisibilityFloor),
+            statsWith(videoCount: 3, totalViews: 250),
+            prefs: prefs,
+          ),
+        );
+        final settings = ProviderScope.containerOf(
+          tester.element(find.byType(RequestPreviewView)),
+        ).read(statsVisibilityPreferencesProvider);
+        final loopsText = l10n.videoFeedLoopCountLine(
+          StringUtils.formatCompactNumber(250),
+          250,
+        );
+        expect(
+          find.textContaining(loopsText, findRichText: true),
+          findsOneWidget,
+        );
+
+        await tester.runAsync(() => settings.setShowTotalLoops(false));
+        await tester.pump();
+        expect(
+          find.textContaining(loopsText, findRichText: true),
+          findsNothing,
+        );
+
+        await tester.runAsync(() => settings.setShowTotalLoops(true));
+        await tester.pump();
+        expect(
+          find.textContaining(loopsText, findRichText: true),
+          findsOneWidget,
+        );
+      });
+
+      // The sender is never the viewer, so there is no owner exemption: the
+      // viewer's choice is the only thing that decides.
+      testWidgets('omits loops when the viewer hides total loops', (
+        tester,
+      ) async {
+        final prefs = MockSharedPreferences();
+        when(() => prefs.getBool(any())).thenReturn(false);
+        await pumpStats(
+          tester,
+          buildStatsSubject(
+            statsWith(videoCount: 3, totalViews: 250),
+            prefs: prefs,
           ),
         );
 
         expect(
           find.textContaining(
             l10n.videoFeedLoopCountLine(
-              StringUtils.formatCompactNumber(profileLoopsVisibilityFloor),
-              profileLoopsVisibilityFloor,
+              StringUtils.formatCompactNumber(250),
+              250,
             ),
             findRichText: true,
           ),
-          findsOneWidget,
+          findsNothing,
         );
       });
 

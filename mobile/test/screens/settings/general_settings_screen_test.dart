@@ -19,6 +19,7 @@ import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,6 +37,7 @@ void main() {
     late _MockLocaleCubit localeCubit;
     late _MockAudioSharingPreferenceService audioSharingService;
     late FeedAspectRatioPreferenceService aspectRatioService;
+    late StatsVisibilityPreferences statsVisibilityPreferences;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
@@ -44,6 +46,9 @@ void main() {
       authService = _MockAuthService();
       localeCubit = _MockLocaleCubit();
       audioSharingService = _MockAudioSharingPreferenceService();
+      statsVisibilityPreferences = StatsVisibilityPreferences(
+        sharedPreferences,
+      );
 
       when(() => localeCubit.state).thenReturn(const LocaleState());
       when(() => authService.isAuthenticated).thenReturn(false);
@@ -70,6 +75,9 @@ void main() {
       ),
       feedAspectRatioPreferenceServiceProvider.overrideWithValue(
         aspectRatioService,
+      ),
+      statsVisibilityPreferencesProvider.overrideWithValue(
+        statsVisibilityPreferences,
       ),
     ];
 
@@ -242,6 +250,62 @@ void main() {
         FeedAspectRatioPreference.squareOnly,
       );
       expect(squareOnlyTile().value, isTrue);
+    });
+
+    testWidgets('stats visibility switches persist and rebuild while mounted', (
+      tester,
+    ) async {
+      final labels = await l10n();
+      useTallViewport(tester);
+
+      await tester.pumpWidget(wrap(const GeneralSettingsScreen()));
+      await tester.pumpAndSettle();
+
+      DivineSwitchTile tile(String title) => tester.widget<DivineSwitchTile>(
+        find.ancestor(
+          of: find.text(title),
+          matching: find.byType(DivineSwitchTile),
+        ),
+      );
+
+      final totalLoopsTitle = labels.generalSettingsShowTotalLoops;
+      final videoLoopsTitle = labels.generalSettingsShowVideoLoops;
+      final publishDateTitle = labels.generalSettingsShowPublishedDate;
+      expect(find.text(totalLoopsTitle), findsOneWidget);
+      expect(find.text(videoLoopsTitle), findsOneWidget);
+      expect(find.text(publishDateTitle), findsOneWidget);
+      expect(tile(totalLoopsTitle).value, isTrue);
+      expect(tile(videoLoopsTitle).value, isFalse);
+      expect(tile(publishDateTitle).value, isFalse);
+      expect(statsVisibilityPreferences.showVideoLoops, isFalse);
+
+      await tester.tap(find.text(totalLoopsTitle));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(videoLoopsTitle));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(publishDateTitle));
+      await tester.pumpAndSettle();
+
+      expect(tile(totalLoopsTitle).value, isFalse);
+      expect(tile(videoLoopsTitle).value, isTrue);
+      expect(tile(publishDateTitle).value, isTrue);
+      expect(statsVisibilityPreferences.showTotalLoops, isFalse);
+      expect(statsVisibilityPreferences.showVideoLoops, isTrue);
+      expect(statsVisibilityPreferences.showPublishedDate, isTrue);
+      expect(
+        sharedPreferences.getBool(StatsVisibilityPreferences.showTotalLoopsKey),
+        isFalse,
+      );
+      expect(
+        sharedPreferences.getBool(StatsVisibilityPreferences.showVideoLoopsKey),
+        isTrue,
+      );
+      expect(
+        sharedPreferences.getBool(
+          StatsVisibilityPreferences.showPublishedDateKey,
+        ),
+        isTrue,
+      );
     });
   });
 }

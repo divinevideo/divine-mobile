@@ -21,10 +21,12 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../../helpers/test_provider_overrides.dart';
@@ -1193,6 +1195,7 @@ void main() {
         required String message,
         DmSharedVideoRef? sharedVideoRef,
         VoidCallback? onDoubleTap,
+        SharedPreferences? mockSharedPreferences,
       }) => testMaterialApp(
         home: Scaffold(
           body: MessageBubble(
@@ -1203,6 +1206,7 @@ void main() {
             onDoubleTap: onDoubleTap,
           ),
         ),
+        mockSharedPreferences: mockSharedPreferences,
         mockNostrService: mockNostrClient,
         additionalOverrides: [
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
@@ -1280,6 +1284,34 @@ void main() {
 
         expect(find.byType(VideoThumbnailWidget), findsOneWidget);
         expect(find.text('My Cool Video'), findsOneWidget);
+      });
+
+      testWidgets('keeps shared loop counts visible when the setting is off', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showVideoLoopsKey: false,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final videoWithLoops = testVideo.copyWith(
+          rawTags: const {'views': '1200'},
+        );
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'abc123',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => videoWithLoops);
+
+        await tester.pumpWidget(
+          buildWithVideoMessage(
+            message: 'https://divine.video/video/abc123',
+            mockSharedPreferences: prefs,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('1.2K'), findsOneWidget);
       });
 
       testWidgets('renders from structured q-tag ref without a legacy URL', (

@@ -272,6 +272,12 @@
   "generalSettingsClosedCaptionsSubtitle": "Show captions when videos include them",
   "generalSettingsVideoShapeSquareOnly": "Square videos only",
   "generalSettingsVideoShapeSquareOnlySubtitle": "Keep feeds in the classic square format",
+  "generalSettingsShowTotalLoops": "Show total loops",
+  "generalSettingsShowTotalLoopsSubtitle": "The creator's loop count across all their videos",
+  "generalSettingsShowVideoLoops": "Show video loops",
+  "generalSettingsShowVideoLoopsSubtitle": "How many times the video you're watching has looped",
+  "generalSettingsShowPublishedDate": "Show publish date",
+  "generalSettingsShowPublishedDateSubtitle": "When the video you're watching was published",
   "contentPreferencesTitle": "Content Preferences",
   "@contentPreferencesTitle": {
     "description": "Content preferences screen app bar title"
@@ -1414,6 +1420,21 @@
       "views": {
         "type": "String"
       },
+      "likes": {
+        "type": "String"
+      },
+      "comments": {
+        "type": "String"
+      },
+      "reposts": {
+        "type": "String"
+      }
+    }
+  },
+  "metadataStatsLineWithoutVideoLoops": "{likes} likes · {comments} comments · {reposts} reposts",
+  "@metadataStatsLineWithoutVideoLoops": {
+    "description": "Engagement summary for a classic Vine when the viewer hides video loops. Each placeholder is a pre-formatted compact count, e.g. '3K'.",
+    "placeholders": {
       "likes": {
         "type": "String"
       },

@@ -307,6 +307,27 @@ class AppLocalizationsId extends AppLocalizations {
       'Pertahankan feed dalam format persegi klasik';
 
   @override
+  String get generalSettingsShowTotalLoops => 'Show total loops';
+
+  @override
+  String get generalSettingsShowTotalLoopsSubtitle =>
+      'The creator\'s loop count across all their videos';
+
+  @override
+  String get generalSettingsShowVideoLoops => 'Show video loops';
+
+  @override
+  String get generalSettingsShowVideoLoopsSubtitle =>
+      'How many times the video you\'re watching has looped';
+
+  @override
+  String get generalSettingsShowPublishedDate => 'Show publish date';
+
+  @override
+  String get generalSettingsShowPublishedDateSubtitle =>
+      'When the video you\'re watching was published';
+
+  @override
   String get contentPreferencesTitle => 'Preferensi Konten';
 
   @override
@@ -2016,6 +2037,15 @@ class AppLocalizationsId extends AppLocalizations {
     String reposts,
   ) {
     return '$views tayangan · $likes suka · $comments komentar · $reposts repost';
+  }
+
+  @override
+  String metadataStatsLineWithoutVideoLoops(
+    String likes,
+    String comments,
+    String reposts,
+  ) {
+    return '$likes likes · $comments comments · $reposts reposts';
   }
 
   @override

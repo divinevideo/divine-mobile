@@ -1444,6 +1444,9 @@ class _VideoCard extends ConsumerWidget {
     final title = video.title;
     final loops = video.totalLoops;
     final hasTitle = title != null && title.isNotEmpty;
+    // Keep loop context on a video someone chose to share in a DM. The
+    // browsing preference applies to feed and metadata surfaces; hiding the
+    // count in a direct share would strip context from the conversation.
     final hasLoops = loops > 0;
     final profileAsync = ref.watch(userProfileReactiveProvider(video.pubkey));
     final authorName = switch (profileAsync) {

@@ -17,6 +17,7 @@ import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -346,6 +347,50 @@ void main() {
               'trust followed accounts as labelers (#6985)',
         );
       });
+
+      test(
+        'keeps the viewer stats visibility choices across an identity change',
+        () async {
+          await prefs.setBool(
+            StatsVisibilityPreferences.showTotalLoopsKey,
+            false,
+          );
+          await prefs.setBool(
+            StatsVisibilityPreferences.showVideoLoopsKey,
+            true,
+          );
+          await prefs.setBool(
+            StatsVisibilityPreferences.showPublishedDateKey,
+            true,
+          );
+          // Positive control: the same sweep does clear an account-scoped key.
+          await prefs.setBool(
+            ModerationLabelService.followingModerationEnabledStorageKey,
+            true,
+          );
+
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          expect(
+            prefs.containsKey(
+              ModerationLabelService.followingModerationEnabledStorageKey,
+            ),
+            isFalse,
+          );
+          expect(
+            prefs.getBool(StatsVisibilityPreferences.showTotalLoopsKey),
+            isFalse,
+          );
+          expect(
+            prefs.getBool(StatsVisibilityPreferences.showVideoLoopsKey),
+            isTrue,
+          );
+          expect(
+            prefs.getBool(StatsVisibilityPreferences.showPublishedDateKey),
+            isTrue,
+          );
+        },
+      );
 
       test(
         'preserves legacy drafts on same-user non-destructive cleanup',

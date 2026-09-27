@@ -656,6 +656,42 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
+  /// No description provided for @generalSettingsShowTotalLoops.
+  ///
+  /// In en, this message translates to:
+  /// **'Show total loops'**
+  String get generalSettingsShowTotalLoops;
+
+  /// No description provided for @generalSettingsShowTotalLoopsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The creator\'s loop count across all their videos'**
+  String get generalSettingsShowTotalLoopsSubtitle;
+
+  /// No description provided for @generalSettingsShowVideoLoops.
+  ///
+  /// In en, this message translates to:
+  /// **'Show video loops'**
+  String get generalSettingsShowVideoLoops;
+
+  /// No description provided for @generalSettingsShowVideoLoopsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How many times the video you\'re watching has looped'**
+  String get generalSettingsShowVideoLoopsSubtitle;
+
+  /// No description provided for @generalSettingsShowPublishedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Show publish date'**
+  String get generalSettingsShowPublishedDate;
+
+  /// No description provided for @generalSettingsShowPublishedDateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When the video you\'re watching was published'**
+  String get generalSettingsShowPublishedDateSubtitle;
+
   /// Content preferences screen app bar title
   ///
   /// In en, this message translates to:
@@ -3571,6 +3607,16 @@ abstract class AppLocalizations {
   /// **'{views} views · {likes} likes · {comments} comments · {reposts} reposts'**
   String metadataDivineStatsLine(
     String views,
+    String likes,
+    String comments,
+    String reposts,
+  );
+
+  /// Engagement summary for a classic Vine when the viewer hides video loops. Each placeholder is a pre-formatted compact count, e.g. '3K'.
+  ///
+  /// In en, this message translates to:
+  /// **'{likes} likes · {comments} comments · {reposts} reposts'**
+  String metadataStatsLineWithoutVideoLoops(
     String likes,
     String comments,
     String reposts,

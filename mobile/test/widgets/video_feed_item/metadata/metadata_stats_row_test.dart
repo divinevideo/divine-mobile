@@ -3,12 +3,17 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/preferences_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockVideoInteractionsBloc
     extends MockBloc<VideoInteractionsEvent, VideoInteractionsState>
@@ -39,15 +44,25 @@ Future<void> _pump(
   WidgetTester tester, {
   required VideoEvent video,
   required VideoInteractionsBloc bloc,
+  // Null leaves the preference unset, so the row runs on its production
+  // default.
+  bool? showVideoLoops = true,
 }) async {
+  SharedPreferences.setMockInitialValues({
+    StatsVisibilityPreferences.showVideoLoopsKey: ?showVideoLoops,
+  });
+  final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
-    MaterialApp(
-      localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: BlocProvider<VideoInteractionsBloc>.value(
-          value: bloc,
-          child: MetadataStatsRow(video: video),
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: BlocProvider<VideoInteractionsBloc>.value(
+            value: bloc,
+            child: MetadataStatsRow(video: video),
+          ),
         ),
       ),
     ),
@@ -80,11 +95,7 @@ void main() {
       tester,
     ) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      await _pump(
-        tester,
-        video: _video(originalLoops: 2100000),
-        bloc: bloc,
-      );
+      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
 
       final loopsX = _labelX(tester, l10n.metadataLoopsLabel(2100000));
 
@@ -95,11 +106,7 @@ void main() {
 
     testWidgets('leads with likes', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      await _pump(
-        tester,
-        video: _video(originalLoops: 2100000),
-        bloc: bloc,
-      );
+      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
 
       final likesX = _labelX(tester, l10n.metadataLikesLabel);
 
@@ -107,16 +114,10 @@ void main() {
       expect(likesX, lessThan(_labelX(tester, l10n.metadataRepostsLabel)));
     });
 
-    testWidgets('keeps the count reachable rather than removing it', (
+    testWidgets('renders the loop count when the viewer shows video loops', (
       tester,
     ) async {
-      // The sheet is where a hidden card count remains available, so the
-      // number itself must still render.
-      await _pump(
-        tester,
-        video: _video(originalLoops: 2100000),
-        bloc: bloc,
-      );
+      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
 
       expect(find.text('2.1M'), findsOneWidget);
     });
@@ -148,6 +149,58 @@ void main() {
       expect(find.text('0'), findsOneWidget);
     });
 
+    testWidgets('leaves loops out until the viewer opts in', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+        showVideoLoops: null,
+      );
+
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsNothing);
+      expect(find.text('847'), findsOneWidget);
+    });
+
+    testWidgets('follows the video-loops setting while mounted', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+        showVideoLoops: false,
+      );
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(MetadataStatsRow)),
+      ).read(statsVisibilityPreferencesProvider);
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsNothing);
+
+      await tester.runAsync(() => settings.setShowVideoLoops(true));
+      await tester.pump();
+
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsOneWidget);
+      expect(find.text('2.1M'), findsOneWidget);
+    });
+
+    testWidgets('hides loops when the viewer turns video loops off', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+        showVideoLoops: false,
+      );
+
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsNothing);
+      expect(find.text('2.1M'), findsNothing);
+      // The interaction stats are unaffected.
+      expect(find.text('847'), findsOneWidget);
+    });
+
     testWidgets('shows the Vine and diVine breakdown for a classic Vine', (
       tester,
     ) async {
@@ -163,6 +216,44 @@ void main() {
 
       expect(find.text(l10n.metadataVineStatsLabel), findsOneWidget);
       expect(find.text(l10n.metadataDivineStatsLabel), findsOneWidget);
+      expect(
+        find.text(l10n.metadataVineStatsLine('2.1M', '0', '0', '0')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.metadataDivineStatsLine('340', '847', '23', '12')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides loop totals in the classic Vine breakdown when off', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(
+          originalLoops: 2100000,
+          rawTags: {'platform': 'vine', 'views': '340'},
+        ),
+        bloc: bloc,
+        showVideoLoops: false,
+      );
+
+      expect(find.text(l10n.metadataVineStatsLabel), findsOneWidget);
+      expect(find.text(l10n.metadataDivineStatsLabel), findsOneWidget);
+      expect(
+        find.text(l10n.metadataStatsLineWithoutVideoLoops('0', '0', '0')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.metadataStatsLineWithoutVideoLoops('847', '23', '12')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('2.1M'), findsNothing);
+      expect(find.textContaining('340'), findsNothing);
+      expect(find.textContaining('— loops'), findsNothing);
+      expect(find.textContaining('— views'), findsNothing);
     });
 
     testWidgets('omits the breakdown for a diVine-native post', (tester) async {

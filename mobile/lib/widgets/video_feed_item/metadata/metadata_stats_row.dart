@@ -1,12 +1,14 @@
 // ABOUTME: Stats row for the metadata expanded sheet.
-// ABOUTME: Shows Likes, Comments, Reposts, Loops with vertical dividers.
+// ABOUTME: Shows Likes, Comments, Reposts and, when enabled, Loops.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/utils/string_utils.dart';
 
 /// Horizontal stats row displaying engagement counts for a video.
@@ -16,16 +18,38 @@ import 'package:openvine/utils/string_utils.dart';
 /// combined totals (archival Vine + live Divine); classic Vines additionally
 /// get a per-source breakdown underneath.
 ///
-/// Loops sits last rather than first. Video cards hide small public counts
-/// because they discourage viewing, so this sheet is where the number stays
-/// reachable — present, but not leading the row.
+/// The Loops column trails the row and is shown only when the viewer asked for
+/// video loops ([StatsVisibilityPreferences.showVideoLoops], off by default).
 ///
-/// Layout follows Figma node `I11251:226991;9113:176278`:
-/// four stat columns separated by vertical dividers.
-class MetadataStatsRow extends StatelessWidget {
+/// Layout follows Figma node `I11251:226991;9113:176278`: stat columns
+/// separated by vertical dividers, three by default and four with Loops.
+class MetadataStatsRow extends ConsumerWidget {
   const MetadataStatsRow({required this.video, super.key});
 
   final VideoEvent video;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
+
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) => _MetadataStatsRowContent(
+        video: video,
+        showVideoLoops: statsVisibility.showVideoLoops,
+      ),
+    );
+  }
+}
+
+class _MetadataStatsRowContent extends StatelessWidget {
+  const _MetadataStatsRowContent({
+    required this.video,
+    required this.showVideoLoops,
+  });
+
+  final VideoEvent video;
+  final bool showVideoLoops;
 
   @override
   Widget build(BuildContext context) {
@@ -83,21 +107,23 @@ class MetadataStatsRow extends StatelessWidget {
                             label: context.l10n.metadataRepostsLabel,
                             isLoading: isLoading,
                           ),
-                          const _VerticalDivider(),
-                          // Loops trails the interaction stats: the count
-                          // stays available to anyone who wants it without
-                          // leading the row. A video whose event carries no
-                          // loop metadata shows the same dash as an unknown
-                          // interaction count instead of a fabricated zero.
-                          _StatColumn(
-                            count: video.hasLoopMetadata
-                                ? video.totalLoops
-                                : null,
-                            label: context.l10n.metadataLoopsLabel(
-                              video.totalLoops,
+                          // Loops trails the interaction stats and is shown
+                          // only when the viewer asked for video loops. A
+                          // video whose event carries no loop metadata shows
+                          // the same dash as an unknown interaction count
+                          // instead of a fabricated zero.
+                          if (showVideoLoops) ...[
+                            const _VerticalDivider(),
+                            _StatColumn(
+                              count: video.hasLoopMetadata
+                                  ? video.totalLoops
+                                  : null,
+                              label: context.l10n.metadataLoopsLabel(
+                                video.totalLoops,
+                              ),
+                              isLoading: false,
                             ),
-                            isLoading: false,
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -105,7 +131,11 @@ class MetadataStatsRow extends StatelessWidget {
                 },
               ),
               if (showVineBreakdown)
-                _VineDivineBreakdown(video: video, state: state),
+                _VineDivineBreakdown(
+                  video: video,
+                  state: state,
+                  showVideoLoops: showVideoLoops,
+                ),
             ],
           ),
         );
@@ -120,10 +150,15 @@ class MetadataStatsRow extends StatelessWidget {
 /// compact lines under the combined stats row, so the headline numbers can
 /// stay big while the split remains visible.
 class _VineDivineBreakdown extends StatelessWidget {
-  const _VineDivineBreakdown({required this.video, required this.state});
+  const _VineDivineBreakdown({
+    required this.video,
+    required this.state,
+    required this.showVideoLoops,
+  });
 
   final VideoEvent video;
   final VideoInteractionsState state;
+  final bool showVideoLoops;
 
   @override
   Widget build(BuildContext context) {
@@ -155,21 +190,33 @@ class _VineDivineBreakdown extends StatelessWidget {
         children: [
           _BreakdownLine(
             label: l10n.metadataVineStatsLabel,
-            value: l10n.metadataVineStatsLine(
-              compact(video.originalLoops),
-              compact(video.originalLikes),
-              compact(video.originalComments),
-              compact(video.originalReposts),
-            ),
+            value: showVideoLoops
+                ? l10n.metadataVineStatsLine(
+                    compact(video.originalLoops),
+                    compact(video.originalLikes),
+                    compact(video.originalComments),
+                    compact(video.originalReposts),
+                  )
+                : l10n.metadataStatsLineWithoutVideoLoops(
+                    compact(video.originalLikes),
+                    compact(video.originalComments),
+                    compact(video.originalReposts),
+                  ),
           ),
           _BreakdownLine(
             label: l10n.metadataDivineStatsLabel,
-            value: l10n.metadataDivineStatsLine(
-              compact(divineViews),
-              compact(divineLikes),
-              compact(divineComments),
-              compact(divineReposts),
-            ),
+            value: showVideoLoops
+                ? l10n.metadataDivineStatsLine(
+                    compact(divineViews),
+                    compact(divineLikes),
+                    compact(divineComments),
+                    compact(divineReposts),
+                  )
+                : l10n.metadataStatsLineWithoutVideoLoops(
+                    compact(divineLikes),
+                    compact(divineComments),
+                    compact(divineReposts),
+                  ),
           ),
         ],
       ),

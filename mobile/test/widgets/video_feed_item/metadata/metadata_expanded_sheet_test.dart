@@ -23,6 +23,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -38,6 +39,7 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_verification_
 import 'package:openvine/widgets/video_feed_item/metadata/video_reposters_cubit.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/upload_explainer_constants.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -153,11 +155,21 @@ void main() {
   late _MockVideosRepository mockVideosRepository;
   late UrlLauncherPlatform originalUrlLauncherPlatform;
   late UrlLauncherTestDouble urlLauncher;
+  late SharedPreferences statsPrefs;
 
-  setUp(() {
+  setUp(() async {
     originalUrlLauncherPlatform = UrlLauncherPlatform.instance;
     urlLauncher = UrlLauncherTestDouble();
     UrlLauncherPlatform.instance = urlLauncher;
+
+    // Stats visibility defaults to total loops only; these suites exercise the
+    // sheet's date and loops content, so all three switches are turned on.
+    SharedPreferences.setMockInitialValues({
+      StatsVisibilityPreferences.showTotalLoopsKey: true,
+      StatsVisibilityPreferences.showVideoLoopsKey: true,
+      StatsVisibilityPreferences.showPublishedDateKey: true,
+    });
+    statsPrefs = await SharedPreferences.getInstance();
 
     mockVideosRepository = _MockVideosRepository();
     mockInteractionsBloc = _MockVideoInteractionsBloc();
@@ -195,6 +207,7 @@ void main() {
     required Widget child,
     List<Override> providerOverrides = const [],
     VideoRepostersState? repostersState,
+    SharedPreferences? sharedPreferences,
   }) {
     if (repostersState != null) {
       when(() => mockRepostersCubit.state).thenReturn(repostersState);
@@ -204,7 +217,7 @@ void main() {
       container: ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(
-            createMockSharedPreferences(),
+            sharedPreferences ?? statsPrefs,
           ),
           videosRepositoryProvider.overrideWithValue(mockVideosRepository),
           ...providerOverrides,
@@ -484,6 +497,61 @@ void main() {
         } finally {
           semantics.dispose();
         }
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'shows the posted date once the viewer turns publish date on',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showPublishedDateKey: false,
+        });
+        final dateOffPrefs = await SharedPreferences.getInstance();
+        final video = _makeVideo(title: 'Who knew?');
+
+        await tester.pumpWidget(
+          buildSubject(
+            child: MetadataExpandedSheet(video: video),
+            sharedPreferences: dateOffPrefs,
+          ),
+        );
+        final settings = ProviderScope.containerOf(
+          tester.element(find.byType(MetadataExpandedSheet)),
+        ).read(statsVisibilityPreferencesProvider);
+        final expectedDate = DateFormat.yMMMMd('en').format(
+          DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000, isUtc: true),
+        );
+        expect(find.text(expectedDate), findsNothing);
+
+        await tester.runAsync(() => settings.setShowPublishedDate(true));
+        await tester.pump();
+
+        expect(find.text(expectedDate), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'hides the posted date when the viewer turns publish date off',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showPublishedDateKey: false,
+        });
+        final dateOffPrefs = await SharedPreferences.getInstance();
+        final video = _makeVideo(title: 'Who knew?');
+
+        await tester.pumpWidget(
+          buildSubject(
+            child: MetadataExpandedSheet(video: video),
+            sharedPreferences: dateOffPrefs,
+          ),
+        );
+
+        final expectedDate = DateFormat.yMMMMd('en').format(
+          DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000, isUtc: true),
+        );
+        expect(find.text(expectedDate), findsNothing);
+        // The rest of the overview still renders.
+        expect(find.text('Who knew?'), findsOneWidget);
       },
     );
   });

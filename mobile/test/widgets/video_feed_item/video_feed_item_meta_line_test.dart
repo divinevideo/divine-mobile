@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/widgets/og_beta_badge.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -95,9 +97,12 @@ void main() {
     int? authorTotalLoops,
     bool isOgDiviner = false,
     bool eligibilityIsLoading = false,
+    SharedPreferences? prefs,
+    void Function()? onAuthorStatsLookup,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
+        mockSharedPreferences: prefs,
         additionalOverrides: [
           repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
           authServiceProvider.overrideWithValue(mockAuthService),
@@ -106,16 +111,17 @@ void main() {
                 ? (ref, pubkey) => Completer<bool>().future
                 : (ref, pubkey) async => isOgDiviner && pubkey == video.pubkey,
           ),
-          videoCardAuthorStatsProvider(video.pubkey).overrideWith(
-            (ref) => authorTotalLoops == null
+          videoCardAuthorStatsProvider(video.pubkey).overrideWith((ref) {
+            onAuthorStatsLookup?.call();
+            return authorTotalLoops == null
                 ? const Stream<ProfileStats?>.empty()
                 : Stream.value(
                     ProfileStats(
                       pubkey: video.pubkey,
                       totalViews: authorTotalLoops,
                     ),
-                  ),
-          ),
+                  );
+          }),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -195,16 +201,76 @@ void main() {
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
     });
 
-    testWidgets('hides a lifetime total below the visibility floor', (
+    testWidgets('hides the line when the viewer turns total loops off', (
       tester,
     ) async {
+      final prefs = MockSharedPreferences();
+      when(() => prefs.getBool(any())).thenReturn(false);
       await pump(
         tester,
-        video: _video(rawTags: {'views': '7'}),
-        authorTotalLoops: 7,
+        video: _video(rawTags: {'views': '50000'}),
+        authorTotalLoops: 50000,
+        prefs: prefs,
       );
 
-      expect(find.textContaining(loopLine(tester, 7)), findsNothing);
+      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+    });
+
+    testWidgets('follows the total-loops setting while mounted', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 50000,
+        prefs: prefs,
+      );
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(VideoOverlayActions)),
+      ).read(statsVisibilityPreferencesProvider);
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(false));
+      await tester.pump();
+      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(true));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+    });
+
+    testWidgets('skips the author stats lookup while total loops are off', (
+      tester,
+    ) async {
+      final prefs = MockSharedPreferences();
+      when(() => prefs.getBool(any())).thenReturn(false);
+      var lookups = 0;
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 50000,
+        prefs: prefs,
+        onAuthorStatsLookup: () => lookups++,
+      );
+
+      expect(lookups, equals(0));
+    });
+
+    testWidgets('looks up the author stats when total loops are on', (
+      tester,
+    ) async {
+      var lookups = 0;
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 50000,
+        onAuthorStatsLookup: () => lookups++,
+      );
+
+      expect(lookups, equals(1));
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('hides a zero lifetime total', (tester) async {
@@ -213,9 +279,7 @@ void main() {
       expect(find.textContaining(loopLine(tester, 0)), findsNothing);
     });
 
-    testWidgets('shows a lifetime total at the visibility floor', (
-      tester,
-    ) async {
+    testWidgets('shows the author lifetime total', (tester) async {
       await pump(tester, video: _video(), authorTotalLoops: 10000);
 
       expect(find.textContaining(loopLine(tester, 10000)), findsOneWidget);

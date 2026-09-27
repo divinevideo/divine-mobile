@@ -106,6 +106,7 @@ class GeneralSettingsScreen extends ConsumerWidget {
               DivineSectionHeader(context.l10n.generalSettingsSectionViewing),
               const _ClosedCaptionsToggle(),
               const _SquareVideosOnlyToggle(),
+              const _StatsVisibilityToggles(),
               DivineSectionHeader(context.l10n.generalSettingsSectionCreating),
               const _AudioSharingToggle(),
               const _LongPressRecordingToggle(),
@@ -258,6 +259,49 @@ class _SquareVideosOnlyToggle extends ConsumerWidget {
                 : FeedAspectRatioPreference.squareAndPortrait,
           );
         },
+      ),
+    );
+  }
+}
+
+/// Viewer-scoped toggles for which engagement stats render across the app.
+///
+/// Three independent switches; any subset may be on, including none. The
+/// choice applies everywhere the figures appear, including the viewer's own
+/// profile and videos.
+class _StatsVisibilityToggles extends ConsumerWidget {
+  const _StatsVisibilityToggles();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(statsVisibilityPreferencesProvider);
+
+    return ListenableBuilder(
+      listenable: service,
+      builder: (context, _) => Column(
+        children: [
+          DivineSwitchTile(
+            leadingIcon: DivineIconName.trendUp,
+            title: context.l10n.generalSettingsShowTotalLoops,
+            subtitle: context.l10n.generalSettingsShowTotalLoopsSubtitle,
+            value: service.showTotalLoops,
+            onChanged: service.setShowTotalLoops,
+          ),
+          DivineSwitchTile(
+            leadingIcon: DivineIconName.repeat,
+            title: context.l10n.generalSettingsShowVideoLoops,
+            subtitle: context.l10n.generalSettingsShowVideoLoopsSubtitle,
+            value: service.showVideoLoops,
+            onChanged: service.setShowVideoLoops,
+          ),
+          DivineSwitchTile(
+            leadingIcon: DivineIconName.timer,
+            title: context.l10n.generalSettingsShowPublishedDate,
+            subtitle: context.l10n.generalSettingsShowPublishedDateSubtitle,
+            value: service.showPublishedDate,
+            onChanged: service.setShowPublishedDate,
+          ),
+        ],
       ),
     );
   }

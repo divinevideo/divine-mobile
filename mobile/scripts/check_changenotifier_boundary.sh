@@ -58,6 +58,7 @@ ALLOWLIST=(
   "services/video_provenance_filter_service.dart"
   "services/environment_service.dart"
   "services/feed_aspect_ratio_preference_service.dart"
+  "services/stats_visibility_preferences.dart"
   "services/nip05_verification_service.dart"
   "services/og_viner_cache_service.dart"
   "services/pending_action_service.dart"

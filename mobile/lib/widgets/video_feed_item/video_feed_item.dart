@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/config/profile_metrics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -310,25 +309,6 @@ class VideoOverlayActions extends ConsumerWidget {
                     final profile = ref
                         .watch(userProfileReactiveProvider(authorPubkey))
                         .value;
-                    // The card's second line reports the author's lifetime
-                    // loops, not this video's. The figure is social proof for
-                    // the creator, and a per-video number beside every card
-                    // reads as a verdict on one clip rather than a body of
-                    // work. Null while the total is unknown or below the
-                    // shared visibility floor, so the card never flashes
-                    // "0 loops" on first paint or discourages a new creator.
-                    final authorStats = ref
-                        .watch(videoCardAuthorStatsProvider(authorPubkey))
-                        .value;
-                    final authorTotalLoops =
-                        authorStats?.hasKnownTotalViews == true
-                        ? authorStats!.totalViews
-                        : null;
-                    final visibleAuthorLoops =
-                        authorTotalLoops != null &&
-                            authorTotalLoops >= profileLoopsVisibilityFloor
-                        ? authorTotalLoops
-                        : null;
                     // Use embedded author data from REST API as fallback
                     // This avoids WebSocket profile fetches for videos
                     // that already have author_name/author_avatar embedded
@@ -502,7 +482,7 @@ class VideoOverlayActions extends ConsumerWidget {
                                               ],
                                             ),
                                             _VideoCardMetaLine(
-                                              totalLoops: visibleAuthorLoops,
+                                              authorPubkey: authorPubkey,
                                             ),
                                           ],
                                         ),
@@ -710,17 +690,44 @@ class VideoOverlayActions extends ConsumerWidget {
 /// deliberately omitted, so an old timestamp cannot make the feed read as
 /// inactive; the metadata sheet carries it.
 ///
-/// Renders nothing while the total is unknown (`null`), rather than an empty
-/// row or a placeholder zero.
-class _VideoCardMetaLine extends StatelessWidget {
-  const _VideoCardMetaLine({required this.totalLoops});
+/// Rendered only when the viewer has total loops on
+/// ([StatsVisibilityPreferences.showTotalLoops], on by default), and only
+/// while the total is known (`null`), rather than an empty row or a
+/// placeholder zero. The stats lookup starts only once the total is shown.
+class _VideoCardMetaLine extends ConsumerWidget {
+  const _VideoCardMetaLine({required this.authorPubkey});
 
-  final int? totalLoops;
+  final String authorPubkey;
 
   @override
-  Widget build(BuildContext context) {
-    final totalLoops = this.totalLoops;
-    if (totalLoops == null) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
+
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) {
+        if (!statsVisibility.showTotalLoops) return const SizedBox.shrink();
+
+        return _AuthorTotalLoops(authorPubkey: authorPubkey);
+      },
+    );
+  }
+}
+
+class _AuthorTotalLoops extends ConsumerWidget {
+  const _AuthorTotalLoops({required this.authorPubkey});
+
+  final String authorPubkey;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authorStats = ref
+        .watch(videoCardAuthorStatsProvider(authorPubkey))
+        .value;
+    final totalLoops = authorStats?.hasKnownTotalViews == true
+        ? authorStats!.totalViews
+        : null;
+    if (totalLoops == null || totalLoops <= 0) return const SizedBox.shrink();
 
     return Text(
       context.l10n.videoFeedLoopCountLine(

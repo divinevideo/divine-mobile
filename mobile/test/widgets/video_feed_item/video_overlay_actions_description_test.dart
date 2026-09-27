@@ -13,12 +13,14 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -72,8 +74,13 @@ void main() {
     testWidgets('opens metadata sheet when tapping description', (
       tester,
     ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+      });
+      final prefs = await SharedPreferences.getInstance();
       await tester.pumpWidget(
         testProviderScope(
+          mockSharedPreferences: prefs,
           additionalOverrides: [
             repostsRepositoryProvider.overrideWithValue(mockRepostsRepository),
           ],
@@ -244,11 +251,10 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized plural loop label at the floor', (
+    testWidgets('author line uses localized plural loop label', (
       tester,
     ) async {
-      // Totals below the visibility floor are hidden, so visible totals use
-      // the plural ICU form.
+      // A large total resolves through the plural ICU form.
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [
