@@ -7,7 +7,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/blocs/apps_permissions/apps_permissions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Displays persisted permission grants and allows
 /// revocation.
@@ -34,10 +36,19 @@ class AppsPermissionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => AppsPermissionsCubit(
-        grantStore: grantStore,
-        currentUserPubkey: currentUserPubkey,
-      )..loadGrants(),
+      create: (_) {
+        final cubit = AppsPermissionsCubit(
+          grantStore: grantStore,
+          currentUserPubkey: currentUserPubkey,
+        );
+        runDetached(
+          cubit.loadGrants(),
+          'load app permission grants',
+          logName: 'AppsPermissionsScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const _AppsPermissionsContent(),
     );
   }
@@ -82,9 +93,12 @@ class _AppsPermissionsContent extends StatelessWidget {
                     final grant = state.grants[index];
                     return _GrantCard(
                       grant: grant,
-                      onRevoke: () => context
-                          .read<AppsPermissionsCubit>()
-                          .revokeGrant(grant),
+                      onRevoke: () => runDetached(
+                        context.read<AppsPermissionsCubit>().revokeGrant(grant),
+                        'revoke app permission grant',
+                        logName: 'AppsPermissionsScreen',
+                        category: LogCategory.ui,
+                      ),
                     );
                   },
                 ),
