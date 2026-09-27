@@ -74,6 +74,11 @@ Architecture and ownership:
   `cache_sync` for remote-derived cacheable data, Drift for durable
   structured data, narrow `SharedPreferences`, and no new Hive boxes without
   explicit justification. See [`data_foundation.md`](data_foundation.md).
+- [ ] A new or growing Drift table that accumulates a row per event/profile/
+  item has a stated retention policy in its own doc comment — a row cap, a
+  TTL, an orphan sweep against the table it derives from, or an explicit
+  "unbounded on purpose" — not silence. See
+  [`data_foundation.md`](data_foundation.md#retention-and-eviction-for-existing-stores).
 - [ ] "Cache warming" and "pre-fetch" work belongs in the **repository**
   layer, not in a `BlocProvider` wrapper. BlocProviders are lazy — see
   [`state_management.md`](state_management.md#blocprovider-is-lazy-by-default).

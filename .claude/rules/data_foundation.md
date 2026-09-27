@@ -134,6 +134,73 @@ before `beforeOpen` and marks that open as upgraded, any new migration reachable
 from an older damaged schema must re-run the relevant idempotent repair steps
 within `onUpgrade`.
 
+## Retention And Eviction For Existing Stores
+
+Choosing a store (the decision tree above) is a one-time call. A table that
+keeps growing after that — one row per pubkey ever seen, one row per event
+ever ingested — needs its own answer to "does this ever shrink, and how."
+#6987 found `db_client` had gone from 16 tables in May to 25 by August with
+only four ever swept (`AppDatabase.runStartupCleanup`, all TTL-based), and
+worked through what a real retention policy looks like for the rest. The
+patterns below are the reusable output; a new table crossing a real growth
+risk should pick one rather than shipping unbounded by default.
+
+**Row cap on an honest recency column** (`user_profiles`). Delete
+oldest-first once a table exceeds a cap, ordered by whichever column
+actually advances when the row is still relevant. `user_profiles` doesn't
+have a true last-*read* timestamp — only `last_fetched`, a last-*write*
+stamp — but a profile that's still relevant keeps getting refetched, which
+keeps its `last_fetched` current and protects it from eviction without
+needing a dedicated read-tracking column. Prefer this approximation over
+adding a real last-accessed column that writes on every read: for a table
+touched on every feed scroll, that write amplification is worse than the
+approximation's imprecision.
+
+**Orphan sweep against the table it derives from** (`video_metrics`). When a
+table is a denormalized derivative of another (metrics parsed from an
+event's tags), and the two aren't kept in sync by a database-enforced
+constraint, sweep it explicitly rather than relying on the constraint. Two
+tables in `db_client` declare a `customConstraints` foreign key with `ON
+DELETE CASCADE`, but `PRAGMA foreign_keys` is never enabled on this
+connection (`DraftsDao.deleteDraft`'s comment is the canonical note on why),
+so neither cascade fires on its own. Don't flip that pragma on to fix one
+table: it's a schema-wide behavior change — every declared FK starts being
+enforced, including insert-order assumptions elsewhere that were written
+assuming it's off — for a fix that a scoped sweep (`DELETE FROM video_metrics
+WHERE event_id NOT IN (SELECT id FROM event)`) gets just as well, run
+alongside whatever already deletes rows from the parent table.
+
+**TTL on a genuine local timestamp** (`processed_gift_wraps`). The
+straightforward case: the table already carries a column that means "when
+this device wrote this row," so prune by age against it, the same shape as
+the already-shipped `SeenVideosDao.pruneExpired`.
+
+**Unbounded on purpose, written down as a decision** (`identity_events`,
+`identity_verifications`). Not every table needs an eviction path — but
+"unbounded" has to be a decision made in the table's own doc comment, not
+silence. These two looked at first like they should ride on `user_profiles`'
+row cap, being keyed by the same pubkey and refreshed on the same "profile
+opened" trigger. That sweep was implemented, and a **shipped migration
+test caught it as wrong**: `v2 identity_events rows survive the upgrade
+unstamped` seeds an `identity_events` row with no corresponding
+`user_profiles` row at all, because identity claims can be fetched and
+cached independently of a kind-0 profile fetch, and the test expects that
+row to survive. Tying eviction to `user_profiles` presence silently deleted
+still-valid claims for a pubkey whose profile was never cached, with no
+re-fetch trigger to recover them — the sweep was reverted, and the tables
+are documented unbounded-while-signed-in instead (both already clear on
+logout and account switch), bounded in practice by session length and by
+how few viewed profiles publish NIP-39 claims at all. The lesson generalizes:
+a plausible-sounding tie between two tables sharing a key column is a
+hypothesis, not a fact, until something that writes real data — a test with
+real fixtures, not just reading the code — confirms the two are actually
+never independent.
+
+When writing a table's retention policy into its doc comment, name the
+mechanism and where it runs (`FooDao.method`, called from
+`AppDatabase.runStartupCleanup`), not just "bounded." A future reader — or
+guard script — needs to find the code, not re-derive that it exists.
+
 ## Account-Boundary Cleanup
 
 Any store holding one account's data must be cleared when a different account
