@@ -81,16 +81,24 @@ class _AppsDirectoryContent extends StatelessWidget {
                   title: context.l10n.appsDirectoryErrorTitle,
                   subtitle: context.l10n.appsDirectoryErrorSubtitle,
                   actionLabel: context.l10n.commonRetry,
-                  onAction: () =>
-                      context.read<AppsDirectoryCubit>().refreshApps(),
+                  onAction: () => runDetached(
+                    context.read<AppsDirectoryCubit>().refreshApps(),
+                    'retry loading approved apps',
+                    logName: 'AppsDirectoryScreen',
+                    category: LogCategory.ui,
+                  ),
                 ),
                 AppsDirectoryStatus.loaded when state.apps.isEmpty =>
                   _AppsDirectoryMessage(
                     title: context.l10n.appsDirectoryEmptyTitle,
                     subtitle: context.l10n.appsDirectoryEmptySubtitle,
                     actionLabel: context.l10n.appsDirectoryRefresh,
-                    onAction: () =>
-                        context.read<AppsDirectoryCubit>().refreshApps(),
+                    onAction: () => runDetached(
+                      context.read<AppsDirectoryCubit>().refreshApps(),
+                      'refresh approved apps',
+                      logName: 'AppsDirectoryScreen',
+                      category: LogCategory.ui,
+                    ),
                   ),
                 AppsDirectoryStatus.loaded => RefreshIndicator(
                   color: VineTheme.onPrimary,
