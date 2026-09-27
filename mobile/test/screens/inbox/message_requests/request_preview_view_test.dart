@@ -5,6 +5,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/screens/inbox/message_requests/request_preview_view.dar
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/finders.dart';
@@ -185,7 +187,7 @@ void main() {
       Widget buildStatsSubject(
         ProfileStats? stats, {
         bool vanished = false,
-        MockSharedPreferences? prefs,
+        SharedPreferences? prefs,
       }) {
         return testMaterialApp(
           mockAuthService: mockAuthService,
@@ -339,6 +341,67 @@ void main() {
             ),
             findRichText: true,
           ),
+          findsOneWidget,
+        );
+      });
+
+      // A zero is not data, so it is withheld like a missing count. The videos
+      // part is the control that proves the line rendered; `statsWith`
+      // defaults the loops total to zero.
+      testWidgets('omits loops when the total is zero', (tester) async {
+        await pumpStats(tester, buildStatsSubject(statsWith(videoCount: 3)));
+
+        expect(
+          find.textContaining(
+            l10n.messageRequestVideosCount(3, '3'),
+            findRichText: true,
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            l10n.videoFeedLoopCountLine('0', 0),
+            findRichText: true,
+          ),
+          findsNothing,
+        );
+      });
+
+      testWidgets('follows the total-loops setting while mounted', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        await pumpStats(
+          tester,
+          buildStatsSubject(
+            statsWith(videoCount: 3, totalViews: 250),
+            prefs: prefs,
+          ),
+        );
+        final settings = ProviderScope.containerOf(
+          tester.element(find.byType(RequestPreviewView)),
+        ).read(statsVisibilityPreferencesProvider);
+        final loopsText = l10n.videoFeedLoopCountLine(
+          StringUtils.formatCompactNumber(250),
+          250,
+        );
+        expect(
+          find.textContaining(loopsText, findRichText: true),
+          findsOneWidget,
+        );
+
+        await tester.runAsync(() => settings.setShowTotalLoops(false));
+        await tester.pump();
+        expect(
+          find.textContaining(loopsText, findRichText: true),
+          findsNothing,
+        );
+
+        await tester.runAsync(() => settings.setShowTotalLoops(true));
+        await tester.pump();
+        expect(
+          find.textContaining(loopsText, findRichText: true),
           findsOneWidget,
         );
       });

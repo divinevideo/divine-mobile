@@ -1680,6 +1680,46 @@ void main() {
       expect(find.text('Loops'), findsOneWidget);
     });
 
+    testWidgets('follows the total-loops setting while mounted', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final testProfile = createTestProfile(displayName: 'Counted User');
+      const profileStats = ProfileStats(
+        pubkey: testUserHex,
+        videoCount: 42,
+        totalLikes: 100,
+        totalViews: 50000,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: testProfile,
+          profileStats: profileStats,
+          videoCount: 3,
+          sharedPreferences: prefs,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(ProfileHeaderWidget)),
+      ).read(statsVisibilityPreferencesProvider);
+      expect(find.text(enL10n.profileLoopsLabel), findsOneWidget);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(false));
+      await tester.pumpAndSettle();
+      expect(find.text(enL10n.profileLoopsLabel), findsNothing);
+      // The rest of the row is unaffected.
+      expect(find.text(enL10n.profileLikesLabel), findsOneWidget);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(true));
+      await tester.pumpAndSettle();
+      expect(find.text(enL10n.profileLoopsLabel), findsOneWidget);
+    });
+
     testWidgets('hides Loops when the viewer turns total loops off', (
       tester,
     ) async {

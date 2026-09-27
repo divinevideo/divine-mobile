@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
@@ -43,10 +44,12 @@ Future<void> _pump(
   WidgetTester tester, {
   required VideoEvent video,
   required VideoInteractionsBloc bloc,
-  bool showVideoLoops = true,
+  // Null leaves the preference unset, so the row runs on its production
+  // default.
+  bool? showVideoLoops = true,
 }) async {
   SharedPreferences.setMockInitialValues({
-    StatsVisibilityPreferences.showVideoLoopsKey: showVideoLoops,
+    StatsVisibilityPreferences.showVideoLoopsKey: ?showVideoLoops,
   });
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
@@ -144,6 +147,41 @@ void main() {
       );
 
       expect(find.text('0'), findsOneWidget);
+    });
+
+    testWidgets('leaves loops out until the viewer opts in', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+        showVideoLoops: null,
+      );
+
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsNothing);
+      expect(find.text('847'), findsOneWidget);
+    });
+
+    testWidgets('follows the video-loops setting while mounted', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(originalLoops: 2100000),
+        bloc: bloc,
+        showVideoLoops: false,
+      );
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(MetadataStatsRow)),
+      ).read(statsVisibilityPreferencesProvider);
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsNothing);
+
+      await tester.runAsync(() => settings.setShowVideoLoops(true));
+      await tester.pump();
+
+      expect(find.text(l10n.metadataLoopsLabel(2100000)), findsOneWidget);
+      expect(find.text('2.1M'), findsOneWidget);
     });
 
     testWidgets('hides loops when the viewer turns video loops off', (

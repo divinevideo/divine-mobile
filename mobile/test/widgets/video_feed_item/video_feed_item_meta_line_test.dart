@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/widgets/og_beta_badge.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -95,7 +97,7 @@ void main() {
     int? authorTotalLoops,
     bool isOgDiviner = false,
     bool eligibilityIsLoading = false,
-    MockSharedPreferences? prefs,
+    SharedPreferences? prefs,
     void Function()? onAuthorStatsLookup,
   }) async {
     await tester.pumpWidget(
@@ -212,6 +214,31 @@ void main() {
       );
 
       expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+    });
+
+    testWidgets('follows the total-loops setting while mounted', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await pump(
+        tester,
+        video: _video(),
+        authorTotalLoops: 50000,
+        prefs: prefs,
+      );
+      final settings = ProviderScope.containerOf(
+        tester.element(find.byType(VideoOverlayActions)),
+      ).read(statsVisibilityPreferencesProvider);
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(false));
+      await tester.pump();
+      expect(find.textContaining(loopLine(tester, 50000)), findsNothing);
+
+      await tester.runAsync(() => settings.setShowTotalLoops(true));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(loopLine(tester, 50000)), findsOneWidget);
     });
 
     testWidgets('skips the author stats lookup while total loops are off', (

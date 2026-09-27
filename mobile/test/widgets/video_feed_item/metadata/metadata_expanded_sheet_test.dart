@@ -501,6 +501,36 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
+      'shows the posted date once the viewer turns publish date on',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showPublishedDateKey: false,
+        });
+        final dateOffPrefs = await SharedPreferences.getInstance();
+        final video = _makeVideo(title: 'Who knew?');
+
+        await tester.pumpWidget(
+          buildSubject(
+            child: MetadataExpandedSheet(video: video),
+            sharedPreferences: dateOffPrefs,
+          ),
+        );
+        final settings = ProviderScope.containerOf(
+          tester.element(find.byType(MetadataExpandedSheet)),
+        ).read(statsVisibilityPreferencesProvider);
+        final expectedDate = DateFormat.yMMMMd('en').format(
+          DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000, isUtc: true),
+        );
+        expect(find.text(expectedDate), findsNothing);
+
+        await tester.runAsync(() => settings.setShowPublishedDate(true));
+        await tester.pump();
+
+        expect(find.text(expectedDate), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
       'hides the posted date when the viewer turns publish date off',
       (tester) async {
         SharedPreferences.setMockInitialValues({
