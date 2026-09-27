@@ -5,7 +5,9 @@ import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Shared navigation and URL handling for linkified text renderers.
@@ -18,7 +20,11 @@ final class LinkifiedTextNavigation {
     VoidCallback? beforeNavigate,
   }) {
     beforeNavigate?.call();
-    context.push(HashtagScreenRouter.pathForTag(hashtag));
+    _pushDetached(
+      context,
+      HashtagScreenRouter.pathForTag(hashtag),
+      description: 'navigate to hashtag feed',
+    );
   }
 
   static void navigateToHashtagFeedFromModal(
@@ -61,7 +67,11 @@ final class LinkifiedTextNavigation {
     VoidCallback? beforeNavigate,
   }) {
     beforeNavigate?.call();
-    context.push(VideoDetailScreen.pathForId(routeReference));
+    _pushDetached(
+      context,
+      VideoDetailScreen.pathForId(routeReference),
+      description: 'navigate to video',
+    );
   }
 
   static void navigateToVideoFromModal(
@@ -82,8 +92,10 @@ final class LinkifiedTextNavigation {
     VoidCallback? beforeNavigate,
   }) {
     beforeNavigate?.call();
-    context.push(
+    _pushDetached(
+      context,
       SearchResultsPage.pathForQuery(username, requestFocusOnMount: false),
+      description: 'navigate to search results',
     );
   }
 
@@ -141,8 +153,25 @@ final class LinkifiedTextNavigation {
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      hostContext.push(location);
+      _pushDetached(
+        hostContext,
+        location,
+        description: 'navigate after linkified text modal dismissal',
+      );
     });
+  }
+
+  static void _pushDetached(
+    BuildContext context,
+    String location, {
+    required String description,
+  }) {
+    runDetached(
+      context.push(location).then<void>((_) {}),
+      description,
+      logName: 'LinkifiedTextNavigation',
+      category: LogCategory.ui,
+    );
   }
 }
 
