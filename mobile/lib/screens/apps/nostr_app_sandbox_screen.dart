@@ -20,6 +20,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/apps/nostr_app_sandbox_bridge.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/apps/nostr_app_permission_prompt_sheet.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -127,7 +128,15 @@ class _NostrAppSandboxScreenState extends ConsumerState<NostrAppSandboxScreen> {
 
   @override
   void dispose() {
-    _attestedMessageSubscription?.cancel();
+    final cancellation = _attestedMessageSubscription?.cancel();
+    if (cancellation != null) {
+      runDetached(
+        cancellation,
+        'cancel attested message subscription',
+        logName: 'NostrAppSandboxScreen',
+        category: LogCategory.system,
+      );
+    }
     if (_isNativeAttestationActive) {
       final webViewId = _attestationWebViewId();
       if (webViewId != null) {
