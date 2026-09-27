@@ -89,14 +89,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = RouterRefreshListenable(
     authService.authStateStream,
   );
-  ref.listen(currentMinorAccountReviewStatusProvider, (previous, next) {
+  // Compared against the status last routed on rather than Riverpod's
+  // `previous`: a finished fetch records the account's last-known status
+  // before the provider settles, so recomputing `previous` would already see
+  // the new value and could miss the change. Only the current fetch records,
+  // so every store write is followed by the provider's own emission.
+  var routedReviewStatus = _routedReviewStatus(
+    ref,
+    ref.read(currentMinorAccountReviewStatusProvider),
+  );
+  ref.listen(currentMinorAccountReviewStatusProvider, (_, next) {
+    final routed = _routedReviewStatus(ref, next);
+    final affectsRouting = minorAccountReviewStatusAffectsRouting(
+      routedReviewStatus,
+      routed,
+    );
+    routedReviewStatus = routed;
     // A resume/background refetch that resolves to a routing-identical status
     // (active → active) must not refresh: refreshing churns the route pipeline
     // and tears down a reel pushed on top mid-init. Only refresh when the
     // redirect outcome can actually change.
-    if (!minorAccountReviewStatusAffectsRouting(previous, next)) {
-      return;
-    }
+    if (!affectsRouting) return;
     refreshListenable.refresh();
   });
   bool deletionGateActiveForCurrentAccount(
