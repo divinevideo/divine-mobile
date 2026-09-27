@@ -283,6 +283,7 @@ void main() {
                   reposts: 0,
                   loops: 0,
                   views: id == 'older-event' ? 1000 : 5,
+                  uniqueViewers: id == 'older-event' ? 100 : 5,
                 ),
             },
           );
@@ -321,6 +322,7 @@ void main() {
         expect(snapshot.diagnostics.totalVideos, 1);
         expect(snapshot.videos.single.id, 'newer-event');
         expect(snapshot.videos.single.rawTags['views'], '1000');
+        expect(snapshot.videos.single.rawTags['unique_viewers'], '100');
         verify(
           () => api.getBulkVideoStats(['older-event', 'newer-event']),
         ).called(1);

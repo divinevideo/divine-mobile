@@ -40,6 +40,15 @@ void main() {
       );
     });
 
+    test('keeps the higher unique-viewer count across edits', () {
+      final merged = mergeVideoRawTagsPrimaryWins(
+        {'unique_viewers': '5', 'title': 'newer'},
+        {'unique_viewers': '100', 'title': 'older'},
+      );
+      expect(merged['title'], equals('newer'));
+      expect(merged['unique_viewers'], equals('100'));
+    });
+
     test('ignores negative parsed counts for max', () {
       final merged = mergeVideoRawTagsPrimaryWins(
         {'views': '-1'},

@@ -9,8 +9,9 @@ library;
 import 'dart:math' as math;
 
 /// Merges raw video tags with primary-wins semantics on duplicate keys
-/// (`{...secondary, ...primary}`), except `views`: the higher parsed
-/// non-negative count wins (#3384).
+/// (`{...secondary, ...primary}`), except `views` and `unique_viewers`: the
+/// higher parsed non-negative count wins (#3384). Unique viewers are not a
+/// sum across edits; the max keeps a known higher count from an older edit.
 ///
 /// Used by profile relay/REST merge and by Nostr enrichment (#3384).
 Map<String, String> mergeVideoRawTagsPrimaryWins(
@@ -18,10 +19,12 @@ Map<String, String> mergeVideoRawTagsPrimaryWins(
   Map<String, String> secondary,
 ) {
   final merged = {...secondary, ...primary};
-  final p = _parseNonNegativeIntTag(primary['views']);
-  final s = _parseNonNegativeIntTag(secondary['views']);
-  if (p == null && s == null) return merged;
-  merged['views'] = math.max(p ?? 0, s ?? 0).toString();
+  for (final key in const ['views', 'unique_viewers']) {
+    final p = _parseNonNegativeIntTag(primary[key]);
+    final s = _parseNonNegativeIntTag(secondary[key]);
+    if (p == null && s == null) continue;
+    merged[key] = math.max(p ?? 0, s ?? 0).toString();
+  }
   return merged;
 }
 

@@ -22,7 +22,7 @@ String canonicalProfileFeedVideoKey(VideoEvent video) =>
 /// smaller `id`). Metadata scalars take primary-wins (`primary ?? secondary`);
 /// list fields take primary-if-non-empty; every engagement counter takes the
 /// per-counter max ([mergeNullableEngagementMax]); raw tags merge primary-wins
-/// except `views`, which takes the higher parsed count
+/// except `views` and `unique_viewers`, which take the higher parsed count
 /// ([mergeVideoRawTagsPrimaryWins]). When neither copy carries a `publishedAt`,
 /// the merged `createdAt`/`timestamp` preserve the older value so re-merging is
 /// stable.
