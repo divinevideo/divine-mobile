@@ -297,7 +297,7 @@ void main() {
       for (final boxName in const [
         'personal_events',
         'personal_events_metadata',
-        'hashtag_stats',
+        HiveBoxNames.legacyHashtagStats,
       ]) {
         test('deletes a retired $boxName left in the home', () async {
           final home = Directory(homePath)..createSync(recursive: true);

@@ -8,6 +8,15 @@ abstract final class HiveBoxNames {
   static const pushNotificationPreferencesDirty =
       'push_notification_preferences_dirty';
 
+  /// Retired name of the box that backed the deleted `HashtagCacheService`.
+  ///
+  /// Not in [all]: nothing opens this box anymore. Kept as the single
+  /// shared owner of the string so `CacheRecoveryService` and
+  /// `HiveStorageService` can each delete a leftover file from a device
+  /// that opened it before the service was removed, without duplicating
+  /// the literal.
+  static const legacyHashtagStats = 'hashtag_stats';
+
   static const Set<String> all = {
     peopleLists,
     pendingUploads,

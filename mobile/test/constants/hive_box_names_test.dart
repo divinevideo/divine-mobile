@@ -82,12 +82,21 @@ Future<Box<dynamic>> open() =>
       expect(declared, isNotEmpty);
       expect(
         declared,
-        unorderedEquals(HiveBoxNames.all),
+        unorderedEquals({
+          ...HiveBoxNames.all,
+          // Deliberately outside `all`: nothing opens this box anymore, so
+          // it doesn't need the live-box wipe/migration coverage `all`
+          // guarantees. CacheRecoveryService and HiveStorageService each
+          // reference it directly to delete a leftover file — see its doc
+          // comment on HiveBoxNames.legacyHashtagStats.
+          HiveBoxNames.legacyHashtagStats,
+        }),
         reason:
             'HiveBoxNames.all is what CacheRecoveryService classifies as '
             'disposable or durable, and what HiveStorageService migrates out '
-            'of the legacy documents directory. A member missing from it is a '
-            'box no wipe policy covers and no migration rescues.',
+            'of the legacy documents directory. A member missing from both '
+            'sets here is a box no wipe policy covers and no migration '
+            'rescues.',
       );
     });
 

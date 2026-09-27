@@ -85,7 +85,7 @@ abstract final class HiveStorageService {
   static const Set<String> _retiredBoxNames = {
     'personal_events',
     'personal_events_metadata',
-    'hashtag_stats',
+    HiveBoxNames.legacyHashtagStats,
   };
 
   /// Deletes retired box files from both the home and the legacy home.

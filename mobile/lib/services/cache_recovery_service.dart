@@ -14,10 +14,9 @@ import 'package:unified_logger/unified_logger.dart';
 class CacheRecoveryService {
   static const String _logName = 'CacheRecoveryService';
 
-  static const String _legacyHashtagStatsBoxName = 'hashtag_stats';
   static const Set<String> _disposableHiveBoxNames = {
     HiveBoxNames.peopleLists,
-    _legacyHashtagStatsBoxName,
+    HiveBoxNames.legacyHashtagStats,
   };
 
   /// Clear all app caches and databases to recover from corruption

@@ -34,7 +34,7 @@ void main() {
       setUp(() async {
         tmp = Directory.systemTemp.createTempSync('cache_recovery_hive_test');
         TestHelpers.setHiveHomeForTesting(tmp.path);
-        await Hive.deleteBoxFromDisk('hashtag_stats');
+        await Hive.deleteBoxFromDisk(HiveBoxNames.legacyHashtagStats);
         await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
         await TestHelpers.cleanupHiveBox(
           HiveBoxNames.pushNotificationPreferencesDirty,
@@ -70,13 +70,17 @@ void main() {
         );
         expect(
           classifiedHiveBoxNames,
-          unorderedEquals({...HiveBoxNames.all, 'hashtag_stats'}),
+          unorderedEquals({
+            ...HiveBoxNames.all,
+            HiveBoxNames.legacyHashtagStats,
+          }),
         );
       });
 
       test('deletes the legacy hashtag stats box from disk', () async {
-        final legacyBoxFile = File(p.join(tmp.path, 'hashtag_stats.hive'))
-          ..writeAsStringSync('stale cache');
+        final legacyBoxFile = File(
+          p.join(tmp.path, '${HiveBoxNames.legacyHashtagStats}.hive'),
+        )..writeAsStringSync('stale cache');
 
         await CacheRecoveryService.clearHiveBoxesForTesting();
 
