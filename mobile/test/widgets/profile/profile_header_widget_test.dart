@@ -1739,6 +1739,44 @@ void main() {
       expect(find.text('Loops'), findsOneWidget);
     });
 
+    testWidgets('hides a known zero loop total from visitors', (tester) async {
+      final testProfile = createTestProfile(displayName: 'New Creator');
+      const profileStats = ProfileStats(
+        pubkey: testUserHex,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: testProfile,
+          profileStats: profileStats,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loops'), findsNothing);
+    });
+
+    testWidgets('shows the owner a known zero loop total', (tester) async {
+      final testProfile = createTestProfile(displayName: 'Owner');
+      const profileStats = ProfileStats(
+        pubkey: testUserHex,
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: true,
+          suppliedProfile: testProfile,
+          profileStats: profileStats,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Loops'), findsOneWidget);
+    });
+
     testWidgets('opens creator analytics when the owner taps Loops', (
       tester,
     ) async {

@@ -314,12 +314,14 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
 
         final hasLikes = widget.profileStats?.totalLikes != null;
         final totalViews = widget.profileStats?.totalViews;
-        // Visibility is the viewer's choice, not the count's size: the Loops
-        // column is shown whenever the viewer asked for total loops and a
-        // total is known (or still loading). No owner exemption rides on top
-        // of that.
+        // The viewer controls whether totals appear. Keep a known zero hidden
+        // on visitor profiles so new creators do not get a public "0 loops"
+        // label; creators can still see their own zero as before.
         final showLoopsColumn =
-            statsVisibility.showTotalLoops && (isLoading || totalViews != null);
+            statsVisibility.showTotalLoops &&
+            (isLoading ||
+                (totalViews != null &&
+                    (widget.isOwnProfile || totalViews > 0)));
 
         final l10n = context.l10n;
         final columns = <Widget>[
