@@ -1708,7 +1708,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // The rest of the row still renders; only Loops is withheld.
-      expect(find.text('Loops'), findsNothing);
+      expect(find.text(enL10n.profileLoopsLabel), findsNothing);
       expect(find.text('Likes'), findsOneWidget);
     });
 
@@ -1736,7 +1736,7 @@ void main() {
 
       // No visibility floor: the viewer's preference alone decides, so a
       // small total is shown rather than withheld.
-      expect(find.text('Loops'), findsOneWidget);
+      expect(find.text(enL10n.profileLoopsLabel), findsOneWidget);
     });
 
     testWidgets('hides a known zero loop total from visitors', (tester) async {
@@ -1755,7 +1755,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Loops'), findsNothing);
+      expect(find.text(enL10n.profileLoopsLabel), findsNothing);
     });
 
     testWidgets('shows the owner a known zero loop total', (tester) async {
@@ -1874,7 +1874,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // The viewer's choice applies to their own profile too.
-        expect(find.text('Loops'), findsNothing);
+        expect(find.text(enL10n.profileLoopsLabel), findsNothing);
       },
     );
 
