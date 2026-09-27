@@ -2623,8 +2623,11 @@ class VideosRepository {
   }
 
   /// Hydrates author REST videos with engagement counts: bulk-stats first
-  /// (loops/views/unique viewers), then a per-video view-stats request for rows
-  /// still missing either total views or unique viewers.
+  /// (loops/views/unique viewers), then a per-video view-stats request only
+  /// for rows still missing total views. Unique viewers are stored when bulk
+  /// stats or that response already include them. A missing unique-viewer
+  /// count does not by itself call the views endpoint: this is the profile
+  /// feed, not creator analytics, and a failure here drops the REST page.
   ///
   /// Bulk stats are **live** Nostr engagement counts, so reactions/comments/
   /// reposts fill only the live `nostr*Count` fields (via `??`); the archival
@@ -2698,22 +2701,19 @@ class VideosRepository {
     List<VideoEvent> videos,
     FunnelcakeApiClient client,
   ) async {
-    final videosMissingStats = videos
+    final videosMissingViews = videos
         .where(
-          (video) =>
-              (!_authorVideoHasTotalViews(video) ||
-                  !_authorVideoHasUniqueViewers(video)) &&
-              video.id.isNotEmpty,
+          (video) => !_authorVideoHasTotalViews(video) && video.id.isNotEmpty,
         )
         .toList();
-    if (videosMissingStats.isEmpty) return videos;
+    if (videosMissingViews.isEmpty) return videos;
 
     final fetchedStats = <String, VideoViewStats>{};
-    for (var i = 0; i < videosMissingStats.length; i += 12) {
-      final end = i + 12 > videosMissingStats.length
-          ? videosMissingStats.length
+    for (var i = 0; i < videosMissingViews.length; i += 12) {
+      final end = i + 12 > videosMissingViews.length
+          ? videosMissingViews.length
           : i + 12;
-      final chunk = videosMissingStats.sublist(i, end);
+      final chunk = videosMissingViews.sublist(i, end);
       final stats = await Future.wait(
         chunk.map((video) => client.getVideoViewStats(video.id)),
       );

@@ -271,7 +271,7 @@ void main() {
 
         expect(result.videos, hasLength(1));
         expect(result.videos.single.rawTags['views'], equals('12.7'));
-        verify(() => funnelcake.getVideoViewStats('a')).called(1);
+        verifyNever(() => funnelcake.getVideoViewStats(any()));
       },
     );
 
