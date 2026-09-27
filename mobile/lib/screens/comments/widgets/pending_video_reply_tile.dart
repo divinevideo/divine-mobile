@@ -2,11 +2,11 @@
 // ABOUTME: Shows upload progress so the poster is not left staring at nothing.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 
 /// Placeholder tile shown while a recorded video reply uploads and publishes.
 ///
@@ -34,10 +34,11 @@ class _PendingVideoReplyTileState extends State<PendingVideoReplyTile> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      SemanticsService.sendAnnouncement(
-        View.of(context),
+      announceDetached(
+        context,
         context.l10n.commentsVideoReplyPendingSemanticLabel,
-        Directionality.of(context),
+        description: 'announce pending video reply',
+        logName: 'PendingVideoReplyTile',
       );
     });
   }
