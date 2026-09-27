@@ -163,6 +163,57 @@ void main() {
       expect(await dao.hasGiftWrap(wrap2), isTrue);
     });
 
+    group('pruneExpired', () {
+      test('deletes rows older than the ttl', () async {
+        final old =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000 -
+            const Duration(days: 91).inSeconds;
+        await database.customStatement(
+          'INSERT INTO processed_gift_wraps '
+          '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, ?, ?)',
+          [wrap1, old, ownerA],
+        );
+
+        final deleted = await dao.pruneExpired();
+
+        expect(deleted, equals(1));
+        expect(await dao.hasGiftWrap(wrap1), isFalse);
+      });
+
+      test('keeps rows within the ttl', () async {
+        final recent =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000 -
+            const Duration(days: 1).inSeconds;
+        await database.customStatement(
+          'INSERT INTO processed_gift_wraps '
+          '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, ?, ?)',
+          [wrap1, recent, ownerA],
+        );
+
+        final deleted = await dao.pruneExpired();
+
+        expect(deleted, equals(0));
+        expect(await dao.hasGiftWrap(wrap1), isTrue);
+      });
+
+      test('respects a custom ttl', () async {
+        final tenDaysOld =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000 -
+            const Duration(days: 10).inSeconds;
+        await database.customStatement(
+          'INSERT INTO processed_gift_wraps '
+          '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, ?, ?)',
+          [wrap1, tenDaysOld, ownerA],
+        );
+
+        final deleted = await dao.pruneExpired(
+          ttl: const Duration(days: 7),
+        );
+
+        expect(deleted, equals(1));
+      });
+    });
+
     test('unknown-owner cleanup removes NULL and empty legacy rows', () async {
       await database.customStatement(
         'INSERT INTO processed_gift_wraps '

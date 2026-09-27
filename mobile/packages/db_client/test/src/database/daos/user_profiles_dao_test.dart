@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
@@ -442,6 +443,93 @@ void main() {
         expect(profile.about, equals('Test about'));
         expect(profile.picture, equals('https://example.com/pic.jpg'));
         expect(profile.nip05, equals('test@example.com'));
+      });
+    });
+
+    group('enforceRowCap', () {
+      /// Inserts a profile row with an explicit `last_fetched`, bypassing
+      /// [UserProfilesDao.upsertProfile] (which always stamps `DateTime.now()`
+      /// and so cannot produce the distinct, ordered timestamps this cap
+      /// needs to test eviction order).
+      Future<void> insertWithLastFetched(
+        String pubkey,
+        DateTime lastFetched,
+      ) {
+        return database
+            .into(database.userProfiles)
+            .insert(
+              UserProfilesCompanion.insert(
+                pubkey: pubkey,
+                createdAt: lastFetched,
+                eventId: 'event-$pubkey',
+                lastFetched: lastFetched,
+              ),
+              mode: InsertMode.insertOrReplace,
+            );
+      }
+
+      test('does nothing when the table is within the cap', () async {
+        await insertWithLastFetched(testPubkey, DateTime.now());
+        await insertWithLastFetched(testPubkey2, DateTime.now());
+
+        final deleted = await dao.enforceRowCap(maxRows: 5000);
+
+        expect(deleted, equals(0));
+        expect(await dao.getAllProfiles(), hasLength(2));
+      });
+
+      test(
+        'evicts the oldest-by-last_fetched rows beyond the cap',
+        () async {
+          final now = DateTime.now();
+          await insertWithLastFetched(
+            testPubkey,
+            now.subtract(const Duration(days: 2)),
+          );
+          await insertWithLastFetched(
+            testPubkey2,
+            now.subtract(const Duration(days: 1)),
+          );
+          const newestPubkey =
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+          await insertWithLastFetched(newestPubkey, now);
+
+          final deleted = await dao.enforceRowCap(maxRows: 2);
+
+          expect(deleted, equals(1));
+          final remaining = await dao.getAllProfiles();
+          expect(
+            remaining.map((p) => p.pubkey),
+            containsAll([testPubkey2, newestPubkey]),
+          );
+          expect(
+            remaining.map((p) => p.pubkey),
+            isNot(contains(testPubkey)),
+          );
+        },
+      );
+
+      test('a profile refreshed after being written stays out of the '
+          'eviction set', () async {
+        final now = DateTime.now();
+        await insertWithLastFetched(
+          testPubkey,
+          now.subtract(const Duration(days: 5)),
+        );
+        await insertWithLastFetched(
+          testPubkey2,
+          now.subtract(const Duration(days: 4)),
+        );
+        // testPubkey is re-fetched most recently, so its refreshed
+        // last_fetched should protect it even though it was originally the
+        // oldest row.
+        await insertWithLastFetched(testPubkey, now);
+
+        final deleted = await dao.enforceRowCap(maxRows: 1);
+
+        expect(deleted, equals(1));
+        final remaining = await dao.getAllProfiles();
+        expect(remaining.map((p) => p.pubkey), equals([testPubkey]));
       });
     });
 

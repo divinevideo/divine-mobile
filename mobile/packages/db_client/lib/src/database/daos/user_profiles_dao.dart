@@ -193,6 +193,34 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
         .toList();
   }
 
+  /// Evicts the oldest-by-`last_fetched` rows once the table exceeds
+  /// [maxRows], so a pubkey seen once (an author, commenter, or liker
+  /// passing through the feed) does not stay cached forever.
+  ///
+  /// `last_fetched` is a last-*write* stamp, not a true last-*read* one —
+  /// there is no column recording when a cached profile was last displayed.
+  /// It is a reasonable proxy here: a profile that is still relevant keeps
+  /// getting refreshed (re-viewed, re-mentioned, re-fetched), which advances
+  /// its `last_fetched` and protects it from eviction, including the
+  /// signed-in user's own row. An evicted pubkey still on screen renders as
+  /// a blank author until the next relay/API refetch lands — a cache miss,
+  /// not data loss. Called from [AppDatabase.runStartupCleanup]. Returns
+  /// the number of rows deleted.
+  Future<int> enforceRowCap({int maxRows = 5000}) async {
+    return customUpdate(
+      '''
+        DELETE FROM user_profiles
+        WHERE pubkey NOT IN (
+          SELECT pubkey FROM user_profiles
+          ORDER BY last_fetched DESC LIMIT ?
+        )
+      ''',
+      variables: [Variable.withInt(maxRows)],
+      updates: {userProfiles},
+      updateKind: UpdateKind.delete,
+    );
+  }
+
   /// Delete a profile by pubkey.
   ///
   /// Returns the number of rows deleted (0 or 1).
@@ -239,9 +267,7 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Returns a list of UserProfile domain models for the given pubkeys.
   /// Profiles not found in the database are omitted from the result.
-  Future<List<UserProfile>> getProfilesByPubkeys(
-    List<String> pubkeys,
-  ) async {
+  Future<List<UserProfile>> getProfilesByPubkeys(List<String> pubkeys) async {
     if (pubkeys.isEmpty) return [];
     final query = select(userProfiles)..where((t) => t.pubkey.isIn(pubkeys));
     final rows = await query.get();

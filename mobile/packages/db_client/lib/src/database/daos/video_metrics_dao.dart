@@ -95,4 +95,23 @@ class VideoMetricsDao extends DatabaseAccessor<AppDatabase>
       updateKind: UpdateKind.delete,
     );
   }
+
+  /// Deletes `video_metrics` rows whose `event_id` no longer has a matching
+  /// `event` row.
+  ///
+  /// `video_metrics` declares `FOREIGN KEY (event_id) REFERENCES event(id)
+  /// ON DELETE CASCADE`, but `PRAGMA foreign_keys` is never enabled on this
+  /// connection (see the note on `DraftsDao.deleteDraft`), so the cascade
+  /// never fires: every `event` deletion — TTL expiry, or the
+  /// superseded-version delete a replaceable-event upsert performs — strands
+  /// its metrics row permanently instead. Called from
+  /// [AppDatabase.runStartupCleanup]. Returns the number of rows deleted.
+  Future<int> deleteOrphaned() async {
+    return customUpdate(
+      'DELETE FROM video_metrics '
+      'WHERE event_id NOT IN (SELECT id FROM event)',
+      updates: {videoMetrics},
+      updateKind: UpdateKind.delete,
+    );
+  }
 }

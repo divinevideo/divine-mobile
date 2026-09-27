@@ -17262,8 +17262,12 @@ class ProcessedGiftWrap extends DataClass
   /// [DirectMessages.giftWrapId] dedup semantics.
   final String giftWrapId;
 
-  /// When the wrap was terminally processed (unix seconds). Informational and
-  /// available for any future time-based retention.
+  /// When the wrap was terminally processed (unix seconds).
+  ///
+  /// Retention: rows older than 90 days are pruned by
+  /// `ProcessedGiftWrapsDao.pruneExpired`, run from
+  /// `AppDatabase.runStartupCleanup` — nothing reads a row once its
+  /// redelivery window has passed.
   final int processedAt;
 
   /// Recipient pubkey this wrap was processed for. Not part of the global
