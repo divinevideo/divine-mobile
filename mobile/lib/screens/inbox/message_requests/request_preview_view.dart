@@ -606,8 +606,8 @@ class _StatsLineState extends State<_StatsLine> {
     final parts = <String>[];
     if (showSkeleton) {
       // Two placeholder parts set the shimmer's width. Followers and videos
-      // are the pair every account can have; loops are floored, so promising
-      // a third bar would usually shimmer into nothing.
+      // are the pair every account can have; loops can be withheld (viewer
+      // choice, or a zero total), so a third bar could shimmer into nothing.
       parts
         ..add(
           StringUtils.compactPlural(
