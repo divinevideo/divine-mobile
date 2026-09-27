@@ -9,9 +9,10 @@ library;
 import 'dart:math' as math;
 
 /// Merges raw video tags with primary-wins semantics on duplicate keys
-/// (`{...secondary, ...primary}`), except `views` and `unique_viewers`: the
-/// higher parsed non-negative count wins (#3384). Unique viewers are not a
-/// sum across edits; the max keeps a known higher count from an older edit.
+/// (`{...secondary, ...primary}`), except `views` and distinct viewers: the
+/// higher parsed non-negative count wins (#3384). Distinct viewers are read
+/// from `unique_viewers` and `unique_views`, written back only as
+/// `unique_viewers`. They are not summed across edits.
 ///
 /// Used by profile relay/REST merge and by Nostr enrichment (#3384).
 Map<String, String> mergeVideoRawTagsPrimaryWins(
@@ -19,13 +20,37 @@ Map<String, String> mergeVideoRawTagsPrimaryWins(
   Map<String, String> secondary,
 ) {
   final merged = {...secondary, ...primary};
-  for (final key in const ['views', 'unique_viewers']) {
-    final p = _parseNonNegativeIntTag(primary[key]);
-    final s = _parseNonNegativeIntTag(secondary[key]);
-    if (p == null && s == null) continue;
-    merged[key] = math.max(p ?? 0, s ?? 0).toString();
+  final primaryViews = _parseNonNegativeIntTag(primary['views']);
+  final secondaryViews = _parseNonNegativeIntTag(secondary['views']);
+  if (primaryViews != null || secondaryViews != null) {
+    merged['views'] = math
+        .max(primaryViews ?? 0, secondaryViews ?? 0)
+        .toString();
+  }
+  final uniqueViewers = _highestUniqueViewers(primary, secondary);
+  if (uniqueViewers != null) {
+    merged['unique_viewers'] = uniqueViewers.toString();
+    merged.remove('unique_views');
   }
   return merged;
+}
+
+int? _highestUniqueViewers(
+  Map<String, String> primary,
+  Map<String, String> secondary,
+) {
+  int? highest;
+  for (final raw in [
+    primary['unique_viewers'],
+    primary['unique_views'],
+    secondary['unique_viewers'],
+    secondary['unique_views'],
+  ]) {
+    final parsed = _parseNonNegativeIntTag(raw);
+    if (parsed == null) continue;
+    highest = highest == null ? parsed : math.max(highest, parsed);
+  }
+  return highest;
 }
 
 int? _parseNonNegativeIntTag(String? raw) {

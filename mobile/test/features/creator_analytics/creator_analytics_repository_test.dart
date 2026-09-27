@@ -89,6 +89,14 @@ void main() {
       expect(extractVideoViews(event), 55);
     });
 
+    test('uses the higher distinct-viewer alias when both are present', () {
+      final event = _video(
+        id: 'v-alias',
+        rawTags: const {'unique_viewers': '5', 'unique_views': '100'},
+      );
+      expect(extractUniqueViewers(event), 100);
+    });
+
     test('does not treat unique viewers or loops as total views', () {
       final event = _video(
         id: 'v2',

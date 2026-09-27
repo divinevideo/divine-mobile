@@ -722,14 +722,20 @@ int? extractVideoViews(VideoEvent video) {
 }
 
 /// Extracts a distinct viewer count when available.
+///
+/// `unique_viewers` and `unique_views` are aliases for the same count. When
+/// both are present, the higher non-negative value wins so an older alias
+/// cannot be hidden by a smaller canonical tag.
 int? extractUniqueViewers(VideoEvent video) {
+  int? highest;
   for (final key in const ['unique_viewers', 'unique_views']) {
     final value = video.rawTags[key];
     if (value == null) continue;
     final normalized = value.replaceAll(',', '').trim();
     final parsed =
         int.tryParse(normalized) ?? double.tryParse(normalized)?.toInt();
-    if (parsed != null) return parsed;
+    if (parsed == null || parsed < 0) continue;
+    highest = highest == null ? parsed : math.max(highest, parsed);
   }
-  return null;
+  return highest;
 }
