@@ -2923,6 +2923,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get analyticsViews => 'Mga View';
 
   @override
+  String get analyticsUniqueViewers => 'Natatanging manonood';
+
+  @override
   String get analyticsInteractions => 'Mga Interaction';
 
   @override

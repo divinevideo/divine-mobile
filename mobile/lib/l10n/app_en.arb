@@ -1881,6 +1881,7 @@
   },
   "analyticsVideos": "Videos",
   "analyticsViews": "Views",
+  "analyticsUniqueViewers": "Unique viewers",
   "analyticsInteractions": "Interactions",
   "analyticsEngagement": "Engagement",
   "analyticsFollowers": "Followers",

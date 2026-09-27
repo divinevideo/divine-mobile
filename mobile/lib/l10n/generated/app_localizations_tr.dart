@@ -2852,6 +2852,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get analyticsViews => 'Görüntülenme';
 
   @override
+  String get analyticsUniqueViewers => 'Tekil izleyici';
+
+  @override
   String get analyticsInteractions => 'Etkileşimler';
 
   @override

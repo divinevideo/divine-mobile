@@ -3021,6 +3021,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get analyticsViews => 'వీక్షణలు';
 
   @override
+  String get analyticsUniqueViewers => 'ప్రత్యేక వీక్షకులు';
+
+  @override
   String get analyticsInteractions => 'పరస్పర చర్యలు';
 
   @override

@@ -2958,6 +2958,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get analyticsViews => 'Гледания';
 
   @override
+  String get analyticsUniqueViewers => 'Уникални зрители';
+
+  @override
   String get analyticsInteractions => 'Взаимодействия';
 
   @override

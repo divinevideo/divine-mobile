@@ -40,6 +40,24 @@ void main() {
       );
     });
 
+    test('keeps the higher count when aliases differ across edits', () {
+      final merged = mergeVideoRawTagsPrimaryWins(
+        {'unique_viewers': '5'},
+        {'unique_views': '100'},
+      );
+      expect(merged['unique_viewers'], equals('100'));
+      expect(merged.containsKey('unique_views'), isFalse);
+    });
+
+    test('keeps the higher unique-viewer count across edits', () {
+      final merged = mergeVideoRawTagsPrimaryWins(
+        {'unique_viewers': '5', 'title': 'newer'},
+        {'unique_viewers': '100', 'title': 'older'},
+      );
+      expect(merged['title'], equals('newer'));
+      expect(merged['unique_viewers'], equals('100'));
+    });
+
     test('ignores negative parsed counts for max', () {
       final merged = mergeVideoRawTagsPrimaryWins(
         {'views': '-1'},

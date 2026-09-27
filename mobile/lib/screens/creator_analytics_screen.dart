@@ -1180,6 +1180,14 @@ class _PostAnalyticsDetailView extends StatelessWidget {
                                 ),
                         ),
                         _MetricPill(
+                          label: context.l10n.analyticsUniqueViewers,
+                          value: performance.uniqueViewers == null
+                              ? context.l10n.analyticsNa
+                              : StringUtils.formatCompactNumber(
+                                  performance.uniqueViewers!,
+                                ),
+                        ),
+                        _MetricPill(
                           label: context.l10n.analyticsLikes,
                           value: hasEngagementData
                               ? StringUtils.formatCompactNumber(likes)
@@ -1642,6 +1650,7 @@ class VideoPerformance {
   const VideoPerformance({
     required this.video,
     required this.views,
+    required this.uniqueViewers,
     required this.hasEngagementData,
     required this.likes,
     required this.comments,
@@ -1658,7 +1667,8 @@ class VideoPerformance {
     final likes = liveLikeCountSeed(video) ?? 0;
     final comments = liveCommentCountSeed(video) ?? 0;
     final reposts = liveRepostCountSeed(video) ?? 0;
-    final views = extractViewLikeCount(video);
+    final views = extractVideoViews(video);
+    final uniqueViewers = extractUniqueViewers(video);
     final interactions = likes + comments + reposts;
     final engagementRate = (views != null && views > 0)
         ? interactions / views
@@ -1670,6 +1680,7 @@ class VideoPerformance {
     return VideoPerformance(
       video: video,
       views: views,
+      uniqueViewers: uniqueViewers,
       hasEngagementData: hasEngagementData,
       likes: likes,
       comments: comments,
@@ -1682,6 +1693,7 @@ class VideoPerformance {
 
   final VideoEvent video;
   final int? views;
+  final int? uniqueViewers;
   final bool hasEngagementData;
   final int likes;
   final int comments;

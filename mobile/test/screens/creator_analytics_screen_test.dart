@@ -131,6 +131,7 @@ void main() {
   VideoEvent analyticsVideo({
     required String id,
     required int views,
+    int? uniqueViewers,
     int? originalLikes,
     int? originalComments,
     int? originalReposts,
@@ -146,7 +147,10 @@ void main() {
       content: 'Analytics fixture video',
       timestamp: now,
       title: 'Analytics Fixture Video',
-      rawTags: {'views': '$views'},
+      rawTags: {
+        'views': '$views',
+        if (uniqueViewers != null) 'unique_viewers': '$uniqueViewers',
+      },
       originalLikes: originalLikes,
       originalComments: originalComments,
       originalReposts: originalReposts,
@@ -158,6 +162,85 @@ void main() {
   }
 
   group(CreatorAnalyticsScreen, () {
+    testWidgets('shows unique viewers in per-video analytics', (tester) async {
+      final video = analyticsVideo(
+        id: 'video-unique',
+        views: 120,
+        uniqueViewers: 45,
+      );
+      final performance = VideoPerformance.fromVideo(video);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: PostAnalyticsDetailScreen(
+              videoId: video.id,
+              performance: performance,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.analyticsUniqueViewers), findsOneWidget);
+      expect(find.text('45'), findsOneWidget);
+    });
+
+    testWidgets('shows N/A when unique-viewer data is missing', (tester) async {
+      final video = analyticsVideo(id: 'video-no-unique-data', views: 120);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: PostAnalyticsDetailScreen(
+              videoId: video.id,
+              performance: VideoPerformance.fromVideo(video),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.analyticsUniqueViewers), findsOneWidget);
+      expect(find.text(l10n.analyticsNa), findsOneWidget);
+    });
+
+    testWidgets('does not show unique viewers as total views', (tester) async {
+      final video = analyticsVideo(
+        id: 'video-only-unique',
+        views: 120,
+      ).copyWith(rawTags: const {'unique_viewers': '11'});
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: PostAnalyticsDetailScreen(
+              videoId: video.id,
+              performance: VideoPerformance.fromVideo(video),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.analyticsViews), findsOneWidget);
+      expect(find.text(l10n.analyticsUniqueViewers), findsOneWidget);
+      expect(find.text('11'), findsOneWidget);
+      expect(find.text(l10n.analyticsNa), findsAtLeastNWidgets(2));
+    });
+
     testWidgets(
       'CreatorAnalyticsScreen constrains content width on wide screens',
       (tester) async {

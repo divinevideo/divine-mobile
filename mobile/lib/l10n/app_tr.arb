@@ -1008,6 +1008,7 @@
         }
     },
     "analyticsVideos": "Videolar",
+    "analyticsUniqueViewers": "Tekil izleyici",
     "analyticsViews": "Görüntülenme",
     "analyticsInteractions": "Etkileşimler",
     "analyticsEngagement": "Etkileşim Oranı",

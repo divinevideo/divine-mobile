@@ -2937,6 +2937,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get analyticsViews => 'Visualizações';
 
   @override
+  String get analyticsUniqueViewers => 'Espectadores únicos';
+
+  @override
   String get analyticsInteractions => 'Interações';
 
   @override

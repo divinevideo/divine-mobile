@@ -1903,6 +1903,12 @@ class FunnelcakeApiClient {
   /// - [FunnelcakeTimeoutException] if the request times out.
   /// - [FunnelcakeException] for other errors.
   Future<int> getVideoViews(String eventId) async {
+    final stats = await getVideoViewStats(eventId);
+    return stats.views ?? 0;
+  }
+
+  /// Fetches total views and unique viewers for a specific video.
+  Future<VideoViewStats> getVideoViewStats(String eventId) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
     }
@@ -1919,11 +1925,11 @@ class FunnelcakeApiClient {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data is Map<String, dynamic>) {
-          return _parseViewCount(data);
+          return VideoViewStats.fromJson(data);
         }
-        return 0;
+        return const VideoViewStats();
       } else if (response.statusCode == 404) {
-        return 0;
+        return const VideoViewStats(views: 0);
       } else {
         throw FunnelcakeApiException(
           message: 'Failed to fetch video views',
@@ -2997,18 +3003,4 @@ class FunnelcakeApiClient {
       _httpClient.close();
     }
   }
-}
-
-/// Parses a dynamic value to int for view count extraction.
-int _parseViewCount(Map<String, dynamic> data) {
-  final views =
-      data['views'] ??
-      data['view_count'] ??
-      data['total_views'] ??
-      data['unique_views'] ??
-      data['unique_viewers'];
-  if (views is int) return views;
-  if (views is num) return views.toInt();
-  if (views is String) return int.tryParse(views) ?? 0;
-  return 0;
 }

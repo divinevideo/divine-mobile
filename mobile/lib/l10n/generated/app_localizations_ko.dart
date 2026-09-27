@@ -2727,6 +2727,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsViews => '조회수';
 
   @override
+  String get analyticsUniqueViewers => '순 시청자';
+
+  @override
   String get analyticsInteractions => '상호작용';
 
   @override

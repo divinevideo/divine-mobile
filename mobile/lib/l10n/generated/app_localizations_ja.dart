@@ -2716,6 +2716,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get analyticsViews => '視聴';
 
   @override
+  String get analyticsUniqueViewers => 'ユニーク視聴者';
+
+  @override
   String get analyticsInteractions => 'インタラクション';
 
   @override

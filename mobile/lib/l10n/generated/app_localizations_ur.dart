@@ -2915,6 +2915,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get analyticsViews => 'ویوز';
 
   @override
+  String get analyticsUniqueViewers => 'منفرد ناظرین';
+
+  @override
   String get analyticsInteractions => 'تفاعلات';
 
   @override

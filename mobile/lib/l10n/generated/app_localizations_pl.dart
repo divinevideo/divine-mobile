@@ -3010,6 +3010,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get analyticsViews => 'Wyświetlenia';
 
   @override
+  String get analyticsUniqueViewers => 'Unikalni widzowie';
+
+  @override
   String get analyticsInteractions => 'Interakcje';
 
   @override

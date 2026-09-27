@@ -15,6 +15,7 @@ class BulkVideoStatsEntry {
     required this.reposts,
     this.loops,
     this.views,
+    this.uniqueViewers,
     this.embeddedLoops,
   });
 
@@ -73,9 +74,12 @@ class BulkVideoStatsEntry {
           'views',
           'view_count',
           'total_views',
-          'unique_views',
-          'unique_viewers',
         },
+      ),
+      uniqueViewers: _findInt(
+        statsData,
+        json,
+        const {'unique_viewers', 'unique_views'},
       ),
     );
   }
@@ -97,6 +101,9 @@ class BulkVideoStatsEntry {
 
   /// View count (if available).
   final int? views;
+
+  /// Number of distinct viewers (when available).
+  final int? uniqueViewers;
 
   /// Archival Vine-era loop count from the archive import (if available).
   final int? embeddedLoops;

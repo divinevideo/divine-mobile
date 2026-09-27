@@ -2892,6 +2892,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get analyticsViews => 'المشاهدات';
 
   @override
+  String get analyticsUniqueViewers => 'المشاهدون الفريدون';
+
+  @override
   String get analyticsInteractions => 'التفاعلات';
 
   @override

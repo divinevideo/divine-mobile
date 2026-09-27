@@ -5002,6 +5002,12 @@ abstract class AppLocalizations {
   /// **'Views'**
   String get analyticsViews;
 
+  /// No description provided for @analyticsUniqueViewers.
+  ///
+  /// In en, this message translates to:
+  /// **'Unique viewers'**
+  String get analyticsUniqueViewers;
+
   /// No description provided for @analyticsInteractions.
   ///
   /// In en, this message translates to:

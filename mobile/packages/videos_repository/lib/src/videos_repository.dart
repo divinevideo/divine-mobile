@@ -2623,8 +2623,11 @@ class VideosRepository {
   }
 
   /// Hydrates author REST videos with engagement counts: bulk-stats first
-  /// (loops/views), then a per-video views-endpoint pass for rows still missing
-  /// a view count.
+  /// (loops/views/unique viewers), then a per-video view-stats request only
+  /// for rows still missing total views. Unique viewers are stored when bulk
+  /// stats or that response already include them. A missing unique-viewer
+  /// count does not by itself call the views endpoint: this is the profile
+  /// feed, not creator analytics, and a failure here drops the REST page.
   ///
   /// Bulk stats are **live** Nostr engagement counts, so reactions/comments/
   /// reposts fill only the live `nostr*Count` fields (via `??`); the archival
@@ -2641,7 +2644,7 @@ class VideosRepository {
       videos,
       client,
     );
-    return _hydrateAuthorVideosWithViewsEndpoint(withBulkStats, client);
+    return _hydrateAuthorVideosWithViewStatsEndpoint(withBulkStats, client);
   }
 
   Future<List<VideoEvent>> _hydrateAuthorVideosWithBulkStats(
@@ -2677,6 +2680,9 @@ class VideosRepository {
       if (stats.views != null) {
         mergedTags['views'] = stats.views!.toString();
       }
+      if (stats.uniqueViewers != null) {
+        mergedTags['unique_viewers'] = stats.uniqueViewers!.toString();
+      }
 
       return video.copyWith(
         rawTags: mergedTags,
@@ -2691,50 +2697,63 @@ class VideosRepository {
     }).toList();
   }
 
-  Future<List<VideoEvent>> _hydrateAuthorVideosWithViewsEndpoint(
+  Future<List<VideoEvent>> _hydrateAuthorVideosWithViewStatsEndpoint(
     List<VideoEvent> videos,
     FunnelcakeApiClient client,
   ) async {
-    final missingViews = videos
+    final videosMissingViews = videos
         .where(
-          (video) =>
-              !_authorVideoHasViewLikeCount(video) && video.id.isNotEmpty,
+          (video) => !_authorVideoHasTotalViews(video) && video.id.isNotEmpty,
         )
         .toList();
-    if (missingViews.isEmpty) return videos;
+    if (videosMissingViews.isEmpty) return videos;
 
-    final fetchedViews = <String, int>{};
-    for (var i = 0; i < missingViews.length; i += 12) {
-      final end = i + 12 > missingViews.length ? missingViews.length : i + 12;
-      final chunk = missingViews.sublist(i, end);
-      final counts = await Future.wait(
-        chunk.map((video) => client.getVideoViews(video.id)),
+    final fetchedStats = <String, VideoViewStats>{};
+    for (var i = 0; i < videosMissingViews.length; i += 12) {
+      final end = i + 12 > videosMissingViews.length
+          ? videosMissingViews.length
+          : i + 12;
+      final chunk = videosMissingViews.sublist(i, end);
+      final stats = await Future.wait(
+        chunk.map((video) => client.getVideoViewStats(video.id)),
       );
       for (var j = 0; j < chunk.length; j++) {
-        fetchedViews[chunk[j].id] = counts[j];
+        fetchedStats[chunk[j].id] = stats[j];
       }
     }
 
-    if (fetchedViews.isEmpty) return videos;
+    if (fetchedStats.isEmpty) return videos;
 
     return videos.map((video) {
-      final count = fetchedViews[video.id];
-      if (count == null) return video;
-      return video.copyWith(
-        rawTags: <String, String>{...video.rawTags, 'views': '$count'},
-      );
+      final stats = fetchedStats[video.id];
+      if (stats == null) return video;
+      final tags = <String, String>{...video.rawTags};
+      if (!_authorVideoHasTotalViews(video) && stats.views != null) {
+        tags['views'] = '${stats.views}';
+      }
+      if (!_authorVideoHasUniqueViewers(video) && stats.uniqueViewers != null) {
+        tags['unique_viewers'] = '${stats.uniqueViewers}';
+      }
+      return video.copyWith(rawTags: tags);
     }).toList();
   }
 
-  bool _authorVideoHasViewLikeCount(VideoEvent video) {
+  bool _authorVideoHasTotalViews(VideoEvent video) {
     final viewTags = [
       video.rawTags['views'],
       video.rawTags['view_count'],
       video.rawTags['total_views'],
-      video.rawTags['unique_views'],
-      video.rawTags['unique_viewers'],
     ];
-    for (final value in viewTags) {
+    return _hasNumericValue(viewTags);
+  }
+
+  bool _authorVideoHasUniqueViewers(VideoEvent video) => _hasNumericValue([
+    video.rawTags['unique_views'],
+    video.rawTags['unique_viewers'],
+  ]);
+
+  bool _hasNumericValue(List<String?> values) {
+    for (final value in values) {
       if (value == null) continue;
       final normalized = value.replaceAll(',', '').trim();
       if (normalized.isEmpty) continue;

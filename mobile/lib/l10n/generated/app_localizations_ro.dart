@@ -3017,6 +3017,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get analyticsViews => 'Vizualizări';
 
   @override
+  String get analyticsUniqueViewers => 'Spectatori unici';
+
+  @override
   String get analyticsInteractions => 'Interacțiuni';
 
   @override

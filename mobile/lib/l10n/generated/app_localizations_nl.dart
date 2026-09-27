@@ -2925,6 +2925,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get analyticsViews => 'Weergaven';
 
   @override
+  String get analyticsUniqueViewers => 'Unieke kijkers';
+
+  @override
   String get analyticsInteractions => 'Interacties';
 
   @override

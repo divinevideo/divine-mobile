@@ -115,25 +115,39 @@ void main() {
       expect(merged.nostrRepostCount, equals(6));
     });
 
-    test('raw tags are primary-wins except views, which takes the max', () {
-      final merged = mergeProfileFeedVideos(
-        _video(
-          id: 'v',
-          createdAt: 1000,
-          rawTags: {'title': 'old', 'views': '100', 'only_old': 'x'},
-        ),
-        _video(
-          id: 'v',
-          createdAt: 2000, // newer => primary
-          rawTags: {'title': 'new', 'views': '50', 'only_new': 'y'},
-        ),
-      );
+    test(
+      'raw tags are primary-wins except maxed view counts',
+      () {
+        final merged = mergeProfileFeedVideos(
+          _video(
+            id: 'v',
+            createdAt: 1000,
+            rawTags: {
+              'title': 'old',
+              'views': '100',
+              'unique_viewers': '80',
+              'only_old': 'x',
+            },
+          ),
+          _video(
+            id: 'v',
+            createdAt: 2000, // newer => primary
+            rawTags: {
+              'title': 'new',
+              'views': '50',
+              'unique_viewers': '5',
+              'only_new': 'y',
+            },
+          ),
+        );
 
-      expect(merged.rawTags['title'], equals('new')); // primary wins
-      expect(merged.rawTags['views'], equals('100')); // max wins
-      expect(merged.rawTags['only_old'], equals('x')); // secondary-only kept
-      expect(merged.rawTags['only_new'], equals('y'));
-    });
+        expect(merged.rawTags['title'], equals('new')); // primary wins
+        expect(merged.rawTags['views'], equals('100')); // max wins
+        expect(merged.rawTags['unique_viewers'], equals('80'));
+        expect(merged.rawTags['only_old'], equals('x')); // secondary-only kept
+        expect(merged.rawTags['only_new'], equals('y'));
+      },
+    );
 
     test('newer createdAt selects the primary metadata copy', () {
       final merged = mergeProfileFeedVideos(
