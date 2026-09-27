@@ -12,7 +12,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/apps/nostr_app_launch_mode.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Displays detailed information about a single approved
 /// third-party integration.
@@ -39,11 +41,20 @@ class AppDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.read(nostrAppDirectoryServiceProvider);
     return BlocProvider(
-      create: (_) => AppDetailCubit(
-        slug: slug,
-        directoryService: service,
-        initialEntry: initialEntry,
-      )..load(),
+      create: (_) {
+        final cubit = AppDetailCubit(
+          slug: slug,
+          directoryService: service,
+          initialEntry: initialEntry,
+        );
+        runDetached(
+          cubit.load(),
+          'load app detail',
+          logName: 'AppDetailScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: const _AppDetailContent(),
     );
   }

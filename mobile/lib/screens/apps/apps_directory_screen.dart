@@ -12,9 +12,11 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/apps/nostr_app_launch_mode.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Displays the directory of approved third-party apps.
 class AppsDirectoryScreen extends ConsumerWidget {
@@ -41,7 +43,16 @@ class AppsDirectoryScreen extends ConsumerWidget {
 
     final service = ref.read(nostrAppDirectoryServiceProvider);
     return BlocProvider(
-      create: (_) => AppsDirectoryCubit(directoryService: service)..loadApps(),
+      create: (_) {
+        final cubit = AppsDirectoryCubit(directoryService: service);
+        runDetached(
+          cubit.loadApps(),
+          'load approved apps',
+          logName: 'AppsDirectoryScreen',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: _AppsDirectoryFrame(
         embedded: embedded,
         child: const _AppsDirectoryContent(),
