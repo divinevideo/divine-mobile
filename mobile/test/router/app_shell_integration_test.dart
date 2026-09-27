@@ -116,10 +116,10 @@ void main() {
       relayListDirtyPublishBridgeProvider.overrideWith((ref) {}),
       contactListDirtyBroadcastBridgeProvider.overrideWith((ref) {}),
       blocklistSyncBridgeProvider.overrideWith((ref) {}),
-      // The real provider builds HashtagCacheService, whose initialize()
-      // opens the hashtag_stats Hive box. Under fake async that open never
-      // completes, and Hive keeps it pending by name for the rest of the
-      // isolate, so every later suite that opens the box hangs (#9022).
+      // The real HashtagService starts a 60-second periodic timer and
+      // registers a listener on VideoEventService. Neither settles on its
+      // own under fake async, so mock the service rather than strand a live
+      // timer and listener past the end of the test.
       hashtagServiceProvider.overrideWithValue(hashtagServiceWithoutHive()),
     ],
   );

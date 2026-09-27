@@ -41,7 +41,6 @@ import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/dm_reaction_retry_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
-import 'package:openvine/services/hashtag_cache_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:openvine/services/pending_action_service.dart';
@@ -635,19 +634,6 @@ AnalyticsService analyticsService(Ref ref) {
   return service;
 }
 
-/// Hashtag cache service for persistent hashtag storage
-@riverpod
-HashtagCacheService hashtagCacheService(Ref ref) {
-  final service = HashtagCacheService();
-  // Initialize asynchronously to avoid blocking UI
-  runProviderDetached(
-    service.initialize(),
-    'initialize the hashtag cache',
-    logName: 'HashtagCacheService',
-  );
-  return service;
-}
-
 /// Draft storage service for persisting vine drafts
 @riverpod
 DraftStorageService draftStorageService(Ref ref) {
@@ -1018,15 +1004,14 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   return service;
 }
 
-/// Hashtag service depends on Video event service and cache service
+/// Hashtag service depends on Video event service
 @riverpod
 HashtagService hashtagService(Ref ref) {
   final videoEventService = ref.watch(videoEventServiceProvider);
-  final cacheService = ref.watch(hashtagCacheServiceProvider);
-  final service = HashtagService(videoEventService, cacheService);
+  final service = HashtagService(videoEventService);
   // The constructor starts a 1-minute periodic timer and registers a listener
-  // on VideoEventService. This provider watches two other providers, so it
-  // rebuilds whenever either changes — without this, every rebuild strands a
+  // on VideoEventService. This provider watches that provider, so it
+  // rebuilds whenever it changes — without this, every rebuild strands a
   // live timer and a listener on the previous instance.
   ref.onDispose(service.dispose);
   return service;

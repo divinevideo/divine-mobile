@@ -47,12 +47,12 @@ void main() {
 
       // Act - Update hashtag stats
       hashtagService.refreshHashtagStats();
-      final popularHashtags = hashtagService.getPopularHashtags(limit: 10);
+      final sortedHashtags = hashtagService.allHashtags;
 
       // Assert - Check that hashtags are sorted by count
-      expect(popularHashtags.first, equals('popular')); // 3 videos
-      expect(popularHashtags[1], equals('trending')); // 2 videos
-      expect(popularHashtags.length, greaterThanOrEqualTo(3));
+      expect(sortedHashtags.first, equals('popular')); // 3 videos
+      expect(sortedHashtags[1], equals('trending')); // 2 videos
+      expect(sortedHashtags.length, greaterThanOrEqualTo(3));
 
       // Verify counts
       final popularStats = hashtagService.getHashtagStats('popular');

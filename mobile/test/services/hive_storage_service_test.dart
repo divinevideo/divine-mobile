@@ -111,7 +111,7 @@ void main() {
       );
 
       await HiveStorageService.initialize();
-      final secondBox = await Hive.openBox<dynamic>(HiveBoxNames.hashtagStats);
+      final secondBox = await Hive.openBox<dynamic>(HiveBoxNames.peopleLists);
 
       expect(p.dirname(secondBox.path!), p.dirname(firstBox.path!));
     });

@@ -18,7 +18,7 @@ final _openBoxCall = RegExp(
 );
 
 /// A `static const`/`const` declaration and its initializer, e.g.
-/// `static const String _boxName = HiveBoxNames.hashtagStats;`.
+/// `static const String _boxName = HiveBoxNames.peopleLists;`.
 String? _initializerOf(String source, String identifier) => RegExp(
   'const\\s+(?:\\w+\\s+)?$identifier\\s*=\\s*([^;]+);',
 ).firstMatch(source)?.group(1)?.trim();

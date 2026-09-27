@@ -4,14 +4,12 @@
 import 'dart:async';
 
 import 'package:models/models.dart';
-import 'package:openvine/services/hashtag_cache_service.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/utils/detached_future.dart';
 
 /// Model for hashtag statistics
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
-class HashtagStats {
-  HashtagStats({
+class HashtagVideoStats {
+  HashtagVideoStats({
     required this.hashtag,
     required this.videoCount,
     required this.recentVideoCount,
@@ -47,7 +45,7 @@ class HashtagStats {
 /// Service for managing hashtag data and statistics
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class HashtagService {
-  HashtagService(this._videoService, [this._cacheService]) {
+  HashtagService(this._videoService) {
     _updateHashtagStats();
 
     // React to new videos arriving in VideoEventService
@@ -59,8 +57,7 @@ class HashtagService {
     });
   }
   final VideoEventService _videoService;
-  final HashtagCacheService? _cacheService;
-  final Map<String, HashtagStats> _hashtagStats = {};
+  final Map<String, HashtagVideoStats> _hashtagStats = {};
   Timer? _updateTimer;
 
   void dispose() {
@@ -77,7 +74,7 @@ class HashtagService {
   void _updateHashtagStats() {
     final now = DateTime.now();
     final twentyFourHoursAgo = now.subtract(const Duration(hours: 24));
-    final newStats = <String, HashtagStats>{};
+    final newStats = <String, HashtagVideoStats>{};
 
     // Combine videos from all sources to get complete hashtag statistics
     final allVideos = <VideoEvent>{
@@ -99,7 +96,7 @@ class HashtagService {
         final isRecent = videoTime.isAfter(twentyFourHoursAgo);
 
         if (existing == null) {
-          newStats[hashtag] = HashtagStats(
+          newStats[hashtag] = HashtagVideoStats(
             hashtag: hashtag,
             videoCount: 1,
             recentVideoCount: isRecent ? 1 : 0,
@@ -108,7 +105,7 @@ class HashtagService {
             uniqueAuthors: {video.pubkey},
           );
         } else {
-          newStats[hashtag] = HashtagStats(
+          newStats[hashtag] = HashtagVideoStats(
             hashtag: hashtag,
             videoCount: existing.videoCount + 1,
             recentVideoCount: existing.recentVideoCount + (isRecent ? 1 : 0),
@@ -142,38 +139,8 @@ class HashtagService {
     return sorted.take(limit).map((e) => e.key).toList();
   }
 
-  /// Get popular hashtags based on total video count
-  List<String> getPopularHashtags({int limit = 25}) {
-    // Try to get from cache first
-    if (_cacheService != null && _cacheService.isInitialized) {
-      final cachedHashtags = _cacheService.getCachedPopularHashtags();
-      if (cachedHashtags != null && cachedHashtags.isNotEmpty) {
-        return cachedHashtags.take(limit).toList();
-      }
-    }
-
-    // Generate fresh list
-    final sorted = _hashtagStats.entries.toList()
-      ..sort((a, b) => b.value.videoCount.compareTo(a.value.videoCount));
-    final hashtags = sorted.take(limit).map((e) => e.key).toList();
-
-    // Cache the result asynchronously
-    if (_cacheService != null &&
-        _cacheService.isInitialized &&
-        hashtags.isNotEmpty) {
-      runDetached(
-        _cacheService.cachePopularHashtags(hashtags),
-        'cache popular hashtags',
-        logName: 'HashtagService',
-        category: LogCategory.system,
-      );
-    }
-
-    return hashtags;
-  }
-
   /// Get statistics for a specific hashtag
-  HashtagStats? getHashtagStats(String hashtag) {
+  HashtagVideoStats? getHashtagStats(String hashtag) {
     return _hashtagStats[hashtag];
   }
 
