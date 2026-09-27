@@ -141,6 +141,36 @@ void main() {
     });
 
     test(
+      'hydrates unique viewers without borrowing them as total views',
+      () async {
+        when(() => funnelcake.getVideoViewStats('a')).thenAnswer(
+          (_) async => const VideoViewStats(uniqueViewers: 8),
+        );
+        stubAuthor(VideosByAuthorResponse(videos: [_stats(id: 'a')]));
+
+        final video = (await repository.getAuthorFeed(
+          authorPubkey: _author,
+        )).videos.single;
+
+        expect(video.rawTags['views'], isNull);
+        expect(video.rawTags['unique_viewers'], equals('8'));
+      },
+    );
+
+    test('hydrates more than one stats chunk', () async {
+      final videos = List.generate(
+        13,
+        (index) => _stats(id: 'video-$index', dTag: 'video-$index'),
+      );
+      stubAuthor(VideosByAuthorResponse(videos: videos));
+
+      final result = await repository.getAuthorFeed(authorPubkey: _author);
+
+      expect(result.videos, hasLength(13));
+      verify(() => funnelcake.getVideoViewStats(any())).called(13);
+    });
+
+    test(
       'live bulk loops never fill the archival originalLoops baseline',
       () async {
         // Bulk stats return a live computed `loops` alongside `views` for
