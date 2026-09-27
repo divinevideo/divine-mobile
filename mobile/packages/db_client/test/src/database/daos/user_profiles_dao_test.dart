@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
@@ -468,11 +468,14 @@ void main() {
             );
       }
 
+      const newestPubkey =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
       test('does nothing when the table is within the cap', () async {
         await insertWithLastFetched(testPubkey, DateTime.now());
         await insertWithLastFetched(testPubkey2, DateTime.now());
 
-        final deleted = await dao.enforceRowCap(maxRows: 5000);
+        final deleted = await dao.enforceRowCap();
 
         expect(deleted, equals(0));
         expect(await dao.getAllProfiles(), hasLength(2));
@@ -490,8 +493,6 @@ void main() {
             testPubkey2,
             now.subtract(const Duration(days: 1)),
           );
-          const newestPubkey =
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
           await insertWithLastFetched(newestPubkey, now);
 
           final deleted = await dao.enforceRowCap(maxRows: 2);
