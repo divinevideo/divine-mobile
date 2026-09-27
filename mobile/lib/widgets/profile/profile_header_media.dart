@@ -251,8 +251,8 @@ class _BannerImage extends StatelessWidget {
 ///
 /// Whether Loops is shown is the viewer's choice ([StatsVisibilityPreferences]
 /// `showTotalLoops`, on by default), applied to every profile including the
-/// viewer's own. Whether it is shown is known before stats load, so the row no
-/// longer changes its column count when the total arrives.
+/// viewer's own. While stats load the column is reserved; a visitor's profile
+/// whose total then arrives as zero drops it, so the row can lose a column.
 class _ProfileStatsRow extends ConsumerStatefulWidget {
   const _ProfileStatsRow({
     required this.userIdHex,
