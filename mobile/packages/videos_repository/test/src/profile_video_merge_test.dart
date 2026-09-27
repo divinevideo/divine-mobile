@@ -116,7 +116,7 @@ void main() {
     });
 
     test(
-      'raw tags are primary-wins except views and unique viewers, which take the max',
+      'raw tags are primary-wins except maxed view counts',
       () {
         final merged = mergeProfileFeedVideos(
           _video(
