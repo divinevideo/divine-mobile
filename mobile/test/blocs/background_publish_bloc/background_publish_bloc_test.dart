@@ -693,6 +693,30 @@ void main() {
             ),
           ).called(greaterThanOrEqualTo(1));
         });
+
+        test(
+          'does not undo the park when the queued publish later settles',
+          () async {
+            await requestBoth();
+            await bloc.parkInFlight();
+            clearInteractions(mockDraftStorageService);
+
+            runningProcess.complete(const PublishSuccess());
+            await pumpEventQueue();
+            queuedProcess.completeError(StateError('container torn down'));
+            await pumpEventQueue();
+
+            verifyNever(() => mockDraftStorageService.deleteDraft(any()));
+            verifyNever(
+              () => mockDraftStorageService.updatePublishStatus(
+                draftId: any(named: 'draftId'),
+                status: PublishStatus.failed,
+                publishError: any(named: 'publishError'),
+              ),
+            );
+            expect(bloc.state.recentlySucceededIds, isEmpty);
+          },
+        );
       });
     });
 

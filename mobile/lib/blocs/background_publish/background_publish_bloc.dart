@@ -53,6 +53,12 @@ class BackgroundPublishBloc
   /// ended. Null disables the behaviour (e.g. in tests).
   final PublishForegroundSession? _foregroundSession;
 
+  /// Drafts [parkInFlight] already wrote back to draft status. The sequential
+  /// handler is still awaiting those publishes, and account-switch teardown
+  /// settles them after the park returns. Recording that settlement would
+  /// delete the parked draft or mark it failed.
+  final Set<String> _parkedDraftIds = <String>{};
+
   /// Lists the upload as soon as it is requested, then waits its turn.
   ///
   /// The caller starts `publishVideo` before dispatching, so a publish queued
@@ -85,9 +91,15 @@ class BackgroundPublishBloc
     _BackgroundPublishQueued event,
     Emitter<BackgroundPublishState> emit,
   ) async {
+    if (_settledResultIsStale(event.draft.id)) {
+      await _awaitPublishResult(event.publishmentProcess);
+      return;
+    }
+
     await _beginForegroundSession(event.draft.id);
     try {
       final result = await _awaitPublishResult(event.publishmentProcess);
+      if (_settledResultIsStale(event.draft.id)) return;
 
       // Remove the upload if it was successful
       if (result is PublishSuccess) {
@@ -276,11 +288,21 @@ class BackgroundPublishBloc
         draft: upload.draft,
         propagateFailure: true,
       );
+      _parkedDraftIds.add(upload.draft.id);
     }
     for (final upload in inFlight) {
       if (isClosed) return;
       add(BackgroundPublishVanished(draftId: upload.draft.id));
     }
+  }
+
+  /// True when applying a publish result would undo a park, or the upload
+  /// has already left the in-flight list.
+  bool _settledResultIsStale(String draftId) {
+    if (_parkedDraftIds.contains(draftId)) return true;
+    return !state.uploads.any(
+      (upload) => upload.draft.id == draftId && upload.result == null,
+    );
   }
 
   /// Keeps an abandoned upload's video reachable.
