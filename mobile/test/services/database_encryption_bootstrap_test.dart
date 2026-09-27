@@ -268,10 +268,19 @@ void main() {
       );
 
       test('is not repairable by clearing the local database cache', () {
+        // The cause deliberately names SQLITE_NOTADB, which the message
+        // allowlist matches, so the type guard is the only thing returning
+        // false here. With a cause whose text matches nothing — the real
+        // ProtectedDataUnavailableException shape — the fall-through returns
+        // false on its own and deleting the guard leaves this green.
+        //
+        // Repairing would delete the cipher key this error merely failed to
+        // reach, turning a locked device into permanent data loss. Same trap
+        // the DatabaseUnreadableError guard beside it documents.
         expect(
           shouldRepairLocalDatabaseCacheAfterBootstrapError(
             DatabaseCipherStorageUnavailableException(
-              const ProtectedDataUnavailableException(),
+              StateError('SqliteException(26): SQLITE_NOTADB'),
             ),
           ),
           isFalse,
@@ -365,6 +374,13 @@ void main() {
         // empty slot, generating a replacement and wiping the database it
         // could still have opened. See #9385.
         expect(dbCipherKeyStorageKey, equals('db.cipher.key.v1'));
+      });
+
+      test('adopts from the name internal builds moved the key to', () {
+        // Internal builds wrote the key here and deleted the primary behind
+        // it. Renamed, the adoption finds nothing on those installs and the
+        // bootstrap wipes a database the key could still open. See #9385.
+        expect(dbCipherKeyV2StorageKey, equals('db.cipher.key.v2'));
       });
     });
 
