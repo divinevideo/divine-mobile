@@ -18,8 +18,10 @@ import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/screens/explore/explore_tab_labels.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Grid of videos for the configured featured tab [config].
 ///
@@ -43,14 +45,23 @@ class FeaturedVideosTab extends ConsumerWidget {
       // deliberately absent from the public config — the visible fields are the
       // only retarget signal the client can see.
       key: ValueKey((repository, config)),
-      create: (_) => FeaturedTabVideosCubit(
-        repository: repository,
-        tabId: config.id,
-        telemetry: FeaturedTabSurfaceTelemetry(
-          configId: config.id,
-          tracker: ref.read(surfacePerformanceTrackerProvider),
-        ),
-      )..load(),
+      create: (_) {
+        final cubit = FeaturedTabVideosCubit(
+          repository: repository,
+          tabId: config.id,
+          telemetry: FeaturedTabSurfaceTelemetry(
+            configId: config.id,
+            tracker: ref.read(surfacePerformanceTrackerProvider),
+          ),
+        );
+        runDetached(
+          cubit.load(),
+          'load featured tab videos',
+          logName: 'FeaturedVideosTab',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: _FeaturedVideosRetryOnPoll(
         child: _FeaturedVideosView(config: config),
       ),
@@ -80,7 +91,14 @@ class _FeaturedVideosRetryOnPoll extends StatelessWidget {
           current.status == FeaturedTabsStatus.resolved,
       listener: (context, _) {
         final videos = context.read<FeaturedTabVideosCubit>();
-        if (videos.state.isEmpty) videos.load();
+        if (videos.state.isEmpty) {
+          runDetached(
+            videos.load(),
+            'retry empty featured tab videos after poll',
+            logName: 'FeaturedVideosTab',
+            category: LogCategory.ui,
+          );
+        }
       },
       child: child,
     );

@@ -152,8 +152,8 @@ void main() {
         );
       });
 
-      tearDown(() {
-        cubit.close();
+      tearDown(() async {
+        await cubit.close();
       });
 
       test('trackScreenLoad starts the explore screen analytics session', () {

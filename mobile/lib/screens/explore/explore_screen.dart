@@ -11,6 +11,8 @@ import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/explore/explore_view.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Explore screen: a thin tabs Page over [ExploreTabsCubit] + [ExploreView].
 class ExploreScreen extends ConsumerWidget {
@@ -94,11 +96,20 @@ class ExploreScreen extends ConsumerWidget {
           // The shell keeps Explore mounted after the first visit; continuing
           // at the clamped cadence lets backend kill switches land off-tab.
           key: ValueKey(featuredTabsRepository),
-          create: (_) => FeaturedTabsCubit(
-            repository: featuredTabsRepository,
-            gateAgeRestrictedContent: () =>
-                ref.read(featuredTabAgeGateProvider),
-          )..refresh(),
+          create: (_) {
+            final cubit = FeaturedTabsCubit(
+              repository: featuredTabsRepository,
+              gateAgeRestrictedContent: () =>
+                  ref.read(featuredTabAgeGateProvider),
+            );
+            runDetached(
+              cubit.refresh(),
+              'load featured tab configuration',
+              logName: 'ExploreScreen',
+              category: LogCategory.ui,
+            );
+            return cubit;
+          },
         ),
       ],
       child: ExploreView(

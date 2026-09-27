@@ -25,6 +25,7 @@ import 'package:openvine/screens/explore/widgets/explore_feed_content.dart';
 import 'package:openvine/screens/explore/widgets/explore_tab_bar.dart';
 import 'package:openvine/screens/explore/widgets/explore_tab_view.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
@@ -126,13 +127,23 @@ class _ExploreViewState extends ConsumerState<ExploreView>
     });
 
     _lifecycleListener = AppLifecycleListener(
-      onResume: () => context.read<FeaturedTabsCubit>().refresh(),
+      onResume: () => runDetached(
+        context.read<FeaturedTabsCubit>().refresh(),
+        'refresh featured tabs on resume',
+        logName: 'ExploreView',
+        category: LogCategory.ui,
+      ),
     );
     _featuredTabAgeGateSubscription = ref.listenManual<bool>(
       featuredTabAgeGateProvider,
       (previous, next) {
         if (previous != null && previous != next) {
-          context.read<FeaturedTabsCubit>().refresh();
+          runDetached(
+            context.read<FeaturedTabsCubit>().refresh(),
+            'refresh featured tabs after age gate change',
+            logName: 'ExploreView',
+            category: LogCategory.ui,
+          );
         }
       },
     );
@@ -141,7 +152,12 @@ class _ExploreViewState extends ConsumerState<ExploreView>
     _tabs.trackScreenLoad();
 
     // Load top hashtags for trending navigation
-    _loadHashtags();
+    runDetached(
+      _loadHashtags(),
+      'load explore hashtags',
+      logName: 'ExploreView',
+      category: LogCategory.ui,
+    );
 
     // Listen for tab changes - no need to clear active video (router-driven).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -210,7 +226,16 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   }
 
   void _openSearchPage() {
-    context.push(
+    runDetached(
+      _navigateToSearchResults(),
+      'open explore search',
+      logName: 'ExploreView',
+      category: LogCategory.ui,
+    );
+  }
+
+  Future<void> _navigateToSearchResults() async {
+    await context.push(
       SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
     );
   }

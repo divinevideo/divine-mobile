@@ -16,9 +16,6 @@ discarded_futures|lib/repositories/feed_repository_impl.dart	2
 discarded_futures|lib/screens/category_gallery_screen.dart	2
 discarded_futures|lib/screens/content_filters_screen.dart	2
 discarded_futures|lib/screens/creator_analytics_screen.dart	1
-discarded_futures|lib/screens/explore/explore_screen.dart	1
-discarded_futures|lib/screens/explore/explore_view.dart	3
-discarded_futures|lib/screens/explore/tabs/featured_videos_tab.dart	2
 discarded_futures|lib/screens/feed/pooled_fullscreen_video_feed_screen.dart	1
 discarded_futures|lib/screens/feed/video_feed_page/feed_error_widget.dart	1
 discarded_futures|lib/screens/hashtag_feed_screen.dart	2
@@ -75,7 +72,6 @@ discarded_futures|test/blocs/comments/comments_list/comments_list_bloc_test.dart
 discarded_futures|test/blocs/community_suggest/community_suggest_cubit_test.dart	2
 discarded_futures|test/blocs/divine_auth/divine_auth_cubit_test.dart	1
 discarded_futures|test/blocs/drafts_library/drafts_library_bloc_test.dart	1
-discarded_futures|test/blocs/explore_tabs/explore_tabs_cubit_test.dart	1
 discarded_futures|test/blocs/hashtag_search/hashtag_search_bloc_test.dart	1
 discarded_futures|test/blocs/locale/locale_cubit_test.dart	2
 discarded_futures|test/blocs/my_followers/my_followers_bloc_test.dart	1
