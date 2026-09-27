@@ -375,6 +375,13 @@ void main() {
         // could still have opened. See #9385.
         expect(dbCipherKeyStorageKey, equals('db.cipher.key.v1'));
       });
+
+      test('adopts from the name internal builds moved the key to', () {
+        // Internal builds wrote the key here and deleted the primary behind
+        // it. Renamed, the adoption finds nothing on those installs and the
+        // bootstrap wipes a database the key could still open. See #9385.
+        expect(dbCipherKeyV2StorageKey, equals('db.cipher.key.v2'));
+      });
     });
 
     group('Keychain accessibility upgrade (#9343 class, in place)', () {
