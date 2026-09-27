@@ -1015,6 +1015,7 @@
         }
     },
     "analyticsVideos": "Videos",
+    "analyticsUniqueViewers": "Espectadores únicos",
     "analyticsViews": "Visualizaciones",
     "analyticsInteractions": "Interacciones",
     "analyticsEngagement": "Engagement",

@@ -124,6 +124,27 @@ void main() {
         expect(entry.embeddedLoops, equals(142678928));
       });
 
+      test('keeps total views separate from unique viewers', () {
+        final entry = BulkVideoStatsEntry.fromJson(const {
+          'event_id': 'video',
+          'views': 120,
+          'unique_viewers': 45,
+        });
+
+        expect(entry.views, 120);
+        expect(entry.uniqueViewers, 45);
+      });
+
+      test('does not treat unique viewers as total views', () {
+        final entry = BulkVideoStatsEntry.fromJson(const {
+          'event_id': 'video',
+          'unique_viewers': 45,
+        });
+
+        expect(entry.views, isNull);
+        expect(entry.uniqueViewers, 45);
+      });
+
       test('finds views under view_count', () {
         final entry = BulkVideoStatsEntry.fromJson(const {
           'event_id': 'test',

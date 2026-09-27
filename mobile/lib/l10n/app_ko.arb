@@ -668,6 +668,7 @@
     "analyticsViewDataTitle": "조회 데이터",
     "analyticsUpdatedTimestamp": "업데이트 {time} • 점수는 Funnelcake에서 사용 가능한 경우 좋아요, 댓글, 리포스트, 조회/루프를 사용해요.",
     "analyticsVideos": "영상",
+    "analyticsUniqueViewers": "순 시청자",
     "analyticsViews": "조회수",
     "analyticsInteractions": "상호작용",
     "analyticsEngagement": "참여도",

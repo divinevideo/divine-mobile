@@ -1008,6 +1008,7 @@
         }
     },
     "analyticsVideos": "動画",
+    "analyticsUniqueViewers": "ユニーク視聴者",
     "analyticsViews": "視聴",
     "analyticsInteractions": "インタラクション",
     "analyticsEngagement": "エンゲージメント",

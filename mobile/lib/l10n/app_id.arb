@@ -1008,6 +1008,7 @@
         }
     },
     "analyticsVideos": "Video",
+    "analyticsUniqueViewers": "Penonton unik",
     "analyticsViews": "Tontonan",
     "analyticsInteractions": "Interaksi",
     "analyticsEngagement": "Keterlibatan",

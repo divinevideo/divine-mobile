@@ -1457,6 +1457,7 @@
     }
   },
   "analyticsVideos": "Video",
+  "analyticsUniqueViewers": "Người xem riêng biệt",
   "analyticsViews": "Lượt xem",
   "analyticsInteractions": "Tương tác",
   "analyticsEngagement": "Mức độ tương tác",

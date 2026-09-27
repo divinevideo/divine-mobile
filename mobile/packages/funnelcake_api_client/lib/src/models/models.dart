@@ -8,5 +8,6 @@ export 'v2_popular_videos_response.dart';
 export 'video_comment.dart';
 export 'video_comments_response.dart';
 export 'video_search_response.dart';
+export 'video_view_stats.dart';
 export 'videos_by_author_response.dart';
 export 'watching_videos_response.dart';

@@ -731,6 +731,7 @@
     "analyticsViewDataTitle": "Data ng views",
     "analyticsUpdatedTimestamp": "Na-update {time} • Ginagamit ng mga score ang likes, comments, reposts, at views/loops mula sa Funnelcake kapag available.",
     "analyticsVideos": "Mga Video",
+    "analyticsUniqueViewers": "Natatanging manonood",
     "analyticsViews": "Mga View",
     "analyticsInteractions": "Mga Interaction",
     "analyticsEngagement": "Engagement",

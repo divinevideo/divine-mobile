@@ -228,7 +228,7 @@ class FunnelcakeCreatorAnalyticsRepository
       sourcesUsed.add(AnalyticsDataSource.bulkVideoStats);
     }
 
-    final endpointResult = await _hydrateVideoViewsTolerant(
+    final endpointResult = await _hydrateVideoViewStatsTolerant(
       hydratedVideos,
       failedSources,
     );
@@ -245,7 +245,7 @@ class FunnelcakeCreatorAnalyticsRepository
 
     final social = await socialFuture;
     final withViewData = videos
-        .where((video) => extractViewLikeCount(video) != null)
+        .where((video) => extractVideoViews(video) != null)
         .length;
 
     return CreatorAnalyticsSnapshot(
@@ -512,6 +512,10 @@ class FunnelcakeCreatorAnalyticsRepository
         mergedTags['views'] = stats.views!.toString();
         updated = true;
       }
+      if (stats.uniqueViewers != null) {
+        mergedTags['unique_viewers'] = stats.uniqueViewers!.toString();
+        updated = true;
+      }
       if (video.nostrLikeCount != stats.reactions ||
           video.nostrCommentCount != stats.comments ||
           video.nostrRepostCount != stats.reposts) {
@@ -538,12 +542,12 @@ class FunnelcakeCreatorAnalyticsRepository
     );
   }
 
-  Future<_HydrationResult> _hydrateVideoViewsTolerant(
+  Future<_HydrationResult> _hydrateVideoViewStatsTolerant(
     List<VideoEvent> videos,
     Set<AnalyticsDataSource> failedSources,
   ) async {
     try {
-      final result = await _hydrateVideoViews(videos);
+      final result = await _hydrateVideoViewStats(videos);
       if (result.hadFailures) {
         failedSources.add(AnalyticsDataSource.videoViewsEndpoint);
       }
@@ -561,33 +565,36 @@ class FunnelcakeCreatorAnalyticsRepository
     }
   }
 
-  Future<_HydrationResult> _hydrateVideoViews(List<VideoEvent> videos) async {
+  Future<_HydrationResult> _hydrateVideoViewStats(
+    List<VideoEvent> videos,
+  ) async {
     if (videos.isEmpty) {
       return const _HydrationResult(videos: [], hydratedCount: 0);
     }
 
-    final missingViewVideos = videos.where((video) {
-      final hasViews = extractViewLikeCount(video) != null;
-      return !hasViews && video.id.isNotEmpty;
+    final videosMissingStats = videos.where((video) {
+      final hasViews = extractVideoViews(video) != null;
+      final hasUniqueViewers = extractUniqueViewers(video) != null;
+      return (!hasViews || !hasUniqueViewers) && video.id.isNotEmpty;
     }).toList();
 
-    if (missingViewVideos.isEmpty) {
+    if (videosMissingStats.isEmpty) {
       return _HydrationResult(videos: videos, hydratedCount: 0);
     }
 
-    final fetchedViews = <String, int>{};
+    final fetchedStats = <String, VideoViewStats>{};
     var hadFailures = false;
     final chunks = <List<VideoEvent>>[];
-    for (var i = 0; i < missingViewVideos.length; i += 12) {
-      final end = math.min(i + 12, missingViewVideos.length);
-      chunks.add(missingViewVideos.sublist(i, end));
+    for (var i = 0; i < videosMissingStats.length; i += 12) {
+      final end = math.min(i + 12, videosMissingStats.length);
+      chunks.add(videosMissingStats.sublist(i, end));
     }
 
     for (final chunk in chunks) {
       final counts = await Future.wait(
         chunk.map((video) async {
           try {
-            return await _client.getVideoViews(video.id);
+            return await _client.getVideoViewStats(video.id);
           } on Exception catch (e, stackTrace) {
             hadFailures = true;
             Log.error(
@@ -602,14 +609,14 @@ class FunnelcakeCreatorAnalyticsRepository
         }),
       );
       for (var i = 0; i < chunk.length; i++) {
-        final count = counts[i];
-        if (count != null) {
-          fetchedViews[chunk[i].id] = count;
+        final stats = counts[i];
+        if (stats != null) {
+          fetchedStats[chunk[i].id] = stats;
         }
       }
     }
 
-    if (fetchedViews.isEmpty) {
+    if (fetchedStats.isEmpty) {
       return _HydrationResult(
         videos: videos,
         hydratedCount: 0,
@@ -619,10 +626,16 @@ class FunnelcakeCreatorAnalyticsRepository
 
     var hydratedCount = 0;
     final hydrated = videos.map((video) {
-      final count = fetchedViews[video.id];
-      if (count == null) return video;
+      final stats = fetchedStats[video.id];
+      if (stats == null) return video;
       hydratedCount++;
-      final mergedTags = <String, String>{...video.rawTags, 'views': '$count'};
+      final mergedTags = <String, String>{...video.rawTags};
+      if (extractVideoViews(video) == null && stats.views != null) {
+        mergedTags['views'] = '${stats.views}';
+      }
+      if (extractUniqueViewers(video) == null && stats.uniqueViewers != null) {
+        mergedTags['unique_viewers'] = '${stats.uniqueViewers}';
+      }
       return video.copyWith(rawTags: mergedTags);
     }).toList();
 
@@ -687,8 +700,8 @@ class _AuthorVideosResult {
   final bool truncated;
 }
 
-/// Extracts view-like counts from known tags and fallbacks.
-int? extractViewLikeCount(VideoEvent video) {
+/// Extracts total views from supported tags.
+int? extractVideoViews(VideoEvent video) {
   int? parse(String? value) {
     if (value == null) return null;
     final normalized = value.replaceAll(',', '').trim();
@@ -699,22 +712,24 @@ int? extractViewLikeCount(VideoEvent video) {
     return asDouble?.toInt();
   }
 
-  const keys = [
-    'views',
-    'view_count',
-    'total_views',
-    'unique_views',
-    'unique_viewers',
-    'loops',
-    'loop_count',
-    'total_loops',
-    'embedded_loops',
-    'computed_loops',
-  ];
+  const keys = ['views', 'view_count', 'total_views'];
 
   for (final key in keys) {
     final parsed = parse(video.rawTags[key]);
     if (parsed != null) return parsed;
   }
-  return video.originalLoops;
+  return null;
+}
+
+/// Extracts a distinct viewer count when available.
+int? extractUniqueViewers(VideoEvent video) {
+  for (final key in const ['unique_viewers', 'unique_views']) {
+    final value = video.rawTags[key];
+    if (value == null) continue;
+    final normalized = value.replaceAll(',', '').trim();
+    final parsed =
+        int.tryParse(normalized) ?? double.tryParse(normalized)?.toInt();
+    if (parsed != null) return parsed;
+  }
+  return null;
 }

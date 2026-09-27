@@ -2907,6 +2907,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get analyticsViews => 'Visningar';
 
   @override
+  String get analyticsUniqueViewers => 'Unika tittare';
+
+  @override
   String get analyticsInteractions => 'Interaktioner';
 
   @override

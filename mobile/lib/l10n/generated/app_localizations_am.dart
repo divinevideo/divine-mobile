@@ -2849,6 +2849,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get analyticsViews => 'እይታዎች';
 
   @override
+  String get analyticsUniqueViewers => 'ልዩ ተመልካቾች';
+
+  @override
   String get analyticsInteractions => 'መስተጋብር';
 
   @override

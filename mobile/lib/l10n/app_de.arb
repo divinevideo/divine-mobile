@@ -1011,6 +1011,7 @@
         }
     },
     "analyticsVideos": "Videos",
+    "analyticsUniqueViewers": "Einzigartige Zuschauer",
     "analyticsViews": "Aufrufe",
     "analyticsInteractions": "Interaktionen",
     "analyticsEngagement": "Engagement",

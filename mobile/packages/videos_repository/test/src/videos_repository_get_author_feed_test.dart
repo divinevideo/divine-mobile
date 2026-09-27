@@ -87,7 +87,9 @@ void main() {
       when(
         () => funnelcake.getBulkVideoStats(any()),
       ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-      when(() => funnelcake.getVideoViews(any())).thenAnswer((_) async => 0);
+      when(() => funnelcake.getVideoViewStats(any())).thenAnswer(
+        (_) async => const VideoViewStats(views: 0),
+      );
     });
 
     test('surfaces the v2 envelope (totalCount/nextOffset/hasMore)', () async {
@@ -118,6 +120,7 @@ void main() {
               comments: 1,
               reposts: 0,
               views: 14,
+              uniqueViewers: 8,
               loops: 7,
               embeddedLoops: 142678928,
             ),
@@ -131,10 +134,10 @@ void main() {
       final video = result.videos.single;
       expect(video.originalLoops, equals(142678928));
       expect(video.rawTags['loops'], equals('142678928'));
-      // Bulk-stats supplied the view count, so the per-video views endpoint is
-      // skipped (the value is preserved verbatim, not overwritten with 0).
+      // Bulk stats supply both metrics, so the per-video endpoint is skipped.
       expect(video.rawTags['views'], equals('14'));
-      verifyNever(() => funnelcake.getVideoViews(any()));
+      expect(video.rawTags['unique_viewers'], equals('8'));
+      verifyNever(() => funnelcake.getVideoViewStats(any()));
     });
 
     test(
@@ -238,7 +241,7 @@ void main() {
 
         expect(result.videos, hasLength(1));
         expect(result.videos.single.rawTags['views'], equals('12.7'));
-        verifyNever(() => funnelcake.getVideoViews(any()));
+        verify(() => funnelcake.getVideoViewStats('a')).called(1);
       },
     );
 

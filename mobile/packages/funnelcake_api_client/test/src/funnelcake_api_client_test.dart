@@ -3577,6 +3577,52 @@ void main() {
         expect(views, equals(2000));
       });
 
+      test('parses unique viewers separately from total views', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '{"views": 120, "unique_viewers": 45}',
+            200,
+          ),
+        );
+
+        final stats = await client.getVideoViewStats(testEventId);
+
+        expect(stats.views, 120);
+        expect(stats.uniqueViewers, 45);
+      });
+
+      test('does not use unique viewers as the view count', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response('{"unique_viewers": 45}', 200),
+        );
+
+        expect(await client.getVideoViews(testEventId), 0);
+      });
+
+      test('parses numeric strings and decimal count values', () {
+        final stats = VideoViewStats.fromJson(const {
+          'views': 120.8,
+          'unique_views': '45',
+        });
+
+        expect(stats.views, 120);
+        expect(stats.uniqueViewers, 45);
+      });
+
+      test('leaves malformed count values unavailable', () {
+        final stats = VideoViewStats.fromJson(const {
+          'views': 'not a count',
+          'unique_viewers': <String>[],
+        });
+
+        expect(stats.views, isNull);
+        expect(stats.uniqueViewers, isNull);
+      });
+
       test('returns 0 on 404', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),

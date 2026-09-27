@@ -2727,6 +2727,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsViews => '观看';
 
   @override
+  String get analyticsUniqueViewers => '独立观众';
+
+  @override
   String get analyticsInteractions => '互动';
 
   @override

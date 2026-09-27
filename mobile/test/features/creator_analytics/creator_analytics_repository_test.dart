@@ -83,20 +83,25 @@ void main() {
     registerFallbackValue(<String>[]);
   });
 
-  group('extractViewLikeCount', () {
+  group('creator analytics metrics', () {
     test('prefers explicit views tag', () {
       final event = _video(id: 'v1', rawTags: const {'views': '55'}, loops: 9);
-      expect(extractViewLikeCount(event), 55);
+      expect(extractVideoViews(event), 55);
     });
 
-    test('falls back to loops/originalLoops', () {
-      final event = _video(id: 'v2', rawTags: const {'loops': '44'});
-      expect(extractViewLikeCount(event), 44);
+    test('does not treat unique viewers or loops as total views', () {
+      final event = _video(
+        id: 'v2',
+        rawTags: const {'unique_viewers': '11', 'loops': '44'},
+        loops: 9,
+      );
+      expect(extractVideoViews(event), isNull);
+      expect(extractUniqueViewers(event), 11);
     });
 
     test('returns null when no view-like value exists', () {
       final event = _video(id: 'v3');
-      expect(extractViewLikeCount(event), isNull);
+      expect(extractVideoViews(event), isNull);
     });
   });
 
@@ -107,7 +112,8 @@ void main() {
 
       when(() => api.isAvailable).thenReturn(true);
       when(() => api.getSocialCounts(pubkey)).thenAnswer((_) async => null);
-      when(() => api.getVideoViews(any())).thenAnswer((_) async => 0);
+      when(() => api.getVideoViewStats(any()))
+          .thenAnswer((_) async => const VideoViewStats(views: 0));
       when(() => api.getBulkVideoStats(any())).thenAnswer((invocation) async {
         final ids = invocation.positionalArguments[0] as List<String>;
         if (ids.length == 1 && ids.first == 'a') {
@@ -120,6 +126,7 @@ void main() {
                 reposts: 1,
                 loops: 12,
                 views: 15,
+                uniqueViewers: 7,
               ),
             },
           );
@@ -150,6 +157,7 @@ void main() {
       expect(snapshot.diagnostics.videosWithAnyViews, 1);
       expect(snapshot.diagnostics.videosMissingViews, 0);
       expect(snapshot.videos.first.rawTags['views'], '15');
+      expect(snapshot.videos.first.rawTags['unique_viewers'], '7');
       expect(snapshot.videos.first.originalLikes, isNull);
       expect(snapshot.videos.first.originalComments, isNull);
       expect(snapshot.videos.first.originalReposts, isNull);
@@ -170,9 +178,12 @@ void main() {
         when(
           () => api.getBulkVideoStats(any()),
         ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-        when(() => api.getVideoViews(any())).thenAnswer((invocation) async {
+        when(() => api.getVideoViewStats(any())).thenAnswer((invocation) async {
           final eventId = invocation.positionalArguments[0] as String;
-          return eventId == 'b' ? 21 : 0;
+          return VideoViewStats(
+            views: eventId == 'b' ? 21 : 0,
+            uniqueViewers: eventId == 'b' ? 11 : null,
+          );
         });
 
         when(
@@ -183,7 +194,13 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => VideosByAuthorResponse(
-            videos: [_videoStats(id: 'b', pubkey: pubkey)],
+            videos: [
+              _videoStats(
+                id: 'b',
+                pubkey: pubkey,
+                rawTags: const {'unique_viewers': '6'},
+              ),
+            ],
           ),
         );
 
@@ -196,6 +213,9 @@ void main() {
         expect(snapshot.diagnostics.videosWithAnyViews, 1);
         expect(snapshot.diagnostics.videosMissingViews, 0);
         expect(snapshot.videos.first.rawTags['views'], '21');
+        // Existing distinct-viewer data remains intact when the endpoint
+        // supplies a newer value alongside the total.
+        expect(snapshot.videos.first.rawTags['unique_viewers'], '6');
       },
     );
 
@@ -211,9 +231,8 @@ void main() {
         when(
           () => api.getBulkVideoStats(any()),
         ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-        when(() => api.getVideoViews(any())).thenAnswer((invocation) async {
-          final eventId = invocation.positionalArguments[0] as String;
-          return eventId == 'c' ? 0 : 0;
+        when(() => api.getVideoViewStats(any())).thenAnswer((invocation) async {
+          return const VideoViewStats(views: 0);
         });
 
         when(
@@ -248,7 +267,8 @@ void main() {
 
         when(() => api.isAvailable).thenReturn(true);
         when(() => api.getSocialCounts(pubkey)).thenAnswer((_) async => null);
-        when(() => api.getVideoViews(any())).thenAnswer((_) async => 0);
+        when(() => api.getVideoViewStats(any()))
+            .thenAnswer((_) async => const VideoViewStats(views: 0));
         // Per-event-id stats: the older edit accumulated more views while it
         // was live than the newer edit has since.
         when(() => api.getBulkVideoStats(any())).thenAnswer((invocation) async {
@@ -316,7 +336,8 @@ void main() {
       when(
         () => api.getBulkVideoStats(any()),
       ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-      when(() => api.getVideoViews(any())).thenAnswer((_) async => 0);
+      when(() => api.getVideoViewStats(any()))
+          .thenAnswer((_) async => const VideoViewStats(views: 0));
 
       when(
         () => api.getVideosByAuthor(
@@ -342,7 +363,7 @@ void main() {
       // surface as ['authored', 'collaborator-leak'] here — assert the exact
       // surviving-id list rather than the (unreachable) single-leak list.
       verify(() => api.getBulkVideoStats(['authored'])).called(1);
-      verifyNever(() => api.getVideoViews('collaborator-leak'));
+      verifyNever(() => api.getVideoViewStats('collaborator-leak'));
     });
 
     test(
@@ -359,7 +380,8 @@ void main() {
         when(
           () => api.getBulkVideoStats(any()),
         ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-        when(() => api.getVideoViews(any())).thenAnswer((_) async => 0);
+        when(() => api.getVideoViewStats(any()))
+            .thenAnswer((_) async => const VideoViewStats(views: 0));
         when(
           () => api.getVideosByAuthor(
             pubkey: pubkey,
@@ -417,7 +439,8 @@ void main() {
       when(
         () => api.getBulkVideoStats(any()),
       ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-      when(() => api.getVideoViews(any())).thenAnswer((_) async => 0);
+      when(() => api.getVideoViewStats(any()))
+          .thenAnswer((_) async => const VideoViewStats(views: 0));
       when(
         () => api.getVideosByAuthor(
           pubkey: pubkey,
@@ -459,7 +482,7 @@ void main() {
           url: 'https://api.divine.video/api/videos/stats/bulk',
         ),
       );
-      when(() => api.getVideoViews(any())).thenThrow(
+      when(() => api.getVideoViewStats(any())).thenThrow(
         const FunnelcakeApiException(message: 'views failed', statusCode: 500),
       );
       when(
@@ -496,7 +519,7 @@ void main() {
       when(
         () => api.getBulkVideoStats(any()),
       ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-      when(() => api.getVideoViews('views-failure-video')).thenThrow(
+      when(() => api.getVideoViewStats('views-failure-video')).thenThrow(
         const FunnelcakeApiException(message: 'views failed', statusCode: 500),
       );
       when(
@@ -532,10 +555,11 @@ void main() {
       when(
         () => api.getBulkVideoStats(any()),
       ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-      when(() => api.getVideoViews('bad-video')).thenThrow(
+      when(() => api.getVideoViewStats('bad-video')).thenThrow(
         const FunnelcakeApiException(message: 'views failed', statusCode: 500),
       );
-      when(() => api.getVideoViews('good-video')).thenAnswer((_) async => 33);
+      when(() => api.getVideoViewStats('good-video'))
+          .thenAnswer((_) async => const VideoViewStats(views: 33));
       when(
         () => api.getVideosByAuthor(
           pubkey: pubkey,
@@ -584,7 +608,8 @@ void main() {
         when(
           () => api.getBulkVideoStats(any()),
         ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-        when(() => api.getVideoViews(any())).thenAnswer((_) async => 12);
+        when(() => api.getVideoViewStats(any()))
+            .thenAnswer((_) async => const VideoViewStats(views: 12));
         when(
           () => api.getVideosByAuthor(
             pubkey: pubkey,
@@ -619,7 +644,8 @@ void main() {
         when(
           () => api.getBulkVideoStats(any()),
         ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-        when(() => api.getVideoViews(any())).thenAnswer((_) async => 12);
+        when(() => api.getVideoViewStats(any()))
+            .thenAnswer((_) async => const VideoViewStats(views: 12));
         when(
           () => api.getVideosByAuthor(
             pubkey: pubkey,
@@ -827,7 +853,8 @@ void main() {
 
       when(() => api.isAvailable).thenReturn(true);
       when(() => api.getSocialCounts(pubkey)).thenAnswer((_) async => null);
-      when(() => api.getVideoViews(any())).thenAnswer((_) async => 12);
+      when(() => api.getVideoViewStats(any()))
+          .thenAnswer((_) async => const VideoViewStats(views: 12));
       when(
         () => api.getBulkVideoStats(any()),
       ).thenAnswer((invocation) async {
@@ -848,6 +875,7 @@ void main() {
                 comments: 2,
                 reposts: 1,
                 views: 15,
+                uniqueViewers: 7,
               ),
           },
         );

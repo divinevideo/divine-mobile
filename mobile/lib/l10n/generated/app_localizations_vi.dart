@@ -2884,6 +2884,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get analyticsViews => 'Lượt xem';
 
   @override
+  String get analyticsUniqueViewers => 'Người xem riêng biệt';
+
+  @override
   String get analyticsInteractions => 'Tương tác';
 
   @override

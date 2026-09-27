@@ -2901,6 +2901,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get analyticsViews => 'Tontonan';
 
   @override
+  String get analyticsUniqueViewers => 'Penonton unik';
+
+  @override
   String get analyticsInteractions => 'Interaksi';
 
   @override
