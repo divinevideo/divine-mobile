@@ -1960,6 +1960,15 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String metadataStatsLineWithoutVideoLoops(
+    String likes,
+    String comments,
+    String reposts,
+  ) {
+    return '$likes likes · $comments comments · $reposts reposts';
+  }
+
+  @override
   String metadataPostedDateSemantics(String date) {
     return '$date에 게시됨';
   }

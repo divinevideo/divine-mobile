@@ -495,6 +495,9 @@ const _knownUntranslatedDebt = <String>{
   'generalSettingsShowVideoLoopsSubtitle',
   'generalSettingsShowPublishedDate',
   'generalSettingsShowPublishedDateSubtitle',
+  // Classic Vine breakdown omits hidden loop metrics; translations tracked in
+  // #7632.
+  'metadataStatsLineWithoutVideoLoops',
   // Unavailable pinned-video recovery (#9443). These keys remain English in
   // all 21 non-English locales until a human translation pass.
   'profilePinReviewUnavailable',

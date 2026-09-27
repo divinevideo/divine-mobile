@@ -2096,6 +2096,15 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String metadataStatsLineWithoutVideoLoops(
+    String likes,
+    String comments,
+    String reposts,
+  ) {
+    return '$likes likes · $comments comments · $reposts reposts';
+  }
+
+  @override
   String metadataPostedDateSemantics(String date) {
     return 'نُشر في $date';
   }

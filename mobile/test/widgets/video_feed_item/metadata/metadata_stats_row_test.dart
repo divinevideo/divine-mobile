@@ -95,11 +95,7 @@ void main() {
       tester,
     ) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      await _pump(
-        tester,
-        video: _video(originalLoops: 2100000),
-        bloc: bloc,
-      );
+      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
 
       final loopsX = _labelX(tester, l10n.metadataLoopsLabel(2100000));
 
@@ -110,11 +106,7 @@ void main() {
 
     testWidgets('leads with likes', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      await _pump(
-        tester,
-        video: _video(originalLoops: 2100000),
-        bloc: bloc,
-      );
+      await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
 
       final likesX = _labelX(tester, l10n.metadataLikesLabel);
 
@@ -224,6 +216,14 @@ void main() {
 
       expect(find.text(l10n.metadataVineStatsLabel), findsOneWidget);
       expect(find.text(l10n.metadataDivineStatsLabel), findsOneWidget);
+      expect(
+        find.text(l10n.metadataVineStatsLine('2.1M', '0', '0', '0')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.metadataDivineStatsLine('340', '847', '23', '12')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('hides loop totals in the classic Vine breakdown when off', (
@@ -242,8 +242,18 @@ void main() {
 
       expect(find.text(l10n.metadataVineStatsLabel), findsOneWidget);
       expect(find.text(l10n.metadataDivineStatsLabel), findsOneWidget);
+      expect(
+        find.text(l10n.metadataStatsLineWithoutVideoLoops('0', '0', '0')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.metadataStatsLineWithoutVideoLoops('847', '23', '12')),
+        findsOneWidget,
+      );
       expect(find.textContaining('2.1M'), findsNothing);
       expect(find.textContaining('340'), findsNothing);
+      expect(find.textContaining('— loops'), findsNothing);
+      expect(find.textContaining('— views'), findsNothing);
     });
 
     testWidgets('omits the breakdown for a diVine-native post', (tester) async {

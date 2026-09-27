@@ -1431,6 +1431,21 @@
       }
     }
   },
+  "metadataStatsLineWithoutVideoLoops": "{likes} likes · {comments} comments · {reposts} reposts",
+  "@metadataStatsLineWithoutVideoLoops": {
+    "description": "Engagement summary for a classic Vine when the viewer hides video loops. Each placeholder is a pre-formatted compact count, e.g. '3K'.",
+    "placeholders": {
+      "likes": {
+        "type": "String"
+      },
+      "comments": {
+        "type": "String"
+      },
+      "reposts": {
+        "type": "String"
+      }
+    }
+  },
   "metadataPostedDateSemantics": "Posted on {date}",
   "@metadataPostedDateSemantics": {
     "description": "Screen reader label for the publish date in the video info sheet. {date} is the locale-formatted absolute date, e.g. 'Apr 22, 2003'.",

@@ -3612,6 +3612,16 @@ abstract class AppLocalizations {
     String reposts,
   );
 
+  /// Engagement summary for a classic Vine when the viewer hides video loops. Each placeholder is a pre-formatted compact count, e.g. '3K'.
+  ///
+  /// In en, this message translates to:
+  /// **'{likes} likes · {comments} comments · {reposts} reposts'**
+  String metadataStatsLineWithoutVideoLoops(
+    String likes,
+    String comments,
+    String reposts,
+  );
+
   /// Screen reader label for the publish date in the video info sheet. {date} is the locale-formatted absolute date, e.g. 'Apr 22, 2003'.
   ///
   /// In en, this message translates to:

@@ -190,21 +190,33 @@ class _VineDivineBreakdown extends StatelessWidget {
         children: [
           _BreakdownLine(
             label: l10n.metadataVineStatsLabel,
-            value: l10n.metadataVineStatsLine(
-              showVideoLoops ? compact(video.originalLoops) : '—',
-              compact(video.originalLikes),
-              compact(video.originalComments),
-              compact(video.originalReposts),
-            ),
+            value: showVideoLoops
+                ? l10n.metadataVineStatsLine(
+                    compact(video.originalLoops),
+                    compact(video.originalLikes),
+                    compact(video.originalComments),
+                    compact(video.originalReposts),
+                  )
+                : l10n.metadataStatsLineWithoutVideoLoops(
+                    compact(video.originalLikes),
+                    compact(video.originalComments),
+                    compact(video.originalReposts),
+                  ),
           ),
           _BreakdownLine(
             label: l10n.metadataDivineStatsLabel,
-            value: l10n.metadataDivineStatsLine(
-              showVideoLoops ? compact(divineViews) : '—',
-              compact(divineLikes),
-              compact(divineComments),
-              compact(divineReposts),
-            ),
+            value: showVideoLoops
+                ? l10n.metadataDivineStatsLine(
+                    compact(divineViews),
+                    compact(divineLikes),
+                    compact(divineComments),
+                    compact(divineReposts),
+                  )
+                : l10n.metadataStatsLineWithoutVideoLoops(
+                    compact(divineLikes),
+                    compact(divineComments),
+                    compact(divineReposts),
+                  ),
           ),
         ],
       ),
