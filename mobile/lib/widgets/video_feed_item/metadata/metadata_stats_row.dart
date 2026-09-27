@@ -34,12 +34,25 @@ class MetadataStatsRow extends ConsumerWidget {
 
     return ListenableBuilder(
       listenable: statsVisibility,
-      builder: (context, _) =>
-          _buildRow(context, statsVisibility.showVideoLoops),
+      builder: (context, _) => _MetadataStatsRowContent(
+        video: video,
+        showVideoLoops: statsVisibility.showVideoLoops,
+      ),
     );
   }
+}
 
-  Widget _buildRow(BuildContext context, bool showVideoLoops) {
+class _MetadataStatsRowContent extends StatelessWidget {
+  const _MetadataStatsRowContent({
+    required this.video,
+    required this.showVideoLoops,
+  });
+
+  final VideoEvent video;
+  final bool showVideoLoops;
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<VideoInteractionsBloc, VideoInteractionsState>(
       builder: (context, state) {
         final isLoading = state.isLoading;
@@ -118,7 +131,11 @@ class MetadataStatsRow extends ConsumerWidget {
                 },
               ),
               if (showVineBreakdown)
-                _VineDivineBreakdown(video: video, state: state),
+                _VineDivineBreakdown(
+                  video: video,
+                  state: state,
+                  showVideoLoops: showVideoLoops,
+                ),
             ],
           ),
         );
@@ -133,10 +150,15 @@ class MetadataStatsRow extends ConsumerWidget {
 /// compact lines under the combined stats row, so the headline numbers can
 /// stay big while the split remains visible.
 class _VineDivineBreakdown extends StatelessWidget {
-  const _VineDivineBreakdown({required this.video, required this.state});
+  const _VineDivineBreakdown({
+    required this.video,
+    required this.state,
+    required this.showVideoLoops,
+  });
 
   final VideoEvent video;
   final VideoInteractionsState state;
+  final bool showVideoLoops;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +191,7 @@ class _VineDivineBreakdown extends StatelessWidget {
           _BreakdownLine(
             label: l10n.metadataVineStatsLabel,
             value: l10n.metadataVineStatsLine(
-              compact(video.originalLoops),
+              showVideoLoops ? compact(video.originalLoops) : '—',
               compact(video.originalLikes),
               compact(video.originalComments),
               compact(video.originalReposts),
@@ -178,7 +200,7 @@ class _VineDivineBreakdown extends StatelessWidget {
           _BreakdownLine(
             label: l10n.metadataDivineStatsLabel,
             value: l10n.metadataDivineStatsLine(
-              compact(divineViews),
+              showVideoLoops ? compact(divineViews) : '—',
               compact(divineLikes),
               compact(divineComments),
               compact(divineReposts),

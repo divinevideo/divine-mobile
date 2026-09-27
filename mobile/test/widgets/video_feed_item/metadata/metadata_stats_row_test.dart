@@ -182,6 +182,26 @@ void main() {
       expect(find.text(l10n.metadataDivineStatsLabel), findsOneWidget);
     });
 
+    testWidgets('hides loop totals in the classic Vine breakdown when off', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await _pump(
+        tester,
+        video: _video(
+          originalLoops: 2100000,
+          rawTags: {'platform': 'vine', 'views': '340'},
+        ),
+        bloc: bloc,
+        showVideoLoops: false,
+      );
+
+      expect(find.text(l10n.metadataVineStatsLabel), findsOneWidget);
+      expect(find.text(l10n.metadataDivineStatsLabel), findsOneWidget);
+      expect(find.textContaining('2.1M'), findsNothing);
+      expect(find.textContaining('340'), findsNothing);
+    });
+
     testWidgets('omits the breakdown for a diVine-native post', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
       await _pump(
