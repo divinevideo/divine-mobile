@@ -314,7 +314,13 @@ final currentAccountDeletionAttemptProvider =
                 .fetchCurrent();
         }
       },
-      retry: (retryCount, error) => error is AccountDeletionStatusUnavailable
+      // A 401 is an auth rejection, so an immediate retry adds traffic without
+      // correcting a persistent clock or signing problem. The default policy
+      // sent it ten more times.
+      retry: (retryCount, error) =>
+          error is AccountDeletionStatusUnavailable ||
+              (error is AccountDeletionRecoveryException &&
+                  error.statusCode == 401)
           ? null
           : ProviderContainer.defaultRetry(retryCount, error),
     );

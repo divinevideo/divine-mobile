@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -103,6 +104,59 @@ void main() {
         verify(repository.fetchCurrent).called(1);
       },
     );
+
+    group('a failed lookup', () {
+      int lookupsAfterFailure(int statusCode) {
+        final repository = _MockDeletionRepository();
+        final authService = _MockAuthService();
+        when(repository.fetchCurrent).thenAnswer(
+          (_) async => throw AccountDeletionRecoveryException(
+            'Status lookup failed ($statusCode)',
+            statusCode: statusCode,
+          ),
+        );
+        when(
+          () => authService.signerReadiness,
+        ).thenReturn(SignerReadiness.ready);
+        return fakeAsync((async) {
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(preferences),
+              authServiceProvider.overrideWithValue(authService),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
+              currentAuthRpcCapabilityProvider.overrideWithValue(
+                AuthRpcCapability.unavailable,
+              ),
+              nostrSessionProvider.overrideWith(_TestNostrSession.new),
+              accountDeletionRecoveryRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+            ],
+          );
+          final subscription = container.listen(
+            currentAccountDeletionAttemptProvider,
+            (_, _) {},
+            fireImmediately: true,
+          );
+          async.elapse(const Duration(minutes: 2));
+          final settled = container.read(currentAccountDeletionAttemptProvider);
+          subscription.close();
+          container.dispose();
+          expect(settled.error, isA<AccountDeletionRecoveryException>());
+          return verify(repository.fetchCurrent).callCount;
+        });
+      }
+
+      test('is not retried when the signature is rejected', () {
+        expect(lookupsAfterFailure(401), equals(1));
+      });
+
+      test('is retried when the coordinator is unavailable', () {
+        expect(lookupsAfterFailure(503), greaterThan(1));
+      });
+    });
 
     test('lookup settles without a receipt while signing warms up', () async {
       final repository = _MockDeletionRepository();

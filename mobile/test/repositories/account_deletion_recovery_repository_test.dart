@@ -13,9 +13,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/repositories/account_deletion_recovery_repository.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 class _MockNip98AuthService extends Mock implements Nip98AuthService {}
+
+class _MockAuthService extends Mock implements AuthService {}
 
 void main() {
   late _MockNip98AuthService nip98;
@@ -31,6 +34,7 @@ void main() {
         url: any(named: 'url'),
         method: any(named: 'method'),
         payload: any(named: 'payload'),
+        reuseCached: any(named: 'reuseCached'),
       ),
     ).thenAnswer((_) async => _token());
   });
@@ -101,6 +105,7 @@ void main() {
           url: any(named: 'url'),
           method: any(named: 'method'),
           payload: any(named: 'payload'),
+          reuseCached: any(named: 'reuseCached'),
         ),
       );
     });
@@ -184,6 +189,7 @@ void main() {
             url: 'https://api.divine.video/api/account-deletion/attempts',
             method: HttpMethod.post,
             payload: jsonEncode({'username': 'alice'}),
+            reuseCached: false,
           ),
         ).called(1);
       },
@@ -824,12 +830,53 @@ void main() {
       );
     });
 
+    test('each lookup signs a new NIP-98 token', () async {
+      const pubkey =
+          '385c3a6ec0b9d57a4330dbd6284989be5bd00e41c535f9ca39b6ae7c521b81cd';
+      final authService = _MockAuthService();
+      when(() => authService.isAuthenticated).thenReturn(true);
+      when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
+      var signatures = 0;
+      when(
+        () => authService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+        ),
+      ).thenAnswer((invocation) async {
+        signatures++;
+        final tags = invocation.namedArguments[#tags] as List<List<String>>;
+        return Event(pubkey, 27235, tags, '');
+      });
+      final nip98AuthService = Nip98AuthService(authService: authService);
+      addTearDown(nip98AuthService.dispose);
+      final authorizations = <String?>[];
+      final lookups = AccountDeletionRecoveryRepository(
+        baseUrl: 'https://api.divine.video/',
+        nameServerBaseUrl: 'https://names.divine.video/',
+        httpClient: MockClient((request) async {
+          authorizations.add(request.headers['Authorization']);
+          return http.Response('', 404);
+        }),
+        nip98AuthService: nip98AuthService,
+        currentPubkey: () => pubkey,
+      );
+
+      await lookups.fetchCurrent();
+      await lookups.fetchCurrent();
+
+      expect(authorizations, hasLength(2));
+      expect(authorizations, everyElement(startsWith('Nostr ')));
+      expect(signatures, equals(2));
+    });
+
     test('rejects a cached NIP-98 token from a different account', () async {
       when(
         () => nip98.createAuthToken(
           url: any(named: 'url'),
           method: any(named: 'method'),
           payload: any(named: 'payload'),
+          reuseCached: any(named: 'reuseCached'),
         ),
       ).thenAnswer((_) async => _token(pubkey: _otherPubkey));
 
