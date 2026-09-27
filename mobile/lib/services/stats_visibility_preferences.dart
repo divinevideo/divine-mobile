@@ -52,21 +52,26 @@ class StatsVisibilityPreferences extends ChangeNotifier {
   Future<void> setShowTotalLoops(bool value) async {
     if (_showTotalLoops == value) return;
     _showTotalLoops = value;
-    await _prefs.setBool(showTotalLoopsKey, value);
-    notifyListeners();
+    await _persist(showTotalLoopsKey, value);
   }
 
   Future<void> setShowVideoLoops(bool value) async {
     if (_showVideoLoops == value) return;
     _showVideoLoops = value;
-    await _prefs.setBool(showVideoLoopsKey, value);
-    notifyListeners();
+    await _persist(showVideoLoopsKey, value);
   }
 
   Future<void> setShowPublishedDate(bool value) async {
     if (_showPublishedDate == value) return;
     _showPublishedDate = value;
-    await _prefs.setBool(showPublishedDateKey, value);
+    await _persist(showPublishedDateKey, value);
+  }
+
+  /// Starts the write, then notifies before awaiting it, so listeners track
+  /// the in-memory choice even when the write throws.
+  Future<void> _persist(String key, bool value) async {
+    final written = _prefs.setBool(key, value);
     notifyListeners();
+    await written;
   }
 }
