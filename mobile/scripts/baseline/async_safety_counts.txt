@@ -29,7 +29,6 @@ discarded_futures|lib/screens/relay_diagnostic_screen.dart	1
 discarded_futures|lib/screens/subtitle_editor/subtitle_editor_screen.dart	3
 discarded_futures|lib/screens/verify/verify_screen.dart	1
 discarded_futures|lib/screens/web_auth_screen.dart	1
-discarded_futures|lib/utils/deferred_login_options_navigator.dart	3
 discarded_futures|lib/widgets/app_lifecycle_handler.dart	1
 discarded_futures|lib/widgets/auth/forgot_password_dialog.dart	1
 discarded_futures|lib/widgets/bug_report_dialog.dart	1
