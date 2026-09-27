@@ -251,11 +251,10 @@ void main() {
       expect(tester.widget<DivineIcon>(heartFinder).color, VineTheme.vineGreen);
     });
 
-    testWidgets('author line uses localized plural loop label at the floor', (
+    testWidgets('author line uses localized plural loop label', (
       tester,
     ) async {
-      // Totals below the visibility floor are hidden, so visible totals use
-      // the plural ICU form.
+      // A large total resolves through the plural ICU form.
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [

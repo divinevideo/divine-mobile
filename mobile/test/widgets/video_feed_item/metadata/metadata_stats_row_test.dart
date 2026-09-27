@@ -111,11 +111,9 @@ void main() {
       expect(likesX, lessThan(_labelX(tester, l10n.metadataRepostsLabel)));
     });
 
-    testWidgets('keeps the count reachable rather than removing it', (
+    testWidgets('renders the loop count when the viewer shows video loops', (
       tester,
     ) async {
-      // The sheet is where a hidden card count remains available, so the
-      // number itself must still render.
       await _pump(tester, video: _video(originalLoops: 2100000), bloc: bloc);
 
       expect(find.text('2.1M'), findsOneWidget);
