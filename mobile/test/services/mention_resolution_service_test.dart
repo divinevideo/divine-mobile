@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -38,6 +40,35 @@ void main() {
   });
 
   group('resolveTextMentions', () {
+    test(
+      'resolves punctuation variants returned by the real profile DAO',
+      () async {
+        final database = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(database.close);
+        await database.userProfilesDao.upsertProfile(
+          _profile(_alicePubkey, name: 'alice_rose'),
+        );
+        when(
+          () => profileRepository.searchCachedProfilesByIdentity(
+            query: 'alice-rose',
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) => database.userProfilesDao.searchProfilesByIdentity(
+            'alice-rose',
+            limit: 10,
+          ),
+        );
+
+        final result = await service.resolveTextMentions(
+          rawText: 'hi @alice-rose',
+        );
+
+        expect(result.resolvedPubkeys, [_alicePubkey]);
+        expect(result.unresolvedTokens, isEmpty);
+      },
+    );
+
     test(
       'canonicalizes selected mentions and records full hex pubkeys',
       () async {

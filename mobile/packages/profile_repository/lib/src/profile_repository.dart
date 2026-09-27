@@ -62,10 +62,7 @@ const String profileSearchSortFollowers =
 /// Callback to filter and sort profiles by search relevance.
 /// Takes a query and list of profiles, returns filtered/sorted profiles.
 typedef ProfileSearchFilter =
-    List<UserProfile> Function(
-      String query,
-      List<UserProfile> profiles,
-    );
+    List<UserProfile> Function(String query, List<UserProfile> profiles);
 
 bool _isSearchCancelled(SearchCancellationToken? token) =>
     token?.isCancelled ?? false;
@@ -286,7 +283,7 @@ class ProfileRepository implements ProfileReader {
   /// Bounded local search over identity fields (name, display name, NIP-05,
   /// exact pubkey) — never biography text, unlike [searchUsersLocally].
   ///
-  /// Uses the DAO's indexed [LocalProfileSearch] when injected (the
+  /// Uses the DAO's bounded [LocalProfileSearch] query when injected (the
   /// production wiring, via `searchProfilesByIdentity`), falling back to
   /// the unbounded [searchUsersLocally] scan otherwise. This is the primitive
   /// for exact-match resolution — typed `@mention` resolution and mention-tap
@@ -2452,13 +2449,9 @@ class ProfileRepository implements ProfileReader {
     final nip05Name = nip05.split('@').first;
 
     if (pubkey == queryHex ||
-        {
-          pubkey,
-          name,
-          displayName,
-          nip05,
-          nip05Name,
-        }.contains(normalizedQuery)) {
+        {pubkey, name, displayName, nip05, nip05Name}.contains(
+          normalizedQuery,
+        )) {
       return _exactMatchRelevance;
     }
     if (name.startsWith(normalizedQuery) ||

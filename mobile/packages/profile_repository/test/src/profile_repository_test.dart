@@ -624,32 +624,35 @@ void main() {
         },
       );
 
-      test('rechecks sources after an indeterminate miss', () async {
-        stubAllSourcesMiss();
+      test(
+        'rechecks sources after an indeterminate miss',
+        () async {
+          stubAllSourcesMiss();
 
-        // First call hits all sources without treating absence as proof.
-        final firstResult = await profileRepository.fetchFreshProfile(
-          pubkey: testPubkey,
-        );
-        expect(firstResult, isNull);
-        expect(profileRepository.isConfirmedMissing(testPubkey), isFalse);
+          // First call hits all sources without treating absence as proof.
+          final firstResult = await profileRepository.fetchFreshProfile(
+            pubkey: testPubkey,
+          );
+          expect(firstResult, isNull);
+          expect(profileRepository.isConfirmedMissing(testPubkey), isFalse);
 
-        // Second call — explicit fetch should clear the stale marker
-        // and try the sources again.
-        when(
-          () => mockNostrClient.fetchProfile(testPubkey),
-        ).thenAnswer((_) async => mockProfileEvent);
+          // Second call — explicit fetch should clear the stale marker
+          // and try the sources again.
+          when(
+            () => mockNostrClient.fetchProfile(testPubkey),
+          ).thenAnswer((_) async => mockProfileEvent);
 
-        final secondResult = await profileRepository.fetchFreshProfile(
-          pubkey: testPubkey,
-        );
+          final secondResult = await profileRepository.fetchFreshProfile(
+            pubkey: testPubkey,
+          );
 
-        expect(secondResult, isNotNull);
-        expect(secondResult!.pubkey, equals(testPubkey));
-        expect(profileRepository.isConfirmedMissing(testPubkey), isFalse);
-        verify(() => mockNostrClient.fetchProfile(testPubkey)).called(2);
-        verify(() => mockUserProfilesDao.upsertProfile(any())).called(1);
-      });
+          expect(secondResult, isNotNull);
+          expect(secondResult!.pubkey, equals(testPubkey));
+          expect(profileRepository.isConfirmedMissing(testPubkey), isFalse);
+          verify(() => mockNostrClient.fetchProfile(testPubkey)).called(2);
+          verify(() => mockUserProfilesDao.upsertProfile(any())).called(1);
+        },
+      );
 
       test('deduplicates concurrent calls for the same pubkey', () async {
         final results = await Future.wait([
@@ -4310,44 +4313,47 @@ void main() {
         },
       );
 
-      test('searchUsersProgressive keeps an exact match ahead of followed '
-          'partial matches', () async {
-        ProfileSearchResult followed(String pubkey, String name) =>
+      test(
+        'searchUsersProgressive keeps an exact match ahead of followed '
+        'partial matches',
+        () async {
+          ProfileSearchResult followed(String pubkey, String name) =>
+              ProfileSearchResult(
+                pubkey: pubkey,
+                name: name,
+                createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+                followerCount: 500,
+                videoCount: 5,
+              );
+          stubRestResults([
+            followed(pk18Videos, 'alice_b'),
+            followed(pk4Videos, 'alice_c'),
+            followed(pkCachedVine, 'alice_d'),
             ProfileSearchResult(
-              pubkey: pubkey,
-              name: name,
+              pubkey: pk1Video,
+              name: 'alice',
               createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-              followerCount: 500,
-              videoCount: 5,
-            );
-        stubRestResults([
-          followed(pk18Videos, 'alice_b'),
-          followed(pk4Videos, 'alice_c'),
-          followed(pkCachedVine, 'alice_d'),
-          ProfileSearchResult(
-            pubkey: pk1Video,
-            name: 'alice',
-            createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-            followerCount: 1,
-            videoCount: 1,
-          ),
-        ]);
+              followerCount: 1,
+              videoCount: 1,
+            ),
+          ]);
 
-        final result = await repoWithFunnelcake
-            .searchUsersProgressive(
-              query: 'alice',
-              sortBy: 'followers',
-              boostPubkeys: {pk18Videos, pk4Videos, pkCachedVine},
-            )
-            .last;
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'alice',
+                sortBy: 'followers',
+                boostPubkeys: {pk18Videos, pk4Videos, pkCachedVine},
+              )
+              .last;
 
-        expect(result.profiles.map((profile) => profile.pubkey), [
-          pk1Video,
-          pk18Videos,
-          pk4Videos,
-          pkCachedVine,
-        ]);
-      });
+          expect(result.profiles.map((profile) => profile.pubkey), [
+            pk1Video,
+            pk18Videos,
+            pk4Videos,
+            pkCachedVine,
+          ]);
+        },
+      );
 
       test(
         'searchUsersProgressive puts the account whose npub was pasted first',
@@ -4841,7 +4847,10 @@ void main() {
           );
 
           final resultFuture = repository
-              .searchUsersProgressive(query: 'test', cancellationToken: token)
+              .searchUsersProgressive(
+                query: 'test',
+                cancellationToken: token,
+              )
               .toList();
           await Future<void>.delayed(Duration.zero);
           token.cancel();
@@ -7495,58 +7504,61 @@ void main() {
         },
       );
 
-      test('clears a stale confirmed-missing mark once a batch resolves the '
-          'profile', () async {
-        when(
-          () => mockUserProfilesDao.getProfilesByPubkeys(any()),
-        ).thenAnswer((_) async => []);
-        when(
-          () => mockUserProfilesDao.upsertProfiles(any()),
-        ).thenAnswer((_) async {});
-        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+      test(
+        'clears a stale confirmed-missing mark once a batch resolves the '
+        'profile',
+        () async {
+          when(
+            () => mockUserProfilesDao.getProfilesByPubkeys(any()),
+          ).thenAnswer((_) async => []);
+          when(
+            () => mockUserProfilesDao.upsertProfiles(any()),
+          ).thenAnswer((_) async {});
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
 
-        var bulkCall = 0;
-        when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer((
-          _,
-        ) async {
-          bulkCall++;
-          if (bulkCall == 1) {
-            return const BulkProfilesResponse(
+          var bulkCall = 0;
+          when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer((
+            _,
+          ) async {
+            bulkCall++;
+            if (bulkCall == 1) {
+              return const BulkProfilesResponse(
+                profiles: {
+                  testPubkey: UserProfileNotPublished(pubkey: testPubkey),
+                },
+              );
+            }
+            return BulkProfilesResponse(
               profiles: {
-                testPubkey: UserProfileNotPublished(pubkey: testPubkey),
+                testPubkey: UserProfileFound(
+                  profile: UserProfileData.fromJson(testPubkey, const {
+                    'display_name': 'Now Published',
+                  }),
+                ),
               },
             );
-          }
-          return BulkProfilesResponse(
-            profiles: {
-              testPubkey: UserProfileFound(
-                profile: UserProfileData.fromJson(testPubkey, const {
-                  'display_name': 'Now Published',
-                }),
-              ),
-            },
+          });
+
+          final repoWithFunnelcake = ProfileRepository(
+            nostrClient: mockNostrClient,
+            userProfilesDao: mockUserProfilesDao,
+            httpClient: mockHttpClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
           );
-        });
 
-        final repoWithFunnelcake = ProfileRepository(
-          nostrClient: mockNostrClient,
-          userProfilesDao: mockUserProfilesDao,
-          httpClient: mockHttpClient,
-          funnelcakeApiClient: mockFunnelcakeClient,
-        );
+          await repoWithFunnelcake.fetchBatchProfiles(pubkeys: [testPubkey]);
+          expect(repoWithFunnelcake.isConfirmedMissing(testPubkey), isTrue);
 
-        await repoWithFunnelcake.fetchBatchProfiles(pubkeys: [testPubkey]);
-        expect(repoWithFunnelcake.isConfirmedMissing(testPubkey), isTrue);
+          final second = await repoWithFunnelcake.fetchBatchProfiles(
+            pubkeys: [testPubkey],
+          );
 
-        final second = await repoWithFunnelcake.fetchBatchProfiles(
-          pubkeys: [testPubkey],
-        );
-
-        // The batch just resolved and cached a profile for this pubkey, so
-        // the earlier absence verdict no longer describes the latest fetch.
-        expect(second[testPubkey]?.displayName, equals('Now Published'));
-        expect(repoWithFunnelcake.isConfirmedMissing(testPubkey), isFalse);
-      });
+          // The batch just resolved and cached a profile for this pubkey, so
+          // the earlier absence verdict no longer describes the latest fetch.
+          expect(second[testPubkey]?.displayName, equals('Now Published'));
+          expect(repoWithFunnelcake.isConfirmedMissing(testPubkey), isFalse);
+        },
+      );
 
       test('evicts a vanished entry and skips relay fallback', () async {
         // The batch path is a second way into the cache, so it has to evict
@@ -7820,33 +7832,22 @@ void main() {
       });
 
       test(
-        'searchCachedProfilesByIdentity filters blocked users even when '
-        'localProfileSearch is injected',
+        'filters blocked users from bounded identity search results',
         () async {
-          // The injected localProfileSearch path (the production wiring, via
-          // UserProfilesDao.searchProfilesByIdentity) never sees the block
-          // filter on its own — it must be applied by
-          // searchCachedProfilesByIdentity itself, not merely by a caller
-          // such as searchUsersProgressive that happens to re-filter
-          // downstream.
-          const blockedPubkey =
-              'dddddddddddddddddddddddddddddddd'
-              'dddddddddddddddddddddddddddddddd';
           final blockedProfile = UserProfile(
             pubkey: blockedPubkey,
             displayName: 'Blocked User',
-            rawData: const {},
+            rawData: const {'display_name': 'Blocked User'},
             createdAt: DateTime(2026),
             eventId: 'evt_blocked_identity',
           );
           final allowedProfile = UserProfile(
             pubkey: testPubkey,
             displayName: 'Allowed User',
-            rawData: const {},
+            rawData: const {'display_name': 'Allowed User'},
             createdAt: DateTime(2026),
             eventId: testEventId,
           );
-
           final repoWithBlockFilter = ProfileRepository(
             nostrClient: mockNostrClient,
             userProfilesDao: mockUserProfilesDao,
@@ -7859,11 +7860,12 @@ void main() {
           );
 
           final result = await repoWithBlockFilter
-              .searchCachedProfilesByIdentity(query: 'user', limit: 10);
+              .searchCachedProfilesByIdentity(
+                query: 'user',
+                limit: 10,
+              );
 
-          expect(result.map((p) => p.pubkey), isNot(contains(blockedPubkey)));
-          expect(result, hasLength(1));
-          expect(result.first.pubkey, equals(testPubkey));
+          expect(result.map((profile) => profile.pubkey), [testPubkey]);
         },
       );
 

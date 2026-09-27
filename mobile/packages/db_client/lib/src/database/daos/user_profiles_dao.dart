@@ -15,6 +15,17 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
     with _$UserProfilesDaoMixin {
   UserProfilesDao(super.attachedDatabase);
 
+  static const _identityPunctuation = r''' !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~''';
+
+  static String _punctuationInsensitiveSql(String column) {
+    var expression = "lower(coalesce($column, ''))";
+    for (final character in _identityPunctuation.split('')) {
+      final escaped = character == "'" ? "''" : character;
+      expression = "replace($expression, '$escaped', '')";
+    }
+    return expression;
+  }
+
   /// Upsert profile from domain model, keeping the newest version.
   ///
   /// Converts a [UserProfile] domain model to a database companion and writes
@@ -45,6 +56,9 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
       if (await _isVanished(profile.pubkey)) return;
       final existing = await getProfile(profile.pubkey);
       if (existing != null && !_incomingWins(profile, existing)) {
+        await (update(userProfiles)
+              ..where((t) => t.pubkey.equals(profile.pubkey)))
+            .write(UserProfilesCompanion(lastFetched: Value(DateTime.now())));
         return;
       }
       await into(userProfiles).insertOnConflictUpdate(
@@ -152,6 +166,10 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   /// Biography text is deliberately excluded: people discovery should not
   /// turn a short query into an unbounded scan of incidental prose.
   ///
+  /// Name, display name, and NIP-05 comparisons ignore punctuation in
+  /// addition to the raw substring match, so mention resolution can apply the
+  /// same punctuation-insensitive equality check it uses after retrieval.
+  ///
   /// Public keys match only when the whole key is given. A hex prefix or
   /// substring is not something a person types, and a two-character hex
   /// query would otherwise sweep a share of every cached pubkey into the
@@ -162,12 +180,20 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   }) async {
     final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty || limit <= 0) return [];
+    final alphanumeric = normalized.replaceAll(RegExp('[^a-z0-9]'), '');
+    final normalizedQuery = alphanumeric.isEmpty ? '\u0000' : alphanumeric;
+    final normalizedName = _punctuationInsensitiveSql('name');
+    final normalizedDisplayName = _punctuationInsensitiveSql('display_name');
+    final normalizedNip05 = _punctuationInsensitiveSql('nip05');
     final rows = await customSelect(
       '''
         SELECT * FROM user_profiles
         WHERE instr(lower(coalesce(name, '')), ?) > 0
            OR instr(lower(coalesce(display_name, '')), ?) > 0
            OR instr(lower(coalesce(nip05, '')), ?) > 0
+           OR instr($normalizedName, ?) > 0
+           OR instr($normalizedDisplayName, ?) > 0
+           OR instr($normalizedNip05, ?) > 0
            OR lower(pubkey) = ?
         ORDER BY
           CASE
@@ -175,15 +201,27 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
             WHEN lower(coalesce(display_name, '')) = ? THEN 0
             WHEN lower(coalesce(nip05, '')) = ? THEN 0
             WHEN lower(pubkey) = ? THEN 0
+            WHEN $normalizedName = ? THEN 0
+            WHEN $normalizedDisplayName = ? THEN 0
+            WHEN $normalizedNip05 = ? THEN 0
             WHEN instr(lower(coalesce(name, '')), ?) = 1 THEN 1
             WHEN instr(lower(coalesce(display_name, '')), ?) = 1 THEN 1
+            WHEN instr($normalizedName, ?) = 1 THEN 1
+            WHEN instr($normalizedDisplayName, ?) = 1 THEN 1
             ELSE 2
           END,
           created_at DESC
         LIMIT ?
       ''',
       variables: [
-        for (var i = 0; i < 10; i++) Variable.withString(normalized),
+        for (var i = 0; i < 3; i++) Variable.withString(normalized),
+        for (var i = 0; i < 3; i++) Variable.withString(normalizedQuery),
+        Variable.withString(normalized),
+        for (var i = 0; i < 3; i++) Variable.withString(normalized),
+        Variable.withString(normalized),
+        for (var i = 0; i < 3; i++) Variable.withString(normalizedQuery),
+        for (var i = 0; i < 2; i++) Variable.withString(normalized),
+        for (var i = 0; i < 2; i++) Variable.withString(normalizedQuery),
         Variable.withInt(limit),
       ],
       readsFrom: {userProfiles},

@@ -510,28 +510,40 @@ void main() {
         },
       );
 
-      test('a profile refreshed after being written stays out of the '
-          'eviction set', () async {
-        final now = DateTime.now();
-        await insertWithLastFetched(
-          testPubkey,
-          now.subtract(const Duration(days: 5)),
-        );
-        await insertWithLastFetched(
-          testPubkey2,
-          now.subtract(const Duration(days: 4)),
-        );
-        // testPubkey is re-fetched most recently, so its refreshed
-        // last_fetched should protect it even though it was originally the
-        // oldest row.
-        await insertWithLastFetched(testPubkey, now);
+      test(
+        'a refetched unchanged profile stays out of the eviction set',
+        () async {
+          final now = DateTime.now();
+          await database
+              .into(database.userProfiles)
+              .insert(
+                UserProfilesCompanion.insert(
+                  pubkey: testPubkey,
+                  name: const Value('same profile'),
+                  createdAt: now.subtract(const Duration(days: 5)),
+                  eventId: 'event-$testPubkey',
+                  lastFetched: now.subtract(const Duration(days: 5)),
+                ),
+              );
+          await insertWithLastFetched(
+            testPubkey2,
+            now.subtract(const Duration(days: 4)),
+          );
 
-        final deleted = await dao.enforceRowCap(maxRows: 1);
+          await dao.upsertProfile(
+            createProfile(
+              name: 'same profile',
+              createdAt: now.subtract(const Duration(days: 5)),
+            ),
+          );
 
-        expect(deleted, equals(1));
-        final remaining = await dao.getAllProfiles();
-        expect(remaining.map((p) => p.pubkey), equals([testPubkey]));
-      });
+          final deleted = await dao.enforceRowCap(maxRows: 1);
+
+          expect(deleted, equals(1));
+          final remaining = await dao.getAllProfiles();
+          expect(remaining.map((p) => p.pubkey), equals([testPubkey]));
+        },
+      );
     });
 
     group('searchProfilesByIdentity', () {
