@@ -14,7 +14,6 @@ class CleanupResult {
     required this.oldNotificationsDeleted,
     required this.orphanedVideoMetricsDeleted,
     required this.evictedUserProfilesDeleted,
-    required this.expiredProcessedGiftWrapsDeleted,
   });
 
   /// Number of expired Nostr events deleted (includes events with NULL expiry).
@@ -38,10 +37,6 @@ class CleanupResult {
   /// by `last_fetched` first.
   final int evictedUserProfilesDeleted;
 
-  /// Number of `processed_gift_wraps` rows deleted for exceeding the
-  /// dedup-ledger retention window.
-  final int expiredProcessedGiftWrapsDeleted;
-
   /// Total number of records deleted across all tables.
   int get totalDeleted =>
       expiredEventsDeleted +
@@ -49,8 +44,7 @@ class CleanupResult {
       expiredHashtagStatsDeleted +
       oldNotificationsDeleted +
       orphanedVideoMetricsDeleted +
-      evictedUserProfilesDeleted +
-      expiredProcessedGiftWrapsDeleted;
+      evictedUserProfilesDeleted;
 
   @override
   String toString() {
@@ -60,7 +54,6 @@ class CleanupResult {
         'hashtagStats: $expiredHashtagStatsDeleted, '
         'notifications: $oldNotificationsDeleted, '
         'orphanedVideoMetrics: $orphanedVideoMetricsDeleted, '
-        'evictedUserProfiles: $evictedUserProfilesDeleted, '
-        'expiredProcessedGiftWraps: $expiredProcessedGiftWrapsDeleted)';
+        'evictedUserProfiles: $evictedUserProfilesDeleted)';
   }
 }

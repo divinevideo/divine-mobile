@@ -135,17 +135,4 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
     final rows = await select(processedGiftWraps).get();
     return rows.length;
   }
-
-  /// Deletes ledger rows older than [ttl] (default 90 days), by
-  /// `processed_at`. Called from [AppDatabase.runStartupCleanup]. This
-  /// ledger exists only to dedup a relay re-delivering an already-processed
-  /// kind-1059 wrap (see the class doc); nothing reads a row once its
-  /// redelivery window has passed. Returns the number of rows deleted.
-  Future<int> pruneExpired({Duration ttl = const Duration(days: 90)}) async {
-    final cutoff =
-        DateTime.now().millisecondsSinceEpoch ~/ 1000 - ttl.inSeconds;
-    return (delete(
-      processedGiftWraps,
-    )..where((t) => t.processedAt.isSmallerThanValue(cutoff))).go();
-  }
 }

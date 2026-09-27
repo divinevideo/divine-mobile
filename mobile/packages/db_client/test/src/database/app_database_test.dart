@@ -257,7 +257,6 @@ void main() {
         expect(result.oldNotificationsDeleted, equals(0));
         expect(result.orphanedVideoMetricsDeleted, equals(0));
         expect(result.evictedUserProfilesDeleted, equals(0));
-        expect(result.expiredProcessedGiftWrapsDeleted, equals(0));
       });
 
       test('handles cleanup when database is empty', () async {
@@ -270,7 +269,6 @@ void main() {
         expect(result.oldNotificationsDeleted, equals(0));
         expect(result.orphanedVideoMetricsDeleted, equals(0));
         expect(result.evictedUserProfilesDeleted, equals(0));
-        expect(result.expiredProcessedGiftWrapsDeleted, equals(0));
       });
 
       test(
@@ -330,26 +328,6 @@ void main() {
           expect(
             await database.userProfilesDao.getProfile('profile-1'),
             isNotNull,
-          );
-        },
-      );
-
-      test(
-        'deletes processed_gift_wraps rows past the retention window',
-        () async {
-          final expired = nowUnix() - const Duration(days: 91).inSeconds;
-          await database.customStatement(
-            'INSERT INTO processed_gift_wraps '
-            '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, ?, ?)',
-            ['a' * 64, expired, testPubkey],
-          );
-
-          final result = await database.runStartupCleanup();
-
-          expect(result.expiredProcessedGiftWrapsDeleted, equals(1));
-          expect(
-            await database.processedGiftWrapsDao.hasGiftWrap('a' * 64),
-            isFalse,
           );
         },
       );

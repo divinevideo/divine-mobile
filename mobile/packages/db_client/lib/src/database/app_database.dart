@@ -1772,7 +1772,6 @@ class AppDatabase extends _$AppDatabase {
   /// - Notification cache rows written more than 7 days ago
   /// - `video_metrics` rows orphaned by an `event` deletion above
   /// - `user_profiles` rows beyond the row cap, oldest by `last_fetched`
-  /// - `processed_gift_wraps` rows past the dedup-ledger retention window
   ///
   /// Returns a [CleanupResult] with counts of deleted records.
   Future<CleanupResult> runStartupCleanup() async {
@@ -1805,9 +1804,6 @@ class AppDatabase extends _$AppDatabase {
     // Enforce the user_profiles row cap, oldest by last_fetched first.
     final evictedUserProfilesDeleted = await userProfilesDao.enforceRowCap();
 
-    final expiredProcessedGiftWrapsDeleted = await processedGiftWrapsDao
-        .pruneExpired();
-
     return CleanupResult(
       expiredEventsDeleted: expiredEventsDeleted,
       expiredProfileStatsDeleted: expiredProfileStatsDeleted,
@@ -1815,7 +1811,6 @@ class AppDatabase extends _$AppDatabase {
       oldNotificationsDeleted: oldNotificationsDeleted,
       orphanedVideoMetricsDeleted: orphanedVideoMetricsDeleted,
       evictedUserProfilesDeleted: evictedUserProfilesDeleted,
-      expiredProcessedGiftWrapsDeleted: expiredProcessedGiftWrapsDeleted,
     );
   }
 }

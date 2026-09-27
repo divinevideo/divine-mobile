@@ -820,14 +820,7 @@ void main() {
           createNew: v14.DatabaseAtV14.new,
           openTestedDatabase: AppDatabase.new,
           createItems: (batch, oldDb) {
-            // Recent, not the fixed historical literal used elsewhere in this
-            // file: runStartupCleanup prunes processed_gift_wraps rows past
-            // its retention window (ProcessedGiftWrapsDao.pruneExpired), and
-            // opening via AppDatabase runs that sweep on every migration in
-            // this test. A fixed old timestamp would make these rows look
-            // expired rather than migrated.
-            final recentProcessedAt =
-                DateTime.now().millisecondsSinceEpoch ~/ 1000;
+            const oldProcessedAt = 1;
             batch.insert(
               oldDb.directMessages,
               v11.DirectMessagesCompanion.insert(
@@ -843,7 +836,7 @@ void main() {
               oldDb.processedGiftWraps,
               v11.ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: 'kept' * 16,
-                processedAt: recentProcessedAt,
+                processedAt: oldProcessedAt,
                 ownerPubkey: Value('a' * 64),
               ),
             );
@@ -851,7 +844,7 @@ void main() {
               oldDb.processedGiftWraps,
               v11.ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: 'lost' * 16,
-                processedAt: recentProcessedAt,
+                processedAt: oldProcessedAt,
                 ownerPubkey: Value('b' * 64),
               ),
             );

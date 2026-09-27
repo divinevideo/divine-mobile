@@ -1753,10 +1753,9 @@ class ProcessedGiftWraps extends Table {
 
   /// When the wrap was terminally processed (unix seconds).
   ///
-  /// Retention: rows older than 90 days are pruned by
-  /// `ProcessedGiftWrapsDao.pruneExpired`, run from
-  /// `AppDatabase.runStartupCleanup` — nothing reads a row once its
-  /// redelivery window has passed.
+  /// Retention: unbounded while the account is active. The history drain reads
+  /// this ledger to avoid re-decrypting terminal outcomes on later drains;
+  /// pruning an old row would make those wraps eligible for decryption again.
   IntColumn get processedAt => integer().named('processed_at')();
 
   /// Recipient pubkey this wrap was processed for. Not part of the global

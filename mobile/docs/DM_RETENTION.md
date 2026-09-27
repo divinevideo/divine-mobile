@@ -61,14 +61,14 @@ Every DM table on the device, and what bounds it. Only one is bounded by code.
 | `outgoing_dms` | partly | deleted on successful send or user cancel; a permanently failed row is marked `failed` and kept for manual retry |
 | `dm_message_reactions` | no | removed with their conversation; NIP-09 and own-supersede are soft deletes |
 | `pending_gift_wraps` | **yes** | attempts cap plus `deleteExhausted`, run at the top of every retry pass |
-| `processed_gift_wraps` | no | nothing. Its `processed_at` column is documented as *"available for any future time-based retention"* that was never built |
+| `processed_gift_wraps` | no | history drains read the ledger to avoid re-decrypting terminal outcomes; pruning entries makes old reactions, deletions, unsupported kinds, and tombstone-suppressed wraps eligible for decryption again |
 
 `processed_gift_wraps` is the odd one out: its sibling `pending_gift_wraps` is
-bounded, and its own schema anticipated the prune. It is not free to fix —
-it is the only record of wraps that write no message row (reactions,
-deletions, and messages suppressed by a removal tombstone), and #8209 covers
-why moving a sync boundary for a message an account never stored is permanent
-damage. Tracked separately rather than bolted onto a retention doc.
+bounded, while the history drain continues to consult processed rows on later
+passes. The table stores outcomes that may have no message row (reactions,
+deletions, unsupported kinds, and messages suppressed by a removal tombstone),
+so those rows remain part of the dedup ledger while history can be replayed.
+Its long-term growth should be measured before changing that policy.
 
 ## The server copy
 

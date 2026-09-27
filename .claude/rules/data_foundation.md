@@ -170,10 +170,13 @@ assuming it's off — for a fix that a scoped sweep (`DELETE FROM video_metrics
 WHERE event_id NOT IN (SELECT id FROM event)`) gets just as well, run
 alongside whatever already deletes rows from the parent table.
 
-**TTL on a genuine local timestamp** (`processed_gift_wraps`). The
-straightforward case: the table already carries a column that means "when
-this device wrote this row," so prune by age against it, the same shape as
-the already-shipped `SeenVideosDao.pruneExpired`.
+**Keep a dedup ledger while its history is replayable** (`processed_gift_wraps`).
+The DM history drain checks this table when it revisits old relay history, not
+only when a relay redelivers a wrap. Pruning terminal outcomes makes reactions,
+deletions, unsupported kinds, and wraps suppressed by a removed conversation
+eligible for decryption again. These rows stay unbounded while the account is
+active until measured growth justifies a policy that preserves the drain's
+deduplication behavior.
 
 **Unbounded on purpose, written down as a decision** (`identity_events`,
 `identity_verifications`). Not every table needs an eviction path — but
