@@ -123,8 +123,9 @@ class _MetadataContent extends StatelessWidget {
 /// Mirrors the Figma frame hierarchy (`15675:27356`):
 /// - Outer column with 16 px gap between date, title cluster, and tags.
 /// - Inner title cluster (8 px gap): title, badges row, description.
-/// - Date renders independently of title/description so classic Vine
-///   archives without captions still show their original publish year.
+/// - When enabled, the date renders independently of title/description so
+///   classic Vine archives without captions still show their original
+///   publish year.
 ///
 /// The separator line between the sheet's drag-handle chrome and this
 /// section comes from `VineBottomSheet` itself when `showHeaderDivider`

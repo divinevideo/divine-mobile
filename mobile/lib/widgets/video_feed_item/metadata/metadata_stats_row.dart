@@ -1,5 +1,5 @@
 // ABOUTME: Stats row for the metadata expanded sheet.
-// ABOUTME: Shows Likes, Comments, Reposts, Loops with vertical dividers.
+// ABOUTME: Shows Likes, Comments, Reposts and, when enabled, Loops.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,8 +21,8 @@ import 'package:openvine/utils/string_utils.dart';
 /// The Loops column trails the row and is shown only when the viewer asked for
 /// video loops ([StatsVisibilityPreferences.showVideoLoops], off by default).
 ///
-/// Layout follows Figma node `I11251:226991;9113:176278`:
-/// four stat columns separated by vertical dividers.
+/// Layout follows Figma node `I11251:226991;9113:176278`: stat columns
+/// separated by vertical dividers, three by default and four with Loops.
 class MetadataStatsRow extends ConsumerWidget {
   const MetadataStatsRow({required this.video, super.key});
 
