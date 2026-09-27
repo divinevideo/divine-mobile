@@ -54,7 +54,7 @@ void main() {
         expect(result.resolvedPubkeys, equals([_alicePubkey]));
         expect(result.unresolvedTokens, isEmpty);
         verifyNever(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: any(named: 'query'),
             limit: any(named: 'limit'),
           ),
@@ -125,7 +125,7 @@ void main() {
       'does not resolve a selected handle that became a longer token',
       () async {
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'aliceandra',
             limit: any(named: 'limit'),
           ),
@@ -210,7 +210,7 @@ void main() {
       () async {
         final aliceNpub = NostrKeyUtils.encodePubKey(_alicePubkey);
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'alice',
             limit: any(named: 'limit'),
           ),
@@ -229,19 +229,19 @@ void main() {
         expect(result.resolvedPubkeys, equals([_alicePubkey]));
         expect(result.unresolvedTokens, isEmpty);
         verify(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'alice',
             limit: any(named: 'limit'),
           ),
         ).called(1);
         verifyNever(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'bob',
             limit: any(named: 'limit'),
           ),
         );
         verifyNever(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'carol',
             limit: any(named: 'limit'),
           ),
@@ -257,7 +257,7 @@ void main() {
 
     test('leaves ambiguous typed matches unchanged', () async {
       when(
-        () => profileRepository.searchUsersLocally(
+        () => profileRepository.searchCachedProfilesByIdentity(
           query: 'alex',
           limit: any(named: 'limit'),
         ),
@@ -294,7 +294,7 @@ void main() {
         };
         final remoteQueries = <String>[];
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: any(named: 'query'),
             limit: any(named: 'limit'),
           ),
@@ -334,7 +334,7 @@ void main() {
       'keeps typed self matches unresolved unless explicitly selected',
       () async {
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'alice',
             limit: any(named: 'limit'),
           ),
@@ -369,7 +369,7 @@ void main() {
     test('returns selected mentions when typed lookup fails', () async {
       final aliceNpub = NostrKeyUtils.encodePubKey(_alicePubkey);
       when(
-        () => profileRepository.searchUsersLocally(
+        () => profileRepository.searchCachedProfilesByIdentity(
           query: 'bob',
           limit: any(named: 'limit'),
         ),
@@ -394,7 +394,7 @@ void main() {
         typedResolutionTimeout: const Duration(milliseconds: 1),
       );
       when(
-        () => profileRepository.searchUsersLocally(
+        () => profileRepository.searchCachedProfilesByIdentity(
           query: 'alice',
           limit: any(named: 'limit'),
         ),
@@ -414,7 +414,7 @@ void main() {
       test('resolves the whole hyphenated handle, not its prefix', () async {
         final bobNpub = NostrKeyUtils.encodePubKey(_bobPubkey);
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'OG-AB',
             limit: any(named: 'limit'),
           ),
@@ -431,7 +431,7 @@ void main() {
         expect(result.resolvedPubkeys, equals([_bobPubkey]));
         expect(result.unresolvedTokens, isEmpty);
         verifyNever(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'OG',
             limit: any(named: 'limit'),
           ),
@@ -442,7 +442,7 @@ void main() {
         'does not resolve a hyphenated handle to its prefix owner',
         () async {
           when(
-            () => profileRepository.searchUsersLocally(
+            () => profileRepository.searchCachedProfilesByIdentity(
               query: any(named: 'query'),
               limit: any(named: 'limit'),
             ),
@@ -466,7 +466,7 @@ void main() {
       test('searches a dotted handle as typed', () async {
         final carolNpub = NostrKeyUtils.encodePubKey(_carolPubkey);
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: 'ickynicki.v2',
             limit: any(named: 'limit'),
           ),
@@ -488,13 +488,13 @@ void main() {
           final aliceNpub = NostrKeyUtils.encodePubKey(_alicePubkey);
           final bobNpub = NostrKeyUtils.encodePubKey(_bobPubkey);
           when(
-            () => profileRepository.searchUsersLocally(
+            () => profileRepository.searchCachedProfilesByIdentity(
               query: 'og-ab',
               limit: any(named: 'limit'),
             ),
           ).thenAnswer((_) async => [_profile(_bobPubkey, name: 'og-ab')]);
           when(
-            () => profileRepository.searchUsersLocally(
+            () => profileRepository.searchCachedProfilesByIdentity(
               query: 'ogab',
               limit: any(named: 'limit'),
             ),

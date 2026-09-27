@@ -355,7 +355,7 @@ void main() {
       );
       final profileRepository = _MockProfileRepository();
       when(
-        () => profileRepository.searchUsersLocally(
+        () => profileRepository.searchCachedProfilesByIdentity(
           query: mention,
           limit: 10,
         ),
@@ -412,7 +412,7 @@ void main() {
       expect(find.text('profile:$expectedNpub'), findsOneWidget);
       expect(find.text('search:$mention'), findsNothing);
       verify(
-        () => profileRepository.searchUsersLocally(
+        () => profileRepository.searchCachedProfilesByIdentity(
           query: mention,
           limit: 10,
         ),
@@ -435,7 +435,7 @@ void main() {
         );
         final profileRepository = _MockProfileRepository();
         when(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: mention,
             limit: 10,
           ),
@@ -452,7 +452,7 @@ void main() {
 
         expect(pubkey, _mentionedHexPubkey);
         verify(
-          () => profileRepository.searchUsersLocally(
+          () => profileRepository.searchCachedProfilesByIdentity(
             query: mention,
             limit: 10,
           ),
