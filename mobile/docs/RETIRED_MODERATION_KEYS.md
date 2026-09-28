@@ -100,7 +100,7 @@ role uses the shared support identity.
 | Pre-rotation threads excluded from pinned-support adoption | `DmRepository.extractPinnedSupport` |
 | Labeler subscription migrated to the current key | `ModerationLabelService._migrateLegacyPubkey` |
 | A protected minor may read (never send to) a retired-key thread while nobody can sign as it | `OfficialAccountsService.isReadableByProtectedMinor`, gated on `RetiredKeyCustody.canStillSign` |
-| Retired key refused as the moderation identity — from the persisted NIP-05 cache (at load and at read time) and from a live NIP-05 answer, before it is ever persisted | `ModerationLabelService._refuseRetired` |
+| Retired key refused as the moderation identity — from the persisted NIP-05 cache (at load and at each NIP-05 refresh) and from a live NIP-05 answer, before it is ever persisted | `ModerationPubkeyResolver._refuseRetired`, reached through `.cached()` and `.resolve()` |
 | Report recipient read at filing time from the label service, not captured once when the reporting provider was built — covers a stale cached key NIP-05 corrects moments later | `ContentReportingService.currentModerationPubkey` → `ModerationLabelService.divineModerationPubkeyHex`, wired in `social_providers.dart` |
 | Composer replaced by a "We couldn't load this conversation" notice, and the player reply bar hidden, when a thread's participants cannot be resolved | `conversation_view.dart` and `reel_dm_reply_bar.dart`, via `resolveDmThreadWritability` returning `DmThreadWritability.unresolved` |
 
