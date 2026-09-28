@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for ContentReportingService
 // ABOUTME: Tests NIP-56 content reporting including AI-generated content reports
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
@@ -2052,6 +2053,37 @@ void main() {
       );
       await reopened.close();
     });
+
+    test(
+      'a user report without prepared text names the account by its pubkey',
+      () async {
+        final crs = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: dao,
+          moderationPubkey: _validEventId('f'),
+        );
+        final result = await crs.reportUser(
+          userPubkey: _validEventId('c'),
+          reason: ContentFilterReason.other,
+          details: 'Reported from DM conversation',
+        );
+        final row = (await dao.getById(result.reportId!))!;
+        final dm = jsonDecode(row.moderationPayload!) as Map<String, dynamic>;
+        expect(
+          dm['content'],
+          equals(
+            'User Report\n'
+            'Reason: other\n'
+            'User Pubkey: '
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n'
+            'Details: Reported from DM conversation',
+          ),
+        );
+      },
+    );
 
     test(
       'does not deliver a queued report under a different account',

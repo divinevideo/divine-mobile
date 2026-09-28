@@ -494,7 +494,11 @@ class ContentReportingService implements ReportChannelDriver {
           : null,
       hashtags: ['user-report'],
       nip56EventIds: validRelatedEventIds ?? const [],
-      moderationContent: moderationContent,
+      // The report sheet's shape: a user report names the account (#9622).
+      moderationContent:
+          moderationContent ??
+          'User Report\nReason: ${reason.name}\nUser Pubkey: $userPubkey\n'
+              'Details: $details',
       moderationTags: moderationTags,
     );
   }
