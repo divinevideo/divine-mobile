@@ -15,8 +15,8 @@ class CacheRecoveryService {
   static const String _logName = 'CacheRecoveryService';
 
   static const Set<String> _disposableHiveBoxNames = {
-    HiveBoxNames.hashtagStats,
     HiveBoxNames.peopleLists,
+    HiveBoxNames.legacyHashtagStats,
   };
 
   /// Clear all app caches and databases to recover from corruption
@@ -275,10 +275,8 @@ class CacheRecoveryService {
     return cleared;
   }
 
-  static String _durableDatabasePath(Directory appSupportDir) => p.joinAll([
-    appSupportDir.path,
-    ..._durableDatabaseDirSegments,
-  ]);
+  static String _durableDatabasePath(Directory appSupportDir) =>
+      p.joinAll([appSupportDir.path, ..._durableDatabaseDirSegments]);
 
   static List<String> _durableHiveBoxPaths(Directory appSupportDir) => [
     for (final segments in _durableHiveBoxFileSegments)

@@ -43,7 +43,7 @@ hive_ce_generator: ^1.6.0    # ❌ Being deprecated
 sqflite: ^2.3.3+1            # ⚠️  Not reactive, not used directly by app
 ```
 
-### Services Currently Using Hive (9 total)
+### Services Currently Using Hive (8 total)
 1. **profile_cache_service.dart**
    - `Box<UserProfile>` - profile metadata
    - `Box<DateTime>` - fetch timestamps
@@ -55,14 +55,11 @@ sqflite: ^2.3.3+1            # ⚠️  Not reactive, not used directly by app
 3. **profile_stats_cache_service.dart**
    - `Box<Map>` - profile statistics
 
-4. **hashtag_cache_service.dart**
-   - Uses Hive for hashtag data
-
-5. **cache_recovery_service.dart**
-6. **notification_persistence.dart**
-7. **notification_service_enhanced.dart**
-8. **upload_initialization_helper.dart**
-9. **upload_manager.dart**
+4. **cache_recovery_service.dart**
+5. **notification_persistence.dart**
+6. **notification_service_enhanced.dart**
+7. **upload_initialization_helper.dart**
+8. **upload_manager.dart**
 
 ### Nostr SDK / Embedded Relay
 - Uses `nostr_sdk` (Rust-based, local dependency at `../nostr_sdk`)
@@ -236,12 +233,11 @@ class ProfileCacheService {
 1. profile_cache_service.dart
 2. personal_event_cache_service.dart
 3. profile_stats_cache_service.dart
-4. hashtag_cache_service.dart
-5. notification_persistence.dart
-6. notification_service_enhanced.dart
-7. upload_initialization_helper.dart
-8. upload_manager.dart
-9. cache_recovery_service.dart (may become obsolete)
+4. notification_persistence.dart
+5. notification_service_enhanced.dart
+6. upload_initialization_helper.dart
+7. upload_manager.dart
+8. cache_recovery_service.dart (may become obsolete)
 
 ### Phase 5: Event Router Implementation (Week 3)
 **Goal**: Centralize event caching - all events go to Drift

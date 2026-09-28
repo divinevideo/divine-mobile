@@ -70,9 +70,8 @@ void main() {
     when(() => mockAuth.isAuthenticated).thenReturn(true);
     when(() => mockAuth.currentPublicKeyHex).thenReturn(syntheticTestPubkey);
     when(() => mockAuth.authState).thenReturn(AuthState.authenticated);
-    when(
-      () => mockAuth.authStateStream,
-    ).thenAnswer((_) => Stream.value(AuthState.authenticated));
+    when(() => mockAuth.authStateStream)
+        .thenAnswer((_) => Stream.value(AuthState.authenticated));
     when(() => mockAuth.hasExpiredOAuthSession).thenReturn(false);
     // authenticatedRedirectsFromAuthEntry consults this before bouncing an
     // authenticated session off /welcome, which is where the router starts.
@@ -84,12 +83,11 @@ void main() {
 
   // What HashtagFeedScreen calls on open: the cached bucket for the tag and a
   // live subscription to it.
-  HashtagService hashtagServiceWithoutHive() {
+  HashtagService mockHashtagService() {
     final service = _MockHashtagService();
     when(() => service.getVideosByHashtags(any())).thenReturn(const []);
-    when(
-      () => service.subscribeToHashtagVideos(any()),
-    ).thenAnswer((_) async {});
+    when(() => service.subscribeToHashtagVideos(any()))
+        .thenAnswer((_) async {});
     return service;
   }
 
@@ -116,11 +114,11 @@ void main() {
       relayListDirtyPublishBridgeProvider.overrideWith((ref) {}),
       contactListDirtyBroadcastBridgeProvider.overrideWith((ref) {}),
       blocklistSyncBridgeProvider.overrideWith((ref) {}),
-      // The real provider builds HashtagCacheService, whose initialize()
-      // opens the hashtag_stats Hive box. Under fake async that open never
-      // completes, and Hive keeps it pending by name for the rest of the
-      // isolate, so every later suite that opens the box hangs (#9022).
-      hashtagServiceProvider.overrideWithValue(hashtagServiceWithoutHive()),
+      // The real HashtagService starts a 60-second periodic timer and
+      // registers a listener on VideoEventService. Neither settles on its
+      // own under fake async, so mock the service rather than strand a live
+      // timer and listener past the end of the test.
+      hashtagServiceProvider.overrideWithValue(mockHashtagService()),
     ],
   );
 
@@ -460,13 +458,10 @@ void main() {
   group('E) Campaign landing', () {
     testWidgets(
       'renders the Following feed despite a persisted non-Following source',
-      (
-        tester,
-      ) async {
+      (tester) async {
         final prefs = createMockSharedPreferences();
-        when(
-          () => prefs.getString('selected_feed_mode_$syntheticTestPubkey'),
-        ).thenReturn(FeedMode.latest.name);
+        when(() => prefs.getString('selected_feed_mode_$syntheticTestPubkey'))
+            .thenReturn(FeedMode.latest.name);
         final c = container(prefs: prefs);
 
         await pumpShell(tester, c);

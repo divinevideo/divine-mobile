@@ -402,59 +402,6 @@ final class AnalyticsServiceProvider
 
 String _$analyticsServiceHash() => r'3823ec76a28945bf37b3c120bde2b4ebc35d97c0';
 
-/// Hashtag cache service for persistent hashtag storage
-
-@ProviderFor(hashtagCacheService)
-final hashtagCacheServiceProvider = HashtagCacheServiceProvider._();
-
-/// Hashtag cache service for persistent hashtag storage
-
-final class HashtagCacheServiceProvider
-    extends
-        $FunctionalProvider<
-          HashtagCacheService,
-          HashtagCacheService,
-          HashtagCacheService
-        >
-    with $Provider<HashtagCacheService> {
-  /// Hashtag cache service for persistent hashtag storage
-  HashtagCacheServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'hashtagCacheServiceProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$hashtagCacheServiceHash();
-
-  @$internal
-  @override
-  $ProviderElement<HashtagCacheService> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  HashtagCacheService create(Ref ref) {
-    return hashtagCacheService(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(HashtagCacheService value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<HashtagCacheService>(value),
-    );
-  }
-}
-
-String _$hashtagCacheServiceHash() =>
-    r'5c776e6395f831b88ed0b6447bfe48e260816494';
-
 /// Draft storage service for persisting vine drafts
 
 @ProviderFor(draftStorageService)
@@ -617,17 +564,17 @@ final class UserDataCleanupServiceProvider
 String _$userDataCleanupServiceHash() =>
     r'8a5b7a34824ad7c5a9ac9804a06a7eace8486fc3';
 
-/// Hashtag service depends on Video event service and cache service
+/// Hashtag service depends on Video event service
 
 @ProviderFor(hashtagService)
 final hashtagServiceProvider = HashtagServiceProvider._();
 
-/// Hashtag service depends on Video event service and cache service
+/// Hashtag service depends on Video event service
 
 final class HashtagServiceProvider
     extends $FunctionalProvider<HashtagService, HashtagService, HashtagService>
     with $Provider<HashtagService> {
-  /// Hashtag service depends on Video event service and cache service
+  /// Hashtag service depends on Video event service
   HashtagServiceProvider._()
     : super(
         from: null,
@@ -661,7 +608,7 @@ final class HashtagServiceProvider
   }
 }
 
-String _$hashtagServiceHash() => r'2b0727a4152eee27d7a1cf595cf5fe66050ee145';
+String _$hashtagServiceHash() => r'415d7fb987653ec757d0aed2295e1820edb43008';
 
 /// Content reporting service for NIP-56 compliance
 

@@ -60,12 +60,10 @@ void main() {
       }
 
       root = await Directory.systemTemp.createTemp('hive_storage_service_');
-      documentsDir = await Directory(
-        p.join(root.path, 'Documents'),
-      ).create(recursive: true);
-      appSupportDir = await Directory(
-        p.join(root.path, 'app_support'),
-      ).create(recursive: true);
+      documentsDir = await Directory(p.join(root.path, 'Documents'))
+          .create(recursive: true);
+      appSupportDir = await Directory(p.join(root.path, 'app_support'))
+          .create(recursive: true);
       homePath = p.join(
         appSupportDir.path,
         HiveStorageService.homeDirectoryName,
@@ -102,16 +100,15 @@ void main() {
       await HiveStorageService.initialize();
       final firstBox = await Hive.openBox<dynamic>(HiveBoxNames.notifications);
 
-      final elsewhere = await Directory(
-        p.join(root.path, 'elsewhere'),
-      ).create(recursive: true);
+      final elsewhere = await Directory(p.join(root.path, 'elsewhere'))
+          .create(recursive: true);
       PathProviderPlatform.instance = _FakePathProviderPlatform(
         documentsPath: elsewhere.path,
         appSupportPath: elsewhere.path,
       );
 
       await HiveStorageService.initialize();
-      final secondBox = await Hive.openBox<dynamic>(HiveBoxNames.hashtagStats);
+      final secondBox = await Hive.openBox<dynamic>(HiveBoxNames.peopleLists);
 
       expect(p.dirname(secondBox.path!), p.dirname(firstBox.path!));
     });
@@ -293,12 +290,14 @@ void main() {
 
     group('retired boxes', () {
       // personal_events / personal_events_metadata moved to Drift in #6986.
-      // They are out of HiveBoxNames.all, so the stranded-box sweep no longer
-      // walks them and they have to be deleted explicitly — from both homes,
+      // hashtag_stats backed the deleted HashtagCacheService. All three are
+      // out of HiveBoxNames.all, so the stranded-box sweep no longer walks
+      // them and they have to be deleted explicitly — from both homes,
       // because a pre-#6958 build could have left a copy in documents.
       for (final boxName in const [
         'personal_events',
         'personal_events_metadata',
+        HiveBoxNames.legacyHashtagStats,
       ]) {
         test('deletes a retired $boxName left in the home', () async {
           final home = Directory(homePath)..createSync(recursive: true);

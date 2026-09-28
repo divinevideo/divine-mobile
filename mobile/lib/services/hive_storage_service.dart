@@ -77,9 +77,15 @@ abstract final class HiveStorageService {
   /// disposable and deleted them on repair — and the events box was the
   /// unbounded one, so reading it here would pay the whole cost on the upgrade
   /// launch, which is the worst possible moment.
+  ///
+  /// `hashtag_stats` backed the deleted `HashtagCacheService`. It is out of
+  /// [HiveBoxNames.all], so the stranded-box sweep no longer walks it.
+  /// `CacheRecoveryService` deletes the current-home copy on repair;
+  /// [_deleteRetiredBoxes] also removes a copy left in the documents directory.
   static const Set<String> _retiredBoxNames = {
     'personal_events',
     'personal_events_metadata',
+    HiveBoxNames.legacyHashtagStats,
   };
 
   /// Deletes retired box files from both the home and the legacy home.

@@ -42,7 +42,6 @@ geo_block_timestamp
 hold_to_record_enabled
 keycast_session
 known_accounts # holds every account on the device by design; sweeping it would sign everyone out
-last_update
 last_used_npub # session marker for the login screen, not account data
 library_clip_grid_columns
 library_clip_sort
@@ -58,7 +57,6 @@ nostr_keypair # signing material; owned by nostr_key_manager, not this sweep
 nostr_signature_verification_policy
 og_viner_pubkeys_v1 # ambiguous: global cache ABOUT other creators, learned during one account browsing
 pending_unblocks
-popular_hashtags
 preferred_audio_device_id
 protected_minor_override
 push_preferences # swept by NotificationPreferencesStore.clearPreferences; method-based cleanup is outside this detector

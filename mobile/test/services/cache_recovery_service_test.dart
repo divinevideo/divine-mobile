@@ -34,12 +34,13 @@ void main() {
       setUp(() async {
         tmp = Directory.systemTemp.createTempSync('cache_recovery_hive_test');
         TestHelpers.setHiveHomeForTesting(tmp.path);
+        await Hive.deleteBoxFromDisk(HiveBoxNames.legacyHashtagStats);
         await TestHelpers.cleanupHiveBox(HiveBoxNames.notifications);
         await TestHelpers.cleanupHiveBox(
           HiveBoxNames.pushNotificationPreferencesDirty,
         );
         await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
-        await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
+        await TestHelpers.cleanupHiveBox(HiveBoxNames.peopleLists);
       });
 
       tearDown(() async {
@@ -49,7 +50,7 @@ void main() {
             HiveBoxNames.pushNotificationPreferencesDirty,
           );
           await TestHelpers.cleanupHiveBox(HiveBoxNames.pendingUploads);
-          await TestHelpers.cleanupHiveBox(HiveBoxNames.hashtagStats);
+          await TestHelpers.cleanupHiveBox(HiveBoxNames.peopleLists);
         } finally {
           if (tmp.existsSync()) tmp.deleteSync(recursive: true);
         }
@@ -67,7 +68,23 @@ void main() {
           ),
           isEmpty,
         );
-        expect(classifiedHiveBoxNames, unorderedEquals(HiveBoxNames.all));
+        expect(
+          classifiedHiveBoxNames,
+          unorderedEquals({
+            ...HiveBoxNames.all,
+            HiveBoxNames.legacyHashtagStats,
+          }),
+        );
+      });
+
+      test('deletes the legacy hashtag stats box from disk', () async {
+        final legacyBoxFile = File(
+          p.join(tmp.path, '${HiveBoxNames.legacyHashtagStats}.hive'),
+        )..writeAsStringSync('stale cache');
+
+        await CacheRecoveryService.clearHiveBoxesForTesting();
+
+        expect(legacyBoxFile.existsSync(), isFalse);
       });
 
       test(
@@ -76,76 +93,70 @@ void main() {
           final pendingUploads = Hive.isBoxOpen(HiveBoxNames.pendingUploads)
               ? Hive.box<PendingUpload>(HiveBoxNames.pendingUploads)
               : await Hive.openBox<PendingUpload>(HiveBoxNames.pendingUploads);
-          final hashtagStats = Hive.isBoxOpen(HiveBoxNames.hashtagStats)
-              ? Hive.box(HiveBoxNames.hashtagStats)
-              : await Hive.openBox(HiveBoxNames.hashtagStats);
+          final peopleLists = Hive.isBoxOpen(HiveBoxNames.peopleLists)
+              ? Hive.box(HiveBoxNames.peopleLists)
+              : await Hive.openBox(HiveBoxNames.peopleLists);
           final upload = PendingUpload.create(
             localVideoPath: '/tmp/durable-upload.mp4',
             nostrPubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           );
           await pendingUploads.put(upload.id, upload);
-          await hashtagStats.put('popular_hashtags', ['divine']);
+          await peopleLists.put('cached_list', ['divine']);
 
           await CacheRecoveryService.clearHiveBoxesForTesting();
 
           expect(
-            Hive.box<PendingUpload>(
-              HiveBoxNames.pendingUploads,
-            ).get(upload.id)?.localVideoPath,
+            Hive.box<PendingUpload>(HiveBoxNames.pendingUploads)
+                .get(upload.id)
+                ?.localVideoPath,
             upload.localVideoPath,
           );
-          expect(Hive.isBoxOpen(HiveBoxNames.hashtagStats), isFalse);
-          final reopenedHashtagStats = await Hive.openBox(
-            HiveBoxNames.hashtagStats,
+          expect(Hive.isBoxOpen(HiveBoxNames.peopleLists), isFalse);
+          final reopenedPeopleLists = await Hive.openBox(
+            HiveBoxNames.peopleLists,
           );
-          addTearDown(reopenedHashtagStats.close);
-          expect(reopenedHashtagStats.get('popular_hashtags'), isNull);
+          addTearDown(reopenedPeopleLists.close);
+          expect(reopenedPeopleLists.get('cached_list'), isNull);
         },
       );
 
-      test(
-        'preserves durable notification preferences while clearing caches',
-        () async {
-          final notifications = Hive.isBoxOpen(HiveBoxNames.notifications)
-              ? Hive.box(HiveBoxNames.notifications)
-              : await Hive.openBox(HiveBoxNames.notifications);
-          final dirtyNotifications =
-              Hive.isBoxOpen(HiveBoxNames.pushNotificationPreferencesDirty)
-              ? Hive.box(HiveBoxNames.pushNotificationPreferencesDirty)
-              : await Hive.openBox(
-                  HiveBoxNames.pushNotificationPreferencesDirty,
-                );
-          final hashtagStats = Hive.isBoxOpen(HiveBoxNames.hashtagStats)
-              ? Hive.box(HiveBoxNames.hashtagStats)
-              : await Hive.openBox(HiveBoxNames.hashtagStats);
-          const preferences = NotificationPreferences(commentsEnabled: false);
-          const dirtyPreferencesKey =
-              'push_preferences_dirty_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-          final storedPreferences = jsonEncode(preferences.toJson());
-          await notifications.put('push_preferences', storedPreferences);
-          await dirtyNotifications.put(dirtyPreferencesKey, storedPreferences);
-          await hashtagStats.put('popular_hashtags', ['divine']);
+      test('preserves durable notification preferences while clearing caches', () async {
+        final notifications = Hive.isBoxOpen(HiveBoxNames.notifications)
+            ? Hive.box(HiveBoxNames.notifications)
+            : await Hive.openBox(HiveBoxNames.notifications);
+        final dirtyNotifications =
+            Hive.isBoxOpen(HiveBoxNames.pushNotificationPreferencesDirty)
+            ? Hive.box(HiveBoxNames.pushNotificationPreferencesDirty)
+            : await Hive.openBox(HiveBoxNames.pushNotificationPreferencesDirty);
+        final peopleLists = Hive.isBoxOpen(HiveBoxNames.peopleLists)
+            ? Hive.box(HiveBoxNames.peopleLists)
+            : await Hive.openBox(HiveBoxNames.peopleLists);
+        const preferences = NotificationPreferences(commentsEnabled: false);
+        const dirtyPreferencesKey =
+            'push_preferences_dirty_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        final storedPreferences = jsonEncode(preferences.toJson());
+        await notifications.put('push_preferences', storedPreferences);
+        await dirtyNotifications.put(dirtyPreferencesKey, storedPreferences);
+        await peopleLists.put('cached_list', ['divine']);
 
-          await CacheRecoveryService.clearHiveBoxesForTesting();
+        await CacheRecoveryService.clearHiveBoxesForTesting();
 
-          expect(
-            Hive.box(HiveBoxNames.notifications).get('push_preferences'),
-            storedPreferences,
-          );
-          expect(
-            Hive.box(
-              HiveBoxNames.pushNotificationPreferencesDirty,
-            ).get(dirtyPreferencesKey),
-            storedPreferences,
-          );
-          expect(Hive.isBoxOpen(HiveBoxNames.hashtagStats), isFalse);
-          final reopenedHashtagStats = await Hive.openBox(
-            HiveBoxNames.hashtagStats,
-          );
-          addTearDown(reopenedHashtagStats.close);
-          expect(reopenedHashtagStats.get('popular_hashtags'), isNull);
-        },
-      );
+        expect(
+          Hive.box(HiveBoxNames.notifications).get('push_preferences'),
+          storedPreferences,
+        );
+        expect(
+          Hive.box(HiveBoxNames.pushNotificationPreferencesDirty)
+              .get(dirtyPreferencesKey),
+          storedPreferences,
+        );
+        expect(Hive.isBoxOpen(HiveBoxNames.peopleLists), isFalse);
+        final reopenedPeopleLists = await Hive.openBox(
+          HiveBoxNames.peopleLists,
+        );
+        addTearDown(reopenedPeopleLists.close);
+        expect(reopenedPeopleLists.get('cached_list'), isNull);
+      });
     });
 
     group('full cache recovery', () {
