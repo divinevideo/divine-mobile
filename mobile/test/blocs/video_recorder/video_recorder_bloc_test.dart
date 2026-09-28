@@ -1560,6 +1560,27 @@ void main() {
         },
       );
 
+      test('reports footage as captured only once the countdown is over', () {
+        fakeAsync((async) {
+          final bloc = buildCountdownBloc();
+          bloc.add(const VideoRecorderRecordingStartRequested());
+          async.flushMicrotasks();
+
+          // Recording already for the countdown, but nothing is written yet —
+          // a chroma-key video backdrop must not start playing here.
+          expect(bloc.state.isRecording, isTrue);
+          expect(bloc.state.isCapturingFootage, isFalse);
+
+          async.elapse(const Duration(seconds: 3));
+          async.flushMicrotasks();
+
+          expect(bloc.state.isCapturingFootage, isTrue);
+
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      });
+
       test('leaves the mic alone when the timer is off', () {
         fakeAsync((async) {
           // Same wiring, but the default state has no timer set.

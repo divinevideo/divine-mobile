@@ -189,11 +189,12 @@ class _ChromaKeyViewfinderState extends State<_ChromaKeyViewfinder> {
   final _recordingStarts = StreamController<void>.broadcast();
   StreamSubscription<VideoRecorderBlocState>? _stateSubscription;
 
-  /// Restarts a video backdrop each time a recording starts.
+  /// Restarts a video backdrop each time the camera starts writing a take.
   ///
   /// The bake plays the backdrop from its first frame under every clip, so
-  /// starting it over on record is what lets the user react to what is behind
-  /// them at the moment it will really be there.
+  /// starting it over then is what lets the user react to what is behind
+  /// them at the moment it will really be there. Not at the tap: a countdown
+  /// would run the backdrop seconds ahead of the take.
   late final _backdropSync = ChromaKeyBackdropSync(
     restarts: _recordingStarts.stream,
   );
@@ -202,10 +203,12 @@ class _ChromaKeyViewfinderState extends State<_ChromaKeyViewfinder> {
   void initState() {
     super.initState();
     final bloc = context.read<VideoRecorderBloc>();
-    var wasRecording = bloc.state.isRecording;
+    var wasCapturing = bloc.state.isCapturingFootage;
     _stateSubscription = bloc.stream.listen((state) {
-      if (state.isRecording && !wasRecording) _recordingStarts.add(null);
-      wasRecording = state.isRecording;
+      if (state.isCapturingFootage && !wasCapturing) {
+        _recordingStarts.add(null);
+      }
+      wasCapturing = state.isCapturingFootage;
     });
   }
 

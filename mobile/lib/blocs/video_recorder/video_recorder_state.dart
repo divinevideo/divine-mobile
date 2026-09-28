@@ -315,6 +315,10 @@ class VideoRecorderBlocState extends Equatable {
   /// iOS with a look-ahead stabilization mode.
   bool get showsActiveRecording => isRecording && !isStoppingRecording;
 
+  /// Whether the camera is writing the take: past any countdown, and past the
+  /// native start. [isRecording] is true for the whole countdown already.
+  bool get isCapturingFootage => isRecording && !isStartingRecording;
+
   /// Whether camera is initialized and not in error state.
   bool get isInitialized =>
       isCameraInitialized && recordingState != VideoRecorderState.error;
