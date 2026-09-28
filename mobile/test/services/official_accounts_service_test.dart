@@ -29,13 +29,16 @@ void main() {
     clock = DateTime(2026, 7, 7, 12);
   });
 
-  OfficialAccountsService build({List<OfficialAccount>? accounts}) =>
-      OfficialAccountsService(
-        resolver: resolver,
-        prefs: prefs,
-        now: () => clock,
-        accounts: accounts,
-      );
+  OfficialAccountsService build({
+    List<OfficialAccount>? accounts,
+    List<RetiredModerationKey>? retiredKeys,
+  }) => OfficialAccountsService(
+    resolver: resolver,
+    prefs: prefs,
+    now: () => clock,
+    accounts: accounts,
+    retiredKeys: retiredKeys,
+  );
 
   const modNip05 = 'moderation@divine.video';
 
@@ -78,6 +81,38 @@ void main() {
         isTrue,
       );
     });
+
+    // support-trust-safety retirement procedure, step 10: the widening rests
+    // on nobody being able to sign as the key.
+    for (final custody in [
+      RetiredKeyCustody.unrecovered,
+      RetiredKeyCustody.destroyed,
+    ]) {
+      test('reads a retired thread nobody can sign into ($custody)', () {
+        final svc = build(
+          retiredKeys: [
+            RetiredModerationKey(pubkeyHex: strangerHex, custody: custody),
+          ],
+        );
+
+        expect(svc.isReadableByProtectedMinor(strangerHex), isTrue);
+      });
+    }
+
+    for (final custody in [
+      RetiredKeyCustody.archived,
+      RetiredKeyCustody.compromised,
+    ]) {
+      test('hides a retired thread someone can still sign into ($custody)', () {
+        final svc = build(
+          retiredKeys: [
+            RetiredModerationKey(pubkeyHex: strangerHex, custody: custody),
+          ],
+        );
+
+        expect(svc.isReadableByProtectedMinor(strangerHex), isFalse);
+      });
+    }
   });
 
   group('isApprovedMinorDmRecipient', () {
