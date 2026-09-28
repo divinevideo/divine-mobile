@@ -1,5 +1,5 @@
 // ABOUTME: Guards the DivineSticker artwork bundled with the app: every
-// ABOUTME: variant has a file, every file is a lossless WebP within 512 px
+// ABOUTME: variant has a file, every file is a lossless-format WebP within 512 px
 // ABOUTME: that decodes and keeps its alpha, and the directory holds nothing
 // ABOUTME: the catalog does not name.
 
