@@ -155,7 +155,7 @@ class _SpeedPresetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final presets = VideoEditorConstants.clipSpeedPresets;
+    const presets = VideoEditorConstants.clipSpeedPresets;
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = _columnsFor(constraints.maxWidth, presets.length);
