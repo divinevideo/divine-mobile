@@ -2028,7 +2028,7 @@ void main() {
         prefs: prefs,
         moderationRelayUrl: 'wss://relay.divine.video',
         pendingReportsDao: dao,
-        moderationPubkey: _validEventId('f'),
+        currentModerationPubkey: () => _validEventId('f'),
       );
       final result = await crs.reportContent(
         eventId: _validEventId('a'),
@@ -2052,6 +2052,33 @@ void main() {
         isNotNull,
       );
       await reopened.close();
+    });
+
+    test('addresses the moderation DM to the key current when the report '
+        'is filed, not when the service was built', () async {
+      when(() => mockNostrService.isInitialized).thenReturn(false);
+      var moderationKey = _validEventId('f');
+      final crs = ContentReportingService(
+        nostrService: mockNostrService,
+        authService: mockAuthService,
+        prefs: prefs,
+        moderationRelayUrl: 'wss://relay.divine.video',
+        pendingReportsDao: dao,
+        currentModerationPubkey: () => moderationKey,
+      );
+      moderationKey = _validEventId('9');
+
+      final result = await crs.reportContent(
+        eventId: _validEventId('a'),
+        authorPubkey: _validEventId('c'),
+        reason: ContentFilterReason.spam,
+        details: 'spam',
+      );
+
+      final row = (await dao.getById(result.reportId!))!;
+      final payload =
+          jsonDecode(row.moderationPayload!) as Map<String, dynamic>;
+      expect(payload['recipientPubkey'], _validEventId('9'));
     });
 
     test(

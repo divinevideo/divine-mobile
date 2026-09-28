@@ -153,7 +153,7 @@ class ContentReportingService implements ReportChannelDriver {
     required SharedPreferences prefs,
     required String moderationRelayUrl,
     PendingReportsDao? pendingReportsDao,
-    this.moderationPubkey,
+    this.currentModerationPubkey,
     this.deliverModerationDm,
   }) : _nostrService = nostrService,
        _authService = authService,
@@ -170,7 +170,11 @@ class ContentReportingService implements ReportChannelDriver {
   /// Durable intent for relay, support ticket, and private moderation delivery.
   /// Production injects this DAO; legacy callers without it await delivery.
   final PendingReportsDao? _pendingReportsDao;
-  final String? moderationPubkey;
+
+  /// Resolves the moderation DM recipient at filing time, not construction
+  /// time — the moderation identity can change after this service is built
+  /// (NIP-05 refresh, a key rotation).
+  final String? Function()? currentModerationPubkey;
   final Future<bool> Function(PendingReport report)? deliverModerationDm;
   final StreamController<void> _reportQueued = StreamController.broadcast();
   final Map<String, Future<bool>> _channelInFlight = {};
@@ -315,7 +319,7 @@ class ContentReportingService implements ReportChannelDriver {
             _authService.currentPublicKeyHex != reporter) {
           return ReportResult.failure('Reporting account changed');
         }
-        final recipient = moderationPubkey;
+        final recipient = currentModerationPubkey?.call();
         final dm = recipient == null
             ? null
             : jsonEncode({

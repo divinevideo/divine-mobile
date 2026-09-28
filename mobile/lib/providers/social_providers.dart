@@ -1024,6 +1024,7 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
   final authService = ref.watch(authServiceProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   final env = ref.watch(currentEnvironmentProvider);
+  final moderationLabels = ref.watch(moderationLabelServiceProvider);
   final service = ContentReportingService(
     nostrService: nostrService,
     authService: authService,
@@ -1031,9 +1032,9 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
     moderationRelayUrl: env.relayUrl,
     // One durable intent for all three destinations, driven by the retry worker.
     pendingReportsDao: ref.watch(databaseProvider).pendingReportsDao,
-    moderationPubkey: ref
-        .watch(moderationLabelServiceProvider)
-        .divineModerationPubkeyHex,
+    // Resolved at filing time (not here) so a NIP-05 refresh or key rotation
+    // that lands after this provider builds is still picked up.
+    currentModerationPubkey: () => moderationLabels.divineModerationPubkeyHex,
     deliverModerationDm: (report) async {
       if (!ref.mounted ||
           authService.currentPublicKeyHex != report.userPubkey) {
