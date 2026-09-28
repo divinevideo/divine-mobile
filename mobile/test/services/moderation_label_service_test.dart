@@ -325,7 +325,7 @@ void main() {
       await service.initialize();
 
       expect(service.divineModerationPubkeyHex, pin);
-      expect(mockPrefs.getString(resolvedPubkeyPrefsKey), isNot(retiredKey));
+      expect(mockPrefs.getString(resolvedPubkeyPrefsKey), isNull);
       expect(refusals(), isNotEmpty);
     });
 

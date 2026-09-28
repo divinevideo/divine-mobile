@@ -1125,7 +1125,7 @@ void main() {
       );
 
       testWidgets(
-        "mirrors the blocked-status caption to the bubble's start edge "
+        "keeps the blocked-status caption flush with the bubble's end edge "
         'under RTL',
         (tester) async {
           tester.view.physicalSize = const Size(360, 800);

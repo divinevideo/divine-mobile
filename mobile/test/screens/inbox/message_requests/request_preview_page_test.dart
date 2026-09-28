@@ -285,7 +285,7 @@ void main() {
     });
 
     group('page reuse across an in-place id change', () {
-      // Same shape as the fix in 573c5478c3 for ConversationPage: go_router
+      // Same shape as ConversationPage's conversationId keying: go_router
       // 18.0.1 keys a declarative page by the route PATTERN, not the matched
       // id (`match.dart:231` `pageKey: ValueKey<String>(newMatchedPath)`), so
       // two consecutive `go()`s to different `/inbox/message-requests/:id`

@@ -150,7 +150,7 @@ void main() {
           final result = await resolver.resolve(prefs);
 
           expect(result, pin);
-          expect(prefs.getString(resolvedPubkeyPrefsKey), isNot(retiredKey));
+          expect(prefs.getString(resolvedPubkeyPrefsKey), isNull);
           expect(refusals(), isNotEmpty);
         },
       );
