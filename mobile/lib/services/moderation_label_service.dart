@@ -7,11 +7,11 @@ import 'dart:convert';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_sdk/nip05/nip05_validor.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/moderation_pubkey_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -193,12 +193,6 @@ class ModerationLabelService {
   static const String followingModerationEnabledStorageKey =
       'following_moderation_enabled';
 
-  /// SharedPreferences key for the NIP-05 resolved moderation pubkey.
-  static const String _resolvedPubkeyKey = 'divine_moderation_resolved_pubkey';
-
-  /// SharedPreferences key for when the moderation pubkey was last resolved.
-  static const String _resolvedAtKey = 'divine_moderation_resolved_at';
-
   static const String _contentWarningNamespace = 'content-warning';
 
   /// NIP-05 address for the Divine moderation identity.
@@ -208,8 +202,9 @@ class ModerationLabelService {
   /// build, which is also what the protected-minor gate anchors on.
   static const String fallbackModerationPubkeyHex = kModerationPubkeyHex;
 
-  /// Cache TTL for NIP-05 resolved pubkey (24 hours).
-  static const Duration _resolvedPubkeyTtl = Duration(hours: 24);
+  /// Resolves and caches [_divineModerationPubkey] via NIP-05, refusing any
+  /// key this build lists as retired.
+  final ModerationPubkeyResolver _pubkeyResolver = ModerationPubkeyResolver();
 
   /// Resolved Divine moderation pubkey (cache → NIP-05 → fallback).
   String _divineModerationPubkey = fallbackModerationPubkeyHex;
@@ -356,7 +351,7 @@ class ModerationLabelService {
     try {
       // Use cache or fallback only. Remote NIP-05 refresh happens from
       // initialize(), which is called only from relay-ready paths.
-      _adoptModerationPubkey(_cachedModerationPubkey(_prefs));
+      _adoptModerationPubkey(_pubkeyResolver.cached(_prefs));
 
       final saved = _prefs.getStringList(subscribedLabelersStorageKey);
       if (saved != null) {
@@ -1297,102 +1292,12 @@ class ModerationLabelService {
     });
   }
 
-  /// Canonical form of a labeler identity: lowercase hex, no surrounding
-  /// whitespace.
-  ///
-  /// NIP-05 mandates lowercase hex and event authors arrive lowercase on the
-  /// wire, so canonicalizing at the two points that produce an identity keeps
-  /// [_divineModerationPubkey], [_subscribedLabelers] and the pin comparison on
-  /// one form. Without it a non-lowercase answer would read as identical to the
-  /// pin yet fail to match the labeler's own events in the subscription filter.
-  static String _normalizedPubkey(String pubkey) => pubkey.trim().toLowerCase();
-
-  /// Whether [pubkey] is a key this build lists as retired, logging the
-  /// refusal. Adopting one would aim labels and report DMs at an account
-  /// nobody reads, and after a compromise at one someone else controls.
-  bool _refuseRetired(String pubkey, {required String source}) {
-    if (!isRetiredModerationAccount(pubkey)) return false;
-    Log.warning(
-      'Refusing moderation pubkey ${pubkeyForLogs(pubkey)} from $source: '
-      'this build lists it as retired. Using the pinned key '
-      '${pubkeyForLogs(fallbackModerationPubkeyHex)} instead.',
-      name: 'ModerationLabelService',
-      category: LogCategory.system,
-    );
-    return true;
-  }
-
-  /// Resolve the Divine moderation pubkey via cached value or NIP-05 lookup.
-  ///
-  /// Strategy: SharedPreferences cache (24h TTL) → NIP-05 → fallback constant.
-  /// Every path returns a [_normalizedPubkey]. A cached or NIP-05-resolved
-  /// value that this build lists as retired is refused via [_refuseRetired]
-  /// rather than adopted — see its doc for why.
-  Future<String> _resolveModerationPubkey(SharedPreferences prefs) async {
-    // Check cached resolution
-    final cachedPubkey = _normalizedPubkey(
-      prefs.getString(_resolvedPubkeyKey) ?? '',
-    );
-    final usableCache =
-        cachedPubkey.isNotEmpty &&
-        !_refuseRetired(cachedPubkey, source: 'the cached NIP-05 answer');
-    final cachedAtStr = prefs.getString(_resolvedAtKey);
-    if (usableCache && cachedAtStr != null) {
-      final cachedAt = DateTime.tryParse(cachedAtStr);
-      if (cachedAt != null &&
-          DateTime.now().difference(cachedAt) < _resolvedPubkeyTtl) {
-        return cachedPubkey;
-      }
-    }
-
-    // Resolve via NIP-05
-    try {
-      final resolved = await Nip05Validor.getPubkey(divineModerationNip05);
-      final normalized = _normalizedPubkey(resolved ?? '');
-      if (_refuseRetired(normalized, source: 'NIP-05')) {
-        return fallbackModerationPubkeyHex;
-      }
-      if (normalized.isNotEmpty) {
-        await prefs.setString(_resolvedPubkeyKey, normalized);
-        await prefs.setString(_resolvedAtKey, DateTime.now().toIso8601String());
-        Log.info(
-          'Resolved moderation pubkey via NIP-05: $normalized',
-          name: 'ModerationLabelService',
-          category: LogCategory.system,
-        );
-        return normalized;
-      }
-    } catch (e) {
-      Log.warning(
-        'NIP-05 resolution failed for $divineModerationNip05: $e',
-        name: 'ModerationLabelService',
-        category: LogCategory.system,
-      );
-    }
-
-    // Use stale cache if available, otherwise fallback
-    if (usableCache) {
-      return cachedPubkey;
-    }
-    return fallbackModerationPubkeyHex;
-  }
-
-  String _cachedModerationPubkey(SharedPreferences prefs) {
-    final cachedPubkey = _normalizedPubkey(
-      prefs.getString(_resolvedPubkeyKey) ?? '',
-    );
-    if (cachedPubkey.isNotEmpty &&
-        !_refuseRetired(cachedPubkey, source: 'the cached NIP-05 answer')) {
-      return cachedPubkey;
-    }
-    return fallbackModerationPubkeyHex;
-  }
-
   /// Adopt [pubkey] as the moderation labeler identity.
   ///
   /// Every path that settles on an identity funnels through here so the pin
   /// check cannot be bypassed by adding a new resolution source. [pubkey] is
-  /// expected canonical — both producers return a [_normalizedPubkey].
+  /// expected canonical — both producers ([ModerationPubkeyResolver.cached]
+  /// and [ModerationPubkeyResolver.resolve]) return a normalized pubkey.
   void _adoptModerationPubkey(String pubkey) {
     _divineModerationPubkey = pubkey;
     _warnIfPinMismatch(pubkey);
@@ -1405,9 +1310,9 @@ class ModerationLabelService {
   /// adoption, so a steady divergence costs one line per session rather than
   /// one per read.
   ///
-  /// Both sides are canonical here — [adoptedPubkey] via [_normalizedPubkey]
-  /// and the pin as a lowercase constant — so a case-only variant of the pin
-  /// stays silent rather than crying wolf.
+  /// Both sides are canonical here — [adoptedPubkey] normalized by
+  /// [ModerationPubkeyResolver] and the pin as a lowercase constant — so a
+  /// case-only variant of the pin stays silent rather than crying wolf.
   void _warnIfPinMismatch(String adoptedPubkey) {
     if (adoptedPubkey == fallbackModerationPubkeyHex) {
       return;
@@ -1424,7 +1329,7 @@ class ModerationLabelService {
 
   Future<void> _refreshModerationPubkey() async {
     final previousPubkey = _divineModerationPubkey;
-    final resolvedPubkey = await _resolveModerationPubkey(_prefs);
+    final resolvedPubkey = await _pubkeyResolver.resolve(_prefs);
     if (resolvedPubkey == previousPubkey) return;
 
     _adoptModerationPubkey(resolvedPubkey);
