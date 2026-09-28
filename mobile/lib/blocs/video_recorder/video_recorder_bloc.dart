@@ -659,6 +659,12 @@ class VideoRecorderBloc
   ) async {
     if (state.isRecording) return;
     if (event.mode == state.videoStabilizationMode) return;
+    // Already on a mode that hides the control: keep the pick, but do not
+    // start a rebind. Upload's camera is paused, and a rebind would restart it.
+    if (!state.recorderMode.supportsVideoStabilization) {
+      await _saveStabilizationModePreference(event.mode);
+      return;
+    }
     final success = await _cameraService.setVideoStabilizationMode(event.mode);
     if (!success) {
       Log.warning(
@@ -669,13 +675,17 @@ class VideoRecorderBloc
       return;
     }
     if (isClosed) return;
-    // The picker and a mode change run concurrently. Classic can already be
-    // selected when this rebind finishes, and the mode handler may have seen
-    // the camera still on the old value and skipped its own apply.
+    // The picker and a mode change run concurrently. The mode handler may
+    // have seen the camera still on the old value and skipped its own apply,
+    // and on Android this set rebinds even a camera Upload has paused.
     if (!state.recorderMode.supportsVideoStabilization) {
       await _saveStabilizationModePreference(event.mode);
       if (isClosed) return;
-      await _applyStabilizationForRecorderMode();
+      if (state.recorderMode == VideoRecorderMode.upload) {
+        await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
+      } else {
+        await _applyStabilizationForRecorderMode();
+      }
       return;
     }
     emit(state.copyWith(videoStabilizationMode: event.mode));
@@ -1702,7 +1712,7 @@ class VideoRecorderBloc
     // recording modes discards it, with or without Upload in between.
     final switchesRecordingMode =
         mode != VideoRecorderMode.upload &&
-sessionMode != null &&
+        sessionMode != null &&
         mode != sessionMode;
     if (switchesRecordingMode) {
       await _readClipManager().clearAll(

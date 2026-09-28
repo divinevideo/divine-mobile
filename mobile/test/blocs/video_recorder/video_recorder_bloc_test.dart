@@ -867,6 +867,48 @@ void main() {
         },
       );
 
+      test(
+        're-pauses Upload when a stabilization change finishes after the switch',
+        () async {
+          final applying = Completer<void>();
+          when(() => cameraService.setVideoStabilizationMode(any())).thenAnswer(
+            (invocation) async {
+              final mode =
+                  invocation.positionalArguments.first
+                      as DivineVideoStabilizationMode;
+              if (mode == DivineVideoStabilizationMode.cinematic) {
+                await applying.future;
+              }
+              return true;
+            },
+          );
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const VideoRecorderStabilizationModeSet(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          applying.complete();
+          await pumpEventQueue();
+
+          verify(
+            () =>
+                cameraService.handleAppLifecycleState(AppLifecycleState.paused),
+          ).called(1);
+          verify(
+            () =>
+                prefs.setString('camera_last_used_stabilization', 'cinematic'),
+          ).called(1);
+        },
+      );
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'ignores mode changes while recording',
         build: () => buildBloc()
