@@ -666,6 +666,10 @@ class VideoEditorRenderService {
   }
 
   /// Limits a clip's duration to a specified length.
+  ///
+  /// [onComplete] is called exactly once on every exit, within
+  /// [VideoEditorConstants.clipTrimWatchdogTimeout] — it is what settles the
+  /// clip's `processingCompleter`, which proofing and rendering wait on.
   static Future limitClipDuration({
     required DivineVideoClip clip,
     required Duration duration,
@@ -687,13 +691,22 @@ class VideoEditorRenderService {
       );
 
       final taskId = DateTime.now().microsecondsSinceEpoch.toString();
-      await cancelAndRender(
-        outputPath,
-        VideoRenderData(
-          id: taskId,
-          videoSegments: [VideoSegment(video: clip.requireVideo)],
-          endTime: duration,
+      // A native render can stall without ever settling
+      // (hm21/pro_video_editor#201); unbounded, that would leave every
+      // waiter on the clip's processing signal waiting for good.
+      await VideoRenderWatchdog.run(
+        render: cancelAndRender(
+          outputPath,
+          VideoRenderData(
+            id: taskId,
+            videoSegments: [VideoSegment(video: clip.requireVideo)],
+            endTime: duration,
+          ),
         ),
+        taskId: taskId,
+        cancelTask: cancelTask,
+        timeout: VideoEditorConstants.clipTrimWatchdogTimeout,
+        reason: 'limitClipDuration timed out',
       );
 
       // Replace the original file with the trimmed version. A concurrent
@@ -717,6 +730,15 @@ class VideoEditorRenderService {
     } on RenderCanceledException {
       Log.info(
         '🚫 Clip duration limit cancelled',
+        name: 'VideoEditorRenderService',
+        category: .video,
+      );
+      onComplete(false);
+    } on VideoRenderFailedException catch (e) {
+      // Only the watchdog throws this here, and it has already reported the
+      // stall under its own reason.
+      Log.warning(
+        '⏱️ Clip duration limit gave up: $e',
         name: 'VideoEditorRenderService',
         category: .video,
       );
