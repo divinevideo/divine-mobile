@@ -245,14 +245,13 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
     final blockedReactors = blocklistRepository.dmHiddenPubkeys;
 
+    final otherPubkey = _otherPubkey;
     // A thread reached from the Blocked chip is readable but not writable:
     // the block stays in force, so the composer and the reaction affordance
     // both go. Reading and screenshotting is the point (#7025); replying
     // would undo the block the viewer deliberately set. Rebuilds off the
     // `blocklistVersionProvider` watch above, so unblocking from the kebab
     // brings the composer straight back.
-    // Resolve other participant's profile for the app bar + empty state
-    final otherPubkey = _otherPubkey;
     final threadWritability = resolveDmThreadWritability(
       participantPubkeys: widget.participantPubkeys,
       isBlockedByUs: blocklistRepository.isBlocked,
@@ -261,6 +260,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
         threadWritability == DmThreadWritability.closedRetired;
     final isUnresolved = threadWritability == DmThreadWritability.unresolved;
 
+    // The other participant's identity, for the app bar and the empty state.
     final UserProfile? profile;
     final bool isResolving;
     final bool isDeleted;
