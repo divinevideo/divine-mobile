@@ -76,7 +76,8 @@ void main() {
       });
 
       test(
-        'keeps members without stats after the ranked ones, in list order',
+        'keeps members without stats after the ranked ones, in list order, '
+        'and shows no totals',
         () async {
           when(
             () => profileRepository.getBulkProfilesFromApi(any()),
@@ -98,16 +99,21 @@ void main() {
             equals([_busy, _unknown, _quiet]),
           );
           expect(cubit.state.members.last.hasStats, isFalse);
-          expect(cubit.state.totalVideos, equals(7));
+          // Two members the API does not know never answered, so seven is
+          // the one member's count, not the list's total.
+          expect(cubit.state.totalVideos, isNull);
+          expect(cubit.state.totalLoops, isNull);
         },
       );
 
       test(
-        'leaves a member whose stats omit the vertical count unranked',
+        'leaves a member whose stats omit the vertical count unranked '
+        'and uncounted',
         () async {
           // The API answered for the member, but not the one count the
           // roster ranks on: unknown, not zero, so the member is neither
-          // ranked last nor counted as posting nothing.
+          // ranked last nor counted as posting nothing, and a total that
+          // leaves them out is not the list's.
           when(
             () => profileRepository.getBulkProfilesFromApi(any()),
           ).thenAnswer(
@@ -131,7 +137,8 @@ void main() {
             equals([_busy, _unknown]),
           );
           expect(cubit.state.members.last.hasStats, isFalse);
-          expect(cubit.state.totalVideos, equals(7));
+          expect(cubit.state.totalVideos, isNull);
+          expect(cubit.state.totalLoops, isNull);
         },
       );
 

@@ -59,9 +59,11 @@ class PeopleListMembersState extends Equatable {
   /// without stats follow, in the list's own order.
   final List<PeopleListMember> members;
 
-  /// Every member's videos, summed. `null` unless the whole list answered:
-  /// a list past the sampled window, a failed page or no Funnelcake leaves a
-  /// partial sum, which is not the list's total.
+  /// Every member's videos, summed. `null` unless every member answered
+  /// with a count: a list past the sampled window, a failed page, no
+  /// Funnelcake, a member the API does not know or one whose stats carry no
+  /// vertical count would all leave a partial sum, which is not the list's
+  /// total.
   final int? totalVideos;
 
   /// Every member's loops, summed. `null` under the same conditions as

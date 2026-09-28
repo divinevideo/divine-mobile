@@ -33,7 +33,8 @@ typedef _MemberStats = ({int videoCount, double? totalLoops});
 /// Ranking can use whatever arrived; the totals cannot. A sum over the
 /// members that happened to answer is a number, but it is not the list's
 /// total, so the totals stay `null` unless every member was asked about and
-/// every page answered.
+/// every member answered with a count: a member Funnelcake does not know,
+/// or one whose stats carry no vertical count, leaves the total unknown.
 class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
     with CloseGuardedEmit<PeopleListMembersState> {
   PeopleListMembersCubit({
@@ -144,7 +145,9 @@ class PeopleListMembersCubit extends Cubit<PeopleListMembersState>
       });
     final ranked = indexed.map((entry) => entry.$2).toList();
     final withStats = ranked.where((member) => member.hasStats).toList();
-    final hasTotals = complete && withStats.isNotEmpty;
+    // Every page answering is not enough: a member absent from a page, or
+    // one without a vertical count, is a member the sum would leave out.
+    final hasTotals = complete && withStats.length == members.length;
     final loopsKnown = withStats.every((member) => member.totalLoops != null);
 
     return PeopleListMembersState(
