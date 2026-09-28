@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -5,7 +7,67 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
+import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+class _MockPathProviderPlatform extends Fake
+    with MockPlatformInterfaceMixin
+    implements PathProviderPlatform {
+  _MockPathProviderPlatform(this.documentsPath);
+
+  final String documentsPath;
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => documentsPath;
+}
+
+/// Parks every metadata read on [metadataGate], so a test can act while the
+/// bake is still building its task.
+class _GatedProVideoEditor extends ProVideoEditor {
+  _GatedProVideoEditor(this.metadataGate);
+
+  final Future<void> metadataGate;
+
+  /// Every render the bake asked the plugin for.
+  final List<String> renderedTaskIds = [];
+
+  @override
+  Stream<dynamic> initializeStream() => const Stream.empty();
+
+  @override
+  Future<VideoMetadata> getMetadata(
+    EditorVideo value, {
+    bool checkStreamingOptimization = false,
+    NativeLogLevel? nativeLogLevel,
+  }) async {
+    await metadataGate;
+    return VideoMetadata(
+      duration: const Duration(seconds: 3),
+      extension: 'mp4',
+      fileSize: 1024,
+      resolution: const Size(1080, 1920),
+      rotation: 0,
+      bitrate: 1000,
+    );
+  }
+
+  @override
+  Future<String> renderVideoToFile(
+    String filePath,
+    VideoRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) async {
+    renderedTaskIds.add(value.id);
+    File(filePath).createSync(recursive: true);
+    return filePath;
+  }
+
+  @override
+  Future<void> cancel(String taskId) async {}
+}
 
 void main() {
   group(ChromaKeyBakeService, () {
@@ -164,6 +226,85 @@ void main() {
 
         expect(segments, hasLength(1));
         expect(segments.single.endTime, isNull);
+      });
+    });
+
+    group('bakeClip', () {
+      late Directory documentsDir;
+      late PathProviderPlatform originalPathProvider;
+      late ProVideoEditor originalProVideoEditor;
+      late DivineVideoClip take;
+
+      setUp(() {
+        documentsDir = Directory.systemTemp.createTempSync('chroma_bake_');
+        originalPathProvider = PathProviderPlatform.instance;
+        originalProVideoEditor = ProVideoEditor.instance;
+        PathProviderPlatform.instance = _MockPathProviderPlatform(
+          documentsDir.path,
+        );
+        final rawPath = '${documentsDir.path}/take.mp4';
+        File(rawPath).writeAsBytesSync(const [0]);
+        take = DivineVideoClip(
+          id: 'take',
+          video: EditorVideo.file(rawPath),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+        );
+      });
+
+      tearDown(() {
+        PathProviderPlatform.instance = originalPathProvider;
+        ProVideoEditor.instance = originalProVideoEditor;
+        RenderCancellationRegistry.reset();
+        VideoEditorRenderService.resetActiveNativeTaskIdsForTesting();
+        if (documentsDir.existsSync()) {
+          documentsDir.deleteSync(recursive: true);
+        }
+      });
+
+      test('keeps a cancel that lands while the task is being built', () async {
+        // A recording starting while a background bake reads metadata cancels
+        // the bake then, before the native render has registered its task.
+        final metadataGate = Completer<void>();
+        final editor = _GatedProVideoEditor(metadataGate.future);
+        ProVideoEditor.instance = editor;
+        final renderId = ChromaKeyBakeService.renderIdFor(take.id);
+
+        final bake = ChromaKeyBakeService.bakeClip(
+          sourceClip: take,
+          // Nothing behind the subject needs a composition, which reads the
+          // take's metadata before rendering.
+          chromaKey: const ClipChromaKey(
+            key: ChromaKey.greenScreen(),
+          ).withTransparentBackground(),
+          renderId: renderId,
+        );
+        await pumpEventQueue();
+        await VideoEditorRenderService.cancelTask(renderId);
+        metadataGate.complete();
+
+        await expectLater(bake, throwsA(isA<RenderCanceledException>()));
+        expect(editor.renderedTaskIds, isEmpty);
+      });
+
+      test('renders when nothing cancels', () async {
+        final editor = _GatedProVideoEditor(Future<void>.value());
+        ProVideoEditor.instance = editor;
+        final renderId = ChromaKeyBakeService.renderIdFor(take.id);
+
+        final baked = await ChromaKeyBakeService.bakeClip(
+          sourceClip: take,
+          chromaKey: const ClipChromaKey(
+            key: ChromaKey.greenScreen(),
+          ).withTransparentBackground(),
+          renderId: renderId,
+        );
+
+        expect(editor.renderedTaskIds, [renderId]);
+        expect(File(baked.video.file!.path).existsSync(), isTrue);
+        expect(baked.source, take.video!.file!.path);
       });
     });
   });

@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
@@ -69,8 +70,32 @@ abstract class ChromaKeyBakeService {
   /// stacks it on already-keyed pixels nor loses a generation. The returned
   /// `source` is that input, for the caller to carry forward.
   ///
-  /// Throws when the render fails, leaving the clip untouched.
+  /// [renderId] is cancellable through [VideoEditorRenderService.cancelTask]
+  /// for the whole call, including the preparation before the native render
+  /// registers — which is when a starting recording stops a background bake.
+  ///
+  /// Throws when the render fails or is cancelled, leaving the clip untouched.
   static Future<({EditorVideo video, String source})> bakeClip({
+    required DivineVideoClip sourceClip,
+    required ClipChromaKey chromaKey,
+    required String renderId,
+  }) async {
+    // Registered before the task is built, not by the native render: building
+    // it reads metadata over the platform channel, and a cancel landing in
+    // that gap had no generation to mark, so the render ran anyway.
+    final renderToken = RenderCancellationRegistry.start(renderId);
+    try {
+      return await _bakeClip(
+        sourceClip: sourceClip,
+        chromaKey: chromaKey,
+        renderId: renderId,
+      );
+    } finally {
+      RenderCancellationRegistry.finish(renderId, renderToken);
+    }
+  }
+
+  static Future<({EditorVideo video, String source})> _bakeClip({
     required DivineVideoClip sourceClip,
     required ClipChromaKey chromaKey,
     required String renderId,
@@ -107,7 +132,9 @@ abstract class ChromaKeyBakeService {
     try {
       if (outputFile.existsSync()) await outputFile.delete();
 
-      await VideoEditorRenderService.renderNativeVideoToFile(
+      // Joins the generation [bakeClip] registered, so a cancel issued while
+      // the task was still being built stops the render before it starts.
+      await VideoEditorRenderService.cancelAndRender(
         outputPath,
         await buildTask(
           renderId: renderId,
