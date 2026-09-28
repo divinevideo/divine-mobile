@@ -200,28 +200,6 @@ class ProfileStats extends Table {
   Set<Column> get primaryKey => {pubkey};
 }
 
-/// Cache of trending/popular hashtags
-///
-/// Stores hashtag statistics with a 1-hour expiry.
-@TableIndex.sql(
-  'CREATE INDEX IF NOT EXISTS idx_hashtag_video_count '
-  'ON hashtag_stats (video_count DESC)',
-)
-@DataClassName('HashtagStatRow')
-class HashtagStats extends Table {
-  @override
-  String get tableName => 'hashtag_stats';
-
-  TextColumn get hashtag => text()();
-  IntColumn get videoCount => integer().nullable().named('video_count')();
-  IntColumn get totalViews => integer().nullable().named('total_views')();
-  IntColumn get totalLikes => integer().nullable().named('total_likes')();
-  DateTimeColumn get cachedAt => dateTime().named('cached_at')();
-
-  @override
-  Set<Column> get primaryKey => {hashtag};
-}
-
 /// Persistent storage for notifications
 ///
 /// Stores notification metadata for offline access.
