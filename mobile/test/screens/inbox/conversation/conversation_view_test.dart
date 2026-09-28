@@ -44,6 +44,7 @@ import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -250,6 +251,7 @@ void main() {
       DmVideoSendService? videoSendService,
       ImagePicker? videoPicker,
       ProfileReader? profileReadRepository,
+      List<Override> extraOverrides = const [],
     }) {
       final effectiveState = state ?? const ConversationState();
       if (restoreStatus != null) {
@@ -315,6 +317,7 @@ void main() {
             dmVideoSendServiceProvider.overrideWithValue(videoSendService),
           if (videoPicker != null)
             dmVideoPickerProvider.overrideWithValue(videoPicker),
+          ...extraOverrides,
         ],
         home: BlocProvider<ConversationBloc>.value(
           value: mockBloc,
@@ -1475,6 +1478,67 @@ void main() {
           findsNothing,
         );
       });
+
+      // Pins the gate directly rather than only through
+      // fetchUserProfileProvider('') short-circuiting at the provider
+      // boundary (which the test above already covers): every per-pubkey
+      // provider the view watches is overridden at the empty pubkey with a
+      // stub that records whether it was read, so a removed `isUnresolved`
+      // branch would flip one of these from false to true.
+      testWidgets(
+        'never reads any per-pubkey provider for the empty pubkey',
+        (tester) async {
+          var fetchProfileRead = false;
+          var identityResolvingRead = false;
+          var vanishedRead = false;
+          var nip05Read = false;
+          var statsRead = false;
+          var followRead = false;
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [],
+              state: const ConversationState(
+                status: ConversationStatus.loaded,
+              ),
+              extraOverrides: [
+                fetchUserProfileProvider('').overrideWith((ref) {
+                  fetchProfileRead = true;
+                  return Future<UserProfile?>.value();
+                }),
+                profileIdentityResolvingProvider('').overrideWith((ref) {
+                  identityResolvingRead = true;
+                  return false;
+                }),
+                profileVanishedProvider('').overrideWith((ref) {
+                  vanishedRead = true;
+                  return false;
+                }),
+                nip05VerificationProvider('').overrideWith((ref) {
+                  nip05Read = true;
+                  return Nip05VerificationStatus.none;
+                }),
+                userProfileStatsReactiveProvider('').overrideWith((ref) {
+                  statsRead = true;
+                  return const Stream<ProfileStats?>.empty();
+                }),
+                followRelationshipProvider('').overrideWith((ref) {
+                  followRead = true;
+                  return Stream.value(FollowRelationship.none);
+                }),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          expect(fetchProfileRead, isFalse);
+          expect(identityResolvingRead, isFalse);
+          expect(vanishedRead, isFalse);
+          expect(nip05Read, isFalse);
+          expect(statsRead, isFalse);
+          expect(followRead, isFalse);
+        },
+      );
     });
 
     group('refused retraction', () {
