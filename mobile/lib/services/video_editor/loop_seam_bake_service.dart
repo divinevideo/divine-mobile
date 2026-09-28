@@ -11,6 +11,7 @@ import 'package:openvine/services/video_editor/loop_seam_alignment.dart';
 import 'package:openvine/services/video_editor/loop_seam_ramp.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -217,6 +218,14 @@ class LoopSeamBakeService {
         'Loop seam: bake failed, exporting without it: $e\n$stackTrace',
         name: _logName,
         category: LogCategory.video,
+      );
+      // A failed encode stays a log line; a programming error still reaches
+      // crash reporting, like the other fallback render callers (#7125).
+      VideoRenderWatchdog.reportFailure(
+        e,
+        stackTrace,
+        reportEveryFailure: false,
+        reason: 'loop seam bake failed',
       );
       await _deleteAll(written);
       return LoopSeamBakeResult(clips: clips);

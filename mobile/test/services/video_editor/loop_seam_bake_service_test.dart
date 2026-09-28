@@ -7,6 +7,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/loop_seam_bake_service.dart';
 import 'package:openvine/services/video_editor/loop_seam_ramp.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import 'loop_seam_test_scene.dart';
@@ -36,7 +37,7 @@ class _Harness {
   _Harness({
     this.dx = 5,
     this.dy = -7,
-    this.failRender = false,
+    this.renderError,
     this.onRender,
   }) {
     addTearDown(() => dir.deleteSync(recursive: true));
@@ -44,7 +45,9 @@ class _Harness {
 
   final double dx;
   final double dy;
-  final bool failRender;
+
+  /// Thrown by every render, after it has written its output file.
+  final Object? renderError;
   final void Function()? onRender;
   final scene = TestScene();
   final renders = <(String, VideoRenderData)>[];
@@ -70,7 +73,8 @@ class _Harness {
       renders.add((outputPath, task));
       File(outputPath).writeAsStringSync('baked');
       onRender?.call();
-      if (failRender) throw StateError('encoder down');
+      final error = renderError;
+      if (error != null) throw error;
     },
     outputDirectory: () async => dir.path,
   );
@@ -223,7 +227,12 @@ void main() {
 
       test('falls back to the original clips and deletes its output when the '
           'bake fails', () async {
-        final harness = _Harness(failRender: true)..lastPath = '/clips/a.mp4';
+        final reported = <Object>[];
+        VideoRenderWatchdog.crashReporterOverride = (error, _) =>
+            reported.add(error);
+        addTearDown(() => VideoRenderWatchdog.crashReporterOverride = null);
+        final harness = _Harness(renderError: Exception('encoder down'))
+          ..lastPath = '/clips/a.mp4';
         final clips = [_clip('a')];
 
         final result = await harness.build().alignClips(clips, taskId: 't');
@@ -232,6 +241,23 @@ void main() {
         expect(result.clips, same(clips));
         expect(result.bakedPaths, isEmpty);
         expect(File(harness.renders.single.$1).existsSync(), isFalse);
+        expect(reported, isEmpty, reason: 'a failed encode is expected');
+      });
+
+      test('reports a programming error from the bake and still falls '
+          'back', () async {
+        final reported = <Object>[];
+        VideoRenderWatchdog.crashReporterOverride = (error, _) =>
+            reported.add(error);
+        addTearDown(() => VideoRenderWatchdog.crashReporterOverride = null);
+        final harness = _Harness(renderError: StateError('bad placement'))
+          ..lastPath = '/clips/a.mp4';
+        final clips = [_clip('a')];
+
+        final result = await harness.build().alignClips(clips, taskId: 't');
+
+        expect(result.clips, same(clips));
+        expect(reported, [isA<StateError>()]);
       });
     });
 
