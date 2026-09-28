@@ -787,7 +787,9 @@ class ContentReportingService implements ReportChannelDriver {
     description.writeln('Content Report - NIP-56');
     description.writeln();
     description.writeln('Report ID: $reportId');
-    description.writeln('Event ID: $eventId');
+    // A user report names no event, and divine-relay-manager reads any
+    // 64-hex `Event ID:` as one, so the account stays on Author Pubkey alone.
+    if (_isValidEventId(eventId)) description.writeln('Event ID: $eventId');
     description.writeln('Author Pubkey: $authorPubkey');
     description.writeln();
     description.writeln('Violation Type: ${reason.name}');

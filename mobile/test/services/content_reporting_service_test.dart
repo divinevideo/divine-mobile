@@ -2085,6 +2085,52 @@ void main() {
       },
     );
 
+    group('support ticket', () {
+      // divine-relay-manager links a ticket to moderation by parsing these
+      // lines: `Event ID:` followed by 64 hex, and `Author Pubkey:`.
+      Future<List<String>> ticketLines(ReportResult result) async {
+        final row = (await dao.getById(result.reportId!))!;
+        final ticket = jsonDecode(row.zendeskPayload) as Map<String, dynamic>;
+        return (ticket['description'] as String).split('\n');
+      }
+
+      test('a user report names the account and no event', () async {
+        final lines = await ticketLines(
+          await service.reportUser(
+            userPubkey: _validEventId('c'),
+            reason: ContentFilterReason.harassment,
+            details: 'harassing me',
+          ),
+        );
+        expect(
+          lines,
+          contains(
+            'Author Pubkey: '
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          ),
+        );
+        expect(lines.where((line) => line.startsWith('Event ID:')), isEmpty);
+      });
+
+      test('a content report still names the reported event', () async {
+        final lines = await ticketLines(
+          await service.reportContent(
+            eventId: _validEventId('a'),
+            authorPubkey: _validEventId('b'),
+            reason: ContentFilterReason.spam,
+            details: 'spam',
+          ),
+        );
+        expect(
+          lines,
+          contains(
+            'Event ID: '
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
+        );
+      });
+    });
+
     test(
       'does not deliver a queued report under a different account',
       () async {
