@@ -739,7 +739,7 @@ void main() {
             await pumpEventQueue();
 
             final park = bloc.parkInFlight();
-            await Future<void>.delayed(Duration.zero);
+            await pumpEventQueue();
             runningProcess.complete(const PublishSuccess());
             await pumpEventQueue();
 
@@ -748,6 +748,48 @@ void main() {
             await pumpEventQueue();
 
             verifyNever(() => mockDraftStorageService.deleteDraft(any()));
+          },
+        );
+
+        test(
+          'does not park a publish that finished while park waited for the lock',
+          () async {
+            final scheduledWrite = Completer<bool>();
+            when(
+              () => mockDraftStorageService.updatePublishStatus(
+                draftId: 'running',
+                status: PublishStatus.scheduled,
+                publishError: any(named: 'publishError'),
+              ),
+            ).thenAnswer((_) => scheduledWrite.future);
+
+            bloc.add(
+              BackgroundPublishRequested(
+                draft: running,
+                publishmentProcess: Future.value(
+                  PublishScheduled(
+                    eventId: 'scheduled-event',
+                    publishAt: DateTime.utc(2026, 9, 28),
+                    submitted: true,
+                  ),
+                ),
+              ),
+            );
+            await pumpEventQueue();
+
+            final park = bloc.parkInFlight();
+            await pumpEventQueue();
+            scheduledWrite.complete(true);
+            await park;
+            await pumpEventQueue();
+
+            verifyNever(
+              () => mockDraftStorageService.updatePublishStatus(
+                draftId: 'running',
+                status: PublishStatus.draft,
+                publishError: any(named: 'publishError'),
+              ),
+            );
           },
         );
       });

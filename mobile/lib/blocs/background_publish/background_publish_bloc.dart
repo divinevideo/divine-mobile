@@ -308,12 +308,11 @@ class BackgroundPublishBloc
   /// afterwards, for the in-memory cleanup only; re-parking an already parked
   /// upload is a no-op.
   Future<void> parkInFlight() async {
-    final inFlight = state.uploads
-        .where((upload) => upload.result == null)
-        .toList();
-    if (inFlight.isEmpty) return;
-
+    final parked = <BackgroundUpload>[];
     await _withResultRecordLock(() async {
+      final inFlight = state.uploads
+          .where((upload) => upload.result == null)
+          .toList();
       for (final upload in inFlight) {
         await _park(
           draftId: upload.draft.id,
@@ -321,9 +320,10 @@ class BackgroundPublishBloc
           propagateFailure: true,
         );
         _parkedDraftIds.add(upload.draft.id);
+        parked.add(upload);
       }
     });
-    for (final upload in inFlight) {
+    for (final upload in parked) {
       if (isClosed) return;
       add(BackgroundPublishVanished(draftId: upload.draft.id));
     }
