@@ -4,10 +4,10 @@ import 'package:openvine/blocs/search_results_filter/search_results_filter.dart'
 
 void main() {
   group(SearchResultsFilterCubit, () {
-    test('initial state is ${SearchResultsFilter.all}', () {
+    test('initial state is ${SearchResultsFilter.all}', () async {
       final cubit = SearchResultsFilterCubit();
       expect(cubit.state, equals(SearchResultsFilter.all));
-      cubit.close();
+      await cubit.close();
     });
 
     blocTest<SearchResultsFilterCubit, SearchResultsFilter>(
