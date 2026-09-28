@@ -10,6 +10,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
@@ -1025,6 +1026,7 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
   final prefs = ref.watch(sharedPreferencesProvider);
   final env = ref.watch(currentEnvironmentProvider);
   final moderationLabels = ref.watch(moderationLabelServiceProvider);
+  final retargetedReports = <String>{};
   final service = ContentReportingService(
     nostrService: nostrService,
     authService: authService,
@@ -1045,7 +1047,11 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
       final repository = ref.read(dmRepositoryProvider);
       if (repository.userPubkey != report.userPubkey) return false;
       final queued = await repository.enqueueSend(
-        recipientPubkey: payload['recipientPubkey'] as String,
+        recipientPubkey: _moderationDmRecipient(
+          payload['recipientPubkey'] as String,
+          reportId: report.reportId,
+          logged: retargetedReports,
+        ),
         content: payload['content'] as String,
         additionalTags: (payload['tags'] as List)
             .map((tag) => (tag as List).cast<String>())
@@ -1073,6 +1079,29 @@ Future<ContentReportingService> contentReportingService(Ref ref) async {
   ref.onDispose(service.dispose);
 
   return service;
+}
+
+/// Where a queued report's moderation DM goes (#7851).
+///
+/// The recipient is stored when the report is filed. If that key has since
+/// been retired, the send policy refuses every retry until the DM is dropped,
+/// so it goes to this build's pinned key instead, logged once per report.
+String _moderationDmRecipient(
+  String storedRecipient, {
+  required String reportId,
+  required Set<String> logged,
+}) {
+  if (!isRetiredModerationAccount(storedRecipient)) return storedRecipient;
+  if (logged.add(reportId)) {
+    Log.warning(
+      'Report $reportId was queued for the retired moderation key '
+      '${pubkeyForLogs(storedRecipient)}; delivering its moderation DM to the '
+      'pinned key ${pubkeyForLogs(kModerationPubkeyHex)} instead',
+      name: 'ContentReportingService',
+      category: LogCategory.system,
+    );
+  }
+  return kModerationPubkeyHex;
 }
 
 /// Auto-sweep service for the durable `pending_reports` queue.
