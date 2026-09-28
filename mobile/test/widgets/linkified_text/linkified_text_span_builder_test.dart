@@ -422,6 +422,32 @@ void main() {
       expect(tappedProfile, equals(profileHex));
     });
 
+    // The reporter reads their own copy of a user report's moderation DM, so
+    // the line naming the account has to render as that account (#9622).
+    test('routes the pubkey line of a user report to a profile tap', () {
+      const reportedHex =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+      String? tappedProfile;
+      String? tappedVideo;
+
+      final spans = LinkifiedTextSpanBuilder(
+        text: 'User Report\nReason: Spam\nUser Pubkey: $reportedHex',
+        defaultStyle: defaultStyle,
+        linkStyle: linkStyle,
+        mentionStyle: mentionStyle,
+        videoLabel: 'View video',
+        profileLabelForHex: (_) => 'dana',
+        onProfileTap: (hexPubkey) => tappedProfile = hexPubkey,
+        onVideoTap: (reference) => tappedVideo = reference,
+      ).build();
+
+      final span = spans.tappableSpans.single;
+      expect(span.text, equals('@dana'));
+      span.tap();
+      expect(tappedProfile, equals(reportedHex));
+      expect(tappedVideo, isNull);
+    });
+
     test('leaves invalid profile Nostr IDs plain and unchanged', () {
       const invalidNpub = 'npub1invalidprofile';
 

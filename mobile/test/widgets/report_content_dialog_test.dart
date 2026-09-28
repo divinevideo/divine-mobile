@@ -1325,7 +1325,7 @@ void main() {
     );
 
     testWidgets(
-      'moderation DM body uses User Report header and the synthetic user_<pubkey> event id',
+      'moderation DM body uses User Report header and names the account by its pubkey',
       (tester) async {
         await setLargeSurface(tester);
         await openAndSubmitUserReport(tester);
@@ -1348,8 +1348,8 @@ void main() {
         );
         expect(
           dmContent,
-          contains('User Pubkey: user_$testUserPubkey'),
-          reason: 'event-id line should carry the synthetic user_<pubkey> id',
+          contains('User Pubkey: $testUserPubkey'),
+          reason: 'moderators need the pubkey itself, not the history key',
         );
         expect(
           dmContent,
