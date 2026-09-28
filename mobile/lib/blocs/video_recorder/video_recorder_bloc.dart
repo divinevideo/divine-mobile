@@ -201,9 +201,8 @@ class VideoRecorderBloc
             if (isClosed) return;
             add(_VideoRecorderAutoStopped(video));
           },
-          onScreenFlashChanged: (isActive) => addIfOpen(
-            _VideoRecorderScreenFlashChanged(isActive: isActive),
-          ),
+          onScreenFlashChanged: (isActive) =>
+              addIfOpen(_VideoRecorderScreenFlashChanged(isActive: isActive)),
         );
 
     on<VideoRecorderInitializeRequested>(_onInitializeRequested);
@@ -667,6 +666,16 @@ class VideoRecorderBloc
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
+      return;
+    }
+    if (isClosed) return;
+    // The picker and a mode change run concurrently. Classic can already be
+    // selected when this rebind finishes, and the mode handler may have seen
+    // the camera still on the old value and skipped its own apply.
+    if (!state.recorderMode.supportsVideoStabilization) {
+      await _saveStabilizationModePreference(event.mode);
+      if (isClosed) return;
+      await _applyStabilizationForRecorderMode();
       return;
     }
     emit(state.copyWith(videoStabilizationMode: event.mode));
@@ -1693,7 +1702,7 @@ class VideoRecorderBloc
     // recording modes discards it, with or without Upload in between.
     final switchesRecordingMode =
         mode != VideoRecorderMode.upload &&
-        sessionMode != null &&
+sessionMode != null &&
         mode != sessionMode;
     if (switchesRecordingMode) {
       await _readClipManager().clearAll(

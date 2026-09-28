@@ -809,6 +809,64 @@ void main() {
         },
       );
 
+      test(
+        'puts the camera back on off when Classic is selected mid-change',
+        () async {
+          final applying = Completer<void>();
+          var current = DivineVideoStabilizationMode.off;
+          when(
+            () => cameraService.videoStabilizationMode,
+          ).thenAnswer((_) => current);
+          when(() => cameraService.availableVideoStabilizationModes).thenReturn(
+            const [
+              DivineVideoStabilizationMode.off,
+              DivineVideoStabilizationMode.cinematic,
+            ],
+          );
+          when(() => cameraService.setVideoStabilizationMode(any())).thenAnswer(
+            (invocation) async {
+              final mode =
+                  invocation.positionalArguments.first
+                      as DivineVideoStabilizationMode;
+              if (mode == DivineVideoStabilizationMode.cinematic) {
+                await applying.future;
+              }
+              current = mode;
+              return true;
+            },
+          );
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const VideoRecorderStabilizationModeSet(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          );
+          await pumpEventQueue();
+          applying.complete();
+          await pumpEventQueue();
+
+          verify(
+            () => cameraService.setVideoStabilizationMode(
+              DivineVideoStabilizationMode.off,
+            ),
+          ).called(1);
+          verify(
+            () =>
+                prefs.setString('camera_last_used_stabilization', 'cinematic'),
+          ).called(1);
+          expect(
+            bloc.state.videoStabilizationMode,
+            isNot(DivineVideoStabilizationMode.cinematic),
+          );
+        },
+      );
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'ignores mode changes while recording',
         build: () => buildBloc()
