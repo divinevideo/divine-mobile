@@ -1307,17 +1307,37 @@ class ModerationLabelService {
   /// pin yet fail to match the labeler's own events in the subscription filter.
   static String _normalizedPubkey(String pubkey) => pubkey.trim().toLowerCase();
 
+  /// Whether [pubkey] is a key this build lists as retired, logging the
+  /// refusal. Adopting one would aim labels and report DMs at an account
+  /// nobody reads, and after a compromise at one someone else controls.
+  bool _refuseRetired(String pubkey, {required String source}) {
+    if (!isRetiredModerationAccount(pubkey)) return false;
+    Log.warning(
+      'Refusing moderation pubkey ${pubkeyForLogs(pubkey)} from $source: '
+      'this build lists it as retired. Using the pinned key '
+      '${pubkeyForLogs(fallbackModerationPubkeyHex)} instead.',
+      name: 'ModerationLabelService',
+      category: LogCategory.system,
+    );
+    return true;
+  }
+
   /// Resolve the Divine moderation pubkey via cached value or NIP-05 lookup.
   ///
   /// Strategy: SharedPreferences cache (24h TTL) → NIP-05 → fallback constant.
-  /// Every path returns a [_normalizedPubkey].
+  /// Every path returns a [_normalizedPubkey]. A cached or NIP-05-resolved
+  /// value that this build lists as retired is refused via [_refuseRetired]
+  /// rather than adopted — see its doc for why.
   Future<String> _resolveModerationPubkey(SharedPreferences prefs) async {
     // Check cached resolution
     final cachedPubkey = _normalizedPubkey(
       prefs.getString(_resolvedPubkeyKey) ?? '',
     );
+    final usableCache =
+        cachedPubkey.isNotEmpty &&
+        !_refuseRetired(cachedPubkey, source: 'the cached NIP-05 answer');
     final cachedAtStr = prefs.getString(_resolvedAtKey);
-    if (cachedPubkey.isNotEmpty && cachedAtStr != null) {
+    if (usableCache && cachedAtStr != null) {
       final cachedAt = DateTime.tryParse(cachedAtStr);
       if (cachedAt != null &&
           DateTime.now().difference(cachedAt) < _resolvedPubkeyTtl) {
@@ -1329,6 +1349,9 @@ class ModerationLabelService {
     try {
       final resolved = await Nip05Validor.getPubkey(divineModerationNip05);
       final normalized = _normalizedPubkey(resolved ?? '');
+      if (_refuseRetired(normalized, source: 'NIP-05')) {
+        return fallbackModerationPubkeyHex;
+      }
       if (normalized.isNotEmpty) {
         await prefs.setString(_resolvedPubkeyKey, normalized);
         await prefs.setString(_resolvedAtKey, DateTime.now().toIso8601String());
@@ -1348,7 +1371,7 @@ class ModerationLabelService {
     }
 
     // Use stale cache if available, otherwise fallback
-    if (cachedPubkey.isNotEmpty) {
+    if (usableCache) {
       return cachedPubkey;
     }
     return fallbackModerationPubkeyHex;
@@ -1358,7 +1381,8 @@ class ModerationLabelService {
     final cachedPubkey = _normalizedPubkey(
       prefs.getString(_resolvedPubkeyKey) ?? '',
     );
-    if (cachedPubkey.isNotEmpty) {
+    if (cachedPubkey.isNotEmpty &&
+        !_refuseRetired(cachedPubkey, source: 'the cached NIP-05 answer')) {
       return cachedPubkey;
     }
     return fallbackModerationPubkeyHex;
