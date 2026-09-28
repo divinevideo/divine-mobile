@@ -1055,11 +1055,13 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     final bake = _bakeCapturedChromaKey(clip);
     _capturedChromaKeyBakes[clip.id] = bake;
     _editorBackgroundWork.track(
-      bake.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
-        if (identical(_capturedChromaKeyBakes[clip.id], bake)) {
-          _capturedChromaKeyBakes.remove(clip.id);
-        }
-      }),
+      bake
+          .then<void>((_) {}, onError: (Object _) {})
+          .whenComplete(
+            () => _capturedChromaKeyBakes.removeWhere(
+              (id, running) => id == clip.id && identical(running, bake),
+            ),
+          ),
     );
     return bake;
   }
