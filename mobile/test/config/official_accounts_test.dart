@@ -103,6 +103,21 @@ void main() {
         }
       });
 
+      // If two entries named the same pubkeyHex with different custody, the
+      // first would silently win: list iteration order, not a deliberate
+      // choice, would decide whether the key reads as unrecovered or
+      // archived.
+      test('no pubkeyHex is registered twice', () {
+        final seen = <String>{};
+        for (final key in kRetiredModerationKeys) {
+          expect(
+            seen.add(key.pubkeyHex),
+            isTrue,
+            reason: '${key.pubkeyHex} is registered more than once',
+          );
+        }
+      });
+
       // Load-bearing for the protected-minor read exception: this entry is
       // readable by minors only because nobody can sign as it (#7851).
       test('records the 2026-03 key as unrecovered', () {
