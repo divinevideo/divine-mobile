@@ -57,7 +57,6 @@ discarded_futures|lib/widgets/stop_motion/stop_motion_player.dart	1
 discarded_futures|lib/widgets/support_capped_text_field.dart	2
 discarded_futures|lib/widgets/trending_hashtags_section.dart	1
 discarded_futures|lib/widgets/upload_failure_sheet.dart	2
-discarded_futures|lib/widgets/user_picker_sheet.dart	2
 discarded_futures|lib/widgets/video_clip/video_clip_preview.dart	3
 discarded_futures|lib/widgets/video_reply_parent_link.dart	1
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
