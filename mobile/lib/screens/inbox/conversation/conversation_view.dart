@@ -1279,14 +1279,16 @@ class _MessageList extends StatelessWidget {
   /// "Delete for everyone" on an own bubble, and "Remove" on an own reaction
   /// in the reactions detail sheet.
   ///
-  /// False on a retired moderation thread. Both retractions publish a NIP-09
-  /// kind-5 through the same send path the composer uses, so `DmSendPolicy`
-  /// refuses them for a retired recipient — but each one has *already* dropped
-  /// the local row by then, so the message or reaction disappears for the
-  /// viewer while the copy the recipient received before the rotation stays
-  /// exactly where it was. A button reading "Delete for everyone" that deletes
-  /// for one person is the same false success `[_ClosedThreadNotice]` removes
-  /// the composer to avoid.
+  /// False on a retired moderation thread, and false while a thread's
+  /// participants cannot be resolved (`DmThreadWritability.unresolved`),
+  /// where there is no participant to notify at all. Both retractions
+  /// publish a NIP-09 kind-5 through the same send path the composer uses,
+  /// so `DmSendPolicy` refuses them for a retired recipient — but each one
+  /// has *already* dropped the local row by then, so the message or
+  /// reaction disappears for the viewer while the copy the recipient
+  /// received before the rotation stays exactly where it was. A button
+  /// reading "Delete for everyone" that deletes for one person is the same
+  /// false success `[_ClosedThreadNotice]` removes the composer to avoid.
   ///
   /// Only the write goes. The bubble, the pill, and the detail sheet all stay
   /// readable — a closed thread is an archive, and the viewer keeps their own
@@ -1295,14 +1297,16 @@ class _MessageList extends StatelessWidget {
 
   /// Whether tapping a failed own bubble may offer to resend it (#7025).
   ///
-  /// False in a thread with an account the viewer blocked, and on a retired
-  /// moderation thread. Removing the composer is not enough on its own: a
-  /// message that hard-failed before the block or rotation is still on screen
-  /// as a red bubble, and its tap opens a recovery sheet whose primary action
-  /// republishes the rumor. On a blocked thread that delivers a DM to the
-  /// account the viewer blocked, from the one screen built to make that
-  /// impossible. On a retired thread the send policy refuses the kind-14, so
-  /// the resend is a dead affordance either way.
+  /// False in a thread with an account the viewer blocked, on a retired
+  /// moderation thread, and while a thread's participants cannot be resolved
+  /// (`DmThreadWritability.unresolved`) — a resend needs a recipient the
+  /// unresolved state does not have. Removing the composer is not enough on
+  /// its own: a message that hard-failed before the block or rotation is
+  /// still on screen as a red bubble, and its tap opens a recovery sheet
+  /// whose primary action republishes the rumor. On a blocked thread that
+  /// delivers a DM to the account the viewer blocked, from the one screen
+  /// built to make that impossible. On a retired thread the send policy
+  /// refuses the kind-14, so the resend is a dead affordance either way.
   ///
   /// This flag removes the affordance only — the bubble itself stays rendered,
   /// so the evidence is intact and nothing is force-deleted here. On a blocked
