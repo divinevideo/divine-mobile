@@ -1635,6 +1635,9 @@ class _DeliveryStatusLine extends StatelessWidget {
             child: Text(
               label,
               textAlign: TextAlign.end,
+              // Shrink to the longest line, so a wrapped caption's first line
+              // stays beside the icon instead of right-aligning away from it.
+              textWidthBasis: TextWidthBasis.longestLine,
               style: VineTheme.labelSmallFont(color: color),
             ),
           ),

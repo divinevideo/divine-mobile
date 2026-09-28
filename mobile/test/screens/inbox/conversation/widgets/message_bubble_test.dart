@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -1174,6 +1175,98 @@ void main() {
           );
         },
       );
+
+      group('icon beside the first line', () {
+        /// Gap between the status icon and the first glyph of [caption].
+        ///
+        /// The Row lays them out 4 apart. A wrapped caption that fills the
+        /// full width right-aligns its first line away from the icon, so the
+        /// gap grows by whatever that line is shorter than the width.
+        double iconToFirstLineGap(WidgetTester tester, String caption) {
+          final row = find
+              .ancestor(of: find.text(caption), matching: find.byType(Row))
+              .first;
+          final icon = tester.getRect(
+            find.descendant(of: row, matching: find.byType(DivineIcon)),
+          );
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.text(caption),
+          );
+          final firstGlyph = paragraph
+              .getBoxesForSelection(
+                const TextSelection(baseOffset: 0, extentOffset: 1),
+              )
+              .first;
+          final firstGlyphLeft = paragraph
+              .localToGlobal(Offset(firstGlyph.left, firstGlyph.top))
+              .dx;
+          return firstGlyphLeft - icon.right;
+        }
+
+        /// Guards the premise: an unwrapped caption has no gap to grow.
+        void expectWraps(WidgetTester tester, String caption) {
+          final lineHeight = tester
+              .renderObject<RenderParagraph>(find.text(caption))
+              .getFullHeightForCaret(const TextPosition(offset: 0));
+          expect(
+            tester.getSize(find.text(caption)).height,
+            greaterThan(lineHeight * 1.5),
+            reason: 'the caption must wrap for this test to mean anything',
+          );
+        }
+
+        Future<void> pumpOwnBubble(
+          WidgetTester tester, {
+          required double width,
+          required DmDeliveryStatus status,
+        }) async {
+          tester.view.physicalSize = Size(width, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: status,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+        }
+
+        testWidgets('for a wrapped blocked-status caption', (tester) async {
+          await pumpOwnBubble(
+            tester,
+            width: 360,
+            status: DmDeliveryStatus.blocked,
+          );
+          final caption = strings.dmSendBlockedRetiredMessage;
+          expectWraps(tester, caption);
+
+          expect(iconToFirstLineGap(tester, caption), closeTo(4, 1));
+        });
+
+        testWidgets('for a wrapped failed-status caption', (tester) async {
+          // A bubble this narrow wraps "Failed to send" as a long
+          // translation or a large text scale would.
+          await pumpOwnBubble(
+            tester,
+            width: 110,
+            status: DmDeliveryStatus.failed,
+          );
+          final caption = strings.dmStatusFailed;
+          expectWraps(tester, caption);
+
+          expect(iconToFirstLineGap(tester, caption), closeTo(4, 1));
+        });
+      });
     });
 
     group('URL linkification', () {
