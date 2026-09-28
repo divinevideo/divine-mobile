@@ -42,9 +42,16 @@ const _divineIdentityCacheTtl = Duration(hours: 24);
 const _nameServerHttpTimeout = Duration(seconds: 10);
 
 // Caps the relay seed fetch in saveProfileEvent so a slow relay does not
-// stall Save indefinitely. On timeout we fall back to currentProfile,
-// which still carries the typed REST fields after #4175.
+// stall Save indefinitely. A read that runs out defers the save instead of
+// publishing a local copy that cannot carry the relay copy's tags.
 const _publishSeedRelayTimeout = Duration(seconds: 4);
+
+/// A profile read, and whether an empty answer can be trusted.
+///
+/// `conclusive` is false when the read could not rule out a copy it never
+/// saw: a relay stayed silent or refused the REQ, none took it, or the read
+/// threw. Only a conclusive miss means no Kind 0 exists to be replaced.
+typedef _ProfileRead = ({UserProfile? profile, bool conclusive});
 
 // Caps NIP-50 user search. The relay query has a slightly shorter inner
 // budget and returns partial results on SDK timeout; the outer guard is a
@@ -209,16 +216,18 @@ class ProfileRepository implements ProfileReader {
 
   /// In-flight relay fetches keyed by pubkey. Concurrent callers for the
   /// same pubkey share the same future instead of firing duplicate requests.
-  final _inFlightFetches = <String, Future<UserProfile?>>{};
+  final _inFlightFetches = <String, Future<_ProfileRead>>{};
 
   /// Pubkeys confirmed to have no Kind 0 profile by an authoritative source.
   /// Session-scoped — cleared on app restart.
   final _confirmedMissing = <String>{};
 
-  /// Pubkeys whose raw relay/indexer Kind 0 was not found after an explicit
-  /// raw-Kind-0 fetch. This is narrower than [_confirmedMissing]: Funnelcake
-  /// may still have a REST projection for the user, but there is no raw Kind 0
-  /// to recover fields that REST strips.
+  /// Pubkeys with no raw Kind 0: every connected relay answered an explicit
+  /// raw-Kind-0 fetch with nothing, or the account vanished. A read that timed
+  /// out, was refused or reached no relay is not recorded here. This is
+  /// narrower than [_confirmedMissing]: Funnelcake may still have a REST
+  /// projection for the user, but there is no raw Kind 0 to recover fields
+  /// that REST strips.
   final _rawKind0ConfirmedMissing = <String>{};
 
   /// Pubkeys with a NIP-62 request to vanish, mirroring the durable
@@ -881,13 +890,28 @@ class ProfileRepository implements ProfileReader {
     required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
+  }) async {
+    final read = await _readFreshProfile(
+      pubkey: pubkey,
+      requireRawKind0: requireRawKind0,
+      rawKind0RetryDelays: rawKind0RetryDelays,
+    );
+    return read.profile;
+  }
+
+  /// [fetchFreshProfile], also reporting whether an empty answer is
+  /// conclusive — the publish seed needs that distinction, display does not.
+  Future<_ProfileRead> _readFreshProfile({
+    required String pubkey,
+    bool requireRawKind0 = false,
+    List<Duration> rawKind0RetryDelays = const [],
   }) {
     if (_vanished.contains(pubkey)) {
       revalidateVanishOnce(pubkey);
-      return Future<UserProfile?>.value();
+      return Future.value((profile: null, conclusive: true));
     }
 
-    return _fetchFreshProfileUnguarded(
+    return _readFreshProfileUnguarded(
       pubkey: pubkey,
       requireRawKind0: requireRawKind0,
       rawKind0RetryDelays: rawKind0RetryDelays,
@@ -900,11 +924,18 @@ class ProfileRepository implements ProfileReader {
   /// exactly one way back to the network per session.
   Future<UserProfile?> _fetchFreshProfileUnguarded({
     required String pubkey,
+  }) async {
+    final read = await _readFreshProfileUnguarded(pubkey: pubkey);
+    return read.profile;
+  }
+
+  Future<_ProfileRead> _readFreshProfileUnguarded({
+    required String pubkey,
     bool requireRawKind0 = false,
     List<Duration> rawKind0RetryDelays = const [],
   }) {
     if (requireRawKind0 && _rawKind0ConfirmedMissing.contains(pubkey)) {
-      return Future<UserProfile?>.value();
+      return Future.value((profile: null, conclusive: true));
     }
 
     // Clear stale _confirmedMissing so we always re-check the REST API.
@@ -929,34 +960,40 @@ class ProfileRepository implements ProfileReader {
     return future.whenComplete(() => _inFlightFetches.remove(fetchKey));
   }
 
-  Future<UserProfile?> _doFetchFreshProfileWithRetries(
+  Future<_ProfileRead> _doFetchFreshProfileWithRetries(
     String pubkey, {
     required bool requireRawKind0,
     required List<Duration> rawKind0RetryDelays,
   }) async {
-    final first = await _doFetchFreshProfile(
+    var read = await _doFetchFreshProfile(
       pubkey,
       requireRawKind0: requireRawKind0,
     );
-    if (!requireRawKind0 || first != null) return first;
+    if (!requireRawKind0 || read.profile != null) return read;
 
     for (final delay in rawKind0RetryDelays) {
       if (delay > Duration.zero) {
         await Future<void>.delayed(delay);
       }
-      final retry = await _doFetchFreshProfile(pubkey, requireRawKind0: true);
-      if (retry != null) return retry;
+      read = await _doFetchFreshProfile(pubkey, requireRawKind0: true);
+      if (read.profile != null) return read;
     }
 
-    _rawKind0ConfirmedMissing.add(pubkey);
-    return null;
+    // Only a read every relay answered proves there is no Kind 0. A timeout,
+    // a refusal or no relay at all must leave the next caller free to look
+    // again, not cache the miss for the rest of the session.
+    if (read.conclusive) _rawKind0ConfirmedMissing.add(pubkey);
+    return read;
   }
 
-  Future<UserProfile?> _doFetchFreshProfile(
+  Future<_ProfileRead> _doFetchFreshProfile(
     String pubkey, {
     required bool requireRawKind0,
   }) async {
-    if (_blockFilter?.call(pubkey) ?? false) return null;
+    // A blocked account is never looked up, so its miss proves nothing.
+    if (_blockFilter?.call(pubkey) ?? false) {
+      return (profile: null, conclusive: false);
+    }
 
     // Step 1: Try Funnelcake REST API (fast, broad coverage).
     if (_funnelcakeApiClient?.isAvailable ?? false) {
@@ -968,7 +1005,7 @@ class ProfileRepository implements ProfileReader {
             // — unconditionally, even under requireRawKind0, so the relay
             // fallback cannot resurrect what we just deleted.
             await _applyVanish(pubkey);
-            return null;
+            return (profile: null, conclusive: true);
           case UserProfileFound():
             // Self-heal: the server says this account is live, so forget any
             // vanish we recorded earlier. Without this a single wrong
@@ -997,7 +1034,10 @@ class ProfileRepository implements ProfileReader {
               // would hand the caller a profile that disagrees with the
               // cache and may be missing fields the local one carries
               // (lud06, eventId, custom rawData).
-              return funnelcakeWon ? funnelcakeProfile : existing;
+              return (
+                profile: funnelcakeWon ? funnelcakeProfile : existing,
+                conclusive: true,
+              );
             }
 
             // Defensive fallback: a found profile without a parseable
@@ -1008,7 +1048,7 @@ class ProfileRepository implements ProfileReader {
             final existing = await _userProfilesDao.getProfile(pubkey);
             if (existing == null && !requireRawKind0) {
               await _userProfilesDao.upsertProfile(funnelcakeProfile);
-              return funnelcakeProfile;
+              return (profile: funnelcakeProfile, conclusive: true);
             }
           // Local profile exists — let the relay/indexer path below run
           // so a newer Kind 0 can still win.
@@ -1021,7 +1061,7 @@ class ProfileRepository implements ProfileReader {
               break;
             }
             _confirmedMissing.add(pubkey);
-            return null;
+            return (profile: null, conclusive: true);
           case null:
             // 404 — user not found at all; fall through to relay.
             break;
@@ -1038,24 +1078,25 @@ class ProfileRepository implements ProfileReader {
     // Step 2: Fire connected relays and indexer relays concurrently.
     // Return the first valid profile immediately, then let slower
     // sources upgrade the cache if they have a newer kind 0 event.
-    final relayProfile = await _fetchFromRelaysParallel(
+    final relayRead = await _fetchFromRelaysParallel(
       pubkey,
       requireRawKind0: requireRawKind0,
     );
+    final relayProfile = relayRead.profile;
     if (relayProfile != null) {
       await _cacheProfileIfNewer(relayProfile);
-      return relayProfile;
+      return relayRead;
     }
 
     if (requireRawKind0) {
-      return null;
+      return relayRead;
     }
 
     // Relay/indexer found nothing. If a local profile already exists
     // (e.g. Funnelcake had a hit but we skipped its upsert to protect
     // a freshly-saved bio), return it as a fallback rather than null.
     final fallback = await _userProfilesDao.getProfile(pubkey);
-    if (fallback != null) return fallback;
+    if (fallback != null) return (profile: fallback, conclusive: true);
 
     // Empty relay/indexer results are indeterminate: queryEvents discards
     // timeout and participation details, so only an explicit server sentinel
@@ -1065,7 +1106,7 @@ class ProfileRepository implements ProfileReader {
       name: 'ProfileRepository.fetchFreshProfile',
       category: LogCategory.relay,
     );
-    return null;
+    return (profile: null, conclusive: relayRead.conclusive);
   }
 
   /// Upserts [profile] into the local cache only when it is strictly newer
@@ -1105,13 +1146,18 @@ class ProfileRepository implements ProfileReader {
   /// Queries connected relays and indexer relays in parallel for a
   /// kind 0 profile event. Returns the first valid profile immediately,
   /// then upgrades the cache if a slower source yields a newer event.
-  /// Falls back to null only when every source completes without a result.
-  Future<UserProfile?> _fetchFromRelaysParallel(
+  ///
+  /// When every source completes without a result, the miss is conclusive
+  /// only if the connected relays all answered. The indexers are an extra
+  /// source of a copy, never the word on its absence: they are not where a
+  /// republish lands, and a silent third-party indexer must not stall a save.
+  Future<_ProfileRead> _fetchFromRelaysParallel(
     String pubkey, {
     required bool requireRawKind0,
   }) async {
-    final completer = Completer<UserProfile?>();
+    final completer = Completer<_ProfileRead>();
     UserProfile? newestProfile;
+    var connectedConclusive = false;
     var remaining = 2;
 
     Future<void> handleSource(Future<UserProfile?> source) async {
@@ -1124,7 +1170,7 @@ class ProfileRepository implements ProfileReader {
           if (isNewer) {
             newestProfile = profile;
             if (!completer.isCompleted) {
-              completer.complete(profile);
+              completer.complete((profile: profile, conclusive: true));
             } else {
               await _cacheProfileIfNewer(profile);
             }
@@ -1135,7 +1181,7 @@ class ProfileRepository implements ProfileReader {
       } finally {
         remaining--;
         if (remaining == 0 && !completer.isCompleted) {
-          completer.complete(newestProfile);
+          completer.complete((profile: null, conclusive: connectedConclusive));
         }
       }
     }
@@ -1144,8 +1190,11 @@ class ProfileRepository implements ProfileReader {
       handleSource(
         _fetchFromConnectedRelays(
           pubkey,
-          useCache: requireRawKind0 ? false : null,
-        ),
+          requireRawKind0: requireRawKind0,
+        ).then((read) {
+          connectedConclusive = read.conclusive;
+          return read.profile;
+        }),
       ),
     );
     unawaited(handleSource(_fetchFromIndexerRelays(pubkey)));
@@ -1153,31 +1202,47 @@ class ProfileRepository implements ProfileReader {
     return completer.future;
   }
 
-  Future<UserProfile?> _fetchFromConnectedRelays(
+  Future<_ProfileRead> _fetchFromConnectedRelays(
     String pubkey, {
-    required bool? useCache,
+    required bool requireRawKind0,
   }) async {
     try {
-      final event = useCache == null
-          ? await _nostrClient.fetchProfile(pubkey)
-          : await _nostrClient.fetchProfile(pubkey, useCache: useCache);
-      if (event != null) {
-        final profile = UserProfile.fromNostrEvent(event);
+      final UserProfile? profile;
+      var conclusive = false;
+      if (requireRawKind0) {
+        // A raw read can seed a republish, so it waits for every connected
+        // relay to settle and reports whether each did: an empty answer from
+        // a relay that stayed silent, refused, or was never asked proves
+        // nothing about the copy a publish would replace.
+        final read = await _nostrClient.queryEventsDetailed(
+          [
+            Filter(kinds: [0], authors: [pubkey], limit: 1),
+          ],
+          useCache: false,
+          requireAllRelaysSettled: true,
+        );
+        profile = _newestKind0Profile(read.events);
+        conclusive = !read.timedOut && !read.noRelays;
+      } else {
+        final event = await _nostrClient.fetchProfile(pubkey);
+        profile = event == null ? null : UserProfile.fromNostrEvent(event);
+      }
+      if (profile != null) {
         Log.debug(
           'Fetched profile from connected relay',
           name: 'ProfileRepository.fetchFreshProfile',
           category: LogCategory.relay,
         );
-        return profile;
       }
+      return (profile: profile, conclusive: conclusive);
     } on Exception catch (e) {
       Log.warning(
         'Connected relay fetch failed: $e',
         name: 'ProfileRepository.fetchFreshProfile',
         category: LogCategory.relay,
       );
+      return (profile: null, conclusive: false);
     }
-    return null;
   }
 
   Future<UserProfile?> _fetchFromIndexerRelays(String pubkey) async {
@@ -1192,15 +1257,8 @@ class ProfileRepository implements ProfileReader {
           )
           .timeout(const Duration(seconds: 5), onTimeout: () => <Event>[]);
 
-      // Relays do not guarantee newest-first ordering, so pick the event
-      // with the highest createdAt to avoid overwriting a freshly saved
-      // profile with stale metadata.
-      final kind0Events = events.where((e) => e.kind == 0).toList();
-      if (kind0Events.isNotEmpty) {
-        final newest = kind0Events.reduce(
-          (a, b) => b.createdAt > a.createdAt ? b : a,
-        );
-        final profile = UserProfile.fromNostrEvent(newest);
+      final profile = _newestKind0Profile(events);
+      if (profile != null) {
         Log.debug(
           'Fetched profile from indexer relay',
           name: 'ProfileRepository.fetchFreshProfile',
@@ -1216,6 +1274,22 @@ class ProfileRepository implements ProfileReader {
       );
     }
     return null;
+  }
+
+  /// The newest Kind 0 in [events] as a profile, or null when there is none.
+  ///
+  /// Relays do not guarantee newest-first ordering, so pick the event with
+  /// the highest createdAt to avoid overwriting a freshly saved profile with
+  /// stale metadata.
+  static UserProfile? _newestKind0Profile(Iterable<Event> events) {
+    Event? newest;
+    for (final event in events) {
+      if (event.kind != 0) continue;
+      if (newest == null || event.createdAt > newest.createdAt) {
+        newest = event;
+      }
+    }
+    return newest == null ? null : UserProfile.fromNostrEvent(newest);
   }
 
   /// Publishes profile metadata to Nostr relays and updates the local cache.
@@ -1241,7 +1315,11 @@ class ProfileRepository implements ProfileReader {
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
-  /// signer returning null).
+  /// signer returning null), and — before publishing anything — when the
+  /// current Kind 0 could not be read from the connected relays. A Kind 0
+  /// replaces the previous one whole, so publishing from a local copy that
+  /// cannot carry its tags would erase them; the save is deferred for the
+  /// caller, or the durable pending-save retry, to try again.
   Future<UserProfile> saveProfileEvent({
     required String displayName,
     String? about,
@@ -1262,10 +1340,12 @@ class ProfileRepository implements ProfileReader {
     // Re-seed from the freshest Kind 0 we can get from relays. This is the
     // only path that preserves arbitrary unknown fields (custom client keys,
     // NIP-39 `i` tags, `bot`, future NIP additions) — the REST API does not
-    // expose them. On relay failure or timeout it falls back to the best local
-    // seed: [currentProfile] when the caller supplied one (whose `rawData`
+    // expose them, and the profile cache stores no tags at all. The best local
+    // seed — [currentProfile] when the caller supplied one (whose `rawData`
     // carries the typed REST fields per `UserProfile.fromUserProfileFound`),
-    // otherwise the cached profile for the signing key.
+    // otherwise the cached profile for the signing key — competes with the
+    // relay copy on recency. A relay read that fails or times out defers the
+    // save instead (see [_resolvePublishSeed]).
     final seed = await _resolvePublishSeed(currentProfile);
 
     final newContent = Map<String, dynamic>.from(seed?.rawData ?? const {});
@@ -1534,11 +1614,16 @@ class ProfileRepository implements ProfileReader {
   ///
   /// Returns the local seed (or null) when:
   /// - there is no pubkey at all — no [currentProfile] and no signer key,
-  /// - the relay fetch returns null (its documented failure mode — internal
-  ///   errors are swallowed by [fetchFreshProfile]),
-  /// - the relay fetch exceeds [_publishSeedRelayTimeout],
-  /// - the local seed is strictly newer, or carries the same timestamp and
-  ///   strictly more meaningful keys.
+  /// - every connected relay answered and none holds a Kind 0,
+  /// - the local seed is strictly newer and can carry the relay copy's tags,
+  ///   or carries the same timestamp and strictly more meaningful keys.
+  ///
+  /// Throws [ProfilePublishFailedException], before anything is published,
+  /// when the relay read is inconclusive — it timed out, was refused, reached
+  /// no relay, threw, or ran past [_publishSeedRelayTimeout] — or when the
+  /// local seed is newer but has no tags while the relay copy does, meaning
+  /// the relays have not indexed the newer copy yet. The profile cache stores
+  /// no tags, so publishing in either case could erase the tags on relays.
   Future<UserProfile?> _resolvePublishSeed(UserProfile? currentProfile) async {
     // `??` short-circuits, so the signer is consulted only when the caller gave
     // us no profile to take a pubkey from.
@@ -1552,11 +1637,22 @@ class ProfileRepository implements ProfileReader {
     // seeded rather than stripped.
     final localSeed = currentProfile ?? await getCachedProfile(pubkey: pubkey);
 
-    final fresh = await fetchFreshProfile(
-      pubkey: pubkey,
-      requireRawKind0: true,
-    ).timeout(_publishSeedRelayTimeout, onTimeout: () => null);
+    final read =
+        await _readFreshProfile(
+          pubkey: pubkey,
+          requireRawKind0: true,
+        ).timeout(
+          _publishSeedRelayTimeout,
+          onTimeout: () => (profile: null, conclusive: false),
+        );
+    final fresh = read.profile;
     if (fresh == null) {
+      if (!read.conclusive) {
+        throw _deferSave(
+          pubkey,
+          'the current Kind 0 could not be read from the connected relays',
+        );
+      }
       return localSeed;
     }
     if (localSeed == null) {
@@ -1570,6 +1666,16 @@ class ProfileRepository implements ProfileReader {
       return fresh;
     }
     if (localSeed.createdAt.isAfter(fresh.createdAt)) {
+      // This app never edits tags, so a newer local copy should carry the
+      // relay copy's. A cached one has none, and the relay has not indexed it
+      // yet: wait for the relay to catch up rather than erase the tags.
+      if (localSeed.rawTags.isEmpty && fresh.rawTags.isNotEmpty) {
+        throw _deferSave(
+          pubkey,
+          'the relays still serve an older Kind 0 than the local copy, '
+          'which has no tags to carry',
+        );
+      }
       return localSeed;
     }
 
@@ -1587,6 +1693,22 @@ class ProfileRepository implements ProfileReader {
             _meaningfulKeyCount(fresh.rawData)
         ? localSeed
         : fresh;
+  }
+
+  /// Logs why a save is deferred and returns the retryable failure to throw.
+  ///
+  /// [drivePendingSave] maps it to a retryable outcome, so an editor save
+  /// stays queued and the durable retry tries again later.
+  ProfilePublishFailedException _deferSave(String pubkey, String reason) {
+    Log.warning(
+      'Deferring profile save for ${pubkeyForLogs(pubkey)}: $reason. '
+      'Publishing now could erase what only the relay copy holds.',
+      name: 'ProfileRepository.saveProfileEvent',
+      category: LogCategory.relay,
+    );
+    return const ProfilePublishFailedException(
+      'Failed to publish profile. Please try again.',
+    );
   }
 
   /// The signing key this repository publishes as, or `null` when the client

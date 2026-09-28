@@ -44,9 +44,31 @@ void main() {
     const pubkey =
         'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
+    /// Every relay answers the publish seed's read, and none holds a Kind 0,
+    /// so a save composes from an empty seed.
+    void stubRelaysHoldNoProfile() {
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
+      when(
+        () => nostrClient.queryEvents(
+          any(),
+          tempRelays: any(named: 'tempRelays'),
+          useCache: any(named: 'useCache'),
+        ),
+      ).thenAnswer((_) async => <Event>[]);
+    }
+
     setUpAll(() {
       registerFallbackValue(Uri.parse(_testNameServer));
       registerFallbackValue(<String, dynamic>{});
+      registerFallbackValue(<Filter>[]);
       registerFallbackValue(
         UserProfile(
           pubkey: pubkey,
@@ -169,6 +191,8 @@ void main() {
     });
 
     group('drivePendingSave', () {
+      setUp(stubRelaysHoldNoProfile);
+
       test('returns noPendingSave when the slot is empty', () async {
         expect(
           await repository.drivePendingSave(pubkey),

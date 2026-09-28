@@ -61,6 +61,28 @@ void main() {
     const testEventId =
         'f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2';
 
+    /// Stubs the connected relays' settled answer to a raw Kind 0 read.
+    void stubRawRelayRead({
+      List<Event> events = const [],
+      bool timedOut = false,
+      bool noRelays = false,
+    }) {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+      );
+    }
+
+    /// Every connected relay answers the raw Kind 0 read with
+    /// [mockProfileEvent], which is what a publish seed reads.
+    void stubRelaysServeProfileEvent() =>
+        stubRawRelayRead(events: [mockProfileEvent]);
+
     setUpAll(() {
       registerFallbackValue(<String, dynamic>{});
       registerFallbackValue(
@@ -169,6 +191,7 @@ void main() {
           useCache: any(named: 'useCache'),
         ),
       ).thenAnswer((_) async => null);
+      stubRawRelayRead();
     }
 
     group('getCachedProfile', () {
@@ -725,6 +748,7 @@ void main() {
         });
 
         test('requires relay metadata when raw Kind 0 is requested', () async {
+          stubRelaysServeProfileEvent();
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
             () => mockFunnelcakeClient.getUserProfile(testPubkey),
@@ -748,7 +772,11 @@ void main() {
             () => mockFunnelcakeClient.getUserProfile(testPubkey),
           ).called(1);
           verify(
-            () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
           ).called(1);
         });
 
@@ -766,9 +794,7 @@ void main() {
                 }),
               ),
             );
-            when(
-              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
-            ).thenAnswer((_) async => null);
+            stubRawRelayRead();
             when(() => mockUserProfilesDao.getProfile(testPubkey)).thenAnswer(
               (_) async => UserProfile(
                 pubkey: testPubkey,
@@ -802,9 +828,7 @@ void main() {
                 }),
               ),
             );
-            when(
-              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
-            ).thenAnswer((_) async => null);
+            stubRawRelayRead();
 
             final first = await repoWithFunnelcake.fetchFreshProfile(
               pubkey: testPubkey,
@@ -821,7 +845,11 @@ void main() {
               () => mockFunnelcakeClient.getUserProfile(testPubkey),
             ).called(1);
             verify(
-              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                useCache: false,
+                requireAllRelaysSettled: true,
+              ),
             ).called(1);
           },
         );
@@ -842,10 +870,18 @@ void main() {
 
             var relayFetchCount = 0;
             when(
-              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              ),
             ).thenAnswer((_) async {
               relayFetchCount += 1;
-              return relayFetchCount == 1 ? null : mockProfileEvent;
+              return (
+                events: relayFetchCount == 1 ? <Event>[] : [mockProfileEvent],
+                timedOut: false,
+                noRelays: false,
+              );
             });
 
             UserProfile? result;
@@ -2157,6 +2193,8 @@ void main() {
     });
 
     group('saveProfileEvent', () {
+      setUp(stubRelaysServeProfileEvent);
+
       test('sends all provided fields to nostrClient and caches and returns '
           'user profile', () async {
         // No pre-existing profile anywhere, so the publish composes from the
@@ -2522,12 +2560,7 @@ void main() {
             }),
             createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
           );
-          when(
-            () => mockNostrClient.fetchProfile(
-              testPubkey,
-              useCache: any(named: 'useCache'),
-            ),
-          ).thenAnswer((_) async => rawKind0);
+          stubRawRelayRead(events: [rawKind0]);
           // A non-empty rawTags seed takes the tags-carrying overload.
           when(
             () => mockNostrClient.sendProfileAwaitOk(
@@ -2565,9 +2598,10 @@ void main() {
             await profileRepository.saveProfileEvent(displayName: 'Only Name');
 
             verifyNever(
-              () => mockNostrClient.fetchProfile(
+              () => mockNostrClient.queryEventsDetailed(
                 any(),
                 useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               ),
             );
             verify(
@@ -2610,12 +2644,7 @@ void main() {
             // event timestamp, so the newer-than check cannot break the tie.
             createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
           );
-          when(
-            () => mockNostrClient.fetchProfile(
-              testPubkey,
-              useCache: any(named: 'useCache'),
-            ),
-          ).thenAnswer((_) async => rawKind0);
+          stubRawRelayRead(events: [rawKind0]);
 
           await profileRepository.saveProfileEvent(
             displayName: 'Wolf M. Iversen',
@@ -2662,12 +2691,7 @@ void main() {
             jsonEncode({'display_name': 'Alice', 'name': 'alice'}),
             createdAt: DateTime(2026, 2).millisecondsSinceEpoch ~/ 1000,
           );
-          when(
-            () => mockNostrClient.fetchProfile(
-              testPubkey,
-              useCache: any(named: 'useCache'),
-            ),
-          ).thenAnswer((_) async => newerSparserKind0);
+          stubRawRelayRead(events: [newerSparserKind0]);
 
           await profileRepository.saveProfileEvent(
             displayName: 'Alice',
@@ -2716,12 +2740,7 @@ void main() {
             }),
             createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
           );
-          when(
-            () => mockNostrClient.fetchProfile(
-              testPubkey,
-              useCache: any(named: 'useCache'),
-            ),
-          ).thenAnswer((_) async => rawKind0);
+          stubRawRelayRead(events: [rawKind0]);
 
           await repository.saveProfileEvent(
             displayName: 'New Name',
@@ -2796,12 +2815,7 @@ void main() {
             }),
             createdAt: DateTime(2026).millisecondsSinceEpoch ~/ 1000,
           );
-          when(
-            () => mockNostrClient.fetchProfile(
-              testPubkey,
-              useCache: any(named: 'useCache'),
-            ),
-          ).thenAnswer((_) async => rawKind0);
+          stubRawRelayRead(events: [rawKind0]);
           when(
             () => mockNostrClient.sendProfileAwaitOk(
               profileContent: any(named: 'profileContent'),
@@ -3086,12 +3100,7 @@ void main() {
               () => freshEvent.createdAt,
             ).thenReturn(DateTime.now().millisecondsSinceEpoch ~/ 1000);
             when(() => freshEvent.content).thenReturn(jsonEncode(freshContent));
-            when(
-              () => mockNostrClient.fetchProfile(
-                testPubkey,
-                useCache: any(named: 'useCache'),
-              ),
-            ).thenAnswer((_) async => freshEvent);
+            stubRawRelayRead(events: [freshEvent]);
 
             // currentProfile from REST has sparse rawData — the relay seed
             // wins because it has more keys.
@@ -3140,37 +3149,37 @@ void main() {
         );
 
         test(
-          'falls back to currentProfile when relay seed fetch fails',
+          'defers instead of republishing from currentProfile when the relay '
+          'seed read fails',
           () async {
-            // createCurrentProfile uses fetchProfile internally; build the
-            // profile first, THEN stub fetchProfile to throw so only the
-            // saveProfileEvent-time seed fetch fails.
+            // The relay copy can hold tags and keys currentProfile cannot, and
+            // a Kind 0 replaces it whole, so nothing is sent without it.
             final currentProfile = await createCurrentProfile({
               'display_name': 'Old Name',
               'lud16': 'alice@strike.me',
               'website': 'https://alice.example',
             });
             when(
-              () => mockNostrClient.fetchProfile(
-                testPubkey,
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
                 useCache: any(named: 'useCache'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
               ),
             ).thenThrow(Exception('relay down'));
 
-            await profileRepository.saveProfileEvent(
-              displayName: 'New Name',
-              currentProfile: currentProfile,
-            );
-
-            verify(
-              () => mockNostrClient.sendProfileAwaitOk(
-                profileContent: {
-                  'display_name': 'New Name',
-                  'lud16': 'alice@strike.me',
-                  'website': 'https://alice.example',
-                },
+            await expectLater(
+              profileRepository.saveProfileEvent(
+                displayName: 'New Name',
+                currentProfile: currentProfile,
               ),
-            ).called(1);
+              throwsA(isA<ProfilePublishFailedException>()),
+            );
+            verifyNever(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                tags: any(named: 'tags'),
+              ),
+            );
           },
         );
       });
