@@ -599,14 +599,18 @@ class _MessageBubbleState extends State<MessageBubble> {
                       if (isFailedOwnSend)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: _NotDeliveredIndicator(
+                          child: _DeliveryStatusLine(
+                            label: context.l10n.dmStatusFailed,
                             maxWidth: bubbleMaxWidth,
                           ),
                         ),
+                      // A terminal send retained on a closed thread: not
+                      // retryable, so it gets its own explanation.
                       if (isBlockedOwnSend)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: _BlockedDeliveryIndicator(
+                          child: _DeliveryStatusLine(
+                            label: context.l10n.dmSendBlockedRetiredMessage,
                             maxWidth: bubbleMaxWidth,
                           ),
                         ),
@@ -1583,81 +1587,32 @@ class _VideoCard extends ConsumerWidget {
   }
 }
 
-/// The "Not delivered" status for a hard-failed own send.
+/// The status line under a hard-failed or terminally blocked own send.
 ///
 /// Sits under the bubble rather than inside it: red text on the sent
 /// bubble's fixed green fill measured 1.16:1, far under the 4.5:1 floor.
 ///
 /// Sends are optimistic, so ordinary pending, delivered, and self-wrap-failed
-/// states render as a plain sent message. The enclosing failed bubble is
-/// tappable to resend or delete; a terminal blocked bubble uses the distinct
-/// [_BlockedDeliveryIndicator].
-class _NotDeliveredIndicator extends StatelessWidget {
-  const _NotDeliveredIndicator({required this.maxWidth});
+/// states render as a plain sent message and never reach this widget. A
+/// failed bubble stays tappable to resend or delete; a blocked one carries
+/// the longer retired-thread explanation instead.
+class _DeliveryStatusLine extends StatelessWidget {
+  const _DeliveryStatusLine({required this.label, required this.maxWidth});
+
+  final String label;
 
   /// Caps this status line to the same width as the bubble above it (see
-  /// [_MessageBubbleState.build]'s `bubbleMaxWidth`), so a translated
-  /// caption longer than "Failed to send" wraps within the bubble's own
-  /// width instead of spanning the whole message row.
+  /// [_MessageBubbleState.build]'s `bubbleMaxWidth`), so a long or
+  /// translated caption wraps within the bubble's own width instead of
+  /// spanning the whole message row.
   final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    final label = context.l10n.dmStatusFailed;
     final color = context.vineColors.onErrorContainer;
     // No `Semantics(label:)` wrapper here: the `Text` below already
     // contributes this label to the merged bubble semantics on its own, so
-    // wrapping it too announced "Failed to send" twice.
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        // The icon sits beside the first line, not centered on the whole
-        // (possibly wrapped) caption block.
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 4,
-        children: [
-          // Decorative: the text carries the meaning, so the icon's own
-          // image semantics must not reach the bubble's merged node.
-          ExcludeSemantics(
-            child: DivineIcon(
-              icon: DivineIconName.warningCircle,
-              size: 14,
-              color: color,
-            ),
-          ),
-          Flexible(
-            child: Text(
-              label,
-              textAlign: TextAlign.end,
-              style: VineTheme.labelSmallFont(color: color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The terminal status, shown under the bubble, for a send retained on a
-/// closed thread — the same 1.16:1 contrast problem as
-/// [_NotDeliveredIndicator].
-class _BlockedDeliveryIndicator extends StatelessWidget {
-  const _BlockedDeliveryIndicator({required this.maxWidth});
-
-  /// Caps this status line to the same width as the bubble above it (see
-  /// [_MessageBubbleState.build]'s `bubbleMaxWidth`). This message is long
-  /// enough to wrap on its own, so without the cap it spanned nearly the
-  /// full message row instead of the bubble's own width.
-  final double maxWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = context.l10n.dmSendBlockedRetiredMessage;
-    final color = context.vineColors.onErrorContainer;
-    // No `Semantics(label:)` wrapper here: the `Text` below already
-    // contributes this label to the merged bubble semantics on its own, so
-    // wrapping it too announced the whole sentence twice.
+    // wrapping it too announced the caption twice.
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Row(
