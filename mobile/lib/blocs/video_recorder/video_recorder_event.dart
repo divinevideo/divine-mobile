@@ -258,8 +258,9 @@ final class VideoRecorderRecordingLockedForNavigation
 }
 
 /// Sets the recorder mode. Switching between recording modes clears
-/// recorded clips and resets the editor; transitions involving
-/// [VideoRecorderMode.upload] preserve both.
+/// recorded clips and resets the editor, also when
+/// [VideoRecorderMode.upload] sits in between; only leaving Upload for the
+/// recording mode it was entered from preserves both.
 final class VideoRecorderRecorderModeSet extends VideoRecorderEvent {
   const VideoRecorderRecorderModeSet(
     this.mode, {

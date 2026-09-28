@@ -1642,11 +1642,18 @@ class VideoRecorderBloc
     // cannot land inside it, and the `ready` it leaves behind already carries an
     // empty frame list — so the discard below is a no-op and the queued library
     // write has nothing to lose.
-    final previousMode = state.recorderMode;
     final previousFrames = state.stopMotionFrames;
+    // The recording mode the session's clips belong to. Upload records nothing,
+    // so while it shows, that is the mode it was entered from — null when the
+    // recorder opened straight into Upload.
+    final sessionMode = state.recorderMode == VideoRecorderMode.upload
+        ? state.modeBeforeUpload
+        : state.recorderMode;
     emit(
       state.copyWith(
         recorderMode: mode,
+        modeBeforeUpload: mode == VideoRecorderMode.upload ? sessionMode : null,
+        clearModeBeforeUpload: mode != VideoRecorderMode.upload,
         aspectRatio: mode.defaultAspectRatio,
         showGridLines: _gridLinesEnabledFor(mode),
         timerDuration: mode.supportsCountdownTimer
@@ -1663,10 +1670,13 @@ class VideoRecorderBloc
     final prefs = _readSharedPreferences();
     await prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
 
-    final touchesRecordingState =
+    // A peek at Upload and back keeps the session; any other move between two
+    // recording modes discards it, with or without Upload in between.
+    final switchesRecordingMode =
         mode != VideoRecorderMode.upload &&
-        previousMode != VideoRecorderMode.upload;
-    if (touchesRecordingState) {
+        sessionMode != null &&
+        mode != sessionMode;
+    if (switchesRecordingMode) {
       await _readClipManager().clearAll(
         keepAutosavedDraft: keepAutosavedDraft,
       );
@@ -1932,10 +1942,10 @@ class VideoRecorderBloc
 
   /// Rebuilds [state] from the current [CameraService] values.
   ///
-  /// Only the rebuild count, aspect ratio, recorder mode, overlay and grid
-  /// toggles, the stop-motion session and, while the camera is initialized,
-  /// the screen flash carry over; flash resets to `off` and every other field
-  /// to its default.
+  /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
+  /// was entered from), overlay and grid toggles, the stop-motion session and,
+  /// while the camera is initialized, the screen flash carry over; flash
+  /// resets to `off` and every other field to its default.
   void _emitCameraSync(
     Emitter<VideoRecorderBlocState> emit, {
     int? cameraRebuildCount,
@@ -1968,6 +1978,7 @@ class VideoRecorderBloc
             _cameraService.isVideoStabilizationSupported,
         showLastClipOverlay: state.showLastClipOverlay,
         recorderMode: state.recorderMode,
+        modeBeforeUpload: state.modeBeforeUpload,
         showGridLines: state.showGridLines,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
