@@ -8,7 +8,7 @@ import 'package:material_ui/material_ui.dart';
 /// The `DivineSticker` collection in Figma is the source of truth for the
 /// catalog, the names and the artwork. Each value maps to a photographic
 /// cutout exported from its Figma component into `assets/divine_stickers/`: a
-/// lossless WebP, at most 512 px on its long edge, in its original
+/// near-lossless WebP, at most 512 px on its long edge, in its original
 /// proportions. Every file has transparency except [polaroid], a rectangular
 /// print with no transparent pixel.
 ///
