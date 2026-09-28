@@ -49,6 +49,14 @@ void main() {
           createdAt: createdAt,
         );
 
+    Event indexerKind0({int createdAt = 1790000000}) => Event(
+      pubkey,
+      0,
+      const [],
+      jsonEncode({'display_name': 'Indexer copy'}),
+      createdAt: createdAt,
+    );
+
     const answered = (events: <Event>[], timedOut: false, noRelays: false);
 
     late AppDatabase db;
@@ -269,6 +277,40 @@ void main() {
         },
       );
 
+      test('does not wait for a hanging indexer after connected relays confirm '
+          'there is no Kind 0', () {
+        final indexerRead = Completer<List<Event>>();
+        when(
+          () => client.queryEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            useCache: any(named: 'useCache'),
+          ),
+        ).thenAnswer((_) => indexerRead.future);
+        stubRelayRead(() async => answered);
+
+        fakeAsync((async) {
+          var completed = false;
+          Object? failure;
+          unawaited(
+            repository
+                .saveProfileEvent(displayName: 'First')
+                .then<void>(
+                  (_) => completed = true,
+                  onError: (Object error) => failure = error,
+                ),
+          );
+
+          async.flushMicrotasks();
+          expect(completed, isTrue);
+          expect(failure, isNull);
+          expect(publishedTags(), isEmpty);
+
+          indexerRead.complete(<Event>[]);
+          async.flushMicrotasks();
+        });
+      });
+
       test('defers when the cached copy is newer than the relay copy but '
           'cannot carry its tags', () async {
         // The first save landed T1 and the cache holds it, tagless. The relay
@@ -293,6 +335,61 @@ void main() {
         );
         expectNoPublish();
       });
+
+      test(
+        'waits for connected relays before choosing over an older indexer',
+        () async {
+          final cachedT1 = await cacheAndReadBack(
+            relayKind0(createdAt: 1790000100, name: 'Edited once'),
+          );
+          final connectedRead = Completer<_RelayRead>();
+          stubRelayRead(() => connectedRead.future);
+          when(
+            () => client.queryEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              useCache: any(named: 'useCache'),
+            ),
+          ).thenAnswer((_) async => [indexerKind0()]);
+
+          final save = repository.saveProfileEvent(
+            displayName: 'Edited twice',
+            currentProfile: cachedT1,
+          );
+          await Future<void>.delayed(Duration.zero);
+          connectedRead.complete((
+            events: [relayKind0()],
+            timedOut: false,
+            noRelays: false,
+          ));
+
+          await expectLater(
+            save,
+            throwsA(isA<ProfilePublishFailedException>()),
+          );
+          expectNoPublish();
+        },
+      );
+
+      test(
+        'defers when a timed-out raw read contains a partial profile',
+        () async {
+          final cached = await cacheAndReadBack(relayKind0());
+          stubRelayRead(
+            () async =>
+                (events: [relayKind0()], timedOut: true, noRelays: false),
+          );
+
+          await expectLater(
+            repository.saveProfileEvent(
+              displayName: 'After',
+              currentProfile: cached,
+            ),
+            throwsA(isA<ProfilePublishFailedException>()),
+          );
+          expectNoPublish();
+        },
+      );
 
       test('publishes a newer local copy that carries its own tags', () async {
         final inMemoryT1 = UserProfile.fromNostrEvent(

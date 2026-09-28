@@ -1144,17 +1144,69 @@ class ProfileRepository implements ProfileReader {
   }
 
   /// Queries connected relays and indexer relays in parallel for a
-  /// kind 0 profile event. Returns the first valid profile immediately,
-  /// then upgrades the cache if a slower source yields a newer event.
+  /// kind 0 profile event. Display reads return the first valid profile,
+  /// then upgrade the cache if a slower source yields a newer event. Raw
+  /// reads wait for the connected relays to settle before choosing a profile,
+  /// because that is the source a subsequent publish will replace.
   ///
-  /// When every source completes without a result, the miss is conclusive
-  /// only if the connected relays all answered. The indexers are an extra
-  /// source of a copy, never the word on its absence: they are not where a
-  /// republish lands, and a silent third-party indexer must not stall a save.
+  /// A raw-read miss is conclusive as soon as the connected relays answer.
+  /// Indexers can supply a copy if they answered by then, but their silence
+  /// cannot stall a save because republished profiles do not land there.
   Future<_ProfileRead> _fetchFromRelaysParallel(
     String pubkey, {
     required bool requireRawKind0,
   }) async {
+    if (requireRawKind0) {
+      UserProfile? indexerProfile;
+      var indexerCompleted = false;
+      var connectedReadCompleted = false;
+      var connectedReadConclusive = false;
+      var connectedReadFoundProfile = false;
+
+      Future<void> handleIndexer() async {
+        try {
+          final profile = await _fetchFromIndexerRelays(pubkey);
+          indexerProfile = profile;
+          indexerCompleted = true;
+          // Preserve cache upgrades when an indexer returns a newer copy
+          // after a conclusive connected read that found a profile. A
+          // conclusive connected miss remains authoritative for raw reads.
+          if (profile != null &&
+              connectedReadCompleted &&
+              connectedReadConclusive &&
+              connectedReadFoundProfile) {
+            await _cacheProfileIfNewer(profile);
+          }
+        } on Object {
+          // Individual source failures should not abort the overall fetch.
+        }
+      }
+
+      unawaited(handleIndexer());
+      final connectedRead = await _fetchFromConnectedRelays(
+        pubkey,
+        requireRawKind0: true,
+      );
+      connectedReadCompleted = true;
+      connectedReadConclusive = connectedRead.conclusive;
+      connectedReadFoundProfile = connectedRead.profile != null;
+
+      // queryEventsDetailed retains partial events when it times out. They are
+      // useful for display, but are not safe to seed a whole-event replacement.
+      if (!connectedRead.conclusive) {
+        return (profile: null, conclusive: false);
+      }
+
+      var newestProfile = connectedRead.profile;
+      if (indexerCompleted && indexerProfile != null) {
+        final indexerIsNewer =
+            newestProfile == null ||
+            indexerProfile!.createdAt.isAfter(newestProfile.createdAt);
+        if (indexerIsNewer) newestProfile = indexerProfile;
+      }
+      return (profile: newestProfile, conclusive: true);
+    }
+
     final completer = Completer<_ProfileRead>();
     UserProfile? newestProfile;
     var connectedConclusive = false;
@@ -1646,13 +1698,13 @@ class ProfileRepository implements ProfileReader {
           onTimeout: () => (profile: null, conclusive: false),
         );
     final fresh = read.profile;
+    if (!read.conclusive) {
+      throw _deferSave(
+        pubkey,
+        'the current Kind 0 could not be read from the connected relays',
+      );
+    }
     if (fresh == null) {
-      if (!read.conclusive) {
-        throw _deferSave(
-          pubkey,
-          'the current Kind 0 could not be read from the connected relays',
-        );
-      }
       return localSeed;
     }
     if (localSeed == null) {
