@@ -24,7 +24,7 @@ import 'package:unified_logger/unified_logger.dart';
 
 // How long a Divine-identity determination is trusted before re-querying.
 //
-// Kept equal to ModerationLabelService._resolvedPubkeyTtl (24h) so the app
+// Kept equal to ModerationPubkeyResolver._resolvedPubkeyTtl (24h) so the app
 // has one consistent "how long a NIP-05-derived identity is trusted" window.
 //
 // Trust posture note (#4948): this reverse lookup rides the same unpinned
