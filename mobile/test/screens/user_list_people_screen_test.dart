@@ -120,6 +120,11 @@ Future<void> _pumpPushedListRoute(
           return UserListPeopleScreen(listId: listId);
         },
       ),
+      GoRoute(
+        path: '${UserListPeopleScreen.path}/add-people',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Add people picker'))),
+      ),
     ],
   );
 
@@ -725,91 +730,40 @@ void main() {
       expect(find.text(l10n.peopleListsListNotFoundTitle), findsNothing);
     });
 
-    testWidgets('shows the add-people action when current list is editable', (
-      tester,
-    ) async {
+    testWidgets(
+      'owner actions sheet lists add people first and delete list last',
+      (tester) async {
+        final bloc = _MockPeopleListsBloc();
+        final list = _buildList(id: 'punk-friends', name: 'Punk Friends');
+        whenListen(
+          bloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [list],
+          ),
+        );
+
+        await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
+
+        await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
+        await tester.pumpAndSettle();
+
+        final addPeople = find.text(l10n.peopleListsAddPeopleTooltip);
+        final deleteList = find.text(l10n.listDeleteAction);
+        expect(addPeople, findsOneWidget);
+        expect(deleteList, findsOneWidget);
+        expect(
+          tester.getTopLeft(addPeople).dy,
+          lessThan(tester.getTopLeft(deleteList).dy),
+        );
+      },
+    );
+
+    testWidgets('add people option opens the picker', (tester) async {
       final bloc = _MockPeopleListsBloc();
       final list = _buildList(id: 'punk-friends', name: 'Punk Friends');
-      whenListen(
-        bloc,
-        const Stream<PeopleListsState>.empty(),
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
-          lists: [list],
-        ),
-      );
-
-      await tester.pumpWidget(
-        testProviderScope(
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BlocProvider<PeopleListsBloc>.value(
-              value: bloc,
-              child: UserListPeopleScreen(listId: list.id),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(
-        find.bySemanticsLabel(l10n.peopleListsAddPeopleSemanticLabel),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('hides the add-people action when current list is read-only', (
-      tester,
-    ) async {
-      final bloc = _MockPeopleListsBloc();
-      // Read-only lists (e.g. Divine Team) carry isEditable: false and must
-      // not expose the add-people action — editing them is forbidden.
-      final list = _buildList(
-        id: 'divine-team',
-        name: 'Divine Team',
-        isEditable: false,
-      );
-      whenListen(
-        bloc,
-        const Stream<PeopleListsState>.empty(),
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey: 'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0',
-          lists: [list],
-        ),
-      );
-
-      await tester.pumpWidget(
-        testProviderScope(
-          child: MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BlocProvider<PeopleListsBloc>.value(
-              value: bloc,
-              child: UserListPeopleScreen(listId: list.id),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pump();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(
-        find.bySemanticsLabel(l10n.peopleListsAddPeopleSemanticLabel),
-        findsNothing,
-      );
-    });
-
-    testWidgets('shows delete action when current list is editable', (
-      tester,
-    ) async {
-      final bloc = _MockPeopleListsBloc();
-      final list = _buildList(id: 'owned-list', name: 'Owned List');
       whenListen(
         bloc,
         const Stream<PeopleListsState>.empty(),
@@ -820,17 +774,17 @@ void main() {
         ),
       );
 
-      await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
-
-      expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsOneWidget);
+      await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
       await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
       await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.peopleListsAddPeopleTooltip));
+      await tester.pumpAndSettle();
 
-      expect(find.text(l10n.listDeleteAction), findsOneWidget);
+      expect(find.text('Add people picker'), findsOneWidget);
     });
 
-    testWidgets('hides delete action menu when current list is read-only', (
+    testWidgets('hides the owner actions when current list is read-only', (
       tester,
     ) async {
       final bloc = _MockPeopleListsBloc();
@@ -852,6 +806,7 @@ void main() {
       await _pumpPeopleListScreen(tester, bloc: bloc, list: list);
 
       expect(find.byTooltip(l10n.peopleListsActionsTooltip), findsNothing);
+      expect(find.text(l10n.peopleListsAddPeopleTooltip), findsNothing);
       expect(find.text(l10n.listDeleteAction), findsNothing);
     });
 
