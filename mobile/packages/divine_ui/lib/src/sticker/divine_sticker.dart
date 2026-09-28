@@ -53,7 +53,7 @@ enum DivineStickerName {
   crtMonitor('crt_monitor'),
 
   /// Named `d&d` in Figma, which is not a valid Dart identifier.
-  dAndD('d_and_d', figmaName: 'd&d'),
+  dAndD('d_and_d'),
 
   dealWithItGlasses('deal_with_it_glasses'),
   detergentPod('detergent_pod'),
@@ -186,28 +186,16 @@ enum DivineStickerName {
   wavePool('wave_pool'),
   x('x');
 
-  const DivineStickerName(this.fileName, {String? figmaName})
-    : _figmaName = figmaName,
-      isLegacySvg = false;
+  const DivineStickerName(this.fileName) : isLegacySvg = false;
 
   /// A variant with no Figma counterpart, still drawn from the OpenMoji SVGs.
-  const DivineStickerName.legacySvg(this.fileName)
-    : _figmaName = null,
-      isLegacySvg = true;
+  const DivineStickerName.legacySvg(this.fileName) : isLegacySvg = true;
 
   /// The file name, without extension, of this sticker's asset.
   final String fileName;
 
   /// Whether this variant is a legacy SVG rather than Figma artwork.
   final bool isLegacySvg;
-
-  final String? _figmaName;
-
-  /// The name of this sticker's component in Figma, or `null` when Figma has
-  /// no counterpart.
-  ///
-  /// Equal to [name] unless the Figma name is not a valid Dart identifier.
-  String? get figmaName => isLegacySvg ? null : _figmaName ?? name;
 
   /// The full asset path for this sticker.
   String get assetPath => isLegacySvg

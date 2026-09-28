@@ -96,26 +96,6 @@ void main() {
       }
     });
 
-    group('figmaName', () {
-      test('matches the variant name when that is a valid identifier', () {
-        expect(DivineStickerName.alert.figmaName, equals('alert'));
-      });
-
-      test('keeps the Figma spelling a Dart identifier cannot express', () {
-        expect(DivineStickerName.dAndD.figmaName, equals('d&d'));
-      });
-
-      test('is unique across the Figma-backed variants', () {
-        final figmaNames = DivineStickerName.values
-            .where((sticker) => !sticker.isLegacySvg)
-            .map((sticker) => sticker.figmaName)
-            .toList();
-
-        expect(figmaNames, hasLength(133));
-        expect(figmaNames.toSet(), hasLength(figmaNames.length));
-      });
-    });
-
     test('stickers that look alike are dedicated variants with own files', () {
       const dedicated = {
         DivineStickerName.alert: 'alert',
@@ -133,7 +113,6 @@ void main() {
 
       for (final MapEntry(key: sticker, value: fileName) in dedicated.entries) {
         expect(sticker.fileName, equals(fileName), reason: sticker.name);
-        expect(sticker.figmaName, equals(sticker.name), reason: sticker.name);
       }
     });
 
@@ -150,10 +129,6 @@ void main() {
           DivineStickerName.grandfather.assetPath,
           equals('assets/stickers/grandfather.svg'),
         );
-      });
-
-      test('has no Figma name', () {
-        expect(DivineStickerName.grandfather.figmaName, isNull);
       });
     });
   });
