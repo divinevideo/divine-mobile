@@ -153,7 +153,8 @@ The client half is small and belongs in one PR:
    `RetiredModerationKey` entry from step 1. Custody is data on the entry, and
    `OfficialAccountsService.isReadableByProtectedMinor` reads it directly, so
    the widening that lets a DM-restricted minor read a retired-key thread
-   follows automatically — no code change needed, just the right enum value.
+   follows automatically — a data edit to the register with the right enum
+   value, not a logic change.
    `unrecovered` and `destroyed` both mean nobody can sign as the key
    (`RetiredKeyCustody.canStillSign` is `false`), so that widening applies.
    `archived` and `compromised` both mean someone still could (`canStillSign`

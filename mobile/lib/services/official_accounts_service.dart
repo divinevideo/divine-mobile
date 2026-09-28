@@ -131,7 +131,7 @@ class OfficialAccountsService {
   /// while [RetiredKeyCustody.canStillSign] is false. An archived or
   /// compromised retired key gets the strict predicate instead, so the
   /// retirement procedure's step 10 — whether a rotated-away key still widens
-  /// this read path — is a register edit, not a code change.
+  /// this read path — is a data edit to the register, not a logic change.
   bool isReadableByProtectedMinor(String hex) {
     if (isApprovedMinorDmRecipientSync(hex)) return true;
     final h = _normHex(hex);

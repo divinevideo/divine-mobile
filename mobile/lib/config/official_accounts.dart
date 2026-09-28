@@ -173,8 +173,10 @@ class RetiredModerationKey {
 /// Never a send target — messages always go to the current pin above. Used for
 /// recognising the account ([isModerationAccount], which drives the bundled
 /// avatar and the display name), for refusing outbound sends
-/// ([isRetiredModerationAccount]), and for the `ModerationLabelService`
-/// subscription migration.
+/// ([isRetiredModerationAccount]), for the `ModerationLabelService`
+/// subscription migration, for the custody-aware protected-minor read
+/// (`OfficialAccountsService.isReadableByProtectedMinor`), and for refusing a
+/// retired key as the moderation identity (`ModerationPubkeyResolver`).
 ///
 /// Every entry carries its rotation date and what performed it below — which
 /// may be no commit at all. The register of what each key was, the roles it
@@ -235,7 +237,8 @@ bool isModerationAccount(String pubkeyHex) =>
 /// [kLegacyModerationPubkeys] has no known private-key holder, and a gift wrap
 /// is encrypted to its recipient — so pointing a reader at it would deliver
 /// ciphertext nobody can open. Do not reopen this on the theory that the
-/// service could grow a watched set. A future retired key may differ, which is
-/// why `mobile/docs/RETIRED_MODERATION_KEYS.md` records custody per entry.
+/// service could grow a watched set. A future retired key may differ, which
+/// is why each [kRetiredModerationKeys] entry records its own custody in
+/// code — mirrored in `mobile/docs/RETIRED_MODERATION_KEYS.md`'s register.
 bool isRetiredModerationAccount(String pubkeyHex) =>
     kLegacyModerationPubkeys.contains(pubkeyHex);
