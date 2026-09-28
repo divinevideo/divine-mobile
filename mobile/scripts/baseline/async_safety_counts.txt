@@ -61,7 +61,6 @@ discarded_futures|lib/widgets/video_reply_parent_link.dart	1
 discarded_futures|lib/widgets/vine_bottom_nav.dart	2
 discarded_futures|lib/widgets/watermark_download_progress_sheet.dart	1
 discarded_futures|test/blocs/comments/comments_list/comments_list_bloc_test.dart	2
-discarded_futures|test/blocs/locale/locale_cubit_test.dart	2
 discarded_futures|test/blocs/my_profile/my_profile_bloc_test.dart	3
 discarded_futures|test/blocs/profile_collab_videos/profile_collab_videos_bloc_test.dart	1
 discarded_futures|test/blocs/profile_editor/profile_editor_bloc_test.dart	1
