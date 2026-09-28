@@ -361,7 +361,7 @@ void main() {
           'canonicalizes exact bio mentions before publishing profile metadata',
           setUp: () {
             when(
-              () => mockProfileRepository.searchUsersLocally(
+              () => mockProfileRepository.searchCachedProfilesByIdentity(
                 query: 'alice',
                 limit: any(named: 'limit'),
               ),
@@ -424,7 +424,7 @@ void main() {
           'preserves unresolved bio text when mention resolution fails',
           setUp: () {
             when(
-              () => mockProfileRepository.searchUsersLocally(
+              () => mockProfileRepository.searchCachedProfilesByIdentity(
                 query: 'alice',
                 limit: any(named: 'limit'),
               ),

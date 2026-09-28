@@ -17262,8 +17262,11 @@ class ProcessedGiftWrap extends DataClass
   /// [DirectMessages.giftWrapId] dedup semantics.
   final String giftWrapId;
 
-  /// When the wrap was terminally processed (unix seconds). Informational and
-  /// available for any future time-based retention.
+  /// When the wrap was terminally processed (unix seconds).
+  ///
+  /// Retention: unbounded while the account is active. The history drain reads
+  /// this ledger to avoid re-decrypting terminal outcomes on later drains;
+  /// pruning an old row would make those wraps eligible for decryption again.
   final int processedAt;
 
   /// Recipient pubkey this wrap was processed for. Not part of the global

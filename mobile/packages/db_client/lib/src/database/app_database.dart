@@ -1770,6 +1770,8 @@ class AppDatabase extends _$AppDatabase {
   /// - Expired profile stats (older than 5 minutes)
   /// - Expired hashtag stats (older than 1 hour)
   /// - Notification cache rows written more than 7 days ago
+  /// - `video_metrics` rows orphaned by an `event` deletion above
+  /// - `user_profiles` rows beyond the row cap, oldest by `last_fetched`
   ///
   /// Returns a [CleanupResult] with counts of deleted records.
   Future<CleanupResult> runStartupCleanup() async {
@@ -1793,11 +1795,22 @@ class AppDatabase extends _$AppDatabase {
       notificationCutoff,
     );
 
+    // Sweep video_metrics rows the event deletion above (or a superseded
+    // replaceable-event version) just stranded — see
+    // VideoMetricsDao.deleteOrphaned for why this can't rely on the
+    // declared FK's cascade.
+    final orphanedVideoMetricsDeleted = await videoMetricsDao.deleteOrphaned();
+
+    // Enforce the user_profiles row cap, oldest by last_fetched first.
+    final evictedUserProfilesDeleted = await userProfilesDao.enforceRowCap();
+
     return CleanupResult(
       expiredEventsDeleted: expiredEventsDeleted,
       expiredProfileStatsDeleted: expiredProfileStatsDeleted,
       expiredHashtagStatsDeleted: expiredHashtagStatsDeleted,
       oldNotificationsDeleted: oldNotificationsDeleted,
+      orphanedVideoMetricsDeleted: orphanedVideoMetricsDeleted,
+      evictedUserProfilesDeleted: evictedUserProfilesDeleted,
     );
   }
 }

@@ -225,5 +225,35 @@ void main() {
         expect(count, equals(1));
       });
     });
+
+    group('deleteOrphaned', () {
+      test('deletes a metrics row whose event no longer exists', () async {
+        // upsertVideoMetrics writes only to video_metrics, so this row has
+        // no matching event row from the start — simulating what an
+        // event-table TTL sweep or replaceable-event supersession leaves
+        // behind.
+        final event = createVideoEvent(loops: 100);
+        await dao.upsertVideoMetrics(event);
+
+        final deleted = await dao.deleteOrphaned();
+
+        expect(deleted, equals(1));
+        expect(await appDbClient.getVideoMetrics(event.id), isNull);
+      });
+
+      test('keeps a metrics row whose event still exists', () async {
+        final event = createVideoEvent(loops: 100);
+        await database.nostrEventsDao.upsertEvent(event);
+
+        final deleted = await dao.deleteOrphaned();
+
+        expect(deleted, equals(0));
+        expect(await appDbClient.getVideoMetrics(event.id), isNotNull);
+      });
+
+      test('returns 0 when there are no metrics rows', () async {
+        expect(await dao.deleteOrphaned(), equals(0));
+      });
+    });
   });
 }

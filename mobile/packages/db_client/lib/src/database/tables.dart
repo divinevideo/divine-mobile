@@ -93,6 +93,15 @@ class NostrEvents extends Table {
 /// Profiles are parsed from kind 0 events and stored here for fast reactive
 /// queries.
 /// This avoids having to parse JSON for every profile display.
+///
+/// Retention: row-capped, oldest by `last_fetched` evicted first
+/// (`UserProfilesDao.enforceRowCap`, run from
+/// `AppDatabase.runStartupCleanup`). `last_fetched` is a last-*write* stamp,
+/// not last-*read*, but a profile that stays relevant keeps getting
+/// refetched, which keeps it out of the eviction set. `IdentityEvents` and
+/// `IdentityVerifications` are keyed by the same pubkey but are
+/// deliberately **not** tied to this table's eviction — see their own
+/// class docs for why.
 @DataClassName('UserProfileRow')
 class UserProfiles extends Table {
   @override
@@ -124,6 +133,13 @@ class UserProfiles extends Table {
 /// Metrics are parsed from video events (kind 34236, etc.) and stored here
 /// for fast sorted queries. This avoids having to parse JSON tags for every
 /// sort/filter operation.
+///
+/// Retention: orphan-swept against `event` (`VideoMetricsDao.deleteOrphaned`,
+/// run from `AppDatabase.runStartupCleanup`), not the declared
+/// `customConstraints` cascade below — `PRAGMA foreign_keys` is never
+/// enabled on this connection (see `DraftsDao.deleteDraft`), so that cascade
+/// never fires on its own. Once orphans are swept, this table is bounded by
+/// whatever bounds `event` (its own TTL sweep), with no separate cap needed.
 @TableIndex.sql(
   'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count '
   'ON video_metrics (loop_count)',
@@ -1735,8 +1751,11 @@ class ProcessedGiftWraps extends Table {
   /// [DirectMessages.giftWrapId] dedup semantics.
   TextColumn get giftWrapId => text().named('gift_wrap_id')();
 
-  /// When the wrap was terminally processed (unix seconds). Informational and
-  /// available for any future time-based retention.
+  /// When the wrap was terminally processed (unix seconds).
+  ///
+  /// Retention: unbounded while the account is active. The history drain reads
+  /// this ledger to avoid re-decrypting terminal outcomes on later drains;
+  /// pruning an old row would make those wraps eligible for decryption again.
   IntColumn get processedAt => integer().named('processed_at')();
 
   /// Recipient pubkey this wrap was processed for. Not part of the global
@@ -1775,9 +1794,26 @@ class RemovedConversations extends Table {
 /// relays. Claims live in kind 10011 since the 2026-02 NIP-39 revision; the
 /// verifier web UI publishes kind 10011 only, so kind 0 `i` tags are a
 /// legacy fallback for pre-migration profiles (#3936). Rows are refreshed on
-/// every profile open (cache+fresh, like `user_profiles`), never expire, and
-/// survive logout — same class of viewer-independent public data as
-/// [UserProfiles].
+/// every profile open (cache+fresh, like `user_profiles`) — same class of
+/// viewer-independent public data as [UserProfiles].
+///
+/// Rows are cleared on logout and account switch
+/// (`social_providers.dart`'s `!preserveActiveSession` branch), not kept
+/// forever as an earlier version of this doc claimed.
+///
+/// Retention while signed in: unbounded, deliberately. This table carries
+/// no local "cached at" timestamp of its own ([sourceCreatedAt] is the
+/// claim event's own age, not cache freshness), so an honest TTL would need
+/// a schema migration to add one. Tying eviction to `user_profiles`
+/// presence instead was tried and reverted: a row here does not imply a
+/// `user_profiles` row exists for the same pubkey — identity claims can be
+/// fetched and cached independently of a kind-0 profile fetch (a shipped
+/// migration test, `v2 identity_events rows survive the upgrade
+/// unstamped`, pins exactly this case) — so that sweep silently deleted
+/// still-valid claims for a pubkey whose profile was never cached, with no
+/// re-fetch trigger to recover them. Growth is bounded in practice by
+/// session length and by the (usually small) subset of viewed profiles
+/// that publish NIP-39 identity claims at all.
 @DataClassName('IdentityEventRow')
 class IdentityEvents extends Table {
   @override
@@ -1825,8 +1861,19 @@ class IdentityEvents extends Table {
 /// [checkedAtFloor] is the minimum `checked_at` across the batch, and the
 /// entry counts as fresh until `checkedAtFloor + 24h` — the verifier's
 /// server-side TTL for verified results. Stale entries are re-verified on
-/// the next profile open (stale-while-revalidate), not deleted. Rows
-/// survive logout, like [Nip05Verifications].
+/// the next profile open (stale-while-revalidate), not deleted on
+/// staleness alone.
+///
+/// Rows are cleared on logout and account switch
+/// (`social_providers.dart`'s `!preserveActiveSession` branch) — unlike
+/// [Nip05Verifications], which an earlier version of this doc wrongly
+/// analogised to.
+///
+/// Retention while signed in: unbounded, deliberately, for the same reason
+/// as [IdentityEvents] — no local "cached at" column to drive an
+/// independent TTL, and tying eviction to `user_profiles` presence risks
+/// deleting still-valid verification data for a pubkey whose profile was
+/// never cached. See [IdentityEvents] for the fuller reasoning.
 @DataClassName('IdentityVerificationRow')
 class IdentityVerifications extends Table {
   @override

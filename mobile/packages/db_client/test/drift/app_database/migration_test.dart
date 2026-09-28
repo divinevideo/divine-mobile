@@ -820,6 +820,7 @@ void main() {
           createNew: v14.DatabaseAtV14.new,
           openTestedDatabase: AppDatabase.new,
           createItems: (batch, oldDb) {
+            const oldProcessedAt = 1;
             batch.insert(
               oldDb.directMessages,
               v11.DirectMessagesCompanion.insert(
@@ -835,7 +836,7 @@ void main() {
               oldDb.processedGiftWraps,
               v11.ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: 'kept' * 16,
-                processedAt: 1700000000,
+                processedAt: oldProcessedAt,
                 ownerPubkey: Value('a' * 64),
               ),
             );
@@ -843,7 +844,7 @@ void main() {
               oldDb.processedGiftWraps,
               v11.ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: 'lost' * 16,
-                processedAt: 1700000000,
+                processedAt: oldProcessedAt,
                 ownerPubkey: Value('b' * 64),
               ),
             );

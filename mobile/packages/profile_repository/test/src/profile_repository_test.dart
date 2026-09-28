@@ -240,14 +240,6 @@ void main() {
         verify(() => mockUserProfilesDao.upsertProfile(profile)).called(1);
       });
 
-      test('adds pubkey to known cached set', () async {
-        final profile = UserProfile.fromNostrEvent(mockProfileEvent);
-
-        await profileRepository.cacheProfile(profile);
-
-        expect(profileRepository.hasProfile(testPubkey), isTrue);
-      });
-
       test('does not infer confirmed missing from relay absence', () async {
         when(
           () => mockNostrClient.fetchProfile(testPubkey),
@@ -261,38 +253,6 @@ void main() {
         ).thenAnswer((_) async => <Event>[]);
         await profileRepository.fetchFreshProfile(pubkey: testPubkey);
         expect(profileRepository.isConfirmedMissing(testPubkey), isFalse);
-      });
-    });
-
-    group('hasProfile', () {
-      test('returns false for unknown pubkey', () {
-        expect(profileRepository.hasProfile(testPubkey), isFalse);
-      });
-
-      test('returns true after caching a profile', () async {
-        final profile = UserProfile.fromNostrEvent(mockProfileEvent);
-        await profileRepository.cacheProfile(profile);
-
-        expect(profileRepository.hasProfile(testPubkey), isTrue);
-      });
-
-      test('returns true after fetching from relay', () async {
-        await profileRepository.fetchFreshProfile(pubkey: testPubkey);
-
-        expect(profileRepository.hasProfile(testPubkey), isTrue);
-      });
-    });
-
-    group('loadKnownCachedPubkeys', () {
-      test('populates known cached set from Drift', () async {
-        final profile = UserProfile.fromNostrEvent(mockProfileEvent);
-        when(
-          () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => [profile]);
-
-        await profileRepository.loadKnownCachedPubkeys();
-
-        expect(profileRepository.hasProfile(testPubkey), isTrue);
       });
     });
 
@@ -322,37 +282,6 @@ void main() {
         expect(result, equals(0));
       });
 
-      test(
-        'removes pubkey from known cached set on successful delete',
-        () async {
-          final profile = UserProfile.fromNostrEvent(mockProfileEvent);
-          await profileRepository.cacheProfile(profile);
-          expect(profileRepository.hasProfile(testPubkey), isTrue);
-
-          when(
-            () => mockUserProfilesDao.deleteProfile(any()),
-          ).thenAnswer((_) async => 1);
-
-          await profileRepository.deleteCachedProfile(pubkey: testPubkey);
-
-          expect(profileRepository.hasProfile(testPubkey), isFalse);
-        },
-      );
-
-      test('keeps pubkey in known cached set when delete is a no-op', () async {
-        final profile = UserProfile.fromNostrEvent(mockProfileEvent);
-        await profileRepository.cacheProfile(profile);
-        expect(profileRepository.hasProfile(testPubkey), isTrue);
-
-        when(
-          () => mockUserProfilesDao.deleteProfile(any()),
-        ).thenAnswer((_) async => 0);
-
-        await profileRepository.deleteCachedProfile(pubkey: testPubkey);
-
-        expect(profileRepository.hasProfile(testPubkey), isTrue);
-      });
-
       test('does not mark pubkey as confirmed missing on delete', () async {
         final profile = UserProfile.fromNostrEvent(mockProfileEvent);
         await profileRepository.cacheProfile(profile);
@@ -363,30 +292,6 @@ void main() {
         await profileRepository.deleteCachedProfile(pubkey: testPubkey);
 
         expect(profileRepository.isConfirmedMissing(testPubkey), isFalse);
-      });
-    });
-
-    group('getAllCachedProfiles', () {
-      test('returns all profiles from dao', () async {
-        final profiles = [UserProfile.fromNostrEvent(mockProfileEvent)];
-        when(
-          () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => profiles);
-
-        final result = await profileRepository.getAllCachedProfiles();
-
-        expect(result, equals(profiles));
-        verify(() => mockUserProfilesDao.getAllProfiles()).called(1);
-      });
-
-      test('returns empty list when no profiles cached', () async {
-        when(
-          () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => []);
-
-        final result = await profileRepository.getAllCachedProfiles();
-
-        expect(result, isEmpty);
       });
     });
 
@@ -7925,6 +7830,44 @@ void main() {
         expect(result, hasLength(1));
         expect(result.first.pubkey, equals(testPubkey));
       });
+
+      test(
+        'filters blocked users from bounded identity search results',
+        () async {
+          final blockedProfile = UserProfile(
+            pubkey: blockedPubkey,
+            displayName: 'Blocked User',
+            rawData: const {'display_name': 'Blocked User'},
+            createdAt: DateTime(2026),
+            eventId: 'evt_blocked_identity',
+          );
+          final allowedProfile = UserProfile(
+            pubkey: testPubkey,
+            displayName: 'Allowed User',
+            rawData: const {'display_name': 'Allowed User'},
+            createdAt: DateTime(2026),
+            eventId: testEventId,
+          );
+          final repoWithBlockFilter = ProfileRepository(
+            nostrClient: mockNostrClient,
+            userProfilesDao: mockUserProfilesDao,
+            httpClient: mockHttpClient,
+            blockFilter: (pubkey) => pubkey == blockedPubkey,
+            localProfileSearch: (query, limit) async => [
+              blockedProfile,
+              allowedProfile,
+            ],
+          );
+
+          final result = await repoWithBlockFilter
+              .searchCachedProfilesByIdentity(
+                query: 'user',
+                limit: 10,
+              );
+
+          expect(result.map((profile) => profile.pubkey), [testPubkey]);
+        },
+      );
 
       test('fetchFreshProfile returns null for a blocked pubkey', () async {
         const blockedPubkey =

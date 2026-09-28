@@ -34,6 +34,17 @@ void main() {
   /// Helper to get current Unix timestamp
   int nowUnix() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+  /// Whether a `video_metrics` row exists for [eventId].
+  Future<bool> videoMetricsRowExists(String eventId) async {
+    final rows = await database
+        .customSelect(
+          'SELECT 1 FROM video_metrics WHERE event_id = ?',
+          variables: [Variable.withString(eventId)],
+        )
+        .get();
+    return rows.isNotEmpty;
+  }
+
   setUp(() async {
     final tempDir = Directory.systemTemp.createTempSync('app_db_test_');
     tempDbPath = '${tempDir.path}/test.db';
@@ -244,6 +255,8 @@ void main() {
         expect(result.expiredProfileStatsDeleted, equals(0));
         expect(result.expiredHashtagStatsDeleted, equals(0));
         expect(result.oldNotificationsDeleted, equals(0));
+        expect(result.orphanedVideoMetricsDeleted, equals(0));
+        expect(result.evictedUserProfilesDeleted, equals(0));
       });
 
       test('handles cleanup when database is empty', () async {
@@ -254,7 +267,70 @@ void main() {
         expect(result.expiredProfileStatsDeleted, equals(0));
         expect(result.expiredHashtagStatsDeleted, equals(0));
         expect(result.oldNotificationsDeleted, equals(0));
+        expect(result.orphanedVideoMetricsDeleted, equals(0));
+        expect(result.evictedUserProfilesDeleted, equals(0));
       });
+
+      test(
+        'deletes video_metrics rows orphaned by an event deletion',
+        () async {
+          final expiredEvent = createEvent(
+            kind: 34236,
+            content: 'expired-video',
+            createdAt: 1000,
+          );
+          await database.nostrEventsDao.upsertEvent(
+            expiredEvent,
+            expireAt: nowUnix() - 100,
+          );
+          expect(await videoMetricsRowExists(expiredEvent.id), isTrue);
+
+          final result = await database.runStartupCleanup();
+
+          expect(result.expiredEventsDeleted, equals(1));
+          expect(result.orphanedVideoMetricsDeleted, equals(1));
+          expect(await videoMetricsRowExists(expiredEvent.id), isFalse);
+        },
+      );
+
+      test(
+        'evicts user_profiles rows beyond the default row cap',
+        () async {
+          // runStartupCleanup calls UserProfilesDao.enforceRowCap with no
+          // arguments, so proving the wiring means crossing its default cap
+          // (5000) rather than an arbitrary small one — that behavior is
+          // already covered directly in user_profiles_dao_test.dart.
+          const rowCount = 5001;
+          final now = DateTime.now();
+          await database.batch((b) {
+            for (var i = 0; i < rowCount; i++) {
+              b.insert(
+                database.userProfiles,
+                UserProfilesCompanion.insert(
+                  pubkey: 'profile-$i',
+                  createdAt: now,
+                  eventId: 'event-$i',
+                  // Ascending offsets so index 0 is the single oldest row —
+                  // the one row a 5000-row cap must evict.
+                  lastFetched: now.add(Duration(seconds: i)),
+                ),
+              );
+            }
+          });
+
+          final result = await database.runStartupCleanup();
+
+          expect(result.evictedUserProfilesDeleted, equals(1));
+          expect(
+            await database.userProfilesDao.getProfile('profile-0'),
+            isNull,
+          );
+          expect(
+            await database.userProfilesDao.getProfile('profile-1'),
+            isNotNull,
+          );
+        },
+      );
 
       test('upgrade path — recreates outgoing_dms when missing', () async {
         // Simulate a damaged database after v2 migration: drop the table from

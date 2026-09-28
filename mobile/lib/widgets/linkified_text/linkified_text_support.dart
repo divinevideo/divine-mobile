@@ -174,7 +174,7 @@ final class LinkifiedTextSupport {
   }) async {
     try {
       final profiles = localOnly
-          ? await profileRepository.searchUsersLocally(
+          ? await profileRepository.searchCachedProfilesByIdentity(
               query: username,
               limit: 10,
             )

@@ -206,10 +206,11 @@ class MentionResolutionService {
     for (final MapEntry(key: token, value: query) in queryByToken.entries) {
       String? resolved;
       try {
-        final localCandidates = await _profileRepository.searchUsersLocally(
-          query: query,
-          limit: _profileSearchLimit,
-        );
+        final localCandidates = await _profileRepository
+            .searchCachedProfilesByIdentity(
+              query: query,
+              limit: _profileSearchLimit,
+            );
         resolved = _exactSingleMatch(query, localCandidates);
 
         if (resolved == null && remoteLookups < _typedRemoteLookupLimit) {

@@ -12,6 +12,8 @@ class CleanupResult {
     required this.expiredProfileStatsDeleted,
     required this.expiredHashtagStatsDeleted,
     required this.oldNotificationsDeleted,
+    required this.orphanedVideoMetricsDeleted,
+    required this.evictedUserProfilesDeleted,
   });
 
   /// Number of expired Nostr events deleted (includes events with NULL expiry).
@@ -26,12 +28,23 @@ class CleanupResult {
   /// Number of old notifications deleted.
   final int oldNotificationsDeleted;
 
+  /// Number of `video_metrics` rows deleted whose `event_id` no longer has a
+  /// matching `event` row (stranded because `foreign_keys` enforcement is
+  /// off, so the declared `ON DELETE CASCADE` never fires on its own).
+  final int orphanedVideoMetricsDeleted;
+
+  /// Number of `user_profiles` rows evicted to enforce the row cap, oldest
+  /// by `last_fetched` first.
+  final int evictedUserProfilesDeleted;
+
   /// Total number of records deleted across all tables.
   int get totalDeleted =>
       expiredEventsDeleted +
       expiredProfileStatsDeleted +
       expiredHashtagStatsDeleted +
-      oldNotificationsDeleted;
+      oldNotificationsDeleted +
+      orphanedVideoMetricsDeleted +
+      evictedUserProfilesDeleted;
 
   @override
   String toString() {
@@ -39,6 +52,8 @@ class CleanupResult {
         'events: $expiredEventsDeleted, '
         'profileStats: $expiredProfileStatsDeleted, '
         'hashtagStats: $expiredHashtagStatsDeleted, '
-        'notifications: $oldNotificationsDeleted)';
+        'notifications: $oldNotificationsDeleted, '
+        'orphanedVideoMetrics: $orphanedVideoMetricsDeleted, '
+        'evictedUserProfiles: $evictedUserProfilesDeleted)';
   }
 }
