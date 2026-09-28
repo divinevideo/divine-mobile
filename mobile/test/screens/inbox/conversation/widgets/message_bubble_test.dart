@@ -4,7 +4,6 @@
 // ABOUTME: and long-press callback.
 
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
@@ -30,6 +29,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../../../helpers/contrast.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -37,22 +37,6 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 Finder _divineIcon(DivineIconName icon) => find.byWidgetPredicate(
   (widget) => widget is DivineIcon && widget.icon == icon,
 );
-
-/// WCAG relative luminance. Same formula as
-/// `test/widgets/library/draft_status_badge_test.dart`.
-double _luminance(Color c) {
-  double channel(double v) =>
-      v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
-  return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
-}
-
-double _contrast(Color a, Color b) {
-  final la = _luminance(a);
-  final lb = _luminance(b);
-  final hi = la > lb ? la : lb;
-  final lo = la > lb ? lb : la;
-  return (hi + 0.05) / (lo + 0.05);
-}
 
 String _longestRenderedText(WidgetTester tester) {
   final values = tester
@@ -876,7 +860,7 @@ void main() {
             .widget<Text>(find.text(strings.dmStatusFailed))
             .style!
             .color!;
-        final ratio = _contrast(textColor, colors.background);
+        final ratio = contrastRatio(textColor, colors.surfaceContainerHigh);
 
         expect(
           ratio,
@@ -910,7 +894,7 @@ void main() {
             .widget<Text>(find.text(strings.dmStatusFailed))
             .style!
             .color!;
-        final ratio = _contrast(textColor, colors.background);
+        final ratio = contrastRatio(textColor, colors.surfaceContainerHigh);
 
         expect(
           ratio,
