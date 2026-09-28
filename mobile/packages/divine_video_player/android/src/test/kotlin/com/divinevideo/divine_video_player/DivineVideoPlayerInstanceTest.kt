@@ -952,6 +952,57 @@ class DivineVideoPlayerInstanceTest {
         verify(exactly = 0) { mockPlayer.setPlaybackParameters(PlaybackParameters(0.25f)) }
     }
 
+    // -- seekTo completion contract --
+
+    /** Attaches a surface, materializes the player and sends one seek. */
+    private fun seekWithSurface(playWhenReady: Boolean): Pair<Player.Listener, MethodChannel.Result> {
+        every { mockProducer.surface } returns mockSurface
+        instance.enableTextureOutput(mockRegistry)
+        val listener = capturePlayerListener()
+        every { mockPlayer.playWhenReady } returns playWhenReady
+        every { mockPlayer.playbackState } returns Player.STATE_READY
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+        instance.onMethodCall(MethodCall("seekTo", mapOf("positionMs" to 500)), result)
+        return listener to result
+    }
+
+    /**
+     * Paused, STATE_READY arrives before a clip's last frames leave the decoder.
+     * Completing there let a scrub's next seek flush them before they showed.
+     */
+    @Test
+    fun `paused seekTo completes once its frame renders, not on STATE_READY`() {
+        val (listener, result) = seekWithSurface(playWhenReady = false)
+
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+        verify(exactly = 0) { result.success(any()) }
+
+        listener.onRenderedFirstFrame()
+        verify(exactly = 1) { result.success(null) }
+    }
+
+    @Test
+    fun `paused seekTo whose frame renders first completes on STATE_READY`() {
+        val (listener, result) = seekWithSurface(playWhenReady = false)
+        every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
+
+        listener.onRenderedFirstFrame()
+        verify(exactly = 0) { result.success(any()) }
+
+        every { mockPlayer.playbackState } returns Player.STATE_READY
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+        verify(exactly = 1) { result.success(null) }
+    }
+
+    @Test
+    fun `seekTo during playback completes on STATE_READY`() {
+        val (listener, result) = seekWithSurface(playWhenReady = true)
+
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+
+        verify(exactly = 1) { result.success(null) }
+    }
+
     // -- common-track-end clamp resolution --
 
     private fun loopingCall(looping: Boolean): MethodCall =

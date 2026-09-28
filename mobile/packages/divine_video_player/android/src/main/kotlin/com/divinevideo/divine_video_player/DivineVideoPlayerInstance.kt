@@ -221,8 +221,16 @@ internal class DivineVideoPlayerInstance(
      */
     private var seekCompletionResult: MethodChannel.Result? = null
 
+    /**
+     * Whether the pending paused seek still waits for its frame. Paused,
+     * ExoPlayer reports STATE_READY before a clip's last frames leave the
+     * decoder; completing there lets a scrub's next seek flush them unseen.
+     */
+    private var seekAwaitsFrame = false
+
     /** Safety timeout so Dart is never left hanging if the callback is lost. */
     private val seekTimeoutRunnable = Runnable {
+        seekAwaitsFrame = false
         seekCompletionResult?.success(null)
         seekCompletionResult = null
     }
@@ -376,6 +384,11 @@ internal class DivineVideoPlayerInstance(
         // surfaces keep the default unbounded buffering.
         if (bufferProfile == BufferProfile.FEED) {
             builder.setLoadControl(FeedLoadControl.build())
+        } else {
+            // Paused, ExoPlayer otherwise only works once a second. A scrub
+            // onto a clip's last frames then waits up to that second: the
+            // decoder only releases them once it is fed the end of stream.
+            builder.experimentalSetDynamicSchedulingEnabled(true)
         }
         return builder.build()
     }
@@ -1110,6 +1123,7 @@ internal class DivineVideoPlayerInstance(
         mainHandler.removeCallbacks(seekTimeoutRunnable)
         seekCompletionResult?.success(null)
         seekCompletionResult = result
+        seekAwaitsFrame = !exoPlayer.playWhenReady && activeSurface != null
 
         // Ensure clip offsets are up-to-date from ExoPlayer's timeline
         // before resolving the global position. Without this, offsets
@@ -1333,6 +1347,7 @@ internal class DivineVideoPlayerInstance(
 
     /** Completes the pending seekTo result so Dart's await returns. */
     private fun completeSeekIfPending() {
+        seekAwaitsFrame = false
         seekCompletionResult?.let {
             mainHandler.removeCallbacks(seekTimeoutRunnable)
             it.success(null)
@@ -1569,7 +1584,7 @@ internal class DivineVideoPlayerInstance(
                 if (clipAudioPending) startClipAudioLoop(lastClipsRaw, lastClipsRaw.size)
                 // Seek complete — switch from reporting target to actual position.
                 pendingGlobalStartMs = 0L
-                completeSeekIfPending()
+                if (!seekAwaitsFrame) completeSeekIfPending()
                 // setClips complete — unblock the Dart await.
                 mainHandler.removeCallbacks(setClipsTimeoutRunnable)
                 pendingSetClipsResult?.success(null)
@@ -1779,6 +1794,10 @@ internal class DivineVideoPlayerInstance(
 
         override fun onRenderedFirstFrame() {
             firstFrameRendered = true
+            if (seekAwaitsFrame) {
+                seekAwaitsFrame = false
+                if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
+            }
             // A frame reached the surface, so whatever contention caused a
             // prior decoder error has cleared — allow the full retry budget
             // again for any future error.
