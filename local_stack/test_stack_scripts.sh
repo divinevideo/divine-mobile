@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Behavioural checks for preflight.sh and up.sh.
+# Behavioural checks for preflight.sh, up.sh and minio/install.sh.
 #
 # Every case runs the real code against a sandboxed PATH holding a stubbed
 # `docker` (plus whichever of `ss`/`lsof` the case wants to exist), so the
@@ -914,6 +914,65 @@ reset_fixtures
 run_pinned_images
 
 assert_status 0 "$last_status" "no image overrides should pass pre-flight"
+
+# --- minio/install.sh stamps the release and retries go install -------------
+#
+# MinIO no longer publishes images, so the stack builds them with install.sh
+# (#9208). A wrong version string would mislabel the binaries silently, and
+# `go install` does not retry a dropped download on its own.
+
+INSTALL_BIN="${tmp_dir}/install-bin"
+mkdir -p "$INSTALL_BIN"
+ln -sf "$(command -v cut)" "${INSTALL_BIN}/cut"
+cat >"${INSTALL_BIN}/go" <<'STUB'
+#!/usr/bin/env bash
+# Records every call and fails the first $GO_FAILS of them.
+calls=$(( $(cat "$GO_CALLS" 2>/dev/null || echo 0) + 1 ))
+echo "$calls" >"$GO_CALLS"
+printf '%s\n' "$*" >>"$GO_ARGS"
+(( calls > GO_FAILS ))
+STUB
+chmod +x "${INSTALL_BIN}/go"
+
+# run_install_sh <failures before go succeeds>
+run_install_sh() {
+    rm -f "${tmp_dir}/go_calls" "${tmp_dir}/go_args"
+    set +e
+    env -i PATH="${INSTALL_BIN}:${BIN}" GO_FAILS="$1" \
+        GO_CALLS="${tmp_dir}/go_calls" GO_ARGS="${tmp_dir}/go_args" \
+        "$BASH_BIN" "${SCRIPT_DIR}/minio/install.sh" github.com/minio/minio \
+        RELEASE.2025-10-15T17-29-55Z 9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a \
+        >"${tmp_dir}/out" 2>"${tmp_dir}/err"
+    last_status=$?
+    set -e
+}
+
+run_install_sh 0
+
+assert_status 0 "$last_status" "install.sh should succeed when go install does"
+assert_file_matches '^1$' "${tmp_dir}/go_calls" "a first-try success should call go once"
+assert_file_matches 'cmd\.Version=2025-10-15T17:29:55Z ' "${tmp_dir}/go_args" \
+    "Version should be the release time, as MinIO's release build sets it"
+assert_file_matches 'cmd\.ReleaseTag=RELEASE\.2025-10-15T17-29-55Z ' "${tmp_dir}/go_args" \
+    "ReleaseTag should be the release name"
+assert_file_matches 'cmd\.ShortCommitID=9e49d5e7a648 ' "${tmp_dir}/go_args" \
+    "ShortCommitID should be the first 12 characters of the commit"
+assert_file_matches 'cmd\.CopyrightYear=2025 ' "${tmp_dir}/go_args" \
+    "CopyrightYear should come from the release date"
+assert_file_matches 'github\.com/minio/minio@9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a$' \
+    "${tmp_dir}/go_args" "the module should be installed at the pinned commit"
+
+run_install_sh 2
+
+assert_status 0 "$last_status" "two dropped downloads followed by a success should pass"
+assert_file_matches '^3$' "${tmp_dir}/go_calls" "go install should be retried until it succeeds"
+assert_stderr_contains 'attempt 2 of 3' "each retry should be announced"
+
+run_install_sh 3
+
+assert_status 1 "$last_status" "three failed attempts should fail the build"
+assert_file_matches '^3$' "${tmp_dir}/go_calls" "go install should stop after three attempts"
+assert_stderr_lacks 'attempt 3 of 3' "the final failure should not announce a retry"
 
 # ----------------------------------------------------------------------------
 
