@@ -28,6 +28,12 @@ class ModerationPubkeyResolver {
 
   final Nip05PubkeyLookup _lookupPubkey;
 
+  /// (pubkey, source) pairs already logged by [_refuseRetired] on this
+  /// instance. `cached()` at load and `resolve()` at refresh both check the
+  /// same cached value under the same source string, so without this a
+  /// refused cached key logs twice, milliseconds apart, for one fact.
+  final Set<(String, String)> _loggedRefusals = {};
+
   /// SharedPreferences key for the NIP-05 resolved moderation pubkey.
   static const String _resolvedPubkeyKey = 'divine_moderation_resolved_pubkey';
 
@@ -48,17 +54,22 @@ class ModerationPubkeyResolver {
   static String _normalizedPubkey(String pubkey) => pubkey.trim().toLowerCase();
 
   /// Whether [pubkey] is a key this build lists as retired, logging the
-  /// refusal. Adopting one would aim labels and report DMs at an account
-  /// nobody reads, and after a compromise at one someone else controls.
+  /// refusal at most once per (pubkey, source) pair on this instance —
+  /// `cached()` and `resolve()` both check the cache under the same source,
+  /// and without the dedup that logs the identical fact twice. Adopting a
+  /// retired key would aim labels and report DMs at an account nobody reads,
+  /// and after a compromise at one someone else controls.
   bool _refuseRetired(String pubkey, {required String source}) {
     if (!isRetiredModerationAccount(pubkey)) return false;
-    Log.warning(
-      'Refusing moderation pubkey ${pubkeyForLogs(pubkey)} from $source: '
-      'this build lists it as retired. Using the pinned key '
-      '${pubkeyForLogs(kModerationPubkeyHex)} instead.',
-      name: 'ModerationLabelService',
-      category: LogCategory.system,
-    );
+    if (_loggedRefusals.add((pubkey, source))) {
+      Log.warning(
+        'Refusing moderation pubkey ${pubkeyForLogs(pubkey)} from $source: '
+        'this build lists it as retired. Using the pinned key '
+        '${pubkeyForLogs(kModerationPubkeyHex)} instead.',
+        name: 'ModerationLabelService',
+        category: LogCategory.system,
+      );
+    }
     return true;
   }
 

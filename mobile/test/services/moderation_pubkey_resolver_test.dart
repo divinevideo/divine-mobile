@@ -188,5 +188,41 @@ void main() {
         expect(refusals(), isNotEmpty);
       });
     });
+
+    group('refusal logging', () {
+      // Observed on device: cached() at load and resolve() at refresh both
+      // check the same cached retired key under the same source string, and
+      // logged two identical "... from the cached NIP-05 answer" lines 8ms
+      // apart.
+      test(
+        'logs a refused retired cached key once across cached() then '
+        'resolve(), but still logs a refused NIP-05 answer under its own '
+        'source',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().toIso8601String(),
+          );
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => retiredKey,
+          );
+
+          resolver.cached(prefs);
+          await resolver.resolve(prefs);
+
+          expect(
+            refusals().where(
+              (message) => message.contains('from the cached NIP-05 answer'),
+            ),
+            hasLength(1),
+          );
+          expect(
+            refusals().where((message) => message.contains('from NIP-05:')),
+            hasLength(1),
+          );
+        },
+      );
+    });
   });
 }
