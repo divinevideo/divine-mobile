@@ -2597,6 +2597,7 @@
     "videoEditorReverseNoLocalFile": "Tidak dapat membalik: klip tidak tersedia secara lokal.",
     "videoEditorReverseFailed": "Tidak dapat membalik klip. Silakan coba lagi.",
     "videoEditorSpeedSheetTitle": "Kecepatan Klip",
+    "videoEditorSpeedPresetSemanticLabel": "Kecepatan {speed}×",
     "videoEditorTransitionSheetTitle": "Transisi",
     "videoEditorTransitionNone": "Tidak ada",
     "videoEditorTransitionDissolve": "Larut",

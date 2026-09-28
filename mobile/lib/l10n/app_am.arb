@@ -3241,6 +3241,7 @@
     "videoEditorReverseNoLocalFile": "ወደ ኋላ መቀየር አልተቻለም፤ ቅንጥቡ በሀገር ዉስጥ አይገኝም።",
     "videoEditorReverseFailed": "ቅንጥቡን ወደ ኋላ መቀየር አልተቻለም። እንደገና ሞክር።",
     "videoEditorSpeedSheetTitle": "የክሊፕ ፍጥነት",
+    "videoEditorSpeedPresetSemanticLabel": "ፍጥነት {speed}×",
     "videoEditorTransitionSheetTitle": "ሽግግር",
     "videoEditorTransitionNone": "ምንም",
     "videoEditorTransitionDissolve": "መሟሟት",

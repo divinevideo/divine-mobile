@@ -9427,6 +9427,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Bilis ng Clip';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'Bilis $speed×';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transisyon';
 
   @override

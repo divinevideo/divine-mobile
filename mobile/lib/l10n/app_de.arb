@@ -2642,6 +2642,7 @@
     "videoEditorReverseNoLocalFile": "Rückwärtsdrehen nicht möglich: Clip ist lokal nicht verfügbar.",
     "videoEditorReverseFailed": "Clip konnte nicht rückwärts gedreht werden. Bitte erneut versuchen.",
     "videoEditorSpeedSheetTitle": "Clip-Geschwindigkeit",
+    "videoEditorSpeedPresetSemanticLabel": "Geschwindigkeit {speed}×",
     "videoEditorTransitionSheetTitle": "Übergang",
     "videoEditorTransitionNone": "Kein",
     "videoEditorTransitionDissolve": "Überblenden",

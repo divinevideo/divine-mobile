@@ -2642,6 +2642,7 @@
     "videoEditorReverseNoLocalFile": "Impossibile invertire: il clip non è disponibile localmente.",
     "videoEditorReverseFailed": "Impossibile invertire il clip. Riprova.",
     "videoEditorSpeedSheetTitle": "Velocità del clip",
+    "videoEditorSpeedPresetSemanticLabel": "Velocità {speed}×",
     "videoEditorTransitionSheetTitle": "Transizione",
     "videoEditorTransitionNone": "Nessuna",
     "videoEditorTransitionDissolve": "Dissolvenza incrociata",

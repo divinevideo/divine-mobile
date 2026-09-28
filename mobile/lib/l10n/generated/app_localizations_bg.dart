@@ -9436,6 +9436,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Скорост на клипа';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'Скорост $speed×';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Преход';
 
   @override

@@ -9628,6 +9628,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'క్లిప్ స్పీడ్';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'వేగం $speed×';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'పరివర్తన';
 
   @override

@@ -1914,6 +1914,7 @@
     "videoEditorReverseNoLocalFile": "Hindi ma-reverse: hindi available ang clip nang lokal.",
     "videoEditorReverseFailed": "Hindi na-reverse ang clip. Pakisubukang muli.",
     "videoEditorSpeedSheetTitle": "Bilis ng Clip",
+    "videoEditorSpeedPresetSemanticLabel": "Bilis {speed}×",
     "videoEditorTransitionSheetTitle": "Transisyon",
     "videoEditorTransitionNone": "Wala",
     "videoEditorTransitionDissolve": "Dissolve",

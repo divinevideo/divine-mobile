@@ -2642,6 +2642,7 @@
     "videoEditorReverseNoLocalFile": "Kan inte vända baklänges: klippet är inte tillgängligt lokalt.",
     "videoEditorReverseFailed": "Kunde inte vända klippet baklänges. Försök igen.",
     "videoEditorSpeedSheetTitle": "Klipphastighet",
+    "videoEditorSpeedPresetSemanticLabel": "Hastighet {speed}×",
     "videoEditorTransitionSheetTitle": "Övergång",
     "videoEditorTransitionNone": "Ingen",
     "videoEditorTransitionDissolve": "Övertoning",

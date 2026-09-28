@@ -8912,6 +8912,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => '클립 속도';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return '속도 $speed×';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => '전환';
 
   @override

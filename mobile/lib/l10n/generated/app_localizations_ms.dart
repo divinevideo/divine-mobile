@@ -9363,6 +9363,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Kelajuan Klip';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'Kelajuan $speed×';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Peralihan';
 
   @override

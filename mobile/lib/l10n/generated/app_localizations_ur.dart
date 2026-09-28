@@ -9352,6 +9352,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'کلپ رفتار';
 
   @override
+  String videoEditorSpeedPresetSemanticLabel(String speed) {
+    return 'رفتار $speed×';
+  }
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ٹرانزیشن';
 
   @override

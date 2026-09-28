@@ -2136,6 +2136,7 @@
     "videoEditorReverseNoLocalFile": "역재생할 수 없습니다: 클립이 로컬에서 사용할 수 없습니다.",
     "videoEditorReverseFailed": "클립을 역재생할 수 없었습니다. 다시 시도해 주세요.",
     "videoEditorSpeedSheetTitle": "클립 속도",
+    "videoEditorSpeedPresetSemanticLabel": "속도 {speed}×",
     "videoEditorTransitionSheetTitle": "전환",
     "videoEditorTransitionNone": "없음",
     "videoEditorTransitionDissolve": "디졸브",
