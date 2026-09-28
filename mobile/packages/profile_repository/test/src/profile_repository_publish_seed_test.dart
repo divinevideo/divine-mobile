@@ -446,6 +446,45 @@ void main() {
     });
 
     group('fetchFreshProfile with requireRawKind0', () {
+      test('upgrades the cache when a newer indexer copy arrives after the '
+          'connected read', () async {
+        final indexerRead = Completer<List<Event>>();
+        when(
+          () => client.queryEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            useCache: any(named: 'useCache'),
+          ),
+        ).thenAnswer((_) => indexerRead.future);
+        stubRelayRead(
+          () async => (
+            events: [relayKind0()],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+
+        final fresh = await repository.fetchFreshProfile(
+          pubkey: pubkey,
+          requireRawKind0: true,
+        );
+        expect(fresh?.displayName, equals('Before'));
+
+        indexerRead.complete([indexerKind0(createdAt: 1790000100)]);
+        await Future<void>.delayed(Duration.zero);
+
+        final cached = await repository.getCachedProfile(pubkey: pubkey);
+        expect(cached?.displayName, equals('Indexer copy'));
+        expect(
+          cached?.createdAt,
+          equals(
+            DateTime.fromMillisecondsSinceEpoch(
+              1790000100 * 1000,
+            ),
+          ),
+        );
+      });
+
       test('asks the relays again after a read that timed out', () async {
         stubRelayRead(
           () async => (events: <Event>[], timedOut: true, noRelays: false),
