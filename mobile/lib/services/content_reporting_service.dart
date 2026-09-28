@@ -171,9 +171,10 @@ class ContentReportingService implements ReportChannelDriver {
   /// Production injects this DAO; legacy callers without it await delivery.
   final PendingReportsDao? _pendingReportsDao;
 
-  /// Resolves the moderation DM recipient at filing time, not construction
-  /// time — the moderation identity can change after this service is built
-  /// (NIP-05 refresh, a key rotation).
+  /// The pubkey a report's moderation DM is addressed to, or `null` to send
+  /// none. Called when a report is filed, not read once at construction —
+  /// the moderation identity can change after this service is built (a
+  /// NIP-05 refresh, a key rotation).
   final String? Function()? currentModerationPubkey;
   final Future<bool> Function(PendingReport report)? deliverModerationDm;
   final StreamController<void> _reportQueued = StreamController.broadcast();

@@ -207,9 +207,6 @@ void main() {
             additionalOverrides: [
               isDmRestrictedProvider.overrideWithValue(false),
               dmRepositoryProvider.overrideWithValue(mockDmRepository),
-              fetchUserProfileProvider(
-                otherPubkey,
-              ).overrideWith((ref) async => null),
             ],
           ),
         );
@@ -238,9 +235,6 @@ void main() {
             additionalOverrides: [
               isDmRestrictedProvider.overrideWithValue(false),
               dmRepositoryProvider.overrideWithValue(mockDmRepository),
-              fetchUserProfileProvider(
-                otherPubkey,
-              ).overrideWith((ref) async => null),
             ],
           ),
         );

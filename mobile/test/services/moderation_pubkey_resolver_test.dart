@@ -165,8 +165,8 @@ void main() {
     });
 
     group('cached', () {
-      test('returns the cached pubkey when one is present', () {
-        prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+      test('returns the cached pubkey when one is present', () async {
+        await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
         final resolver = ModerationPubkeyResolver();
 
         expect(resolver.cached(prefs), syntheticTestPubkey);
@@ -178,15 +178,18 @@ void main() {
         expect(resolver.cached(prefs), pin);
       });
 
-      test('refuses a cached retired key and returns the pin instead', () {
-        prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
-        final resolver = ModerationPubkeyResolver();
+      test(
+        'refuses a cached retired key and returns the pin instead',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+          final resolver = ModerationPubkeyResolver();
 
-        final result = resolver.cached(prefs);
+          final result = resolver.cached(prefs);
 
-        expect(result, pin);
-        expect(refusals(), isNotEmpty);
-      });
+          expect(result, pin);
+          expect(refusals(), isNotEmpty);
+        },
+      );
     });
 
     group('refusal logging', () {
