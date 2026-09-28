@@ -101,8 +101,8 @@ role uses the shared support identity.
 | Labeler subscription migrated to the current key | `ModerationLabelService._migrateLegacyPubkey` |
 | A protected minor may read (never send to) a retired-key thread while nobody can sign as it | `OfficialAccountsService.isReadableByProtectedMinor`, gated on `RetiredKeyCustody.canStillSign` |
 | Retired key refused as the moderation identity — from the persisted NIP-05 cache (at load and at read time) and from a live NIP-05 answer, before it is ever persisted | `ModerationLabelService._refuseRetired` |
-| Report recipient read at filing time rather than captured once at provider construction, so a rotation mid-session cannot address a report to a key that just retired | `ContentReportingService.currentModerationPubkey` → `ModerationLabelService.divineModerationPubkeyHex`, wired in `social_providers.dart` |
-| Composer replaced by a "couldn't load this conversation" notice, and the player reply bar hidden, when a thread's participants cannot be resolved | `conversation_view.dart` and `reel_dm_reply_bar.dart`, via `resolveDmThreadWritability` returning `DmThreadWritability.unresolved` |
+| Report recipient read at filing time from the label service, not captured once when the reporting provider was built — covers a stale cached key NIP-05 corrects moments later | `ContentReportingService.currentModerationPubkey` → `ModerationLabelService.divineModerationPubkeyHex`, wired in `social_providers.dart` |
+| Composer replaced by a "We couldn't load this conversation" notice, and the player reply bar hidden, when a thread's participants cannot be resolved | `conversation_view.dart` and `reel_dm_reply_bar.dart`, via `resolveDmThreadWritability` returning `DmThreadWritability.unresolved` |
 
 `isModerationAccount` answers *"is this the moderation team"* and is true for
 retired keys on purpose, so old threads still read correctly.
@@ -155,12 +155,16 @@ The client half is small and belongs in one PR:
    the widening that lets a DM-restricted minor read a retired-key thread
    follows automatically — no code change needed, just the right enum value.
    `unrecovered` and `destroyed` both mean nobody can sign as the key
-   (`RetiredKeyCustody.canStillSign` is `false`), so that widening applies and
-   the closed composer is permanent. `archived` and `compromised` both mean
-   someone still could (`canStillSign` is `true`), so the widening does not
-   apply. Use `compromised` whenever someone outside the team may hold the
-   key — regardless of what became of the team's own copy — and reserve
-   `archived` for a key that stayed fully inside the team's control.
+   (`RetiredKeyCustody.canStillSign` is `false`), so that widening applies.
+   `archived` and `compromised` both mean someone still could (`canStillSign`
+   is `true`), so the widening does not apply. Use `compromised` whenever
+   someone outside the team may hold the key — regardless of what became of
+   the team's own copy — and reserve `archived` for a key that stayed fully
+   inside the team's control. For an archived key the team can still decrypt
+   what was already sent to it, so standing up a reader against that backlog
+   is possible and whether to do so is a real decision; the composer stays
+   closed either way, because outbound sends are refused for every retired
+   key regardless of custody.
 6. Note that a rotation forks `conversation_id` on the service side, so the
    outgoing key's rows become a disjoint set that the admin UI's pubkey lookup
    can no longer reach. `divinevideo/divine-mobile#7850` is closed, but the
@@ -248,8 +252,8 @@ Do not re-litigate the composer for this key. A future retirement is a
 different question: what makes a key retired, how access is revoked, where
 remaining private material lives, how a retired identity is proved
 unreactivatable, and how a replacement is announced. That protocol is now
-written down — see [Open items](#open-items) — and the mobile behaviour that
-follows from it is delivered by this change (`divinevideo/divine-mobile#7851`).
+written down, and what this change delivers against it is listed in
+[Open items](#open-items) under `divinevideo/divine-mobile#7851`.
 This custody result does not settle whether newly discovered events from this
 retired key should retain official Divine branding;
 `divinevideo/support-trust-safety#211` owns that decision.
@@ -273,9 +277,13 @@ Settled, kept here because the register used to cite these as open:
   `divinevideo/support-trust-safety#253`, which wrote the procedure down at
   `docs/moderation/moderation-key-retirement-procedure.md` in that repo.
 - `divinevideo/divine-mobile#7851` — the mobile behaviour that follows from
-  the retirement protocol: the custody-aware send predicate, closed composer,
-  minor-read widening, label-service refusal, and filing-time report
-  recipient. Delivered by this change.
+  the retirement protocol. The send refusal and closed composer predate this
+  change (#6416) and are not custody-aware — every retired key is refused
+  alike. What this change delivers is custody recorded per register entry,
+  the custody-aware minor-read exception, the label service refusing
+  retired keys from cache and live NIP-05, the report recipient read at
+  filing time, and the composer withheld while a thread's participants
+  cannot be resolved (#8664/#8677).
 - `divinevideo/divine-mobile#8355` decided on 2026-08-31 that shared access to
   the current moderation identity stays acceptable, and that the client should
   resolve that identity through NIP-05. It did not cover retirement.
