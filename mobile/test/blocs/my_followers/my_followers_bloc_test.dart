@@ -42,10 +42,10 @@ void main() {
       contentBlocklistRepository: mockBlocklistRepository,
     );
 
-    test('initial state is initial with empty list', () {
+    test('initial state is initial with empty list', () async {
       final bloc = createBloc();
       expect(bloc.state, const MyFollowersState());
-      bloc.close();
+      await bloc.close();
     });
 
     group('MyFollowersListLoadRequested', () {
