@@ -78,7 +78,7 @@ void main() {
           rootAddressableId: rootAddressableId,
         );
 
-    test('initial state is empty', () {
+    test('initial state is empty', () async {
       final bloc = createBloc();
       expect(bloc.state.commentUpvoteCounts, isEmpty);
       expect(bloc.state.commentDownvoteCounts, isEmpty);
@@ -86,7 +86,7 @@ void main() {
       expect(bloc.state.downvotedCommentIds, isEmpty);
       expect(bloc.state.error, isNull);
       expect(bloc.state.outbox, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group('CommentVoteCountsFetchRequested', () {
