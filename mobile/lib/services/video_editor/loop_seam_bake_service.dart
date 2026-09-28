@@ -192,6 +192,9 @@ class LoopSeamBakeService {
           renderId: '$taskId-loop-seam-head',
           written: written,
         );
+        // Without the head there is no seam to meet, so the tail is not worth
+        // an encode.
+        if (bakedFirst == null) return LoopSeamBakeResult(clips: clips);
         RenderCancellationRegistry.throwIfRequested(taskId);
         final bakedLast = await _bakeClip(
           clip: last,
@@ -202,7 +205,7 @@ class LoopSeamBakeService {
           renderId: '$taskId-loop-seam-tail',
           written: written,
         );
-        if (bakedFirst == null || bakedLast == null) {
+        if (bakedLast == null) {
           await _deleteAll(written);
           return LoopSeamBakeResult(clips: clips);
         }

@@ -19,17 +19,22 @@ const _info = LoopSeamSourceInfo(
   hasAudio: true,
 );
 
-DivineVideoClip _clip(String id, {bool reversed = false, double? speed}) =>
-    DivineVideoClip(
-      id: id,
-      video: EditorVideo.file('/clips/$id.mp4'),
-      duration: const Duration(seconds: 6),
-      recordedAt: DateTime(2026),
-      targetAspectRatio: model.AspectRatio.vertical,
-      originalAspectRatio: 9 / 16,
-      reversed: reversed,
-      playbackSpeed: speed,
-    );
+DivineVideoClip _clip(
+  String id, {
+  bool reversed = false,
+  double? speed,
+  Duration trimEnd = Duration.zero,
+}) => DivineVideoClip(
+  id: id,
+  video: EditorVideo.file('/clips/$id.mp4'),
+  duration: const Duration(seconds: 6),
+  recordedAt: DateTime(2026),
+  targetAspectRatio: model.AspectRatio.vertical,
+  originalAspectRatio: 9 / 16,
+  reversed: reversed,
+  playbackSpeed: speed,
+  trimEnd: trimEnd,
+);
 
 /// A bake whose frames come from [TestScene]: the file named [lastPath] ends
 /// on the scene moved by ([dx], [dy]) pixels, everything else is unmoved.
@@ -143,6 +148,20 @@ void main() {
         expect(result.clips[1], same(clips[1]));
         expect(result.clips.first.video!.file!.path, harness.renders[0].$1);
         expect(result.clips.last.video!.file!.path, harness.renders[1].$1);
+      });
+
+      test('skips the tail encode when the head clip is too short to '
+          'bake', () async {
+        final harness = _Harness()..lastPath = '/clips/b.mp4';
+        final clips = [
+          _clip('a', trimEnd: const Duration(milliseconds: 5950)),
+          _clip('b'),
+        ];
+
+        final result = await harness.build().alignClips(clips, taskId: 't');
+
+        expect(harness.renders, isEmpty);
+        expect(result.clips, same(clips));
       });
 
       test('reads the seam frames at the visible ends of the trim', () async {
