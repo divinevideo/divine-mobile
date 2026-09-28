@@ -293,8 +293,8 @@ class VideoEditorRenderService {
         category: LogCategory.video,
       );
 
-      // The aligned clips are encoded only; proofs, cover and metadata below
-      // keep describing the recorded clips.
+      // Only the encode sees the aligned clips. The per-clip proofs below still
+      // attest the recorded clips; cover and metadata come from the output.
       final List<DivineVideoClip> encodeClips;
       if (!alignLoopSeam) {
         encodeClips = renderClips;
