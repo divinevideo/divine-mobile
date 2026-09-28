@@ -137,12 +137,15 @@ The client half is small and belongs in one PR:
    key held — check Funnelcake's `RELAY_PUBKEY` and `ADMIN_PUBKEYS` and the
    labeler roles, not just DM signing.
 3. Update `kModerationPubkeyHex` to the incoming shared support key. This is a
-   mandatory routing change: the constant is the report target, pinned support
-   row destination, protected-minor gate anchor, unread partition, retired
-   thread redirect target, and `ModerationLabelService`'s NIP-05 fallback. A
-   stale value silently routes support traffic to the retired account even
-   when live NIP-05 resolution succeeds elsewhere. Treat this step as
-   transitional: `divinevideo/divine-mobile#8355` decided on 2026-08-31 that
+   mandatory routing change: the constant is the report target's fallback
+   (the live recipient is the label service's NIP-05-resolved key — see the
+   row above), the pinned support row destination, the protected-minor gate
+   anchor, the unread partition, the retired thread redirect target, and
+   `ModerationLabelService`'s own NIP-05 fallback. A stale value silently
+   routes support traffic to the retired account for every one of those
+   pin-anchored surfaces, and for reports too whenever live NIP-05
+   resolution is unavailable. Treat this step as transitional:
+   `divinevideo/divine-mobile#8355` decided on 2026-08-31 that
    the client should resolve the moderation identity through NIP-05 instead of
    a shipped pubkey, so that rotation no longer needs an app release.
    `divinevideo/divine-mobile#8253` owns that change; until it lands, a
