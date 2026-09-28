@@ -667,8 +667,10 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // Nobody to send to (#7335). Like a block, this is refused before a queue
     // row exists, so there is no bubble to carry it — and unlike a block, the
     // thread itself is the broken thing, so the copy points back at the inbox
-    // rather than at the peer. No retry: the same tap re-hits the same empty
-    // participant list.
+    // rather than at the peer. No retry action: the bloc guard behind this
+    // status is now a backstop rather than a path the UI still reaches —
+    // `_SendBarBody` is built only for a writable thread, which requires
+    // participants.
     if (state.sendStatus == SendStatus.noRecipient) {
       final message = l10n.dmSendNoRecipientMessage;
       _showErrorToastAndAnnounce(context, message);
