@@ -255,12 +255,12 @@ void main() {
       );
     });
 
-    test('initial state has type and initial status', () {
+    test('initial state has type and initial status', () async {
       final bloc = createBloc();
       expect(bloc.state.type, VideoEngagementType.likers);
       expect(bloc.state.status, VideoEngagementStatus.initial);
       expect(bloc.state.pubkeys, isEmpty);
-      bloc.close();
+      await bloc.close();
     });
 
     group('VideoEngagementLoadRequested for likers', () {

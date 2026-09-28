@@ -110,11 +110,11 @@ void main() {
   );
 
   group(WelcomeBloc, () {
-    test('initial state is $WelcomeState with initial status', () {
+    test('initial state is $WelcomeState with initial status', () async {
       final bloc = buildBloc();
       expect(bloc.state, const WelcomeState());
       expect(bloc.state.status, WelcomeStatus.initial);
-      bloc.close();
+      await bloc.close();
     });
 
     group('$WelcomeStarted', () {
