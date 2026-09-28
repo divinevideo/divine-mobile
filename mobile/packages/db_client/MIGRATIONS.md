@@ -131,6 +131,11 @@ matching read/delete/count methods and
 `CleanupResult.expiredHashtagStatsDeleted` are removed alongside it, for the
 same reason: no caller ever used them.
 
+This removal is not backward-compatible with a v18 binary: v18 startup cleanup
+still calls `HashtagStatsDao.deleteExpired()`, which fails when the v19 database
+no longer has the table. Do not open a v19 database with an older build when
+testing an app rollback; use a separate database for the older build.
+
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
 for startup cleanup and guarded recovery of damaged local databases.
