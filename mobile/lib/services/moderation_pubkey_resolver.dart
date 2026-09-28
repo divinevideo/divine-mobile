@@ -101,6 +101,11 @@ class ModerationPubkeyResolver {
       final resolved = await _lookupPubkey(kModerationNip05);
       final normalized = _normalizedPubkey(resolved ?? '');
       if (_refuseRetired(normalized, source: 'NIP-05')) {
+        // Do not let a different, stale cached answer win on the next cold
+        // start after this explicit refusal. `cached()` intentionally avoids
+        // network access and would otherwise keep returning it indefinitely.
+        await prefs.remove(_resolvedPubkeyKey);
+        await prefs.remove(_resolvedAtKey);
         return kModerationPubkeyHex;
       }
       if (normalized.isNotEmpty) {
