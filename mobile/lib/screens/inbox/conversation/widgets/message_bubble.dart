@@ -360,6 +360,12 @@ class _MessageBubbleState extends State<MessageBubble> {
     final hasMediaCard = hasVideo || hasEncryptedVideo;
     final effectiveIsFirstInGroup = hasMediaCard || isFirstInGroup;
     final effectiveIsLastInGroup = hasMediaCard || isLastInGroup;
+    // Shared by the bubble itself and the failed/blocked status line below
+    // it, so both stay capped to the same width instead of the status line
+    // duplicating this expression and drifting from it.
+    final bubbleMaxWidth = hasMediaCard
+        ? _videoCardWidth + 32
+        : MediaQuery.sizeOf(context).width * 0.75;
 
     // A reply that references a video (but doesn't itself render a full card)
     // shows a compact quoted preview above its text. Strip the trailing
@@ -455,11 +461,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                         // the bubble doesn't grow wider than the card when a
                         // personal message wraps below it. Text-only bubbles
                         // stay at the chat-typical 75 % of screen width.
-                        constraints: BoxConstraints(
-                          maxWidth: hasMediaCard
-                              ? _videoCardWidth + 32
-                              : MediaQuery.sizeOf(context).width * 0.75,
-                        ),
+                        constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
                         // Both text and video bubbles use 16 px horizontal /
                         // 12 px vertical padding (Figma spacing/16 +
                         // spacing/12) so the thumbnail and text sit in the
@@ -595,14 +597,18 @@ class _MessageBubbleState extends State<MessageBubble> {
                       // 1.16:1, far under the 4.5:1 floor (the whole bubble
                       // stays tappable to resend or delete).
                       if (isFailedOwnSend)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: _NotDeliveredIndicator(),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _NotDeliveredIndicator(
+                            maxWidth: bubbleMaxWidth,
+                          ),
                         ),
                       if (isBlockedOwnSend)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: _BlockedDeliveryIndicator(),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _BlockedDeliveryIndicator(
+                            maxWidth: bubbleMaxWidth,
+                          ),
                         ),
                     ],
                   ),
@@ -1587,48 +1593,28 @@ class _VideoCard extends ConsumerWidget {
 /// tappable to resend or delete; a terminal blocked bubble uses the distinct
 /// [_BlockedDeliveryIndicator].
 class _NotDeliveredIndicator extends StatelessWidget {
-  const _NotDeliveredIndicator();
+  const _NotDeliveredIndicator({required this.maxWidth});
+
+  /// Caps this status line to the same width as the bubble above it (see
+  /// [_MessageBubbleState.build]'s `bubbleMaxWidth`), so a translated
+  /// caption longer than "Failed to send" wraps within the bubble's own
+  /// width instead of spanning the whole message row.
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
     final label = context.l10n.dmStatusFailed;
     final color = context.vineColors.onErrorContainer;
-    return Semantics(
-      label: label,
+    // No `Semantics(label:)` wrapper here: the `Text` below already
+    // contributes this label to the merged bubble semantics on its own, so
+    // wrapping it too announced "Failed to send" twice.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: 4,
-        children: [
-          // Decorative: the text carries the meaning, so the icon's own
-          // image semantics must not reach the bubble's merged node.
-          ExcludeSemantics(
-            child: DivineIcon(
-              icon: DivineIconName.warningCircle,
-              size: 14,
-              color: color,
-            ),
-          ),
-          Text(label, style: VineTheme.labelSmallFont(color: color)),
-        ],
-      ),
-    );
-  }
-}
-
-/// The terminal status, shown under the bubble, for a send retained on a
-/// closed thread — the same 1.16:1 contrast problem as
-/// [_NotDeliveredIndicator].
-class _BlockedDeliveryIndicator extends StatelessWidget {
-  const _BlockedDeliveryIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    final label = context.l10n.dmSendBlockedRetiredMessage;
-    final color = context.vineColors.onErrorContainer;
-    return Semantics(
-      label: label,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+        // The icon sits beside the first line, not centered on the whole
+        // (possibly wrapped) caption block.
+        crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 4,
         children: [
           // Decorative: the text carries the meaning, so the icon's own
@@ -1641,7 +1627,61 @@ class _BlockedDeliveryIndicator extends StatelessWidget {
             ),
           ),
           Flexible(
-            child: Text(label, style: VineTheme.labelSmallFont(color: color)),
+            child: Text(
+              label,
+              textAlign: TextAlign.end,
+              style: VineTheme.labelSmallFont(color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The terminal status, shown under the bubble, for a send retained on a
+/// closed thread — the same 1.16:1 contrast problem as
+/// [_NotDeliveredIndicator].
+class _BlockedDeliveryIndicator extends StatelessWidget {
+  const _BlockedDeliveryIndicator({required this.maxWidth});
+
+  /// Caps this status line to the same width as the bubble above it (see
+  /// [_MessageBubbleState.build]'s `bubbleMaxWidth`). This message is long
+  /// enough to wrap on its own, so without the cap it spanned nearly the
+  /// full message row instead of the bubble's own width.
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.dmSendBlockedRetiredMessage;
+    final color = context.vineColors.onErrorContainer;
+    // No `Semantics(label:)` wrapper here: the `Text` below already
+    // contributes this label to the merged bubble semantics on its own, so
+    // wrapping it too announced the whole sentence twice.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        // The icon sits beside the first line, not centered on the whole
+        // wrapped caption block.
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 4,
+        children: [
+          // Decorative: the text carries the meaning, so the icon's own
+          // image semantics must not reach the bubble's merged node.
+          ExcludeSemantics(
+            child: DivineIcon(
+              icon: DivineIconName.warningCircle,
+              size: 14,
+              color: color,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.end,
+              style: VineTheme.labelSmallFont(color: color),
+            ),
           ),
         ],
       ),

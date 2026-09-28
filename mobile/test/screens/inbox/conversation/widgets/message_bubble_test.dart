@@ -976,6 +976,220 @@ void main() {
           expect(find.byIcon(Icons.access_time), findsNothing);
         },
       );
+
+      testWidgets(
+        'reads the failed-status caption once in the merged bubble '
+        'semantics, not twice',
+        (tester) async {
+          // Regression: the indicator wrapped its Row in `Semantics(label:)`
+          // while leaving the child Text un-excluded, so the merged bubble
+          // label carried "Failed to send" twice — VoiceOver read it back
+          // to back.
+          final handle = tester.ensureSemantics();
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Verify me 7851',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.failed,
+                ),
+              ),
+            ),
+          );
+
+          // Anchor on the message text (unique, unaffected by the fix) so
+          // the finder resolves to exactly one element regardless of
+          // whether the status label is currently duplicated.
+          final node = tester.getSemantics(
+            find.bySemanticsLabel(RegExp('Verify me 7851')),
+          );
+          final occurrences = strings.dmStatusFailed
+              .allMatches(node.label)
+              .length;
+          expect(occurrences, equals(1));
+
+          handle.dispose();
+        },
+      );
+
+      testWidgets(
+        'reads the blocked-status caption once in the merged bubble '
+        'semantics, not twice',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Verify me 7851',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+
+          final node = tester.getSemantics(
+            find.bySemanticsLabel(RegExp('Verify me 7851')),
+          );
+          final occurrences = strings.dmSendBlockedRetiredMessage
+              .allMatches(node.label)
+              .length;
+          expect(occurrences, equals(1));
+
+          handle.dispose();
+        },
+      );
+    });
+
+    group('status line layout', () {
+      testWidgets(
+        'wraps a long blocked-status caption within the bubble max width',
+        (tester) async {
+          // Regression: the status Row had no width cap, so a long message
+          // wrapped across nearly the full message row — far wider than
+          // the bubble it explains.
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          const bubbleMaxWidth = 360 * 0.75;
+          final statusTextRect = tester.getRect(
+            find.text(strings.dmSendBlockedRetiredMessage),
+          );
+
+          expect(
+            statusTextRect.width,
+            lessThanOrEqualTo(bubbleMaxWidth + 1),
+            reason: 'measured ${statusTextRect.width}',
+          );
+        },
+      );
+
+      testWidgets(
+        "ends the blocked-status caption flush with the bubble's end "
+        'edge in LTR',
+        (tester) async {
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final bubbleContainerRect = tester.getRect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Container &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration! as BoxDecoration).color ==
+                      VineTheme.primaryAccessible,
+            ),
+          );
+          final statusTextRect = tester.getRect(
+            find.text(strings.dmSendBlockedRetiredMessage),
+          );
+
+          expect(
+            (statusTextRect.right - bubbleContainerRect.right).abs(),
+            lessThanOrEqualTo(1),
+            reason:
+                'status right ${statusTextRect.right}, bubble right '
+                '${bubbleContainerRect.right}',
+          );
+        },
+      );
+
+      testWidgets(
+        "mirrors the blocked-status caption to the bubble's start edge "
+        'under RTL',
+        (tester) async {
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Scaffold(
+                  body: MessageBubble(
+                    message: 'Retained appeal',
+                    timestamp: '2:30 PM',
+                    isSent: true,
+                    deliveryStatus: DmDeliveryStatus.blocked,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final bubbleContainerRect = tester.getRect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Container &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration! as BoxDecoration).color ==
+                      VineTheme.primaryAccessible,
+            ),
+          );
+          final statusTextRect = tester.getRect(
+            find.text(strings.dmSendBlockedRetiredMessage),
+          );
+
+          expect(
+            (statusTextRect.left - bubbleContainerRect.left).abs(),
+            lessThanOrEqualTo(1),
+            reason:
+                'status left ${statusTextRect.left}, bubble left '
+                '${bubbleContainerRect.left}',
+          );
+        },
+      );
     });
 
     group('URL linkification', () {
