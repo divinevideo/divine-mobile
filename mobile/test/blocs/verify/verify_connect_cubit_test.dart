@@ -129,10 +129,12 @@ void main() {
           );
         },
         build: () => build(_discord),
-        act: (cubit) => cubit
-          ..identityChanged('alice')
-          ..proofChanged('https://discord.com/channels/1/2/3')
-          ..submitProof(),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('alice')
+            ..proofChanged('https://discord.com/channels/1/2/3');
+          await cubit.submitProof();
+        },
         verify: (cubit) {
           expect(
             cubit.state.error,
@@ -150,10 +152,12 @@ void main() {
           );
         },
         build: () => build(_discord),
-        act: (cubit) => cubit
-          ..identityChanged('alice')
-          ..proofChanged('https://discord.com/channels/1/2/3')
-          ..submitProof(),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('alice')
+            ..proofChanged('https://discord.com/channels/1/2/3');
+          await cubit.submitProof();
+        },
         verify: (_) {
           verify(
             () => analytics.logEvent(
@@ -175,10 +179,12 @@ void main() {
           ).thenAnswer((_) async => _result(verified: false));
         },
         build: () => build(_github),
-        act: (cubit) => cubit
-          ..identityChanged('octocat')
-          ..proofChanged('abc')
-          ..submitProof(),
+        act: (cubit) async {
+          cubit
+            ..identityChanged('octocat')
+            ..proofChanged('abc');
+          await cubit.submitProof();
+        },
         verify: (_) {
           verify(
             () => analytics.logEvent(

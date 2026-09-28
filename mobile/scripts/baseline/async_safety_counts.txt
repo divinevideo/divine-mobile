@@ -85,7 +85,6 @@ discarded_futures|test/blocs/share_sheet/share_sheet_bloc_test.dart	1
 discarded_futures|test/blocs/tags_picker/tags_picker_bloc_test.dart	1
 discarded_futures|test/blocs/upload_progress/upload_progress_cubit_test.dart	1
 discarded_futures|test/blocs/user_search/user_search_bloc_test.dart	1
-discarded_futures|test/blocs/verify/verify_connect_cubit_test.dart	3
 discarded_futures|test/blocs/video_engagement/video_engagement_bloc_test.dart	1
 discarded_futures|test/blocs/video_search/video_search_bloc_test.dart	3
 discarded_futures|test/blocs/welcome/welcome_bloc_test.dart	1
