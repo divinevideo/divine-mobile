@@ -56,7 +56,10 @@ void main() {
         );
 
         _expectSwiftSendsEveryResult(
-          declarationAt(salvage, 'stopRecording { [weak self] result, error'),
+          declarationAt(
+            salvage,
+            'stopRecording(drainPipeline: false) { [weak self] result, error',
+          ),
           send: 'self?.sendAutoStopEvent(result: result)',
         );
       });

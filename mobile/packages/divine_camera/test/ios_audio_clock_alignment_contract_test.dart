@@ -33,9 +33,11 @@ void main() {
         'let sampleBuffer = retimedToVideoClock(sampleBuffer)',
       );
       final firstSeen = audioBranch.indexOf('firstSeenAudioPTS =');
-      final append = audioBranch.indexOf('audioInput.append(sampleBuffer)');
+      final hold = audioBranch.indexOf('holdPendingAudio(sampleBuffer');
+      final append = audioBranch.indexOf('appendAudio(sampleBuffer');
       expect(retimeCall, greaterThan(-1));
       expect(firstSeen, greaterThan(retimeCall));
+      expect(hold, greaterThan(retimeCall));
       expect(append, greaterThan(retimeCall));
     });
 
