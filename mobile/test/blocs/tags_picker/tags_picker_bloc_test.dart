@@ -26,14 +26,14 @@ void main() {
     TagsPickerBloc createBloc({Set<String> initial = const <String>{}}) =>
         TagsPickerBloc(hashtagRepository: repo, initialTags: initial);
 
-    test('initial state contains the initialTags and is idle', () {
+    test('initial state contains the initialTags and is idle', () async {
       final bloc = createBloc(initial: {'foo', 'bar'});
       expect(bloc.state.selectedTags, {'foo', 'bar'});
       expect(bloc.state.status, TagsPickerStatus.initial);
       expect(bloc.state.query, isEmpty);
       expect(bloc.state.searchResults, isEmpty);
       expect(bloc.state.suggestions, isEmpty);
-      bloc.close();
+      await bloc.close();
     });
 
     group('TagsPickerTagsAdded', () {
