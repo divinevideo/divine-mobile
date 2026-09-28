@@ -85,6 +85,7 @@ enum FeatureFlag {
     'Smooth Loop Seam',
     'When exporting, line up the last frame with the first so a small '
         'camera drift does not jump at the loop restart. Prototype.',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(
