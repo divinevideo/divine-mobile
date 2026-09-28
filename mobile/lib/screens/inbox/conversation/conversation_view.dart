@@ -257,9 +257,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       participantPubkeys: widget.participantPubkeys,
       isBlockedByUs: blocklistRepository.isBlocked,
     );
-    final isBlockedByUs = threadWritability == DmThreadWritability.blockedByUs;
     final isRetiredModerationThread =
         threadWritability == DmThreadWritability.closedRetired;
+    final isUnresolved = threadWritability == DmThreadWritability.unresolved;
     final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
     final profile = profileAsync.asData?.value;
     final isResolving = ref.watch(
@@ -492,13 +492,14 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   displayName: conversationDisplayName,
                                   isResolving: isIdentityResolving,
                                   reactionsEnabled:
-                                      !isRetiredModerationThread &&
-                                      !isBlockedByUs,
+                                      threadWritability ==
+                                      DmThreadWritability.writable,
                                   retractionsEnabled:
-                                      !isRetiredModerationThread,
-                                  sendRecoveryEnabled:
                                       !isRetiredModerationThread &&
-                                      !isBlockedByUs,
+                                      !isUnresolved,
+                                  sendRecoveryEnabled:
+                                      threadWritability ==
+                                      DmThreadWritability.writable,
                                   imageUrl: isDeleted ? null : profile?.picture,
                                   nip05: isDeleted
                                       ? null
@@ -525,12 +526,18 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                     ),
                   ),
                 ),
-                if (isRetiredModerationThread)
-                  _ClosedThreadNotice(currentPubkey: currentPubkey)
-                else if (isBlockedByUs)
-                  const _BlockedThreadNotice()
-                else
-                  _SendBar(participantPubkeys: widget.participantPubkeys),
+                switch (threadWritability) {
+                  DmThreadWritability.closedRetired => _ClosedThreadNotice(
+                    currentPubkey: currentPubkey,
+                  ),
+                  DmThreadWritability.blockedByUs =>
+                    const _BlockedThreadNotice(),
+                  DmThreadWritability.unresolved =>
+                    const _UnresolvedThreadNotice(),
+                  DmThreadWritability.writable => _SendBar(
+                    participantPubkeys: widget.participantPubkeys,
+                  ),
+                },
               ],
             ),
           ),
@@ -1007,8 +1014,55 @@ class _BlockedThreadNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    return _ReadOnlyThreadNotice(
+      title: l10n.dmBlockedThreadTitle,
+      body: l10n.dmBlockedThreadBody,
+    );
+  }
+}
 
-    // Matches the composer's slot geometry so the layout does not shift.
+/// Takes the composer's place in a thread whose participants could not be
+/// resolved (#8664, #8677).
+///
+/// `ConversationParticipantsCubit` emits an empty participant list when the
+/// conversation row has no stored counterparty yet or the read failed, and
+/// `resolveDmThreadWritability` treats that as
+/// `DmThreadWritability.unresolved`. There is nobody left to address, so
+/// leaving the composer up would silently address no one; hiding it with no
+/// explanation would read as a stuck loading state instead.
+///
+/// Replaces [MessageInputBar] rather than disabling it, for the same reason
+/// [_ClosedThreadNotice] does: the input has no disabled state, and a
+/// focusable text field reads as "maybe this works".
+///
+/// Carries no action of its own — the fix is leaving and reopening the
+/// conversation, which the back button already offers.
+class _UnresolvedThreadNotice extends StatelessWidget {
+  const _UnresolvedThreadNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _ReadOnlyThreadNotice(
+      title: l10n.dmUnresolvedThreadTitle,
+      body: l10n.dmUnresolvedThreadBody,
+    );
+  }
+}
+
+/// Shared read-only composer-slot layout for [_BlockedThreadNotice] and
+/// [_UnresolvedThreadNotice].
+///
+/// Matches the composer's slot geometry so replacing [MessageInputBar] with
+/// either notice does not shift the layout.
+class _ReadOnlyThreadNotice extends StatelessWidget {
+  const _ReadOnlyThreadNotice({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       color: context.vineColors.surface,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -1019,13 +1073,13 @@ class _BlockedThreadNotice extends StatelessWidget {
           spacing: 8,
           children: [
             Text(
-              l10n.dmBlockedThreadTitle,
+              title,
               style: VineTheme.titleSmallFont(
                 color: context.vineColors.primaryText,
               ),
             ),
             Text(
-              l10n.dmBlockedThreadBody,
+              body,
               style: VineTheme.bodyMediumFont(
                 color: context.vineColors.onSurfaceVariant,
               ),

@@ -5761,6 +5761,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'I messaggi restano qui così puoi leggerli o farne uno screenshot. Sblocca per rispondere.';
 
   @override
+  String get dmUnresolvedThreadTitle =>
+      'Impossibile caricare questa conversazione';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Torna indietro e riaprila. Potrai rispondere non appena si carica.';
+
+  @override
   String get inboxFilterBlocked => 'Bloccati';
 
   @override

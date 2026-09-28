@@ -5636,6 +5636,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir untuk membalas.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Percakapan ini tidak dapat dimuat';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Kembali, lalu buka lagi. Kamu bisa membalas setelah dimuat.';
+
+  @override
   String get inboxFilterBlocked => 'Diblokir';
 
   @override

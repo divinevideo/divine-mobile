@@ -5709,6 +5709,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat untuk membalas.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Tidak dapat memuatkan perbualan ini';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Kembali dan buka semula. Anda boleh membalas sebaik sahaja ia dimuatkan.';
+
+  @override
   String get inboxFilterBlocked => 'Disekat';
 
   @override

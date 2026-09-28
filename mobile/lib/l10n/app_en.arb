@@ -3497,6 +3497,14 @@
   "@dmBlockedThreadBody": {
     "description": "Body of the notice replacing the composer in a blocked conversation. Explains that history is preserved and names unblocking as the way to reply again."
   },
+  "dmUnresolvedThreadTitle": "We couldn't load this conversation",
+  "@dmUnresolvedThreadTitle": {
+    "description": "Title of the notice that replaces the message composer when the app cannot tell who a conversation is with because its participants failed to load. Replying is off because there is no one to address."
+  },
+  "dmUnresolvedThreadBody": "Go back and open it again. You can reply once it loads.",
+  "@dmUnresolvedThreadBody": {
+    "description": "Body of the notice replacing the composer when a conversation's participants failed to load. Tells the viewer how to recover by reopening the conversation."
+  },
   "inboxFilterBlocked": "Blocked",
   "@inboxFilterBlocked": {
     "description": "Filter chip label showing conversations with accounts the viewer has blocked. Only rendered once the viewer has blocked someone."

@@ -5371,6 +5371,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmBlockedThreadBody => '消息会保留在这里，方便你查看或截图。解除屏蔽后即可回复。';
 
   @override
+  String get dmUnresolvedThreadTitle => '无法加载此对话';
+
+  @override
+  String get dmUnresolvedThreadBody => '返回后重新打开。加载完成后即可回复。';
+
+  @override
   String get inboxFilterBlocked => '已屏蔽';
 
   @override

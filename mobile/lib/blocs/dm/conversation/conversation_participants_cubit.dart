@@ -36,9 +36,13 @@ class ConversationParticipantsState extends Equatable {
   ///
   /// Empty on [ConversationParticipantsStatus.ready] means no counterparty
   /// could be resolved — the conversation has no stored row yet, or the read
-  /// failed. The thread still renders its (empty) history; it just cannot be
-  /// addressed. This is the pre-existing behaviour for a conversation opened
-  /// without a route hint, so the resolution never makes a thread worse.
+  /// failed. `resolveDmThreadWritability` treats that as
+  /// `DmThreadWritability.unresolved` and fails the thread closed: it still
+  /// renders its (empty) history, but the composer and every write
+  /// affordance are replaced by a notice instead of silently addressing
+  /// nobody. This is the pre-existing behaviour for a conversation opened
+  /// without a route hint, so the resolution itself never makes a thread
+  /// worse — only what the UI does with an empty list changed.
   final List<String> participantPubkeys;
 
   /// Copies this state with the given fields replaced.
@@ -135,8 +139,9 @@ class ConversationParticipantsCubit extends Cubit<ConversationParticipantsState>
       resolved = await _resolveParticipants();
     } catch (error, stackTrace) {
       // Drift read failures are expected and, per
-      // .claude/rules/error_handling.md, not Reportable. An unresolved thread
-      // is the documented empty-list case rather than a separate failure UI.
+      // .claude/rules/error_handling.md, not Reportable. `resolved` stays
+      // empty, which `resolveDmThreadWritability` now treats as read-only
+      // rather than a separate failure UI.
       addError(error, stackTrace);
     }
     emitIfOpen(

@@ -4528,6 +4528,8 @@
   "inboxBlockedNoMessages": "Niciun mesaj",
   "dmBlockedThreadTitle": "Ai blocat acest cont",
   "dmBlockedThreadBody": "Mesajele rămân aici ca să le poți citi sau captura. Deblochează pentru a răspunde.",
+  "dmUnresolvedThreadTitle": "Această conversație nu a putut fi încărcată",
+  "dmUnresolvedThreadBody": "Revino și deschide-o din nou. Vei putea răspunde imediat ce se încarcă.",
   "verifyTitle": "Conturi verificate",
   "verifySignedOutMessage": "Conectează-te ca să îți legi conturile.",
   "verifyIntro": "Leagă conturile pe care le ai deja, ca lumea să vadă că ești chiar tu.",

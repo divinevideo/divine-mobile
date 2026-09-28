@@ -4528,6 +4528,8 @@
   "inboxBlockedNoMessages": "لا توجد رسائل",
   "dmBlockedThreadTitle": "لقد حظرت هذا الحساب",
   "dmBlockedThreadBody": "تبقى الرسائل هنا لتتمكن من قراءتها أو التقاط صورة لها. ألغِ الحظر للرد.",
+  "dmUnresolvedThreadTitle": "تعذّر تحميل هذه المحادثة",
+  "dmUnresolvedThreadBody": "بالعودة وإعادة فتح المحادثة، يمكن الرد بعد اكتمال التحميل.",
   "verifyTitle": "الحسابات الموثّقة",
   "verifySignedOutMessage": "سجّل الدخول لربط حساباتك.",
   "verifyIntro": "اربط الحسابات التي تملكها أصلاً، ليعرف الناس أنك أنت فعلاً.",

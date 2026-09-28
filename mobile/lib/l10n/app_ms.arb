@@ -6287,6 +6287,8 @@
   "inboxBlockedNoMessages": "Tiada mesej",
   "dmBlockedThreadTitle": "Anda menyekat akaun ini",
   "dmBlockedThreadBody": "Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat untuk membalas.",
+  "dmUnresolvedThreadTitle": "Tidak dapat memuatkan perbualan ini",
+  "dmUnresolvedThreadBody": "Kembali dan buka semula. Anda boleh membalas sebaik sahaja ia dimuatkan.",
   "verifyTitle": "Akaun disahkan",
   "verifySignedOutMessage": "Log masuk untuk memautkan akaun anda.",
   "verifyIntro": "Pautkan akaun yang anda sudah ada, supaya orang tahu ini memang anda.",

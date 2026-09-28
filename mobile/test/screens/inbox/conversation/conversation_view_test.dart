@@ -1366,6 +1366,68 @@ void main() {
       });
     });
 
+    // #8664, #8677. `ConversationParticipantsCubit` emits an empty
+    // participant list when the conversation row is missing or the read
+    // failed — nobody to address, so the resolver now fails the thread
+    // closed the same way a retired or blocked one does, with its own notice.
+    group('unresolved participants (#8664)', () {
+      testWidgets('replaces the composer with the unresolved-thread notice', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject(counterparties: const []));
+        await tester.pump();
+
+        expect(find.byType(MessageInputBar), findsNothing);
+        expect(find.text(l10n.dmUnresolvedThreadTitle), findsOneWidget);
+        expect(find.text(l10n.dmUnresolvedThreadBody), findsOneWidget);
+      });
+
+      testWidgets(
+        'an own bubble offers no delete-for-everyone or reaction picker',
+        (tester) async {
+          final message = DmMessage(
+            id: 'own-message',
+            conversationId: 'conversation',
+            senderPubkey: currentPubkey,
+            content: 'sent before the thread lost its participants',
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            giftWrapId: 'wrap',
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [],
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [message],
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.longPress(find.text(message.content));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.dmMessageActionDeleteForEveryone),
+            findsNothing,
+            reason:
+                'no participant is known, so there is nobody left to '
+                'notify and nothing to retract on their side',
+          );
+          expect(
+            find.text(kDefaultDmReactionEmojis.first),
+            findsNothing,
+            reason:
+                'reacting to a message with no known recipient is '
+                'meaningless',
+          );
+          // The read affordance stays: the thread is still an archive.
+          expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
+        },
+      );
+    });
+
     group('refused retraction', () {
       // #8201. The warning icon is the durable status; the toast is only the
       // immediate announcement and must not remain on screen indefinitely.

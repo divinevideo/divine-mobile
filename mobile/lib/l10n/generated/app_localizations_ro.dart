@@ -5858,6 +5858,14 @@ class AppLocalizationsRo extends AppLocalizations {
       'Mesajele rămân aici ca să le poți citi sau captura. Deblochează pentru a răspunde.';
 
   @override
+  String get dmUnresolvedThreadTitle =>
+      'Această conversație nu a putut fi încărcată';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Revino și deschide-o din nou. Vei putea răspunde imediat ce se încarcă.';
+
+  @override
   String get inboxFilterBlocked => 'Blocate';
 
   @override

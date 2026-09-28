@@ -5739,6 +5739,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. Mag-unblock para makasagot.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Hindi na-load ang usapang ito';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Bumalik ka at buksan ulit ito. Makakasagot ka na pagka-load nito.';
+
+  @override
   String get inboxFilterBlocked => 'Naka-block';
 
   @override

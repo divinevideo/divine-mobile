@@ -5697,6 +5697,14 @@ class AppLocalizationsSv extends AppLocalizations {
       'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen för att svara.';
 
   @override
+  String get dmUnresolvedThreadTitle =>
+      'Det gick inte att läsa in den här konversationen';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Gå tillbaka och öppna den igen. Du kan svara så snart den har laddats.';
+
+  @override
   String get inboxFilterBlocked => 'Blockerade';
 
   @override

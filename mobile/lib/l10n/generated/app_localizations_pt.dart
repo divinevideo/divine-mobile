@@ -5743,6 +5743,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'As mensagens ficam aqui para você ler ou capturar a tela. Desbloqueie para responder.';
 
   @override
+  String get dmUnresolvedThreadTitle =>
+      'Não foi possível carregar esta conversa';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Volte e abra de novo. Você vai poder responder assim que carregar.';
+
+  @override
   String get inboxFilterBlocked => 'Bloqueados';
 
   @override

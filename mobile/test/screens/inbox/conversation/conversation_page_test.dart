@@ -18,6 +18,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
@@ -182,6 +183,73 @@ void main() {
           find.byType(ConversationView),
         );
         expect(view.participantPubkeys, equals([otherPubkey]));
+      });
+
+      // #8677. `getConversation` can throw (a Drift read failure) or resolve
+      // to `null` (no stored row yet) when the route carries no extra. Either
+      // way `ConversationParticipantsCubit` falls back to an empty
+      // participant list, and the resolver now fails that thread closed
+      // instead of rendering a composer that addresses nobody.
+      testWidgets('renders the unresolved notice and no composer when the '
+          'conversation row read throws', (tester) async {
+        when(() => mockDmRepository.userPubkey).thenReturn(testPubkey);
+        when(
+          () => mockDmRepository.getConversation(testConversationId),
+        ).thenThrow(Exception('drift read failed'));
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const ConversationPage(
+              conversationId: testConversationId,
+              participantPubkeys: [],
+            ),
+            mockAuthService: mockAuthService,
+            additionalOverrides: [
+              isDmRestrictedProvider.overrideWithValue(false),
+              dmRepositoryProvider.overrideWithValue(mockDmRepository),
+              fetchUserProfileProvider(
+                otherPubkey,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.byType(MessageInputBar), findsNothing);
+        expect(find.text(l10n.dmUnresolvedThreadTitle), findsOneWidget);
+      });
+
+      testWidgets('renders the unresolved notice and no composer when the '
+          'conversation row is missing', (tester) async {
+        when(() => mockDmRepository.userPubkey).thenReturn(testPubkey);
+        when(
+          () => mockDmRepository.getConversation(testConversationId),
+        ).thenAnswer((_) async => null);
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const ConversationPage(
+              conversationId: testConversationId,
+              participantPubkeys: [],
+            ),
+            mockAuthService: mockAuthService,
+            additionalOverrides: [
+              isDmRestrictedProvider.overrideWithValue(false),
+              dmRepositoryProvider.overrideWithValue(mockDmRepository),
+              fetchUserProfileProvider(
+                otherPubkey,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.byType(MessageInputBar), findsNothing);
+        expect(find.text(l10n.dmUnresolvedThreadTitle), findsOneWidget);
       });
 
       testWidgets('a DM-restricted user deep-linking without extras is '

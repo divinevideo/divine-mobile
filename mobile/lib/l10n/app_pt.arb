@@ -4528,6 +4528,8 @@
   "inboxBlockedNoMessages": "Sem mensagens",
   "dmBlockedThreadTitle": "Você bloqueou esta conta",
   "dmBlockedThreadBody": "As mensagens ficam aqui para você ler ou capturar a tela. Desbloqueie para responder.",
+  "dmUnresolvedThreadTitle": "Não foi possível carregar esta conversa",
+  "dmUnresolvedThreadBody": "Volte e abra de novo. Você vai poder responder assim que carregar.",
   "verifyTitle": "Contas verificadas",
   "verifySignedOutMessage": "Entre para vincular suas contas.",
   "verifyIntro": "Vincule as contas que você já tem, assim todo mundo sabe que é você mesmo.",

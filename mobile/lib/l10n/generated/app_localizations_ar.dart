@@ -5665,6 +5665,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'تبقى الرسائل هنا لتتمكن من قراءتها أو التقاط صورة لها. ألغِ الحظر للرد.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'تعذّر تحميل هذه المحادثة';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'بالعودة وإعادة فتح المحادثة، يمكن الرد بعد اكتمال التحميل.';
+
+  @override
   String get inboxFilterBlocked => 'محظور';
 
   @override

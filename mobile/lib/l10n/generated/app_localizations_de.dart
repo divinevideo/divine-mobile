@@ -5777,6 +5777,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung auf, um zu antworten.';
 
   @override
+  String get dmUnresolvedThreadTitle =>
+      'Diese Unterhaltung konnte nicht geladen werden';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Geh zurück und öffne sie erneut. Du kannst antworten, sobald sie geladen ist.';
+
+  @override
   String get inboxFilterBlocked => 'Blockiert';
 
   @override

@@ -5793,6 +5793,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Messages stay here so you can read or screenshot them. Unblock to reply.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'We couldn\'t load this conversation';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Go back and open it again. You can reply once it loads.';
+
+  @override
   String get inboxFilterBlocked => 'Blocked';
 
   @override

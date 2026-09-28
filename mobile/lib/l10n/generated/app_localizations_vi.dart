@@ -5673,6 +5673,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn để trả lời.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Không tải được cuộc trò chuyện này';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Hãy quay lại và mở lại nó. Bạn có thể trả lời khi tải xong.';
+
+  @override
   String get inboxFilterBlocked => 'Đã chặn';
 
   @override
