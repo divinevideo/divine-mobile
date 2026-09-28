@@ -148,11 +148,11 @@ void main() {
           status: CommunitySuggestStatus.ready,
           selected: {ContentLabel.gambling},
         ),
-        act: (cubit) {
-          cubit
-            ..submit()
-            ..submit();
+        act: (cubit) async {
+          final firstSubmit = cubit.submit();
+          final secondSubmit = cubit.submit();
           publishGate.complete();
+          await Future.wait([firstSubmit, secondSubmit]);
         },
         expect: () => const [
           CommunitySuggestState(
