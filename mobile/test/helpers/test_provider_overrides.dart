@@ -473,8 +473,9 @@ List<Override> getStandardTestOverrides({
     // Always override MediaCacheManager for PooledFullscreenVideoFeedScreen
     mediaCacheProvider.overrideWithValue(mockCache),
 
-    // Always override ModerationLabelService to avoid NIP-05 HTTP calls
-    // from initialize() → _resolveModerationPubkey() → Nip05Validor.getPubkey
+    // Always override ModerationLabelService to avoid NIP-05 HTTP calls from
+    // initialize() → _refreshModerationPubkey() →
+    // ModerationPubkeyResolver.resolve() → Nip05Validor.getPubkey
     moderationLabelServiceProvider.overrideWithValue(mockModeration),
 
     // Override NIP-05 verification service to avoid opening Drift/SQLite in
