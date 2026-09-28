@@ -608,6 +608,50 @@ void main() {
       );
     });
 
+    group('loop wrap', () {
+      testWidgets('seeks to the end when a scrub wraps back past the start', (
+        tester,
+      ) async {
+        // A wrap moves the playhead across the whole composition in one
+        // update. Throttling it away would leave the preview on the start
+        // frame while the finger rests at the end.
+        final clips = [_createTestClip(id: 'a', seconds: 20)];
+
+        await tester.pumpWidget(
+          buildWidget(clipState: ClipEditorState(clips: clips)),
+        );
+        tester
+            .widget<SingleChildScrollView>(timelineScrollView())
+            .controller!
+            .jumpTo(100);
+        await tester.pump();
+
+        final strip = find.byType(VideoEditorTimelineClipStrip);
+        final gesture = await tester.startGesture(
+          tester.getTopLeft(strip) +
+              Offset(60, tester.getSize(strip).height / 2),
+        );
+        // Win the arena and seek once near the start, then wrap within the
+        // same throttle window.
+        await gesture.moveBy(const Offset(30, 0));
+        await tester.pump();
+        await gesture.moveBy(const Offset(5, 0));
+        await tester.pump();
+        await gesture.moveBy(const Offset(200, 0));
+        await tester.pump();
+
+        final seeks = verify(
+          () => mockMainBloc.add(
+            captureAny(that: isA<VideoEditorSeekRequested>()),
+          ),
+        ).captured.cast<VideoEditorSeekRequested>();
+        expect(seeks.last.position, greaterThan(const Duration(seconds: 10)));
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+    });
+
     group('marker-mode mutual exclusion', () {
       testWidgets(
         'entering marker mode clears volume mode, clip edit, and overlay '
