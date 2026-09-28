@@ -253,8 +253,8 @@ Do not re-litigate the composer for this key. A future retirement is a
 different question: what makes a key retired, how access is revoked, where
 remaining private material lives, how a retired identity is proved
 unreactivatable, and how a replacement is announced. That protocol is now
-written down, and what this change delivers against it is listed in
-[Open items](#open-items) under `divinevideo/divine-mobile#7851`.
+written down, and what the fix for `divinevideo/divine-mobile#7851`
+delivers against it is listed in [Open items](#open-items).
 This custody result does not settle whether newly discovered events from this
 retired key should retain official Divine branding;
 `divinevideo/support-trust-safety#211` owns that decision.
@@ -278,13 +278,13 @@ Settled, kept here because the register used to cite these as open:
   `divinevideo/support-trust-safety#253`, which wrote the procedure down at
   `docs/moderation/moderation-key-retirement-procedure.md` in that repo.
 - `divinevideo/divine-mobile#7851` — the mobile behaviour that follows from
-  the retirement protocol. The send refusal and closed composer predate this
-  change (#6416) and are not custody-aware — every retired key is refused
-  alike. What this change delivers is custody recorded per register entry,
-  the custody-aware minor-read exception, the label service refusing
-  retired keys from cache and live NIP-05, the report recipient read at
-  filing time, and the composer withheld while a thread's participants
-  cannot be resolved (#8664/#8677).
+  the retirement protocol. The send refusal and closed composer predate
+  #7851 (they shipped with #6416) and are not custody-aware — every
+  retired key is refused alike. What #7851 delivers is custody recorded per
+  register entry, the custody-aware minor-read exception, the label service
+  refusing retired keys from cache and live NIP-05, the report recipient
+  read at filing time, and the composer withheld while a thread's
+  participants cannot be resolved (#8664/#8677).
 - `divinevideo/divine-mobile#8355` decided on 2026-08-31 that shared access to
   the current moderation identity stays acceptable, and that the client should
   resolve that identity through NIP-05. It did not cover retirement.
