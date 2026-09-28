@@ -650,6 +650,60 @@ void main() {
         await gesture.up();
         await tester.pumpAndSettle();
       });
+
+      testWidgets('keeps every reorder slot reachable past the loop point', (
+        tester,
+      ) async {
+        // Reorder lays clips out as fixed-size slots. With many short clips
+        // that row runs far past the composition's end, so the loop-point
+        // limit on the scroll range must not apply while reordering.
+        final clips = [
+          for (var i = 0; i < 12; i++)
+            _createTestClip(id: 'c$i', seconds: 0, milliseconds: 200),
+        ];
+        final states = StreamController<VideoEditorMainState>.broadcast();
+        addTearDown(states.close);
+        whenListen(
+          mockMainBloc,
+          states.stream,
+          initialState: const VideoEditorMainState(),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(clipState: ClipEditorState(clips: clips)),
+        );
+        final controller = tester
+            .widget<SingleChildScrollView>(timelineScrollView())
+            .controller!;
+        final loopEnd = timelinePositionToScrollOffset(
+          clips,
+          const Duration(milliseconds: 2400),
+          TimelineConstants.pixelsPerSecond,
+        );
+        expect(controller.position.maxScrollExtent, closeTo(loopEnd, 0.5));
+
+        final strip = find.byType(VideoEditorTimelineClipStrip);
+        final gesture = await tester.startGesture(
+          tester.getTopLeft(strip) +
+              Offset(5, tester.getSize(strip).height / 2),
+        );
+        await tester.pump(const Duration(milliseconds: 600));
+        states.add(const VideoEditorMainState(isReordering: true));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        const lastSlotLeft =
+            11 *
+            (TimelineConstants.thumbnailStripHeight +
+                TimelineConstants.clipGap);
+        expect(
+          controller.position.maxScrollExtent,
+          greaterThanOrEqualTo(lastSlotLeft),
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
     });
 
     group('marker-mode mutual exclusion', () {

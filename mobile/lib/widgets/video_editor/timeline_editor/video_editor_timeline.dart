@@ -183,12 +183,19 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     final displayDuration = wrapDisplay.displayTotal(clips);
     _totalDuration = displayDuration;
     _wrapDisplay = wrapDisplay;
-    _scrollController.loopExtent = timelinePositionToScrollOffset(
-      clips,
-      displayDuration,
-      _pixelsPerSecond,
-      wrap: wrapDisplay,
+    // Reorder lays clips out as fixed-size slots, which can run far past the
+    // composition's end; every slot must stay reachable while dragging.
+    final isReordering = context.select(
+      (VideoEditorMainBloc b) => b.state.isReordering,
     );
+    _scrollController.loopExtent = isReordering
+        ? null
+        : timelinePositionToScrollOffset(
+            clips,
+            displayDuration,
+            _pixelsPerSecond,
+            wrap: wrapDisplay,
+          );
     final screenWidth = MediaQuery.sizeOf(context).width;
     final halfScreen = screenWidth / 2;
     final totalWidth = _contentWidth(displayDuration);
