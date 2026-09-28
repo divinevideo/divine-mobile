@@ -43,10 +43,10 @@ void main() {
       currentUserPubkey: validPubkey('currentUser'),
     );
 
-    test('initial state is initial with empty list', () {
+    test('initial state is initial with empty list', () async {
       final bloc = createBloc();
       expect(bloc.state, const OthersFollowingState());
-      bloc.close();
+      await bloc.close();
     });
 
     group('OthersFollowingListLoadRequested', () {
