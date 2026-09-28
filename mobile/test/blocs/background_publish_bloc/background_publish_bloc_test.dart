@@ -717,6 +717,39 @@ void main() {
             expect(bloc.state.recentlySucceededIds, isEmpty);
           },
         );
+
+        test(
+          'does not delete a draft when publish succeeds during the park write',
+          () async {
+            final parking = Completer<bool>();
+            when(
+              () => mockDraftStorageService.updatePublishStatus(
+                draftId: any(named: 'draftId'),
+                status: PublishStatus.draft,
+                publishError: any(named: 'publishError'),
+              ),
+            ).thenAnswer((_) => parking.future);
+
+            bloc.add(
+              BackgroundPublishRequested(
+                draft: running,
+                publishmentProcess: runningProcess.future,
+              ),
+            );
+            await pumpEventQueue();
+
+            final park = bloc.parkInFlight();
+            await Future<void>.delayed(Duration.zero);
+            runningProcess.complete(const PublishSuccess());
+            await pumpEventQueue();
+
+            parking.complete(true);
+            await park;
+            await pumpEventQueue();
+
+            verifyNever(() => mockDraftStorageService.deleteDraft(any()));
+          },
+        );
       });
     });
 
