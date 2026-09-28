@@ -1569,8 +1569,8 @@ void main() {
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
-          // stopRecording() must run on the recovery path too — it cancels the
-          // periodic duration timer that resetRecording() leaves running.
+          // The duration timer is stopped on the recovery path too —
+          // resetRecording() alone leaves it running.
           verify(() => clipManager.stopRecording()).called(1);
           verify(() => clipManager.resetRecording()).called(1);
         },
@@ -1716,6 +1716,53 @@ void main() {
           verify(() => cameraService.stopRecording()).called(2);
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
+        },
+      );
+    });
+
+    group('RecordingStopRequested → immediate stop feedback', () {
+      late Completer<EditorVideo?> nativeStop;
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'freezes the timer and the shutter while the native stop is still '
+        'finalizing',
+        setUp: () {
+          // iOS with a look-ahead stabilization mode holds the native stop
+          // ~1.6s while the camera hands over the last frames.
+          nativeStop = Completer<EditorVideo?>();
+          when(
+            () => cameraService.stopRecording(),
+          ).thenAnswer((_) => nativeStop.future);
+        },
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              recordingState: VideoRecorderState.recording,
+            ),
+          ),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await pumpEventQueue();
+
+          try {
+            verify(() => cameraService.stopRecording()).called(1);
+            expect(nativeStop.isCompleted, isFalse);
+            verify(() => clipManager.stopRecording()).called(1);
+            expect(bloc.state.isRecording, isTrue);
+            expect(bloc.state.showsActiveRecording, isFalse);
+          } finally {
+            // Release the stop even when an expectation fails, or the handler
+            // stays suspended and the test hangs until its timeout.
+            nativeStop.complete(null);
+            await pumpEventQueue();
+          }
+        },
+        errors: () => [isA<RecordingProducedNoVideoException>()],
+        verify: (bloc) {
+          expect(bloc.state.isRecording, isFalse);
+          // The freeze at the tap is the only stop; the timer is not stopped
+          // a second time when the native call returns.
+          verifyNever(() => clipManager.stopRecording());
         },
       );
     });
