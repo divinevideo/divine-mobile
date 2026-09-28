@@ -594,8 +594,6 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     );
   }
 
-  /// Runs asset recovery in the background and dispatches a fresh load
-  /// event when done so the UI picks up the updated thumbnails/ghost frames.
   Future<void> _onClipsChanged(
     ClipsLibraryClipsChanged event,
     Emitter<ClipsLibraryState> emit,
@@ -631,6 +629,8 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     }
   }
 
+  /// Runs asset recovery in the background and dispatches a fresh load
+  /// event when done so the UI picks up the updated thumbnails/ghost frames.
   Future<void> _recoverAndReload(List<DivineVideoClip> clips) async {
     try {
       final recovered = await _clipLibraryService.recoverMissingAssets(clips);
