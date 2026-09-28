@@ -266,6 +266,22 @@ void main() {
         expect(_selectedNodes(), findsNothing);
       });
 
+      testWidgets('keeps a 48dp tap target on a 320dp-wide phone', (
+        tester,
+      ) async {
+        await tester.binding.setSurfaceSize(const Size(320, 640));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(_buildSubject());
+        await tester.pumpAndSettle();
+
+        for (final label in ['0.25', '0.5', '1', '1.5', '2', '3']) {
+          final size = tester.getSize(_preset(label));
+          expect(size.width, greaterThanOrEqualTo(48), reason: label);
+          expect(size.height, greaterThanOrEqualTo(48), reason: label);
+        }
+      });
+
       testWidgets('confirming returns the tapped preset', (tester) async {
         double? result;
         await tester.pumpWidget(

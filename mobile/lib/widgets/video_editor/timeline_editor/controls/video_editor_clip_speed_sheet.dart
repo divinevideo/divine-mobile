@@ -11,6 +11,10 @@ import 'package:openvine/l10n/l10n.dart';
 /// as selected when the speed is within this distance of it.
 const double _presetTolerance = 1e-6;
 
+const double _minTapTarget = 48;
+
+const double _chipGap = 8;
+
 class VideoEditorClipSpeedSheet extends StatefulWidget {
   const VideoEditorClipSpeedSheet({super.key, this.initialSpeed = 1.0});
 
@@ -138,20 +142,41 @@ class _SpeedPresetRow extends StatelessWidget {
   final double value;
   final ValueChanged<double> onSelected;
 
+  static int _columnsFor(double width, int count) {
+    if (count <= 1 || width <= 0) return 1;
+    var columns = count;
+    while (columns > 1) {
+      final slot = (width - _chipGap * (columns - 1)) / columns;
+      if (slot >= _minTapTarget) return columns;
+      columns--;
+    }
+    return 1;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      spacing: 8,
-      children: [
-        for (final preset in VideoEditorConstants.clipSpeedPresets)
-          Expanded(
-            child: _SpeedPresetChip(
-              preset: preset,
-              selected: (value - preset).abs() < _presetTolerance,
-              onTap: () => onSelected(preset),
-            ),
-          ),
-      ],
+    final presets = VideoEditorConstants.clipSpeedPresets;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _columnsFor(constraints.maxWidth, presets.length);
+        final slot =
+            (constraints.maxWidth - _chipGap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: _chipGap,
+          runSpacing: _chipGap,
+          children: [
+            for (final preset in presets)
+              SizedBox(
+                width: slot,
+                child: _SpeedPresetChip(
+                  preset: preset,
+                  selected: (value - preset).abs() < _presetTolerance,
+                  onTap: () => onSelected(preset),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -176,12 +201,14 @@ class _SpeedPresetChip extends StatelessWidget {
       button: true,
       selected: selected,
       label: context.l10n.videoEditorSpeedPresetSemanticLabel(label),
-      // The whole slot is tappable, so the compact pill keeps a 48dp target.
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
+          ),
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
