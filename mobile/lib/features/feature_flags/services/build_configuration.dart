@@ -63,6 +63,9 @@ class BuildConfiguration {
           'FF_POST_PUBLISH_CONFIRMATION_TREATMENT',
           defaultValue: true,
         );
+      case FeatureFlag.smoothLoopSeam:
+        // Default OFF while the prototype is evaluated on real footage.
+        return const bool.fromEnvironment('FF_SMOOTH_LOOP_SEAM');
     }
   }
 
@@ -107,6 +110,8 @@ class BuildConfiguration {
         return 'FF_POST_PUBLISH_CONFIRMATION_EXPERIMENT';
       case FeatureFlag.postPublishConfirmationTreatment:
         return 'FF_POST_PUBLISH_CONFIRMATION_TREATMENT';
+      case FeatureFlag.smoothLoopSeam:
+        return 'FF_SMOOTH_LOOP_SEAM';
     }
   }
 }

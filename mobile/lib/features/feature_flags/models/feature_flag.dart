@@ -80,6 +80,11 @@ enum FeatureFlag {
     'Show the View and Share confirmation to its assigned group. Turn off '
         'while checking that both identical groups measure the same.',
     audience: FeatureFlagAudience.internal,
+  ),
+  smoothLoopSeam(
+    'Smooth Loop Seam',
+    'When exporting, line up the last frame with the first so a small '
+        'camera drift does not jump at the loop restart. Prototype.',
   );
 
   const FeatureFlag(

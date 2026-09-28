@@ -19,6 +19,8 @@ import 'package:models/models.dart'
         stripInspiredByAttribution;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
@@ -1431,6 +1433,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         parameters: renderParameters,
         editorStateHistory: state.editorStateHistory,
         taskId: draftId,
+        alignLoopSeam: ref.read(
+          isFeatureEnabledProvider(FeatureFlag.smoothLoopSeam),
+        ),
       );
 
       // A newer render was started or the user cancelled while this one was

@@ -15,6 +15,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -519,6 +521,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
             parameters: parameters,
             editorStateHistory: draft.editorStateHistory,
             taskId: draft.id,
+            alignLoopSeam: ref.read(
+              isFeatureEnabledProvider(FeatureFlag.smoothLoopSeam),
+            ),
           );
         } on VideoRenderFailedException catch (error) {
           // `setError` alone is invisible here: nothing on screen reads the

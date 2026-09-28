@@ -18,6 +18,7 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
+import 'package:openvine/services/video_editor/loop_seam_bake_service.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
@@ -171,12 +172,14 @@ class VideoEditorRenderService {
     required Map<String, dynamic> editorStateHistory,
     CompleteParameters? parameters,
     String? taskId,
+    bool alignLoopSeam = false,
   }) {
     final render = _renderVideoToClip(
       clips: clips,
       editorStateHistory: editorStateHistory,
       parameters: parameters,
       taskId: taskId,
+      alignLoopSeam: alignLoopSeam,
     );
     final effectiveTaskId = taskId ?? (clips.isEmpty ? null : clips.first.id);
 
@@ -196,6 +199,7 @@ class VideoEditorRenderService {
     required Map<String, dynamic> editorStateHistory,
     CompleteParameters? parameters,
     String? taskId,
+    bool alignLoopSeam = false,
   }) async {
     if (renderVideoToClipOverride != null) {
       return renderVideoToClipOverride!(
@@ -235,6 +239,8 @@ class VideoEditorRenderService {
     // they don't accumulate in the documents directory (each is a full extra
     // video per export).
     final intermediateStopMotionPaths = <String>[];
+    // Clips re-rendered for the loop-seam prototype, likewise encode-only.
+    final loopSeamPaths = <String>[];
 
     try {
       final renderClips = <DivineVideoClip>[];
@@ -287,8 +293,18 @@ class VideoEditorRenderService {
         category: LogCategory.video,
       );
 
+      // The aligned clips are encoded only; proofs, cover and metadata below
+      // keep describing the recorded clips.
+      final encodeClips = alignLoopSeam
+          ? await _alignLoopSeam(
+              renderClips,
+              taskId: effectiveTaskId,
+              bakedPaths: loopSeamPaths,
+            )
+          : renderClips;
+
       final outputPath = await _renderVideoOrThrow(
-        clips: renderClips,
+        clips: encodeClips,
         aspectRatio: renderClips.first.targetAspectRatio,
         usePersistentStorage: true,
         parameters: parameters,
@@ -371,7 +387,10 @@ class VideoEditorRenderService {
     } finally {
       RenderCancellationRegistry.finish(effectiveTaskId, renderToken);
       await progressTracker.dispose();
-      await _cleanupTempFiles(intermediateStopMotionPaths);
+      await _cleanupTempFiles([
+        ...intermediateStopMotionPaths,
+        ...loopSeamPaths,
+      ]);
     }
   }
 
@@ -397,6 +416,21 @@ class VideoEditorRenderService {
       editorStateHistory: editorStateHistory,
     );
     return proofData != null ? jsonEncode(proofData) : null;
+  }
+
+  /// Swaps in the loop-seam-aligned clips (behind `FeatureFlag.smoothLoopSeam`)
+  /// and records the files it wrote in [bakedPaths] for cleanup.
+  static Future<List<DivineVideoClip>> _alignLoopSeam(
+    List<DivineVideoClip> clips, {
+    required String taskId,
+    required List<String> bakedPaths,
+  }) async {
+    final result = await LoopSeamBakeService().alignClips(
+      clips,
+      taskId: taskId,
+    );
+    bakedPaths.addAll(result.bakedPaths);
+    return result.clips;
   }
 
   /// Ensures every clip has a [DivineVideoClip.proofManifestJson].
