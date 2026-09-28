@@ -2,6 +2,7 @@
 // ABOUTME: mode — the per-clip swap, the skips, and a pass that partly fails.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -16,17 +17,20 @@ const _recordedKey = ClipChromaKey(
   key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
 );
 
-DivineVideoClip _clip(String id, {ClipChromaKey? captureChromaKey}) =>
-    DivineVideoClip(
-      id: id,
-      video: EditorVideo.file('/documents/$id.mp4'),
-      duration: const Duration(seconds: 3),
-      recordedAt: DateTime(2026),
-      targetAspectRatio: .vertical,
-      originalAspectRatio: 9 / 16,
-      thumbnailPath: '/documents/${id}_raw.jpg',
-      captureChromaKey: captureChromaKey,
-    );
+DivineVideoClip _clip(
+  String id, {
+  ClipChromaKey? captureChromaKey,
+  String? videoPath,
+}) => DivineVideoClip(
+  id: id,
+  video: EditorVideo.file(videoPath ?? '/documents/$id.mp4'),
+  duration: const Duration(seconds: 3),
+  recordedAt: DateTime(2026),
+  targetAspectRatio: .vertical,
+  originalAspectRatio: 9 / 16,
+  thumbnailPath: '/documents/${id}_raw.jpg',
+  captureChromaKey: captureChromaKey,
+);
 
 /// What the shared bake hands back: the take with its key burned in.
 Future<DivineVideoClip> _keyed(DivineVideoClip clip) async => clip.copyWith(
@@ -44,12 +48,14 @@ void main() {
       required BakeCapturedChromaKeyFn? bake,
       void Function()? onFinalClipInvalidated,
       DeferFileCleanupFn? deferFileCleanup,
+      ChromaKeyBakeFn? bakeChromaKey,
     }) {
       final bloc = ClipEditorBloc(
         onFinalClipInvalidated: onFinalClipInvalidated ?? () {},
         saveClipToLibrary: ({required clip}) async => false,
         deferFileCleanup: deferFileCleanup,
         bakeCapturedChromaKey: bake,
+        bakeChromaKey: bakeChromaKey,
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(clips));
@@ -261,6 +267,56 @@ void main() {
         expect(state.clips.map((c) => c.id), ['b']);
         // The library copy of the take plays it now.
         expect(queued, isNot(contains('/documents/a_keyed.mp4')));
+      },
+    );
+
+    test(
+      'does not bake the recorded key back in once the user keyed the take '
+      'by hand and removed that key again',
+      () async {
+        final documents = Directory.systemTemp.createTempSync('captured_key_');
+        addTearDown(() => documents.deleteSync(recursive: true));
+        // Removing a key swaps back to the pre-key footage, which must exist.
+        final rawPath = '${documents.path}/a.mp4';
+        File(rawPath).writeAsBytesSync(const [0]);
+        const handKey = ClipChromaKey(key: ChromaKey.blueScreen());
+        var recordedBakes = 0;
+        final bloc = seeded(
+          [_clip('a', captureChromaKey: _recordedKey, videoPath: rawPath)],
+          bake: (clip) {
+            recordedBakes++;
+            return _keyed(clip);
+          },
+          bakeChromaKey:
+              ({
+                required sourceClip,
+                required chromaKey,
+                required renderId,
+              }) async => (
+                video: EditorVideo.file('${documents.path}/a_hand.mp4'),
+                source: rawPath,
+              ),
+        );
+        await pumpEventQueue();
+
+        bloc.add(
+          const ClipEditorChromaKeyRequested(clipId: 'a', chromaKey: handKey),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.clips.single.chromaKey, handKey);
+        // The confirmed key settles the recorded one.
+        expect(bloc.state.clips.single.captureChromaKey, isNull);
+
+        bloc.add(const ClipEditorChromaKeyRemoved('a'));
+        await pumpEventQueue();
+        bloc.add(const ClipEditorCapturedChromaKeysBakeRequested());
+        await pumpEventQueue();
+
+        expect(recordedBakes, 0);
+        final clip = bloc.state.clips.single;
+        expect(clip.video?.file?.path, rawPath);
+        expect(clip.chromaKey, isNull);
+        expect(clip.hasPendingCaptureChromaKey, isFalse);
       },
     );
   });

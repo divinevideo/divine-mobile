@@ -1914,6 +1914,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     final restored = clip.copyWith(
       video: EditorVideo.file(source),
       clearChromaKey: true,
+      // A removed key stays removed: a recorded one must not bake back in on
+      // the next pass over the timeline.
+      clearCaptureChromaKey: true,
       // The cached reverse files were rendered from the keyed video, so they
       // no longer match the footage this clip is going back to.
       clearForwardVideoPath: true,
@@ -2351,11 +2354,16 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       // The cached forward/reversed paths now point at stale (unkeyed) files —
       // clear them so a later reverse re-renders from the keyed video instead
       // of restoring footage that still has the screen in it.
+      //
+      // A key the clip was recorded with is settled by this one: left in
+      // place, removing this key would put the clip back in line for an
+      // automatic bake of the recorded one.
       final currentClip = currentClips[currentIndex];
       final updatedClip = currentClip.copyWith(
         video: baked.video,
         chromaKey: event.chromaKey,
         chromaKeySourcePath: baked.source,
+        clearCaptureChromaKey: true,
         clearForwardVideoPath: true,
         clearReversedVideoPath: true,
       );
