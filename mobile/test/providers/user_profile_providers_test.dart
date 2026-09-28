@@ -590,6 +590,22 @@ void main() {
       ).called(1);
       verifyNever(() => profileRepository.revalidateVanishOnce(pubkey));
     });
+
+    // #8664/#8677: a conversation whose counterparty could not be resolved
+    // falls back to an empty pubkey, and a lookup for it sent every relay a
+    // filter they rejected outright ("bad req: filter item too small").
+    test(
+      'returns null for an empty pubkey without touching the repository',
+      () async {
+        final result = await container.read(
+          fetchUserProfileProvider('').future,
+        );
+
+        expect(result, isNull);
+        verifyNever(() => profileRepository.getCachedProfile(pubkey: ''));
+        verifyNever(() => profileRepository.fetchFreshProfile(pubkey: ''));
+      },
+    );
   });
 
   group('userProfileStatsReactiveProvider lifecycle', () {

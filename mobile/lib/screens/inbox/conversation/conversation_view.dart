@@ -260,74 +260,98 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     final isRetiredModerationThread =
         threadWritability == DmThreadWritability.closedRetired;
     final isUnresolved = threadWritability == DmThreadWritability.unresolved;
-    final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
-    final profile = profileAsync.asData?.value;
-    final isResolving = ref.watch(
-      profileIdentityResolvingProvider(otherPubkey),
-    );
-    // The conversation and its history remain readable — they are the viewer's
-    // own copy of messages a NIP-62 vanish cannot retract. Only the header
-    // identity changes.
-    final isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
-    final displayName = dmPeerDisplayName(
-      context,
-      pubkeyHex: otherPubkey,
-      isVanished: isDeleted,
-      profile: profile,
-      isResolving: isResolving,
-    );
-    final isGroup = widget.participantPubkeys.length > 1;
-    final conversationDisplayName = dmConversationDisplayTitle(
-      context,
-      participantPubkeys: [currentPubkey, ...widget.participantPubkeys],
-      currentUserPubkey: currentPubkey,
-      isGroup: isGroup,
-      peerName: displayName,
-      subject: widget.subject,
-    );
-    // Derived from the room title, not the peer name: a titled group resolves
-    // without a profile and must not skeleton, while an untitled one is named
-    // for its peer and must.
-    final isIdentityResolving = isResolving && conversationDisplayName.isEmpty;
-    final visualDisplayName = conversationDisplayName.isEmpty
-        ? UserProfile.defaultDisplayNameFor(otherPubkey)
-        : conversationDisplayName;
-    final claimedNip05 = profile?.shortDisplayNip05;
-    final verificationStatus = claimedNip05 != null && claimedNip05.isNotEmpty
-        ? ref
-              .watch(nip05VerificationProvider(otherPubkey))
-              .whenOrNull(data: (status) => status)
-        : null;
-    // Counts live in the `profile_statistics` store, not on the profile.
-    // `UserProfile.restFollowerCount` reads `rawData['follower_count']`, which
-    // only the people-search shape ever writes and which is never persisted to
-    // the cache this screen reads — so it was permanently null here and the
-    // social-proof fallback never fired (#8403). The repository routes
-    // `GET /api/users/{pubkey}`'s `social` block into `profile_statistics`
-    // instead. A vanished account takes the branch below and never reaches the
-    // resolver; `fetchFreshProfile` short-circuits for it in any case.
-    final followerCount = ref
-        .watch(userProfileStatsReactiveProvider(otherPubkey))
-        .asData
-        ?.value
-        ?.followers;
 
-    // Prefer the profile's NIP-05 / divine handle when set, otherwise the
-    // follow relationship — which tells the viewer which of several
-    // same-named people they are messaging, as a truncated npub never did.
-    final handle = isDeleted
-        ? context.l10n.inboxConversationDeletedAccountSubtitle
-        : resolveUserIdentifierLine(
-                l10n: context.l10n,
-                locale: Localizations.localeOf(context).toLanguageTag(),
-                handle: claimedNip05,
-                verificationStatus: verificationStatus,
-                relationship:
-                    ref.watch(followRelationshipProvider(otherPubkey)).value ??
-                    FollowRelationship.none,
-                followerCount: followerCount,
-              ) ??
-              '';
+    final UserProfile? profile;
+    final bool isResolving;
+    final bool isDeleted;
+    final String conversationDisplayName;
+    final bool isIdentityResolving;
+    final String visualDisplayName;
+    final String handle;
+
+    if (isUnresolved) {
+      // Nobody to resolve a profile for: skip every per-pubkey provider watch
+      // so an unresolved thread can never send a relay an empty-author filter
+      // (#8664, #8677), and show a neutral header instead of a generated
+      // identity for the empty pubkey.
+      profile = null;
+      isResolving = false;
+      isDeleted = false;
+      conversationDisplayName = '';
+      isIdentityResolving = false;
+      visualDisplayName = '';
+      handle = '';
+    } else {
+      final profileAsync = ref.watch(fetchUserProfileProvider(otherPubkey));
+      profile = profileAsync.asData?.value;
+      isResolving = ref.watch(profileIdentityResolvingProvider(otherPubkey));
+      // The conversation and its history remain readable — they are the
+      // viewer's own copy of messages a NIP-62 vanish cannot retract. Only
+      // the header identity changes.
+      isDeleted = ref.watch(profileVanishedProvider(otherPubkey));
+      final displayName = dmPeerDisplayName(
+        context,
+        pubkeyHex: otherPubkey,
+        isVanished: isDeleted,
+        profile: profile,
+        isResolving: isResolving,
+      );
+      final isGroup = widget.participantPubkeys.length > 1;
+      conversationDisplayName = dmConversationDisplayTitle(
+        context,
+        participantPubkeys: [currentPubkey, ...widget.participantPubkeys],
+        currentUserPubkey: currentPubkey,
+        isGroup: isGroup,
+        peerName: displayName,
+        subject: widget.subject,
+      );
+      // Derived from the room title, not the peer name: a titled group
+      // resolves without a profile and must not skeleton, while an untitled
+      // one is named for its peer and must.
+      isIdentityResolving = isResolving && conversationDisplayName.isEmpty;
+      visualDisplayName = conversationDisplayName.isEmpty
+          ? UserProfile.defaultDisplayNameFor(otherPubkey)
+          : conversationDisplayName;
+      final claimedNip05 = profile?.shortDisplayNip05;
+      final verificationStatus = claimedNip05 != null && claimedNip05.isNotEmpty
+          ? ref
+                .watch(nip05VerificationProvider(otherPubkey))
+                .whenOrNull(data: (status) => status)
+          : null;
+      // Counts live in the `profile_statistics` store, not on the profile.
+      // `UserProfile.restFollowerCount` reads `rawData['follower_count']`,
+      // which only the people-search shape ever writes and which is never
+      // persisted to the cache this screen reads — so it was permanently
+      // null here and the social-proof fallback never fired (#8403). The
+      // repository routes `GET /api/users/{pubkey}`'s `social` block into
+      // `profile_statistics` instead. A vanished account takes the branch
+      // below and never reaches the resolver; `fetchFreshProfile`
+      // short-circuits for it in any case.
+      final followerCount = ref
+          .watch(userProfileStatsReactiveProvider(otherPubkey))
+          .asData
+          ?.value
+          ?.followers;
+
+      // Prefer the profile's NIP-05 / divine handle when set, otherwise the
+      // follow relationship — which tells the viewer which of several
+      // same-named people they are messaging, as a truncated npub never did.
+      handle = isDeleted
+          ? context.l10n.inboxConversationDeletedAccountSubtitle
+          : resolveUserIdentifierLine(
+                  l10n: context.l10n,
+                  locale: Localizations.localeOf(context).toLanguageTag(),
+                  handle: claimedNip05,
+                  verificationStatus: verificationStatus,
+                  relationship:
+                      ref
+                          .watch(followRelationshipProvider(otherPubkey))
+                          .value ??
+                      FollowRelationship.none,
+                  followerCount: followerCount,
+                ) ??
+                '';
+    }
 
     return MultiBlocProvider(
       providers: [
@@ -468,7 +492,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   '${OtherProfileScreen.path}/${NostrKeyUtils.encodePubKey(otherPubkey)}',
                                 )
                               : null,
-                          onOptions: () => _onOptions(otherPubkey),
+                          onOptions: otherPubkey.isNotEmpty
+                              ? () => _onOptions(otherPubkey)
+                              : null,
                         ),
                         Expanded(
                           // Force the messages card to fill the available width
@@ -491,6 +517,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   blockedPubkeys: blockedReactors,
                                   displayName: conversationDisplayName,
                                   isResolving: isIdentityResolving,
+                                  isUnresolved: isUnresolved,
                                   reactionsEnabled:
                                       threadWritability ==
                                       DmThreadWritability.writable,
@@ -504,19 +531,22 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   nip05: isDeleted
                                       ? null
                                       : profile?.shortDisplayNip05,
-                                  onViewProfile: () {
-                                    final npub = NostrKeyUtils.encodePubKey(
-                                      otherPubkey,
-                                    );
-                                    runDetached(
-                                      context.push(
-                                        '${OtherProfileScreen.path}/$npub',
-                                      ),
-                                      'open conversation profile',
-                                      logName: 'ConversationView',
-                                      category: LogCategory.ui,
-                                    );
-                                  },
+                                  onViewProfile: otherPubkey.isNotEmpty
+                                      ? () {
+                                          final npub =
+                                              NostrKeyUtils.encodePubKey(
+                                                otherPubkey,
+                                              );
+                                          runDetached(
+                                            context.push(
+                                              '${OtherProfileScreen.path}/$npub',
+                                            ),
+                                            'open conversation profile',
+                                            logName: 'ConversationView',
+                                            category: LogCategory.ui,
+                                          );
+                                        }
+                                      : null,
                                 ),
                               ),
                             ),
@@ -1101,6 +1131,7 @@ class _ConversationContent extends StatelessWidget {
     required this.blockedPubkeys,
     required this.displayName,
     required this.isResolving,
+    required this.isUnresolved,
     required this.reactionsEnabled,
     required this.retractionsEnabled,
     required this.sendRecoveryEnabled,
@@ -1117,6 +1148,13 @@ class _ConversationContent extends StatelessWidget {
   final Set<String> blockedPubkeys;
   final String displayName;
   final bool isResolving;
+
+  /// Whether the thread's participants could not be resolved (#8664, #8677).
+  ///
+  /// An empty message list renders nothing here rather than a peer card for
+  /// the empty pubkey — [_UnresolvedThreadNotice] in the composer slot is the
+  /// only explanation shown.
+  final bool isUnresolved;
   final bool reactionsEnabled;
 
   /// Whether the viewer may retract something already delivered here.
@@ -1154,19 +1192,22 @@ class _ConversationContent extends StatelessWidget {
           ),
           ConversationStatus.loaded =>
             selected.messages.isEmpty
-                ? EmptyConversation(
-                    displayName: isResolving
-                        ? UserProfile.defaultDisplayNameFor(otherPubkey)
-                        : displayName,
-                    pubkey: otherPubkey,
-                    imageUrl: imageUrl,
-                    nip05: nip05,
-                    onViewProfile: onViewProfile,
-                    isIdentityResolving: isResolving,
-                    mayBeIncomplete: context.select<DmRestoreStatusCubit, bool>(
-                      (cubit) => cubit.state.mayBeIncomplete,
-                    ),
-                  )
+                ? (isUnresolved
+                      ? const SizedBox.shrink()
+                      : EmptyConversation(
+                          displayName: isResolving
+                              ? UserProfile.defaultDisplayNameFor(otherPubkey)
+                              : displayName,
+                          pubkey: otherPubkey,
+                          imageUrl: imageUrl,
+                          nip05: nip05,
+                          onViewProfile: onViewProfile,
+                          isIdentityResolving: isResolving,
+                          mayBeIncomplete: context
+                              .select<DmRestoreStatusCubit, bool>(
+                                (cubit) => cubit.state.mayBeIncomplete,
+                              ),
+                        ))
                 : _MessageList(
                     messages: selected.messages,
                     currentPubkey: currentPubkey,

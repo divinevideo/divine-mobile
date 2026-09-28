@@ -43,6 +43,7 @@ import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -72,6 +73,8 @@ class _MockWatermarkDownloadService extends Mock
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockProfileReader extends Mock implements ProfileReader {}
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -246,6 +249,7 @@ void main() {
       Stream<ConversationState>? stateStream,
       DmVideoSendService? videoSendService,
       ImagePicker? videoPicker,
+      ProfileReader? profileReadRepository,
     }) {
       final effectiveState = state ?? const ConversationState();
       if (restoreStatus != null) {
@@ -274,7 +278,9 @@ void main() {
             mockWatermarkDownloadService,
           ),
           profileRepositoryProvider.overrideWithValue(null),
-          profileReadRepositoryProvider.overrideWithValue(null),
+          profileReadRepositoryProvider.overrideWithValue(
+            profileReadRepository,
+          ),
           fetchUserProfileProvider(
             counterparty,
           ).overrideWith(
@@ -1426,6 +1432,49 @@ void main() {
           expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
         },
       );
+
+      // Device evidence, 2026-09-28: an empty participant list previously fell
+      // through to the ordinary peer-resolution path, so the header watched
+      // `fetchUserProfileProvider('')` and friends, and the empty-state card
+      // offered a "View profile" that pushed a route for an empty npub. Both
+      // sent relays an empty-author filter they rejected outright.
+      testWidgets(
+        'shows a neutral header and no peer card, and never resolves a '
+        'profile for the empty pubkey',
+        (tester) async {
+          final mockProfileReader = _MockProfileReader();
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [],
+              profileReadRepository: mockProfileReader,
+              state: const ConversationState(status: ConversationStatus.loaded),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.inboxConversationViewProfileButton),
+            findsNothing,
+          );
+          expect(
+            find.text(UserProfile.defaultDisplayNameFor('')),
+            findsNothing,
+          );
+          verifyNever(() => mockProfileReader.getCachedProfile(pubkey: ''));
+          verifyNever(() => mockProfileReader.fetchFreshProfile(pubkey: ''));
+        },
+      );
+
+      testWidgets('hides the options button', (tester) async {
+        await tester.pumpWidget(buildSubject(counterparties: const []));
+        await tester.pump();
+
+        expect(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+          findsNothing,
+        );
+      });
     });
 
     group('refused retraction', () {

@@ -509,6 +509,12 @@ final class BlockedUserProfileFamily extends $Family
 /// Use this when you need a single read (e.g., building a share sheet)
 /// rather than a reactive stream.
 ///
+/// Returns `null` immediately for an empty [pubkey] without reading
+/// [profileReadRepositoryProvider] or calling either repository method: a
+/// conversation whose counterparty could not be resolved falls back to `''`,
+/// and a lookup for that pubkey sends every relay an empty-author filter they
+/// reject outright (#8664, #8677).
+///
 /// Same read gate as [userProfileReactive] — both paths are signer-free.
 
 @ProviderFor(fetchUserProfile)
@@ -518,6 +524,12 @@ final fetchUserProfileProvider = FetchUserProfileFamily._();
 ///
 /// Use this when you need a single read (e.g., building a share sheet)
 /// rather than a reactive stream.
+///
+/// Returns `null` immediately for an empty [pubkey] without reading
+/// [profileReadRepositoryProvider] or calling either repository method: a
+/// conversation whose counterparty could not be resolved falls back to `''`,
+/// and a lookup for that pubkey sends every relay an empty-author filter they
+/// reject outright (#8664, #8677).
 ///
 /// Same read gate as [userProfileReactive] — both paths are signer-free.
 
@@ -533,6 +545,12 @@ final class FetchUserProfileProvider
   ///
   /// Use this when you need a single read (e.g., building a share sheet)
   /// rather than a reactive stream.
+  ///
+  /// Returns `null` immediately for an empty [pubkey] without reading
+  /// [profileReadRepositoryProvider] or calling either repository method: a
+  /// conversation whose counterparty could not be resolved falls back to `''`,
+  /// and a lookup for that pubkey sends every relay an empty-author filter they
+  /// reject outright (#8664, #8677).
   ///
   /// Same read gate as [userProfileReactive] — both paths are signer-free.
   FetchUserProfileProvider._({
@@ -579,12 +597,18 @@ final class FetchUserProfileProvider
   }
 }
 
-String _$fetchUserProfileHash() => r'83353a4223c0c0ca7feee6e08c2f8116ca551c66';
+String _$fetchUserProfileHash() => r'e6abb914d568b53c5f93a1a290643483afbcb827';
 
 /// One-shot provider: returns cached profile or fetches fresh.
 ///
 /// Use this when you need a single read (e.g., building a share sheet)
 /// rather than a reactive stream.
+///
+/// Returns `null` immediately for an empty [pubkey] without reading
+/// [profileReadRepositoryProvider] or calling either repository method: a
+/// conversation whose counterparty could not be resolved falls back to `''`,
+/// and a lookup for that pubkey sends every relay an empty-author filter they
+/// reject outright (#8664, #8677).
 ///
 /// Same read gate as [userProfileReactive] — both paths are signer-free.
 
@@ -603,6 +627,12 @@ final class FetchUserProfileFamily extends $Family
   ///
   /// Use this when you need a single read (e.g., building a share sheet)
   /// rather than a reactive stream.
+  ///
+  /// Returns `null` immediately for an empty [pubkey] without reading
+  /// [profileReadRepositoryProvider] or calling either repository method: a
+  /// conversation whose counterparty could not be resolved falls back to `''`,
+  /// and a lookup for that pubkey sends every relay an empty-author filter they
+  /// reject outright (#8664, #8677).
   ///
   /// Same read gate as [userProfileReactive] — both paths are signer-free.
 

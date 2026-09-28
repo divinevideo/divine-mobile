@@ -8,14 +8,16 @@ import 'package:openvine/l10n/l10n.dart';
 /// Top app bar for the conversation detail screen.
 ///
 /// Wraps [DiVineAppBar] with a back button, the other user's display name
-/// and handle, and a trailing options button.
+/// and handle, and — when [onOptions] is set — a trailing options button.
+/// [onOptions] is null for a thread with no resolved counterparty, which
+/// hides the button rather than wiring it to nobody.
 class ConversationAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   const ConversationAppBar({
     required this.displayName,
     required this.handle,
     required this.onBack,
-    required this.onOptions,
+    this.onOptions,
     this.isResolving = false,
     this.loadingDisplayName,
     this.onTitleTap,
@@ -25,7 +27,7 @@ class ConversationAppBar extends StatelessWidget
   final String displayName;
   final String handle;
   final VoidCallback onBack;
-  final VoidCallback onOptions;
+  final VoidCallback? onOptions;
   final bool isResolving;
   final String? loadingDisplayName;
 
@@ -73,13 +75,15 @@ class ConversationAppBar extends StatelessWidget
         // = 74 − (10 + 48).
         leadingWidth: 74,
       ),
-      actions: [
-        DiVineAppBarAction(
-          icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
-          onPressed: onOptions,
-          semanticLabel: context.l10n.inboxConversationOptionsLabel,
-        ),
-      ],
+      actions: onOptions == null
+          ? const []
+          : [
+              DiVineAppBarAction(
+                icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
+                onPressed: onOptions,
+                semanticLabel: context.l10n.inboxConversationOptionsLabel,
+              ),
+            ],
     );
   }
 }

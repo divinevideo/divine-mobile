@@ -7,6 +7,8 @@ import 'package:openvine/screens/inbox/conversation/widgets/empty_conversation.d
 import 'package:openvine/widgets/user_avatar.dart';
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group(EmptyConversation, () {
     group('renders', () {
       testWidgets('renders $UserAvatar', (tester) async {
@@ -101,6 +103,25 @@ void main() {
         expect(find.text('View profile'), findsOneWidget);
       });
 
+      testWidgets('does not render "View profile" when onViewProfile is null', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: EmptyConversation(displayName: 'Bob', pubkey: 'pk1'),
+            ),
+          ),
+        );
+
+        expect(
+          find.text(l10n.inboxConversationViewProfileButton),
+          findsNothing,
+        );
+      });
+
       testWidgets('announces loading instead of the placeholder identity', (
         tester,
       ) async {
@@ -149,6 +170,36 @@ void main() {
         await tester.pump();
 
         expect(wasCalled, isTrue);
+      });
+    });
+
+    group('accessibility', () {
+      testWidgets('exposes "View profile" as a button', (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: EmptyConversation(
+                displayName: 'Bob',
+                pubkey: 'pk1',
+                onViewProfile: () {},
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          tester.getSemantics(
+            find.text(l10n.inboxConversationViewProfileButton),
+          ),
+          isSemantics(
+            label: l10n.inboxConversationViewProfileButton,
+            isButton: true,
+          ),
+        );
+        handle.dispose();
       });
     });
 
