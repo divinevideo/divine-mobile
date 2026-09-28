@@ -20,6 +20,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -227,23 +228,36 @@ internal class DivineVideoPlayerInstance(
      * ExoPlayer reports STATE_READY before a clip's last frames leave the
      * decoder; completing there lets a scrub's next seek flush them unseen.
      *
-     * The signal is the next rendered frame, not [Player.Listener.onRenderedFirstFrame].
-     * That callback fires once per surface, so a later scrub would wait out
-     * [seekTimeoutRunnable] while the canvas holds the following seek.
+     * The signal is a frame rendered after the seek has been applied, not
+     * [Player.Listener.onRenderedFirstFrame]. That callback fires once per
+     * surface, so a later scrub would wait out [seekTimeoutRunnable] while
+     * the canvas holds the following seek.
      */
+    @Volatile
     private var seekAwaitsFrame = false
+
+    /**
+     * Set on the playback thread by a message queued after [ExoPlayer.seekTo].
+     * A frame callback already in flight reads this as false and is ignored,
+     * so it cannot complete the seek that just replaced it.
+     */
+    @Volatile
+    private var seekFrameArmed = false
 
     /**
      * Bumped on each seek and on dispose. A frame callback posted for an
      * older seek must not complete the one that replaced it.
      */
+    @Volatile
     private var seekFrameGeneration = 0
 
     /**
      * Fires on the playback thread for every frame about to be rendered.
-     * Hop to [mainHandler] before touching the method-channel result.
+     * Returns immediately unless a paused seek is armed, so feed playback
+     * does not enqueue a main-thread task per frame.
      */
     private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, _ ->
+        if (!seekAwaitsFrame || !seekFrameArmed) return@VideoFrameMetadataListener
         val generation = seekFrameGeneration
         mainHandler.post { onSeekFrameRendered(generation) }
     }
@@ -1145,6 +1159,7 @@ internal class DivineVideoPlayerInstance(
         seekCompletionResult?.success(null)
         seekCompletionResult = result
         seekFrameGeneration++
+        seekFrameArmed = false
         seekAwaitsFrame = !exoPlayer.playWhenReady && activeSurface != null
 
         // Ensure clip offsets are up-to-date from ExoPlayer's timeline
@@ -1164,6 +1179,12 @@ internal class DivineVideoPlayerInstance(
         // and not the start of the video, so the fade out stays on the join.
         declickProcessor.nextStreamStartUs = resolved.second * 1000L
         exoPlayer.seekTo(targetIndex, resolved.second)
+        if (seekAwaitsFrame) {
+            val generation = seekFrameGeneration
+            exoPlayer.createMessage { _, _ ->
+                if (generation == seekFrameGeneration) seekFrameArmed = true
+            }.send()
+        }
         // Settle any in-flight takeover before repositioning the loop track,
         // the same way pausing and setVolume do — otherwise the crossfade
         // keeps stepping against a track whose position just jumped underneath
@@ -1999,6 +2020,7 @@ internal class DivineVideoPlayerInstance(
 
     fun dispose() {
         seekFrameGeneration++
+        seekFrameArmed = false
         seekAwaitsFrame = false
         mainHandler.removeCallbacks(positionUpdater)
         mainHandler.removeCallbacks(seekTimeoutRunnable)

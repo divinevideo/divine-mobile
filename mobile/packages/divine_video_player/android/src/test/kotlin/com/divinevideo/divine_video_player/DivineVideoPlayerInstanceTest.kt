@@ -17,6 +17,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.exoplayer.source.SinglePeriodTimeline
 import io.flutter.plugin.common.BinaryMessenger
@@ -955,6 +956,8 @@ class DivineVideoPlayerInstanceTest {
 
     // -- seekTo completion contract --
 
+    private lateinit var seekFrameArm: io.mockk.CapturingSlot<PlayerMessage.Target>
+
     /** Attaches a surface, materializes the player and sends one seek. */
     private fun seekWithSurface(
         playWhenReady: Boolean,
@@ -967,6 +970,11 @@ class DivineVideoPlayerInstanceTest {
         instance.enableTextureOutput(mockRegistry)
         val playerListener = slot<Player.Listener>()
         val frameListener = slot<VideoFrameMetadataListener>()
+        val arm = slot<PlayerMessage.Target>()
+        val message = mockk<PlayerMessage>(relaxed = true)
+        every { mockPlayer.createMessage(capture(arm)) } returns message
+        every { message.send() } returns message
+        seekFrameArm = arm
         every { mockPlayer.addListener(capture(playerListener)) } just runs
         every { mockPlayer.setVideoFrameMetadataListener(capture(frameListener)) } just runs
         materializePlayer()
@@ -979,6 +987,11 @@ class DivineVideoPlayerInstanceTest {
 
     private fun renderFrame(listener: VideoFrameMetadataListener) {
         listener.onVideoFrameAboutToBeRendered(0L, 0L, mockk(relaxed = true), null)
+    }
+
+    /** Runs the playback-thread message queued after seekTo. */
+    private fun armSeekFrame() {
+        seekFrameArm.captured.handleMessage(0, null)
     }
 
     /**
@@ -996,6 +1009,10 @@ class DivineVideoPlayerInstanceTest {
         verify(exactly = 0) { result.success(any()) }
 
         renderFrame(frames)
+        verify(exactly = 0) { result.success(any()) }
+
+        armSeekFrame()
+        renderFrame(frames)
         verify(exactly = 1) { result.success(null) }
     }
 
@@ -1004,17 +1021,23 @@ class DivineVideoPlayerInstanceTest {
         val (listener, frames, result) = seekWithSurface(playWhenReady = false)
         every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
 
+        armSeekFrame()
         renderFrame(frames)
         verify(exactly = 0) { result.success(any()) }
 
         every { mockPlayer.playbackState } returns Player.STATE_READY
         listener.onPlaybackStateChanged(Player.STATE_READY)
-        verify(exactly = 1) { result.success(null) }
-    }
 
+        verify(exactly = 1) { result.success(null) }
+
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+        renderFrame(frames)
+        verify(exactly = 0) { mockHandler.post(any()) }
+    }
     @Test
     fun `later paused seekTo completes on the next frame, not onRenderedFirstFrame`() {
         val (listener, frames, first) = seekWithSurface(playWhenReady = false)
+        armSeekFrame()
         renderFrame(frames)
         verify(exactly = 1) { first.success(null) }
 
@@ -1023,19 +1046,25 @@ class DivineVideoPlayerInstanceTest {
 
         listener.onPlaybackStateChanged(Player.STATE_READY)
         listener.onRenderedFirstFrame()
+        renderFrame(frames)
         verify(exactly = 0) { second.success(any()) }
 
+        armSeekFrame()
         renderFrame(frames)
         verify(exactly = 1) { second.success(null) }
     }
 
     @Test
     fun `seekTo during playback completes on STATE_READY`() {
-        val (listener, _, result) = seekWithSurface(playWhenReady = true)
+        val (listener, frames, result) = seekWithSurface(playWhenReady = true)
 
         listener.onPlaybackStateChanged(Player.STATE_READY)
 
         verify(exactly = 1) { result.success(null) }
+
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+        renderFrame(frames)
+        verify(exactly = 0) { mockHandler.post(any()) }
     }
 
     // -- common-track-end clamp resolution --
