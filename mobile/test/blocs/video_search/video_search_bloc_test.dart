@@ -16,6 +16,8 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 void main() {
   group(VideoSearchBloc, () {
     late _MockVideosRepository mockVideosRepository;
+    late Future<void> trendingEmission;
+    late Future<void> delayedLoadMoreCompletion;
 
     const debounceDuration = Duration(milliseconds: 400);
 
@@ -78,14 +80,14 @@ void main() {
     VideoSearchBloc createBloc() =>
         VideoSearchBloc(videosRepository: mockVideosRepository);
 
-    test('initial state is correct', () {
+    test('initial state is correct', () async {
       final bloc = createBloc();
       expect(bloc.state.status, VideoSearchStatus.initial);
       expect(bloc.state.query, isEmpty);
       expect(bloc.state.videos, isEmpty);
       expect(bloc.state.resultCount, isNull);
       expect(bloc.state.sort, VideoSearchSort.trending);
-      bloc.close();
+      await bloc.close();
     });
 
     group('VideoSearchQueryChanged', () {
@@ -677,7 +679,7 @@ void main() {
             (_) => Stream.value([createVideo(id: 'recent-1', title: 'Recent')]),
           );
 
-          Future<void>.microtask(() async {
+          trendingEmission = Future<void>.microtask(() async {
             await Future<void>.delayed(const Duration(milliseconds: 450));
             trendingController.add([
               createVideo(id: 'trending-1', title: 'Trending'),
@@ -689,6 +691,7 @@ void main() {
           bloc.add(const VideoSearchQueryChanged('flutter'));
           await Future<void>.delayed(const Duration(milliseconds: 425));
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
+          await trendingEmission;
         },
         wait: const Duration(milliseconds: 800),
         verify: (bloc) {
@@ -778,7 +781,7 @@ void main() {
             ]),
           );
 
-          Future<void>.microtask(() async {
+          delayedLoadMoreCompletion = Future<void>.microtask(() async {
             await Future<void>.delayed(const Duration(milliseconds: 10));
             loadMoreCompleter.complete((
               videos: [createVideo(id: 'old-page-2', title: 'Old Page 2')],
@@ -798,6 +801,7 @@ void main() {
           bloc.add(const VideoSearchLoadMore());
           await Future<void>.delayed(const Duration(milliseconds: 1));
           bloc.add(const VideoSearchSortChanged(VideoSearchSort.recent));
+          await delayedLoadMoreCompletion;
         },
         wait: const Duration(milliseconds: 500),
         verify: (bloc) {
