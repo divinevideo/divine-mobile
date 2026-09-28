@@ -35,6 +35,12 @@ void main() {
       .where((message) => message.contains('lists it as retired'))
       .toList();
 
+  List<String> resolvedLogs() => logCapture
+      .getRecentLogs(minLevel: LogLevel.info)
+      .map((entry) => entry.message)
+      .where((message) => message.contains('Resolved moderation pubkey'))
+      .toList();
+
   group(ModerationPubkeyResolver, () {
     group('resolve', () {
       test(
@@ -77,6 +83,11 @@ void main() {
           prefs.getString(resolvedPubkeyPrefsKey),
           syntheticOtherTestPubkey,
         );
+        // AGENTS.md: every pubkey reaching a log sink carries both encodings.
+        final logged = resolvedLogs();
+        expect(logged, hasLength(1));
+        expect(logged.single, contains(syntheticOtherTestPubkey));
+        expect(logged.single, contains(syntheticOtherTestNpub));
       });
 
       test('falls back to the stale cache when the lookup throws', () async {

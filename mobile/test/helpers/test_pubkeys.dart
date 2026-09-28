@@ -28,3 +28,8 @@ const syntheticOtherTestPubkey =
 /// rather than moving the expectation with it.
 const syntheticTestNpub =
     'npub1m6kmam774klwlh4dhmhaatd7al02m0h0m6kmam774klwlh4dhmhslezuz0';
+
+/// The npub encoding of [syntheticOtherTestPubkey], written out as a literal.
+/// See [syntheticTestNpub] for why this is a literal rather than computed.
+const syntheticOtherTestNpub =
+    'npub1etlt40k2l6atajh7h2lv4l46hm90aw47etlt40k2l6atajh7h2lqx4end5';

@@ -107,7 +107,7 @@ class ModerationPubkeyResolver {
         await prefs.setString(_resolvedPubkeyKey, normalized);
         await prefs.setString(_resolvedAtKey, DateTime.now().toIso8601String());
         Log.info(
-          'Resolved moderation pubkey via NIP-05: $normalized',
+          'Resolved moderation pubkey via NIP-05: ${pubkeyForLogs(normalized)}',
           name: 'ModerationLabelService',
           category: LogCategory.system,
         );
