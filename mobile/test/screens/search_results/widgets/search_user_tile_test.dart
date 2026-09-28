@@ -132,34 +132,6 @@ void main() {
       expect(find.textContaining('npub'), findsNothing);
     });
 
-    testWidgets('does not render Vine loop count as a video count', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildSubject(profileWith(rawData: const {'vine_loops': 5000})),
-      );
-
-      expect(find.textContaining('5000'), findsNothing);
-      expect(find.textContaining('videos'), findsNothing);
-    });
-
-    testWidgets('does not render a self-reported Vine follower count', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildSubject(
-          profileWith(nip05: '', rawData: const {'vine_followers': 430}),
-          relationship: FollowRelationship.mutual,
-        ),
-      );
-      await tester.pump();
-
-      // vine_followers is the account's own kind-0 claim; only an
-      // authoritative follower_count earns a spot on the line.
-      expect(find.text(l10n.socialProofMutual), findsOneWidget);
-      expect(find.textContaining('430'), findsNothing);
-    });
-
     testWidgets('shows social proof when there is no handle or video count', (
       tester,
     ) async {

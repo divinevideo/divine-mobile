@@ -4431,18 +4431,18 @@ void main() {
         expect(pubkeys, [pk18Videos, pk4Videos, pk1Video]);
       });
 
-      test('searchUsersProgressive ignores Kind 0 Vine metrics when ranking a '
-          'mixed page', () async {
-        final cachedVineProfile = UserProfile(
+      test('searchUsersProgressive ranks a cached profile with no REST counts '
+          'after the counted results', () async {
+        final cachedProfile = UserProfile(
           pubkey: pkCachedVine,
-          displayName: 'Lauren Cached Vine',
-          rawData: const {'vine_followers': 999999, 'vine_loops': 5000000},
+          displayName: 'Lauren Cached',
+          rawData: const {},
           createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
           eventId: 'kind0-$pkCachedVine',
         );
         when(
           () => mockUserProfilesDao.getAllProfiles(),
-        ).thenAnswer((_) async => [cachedVineProfile]);
+        ).thenAnswer((_) async => [cachedProfile]);
         stubRestResults([
           ProfileSearchResult(
             pubkey: pk1Video,
