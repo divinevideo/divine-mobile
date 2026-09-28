@@ -2129,6 +2129,37 @@ void main() {
           ),
         );
       });
+
+      // The published report event's id is not known yet when the ticket is
+      // written: it is signed later, and signing can add tags.
+      test(
+        'a content report names its event once, as the reported one',
+        () async {
+          final lines = await ticketLines(
+            await service.reportContent(
+              eventId: _validEventId('a'),
+              authorPubkey: _validEventId('b'),
+              reason: ContentFilterReason.spam,
+              details: 'spam',
+            ),
+          );
+          expect(
+            lines.where((line) => line.contains(_validEventId('a'))),
+            equals(['Event ID: ${'a' * 64}']),
+          );
+        },
+      );
+
+      test('a user report carries no local history key', () async {
+        final lines = await ticketLines(
+          await service.reportUser(
+            userPubkey: _validEventId('c'),
+            reason: ContentFilterReason.harassment,
+            details: 'harassing me',
+          ),
+        );
+        expect(lines.where((line) => line.contains('user_')), isEmpty);
+      });
     });
 
     test(

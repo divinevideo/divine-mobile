@@ -807,8 +807,9 @@ class ContentReportingService implements ReportChannelDriver {
 
     description.writeln();
     description.writeln('---');
+    // No report event id: the queued event is signed later, and signing can
+    // add tags, so its published id is not known when this ticket is written.
     description.writeln('Reported via Divine mobile app');
-    description.writeln('NIP-56 Nostr event created: $eventId');
 
     return {
       'subject': 'Content Report: ${reason.name}',
