@@ -15,6 +15,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/moderation_pubkey_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -142,13 +143,29 @@ void main() {
       await logCapture.clearAllLogs();
     });
 
-    ModerationLabelService buildService({bool canQueryRelays = false}) =>
-        ModerationLabelService(
-          nostrClient: mockNostrClient,
-          authService: mockAuthService,
-          sharedPreferences: mockPrefs,
-          canQueryRelays: () => canQueryRelays,
-        );
+    ModerationLabelService buildService({
+      bool canQueryRelays = false,
+      ModerationPubkeyResolver? pubkeyResolver,
+    }) => ModerationLabelService(
+      nostrClient: mockNostrClient,
+      authService: mockAuthService,
+      sharedPreferences: mockPrefs,
+      canQueryRelays: () => canQueryRelays,
+      pubkeyResolver: pubkeyResolver,
+    );
+
+    test('uses the injected moderation pubkey resolver', () async {
+      final service = buildService(
+        canQueryRelays: true,
+        pubkeyResolver: ModerationPubkeyResolver(
+          lookupPubkey: (_) async => divergentKey,
+        ),
+      );
+
+      await service.initialize();
+
+      expect(service.divineModerationPubkeyHex, divergentKey);
+    });
 
     List<String> pinWarnings() => logCapture
         .getRecentLogs(minLevel: LogLevel.warning)

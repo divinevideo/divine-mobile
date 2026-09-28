@@ -97,6 +97,7 @@ class ModerationLabelService {
     required AuthService authService,
     required SharedPreferences sharedPreferences,
     bool Function()? canQueryRelays,
+    ModerationPubkeyResolver? pubkeyResolver,
     int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
     int maxLabelerHistoryPages = defaultMaxLabelerHistoryPages,
     Duration labelerHistoryBudget = defaultLabelerHistoryBudget,
@@ -106,6 +107,7 @@ class ModerationLabelService {
        _authService = authService,
        _prefs = sharedPreferences,
        _canQueryRelays = canQueryRelays ?? (() => true),
+       _pubkeyResolver = pubkeyResolver ?? ModerationPubkeyResolver(),
        _labelerHistoryPageSize = labelerHistoryPageSize,
        _maxLabelerHistoryPages = maxLabelerHistoryPages,
        _labelerHistoryBudget = labelerHistoryBudget,
@@ -119,6 +121,7 @@ class ModerationLabelService {
   final AuthService _authService;
   final SharedPreferences _prefs;
   final bool Function() _canQueryRelays;
+  final ModerationPubkeyResolver _pubkeyResolver;
 
   /// Page size for the paged labeler-history query.
   ///
@@ -201,10 +204,6 @@ class ModerationLabelService {
   /// Fallback pubkey when NIP-05 resolution fails — the key pinned in this
   /// build, which is also what the protected-minor gate anchors on.
   static const String fallbackModerationPubkeyHex = kModerationPubkeyHex;
-
-  /// Resolves and caches [_divineModerationPubkey] via NIP-05, refusing any
-  /// key this build lists as retired.
-  final ModerationPubkeyResolver _pubkeyResolver = ModerationPubkeyResolver();
 
   /// Resolved Divine moderation pubkey (cache → NIP-05 → fallback).
   String _divineModerationPubkey = fallbackModerationPubkeyHex;

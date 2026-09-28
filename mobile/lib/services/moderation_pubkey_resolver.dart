@@ -19,9 +19,10 @@ typedef Nip05PubkeyLookup = Future<String?> Function(String nip05Address);
 /// adopted — see [_refuseRetired] for why.
 ///
 /// Extracted from `ModerationLabelService` (#7851) to keep that file under
-/// the service-layer line ceiling. `ModerationLabelService` owns a private
-/// instance and calls [resolve] / [cached] where it used to call the
-/// now-moved private methods.
+/// the service-layer line ceiling. `ModerationLabelService` calls [resolve]
+/// and [cached] where it used to call the now-moved private methods, and
+/// accepts a resolver through its constructor so tests can supply a controlled
+/// NIP-05 lookup.
 class ModerationPubkeyResolver {
   ModerationPubkeyResolver({Nip05PubkeyLookup? lookupPubkey})
     : _lookupPubkey = lookupPubkey ?? Nip05Validor.getPubkey;
