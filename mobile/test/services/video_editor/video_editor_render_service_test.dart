@@ -29,10 +29,12 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ClipTransitionType,
         EditorVideo,
         NativeFailureDetails,
+        NativeLogLevel,
         ProVideoEditor,
         ProgressModel,
         RenderCanceledException,
         RenderEncoderException,
+        VideoMetadata,
         VideoQualityConfig,
         VideoRenderData,
         VideoSegment;
@@ -708,6 +710,35 @@ void main() {
       );
     });
 
+    test(
+      'renderVideoToClip maps a cancelled loop-seam bake to canceled',
+      () async {
+        ProVideoEditor.instance = _CancelOnMetadataProVideoEditor();
+
+        await expectLater(
+          VideoEditorRenderService.renderVideoToClip(
+            clips: [clip('a', const Duration(seconds: 6))],
+            editorStateHistory: const {},
+            taskId: 'export',
+            alignLoopSeam: true,
+          ),
+          throwsA(
+            isA<VideoRenderFailedException>()
+                .having(
+                  (e) => e.reason,
+                  'reason',
+                  VideoRenderFailureReason.canceled,
+                )
+                .having(
+                  (e) => e.cause,
+                  'cause',
+                  isA<RenderCanceledException>(),
+                ),
+          ),
+        );
+      },
+    );
+
     test('renderVideoToClip maps a cancelled stop-motion assembly to canceled, '
         'not stop_motion_assembly', () async {
       StopMotionRenderService.assembleOverride = ({
@@ -900,6 +931,15 @@ void main() {
 /// Satisfies the composite-progress subscription that
 /// [VideoEditorRenderService.renderVideoToClip] opens; the render itself is
 /// stubbed out through `renderVideoOverride`.
+class _CancelOnMetadataProVideoEditor extends _StubProVideoEditor {
+  @override
+  Future<VideoMetadata> getMetadata(
+    EditorVideo value, {
+    bool checkStreamingOptimization = false,
+    NativeLogLevel? nativeLogLevel,
+  }) async => throw const RenderCanceledException();
+}
+
 class _StubProVideoEditor extends ProVideoEditor {
   @override
   void initializeStream() {}

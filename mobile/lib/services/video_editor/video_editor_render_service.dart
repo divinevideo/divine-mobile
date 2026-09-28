@@ -295,13 +295,26 @@ class VideoEditorRenderService {
 
       // The aligned clips are encoded only; proofs, cover and metadata below
       // keep describing the recorded clips.
-      final encodeClips = alignLoopSeam
-          ? await _alignLoopSeam(
-              renderClips,
-              taskId: effectiveTaskId,
-              bakedPaths: loopSeamPaths,
-            )
-          : renderClips;
+      final List<DivineVideoClip> encodeClips;
+      if (!alignLoopSeam) {
+        encodeClips = renderClips;
+      } else {
+        try {
+          encodeClips = await _alignLoopSeam(
+            renderClips,
+            taskId: effectiveTaskId,
+            bakedPaths: loopSeamPaths,
+          );
+        } on RenderCanceledException catch (e) {
+          // Same incomplete semantics as a cancelled stop-motion assembly:
+          // detach cancels the seam encode by its own native id, and that
+          // must not land in the generic failure bucket.
+          throw VideoRenderFailedException(
+            VideoRenderFailureReason.canceled,
+            cause: e,
+          );
+        }
+      }
 
       final outputPath = await _renderVideoOrThrow(
         clips: encodeClips,

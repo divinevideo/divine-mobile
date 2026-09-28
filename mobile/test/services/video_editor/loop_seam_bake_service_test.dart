@@ -6,6 +6,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/loop_seam_bake_service.dart';
 import 'package:openvine/services/video_editor/loop_seam_ramp.dart';
+import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import 'loop_seam_test_scene.dart';
@@ -32,13 +33,19 @@ DivineVideoClip _clip(String id, {bool reversed = false, double? speed}) =>
 /// A bake whose frames come from [TestScene]: the file named [lastPath] ends
 /// on the scene moved by ([dx], [dy]) pixels, everything else is unmoved.
 class _Harness {
-  _Harness({this.dx = 5, this.dy = -7, this.failRender = false}) {
+  _Harness({
+    this.dx = 5,
+    this.dy = -7,
+    this.failRender = false,
+    this.onRender,
+  }) {
     addTearDown(() => dir.deleteSync(recursive: true));
   }
 
   final double dx;
   final double dy;
   final bool failRender;
+  final void Function()? onRender;
   final scene = TestScene();
   final renders = <(String, VideoRenderData)>[];
   final grabs = <(String, Duration)>[];
@@ -62,6 +69,7 @@ class _Harness {
     render: (outputPath, task) async {
       renders.add((outputPath, task));
       File(outputPath).writeAsStringSync('baked');
+      onRender?.call();
       if (failRender) throw StateError('encoder down');
     },
     outputDirectory: () async => dir.path,
@@ -169,6 +177,49 @@ void main() {
         expect(harness.grabs, isEmpty);
         expect(result.clips, same(clips));
       });
+
+      test(
+        'does not measure or bake when the export is already cancelled',
+        () async {
+          RenderCancellationRegistry.start('task');
+          RenderCancellationRegistry.cancel('task');
+          addTearDown(RenderCancellationRegistry.reset);
+          final harness = _Harness()..lastPath = '/clips/a.mp4';
+
+          await expectLater(
+            harness.build().alignClips([_clip('a')], taskId: 'task'),
+            throwsA(isA<RenderCanceledException>()),
+          );
+
+          expect(harness.grabs, isEmpty);
+          expect(harness.renders, isEmpty);
+        },
+      );
+
+      test(
+        'does not start the second bake after a cancel during the first',
+        () async {
+          RenderCancellationRegistry.start('task');
+          addTearDown(RenderCancellationRegistry.reset);
+          final harness = _Harness(
+            onRender: () {
+              RenderCancellationRegistry.cancel('task');
+            },
+          )..lastPath = '/clips/c.mp4';
+
+          await expectLater(
+            harness.build().alignClips([
+              _clip('a'),
+              _clip('b'),
+              _clip('c'),
+            ], taskId: 'task'),
+            throwsA(isA<RenderCanceledException>()),
+          );
+
+          expect(harness.renders, hasLength(1));
+          expect(File(harness.renders.single.$1).existsSync(), isFalse);
+        },
+      );
 
       test('falls back to the original clips and deletes its output when the '
           'bake fails', () async {

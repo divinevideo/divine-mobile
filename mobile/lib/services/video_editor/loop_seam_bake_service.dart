@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/loop_seam_alignment.dart';
 import 'package:openvine/services/video_editor/loop_seam_ramp.dart';
+import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -130,6 +131,10 @@ class LoopSeamBakeService {
 
     final written = <String>[];
     try {
+      // A user cancel targets the export id, which this bake does not render
+      // under. Check it before the measurement and again before each encode so
+      // a cancel during the first clip does not start the second.
+      RenderCancellationRegistry.throwIfRequested(taskId);
       final firstPath = await first.requireVideo.safeFilePath();
       final lastPath = await last.requireVideo.safeFilePath();
       final firstInfo = await _readInfo(firstPath);
@@ -163,6 +168,7 @@ class LoopSeamBakeService {
 
       final result = [...clips];
       if (clips.length == 1) {
+        RenderCancellationRegistry.throwIfRequested(taskId);
         final baked = await _bakeClip(
           clip: first,
           path: firstPath,
@@ -175,6 +181,7 @@ class LoopSeamBakeService {
         if (baked == null) return LoopSeamBakeResult(clips: clips);
         result[0] = baked;
       } else {
+        RenderCancellationRegistry.throwIfRequested(taskId);
         final bakedFirst = await _bakeClip(
           clip: first,
           path: firstPath,
@@ -184,6 +191,7 @@ class LoopSeamBakeService {
           renderId: '$taskId-loop-seam-head',
           written: written,
         );
+        RenderCancellationRegistry.throwIfRequested(taskId);
         final bakedLast = await _bakeClip(
           clip: last,
           path: lastPath,
