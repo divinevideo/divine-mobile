@@ -39,13 +39,13 @@ void main() {
     HashtagSearchBloc createBloc() =>
         HashtagSearchBloc(hashtagRepository: mockHashtagRepository);
 
-    test('initial state is correct', () {
+    test('initial state is correct', () async {
       final bloc = createBloc();
       expect(bloc.state.status, HashtagSearchStatus.initial);
       expect(bloc.state.query, isEmpty);
       expect(bloc.state.results, isEmpty);
       expect(bloc.state.resultCount, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group('HashtagSearchQueryChanged', () {
