@@ -416,7 +416,10 @@ class VideoRecorderBloc
             prefs.getBool(MusicModePreferenceService.prefsKey) ?? false,
         // Rides the first bind: applying it after init would rebind the
         // whole camera a second time on Android.
-        videoStabilizationMode: _savedStabilizationMode(prefs),
+        videoStabilizationMode: _stabilizationModeFor(
+          state.recorderMode,
+          prefs,
+        ),
       );
     } catch (e, stackTrace) {
       initError = e;
@@ -464,6 +467,9 @@ class VideoRecorderBloc
       emit,
       aspectRatio: clips.isNotEmpty ? clips.first.targetAspectRatio : null,
     );
+
+    // A mode switched to while the camera was starting could not reach it.
+    await _applyStabilizationForRecorderMode();
 
     // Opening straight into Upload: the screen's pause for that tab arrived
     // while the camera was still starting and was dropped, so release it now.
@@ -513,6 +519,13 @@ class VideoRecorderBloc
           initializationError: CameraInitializationError.failed,
         ),
       );
+      return;
+    }
+
+    // Leaving the Upload tab resumes the camera it paused, into whichever
+    // mode the user switched to meanwhile.
+    if (event.state == AppLifecycleState.resumed) {
+      await _applyStabilizationForRecorderMode();
     }
   }
 
@@ -1626,11 +1639,17 @@ class VideoRecorderBloc
     VideoRecorderRecorderModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    final previousMode = state.recorderMode;
     await _applyRecorderMode(
       emit,
       event.mode,
       keepAutosavedDraft: event.keepAutosavedDraft,
     );
+    // Leaving Upload resumes a paused camera: a rebind while paused would
+    // restart it on Android, so the resume applies the mode instead.
+    if (previousMode != VideoRecorderMode.upload) {
+      await _applyStabilizationForRecorderMode();
+    }
   }
 
   Future<void> _applyRecorderMode(
@@ -2107,17 +2126,55 @@ class VideoRecorderBloc
     );
   }
 
-  /// The persisted stabilization mode, handed to the camera's initialize.
+  /// The persisted stabilization mode, as last picked in a mode that shows
+  /// the control.
   ///
   /// The native controller is recreated (mode reset to off) on every init, so
-  /// the saved preference travels with each one. The platform opens with off
-  /// when the active lens does not support it.
+  /// the preference travels with each one (see [_stabilizationModeFor]). The
+  /// platform opens with off when the active lens does not support it.
   DivineVideoStabilizationMode _savedStabilizationMode(
     SharedPreferences prefs,
   ) {
     final saved = prefs.getString(_kLastUsedStabilizationModeKey);
     if (saved == null) return DivineVideoStabilizationMode.off;
     return DivineVideoStabilizationMode.fromNativeString(saved);
+  }
+
+  /// The stabilization the camera runs in [mode]: the saved choice where the
+  /// mode shows the control, off where it hides it, so Classic and Stop
+  /// Motion never run a mode picked in Capture. The saved choice itself stays
+  /// untouched.
+  DivineVideoStabilizationMode _stabilizationModeFor(
+    VideoRecorderMode mode,
+    SharedPreferences prefs,
+  ) => mode.supportsVideoStabilization
+      ? _savedStabilizationMode(prefs)
+      : DivineVideoStabilizationMode.off;
+
+  /// Points the live camera at [_stabilizationModeFor] the current mode.
+  ///
+  /// A saved mode the current lens cannot take is left alone: the camera
+  /// already opened with off for it, and requesting it again would rebind the
+  /// camera for nothing on Android.
+  Future<void> _applyStabilizationForRecorderMode() async {
+    final mode = state.recorderMode;
+    // Upload pauses the camera and records nothing.
+    if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
+      return;
+    }
+    final target = _stabilizationModeFor(mode, _readSharedPreferences());
+    if (target == _cameraService.videoStabilizationMode ||
+        !_cameraService.availableVideoStabilizationModes.contains(target)) {
+      return;
+    }
+    final success = await _cameraService.setVideoStabilizationMode(target);
+    if (!success) {
+      Log.warning(
+        '⚠️ Failed to set stabilization to ${target.name} for ${mode.name}',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
   }
 
   Future<void> _prepareSoundForPlayback() async {
