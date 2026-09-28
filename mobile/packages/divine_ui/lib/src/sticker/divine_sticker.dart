@@ -104,7 +104,6 @@ enum DivineStickerName {
   holographicShape('holographic_shape'),
   horse('horse'),
   hotAirBalloon('hot_air_balloon'),
-  idLicense('id_license'),
   indexFingerPointingUp('index_finger_pointing_up'),
 
   /// The flamingo pool float. Not a variant of [unicornFloat].
@@ -158,7 +157,6 @@ enum DivineStickerName {
   schoolNotebook('school_notebook'),
   secureVault('secure_vault'),
   serumDropper('serum_dropper'),
-  shockedMan('shocked_man'),
   shrimp('shrimp'),
   skateboard('skateboard'),
   skeletonKey('skeleton_key'),

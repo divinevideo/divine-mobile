@@ -51,8 +51,8 @@ String _snakeCase(String identifier) => identifier.replaceAllMapped(
 
 void main() {
   group(DivineStickerName, () {
-    test('has 136 variants', () {
-      expect(DivineStickerName.values.length, equals(136));
+    test('has 134 variants', () {
+      expect(DivineStickerName.values.length, equals(134));
     });
 
     test('assetPath points Figma artwork at the WebP directory', () {
@@ -111,7 +111,7 @@ void main() {
             .map((sticker) => sticker.figmaName)
             .toList();
 
-        expect(figmaNames, hasLength(135));
+        expect(figmaNames, hasLength(133));
         expect(figmaNames.toSet(), hasLength(figmaNames.length));
       });
     });
