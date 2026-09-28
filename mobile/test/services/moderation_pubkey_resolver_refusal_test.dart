@@ -13,23 +13,28 @@ void main() {
   const resolvedAtPrefsKey = 'divine_moderation_resolved_at';
   final retiredKey = kLegacyModerationPubkeys.first;
 
-  test('a retired NIP-05 answer clears a different stale cached key', () async {
-    SharedPreferences.setMockInitialValues({
-      cachedPubkeyPrefsKey: syntheticTestPubkey,
-      resolvedAtPrefsKey: DateTime.now()
-          .subtract(const Duration(days: 2))
-          .toIso8601String(),
-    });
-    final prefs = await SharedPreferences.getInstance();
-    final resolver = ModerationPubkeyResolver(
-      lookupPubkey: (_) async => retiredKey,
+  group(ModerationPubkeyResolver, () {
+    test(
+      'a retired NIP-05 answer clears a different stale cached key',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          cachedPubkeyPrefsKey: syntheticTestPubkey,
+          resolvedAtPrefsKey: DateTime.now()
+              .subtract(const Duration(days: 2))
+              .toIso8601String(),
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final resolver = ModerationPubkeyResolver(
+          lookupPubkey: (_) async => retiredKey,
+        );
+
+        final resolved = await resolver.resolve(prefs);
+
+        expect(resolved, kModerationPubkeyHex);
+        expect(prefs.getString(cachedPubkeyPrefsKey), isNull);
+        expect(prefs.getString(resolvedAtPrefsKey), isNull);
+        expect(resolver.cached(prefs), kModerationPubkeyHex);
+      },
     );
-
-    final resolved = await resolver.resolve(prefs);
-
-    expect(resolved, kModerationPubkeyHex);
-    expect(prefs.getString(cachedPubkeyPrefsKey), isNull);
-    expect(prefs.getString(resolvedAtPrefsKey), isNull);
-    expect(resolver.cached(prefs), kModerationPubkeyHex);
   });
 }
