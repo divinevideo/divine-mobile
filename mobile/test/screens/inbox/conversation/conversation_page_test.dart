@@ -366,6 +366,129 @@ void main() {
           equals(InboxPage.path),
         );
       });
+
+      // Device evidence (2026-09-28): go_router 18.0.1 keys a declarative
+      // page by the route PATTERN, not the matched id (`match.dart:231`
+      // `pageKey: ValueKey<String>(newMatchedPath)` — the same mechanism
+      // documented on `branchPage` in `router/routes/shell.dart`), so two
+      // consecutive `go()`s to different conversation ids reuse this exact
+      // element. `push`/`pushReplacement` get unique page keys, so only an
+      // in-place `go()` reproduces this — modelled here with a
+      // ValueListenableBuilder rebuilding the SAME ConversationPage element
+      // with a new id, independent of go_router itself.
+      testWidgets(
+        'shows the new conversation, not the previous one, after an '
+        'in-place id change reuses this element',
+        (tester) async {
+          when(() => mockDmRepository.userPubkey).thenReturn(testPubkey);
+          const conversationIdB =
+              'bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00bb00';
+          const otherPubkeyB =
+              '9988776655443322998877665544332299887766554433229988776655443322';
+          const messageInA = DmMessage(
+            id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            conversationId: testConversationId,
+            senderPubkey: otherPubkey,
+            content: 'Message in thread A',
+            createdAt: 1700000000,
+            giftWrapId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+          );
+          const messageInB = DmMessage(
+            id: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            conversationId: conversationIdB,
+            senderPubkey: otherPubkeyB,
+            content: 'Message in thread B',
+            createdAt: 1700000001,
+            giftWrapId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbc',
+          );
+
+          when(
+            () => mockDmRepository.getConversation(testConversationId),
+          ).thenAnswer(
+            (_) async => DmConversation(
+              id: testConversationId,
+              participantPubkeys: const [testPubkey, otherPubkey],
+              isGroup: false,
+              createdAt: 1700000000,
+            ),
+          );
+          when(
+            () => mockDmRepository.getConversation(conversationIdB),
+          ).thenAnswer(
+            (_) async => DmConversation(
+              id: conversationIdB,
+              participantPubkeys: const [testPubkey, otherPubkeyB],
+              isGroup: false,
+              createdAt: 1700000001,
+            ),
+          );
+          when(
+            () => mockDmRepository.watchMessages(testConversationId),
+          ).thenAnswer((_) => Stream.value([messageInA]));
+          when(
+            () => mockDmRepository.watchMessages(conversationIdB),
+          ).thenAnswer((_) => Stream.value([messageInB]));
+
+          final conversationId = ValueNotifier<String>(testConversationId);
+          addTearDown(conversationId.dispose);
+
+          await tester.pumpWidget(
+            testMaterialApp(
+              // The SAME ConversationPage element is rebuilt with a new
+              // conversationId, exactly like go_router reusing a
+              // pattern-keyed page across two different matched ids.
+              home: ValueListenableBuilder<String>(
+                valueListenable: conversationId,
+                builder: (context, id, _) => ConversationPage(
+                  conversationId: id,
+                  participantPubkeys: const [],
+                ),
+              ),
+              mockAuthService: mockAuthService,
+              additionalOverrides: [
+                isDmRestrictedProvider.overrideWithValue(false),
+                dmRepositoryProvider.overrideWithValue(mockDmRepository),
+                fetchUserProfileProvider(
+                  otherPubkey,
+                ).overrideWith((ref) async => null),
+                fetchUserProfileProvider(
+                  otherPubkeyB,
+                ).overrideWith((ref) async => null),
+              ],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            tester
+                .widget<ConversationView>(find.byType(ConversationView))
+                .participantPubkeys,
+            equals([otherPubkey]),
+          );
+          expect(find.text('Message in thread A'), findsOneWidget);
+
+          conversationId.value = conversationIdB;
+          await tester.pump();
+          await tester.pump();
+          await tester.pump();
+
+          expect(
+            tester
+                .widget<ConversationView>(find.byType(ConversationView))
+                .participantPubkeys,
+            equals([otherPubkeyB]),
+            reason:
+                "the reused element must resolve the NEW id's participants, "
+                'not keep showing the previous conversation',
+          );
+          expect(find.text('Message in thread B'), findsOneWidget);
+          expect(find.text('Message in thread A'), findsNothing);
+          verify(
+            () => mockDmRepository.getConversation(conversationIdB),
+          ).called(1);
+        },
+      );
     });
   });
 }

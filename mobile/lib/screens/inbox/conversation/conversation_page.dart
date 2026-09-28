@@ -76,9 +76,15 @@ class ConversationPage extends ConsumerWidget {
     final officialAccounts = ref.watch(officialAccountsServiceProvider);
 
     return BlocProvider(
-      // Also keyed on the captured dependencies: a stale dmRepository would
-      // resolve participants against the previous account.
+      // Also keyed on conversationId and the captured dependencies: a stale
+      // dmRepository would resolve participants against the previous
+      // account, and go_router keys a declarative page on the route
+      // PATTERN, not the matched id (see `branchPage` in
+      // `router/routes/shell.dart`), so navigating between two
+      // conversations reuses this element. Without conversationId here, the
+      // reused cubit keeps resolving the FIRST conversation's participants.
       key: ValueKey((
+        conversationId,
         dmRepository,
         currentPubkey,
         isDmRestricted,
@@ -195,8 +201,11 @@ class _ConversationBlocScope extends ConsumerWidget {
         // See `state_management.md` → "Bridging Riverpod-provided
         // dependencies into BlocProvider" and the canonical four sites in
         // `video_feed_page.dart` / `pooled_fullscreen_video_feed_screen.dart`.
+        // conversationId is keyed too, for the same route-reuse reason as
+        // ConversationPage's own BlocProvider above: `create:` here also
+        // captures it, one-shot, in the initial ConversationStarted event.
         BlocProvider<ConversationBloc>(
-          key: ValueKey((dmRepository, currentPubkey)),
+          key: ValueKey((conversationId, dmRepository, currentPubkey)),
           create: (_) => ConversationBloc(
             dmRepository: dmRepository,
             conversationId: conversationId,
@@ -210,9 +219,15 @@ class _ConversationBlocScope extends ConsumerWidget {
           key: ValueKey((dmRepository, currentPubkey, 'restoreStatus')),
           create: (_) => DmRestoreStatusCubit(dmRepository: dmRepository),
         ),
-        // Reactions cubit; same identity-keying as ConversationBloc.
+        // Reactions cubit; same identity-keying as ConversationBloc,
+        // including conversationId.
         BlocProvider<ConversationReactionsCubit>(
-          key: ValueKey((reactionsRepository, currentPubkey, 'reactions')),
+          key: ValueKey((
+            conversationId,
+            reactionsRepository,
+            currentPubkey,
+            'reactions',
+          )),
           create: (_) => ConversationReactionsCubit(
             reactionsRepository: reactionsRepository,
             ownerPubkey: currentPubkey,
