@@ -17,6 +17,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.exoplayer.source.SinglePeriodTimeline
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
@@ -955,15 +956,29 @@ class DivineVideoPlayerInstanceTest {
     // -- seekTo completion contract --
 
     /** Attaches a surface, materializes the player and sends one seek. */
-    private fun seekWithSurface(playWhenReady: Boolean): Pair<Player.Listener, MethodChannel.Result> {
+    private fun seekWithSurface(
+        playWhenReady: Boolean,
+    ): Triple<Player.Listener, VideoFrameMetadataListener, MethodChannel.Result> {
+        every { mockHandler.post(any()) } answers {
+            firstArg<Runnable>().run()
+            true
+        }
         every { mockProducer.surface } returns mockSurface
         instance.enableTextureOutput(mockRegistry)
-        val listener = capturePlayerListener()
+        val playerListener = slot<Player.Listener>()
+        val frameListener = slot<VideoFrameMetadataListener>()
+        every { mockPlayer.addListener(capture(playerListener)) } just runs
+        every { mockPlayer.setVideoFrameMetadataListener(capture(frameListener)) } just runs
+        materializePlayer()
         every { mockPlayer.playWhenReady } returns playWhenReady
         every { mockPlayer.playbackState } returns Player.STATE_READY
         val result = mockk<MethodChannel.Result>(relaxed = true)
         instance.onMethodCall(MethodCall("seekTo", mapOf("positionMs" to 500)), result)
-        return listener to result
+        return Triple(playerListener.captured, frameListener.captured, result)
+    }
+
+    private fun renderFrame(listener: VideoFrameMetadataListener) {
+        listener.onVideoFrameAboutToBeRendered(0L, 0L, mockk(relaxed = true), null)
     }
 
     /**
@@ -972,21 +987,24 @@ class DivineVideoPlayerInstanceTest {
      */
     @Test
     fun `paused seekTo completes once its frame renders, not on STATE_READY`() {
-        val (listener, result) = seekWithSurface(playWhenReady = false)
+        val (listener, frames, result) = seekWithSurface(playWhenReady = false)
 
         listener.onPlaybackStateChanged(Player.STATE_READY)
         verify(exactly = 0) { result.success(any()) }
 
         listener.onRenderedFirstFrame()
+        verify(exactly = 0) { result.success(any()) }
+
+        renderFrame(frames)
         verify(exactly = 1) { result.success(null) }
     }
 
     @Test
     fun `paused seekTo whose frame renders first completes on STATE_READY`() {
-        val (listener, result) = seekWithSurface(playWhenReady = false)
+        val (listener, frames, result) = seekWithSurface(playWhenReady = false)
         every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
 
-        listener.onRenderedFirstFrame()
+        renderFrame(frames)
         verify(exactly = 0) { result.success(any()) }
 
         every { mockPlayer.playbackState } returns Player.STATE_READY
@@ -995,8 +1013,25 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `later paused seekTo completes on the next frame, not onRenderedFirstFrame`() {
+        val (listener, frames, first) = seekWithSurface(playWhenReady = false)
+        renderFrame(frames)
+        verify(exactly = 1) { first.success(null) }
+
+        val second = mockk<MethodChannel.Result>(relaxed = true)
+        instance.onMethodCall(MethodCall("seekTo", mapOf("positionMs" to 800)), second)
+
+        listener.onPlaybackStateChanged(Player.STATE_READY)
+        listener.onRenderedFirstFrame()
+        verify(exactly = 0) { second.success(any()) }
+
+        renderFrame(frames)
+        verify(exactly = 1) { second.success(null) }
+    }
+
+    @Test
     fun `seekTo during playback completes on STATE_READY`() {
-        val (listener, result) = seekWithSurface(playWhenReady = true)
+        val (listener, _, result) = seekWithSurface(playWhenReady = true)
 
         listener.onPlaybackStateChanged(Player.STATE_READY)
 

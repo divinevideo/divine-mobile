@@ -21,6 +21,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import io.flutter.plugin.common.BinaryMessenger
@@ -225,8 +226,27 @@ internal class DivineVideoPlayerInstance(
      * Whether the pending paused seek still waits for its frame. Paused,
      * ExoPlayer reports STATE_READY before a clip's last frames leave the
      * decoder; completing there lets a scrub's next seek flush them unseen.
+     *
+     * The signal is the next rendered frame, not [Player.Listener.onRenderedFirstFrame].
+     * That callback fires once per surface, so a later scrub would wait out
+     * [seekTimeoutRunnable] while the canvas holds the following seek.
      */
     private var seekAwaitsFrame = false
+
+    /**
+     * Bumped on each seek and on dispose. A frame callback posted for an
+     * older seek must not complete the one that replaced it.
+     */
+    private var seekFrameGeneration = 0
+
+    /**
+     * Fires on the playback thread for every frame about to be rendered.
+     * Hop to [mainHandler] before touching the method-channel result.
+     */
+    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, _ ->
+        val generation = seekFrameGeneration
+        mainHandler.post { onSeekFrameRendered(generation) }
+    }
 
     /** Safety timeout so Dart is never left hanging if the callback is lost. */
     private val seekTimeoutRunnable = Runnable {
@@ -343,6 +363,7 @@ internal class DivineVideoPlayerInstance(
                 player = newPlayer
                 newPlayer.setSeekParameters(SeekParameters.EXACT)
                 newPlayer.addListener(playerListener)
+                newPlayer.setVideoFrameMetadataListener(renderedFrameListener)
                 val surface = activeSurface
                 if (surface != null) {
                     newPlayer.setVideoSurface(surface)
@@ -1123,6 +1144,7 @@ internal class DivineVideoPlayerInstance(
         mainHandler.removeCallbacks(seekTimeoutRunnable)
         seekCompletionResult?.success(null)
         seekCompletionResult = result
+        seekFrameGeneration++
         seekAwaitsFrame = !exoPlayer.playWhenReady && activeSurface != null
 
         // Ensure clip offsets are up-to-date from ExoPlayer's timeline
@@ -1343,6 +1365,17 @@ internal class DivineVideoPlayerInstance(
         val videoPlayer = player ?: return
         val globalPositionMs = currentGlobalPlaybackMs(videoPlayer)
         audioOverlayManager.update(globalPositionMs, videoPlayer.isPlaying)
+    }
+
+    /**
+     * A frame for [generation] is about to be rendered. Completes a paused
+     * seek only when this is still that seek and the player is ready; a
+     * frame that arrives first just clears the wait so STATE_READY can.
+     */
+    private fun onSeekFrameRendered(generation: Int) {
+        if (generation != seekFrameGeneration || !seekAwaitsFrame) return
+        seekAwaitsFrame = false
+        if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
     }
 
     /** Completes the pending seekTo result so Dart's await returns. */
@@ -1794,10 +1827,6 @@ internal class DivineVideoPlayerInstance(
 
         override fun onRenderedFirstFrame() {
             firstFrameRendered = true
-            if (seekAwaitsFrame) {
-                seekAwaitsFrame = false
-                if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
-            }
             // A frame reached the surface, so whatever contention caused a
             // prior decoder error has cleared — allow the full retry budget
             // again for any future error.
@@ -1969,6 +1998,8 @@ internal class DivineVideoPlayerInstance(
     }
 
     fun dispose() {
+        seekFrameGeneration++
+        seekAwaitsFrame = false
         mainHandler.removeCallbacks(positionUpdater)
         mainHandler.removeCallbacks(seekTimeoutRunnable)
         mainHandler.removeCallbacks(setClipsTimeoutRunnable)
