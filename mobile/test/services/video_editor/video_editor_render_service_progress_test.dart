@@ -5,8 +5,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -118,6 +120,31 @@ class _ImmediateRenderProVideoEditor extends ProVideoEditor {
     }
     File(filePath).writeAsStringSync('trimmed');
     return filePath;
+  }
+
+  @override
+  Future<void> cancel(String taskId) async {
+    cancelCalls.add(taskId);
+  }
+}
+
+/// Starts renders that never settle, not even once cancelled — the setup-stage
+/// stall in hm21/pro_video_editor#201.
+class _StalledRenderProVideoEditor extends ProVideoEditor {
+  final startedTaskIds = <String>[];
+  final cancelCalls = <String>[];
+
+  @override
+  void initializeStream() {}
+
+  @override
+  Future<String> renderVideoToFile(
+    String filePath,
+    VideoRenderData value, {
+    NativeLogLevel? nativeLogLevel,
+  }) {
+    startedTaskIds.add(value.id);
+    return Completer<String>().future;
   }
 
   @override
@@ -626,6 +653,45 @@ void main() {
       expect(crashReporter.reports, hasLength(1));
       expect(crashReporter.reports.single.reason, 'limitClipDuration failed');
       expect(crashReporter.reports.single.error, isA<Exception>());
+    });
+
+    test('completes as failed at the watchdog bound when the render never '
+        'settles, and cancels its native task', () {
+      fakeAsync((async) {
+        final editor = _StalledRenderProVideoEditor();
+        ProVideoEditor.instance = editor;
+        final inputPath = '${tempDir.path}/VID_stalled.mp4';
+        File(inputPath).writeAsStringSync('original');
+
+        final completions = <bool>[];
+        unawaited(
+          VideoEditorRenderService.limitClipDuration(
+            clip: clipForPath(inputPath),
+            duration: const Duration(seconds: 6),
+            onComplete: completions.add,
+          ),
+        );
+        async.flushMicrotasks();
+        expect(editor.startedTaskIds, hasLength(1));
+
+        async.elapse(
+          VideoEditorConstants.clipTrimWatchdogTimeout -
+              const Duration(seconds: 1),
+        );
+        expect(completions, isEmpty);
+
+        async.elapse(const Duration(seconds: 1));
+
+        expect(completions, [false]);
+        expect(editor.cancelCalls, editor.startedTaskIds);
+        expect(File(inputPath).readAsStringSync(), equals('original'));
+        // Reported once, by the watchdog, under the trim's own reason.
+        expect(crashReporter.reports, hasLength(1));
+        expect(
+          crashReporter.reports.single.reason,
+          'limitClipDuration timed out',
+        );
+      });
     });
   });
 }
