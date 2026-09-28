@@ -389,8 +389,9 @@ class _CandidateRow extends StatelessWidget {
 }
 
 /// The Following screen's follow/unfollow button, repurposed: green chip to
-/// add, muted outline to remove. Removal needs no confirmation here — a
-/// second tap puts the person straight back.
+/// add, muted outline to remove, both at the chip's size so a row does not
+/// change shape when it flips. Removal needs no confirmation here — a second
+/// tap puts the person straight back.
 class _MembershipButton extends StatelessWidget {
   const _MembershipButton({
     required this.isMember,
@@ -409,6 +410,7 @@ class _MembershipButton extends StatelessWidget {
       return DivineIconButton(
         icon: .userMinus,
         type: .secondary,
+        size: .small,
         semanticIdentifier: 'remove_person_from_list',
         semanticLabel: l10n.peopleListsRemovePersonSemanticLabel(displayName),
         onPressed: onPressed,

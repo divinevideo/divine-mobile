@@ -262,6 +262,18 @@ void main() {
 
           expect(_removeButtons(), findsOneWidget);
           expect(_addButtons(), findsNWidgets(2));
+          // Both states are the chip size, so a row keeps its shape when it
+          // flips; the secondary type would otherwise default to a larger
+          // one. The tap target is 48px either way, so the size is asserted
+          // on the widget rather than measured.
+          expect(
+            tester.widget<DivineIconButton>(_removeButtons()).size,
+            equals(tester.widget<DivineIconButton>(_addButtons().first).size),
+          );
+          expect(
+            tester.widget<DivineIconButton>(_removeButtons()).size,
+            equals(DivineIconButtonSize.small),
+          );
           expect(
             tester.widget<DivineIconButton>(_removeButtons()).semanticLabel,
             equals(l10n.peopleListsRemovePersonSemanticLabel('Alice')),
