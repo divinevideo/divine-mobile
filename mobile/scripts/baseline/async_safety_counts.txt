@@ -81,7 +81,6 @@ discarded_futures|test/blocs/profile_reposted_videos/profile_reposted_videos_blo
 discarded_futures|test/blocs/profile_saved_videos/profile_saved_videos_bloc_test.dart	1
 discarded_futures|test/blocs/search_results_filter/search_results_filter_cubit_test.dart	1
 discarded_futures|test/blocs/share_sheet/share_sheet_bloc_test.dart	1
-discarded_futures|test/blocs/tags_picker/tags_picker_bloc_test.dart	1
 discarded_futures|test/blocs/upload_progress/upload_progress_cubit_test.dart	1
 discarded_futures|test/blocs/user_search/user_search_bloc_test.dart	1
 discarded_futures|test/blocs/video_engagement/video_engagement_bloc_test.dart	1
