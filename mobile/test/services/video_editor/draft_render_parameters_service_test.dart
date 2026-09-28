@@ -107,6 +107,7 @@ void main() {
               ({
                 required clips,
                 required editorStateHistory,
+                required alignLoopSeam,
                 parameters,
                 taskId,
               }) async {

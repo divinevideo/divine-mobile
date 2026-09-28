@@ -106,6 +106,7 @@ class VideoEditorRenderService {
   static Future<(DivineVideoClip, String? proofManifestJson)> Function({
     required List<DivineVideoClip> clips,
     required Map<String, dynamic> editorStateHistory,
+    required bool alignLoopSeam,
     CompleteParameters? parameters,
     String? taskId,
   })?
@@ -207,6 +208,7 @@ class VideoEditorRenderService {
         editorStateHistory: editorStateHistory,
         parameters: parameters,
         taskId: taskId,
+        alignLoopSeam: alignLoopSeam,
       );
     }
 

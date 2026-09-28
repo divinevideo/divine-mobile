@@ -15,6 +15,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -649,6 +651,67 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = null;
       });
 
+      /// What the final render was told about the loop seam when the Smooth
+      /// Loop Seam flag is [enabled], or left at its default when `null`.
+      Future<bool?> renderedLoopSeamFlag({bool? enabled}) async {
+        final prefs = await SharedPreferences.getInstance();
+        final flagged = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            performanceMonitoringServiceProvider.overrideWithValue(
+              performanceMonitor,
+            ),
+            if (enabled != null)
+              isFeatureEnabledProvider(
+                FeatureFlag.smoothLoopSeam,
+              ).overrideWithValue(enabled),
+          ],
+        );
+        addTearDown(flagged.dispose);
+        flagged
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/docs/clip.mp4'),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              duration: const Duration(seconds: 2),
+            );
+        bool? received;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              required alignLoopSeam,
+              parameters,
+              taskId,
+            }) async {
+              received = alignLoopSeam;
+              return (
+                DivineVideoClip(
+                  id: 'rendered',
+                  video: EditorVideo.file('/docs/rendered.mp4'),
+                  duration: const Duration(seconds: 2),
+                  recordedAt: DateTime.now(),
+                  targetAspectRatio: .vertical,
+                  originalAspectRatio: 9 / 16,
+                ),
+                null,
+              );
+            };
+
+        await flagged.read(videoEditorProvider.notifier).startRenderVideo();
+        return received;
+      }
+
+      test('aligns the loop seam when Smooth Loop Seam is on', () async {
+        expect(await renderedLoopSeamFlag(enabled: true), isTrue);
+      });
+
+      test('leaves the loop seam alone by default', () async {
+        expect(await renderedLoopSeamFlag(), isFalse);
+      });
+
       test('resets isProcessing to false when finalRenderedClip '
           'already exists', () async {
         final notifier = container.read(videoEditorProvider.notifier);
@@ -712,6 +775,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) async => (renderedClip, null);
@@ -741,6 +805,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async => throw const VideoRenderFailedException(
@@ -784,6 +849,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async => throw const VideoRenderFailedException(
@@ -805,6 +871,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) async => throw Exception('proof step hung');
@@ -833,6 +900,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) async => throw Exception('C2PA network failure'); // hung proof
@@ -860,6 +928,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) async => (renderedClip, null);
@@ -893,6 +962,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) {
@@ -966,6 +1036,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) {
@@ -1033,6 +1104,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async {
@@ -1069,6 +1141,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async {
@@ -1113,6 +1186,7 @@ void main() {
           VideoEditorRenderService.renderVideoToClipOverride = ({
             required clips,
             required editorStateHistory,
+            required alignLoopSeam,
             parameters,
             taskId,
           }) => hung.future;
@@ -1296,6 +1370,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async {
@@ -1606,6 +1681,7 @@ void main() {
               ({
                 required clips,
                 required editorStateHistory,
+                required alignLoopSeam,
                 parameters,
                 taskId,
               }) {
@@ -1661,6 +1737,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) async => throw failure;
@@ -1757,6 +1834,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) async => throw StateError('render boom');
@@ -1861,6 +1939,7 @@ void main() {
           VideoEditorRenderService.renderVideoToClipOverride = ({
             required clips,
             required editorStateHistory,
+            required alignLoopSeam,
             parameters,
             taskId,
           }) => renderCompleter.future;

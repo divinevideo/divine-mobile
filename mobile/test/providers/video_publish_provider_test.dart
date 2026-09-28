@@ -12,6 +12,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -543,6 +545,7 @@ void main() {
       Future<ProviderContainer> pumpHarness(
         WidgetTester tester, {
         LayerRasterizer? rasterizer,
+        bool? smoothLoopSeam,
       }) async {
         SharedPreferences.setMockInitialValues({});
         final prefs = await SharedPreferences.getInstance();
@@ -556,6 +559,10 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(prefs),
             if (rasterizer != null)
               layerRasterizerProvider.overrideWithValue(rasterizer),
+            if (smoothLoopSeam != null)
+              isFeatureEnabledProvider(
+                FeatureFlag.smoothLoopSeam,
+              ).overrideWithValue(smoothLoopSeam),
           ],
         );
         addTearDown(container.dispose);
@@ -583,6 +590,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async {
@@ -607,6 +615,45 @@ void main() {
         );
       });
 
+      /// What the draft render was told about the loop seam when the Smooth
+      /// Loop Seam flag is [enabled], or left at its default when `null`.
+      Future<bool?> renderedLoopSeamFlag(
+        WidgetTester tester, {
+        bool? enabled,
+      }) async {
+        final container = await pumpHarness(tester, smoothLoopSeam: enabled);
+        bool? received;
+        VideoEditorRenderService.renderVideoToClipOverride =
+            ({
+              required clips,
+              required editorStateHistory,
+              required alignLoopSeam,
+              parameters,
+              taskId,
+            }) async {
+              received = alignLoopSeam;
+              throw const VideoRenderFailedException(
+                VideoRenderFailureReason.nativeRender,
+              );
+            };
+
+        final context = tester.element(find.byType(SizedBox));
+        await container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(context, draft());
+        return received;
+      }
+
+      testWidgets('aligns the loop seam when Smooth Loop Seam is on', (
+        tester,
+      ) async {
+        expect(await renderedLoopSeamFlag(tester, enabled: true), isTrue);
+      });
+
+      testWidgets('leaves the loop seam alone by default', (tester) async {
+        expect(await renderedLoopSeamFlag(tester), isFalse);
+      });
+
       testWidgets('renders again instead of publishing a stale final render', (
         tester,
       ) async {
@@ -616,6 +663,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async {
@@ -652,6 +700,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async => throw const VideoRenderFailedException(
@@ -686,6 +735,7 @@ void main() {
         VideoEditorRenderService.renderVideoToClipOverride = ({
           required clips,
           required editorStateHistory,
+          required alignLoopSeam,
           parameters,
           taskId,
         }) => hung.future;
@@ -722,6 +772,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async => throw const VideoRenderFailedException(
@@ -756,6 +807,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async => throw const VideoRenderFailedException(
@@ -807,6 +859,7 @@ void main() {
             ({
               required clips,
               required editorStateHistory,
+              required alignLoopSeam,
               parameters,
               taskId,
             }) async {
