@@ -63,7 +63,15 @@ class RequestPreviewPage extends ConsumerWidget {
           // receives newly ingested rows.
           // See .claude/rules/state_management.md ("Bridging Riverpod-provided
           // dependencies into BlocProvider").
-          key: ValueKey(dmRepository),
+          //
+          // Also keyed on conversationId: go_router keys a declarative page
+          // on the route PATTERN, not the matched id (see `ConversationPage`
+          // and `router/routes/shell.dart`'s `branchPage`), so navigating
+          // between two message requests can reuse this element. `create:`
+          // here captures conversationId one-shot in the cubit, so without
+          // it in the key the reused cubit keeps resolving the FIRST
+          // request's data.
+          key: ValueKey((conversationId, dmRepository)),
           create: (_) {
             final cubit = RequestPreviewCubit(
               dmRepository: dmRepository,

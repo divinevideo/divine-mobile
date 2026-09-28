@@ -3,11 +3,13 @@
 // ABOUTME: with RequestPreviewCubit and MessageRequestActionsCubit provided.
 
 import 'package:dm_repository/dm_repository.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/dm/message_requests/request_preview_cubit.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -278,6 +280,88 @@ void main() {
           verify(
             () => readyRepository.countMessagesInConversation(conversationId),
           ).called(1);
+        },
+      );
+    });
+
+    group('page reuse across an in-place id change', () {
+      // Same shape as the fix in 573c5478c3 for ConversationPage: go_router
+      // 18.0.1 keys a declarative page by the route PATTERN, not the matched
+      // id (`match.dart:231` `pageKey: ValueKey<String>(newMatchedPath)`), so
+      // two consecutive `go()`s to different `/inbox/message-requests/:id`
+      // URLs can reuse this exact element. Modelled here with a
+      // ValueListenableBuilder rebuilding the SAME RequestPreviewPage
+      // element with a new id, independent of go_router itself.
+      testWidgets(
+        'shows the new request, not the previous one, after an in-place id '
+        'change reuses this element',
+        (tester) async {
+          const conversationIdB =
+              'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+          when(
+            () => mockDmRepository.countMessagesInConversation(conversationId),
+          ).thenAnswer((_) async => 3);
+          when(
+            () => mockDmRepository.countMessagesInConversation(conversationIdB),
+          ).thenAnswer((_) async => 9);
+
+          final currentConversationId = ValueNotifier<String>(conversationId);
+          addTearDown(currentConversationId.dispose);
+
+          await tester.pumpWidget(
+            testMaterialApp(
+              // The SAME RequestPreviewPage element is rebuilt with a new
+              // conversationId, exactly like go_router reusing a
+              // pattern-keyed page across two different matched ids.
+              home: ValueListenableBuilder<String>(
+                valueListenable: currentConversationId,
+                builder: (context, id, _) => RequestPreviewPage(
+                  conversationId: id,
+                  participantPubkeys: const [otherPubkey],
+                ),
+              ),
+              mockAuthService: mockAuthService,
+              additionalOverrides: [
+                dmRepositoryProvider.overrideWithValue(mockDmRepository),
+                goRouterProvider.overrideWithValue(mockGoRouter),
+                isDmRestrictedProvider.overrideWithValue(false),
+                officialAccountsServiceProvider.overrideWithValue(
+                  mockOfficials,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+
+          verify(
+            () => mockDmRepository.countMessagesInConversation(conversationId),
+          ).called(1);
+          expect(
+            find.textContaining(l10n.messageRequestMessageCount(3)),
+            findsOneWidget,
+          );
+
+          currentConversationId.value = conversationIdB;
+          await tester.pump();
+          await tester.pump();
+
+          verify(
+            () => mockDmRepository.countMessagesInConversation(conversationIdB),
+          ).called(1);
+          expect(
+            find.textContaining(l10n.messageRequestMessageCount(9)),
+            findsOneWidget,
+            reason:
+                "the reused element must load the NEW id's data, not keep "
+                'showing the previous request',
+          );
+          expect(
+            find.textContaining(l10n.messageRequestMessageCount(3)),
+            findsNothing,
+          );
         },
       );
     });
