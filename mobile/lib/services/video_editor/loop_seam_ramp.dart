@@ -126,7 +126,9 @@ List<LoopSeamPiece>? planLoopSeamPieces({
     return view.zoomed(zoom).placement(canvas);
   }
 
-  Duration at(double us) => Duration(microseconds: us.round());
+  // Floor, never round: the renderer draws frame n at exactly n / frameRate,
+  // and a boundary rounded past that instant hands it the previous placement.
+  Duration at(double us) => Duration(microseconds: us.floor());
 
   final pieces = <LoopSeamPiece>[];
   void plain(Duration start, Duration end) {

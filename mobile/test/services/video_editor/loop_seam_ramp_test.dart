@@ -116,6 +116,36 @@ void main() {
       }
     });
 
+    test('draws every moved frame of a 30 fps clip at its own placement', () {
+      // The renderer samples frame n at exactly n / 30 s, so each moved piece
+      // must hold exactly one of those instants.
+      for (final visibleStart in const [
+        Duration.zero,
+        Duration(milliseconds: 500),
+      ]) {
+        final pieces = _plan(
+          visibleStart: visibleStart,
+          visibleEnd: const Duration(milliseconds: 5500),
+        );
+        final drawn = <LoopSeamPiece>{};
+        for (var n = 0; n < 180; n++) {
+          final instant = n * Duration.microsecondsPerSecond / 30;
+          final piece = pieces.firstWhere(
+            (p) =>
+                p.start.inMicroseconds <= instant &&
+                instant < p.end.inMicroseconds,
+          );
+          if (piece.placement == null) continue;
+          expect(drawn.add(piece), isTrue, reason: 'frame $n redraws $piece');
+        }
+        expect(
+          drawn,
+          hasLength(pieces.where((p) => p.placement != null).length),
+          reason: 'visibleStart $visibleStart',
+        );
+      }
+    });
+
     test('leaves the middle of the clip untouched', () {
       final pieces = _plan();
       final body = pieces.where((p) => p.placement == null).toList();
