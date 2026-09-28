@@ -2943,8 +2943,6 @@
     "peopleListsAddPeopleSearchHint": "Cari orang",
     "peopleListsAddPeopleError": "Tidak dapat memuat orang. Silakan coba lagi.",
     "peopleListsAddPeopleRetry": "Coba lagi",
-    "peopleListsAddButton": "Tambah",
-    "peopleListsAddButtonWithCount": "Tambah {count}",
     "peopleListsInNLists": "{count, plural, other{Di {count} daftar}}",
     "peopleListsRemoveConfirmTitle": "Hapus {name}?",
     "peopleListsRemoveConfirmBody": "Mereka akan dihapus dari daftar ini.",

@@ -2943,8 +2943,6 @@
     "peopleListsAddPeopleSearchHint": "Sök personer",
     "peopleListsAddPeopleError": "Det gick inte att läsa in personer. Försök igen.",
     "peopleListsAddPeopleRetry": "Försök igen",
-    "peopleListsAddButton": "Lägg till",
-    "peopleListsAddButtonWithCount": "Lägg till {count}",
     "peopleListsInNLists": "{count, plural, =1{I 1 lista} other{I {count} listor}}",
     "peopleListsRemoveConfirmTitle": "Ta bort {name}?",
     "peopleListsRemoveConfirmBody": "De kommer att tas bort från den här listan.",

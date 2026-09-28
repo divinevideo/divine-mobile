@@ -2943,8 +2943,6 @@
     "peopleListsAddPeopleSearchHint": "Mensen zoeken",
     "peopleListsAddPeopleError": "Kon mensen niet laden. Probeer het opnieuw.",
     "peopleListsAddPeopleRetry": "Opnieuw proberen",
-    "peopleListsAddButton": "Toevoegen",
-    "peopleListsAddButtonWithCount": "{count} toevoegen",
     "peopleListsInNLists": "{count, plural, =1{In 1 lijst} other{In {count} lijsten}}",
     "peopleListsRemoveConfirmTitle": "{name} verwijderen?",
     "peopleListsRemoveConfirmBody": "Ze worden uit deze lijst verwijderd.",

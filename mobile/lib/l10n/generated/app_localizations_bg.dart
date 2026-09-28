@@ -3973,6 +3973,20 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Add $name to list';
+  }
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Remove $name from list';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Couldn\'t update the list. Please try again.';
+
+  @override
   String get peopleListsAddPeopleSearchHint => 'Търси хора';
 
   @override
@@ -3984,14 +3998,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get peopleListsLoadFailed => 'Couldn\'t load this list.';
-
-  @override
-  String get peopleListsAddButton => 'Добави';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Добави $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {

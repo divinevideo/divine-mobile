@@ -2943,8 +2943,6 @@
     "peopleListsAddPeopleSearchHint": "Personen suchen",
     "peopleListsAddPeopleError": "Personen konnten nicht geladen werden. Bitte versuche es erneut.",
     "peopleListsAddPeopleRetry": "Erneut versuchen",
-    "peopleListsAddButton": "Hinzufügen",
-    "peopleListsAddButtonWithCount": "{count} hinzufügen",
     "peopleListsInNLists": "{count, plural, =1{In 1 Liste} other{In {count} Listen}}",
     "peopleListsRemoveConfirmTitle": "{name} entfernen?",
     "peopleListsRemoveConfirmBody": "Sie werden aus dieser Liste entfernt.",

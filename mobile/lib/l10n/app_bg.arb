@@ -1483,15 +1483,6 @@
     "peopleListsAddPeopleSearchHint": "Търси хора",
     "peopleListsAddPeopleError": "Не успяхме да заредим хората. Опитай пак.",
     "peopleListsAddPeopleRetry": "Опитай пак",
-    "peopleListsAddButton": "Добави",
-    "peopleListsAddButtonWithCount": "Добави {count}",
-    "@peopleListsAddButtonWithCount": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "peopleListsInNLists": "{count, plural, =1{В 1 списък} other{В {count} списъка}}",
     "@peopleListsInNLists": {
         "placeholders": {

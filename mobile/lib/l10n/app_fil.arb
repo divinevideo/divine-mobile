@@ -2185,8 +2185,6 @@
     "notificationsEmptyTitle": "Wala pang activity",
     "notificationsViewProfileSemanticLabel": "Tingnan ang profile ni {displayName}",
     "notificationsViewProfilesSemanticLabel": "Tingnan ang mga profile",
-    "peopleListsAddButton": "Idagdag",
-    "peopleListsAddButtonWithCount": "Idagdag ang {count}",
     "peopleListsAddPeopleError": "Hindi na-load ang mga tao. Subukan ulit.",
     "peopleListsAddPeopleRetry": "Subukan ulit",
     "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
