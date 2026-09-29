@@ -66,7 +66,6 @@ discarded_futures|test/blocs/profile_feed/profile_feed_cubit_test.dart	1
 discarded_futures|test/blocs/profile_liked_videos/profile_liked_videos_bloc_test.dart	4
 discarded_futures|test/blocs/profile_reposted_videos/profile_reposted_videos_bloc_test.dart	2
 discarded_futures|test/blocs/profile_saved_videos/profile_saved_videos_bloc_test.dart	1
-discarded_futures|test/blocs/upload_progress/upload_progress_cubit_test.dart	1
 discarded_futures|test/features/app/startup/startup_coordinator_test.dart	1
 discarded_futures|test/helpers/service_init_helper.dart	2
 discarded_futures|test/helpers/video_feed_builder_streaming_test.dart	1

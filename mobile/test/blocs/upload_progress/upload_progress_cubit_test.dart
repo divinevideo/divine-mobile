@@ -24,11 +24,12 @@ void main() {
       );
     }
 
-    test('polls and emits progress + status', () {
+    test('polls and emits progress + status', () async {
+      late UploadProgressCubit cubit;
       fakeAsync((async) {
         var progress = 0.0;
         var status = UploadStatus.pending;
-        final cubit = UploadProgressCubit(
+        cubit = UploadProgressCubit(
           uploadId: 'u1',
           lookup: (id) => id == 'u1'
               ? fakeUpload(progress: progress, status: status)
@@ -53,9 +54,8 @@ void main() {
         final lastState = cubit.state;
         async.elapse(const Duration(milliseconds: 500));
         expect(cubit.state, lastState);
-
-        cubit.close();
       });
+      await cubit.close();
     });
 
     blocTest<UploadProgressCubit, UploadProgressState>(
