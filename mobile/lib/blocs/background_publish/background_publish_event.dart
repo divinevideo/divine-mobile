@@ -18,6 +18,21 @@ class BackgroundPublishRequested extends BackgroundPublishEvent {
   List<Object?> get props => [draft, publishmentProcess];
 }
 
+/// A requested publish waiting its sequential turn, after the request already
+/// listed its upload.
+class _BackgroundPublishQueued extends BackgroundPublishEvent {
+  _BackgroundPublishQueued({
+    required this.draft,
+    required this.publishmentProcess,
+  });
+
+  final DivineVideoDraft draft;
+  final Future<PublishResult> publishmentProcess;
+
+  @override
+  List<Object?> get props => [draft, publishmentProcess];
+}
+
 class BackgroundPublishProgressChanged extends BackgroundPublishEvent {
   BackgroundPublishProgressChanged({
     required this.draftId,
