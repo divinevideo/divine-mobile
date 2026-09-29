@@ -131,15 +131,46 @@ void main() {
         await tester.pump();
 
         verify(() => router.go(WelcomeScreen.loginOptionsPath)).called(1);
-        final logs = logCapture.getRecentLogs().where(
-          (entry) => entry.name == 'DeferredLoginOptionsNavigator',
+        final failures = logCapture.getRecentLogs().where(
+          (entry) =>
+              entry.name == 'DeferredLoginOptionsNavigator' &&
+              entry.message.startsWith('Failed to cancel'),
         );
-        expect(logs, hasLength(1));
+        expect(failures, hasLength(1));
         expect(
-          logs.single.message,
+          failures.single.message,
           'Failed to cancel background-publish listener: '
           'Bad state: cancel failed',
         );
+      });
+
+      testWidgets('logs that it is waiting for unfinished uploads', (
+        tester,
+      ) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final context = await pumpContext(tester);
+        final bloc = _FakeBackgroundPublishBloc(_uploadingState());
+
+        navigator.goAfterUploadsComplete(context: context, publishBloc: bloc);
+
+        expect(_navigatorLogs(logCapture).map((entry) => entry.message), [
+          'Deferring login options until 1 upload(s) finish',
+        ]);
+      });
+
+      testWidgets('logs nothing when it can navigate at once', (tester) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final context = await pumpContext(tester);
+        final bloc = _FakeBackgroundPublishBloc(const BackgroundPublishState());
+
+        navigator.goAfterUploadsComplete(context: context, publishBloc: bloc);
+
+        verify(() => router.go(WelcomeScreen.loginOptionsPath)).called(1);
+        expect(_navigatorLogs(logCapture), isEmpty);
       });
     });
 
@@ -157,6 +188,38 @@ void main() {
         verifyNever(() => router.go(any()));
       });
 
+      testWidgets('logs a navigation it drops while waiting', (tester) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final context = await pumpContext(tester);
+        final bloc = _FakeBackgroundPublishBloc(_uploadingState());
+
+        navigator
+          ..goAfterUploadsComplete(context: context, publishBloc: bloc)
+          ..dispose();
+
+        expect(_navigatorLogs(logCapture).map((entry) => entry.message), [
+          'Deferring login options until 1 upload(s) finish',
+          'Dropped deferred login options: closed before uploads finished',
+        ]);
+      });
+
+      testWidgets('logs no drop once it has navigated', (tester) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final context = await pumpContext(tester);
+        final bloc = _FakeBackgroundPublishBloc(const BackgroundPublishState());
+
+        navigator
+          ..goAfterUploadsComplete(context: context, publishBloc: bloc)
+          ..dispose();
+
+        verify(() => router.go(WelcomeScreen.loginOptionsPath)).called(1);
+        expect(_navigatorLogs(logCapture), isEmpty);
+      });
+
       testWidgets('ignores requests made after it', (tester) async {
         final context = await pumpContext(tester);
         final bloc = _FakeBackgroundPublishBloc(const BackgroundPublishState());
@@ -170,3 +233,7 @@ void main() {
     });
   });
 }
+
+Iterable<LogEntry> _navigatorLogs(LogCaptureService capture) => capture
+    .getRecentLogs()
+    .where((entry) => entry.name == 'DeferredLoginOptionsNavigator');
