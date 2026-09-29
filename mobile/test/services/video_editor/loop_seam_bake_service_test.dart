@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -62,6 +63,12 @@ class _Harness {
   /// The final frame of the video is the one grabbed from the last clip.
   String? lastPath;
 
+  /// Holds the output directory lookup open until completed.
+  Completer<void>? directoryGate;
+
+  /// Completes once the bake asks where to write its output.
+  final directoryRequested = Completer<void>();
+
   LoopSeamBakeService build() => LoopSeamBakeService(
     readInfo: (_) async => _info,
     grabFrame: (path, at, size) async {
@@ -81,7 +88,11 @@ class _Harness {
       final error = renderError;
       if (error != null) throw error;
     },
-    outputDirectory: () async => dir.path,
+    outputDirectory: () async {
+      if (!directoryRequested.isCompleted) directoryRequested.complete();
+      await directoryGate?.future;
+      return dir.path;
+    },
   );
 
   List<VideoSegment> segmentsOf(VideoRenderData task) =>
@@ -243,6 +254,29 @@ void main() {
           expect(File(harness.renders.single.$1).existsSync(), isFalse);
         },
       );
+
+      test('does not start a bake when the export is cancelled while its '
+          'output directory resolves', () async {
+        RenderCancellationRegistry.start('task');
+        addTearDown(RenderCancellationRegistry.reset);
+        final harness = _Harness()
+          ..lastPath = '/clips/a.mp4'
+          ..directoryGate = Completer<void>();
+
+        final aligned = harness.build().alignClips([
+          _clip('a'),
+        ], taskId: 'task');
+        final expectation = expectLater(
+          aligned,
+          throwsA(isA<RenderCanceledException>()),
+        );
+        await harness.directoryRequested.future;
+        RenderCancellationRegistry.cancel('task');
+        harness.directoryGate!.complete();
+        await expectation;
+
+        expect(harness.renders, isEmpty);
+      });
 
       test('falls back to the original clips and deletes its output when the '
           'bake fails', () async {

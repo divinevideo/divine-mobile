@@ -176,6 +176,7 @@ class LoopSeamBakeService {
           info: firstInfo,
           side: LoopSeamSide.both,
           alignment: estimate.alignment,
+          taskId: taskId,
           renderId: VideoEditorRenderService.loopSeamRenderIdPrefix(taskId),
           written: written,
         );
@@ -189,6 +190,7 @@ class LoopSeamBakeService {
           info: firstInfo,
           side: LoopSeamSide.head,
           alignment: estimate.alignment,
+          taskId: taskId,
           renderId:
               '${VideoEditorRenderService.loopSeamRenderIdPrefix(taskId)}-head',
           written: written,
@@ -203,6 +205,7 @@ class LoopSeamBakeService {
           info: lastInfo,
           side: LoopSeamSide.tail,
           alignment: estimate.alignment,
+          taskId: taskId,
           renderId:
               '${VideoEditorRenderService.loopSeamRenderIdPrefix(taskId)}-tail',
           written: written,
@@ -277,6 +280,7 @@ class LoopSeamBakeService {
     required LoopSeamSourceInfo info,
     required LoopSeamSide side,
     required LoopSeamAlignment alignment,
+    required String taskId,
     required String renderId,
     required List<String> written,
   }) async {
@@ -298,8 +302,12 @@ class LoopSeamBakeService {
       return null;
     }
 
+    final outputDirectory = await _outputDirectory();
+    // A cancel that landed while the directory resolved found no encode under
+    // this bake's ids to stop, so it has to be seen here, before one starts.
+    RenderCancellationRegistry.throwIfRequested(taskId);
     final outputPath = p.join(
-      await _outputDirectory(),
+      outputDirectory,
       '${clip.id}_loopseam_${DateTime.now().microsecondsSinceEpoch}.mp4',
     );
     if (p.equals(path, outputPath)) {
