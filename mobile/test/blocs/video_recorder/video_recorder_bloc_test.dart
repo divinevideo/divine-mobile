@@ -2650,7 +2650,7 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'transitions involving upload preserve clips and editor',
+        'entering upload preserves clips and editor',
         build: buildBloc,
         act: (bloc) => bloc.add(
           const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
@@ -2666,6 +2666,60 @@ void main() {
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'upload → the mode it was entered from preserves clips and editor',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          verifyNever(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+          verifyNever(
+            () => videoEditor.reset(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'upload → another recording mode clears clips and editor',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.classic);
+          verify(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          ).called(1);
+          verify(
+            () => videoEditor.reset(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          ).called(1);
         },
       );
     });
