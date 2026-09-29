@@ -599,7 +599,7 @@ void main() {
       when(() => editor.activeLayers).thenReturn([captionLayer]);
       when(() => stateManager.activeMeta).thenReturn({
         VideoEditorConstants.captionsStateHistoryKey: track
-            .copyWith(cues: [spoken])
+            .copyWith(presetId: 'karaoke', cues: [spoken])
             .toJson(),
       });
 
@@ -631,6 +631,69 @@ void main() {
       );
       // The previous history entry keeps its own highlights for undo.
       expect(captionLayer.highlights, captionWordHighlights(spoken));
+    });
+
+    test('setCaptionCueTimeline lights the words again after a drag left '
+        'none lit', () {
+      const spoken = CaptionCue(
+        id: 'cue-1',
+        text: 'Hello there world',
+        start: Duration(seconds: 2),
+        end: Duration(milliseconds: 3500),
+        words: [
+          CaptionSegment(
+            text: 'Hello',
+            start: Duration(seconds: 2),
+            end: Duration(milliseconds: 2400),
+          ),
+          CaptionSegment(
+            text: 'there',
+            start: Duration(milliseconds: 2500),
+            end: Duration(milliseconds: 2900),
+          ),
+          CaptionSegment(
+            text: 'world',
+            start: Duration(seconds: 3),
+            end: Duration(milliseconds: 3400),
+          ),
+        ],
+      );
+      final captionLayer = TextLayer(
+        text: spoken.text,
+        meta: {
+          VideoEditorConstants.captionCueMetaKey: true,
+          VideoEditorConstants.captionCueIdMetaKey: 'cue-1',
+        },
+        startTime: spoken.start,
+        endTime: spoken.end,
+        highlights: captionWordHighlights(spoken),
+      );
+      when(() => editor.activeLayers).thenReturn([captionLayer]);
+      when(() => stateManager.activeMeta).thenReturn({
+        VideoEditorConstants.captionsStateHistoryKey: track
+            .copyWith(presetId: 'karaoke', cues: [spoken])
+            .toJson(),
+      });
+
+      void drag({Duration? start, Duration? end}) =>
+          editor.setCaptionCueTimeline(
+            cueId: 'cue-1',
+            startTime: start,
+            endTime: end,
+            skipUpdateHistory: true,
+          );
+
+      // The start handle goes left of every word, then the end handle is
+      // pulled back before the first word: the words stay where they are
+      // spoken, so no word lights up.
+      drag(start: const Duration(milliseconds: 500));
+      drag(end: const Duration(milliseconds: 1500));
+      expect(captionLayer.highlights, isEmpty);
+
+      // Pulled out again in the same drag, the words light up once more.
+      drag(end: const Duration(milliseconds: 3500));
+
+      expect(captionLayer.highlights, hasLength(3));
     });
 
     test('setCaptionCueTimeline mutates meta in-place during drags', () {

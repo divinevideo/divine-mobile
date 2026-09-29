@@ -4,6 +4,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
+import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
@@ -29,6 +30,16 @@ Map<String, dynamic> buildAppendedAudioMeta({
     ],
   };
 }
+
+/// Whether the burned-in style of [track] lights each word as it is spoken.
+///
+/// Read from the style rather than from a layer's highlights, which are empty
+/// whenever a retime leaves no word to light.
+bool _burnInHighlightsWords(CaptionTrack track) =>
+    (track.customStyle?.resolve() ??
+            CaptionStylePreset.byId(track.presetId).style)
+        .highlightColor !=
+    null;
 
 extension VideoEditorExtensions on ProImageEditorState {
   /// Captures the overlays currently over the composition — layers, colour
@@ -203,6 +214,7 @@ extension VideoEditorExtensions on ProImageEditorState {
     final newStart = startTime ?? cue.start;
     final newEnd = endTime ?? cue.end;
     final retimed = cue.withTiming(start: newStart, end: newEnd);
+    final highlightsWords = _burnInHighlightsWords(track);
     final cues = List<CaptionCue>.from(track.cues);
     cues[index] = retimed;
     final updated = track.copyWith(cues: cues).toJson();
@@ -227,7 +239,7 @@ extension VideoEditorExtensions on ProImageEditorState {
         // would drift the CC track and the burned-in text apart.
         final layers = [...activeLayers];
         final layer = activeLayers[layerIndex];
-        layers[layerIndex] = layer is TextLayer && layer.highlights.isNotEmpty
+        layers[layerIndex] = layer is TextLayer && highlightsWords
             ? layer.copyWith(
                 startTime: newStart,
                 endTime: newEnd,
@@ -253,7 +265,7 @@ extension VideoEditorExtensions on ProImageEditorState {
         // setLayerTimeline swapped in a copy of the layer, so updating it in
         // place leaves the history entries alone.
         final layer = activeLayers[layerIndex];
-        if (layer is TextLayer && layer.highlights.isNotEmpty) {
+        if (layer is TextLayer && highlightsWords) {
           layer.highlights = captionWordHighlights(retimed);
         }
       }
