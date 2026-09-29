@@ -1808,11 +1808,12 @@ packages:
   pro_image_editor:
     dependency: "direct main"
     description:
-      name: pro_image_editor
-      sha256: "597b4ced319667fbf5df3ad6d4611f10c84c8e25ec2d07b59f6234b257193b24"
-      url: "https://pub.dev"
-    source: hosted
-    version: "14.4.0"
+      path: "."
+      ref: "56ddc78beb8f403345b597a835a2b11903391998"
+      resolved-ref: "56ddc78beb8f403345b597a835a2b11903391998"
+      url: "https://github.com/hm21/pro_image_editor.git"
+    source: git
+    version: "14.5.0"
   pro_video_editor:
     dependency: "direct main"
     description:
