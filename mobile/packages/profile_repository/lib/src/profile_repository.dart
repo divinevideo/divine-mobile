@@ -885,10 +885,10 @@ class ProfileRepository implements ProfileReader {
     final archivedLoops = engagement.archivedLoops;
     final total = (archivedLoops ?? 0) + divineViews;
     final isIncomplete = archivedLoops == null || divineViews == 0;
+    if (!isIncomplete) return total;
 
     final cachedTotal = (await dao.getStatsRaw(pubkey))?.totalViews ?? 0;
-    if (isIncomplete && total < cachedTotal) return null;
-    return total;
+    return total < cachedTotal ? null : total;
   }
 
   /// Fetches a fresh profile and updates the local cache.
