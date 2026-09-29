@@ -5,6 +5,10 @@ import AVFoundation
 /// Each overlay is an independent `AVPlayer` instance positioned and
 /// synced to the main video timeline. Drift correction keeps audio
 /// aligned within ``driftThreshold``.
+///
+/// A track's ``AudioOverlayFade`` is played by an `AVAudioMix` on its player
+/// item, whose volume ramps run in the item's own time: sample-exact, and
+/// untouched by seeks, rate changes and the 0.2 s position sync.
 final class AudioOverlayManager {
 
     private let log = DivineVideoPlayerLog.shared
@@ -48,16 +52,20 @@ final class AudioOverlayManager {
             }
 
             let overlay = AVPlayer(playerItem: AVPlayerItem(url: url))
-            overlay.volume = vol
 
-            overlays.append(AudioOverlayEntry(
+            let entry = AudioOverlayEntry(
                 player: overlay,
                 videoStartSec: videoStartMs / 1000.0,
                 videoEndSec: videoEndMs.map { $0 / 1000.0 },
                 trackStartSec: trackStartMs / 1000.0,
                 trackEndSec: trackEndMs.map { $0 / 1000.0 },
-                trackIndex: index
-            ))
+                trackIndex: index,
+                baseVolume: vol,
+                fade: AudioOverlayFade(map: map)
+            )
+            applyVolume(to: entry)
+            attachFadeMix(to: entry)
+            overlays.append(entry)
         }
     }
 
@@ -74,7 +82,8 @@ final class AudioOverlayManager {
             "Audio overlay track \(overlays[index].trackIndex): volume set to \(volume)",
             name: logName
         )
-        overlays[index].player.volume = volume
+        overlays[index].baseVolume = volume
+        applyVolume(to: overlays[index])
     }
 
     /// Resumes playback of currently active overlays at the given speed.
@@ -199,6 +208,86 @@ final class AudioOverlayManager {
         overlays.removeAll()
     }
 
+    /// Sets the player's own volume: the track's level, or silence while a
+    /// fade in waits for its mix, so a start inside the fade does not play
+    /// its first moments at full level.
+    private func applyVolume(to entry: AudioOverlayEntry) {
+        let holdsSilent = entry.isAwaitingFadeMix && entry.fade.fadeInSec > 0
+        entry.player.volume = holdsSilent ? 0 : entry.baseVolume
+    }
+
+    /// Puts the track's fade on its player item as an `AVAudioMix`.
+    ///
+    /// The mix needs the file's audio track and duration, which load
+    /// asynchronously; a local file resolves them long before the 0.2 s
+    /// position sync first starts the overlay.
+    private func attachFadeMix(to entry: AudioOverlayEntry) {
+        guard !entry.fade.isNone, let item = entry.player.currentItem else { return }
+        entry.isAwaitingFadeMix = true
+        applyVolume(to: entry)
+        let asset = item.asset
+        Task { @MainActor [weak self, weak entry] in
+            let track = try? await asset.loadTracks(withMediaType: .audio).first
+            let fileDuration = try? await asset.load(.duration)
+            guard let self, let entry, entry.player.currentItem === item else { return }
+            entry.isAwaitingFadeMix = false
+            defer { self.applyVolume(to: entry) }
+            guard let track else {
+                self.log.warning(
+                    "Audio overlay track \(entry.trackIndex): no audio track, playing without fade",
+                    name: self.logName
+                )
+                return
+            }
+            let parameters = AVMutableAudioMixInputParameters(track: track)
+            for ramp in self.fadeRamps(for: entry, fileDuration: fileDuration) {
+                parameters.setVolumeRamp(
+                    fromStartVolume: Float(ramp.fromGain),
+                    toEndVolume: Float(ramp.toGain),
+                    timeRange: CMTimeRange(
+                        start: self.itemTime(entry.trackStartSec + ramp.startSec),
+                        end: self.itemTime(entry.trackStartSec + ramp.endSec)
+                    )
+                )
+            }
+            let mix = AVMutableAudioMix()
+            mix.inputParameters = [parameters]
+            item.audioMix = mix
+            self.log.debug(
+                "Audio overlay track \(entry.trackIndex): fade in \(entry.fade.fadeInSec)s, " +
+                    "fade out \(entry.fade.fadeOutSec)s attached",
+                name: self.logName
+            )
+        }
+    }
+
+    /// The fade ramps of `entry`, in seconds from its trim start.
+    ///
+    /// The fade out ends where the track stops sounding: the end of its slot
+    /// on the video timeline, the end of its trimmed audio, or the end of the
+    /// file, whichever comes first. With none of them known only the fade in
+    /// can be placed.
+    private func fadeRamps(
+        for entry: AudioOverlayEntry,
+        fileDuration: CMTime?
+    ) -> [AudioOverlayFade.Ramp] {
+        var ends: [Double] = []
+        if let videoEnd = entry.videoEndSec { ends.append(videoEnd - entry.videoStartSec) }
+        if let trackEnd = entry.trackEndSec { ends.append(trackEnd - entry.trackStartSec) }
+        if let fileDuration, fileDuration.isNumeric, fileDuration.seconds.isFinite {
+            ends.append(fileDuration.seconds - entry.trackStartSec)
+        }
+        guard let audibleSec = ends.min() else {
+            let fadeInOnly = AudioOverlayFade(fadeInSec: entry.fade.fadeInSec, fadeOutSec: 0)
+            return fadeInOnly.ramps(audibleSec: entry.fade.fadeInSec)
+        }
+        return entry.fade.ramps(audibleSec: audibleSec)
+    }
+
+    private func itemTime(_ seconds: Double) -> CMTime {
+        CMTime(seconds: max(seconds, 0), preferredTimescale: 44_100)
+    }
+
     private func seek(_ entry: AudioOverlayEntry, to time: CMTime, reason: String) {
         entry.player.seek(
             to: time,
@@ -271,6 +360,11 @@ final class AudioOverlayEntry {
     let trackEndSec: Double?
     var isActive: Bool = false
     let trackIndex: Int
+    /// The track's volume before its fade is applied.
+    var baseVolume: Float
+    let fade: AudioOverlayFade
+    /// Whether the fade's audio mix is still loading.
+    var isAwaitingFadeMix: Bool = false
     var lastPlayerStatus: AVPlayer.Status?
     var lastItemStatus: AVPlayerItem.Status?
     var lastItemErrorDescription: String?
@@ -281,7 +375,9 @@ final class AudioOverlayEntry {
         videoEndSec: Double?,
         trackStartSec: Double,
         trackEndSec: Double?,
-        trackIndex: Int
+        trackIndex: Int,
+        baseVolume: Float = 1.0,
+        fade: AudioOverlayFade = AudioOverlayFade(fadeInSec: 0, fadeOutSec: 0)
     ) {
         self.player = player
         self.videoStartSec = videoStartSec
@@ -289,5 +385,7 @@ final class AudioOverlayEntry {
         self.trackStartSec = trackStartSec
         self.trackEndSec = trackEndSec
         self.trackIndex = trackIndex
+        self.baseVolume = baseVolume
+        self.fade = fade
     }
 }
