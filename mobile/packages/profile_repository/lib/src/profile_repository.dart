@@ -863,12 +863,14 @@ class ProfileRepository implements ProfileReader {
   /// Returns the creator's lifetime loop total to cache from [engagement],
   /// or `null` to keep whatever total the row already holds.
   ///
-  /// The total is archived Vine loops plus Divine-era views, the same sum
-  /// `VideoEvent.totalLoops` makes per video. Funnelcake reports the archive
-  /// as `engagement.archived_loops`; while it does not (an older backend, or
-  /// one that could not compute it), the response carries Divine-era views
-  /// only, and is therefore not allowed to lower a cached total — the classic
-  /// Vine seed writes archived totals into this row.
+  /// The total is archived Vine loops plus Divine-era views, the sum
+  /// `VideoEvent.totalLoops` makes per video; when funnelcake reports no
+  /// views, its watch-duration loops stand in for them. Funnelcake reports
+  /// the archive as `engagement.archived_loops`; while it does not (an older
+  /// backend, or one that could not compute it), the response carries
+  /// Divine-era views only, and is therefore not allowed to lower a cached
+  /// total, such as the archived total the classic Vine seed writes into this
+  /// row while that row stays cached.
   ///
   /// A zero Divine-era count is just as incomplete: funnelcake answers 200
   /// with `total_views: 0` when its view lookup fails, even when the archive

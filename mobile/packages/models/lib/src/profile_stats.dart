@@ -44,10 +44,11 @@ class ProfileStats {
   ///
   /// This is archived Vine loops plus Divine-era views, summed by
   /// `ProfileRepository` from funnelcake's `engagement.archived_loops` and
-  /// `engagement.total_views`. Until funnelcake reports `archived_loops`, a
-  /// fetched value is Divine-era views only, though it never lowers a cached
-  /// archived total such as the classic Vine seed's. A surface that needs the
-  /// archival-only per-video figure must read the event tags instead.
+  /// `engagement.total_views`. A response missing either part can raise the
+  /// cached value but not lower it, so until funnelcake reports
+  /// `archived_loops` a fetch keeps a larger cached total, such as a classic
+  /// Vine seed's, for as long as that row stays cached. A surface that needs
+  /// the archival-only per-video figure must read the event tags instead.
   final int totalViews;
 
   /// Whether [totalViews] came from a source that supplied a value.
