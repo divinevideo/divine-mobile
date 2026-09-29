@@ -63,9 +63,9 @@ final class AudioOverlayManager {
                 baseVolume: vol,
                 fade: AudioOverlayFade(map: map)
             )
+            overlays.append(entry)
             applyVolume(to: entry)
             attachFadeMix(to: entry)
-            overlays.append(entry)
         }
     }
 
