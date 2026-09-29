@@ -1102,8 +1102,8 @@ class DivineVideoPlayerInstanceTest {
     // -- HLS loops by seeking back --
 
     /**
-     * Imported videos publish only an HLS playlist without codecs, with
-     * segments longer than the 7 s the feed plays.
+     * Imported videos publish only an HLS playlist on a third-party host,
+     * without codecs, with segments longer than the 7 s the feed plays.
      */
     private fun hlsSetClipsCall(): MethodCall =
         setClipsCall("https://media.example.com/video.m3u8")
@@ -1118,6 +1118,20 @@ class DivineVideoPlayerInstanceTest {
         // the Java heap runs out.
         verify(exactly = 0) { mockPlayer.repeatMode = Player.REPEAT_MODE_ONE }
         verify { mockPlayer.repeatMode = Player.REPEAT_MODE_OFF }
+    }
+
+    @Test
+    fun `a looping Divine-hosted HLS clip keeps the player's repeat`() {
+        val hash = "a".repeat(64)
+        instance.onMethodCall(
+            setClipsCall("https://media.divine.video/$hash/hls/master.m3u8"),
+            mockk(relaxed = true),
+        )
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+        // Divine's playlists declare their codecs, so their laps are prepared
+        // without a download; seeking back would cost a visible stall.
+        verify { mockPlayer.repeatMode = Player.REPEAT_MODE_ONE }
     }
 
     @Test

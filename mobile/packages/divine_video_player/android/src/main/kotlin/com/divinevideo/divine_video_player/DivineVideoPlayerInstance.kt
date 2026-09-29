@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
+import java.net.URI
 import java.util.Collections
 import kotlin.math.abs
 import java.util.concurrent.ExecutorService
@@ -864,9 +865,8 @@ internal class DivineVideoPlayerInstance(
         if (clipCount != 1 || !isLooping) return
         val map = clipsRaw.firstOrNull() ?: return
         val uri = map["uri"] as? String ?: return
-        // The track laps on its own clock, in step with a repeating item; a
-        // lap started by a seek has no fixed length to follow. HLS is also
-        // nothing the track's extractor can read.
+        // The track's extractor cannot read a playlist, and a lap started by
+        // a seek has no fixed length for the track to follow.
         if (isHlsSource(uri)) return
         if (((map["startMs"] as? Number)?.toLong() ?: 0L) != 0L) return
         // A static track plays the recording at its own rate and has no
@@ -1320,10 +1320,14 @@ internal class DivineVideoPlayerInstance(
      * prepared, so the player keeps chaining laps until the Java heap runs
      * out. A playlist that does not repeat ends at its last item, and nothing
      * is prepared past it.
+     *
+     * The seek costs a visible stall at every restart, 300–400 ms on a
+     * Galaxy S26, so Divine's own playlists keep the repeat mode: they
+     * declare their codecs, and their laps are prepared without a download.
      */
     private val loopsBySeeking: Boolean
         get() = isLooping &&
-            lastClipsRaw.any { (it["uri"] as? String)?.let(::isHlsSource) == true }
+            lastClipsRaw.any { (it["uri"] as? String)?.let(::isForeignHlsSource) == true }
 
     private fun handleJumpToClip(call: MethodCall, result: MethodChannel.Result) {
         val index = (call.argument<Number>("index"))?.toInt() ?: 0
@@ -2093,6 +2097,17 @@ internal class DivineVideoPlayerInstance(
             val path = uri.substringBefore('?').substringBefore('#')
             return path.endsWith(".m3u8", ignoreCase = true) ||
                 path.contains("/hls/", ignoreCase = true)
+        }
+
+        /** Whether [uri] is an HLS playlist served from outside Divine. */
+        private fun isForeignHlsSource(uri: String): Boolean =
+            isHlsSource(uri) && !isDivineHosted(uri)
+
+        /** Whether [uri] is served from a `divine.video` host. */
+        private fun isDivineHosted(uri: String): Boolean {
+            val host = runCatching { URI(uri).host }.getOrNull()?.lowercase()
+                ?: return false
+            return host == "divine.video" || host.endsWith(".divine.video")
         }
 
         /** [armedSeekGeneration] while no paused seek is armed. */
