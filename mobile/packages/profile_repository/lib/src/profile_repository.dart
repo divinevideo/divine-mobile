@@ -824,12 +824,9 @@ class ProfileRepository implements ProfileReader {
 
     if (stats == null && engagement == null && social == null) return;
 
-    int? publicViewCount;
-    if (engagement != null) {
-      publicViewCount = engagement.totalViews > 0
-          ? engagement.totalViews
-          : engagement.totalLoops.round();
-    }
+    final lifetimeTotal = engagement == null
+        ? null
+        : await _lifetimeTotalToCache(pubkey, dao, engagement);
 
     // A zero field is not data. `/api/users/{pubkey}/social` answers 200 for
     // every pubkey, and funnelcake collapses ClickHouse failures into
@@ -859,8 +856,37 @@ class ProfileRepository implements ProfileReader {
       // (#8403).
       videoCount: (stats?.videoCount ?? 0) > 0 ? stats!.videoCount : null,
       totalLikes: engagement?.totalReactions,
-      totalViews: publicViewCount,
+      totalViews: lifetimeTotal,
     );
+  }
+
+  /// Returns the creator's lifetime loop total to cache from [engagement],
+  /// or `null` to keep whatever total the row already holds.
+  ///
+  /// The total is archived Vine loops plus Divine-era views, the same sum
+  /// `VideoEvent.totalLoops` makes per video. Funnelcake reports the archive
+  /// as `engagement.archived_loops`; while it does not (an older backend, or
+  /// one that could not compute it), the response carries Divine-era views
+  /// only, and is therefore not allowed to lower a cached total — the classic
+  /// Vine seed writes archived totals into this row.
+  ///
+  /// A zero is ambiguous: funnelcake answers 200 with `total_views: 0` when
+  /// ClickHouse is down, so a zero never overwrites a known positive total.
+  Future<int?> _lifetimeTotalToCache(
+    String pubkey,
+    ProfileStatsDao dao,
+    ProfileEngagementData engagement,
+  ) async {
+    final divineViews = engagement.totalViews > 0
+        ? engagement.totalViews
+        : engagement.totalLoops.round();
+    final archivedLoops = engagement.archivedLoops;
+    final total = (archivedLoops ?? 0) + divineViews;
+
+    final cachedTotal = (await dao.getStatsRaw(pubkey))?.totalViews ?? 0;
+    if (total == 0) return cachedTotal > 0 ? null : 0;
+    if (archivedLoops == null && total < cachedTotal) return null;
+    return total;
   }
 
   /// Fetches a fresh profile and updates the local cache.

@@ -12,6 +12,11 @@
 > `profileLoopsVisibilityFloor` threshold that briefly gated it). Everything
 > else here — the view/loop definitions and the ranking discussion — is
 > unaffected.
+>
+> **Author lifetime total, 2026-09-29:** that total is archived Vine loops plus
+> Divine-era views, summed by `ProfileRepository` from funnelcake's
+> `engagement.archived_loops` and `engagement.total_views`. Until funnelcake
+> reports `archived_loops` it is Divine-era views only.
 
 ## Problem
 

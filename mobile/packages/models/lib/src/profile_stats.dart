@@ -40,13 +40,14 @@ class ProfileStats {
   /// has been cached yet. See [followers].
   final int? following;
 
-  /// Total views across all videos.
+  /// The author's lifetime loop total across all videos.
   ///
-  /// This is the author's aggregate engagement figure, not an archival-only
-  /// count: `ProfileRepository` fills it from funnelcake's `engagement` total,
-  /// falling back to the loop total, so a classic Vine's archived loops and a
-  /// live Divine video's loops land in the same number. A surface that needs
-  /// the archival-only per-video figure must read the event tags instead.
+  /// This is archived Vine loops plus Divine-era views, summed by
+  /// `ProfileRepository` from funnelcake's `engagement.archived_loops` and
+  /// `engagement.total_views`. Until funnelcake reports `archived_loops`, a
+  /// fetched value is Divine-era views only, though it never lowers a cached
+  /// archived total such as the classic Vine seed's. A surface that needs the
+  /// archival-only per-video figure must read the event tags instead.
   final int totalViews;
 
   /// Whether [totalViews] came from a source that supplied a value.

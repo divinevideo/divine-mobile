@@ -1342,6 +1342,9 @@ void main() {
             'UserProfileNotPublished', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
+            () => mockProfileStatsDao.getStatsRaw(testPubkey),
+          ).thenAnswer((_) async => null);
+          when(
             () => mockFunnelcakeClient.getUserProfile(testPubkey),
           ).thenAnswer(
             (_) async => UserProfileNotPublished(
@@ -1392,6 +1395,9 @@ void main() {
         test('uses rounded loops when unified views are unavailable', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
+            () => mockProfileStatsDao.getStatsRaw(testPubkey),
+          ).thenAnswer((_) async => null);
+          when(
             () => mockFunnelcakeClient.getUserProfile(testPubkey),
           ).thenAnswer(
             (_) async => UserProfileNotPublished(
@@ -1419,6 +1425,142 @@ void main() {
               totalViews: 13,
             ),
           ).called(1);
+        });
+
+        group('lifetime loop total', () {
+          void stubEngagement(Map<String, dynamic> engagement) {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getUserProfile(testPubkey),
+            ).thenAnswer(
+              (_) async => UserProfileNotPublished(
+                pubkey: testPubkey,
+                engagement: ProfileEngagementData.fromJson(engagement),
+              ),
+            );
+          }
+
+          void stubCachedTotal(int? totalViews) {
+            when(() => mockProfileStatsDao.getStatsRaw(testPubkey)).thenAnswer(
+              (_) async => totalViews == null
+                  ? null
+                  : ProfileStatRow(
+                      pubkey: testPubkey,
+                      totalViews: totalViews,
+                      cachedAt: DateTime.now(),
+                    ),
+            );
+          }
+
+          void verifyCachedTotal(int expected) {
+            verify(
+              () => mockProfileStatsDao.upsertStats(
+                pubkey: testPubkey,
+                followerCount: any(named: 'followerCount'),
+                followingCount: any(named: 'followingCount'),
+                videoCount: any(named: 'videoCount'),
+                totalLikes: any(named: 'totalLikes'),
+                totalViews: expected,
+              ),
+            ).called(1);
+          }
+
+          // `totalViews` is omitted, i.e. passed as null, which tells the DAO
+          // to keep the total the row already holds.
+          void verifyCachedTotalKept() {
+            verify(
+              () => mockProfileStatsDao.upsertStats(
+                pubkey: testPubkey,
+                followerCount: any(named: 'followerCount'),
+                followingCount: any(named: 'followingCount'),
+                videoCount: any(named: 'videoCount'),
+                totalLikes: any(named: 'totalLikes'),
+              ),
+            ).called(1);
+          }
+
+          test('adds archived Vine loops to Divine-era views', () async {
+            stubCachedTotal(null);
+            stubEngagement(const {
+              'total_views': 292000,
+              'archived_loops': 8130000000,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotal(8130292000);
+          });
+
+          test('a complete total replaces a larger cached one', () async {
+            stubCachedTotal(9000000000);
+            stubEngagement(const {
+              'total_views': 292000,
+              'archived_loops': 8130000000,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotal(8130292000);
+          });
+
+          test('a views-only response does not shrink a seeded archived '
+              'total', () async {
+            // The classic Vine seed writes archived totals into this row.
+            // Without `archived_loops` the response is Divine-era views only.
+            stubCachedTotal(8130000000);
+            stubEngagement(const {'total_views': 292000});
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
+
+          test('a views-only response still raises a smaller cached '
+              'total', () async {
+            stubCachedTotal(50);
+            stubEngagement(const {
+              'total_views': 99,
+              'archived_loops': null,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotal(99);
+          });
+
+          test('an outage zero does not overwrite a known total', () async {
+            // With ClickHouse down, funnelcake still answers 200 with
+            // `total_views: 0` and cannot compute `archived_loops`.
+            stubCachedTotal(1000);
+            stubEngagement(const {
+              'total_views': 0,
+              'total_loops': 0,
+              'archived_loops': null,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
+
+          test('a zero with archived loops reported as zero does not '
+              'overwrite a known total', () async {
+            stubCachedTotal(1000);
+            stubEngagement(const {'total_views': 0, 'archived_loops': 0});
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
+
+          test('records a zero when no total is cached yet', () async {
+            stubCachedTotal(null);
+            stubEngagement(const {'total_views': 0});
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotal(0);
+          });
         });
 
         test('does not cache an ambiguous 0/0 social response', () async {
