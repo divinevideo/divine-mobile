@@ -1374,6 +1374,59 @@ void main() {
       expect(settled.single.isSupporter, isTrue);
     });
 
+    test('settles an inconclusive claim with the membership it kept', () async {
+      final prefs = await SharedPreferences.getInstance();
+      var status = 'active';
+      final apiClient = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr fixture', pubkey: pubkeyA),
+        httpClient: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'status': status,
+              'entitlement': {
+                'source': 'server',
+                'isActive': status == 'active',
+              },
+              'recognition': <String, dynamic>{},
+            }),
+            200,
+          ),
+        ),
+      );
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: apiClient,
+      );
+      addTearDown(repo.dispose);
+      addTearDown(apiClient.dispose);
+      await repo.refreshFromServer();
+      expect(repo.isSupporter, isTrue);
+      final settled = <SupporterEntitlement>[];
+      final subscription = repo.settledPurchases.listen(settled.add);
+      addTearDown(subscription.cancel);
+
+      status = 'unknown';
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'foreground-inconclusive',
+          store: 'apple',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(repo.isSupporter, isTrue);
+      expect(settled, hasLength(1));
+      expect(settled.single.isSupporter, isTrue);
+    });
+
     test('does not settle a silent background claim', () async {
       final prefs = await SharedPreferences.getInstance();
       final apiClient = buildApiClient();

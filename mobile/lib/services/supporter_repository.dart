@@ -486,11 +486,12 @@ class SupporterRepository {
       _handleSnapshot(snapshot);
       // A user-initiated claim is terminal even when it granted nothing: the
       // Worker verified the purchase and its canonical state is not active.
-      // Report it on the claim-only stream so callers can end checkout without
-      // mistaking a routine refresh for the outcome.
+      // Report the resolved entitlement on the claim-only stream so callers can
+      // end checkout without mistaking a routine refresh for the outcome, and
+      // without an inconclusive claim revoking known benefits.
       if (!proof.silent && proof.capturedPubkey == _pubkey) {
         if (!_settledPurchases.isClosed) {
-          _settledPurchases.add(snapshot.entitlement);
+          _settledPurchases.add(_current);
         }
       }
       await _validator.completePurchase(proof);
