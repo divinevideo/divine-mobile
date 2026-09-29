@@ -357,7 +357,7 @@ void main() {
       );
     });
 
-    test('drops words spoken outside the cue', () {
+    test('holds the word spoken before the cue and drops one after it', () {
       const cue = CaptionCue(
         id: 'cue',
         text: 'early late',

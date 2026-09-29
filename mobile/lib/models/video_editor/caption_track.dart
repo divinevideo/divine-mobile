@@ -127,8 +127,9 @@ class CaptionCue extends Equatable {
   ///
   /// Moving the whole cue moves its words along, since the move lines the
   /// caption up with the speech. Trimming or extending it leaves the words
-  /// where they are spoken: a word outside the new range just never lights
-  /// up.
+  /// where they are spoken: a word that starts after the new end never lights
+  /// up, and the last word that started before the new start stays lit from
+  /// the first frame until the next one begins.
   CaptionCue withTiming({Duration? start, Duration? end}) {
     final newStart = start ?? this.start;
     final newEnd = end ?? this.end;
