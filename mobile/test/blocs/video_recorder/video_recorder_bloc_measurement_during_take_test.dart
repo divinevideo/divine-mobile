@@ -1,15 +1,17 @@
-// ABOUTME: Tests that a chroma-key wall measurement landing mid-take leaves
-// ABOUTME: the take on the key it was started with.
+// ABOUTME: Tests a chroma-key wall measurement that outlives the moment it
+// ABOUTME: was asked for: the take it must not re-key, the flash it restores.
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:divine_camera/divine_camera.dart' show PhotoCaptureResult;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
@@ -264,6 +266,134 @@ void main() {
 
         expect(recordedIntent(), keyAtFootageStart);
       });
+    });
+
+    group('while the flash is changed', () {
+      late List<DivineFlashMode> flashCalls;
+
+      setUp(() {
+        stubReadyCamera();
+        flashCalls = [];
+        when(() => cameraService.setFlashMode(any())).thenAnswer((
+          invocation,
+        ) async {
+          flashCalls.add(
+            invocation.positionalArguments.single as DivineFlashMode,
+          );
+          return true;
+        });
+      });
+
+      /// Holds the still until [gate] completes. The returned completer
+      /// completes once the camera is asked for the still.
+      Completer<void> holdStillUntil(Completer<PhotoCaptureResult?> gate) {
+        final requested = Completer<void>();
+        when(
+          () => cameraService.capturePhoto(
+            outputDirectory: any(named: 'outputDirectory'),
+          ),
+        ).thenAnswer((_) {
+          requested.complete();
+          return gate.future;
+        });
+        return requested;
+      }
+
+      VideoRecorderBloc measuringBloc() => VideoRecorderBloc(
+        readClipManager: () => clipManager,
+        readVideoEditor: () => videoEditor,
+        readVideoEditorState: VideoEditorProviderState.new,
+        readSharedPreferences: () => prefs,
+        cameraService: cameraService,
+        liveChromaKeySupported: true,
+        detectChromaKeyStill: (_, {required visibleAspectRatio}) async =>
+            _measured,
+      )..emit(_chromaKeyState);
+
+      test(
+        'leaves the camera flash on the mode the recorder shows when it is '
+        'changed while the still is taken',
+        () async {
+          final stillGate = Completer<PhotoCaptureResult?>();
+          final stillRequested = holdStillUntil(stillGate);
+          final bloc = measuringBloc();
+          addTearDown(bloc.close);
+          expect(bloc.state.flashMode, DivineFlashMode.auto);
+
+          bloc.add(const VideoRecorderChromaKeyMeasureRequested());
+          await stillRequested.future;
+
+          final toggled = bloc.stream.firstWhere(
+            (state) => state.flashMode != DivineFlashMode.auto,
+          );
+          bloc.add(const VideoRecorderFlashToggled());
+          await toggled;
+
+          final landed = bloc.stream.firstWhere(
+            (state) =>
+                state.chromaKeyMeasurementStatus !=
+                ChromaKeyMeasurementStatus.detecting,
+          );
+          stillGate.complete(PhotoCaptureResult(filePath: still.path));
+          await landed;
+          // The measurement ran to its end: it measured and deleted the still.
+          expect(still.existsSync(), isFalse);
+
+          expect(
+            flashCalls.last,
+            bloc.state.flashMode,
+            reason:
+                'the last flash mode sent to the camera must be the one the '
+                'recorder shows (calls: $flashCalls)',
+          );
+        },
+      );
+
+      test(
+        'leaves the camera flash on the mode the recorder shows when it is '
+        'changed after the measurement timed out',
+        () {
+          fakeAsync((async) {
+            // Created inside the fake zone, so completing it resumes the
+            // measurement on this zone's microtask queue.
+            final stillGate = Completer<PhotoCaptureResult?>();
+            holdStillUntil(stillGate);
+            final bloc = measuringBloc();
+            expect(bloc.state.flashMode, DivineFlashMode.auto);
+
+            bloc.add(const VideoRecorderChromaKeyMeasureRequested());
+            async
+              ..flushMicrotasks()
+              ..elapse(VideoEditorConstants.chromaKeyDetectTimeout);
+            expect(
+              bloc.state.chromaKeyMeasurementStatus,
+              ChromaKeyMeasurementStatus.timedOut,
+            );
+
+            // The panel asks for a retry; the user turns the flash off.
+            bloc.add(const VideoRecorderFlashToggled());
+            async.flushMicrotasks();
+            expect(bloc.state.flashMode, DivineFlashMode.off);
+
+            // The stalled still comes back after all, and the measurement
+            // that gave up on it runs on to its end.
+            stillGate.complete(PhotoCaptureResult(filePath: still.path));
+            async.flushMicrotasks();
+            expect(still.existsSync(), isFalse);
+
+            expect(
+              flashCalls.last,
+              bloc.state.flashMode,
+              reason:
+                  'the last flash mode sent to the camera must be the one '
+                  'the recorder shows (calls: $flashCalls)',
+            );
+
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        },
+      );
     });
   });
 }

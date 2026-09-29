@@ -2024,8 +2024,10 @@ class VideoRecorderBloc
         outputDirectory: Directory.systemTemp.path,
       );
     } finally {
+      // Back to the mode the recorder shows, not to `auto`: the user may have
+      // changed it while the still was taken, or after a timeout gave up on it.
       if (restoreAutoFlash) {
-        await _cameraService.setFlashMode(DivineFlashMode.auto);
+        await _cameraService.setFlashMode(state.flashMode);
       }
     }
     if (photo == null) {
