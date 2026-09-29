@@ -5583,6 +5583,8 @@
   "videoEditorDetachProgressLabel": "మీ క్లిప్‌ను వేరు చేస్తోంది…",
   "videoEditorDetachFailed": "ఆ క్లిప్‌ని వేరు చేయడం సాధ్యపడలేదు. మీ టైమ్‌లైన్ మారలేదు.",
   "videoEditorDetachImagePickFailed": "ఆ ఫోటోను లోడ్ చేయడం సాధ్యపడలేదు.",
+  "videoEditorReattachLabel": "టైమ్‌లైన్‌కు",
+  "videoEditorReattachSemanticLabel": "ఎంచుకున్న క్లిప్‌ని తిరిగి టైమ్‌లైన్‌లో ఉంచండి",
   "videoEditorBackdropLabel": "నేపథ్యం",
   "videoEditorBackdropSemanticLabel": "ఈ స్థానాన్ని నింపిన నేపథ్యాన్ని మార్చండి",
   "videoEditorBackdropTitle": "నేపథ్యం మార్చండి",

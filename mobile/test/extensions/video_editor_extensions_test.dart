@@ -254,6 +254,34 @@ void main() {
       );
     });
 
+    test('setClipStateRemovingLayer drops the layer in the clips entry', () {
+      final kept = TextLayer(id: 'text', text: 'hi');
+      final detached = TextLayer(id: 'detached_b', text: 'clip');
+      when(() => editor.activeLayers).thenReturn([kept, detached]);
+      when(() => stateManager.activeMeta).thenReturn({});
+
+      editor.setClipStateRemovingLayer(
+        previousClips: [_clip('a')],
+        clips: [_clip('a'), _clip('b')],
+        layerId: 'detached_b',
+      );
+
+      // One entry, so a single undo lifts the clip back onto the canvas
+      // instead of leaving it on the timeline and the canvas at once.
+      final captured = verify(
+        () => editor.addHistory(
+          layers: captureAny(named: 'layers'),
+          meta: captureAny(named: 'meta'),
+        ),
+      ).captured;
+      expect((captured[0] as List<Layer>).map((l) => l.id), ['text']);
+      expect(
+        (captured[1]
+            as Map<String, dynamic>)[VideoEditorConstants.clipsStateHistoryKey],
+        hasLength(2),
+      );
+    });
+
     test('setClipState updates current markers when skipping history', () {
       final activeMeta = <String, dynamic>{
         VideoEditorConstants.timelineMarkersStateHistoryKey: [900],

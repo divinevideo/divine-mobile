@@ -3629,6 +3629,8 @@
   "videoEditorDetachProgressLabel": "Klibin ayrılıyor…",
   "videoEditorDetachFailed": "Bu klip ayrılamadı. Zaman çizelgen değişmedi.",
   "videoEditorDetachImagePickFailed": "Bu fotoğraf yüklenemedi.",
+  "videoEditorReattachLabel": "Geri koy",
+  "videoEditorReattachSemanticLabel": "Seçili klibi zaman çizelgesine geri koy",
   "videoEditorBackdropLabel": "Arka plan",
   "videoEditorBackdropSemanticLabel": "Bu yeri tutan arka planı değiştir",
   "videoEditorBackdropTitle": "Arka planı değiştir",

@@ -9117,6 +9117,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-load ang larawang iyon.';
 
   @override
+  String get videoEditorReattachLabel => 'Ibalik';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Ibalik ang napiling clip sa timeline';
+
+  @override
   String get videoEditorBackdropLabel => 'Background';
 
   @override

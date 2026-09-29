@@ -3747,6 +3747,8 @@
   "videoEditorDetachProgressLabel": "ቅንጥብዎ እየተለየ ነው…",
   "videoEditorDetachFailed": "ያንን ቅንጥብ መንጠል አልተቻለም። የጊዜ መስመርዎ ሳይለወጥ ይቆያል።",
   "videoEditorDetachImagePickFailed": "ያንን ፎቶ መጫን አልተቻለም።",
+  "videoEditorReattachLabel": "ወደ ጊዜ መስመር",
+  "videoEditorReattachSemanticLabel": "የተመረጠውን ቅንጥብ ወደ ጊዜ መስመሩ መመለስ",
   "videoEditorBackdropLabel": "ዳራ",
   "videoEditorBackdropSemanticLabel": "ይህን ቦታ የያዘውን ዳራ ይቀይሩ",
   "videoEditorBackdropTitle": "ዳራ ይቀይሩ",

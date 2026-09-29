@@ -8843,6 +8843,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'ያንን ፎቶ መጫን አልተቻለም።';
 
   @override
+  String get videoEditorReattachLabel => 'ወደ ጊዜ መስመር';
+
+  @override
+  String get videoEditorReattachSemanticLabel => 'የተመረጠውን ቅንጥብ ወደ ጊዜ መስመሩ መመለስ';
+
+  @override
   String get videoEditorBackdropLabel => 'ዳራ';
 
   @override

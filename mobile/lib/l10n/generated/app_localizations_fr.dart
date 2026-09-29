@@ -9181,6 +9181,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de charger cette photo.';
 
   @override
+  String get videoEditorReattachLabel => 'Remettre';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Remettre le clip sélectionné dans la timeline';
+
+  @override
   String get videoEditorBackdropLabel => 'Arrière-plan';
 
   @override

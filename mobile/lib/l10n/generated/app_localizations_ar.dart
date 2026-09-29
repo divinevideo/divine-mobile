@@ -9003,6 +9003,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'تعذّر تحميل هذه الصورة.';
 
   @override
+  String get videoEditorReattachLabel => 'إرجاع';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'إرجاع المقطع المحدد إلى الجدول الزمني';
+
+  @override
   String get videoEditorBackdropLabel => 'الخلفية';
 
   @override

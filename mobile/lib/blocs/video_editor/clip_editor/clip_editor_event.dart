@@ -476,6 +476,55 @@ class ClipEditorDetachedClipTransformRequested extends ClipEditorEvent {
   List<Object?> get props => [layerId, clip, transform];
 }
 
+/// Put [clip], which the canvas layer [layerId] carries, back onto the
+/// timeline — the way back from [ClipEditorClipDetachRequested].
+///
+/// [sourceOffset] and [window] describe the stretch of the clip the layer
+/// shows, and only that stretch comes back. It takes the slot of the
+/// placeholder [placeholderClipId] if that is still on the timeline, and
+/// otherwise joins at [playhead].
+///
+/// The bloc owns the clip-list change; removing the layer and writing both to
+/// editor history as one entry is the widget layer's half, driven by
+/// [ClipEditorState.lastDetachedClipReattachResult] — the same split a detach
+/// uses, in reverse.
+class ClipEditorDetachedClipReattachRequested extends ClipEditorEvent {
+  const ClipEditorDetachedClipReattachRequested({
+    required this.layerId,
+    required this.clip,
+    required this.playhead,
+    this.sourceOffset = Duration.zero,
+    this.window,
+    this.placeholderClipId,
+  });
+
+  final String layerId;
+  final DivineVideoClip clip;
+
+  /// Timeline position the clip joins at when its slot is gone.
+  final Duration playhead;
+
+  /// Where the layer starts inside the clip, in playback time.
+  final Duration sourceOffset;
+
+  /// How long the layer's bar runs, or `null` for to the clip's end.
+  final Duration? window;
+
+  /// Id of the placeholder that took the clip's slot, or `null` when the gap
+  /// was closed.
+  final String? placeholderClipId;
+
+  @override
+  List<Object?> get props => [
+    layerId,
+    clip,
+    playhead,
+    sourceOffset,
+    window,
+    placeholderClipId,
+  ];
+}
+
 // === VOLUME ===
 
 /// Update the volume of a clip by its ID.

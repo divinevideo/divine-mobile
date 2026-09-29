@@ -8967,6 +8967,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Bu fotoğraf yüklenemedi.';
 
   @override
+  String get videoEditorReattachLabel => 'Geri koy';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Seçili klibi zaman çizelgesine geri koy';
+
+  @override
   String get videoEditorBackdropLabel => 'Arka plan';
 
   @override

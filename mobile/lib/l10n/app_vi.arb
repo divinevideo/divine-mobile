@@ -4726,6 +4726,8 @@
   "videoEditorDetachProgressLabel": "Đang tách clip của bạn…",
   "videoEditorDetachFailed": "Không tách được clip đó. Timeline của bạn vẫn nguyên.",
   "videoEditorDetachImagePickFailed": "Không tải được ảnh đó.",
+  "videoEditorReattachLabel": "Về timeline",
+  "videoEditorReattachSemanticLabel": "Đưa clip đã chọn trở lại timeline",
   "videoEditorBackdropLabel": "Nền",
   "videoEditorBackdropSemanticLabel": "Đổi phần nền đang giữ chỗ này",
   "videoEditorBackdropTitle": "Đổi nền",

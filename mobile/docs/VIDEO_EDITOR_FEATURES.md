@@ -63,6 +63,7 @@ Detach (picture-in-picture):
 - Lifts a clip off the timeline onto the canvas as a freely placed layer.
 - The gap it leaves can be closed, or held with a solid color or a photo.
 - A detached layer can be moved, resized, split, duplicated, deleted, cropped to any aspect ratio, and green-screened. It has no enter or leave animation.
+- Back to timeline puts the clip back as a timeline clip: into the color or photo slot it left if that is still there, otherwise at the playhead. Only the part its layer showed comes back, as trim. Its placement and live green screen stay behind, a free crop fills the frame, and its length counts toward the 6.3 s maximum again.
 
 Green screen (chroma key):
 
@@ -135,7 +136,7 @@ Open feature requests for things the editor does not do yet:
 - Audio: fade in and out ([#9557](https://github.com/divinevideo/divine-mobile/issues/9557)), voice effects and noise reduction for voice-overs ([#9565](https://github.com/divinevideo/divine-mobile/issues/9565)), volume above 100 % ([#4906](https://github.com/divinevideo/divine-mobile/issues/4906)), loudness equalization ([#3789](https://github.com/divinevideo/divine-mobile/issues/3789)), a larger sound library ([#8338](https://github.com/divinevideo/divine-mobile/issues/8338)).
 - Text and captions: outline and shadow ([#9558](https://github.com/divinevideo/divine-mobile/issues/9558)), word-by-word highlighted captions ([#9564](https://github.com/divinevideo/divine-mobile/issues/9564)), a link in the text overlay ([#3111](https://github.com/divinevideo/divine-mobile/issues/3111)).
 - Clips: speed presets ([#9559](https://github.com/divinevideo/divine-mobile/issues/9559)), freeze frame ([#9561](https://github.com/divinevideo/divine-mobile/issues/9561)), zoom over time ([#4951](https://github.com/divinevideo/divine-mobile/issues/4951)).
-- Detach: move a detached clip back into the timeline ([#9560](https://github.com/divinevideo/divine-mobile/issues/9560)), opacity ([#9563](https://github.com/divinevideo/divine-mobile/issues/9563)).
+- Detach: opacity ([#9563](https://github.com/divinevideo/divine-mobile/issues/9563)).
 - Privacy: blur or pixelate part of the picture ([#9562](https://github.com/divinevideo/divine-mobile/issues/9562)).
 - Stickers: NIP-30 stickers ([#2265](https://github.com/divinevideo/divine-mobile/issues/2265)).
 - Frames around the video ([#7099](https://github.com/divinevideo/divine-mobile/issues/7099)).

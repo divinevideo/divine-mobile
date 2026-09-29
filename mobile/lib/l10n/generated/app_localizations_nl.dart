@@ -9089,6 +9089,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Kon die foto niet laden.';
 
   @override
+  String get videoEditorReattachLabel => 'Terugzetten';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Geselecteerde clip terugzetten op de tijdlijn';
+
+  @override
   String get videoEditorBackdropLabel => 'Achtergrond';
 
   @override

@@ -3629,6 +3629,8 @@
   "videoEditorDetachProgressLabel": "جارٍ فصل مقطعك…",
   "videoEditorDetachFailed": "تعذّر فصل هذا المقطع. الجدول الزمني كما هو دون تغيير.",
   "videoEditorDetachImagePickFailed": "تعذّر تحميل هذه الصورة.",
+  "videoEditorReattachLabel": "إرجاع",
+  "videoEditorReattachSemanticLabel": "إرجاع المقطع المحدد إلى الجدول الزمني",
   "videoEditorBackdropLabel": "الخلفية",
   "videoEditorBackdropSemanticLabel": "تغيير الخلفية التي تشغل هذا المكان",
   "videoEditorBackdropTitle": "تغيير الخلفية",

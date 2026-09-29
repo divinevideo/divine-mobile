@@ -9115,6 +9115,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível carregar essa foto.';
 
   @override
+  String get videoEditorReattachLabel => 'Devolver';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Devolver o clipe selecionado à linha do tempo';
+
+  @override
   String get videoEditorBackdropLabel => 'Fundo';
 
   @override

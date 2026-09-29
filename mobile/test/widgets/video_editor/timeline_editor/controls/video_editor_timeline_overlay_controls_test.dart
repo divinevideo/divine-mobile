@@ -66,6 +66,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(const TimelineOverlayItemSelected(null));
+      registerFallbackValue(const ClipEditorEditingStopped());
     });
 
     setUp(() {
@@ -173,7 +174,8 @@ void main() {
       expect(find.text(l10n.videoEditorEditLabel), findsNothing);
     });
 
-    testWidgets('offers duplicate, split and crop for a detached clip', (
+    testWidgets('offers duplicate, split, crop and the way back for a detached '
+        'clip', (
       tester,
     ) async {
       const item = TimelineOverlayItem(
@@ -205,6 +207,7 @@ void main() {
       expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorTransformLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorReattachLabel), findsOneWidget);
       // A detached clip is composited as a VideoLayer, which carries no
       // animations field — offering the action would animate it in the editor
       // and drop it silently from the file.
@@ -234,7 +237,7 @@ void main() {
       expect(find.text(l10n.videoEditorTitleStylesLabel), findsNothing);
     });
 
-    testWidgets('keeps the green screen off every other layer', (
+    testWidgets('keeps the clip-only actions off every other layer', (
       tester,
     ) async {
       const item = TimelineOverlayItem(
@@ -252,8 +255,10 @@ void main() {
 
       await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
 
-      // Only a detached clip carries footage a key can be applied to.
+      // Only a detached clip carries footage a key can be applied to, or a
+      // clip that could go back onto the timeline.
       expect(find.text(l10n.videoEditorChromaKeyLabel), findsNothing);
+      expect(find.text(l10n.videoEditorReattachLabel), findsNothing);
     });
 
     testWidgets('highlights the green screen once the layer carries one', (
@@ -447,6 +452,66 @@ void main() {
           DetachedClipLayerData.layerIdOf(DetachedClipLayerData.metaOf(copy)),
           copy.id,
         );
+      });
+
+      testWidgets('sending a detached clip back hands the clip editor what the '
+          'layer shows', (tester) async {
+        final clipBloc = _MockClipEditorBloc();
+        when(() => clipBloc.isClosed).thenReturn(false);
+        final clip = DivineVideoClip(
+          id: 'clip-b',
+          video: EditorVideo.file('/docs/clip-b.mp4'),
+          duration: const Duration(seconds: 6),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        final meta = DetachedClipLayerData(
+          clip: clip,
+          layerId: 'detached-1',
+          sourceOffset: const Duration(seconds: 1),
+          placeholderClipId: 'placeholder_1',
+        ).toMeta();
+        final layer = WidgetLayer(
+          id: 'detached-1',
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 3),
+          exportConfigs: WidgetLayerExportConfigs(id: 'detached-1', meta: meta),
+        );
+        when(() => mockEditor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(
+          const VideoEditorMainState(currentPosition: Duration(seconds: 5)),
+        );
+
+        const item = TimelineOverlayItem(
+          id: 'detached-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration(seconds: 1),
+          endTime: Duration(seconds: 3),
+        );
+        await tester.pumpWidget(
+          buildWithEditor(item, mockEditor, mainBloc, clipBloc: clipBloc),
+        );
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorReattachSemanticLabel),
+        );
+        await tester.pump();
+
+        final event =
+            verify(() => clipBloc.add(captureAny())).captured.single
+                as ClipEditorDetachedClipReattachRequested;
+        expect(event.layerId, 'detached-1');
+        expect(event.clip.id, 'clip-b');
+        expect(event.sourceOffset, const Duration(seconds: 1));
+        // The bar runs two seconds, so two seconds of the clip go back.
+        expect(event.window, const Duration(seconds: 2));
+        expect(event.placeholderClipId, 'placeholder_1');
+        expect(event.playhead, const Duration(seconds: 5));
+        verify(
+          () => overlayBloc.add(const TimelineOverlayItemSelected(null)),
+        ).called(1);
       });
 
       testWidgets('splitting a detached clip offsets the tail into the clip', (

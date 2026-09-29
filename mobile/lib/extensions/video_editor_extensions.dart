@@ -379,6 +379,43 @@ extension VideoEditorExtensions on ProImageEditorState {
     setState(() {});
   }
 
+  /// Removes the layer [layerId] and persists a clip-list change as **one**
+  /// history entry — the reverse of [setClipStateWithNewLayer], for putting a
+  /// detached clip back onto the timeline.
+  ///
+  /// The clip list can come out longer than [previousClips], so a sound that
+  /// covered the old end grows onto the new one, as in
+  /// [setLengthenedClipState].
+  void setClipStateRemovingLayer({
+    required List<DivineVideoClip> previousClips,
+    required List<DivineVideoClip> clips,
+    required String layerId,
+    List<Duration>? timelineMarkers,
+  }) {
+    final currentTracks = stateManager.audioTracks;
+    final tracks = growAudioToCompositionEnd(
+      rebaseAnchoredAudioForClipState(clips, currentTracks),
+      previousDuration: compositionDuration(previousClips),
+      duration: compositionDuration(clips),
+      maxDuration: VideoEditorConstants.maxDuration,
+    );
+
+    addHistory(
+      layers: [
+        for (final layer in activeLayers)
+          if (layer.id != layerId) layer,
+      ],
+      meta: _clipHistoryMeta(
+        clips,
+        serializedAudio: identical(tracks, currentTracks)
+            ? null
+            : tracks.map((e) => e.toJson()).toList(),
+        timelineMarkers: timelineMarkers,
+      ),
+    );
+    setState(() {});
+  }
+
   /// Persists clip trim and order state in the editor's history metadata.
   ///
   /// When [skipUpdateHistory] is `false` (default), creates a new history

@@ -8628,6 +8628,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => '그 사진을 불러오지 못했어요.';
 
   @override
+  String get videoEditorReattachLabel => '타임라인으로';
+
+  @override
+  String get videoEditorReattachSemanticLabel => '선택한 클립을 타임라인으로 되돌리기';
+
+  @override
   String get videoEditorBackdropLabel => '배경';
 
   @override

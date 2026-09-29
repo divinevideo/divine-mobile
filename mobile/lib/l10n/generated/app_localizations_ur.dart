@@ -9046,6 +9046,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'وہ تصویر لوڈ نہیں ہو سکی۔';
 
   @override
+  String get videoEditorReattachLabel => 'ٹائم لائن پر';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'منتخب کلپ کو واپس ٹائم لائن پر رکھیں';
+
+  @override
   String get videoEditorBackdropLabel => 'پس منظر';
 
   @override

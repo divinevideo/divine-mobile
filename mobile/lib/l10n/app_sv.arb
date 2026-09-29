@@ -3629,6 +3629,8 @@
   "videoEditorDetachProgressLabel": "Kopplar loss klippet …",
   "videoEditorDetachFailed": "Det gick inte att lossa klippet. Din tidslinje är oförändrad.",
   "videoEditorDetachImagePickFailed": "Det gick inte att läsa in fotot.",
+  "videoEditorReattachLabel": "Lägg tillbaka",
+  "videoEditorReattachSemanticLabel": "Lägg tillbaka valt klipp på tidslinjen",
   "videoEditorBackdropLabel": "Bakgrund",
   "videoEditorBackdropSemanticLabel": "Ändra bakgrunden som håller platsen",
   "videoEditorBackdropTitle": "Ändra bakgrund",

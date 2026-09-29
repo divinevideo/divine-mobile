@@ -3629,6 +3629,8 @@
   "videoEditorDetachProgressLabel": "Se detașează clipul…",
   "videoEditorDetachFailed": "Clipul nu a putut fi desprins. Cronologia ta rămâne neschimbată.",
   "videoEditorDetachImagePickFailed": "Fotografia nu a putut fi încărcată.",
+  "videoEditorReattachLabel": "Pune înapoi",
+  "videoEditorReattachSemanticLabel": "Pune clipul selectat înapoi pe cronologie",
   "videoEditorBackdropLabel": "Fundal",
   "videoEditorBackdropSemanticLabel": "Schimbă fundalul care ține acest loc",
   "videoEditorBackdropTitle": "Schimbă fundalul",

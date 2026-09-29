@@ -8965,6 +8965,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Foto itu tidak bisa dimuat.';
 
   @override
+  String get videoEditorReattachLabel => 'Kembalikan';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Kembalikan klip yang dipilih ke timeline';
+
+  @override
   String get videoEditorBackdropLabel => 'Latar';
 
   @override

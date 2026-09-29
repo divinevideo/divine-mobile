@@ -9227,6 +9227,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się wczytać tego zdjęcia.';
 
   @override
+  String get videoEditorReattachLabel => 'Przywróć';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Przywróć wybrany klip na oś czasu';
+
+  @override
   String get videoEditorBackdropLabel => 'Tło';
 
   @override

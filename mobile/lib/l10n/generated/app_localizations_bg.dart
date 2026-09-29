@@ -9127,6 +9127,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Снимката не можа да се зареди.';
 
   @override
+  String get videoEditorReattachLabel => 'Върни';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Върни избрания клип на времевата линия';
+
+  @override
   String get videoEditorBackdropLabel => 'Фон';
 
   @override

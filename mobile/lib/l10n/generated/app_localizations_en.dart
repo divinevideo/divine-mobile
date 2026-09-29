@@ -9140,6 +9140,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorDetachImagePickFailed => 'Couldn\'t load that photo.';
 
   @override
+  String get videoEditorReattachLabel => 'Back to timeline';
+
+  @override
+  String get videoEditorReattachSemanticLabel =>
+      'Put the selected clip back on the timeline';
+
+  @override
   String get videoEditorBackdropLabel => 'Backdrop';
 
   @override

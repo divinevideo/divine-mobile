@@ -5953,6 +5953,11 @@
   },
   "videoEditorDetachFailed": "Couldn't detach that clip. Your timeline is unchanged.",
   "videoEditorDetachImagePickFailed": "Couldn't load that photo.",
+  "videoEditorReattachLabel": "Back to timeline",
+  "@videoEditorReattachLabel": {
+    "description": "Action-bar button on a clip detached onto the canvas. Puts the clip back onto the timeline as a regular clip, in the slot it left if that is still there, otherwise at the playhead. Keep it short — it sits under a 52dp icon beside Split, Crop and Green screen."
+  },
+  "videoEditorReattachSemanticLabel": "Put the selected clip back on the timeline",
   "videoEditorBackdropLabel": "Backdrop",
   "@videoEditorBackdropLabel": {
     "description": "Clip action-bar button on the still that holds the slot a detached clip left behind. Opens the sheet that swaps that still for another colour or photo. Keep it short — it sits under a 52dp icon beside Delete and Done."

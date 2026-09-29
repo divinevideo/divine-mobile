@@ -12,6 +12,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
+import 'package:openvine/models/video_editor/detached_clip_reattach.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
@@ -300,6 +301,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     // one's placeholder renders is queued rather than silently dropped.
     on<ClipEditorClipDetachRequested>(
       _onClipDetachRequested,
+      transformer: sequential(),
+    );
+
+    // Put a detached clip back. sequential for the same reason: a second
+    // layer sent back while the first is measured is queued, not dropped.
+    on<ClipEditorDetachedClipReattachRequested>(
+      _onDetachedClipReattachRequested,
       transformer: sequential(),
     );
 
@@ -2022,6 +2030,98 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           previousClips: currentClips,
           detachedClip: clip,
           placeholder: placeholder,
+        ),
+      ),
+    );
+  }
+
+  /// Puts a clip detached onto the canvas back onto the timeline — the way
+  /// back from [_onClipDetachRequested].
+  ///
+  /// Only what the layer showed comes back, as trim, so the footage the layer
+  /// cut stays recoverable with the trim handles. The clip takes the slot its
+  /// placeholder holds, if that is still on the timeline, and otherwise joins
+  /// at the playhead.
+  ///
+  /// What the layer did on the canvas stays behind: its position, size and
+  /// rotation have no timeline equivalent, and neither has its live green
+  /// screen, which a timeline clip can only carry baked into its file. A key
+  /// baked in before the clip was detached is part of the clip and comes back
+  /// with it.
+  ///
+  /// Removing the layer is the widget layer's half, driven by
+  /// [ClipEditorState.lastDetachedClipReattachResult], so both changes land in
+  /// one history entry.
+  Future<void> _onDetachedClipReattachRequested(
+    ClipEditorDetachedClipReattachRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    // A free crop on the canvas can have left the file any shape, and the
+    // clip's recorded ratios are not a dependable answer for a draft that
+    // went through both a timeline and a canvas crop. The preview fits the
+    // clip's frames by this value, so it is read off the file.
+    final video = event.clip.video;
+    final measuredAspectRatio = video == null
+        ? null
+        : await _measureAspectRatio(video);
+    if (isClosed) return;
+
+    final currentClips = state.clips;
+    var clip = detachedClipTrimmedToLayer(
+      clip: event.clip,
+      sourceOffset: event.sourceOffset,
+      window: event.window,
+    );
+    // Duplicating or splitting a layer copies its clip id, so a second layer
+    // of the same footage would otherwise collide with the first one back.
+    if (currentClips.any((c) => c.id == clip.id)) {
+      clip = clip.copyWith(
+        id: '${clip.id}_${DateTime.now().microsecondsSinceEpoch}',
+      );
+    }
+
+    final placeholderIndex = event.placeholderClipId == null
+        ? -1
+        : currentClips.indexWhere(
+            (c) => c.isPlaceholder && c.id == event.placeholderClipId,
+          );
+    final index = placeholderIndex >= 0
+        ? placeholderIndex
+        : reattachInsertIndex(currentClips, event.playhead);
+
+    clip = clip.copyWith(
+      videoAspectRatio: measuredAspectRatio ?? clip.videoAspectRatio,
+      // The first clip's ratio is the canvas coordinate system, and a canvas
+      // crop rewrites a detached clip's. Inheriting the ratio the canvas
+      // already has keeps every other layer where it is.
+      originalAspectRatio: index == 0 && currentClips.isNotEmpty
+          ? currentClips.first.originalAspectRatio
+          : null,
+    );
+
+    final newClips = List<DivineVideoClip>.of(currentClips);
+    if (placeholderIndex >= 0) {
+      newClips[placeholderIndex] = clip;
+    } else {
+      newClips.insert(index, clip);
+    }
+
+    Log.debug(
+      '↩️ Detached clip ${event.clip.id} back on the timeline at index $index '
+      '(${placeholderIndex >= 0 ? 'placeholder slot' : 'playhead'})',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
+
+    // The placeholder's files are deliberately not reaped: undo puts it back.
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        currentClipIndex: index,
+        isEditing: false,
+        lastDetachedClipReattachResult: DetachedClipReattachResult(
+          previousClips: currentClips,
+          layerId: event.layerId,
         ),
       ),
     );

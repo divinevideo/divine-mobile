@@ -23,10 +23,9 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
 /// Every operation the user can wait on — split, reverse, transform, merge,
-/// detach, backdrop change, detached-clip transform, remove, audio extraction,
-/// library save, library import — reports its outcome through a `last*Result`
-/// field on
-/// [ClipEditorState].
+/// detach, backdrop change, detached-clip transform and reattach, remove, audio
+/// extraction, library save, library import — reports its outcome through a
+/// `last*Result` field on [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
 ///
@@ -46,10 +45,12 @@ class ClipEditorResultListeners extends StatelessWidget {
             child: _ClipDetachResultListener(
               child: _ClipPlaceholderFillResultListener(
                 child: _DetachedClipTransformResultListener(
-                  child: _ClipsRemovedResultListener(
-                    child: _AudioExtractionResultListener(
-                      child: _ClipLibrarySaveResultListener(
-                        child: _ClipLibraryImportResultListener(child: child),
+                  child: _DetachedClipReattachResultListener(
+                    child: _ClipsRemovedResultListener(
+                      child: _AudioExtractionResultListener(
+                        child: _ClipLibrarySaveResultListener(
+                          child: _ClipLibraryImportResultListener(child: child),
+                        ),
                       ),
                     ),
                   ),
@@ -303,8 +304,18 @@ class _ClipDetachResultListener extends StatelessWidget {
   void _onDetachResult(BuildContext context, ClipEditorState state) {
     final result = state.lastDetachResult;
     switch (result) {
-      case ClipDetachSuccess(:final previousClips, :final detachedClip):
-        _commitDetach(context, state, previousClips, detachedClip);
+      case ClipDetachSuccess(
+        :final previousClips,
+        :final detachedClip,
+        :final placeholder,
+      ):
+        _commitDetach(
+          context,
+          state,
+          previousClips,
+          detachedClip,
+          placeholderClipId: placeholder?.id,
+        );
       case ClipDetachFailure():
         ScaffoldMessenger.of(context).showSnackBar(
           DivineSnackbarContainer.snackBar(
@@ -323,8 +334,9 @@ class _ClipDetachResultListener extends StatelessWidget {
     BuildContext context,
     ClipEditorState state,
     List<DivineVideoClip> previousClips,
-    DivineVideoClip detachedClip,
-  ) {
+    DivineVideoClip detachedClip, {
+    String? placeholderClipId,
+  }) {
     final scope = VideoEditorScope.of(context);
     final editor = scope.editor;
     if (editor == null) return;
@@ -363,6 +375,8 @@ class _ClipDetachResultListener extends StatelessWidget {
     final meta = DetachedClipLayerData(
       clip: detachedClip,
       layerId: layerId,
+      // So putting the clip back can find the slot it left.
+      placeholderClipId: placeholderClipId,
     ).toMeta();
     final layer = WidgetLayer(
       id: layerId,
@@ -505,6 +519,54 @@ class _DetachedClipTransformResultListener extends StatelessWidget {
         meta: meta,
         exportConfigs: layer.exportConfigs.copyWith(meta: meta),
       ),
+    );
+  }
+}
+
+/// Finishes putting a detached clip back onto the timeline: removes the layer
+/// it came off and commits that together with the clip list as one history
+/// entry, so a single undo lifts the clip back onto the canvas.
+///
+/// The BLoC has already put the clip into the list. Kept at the scaffold level
+/// (always mounted) because the layer's action bar that asked for it is gone
+/// by the time the result lands.
+class _DetachedClipReattachResultListener extends StatelessWidget {
+  const _DetachedClipReattachResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastDetachedClipReattachResult,
+            curr.lastDetachedClipReattachResult,
+          ) &&
+          curr.lastDetachedClipReattachResult != null,
+      listener: _onResult,
+      child: child,
+    );
+  }
+
+  void _onResult(BuildContext context, ClipEditorState state) {
+    final result = state.lastDetachedClipReattachResult;
+    final editor = VideoEditorScope.of(context).editor;
+    if (result == null || editor == null) return;
+    final overlayBloc = context.read<TimelineOverlayBloc>();
+
+    final rebasedMarkers = rebaseTimelineMarkersForClipState(
+      oldClips: result.previousClips,
+      newClips: state.clips,
+      markers: overlayBloc.state.timelineMarkers,
+    );
+
+    overlayBloc.add(TimelineMarkersRebased(rebasedMarkers));
+    editor.setClipStateRemovingLayer(
+      previousClips: result.previousClips,
+      clips: state.clips,
+      layerId: result.layerId,
+      timelineMarkers: rebasedMarkers,
     );
   }
 }
