@@ -39,8 +39,7 @@ enum CaptionAnimationStyle {
 
   /// The enter/leave animations this style resolves to.
   ///
-  /// [highlight] has none: every word gets its own exported frame, and an
-  /// enter or leave animation would restart on each of them.
+  /// [highlight] has none: it appears and disappears instantly.
   ({List<pve.LayerAnimation> enter, List<pve.LayerAnimation> leave})
   resolve() => switch (this) {
     CaptionAnimationStyle.none ||
