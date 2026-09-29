@@ -257,6 +257,12 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether currently recording.
   bool get isRecording => recordingState == VideoRecorderState.recording;
 
+  /// Whether the shutter should show an active recording: recording, and no
+  /// stop requested yet. The shutter answers the stop tap right away, while
+  /// [isRecording] stays true until the file is finalized — ~1.6s later on
+  /// iOS with a look-ahead stabilization mode.
+  bool get showsActiveRecording => isRecording && !isStoppingRecording;
+
   /// Whether camera is initialized and not in error state.
   bool get isInitialized =>
       isCameraInitialized && recordingState != VideoRecorderState.error;

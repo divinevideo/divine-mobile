@@ -8,6 +8,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_recorder/shutter_gesture_detector.dart';
 
 /// Circular record button for starting/stopping video recording.
@@ -29,6 +30,8 @@ class RecordButton extends ConsumerWidget {
     final state = context.select(
       (VideoRecorderBloc b) => (
         isRecording: b.state.isRecording,
+        showsActiveRecording: b.state.showsActiveRecording,
+        isStoppingRecording: b.state.isStoppingRecording,
         timerDuration: b.state.timerDuration,
         canRecord: b.state.canRecord,
         isCameraInitialized: b.state.isCameraInitialized,
@@ -66,7 +69,9 @@ class RecordButton extends ConsumerWidget {
       identifier: SemanticIds.cameraRecordButton,
       button: true,
       enabled: isEnabled,
-      tooltip: state.isRecording
+      tooltip: state.isStoppingRecording
+          ? context.l10n.commonLoading
+          : state.showsActiveRecording
           ? context.l10n.videoRecorderStopRecordingTooltip
           : context.l10n.videoRecorderStartRecordingTooltip,
       child: ShutterGestureDetector(
@@ -95,7 +100,8 @@ class RecordButton extends ConsumerWidget {
             : null,
         child: _RecordButtonVisual(
           isEnabled: isEnabled,
-          isRecording: state.isRecording,
+          isRecording: state.showsActiveRecording,
+          isFinalizing: state.isStoppingRecording,
         ),
       ),
     );
@@ -120,22 +126,29 @@ class _BlockedRecordButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: const _RecordButtonVisual(isEnabled: false, isRecording: false),
+        child: const _RecordButtonVisual(
+          isEnabled: false,
+          isRecording: false,
+          isFinalizing: false,
+        ),
       ),
     );
   }
 }
 
 /// The visual chrome of the record button: a 96px ring with an inner shape
-/// that morphs between the idle dot and the recording square.
+/// that morphs between the idle dot and the recording square, and a loading
+/// mark over the dot while a stopped recording is still being finalized.
 class _RecordButtonVisual extends StatelessWidget {
   const _RecordButtonVisual({
     required this.isEnabled,
     required this.isRecording,
+    required this.isFinalizing,
   });
 
   final bool isEnabled;
   final bool isRecording;
+  final bool isFinalizing;
 
   @override
   Widget build(BuildContext context) {
@@ -153,28 +166,73 @@ class _RecordButtonVisual extends StatelessWidget {
           ),
           borderRadius: .circular(36),
         ),
-        child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            width: isRecording ? 32 : 64,
-            height: isRecording ? 32 : 64,
-            decoration: ShapeDecoration(
-              color: VineTheme.error,
-              shape: RoundedRectangleBorder(
-                borderRadius: .circular(isRecording ? 6 : 20),
-              ),
-              shadows: const [
-                BoxShadow(
-                  color: VineTheme.innerShadow,
-                  blurRadius: 1,
-                  offset: Offset(1, 1),
+        child: Stack(
+          alignment: .center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              width: isRecording ? 32 : 64,
+              height: isRecording ? 32 : 64,
+              decoration: ShapeDecoration(
+                color: VineTheme.error,
+                shape: RoundedRectangleBorder(
+                  borderRadius: .circular(isRecording ? 6 : 20),
                 ),
-              ],
+                shadows: const [
+                  BoxShadow(
+                    color: VineTheme.innerShadow,
+                    blurRadius: 1,
+                    offset: Offset(1, 1),
+                  ),
+                ],
+              ),
             ),
-          ),
+            _FinalizingIndicator(isVisible: isFinalizing),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// The branded loading mark shown while a stopped recording is finalized.
+///
+/// With a look-ahead stabilization mode iOS needs ~1.6s after the stop to hand
+/// over the last frames; without one that wait is ~90ms. The mark only fades
+/// in once the stop outlasts [_revealDelay], so it does not flash on every
+/// quick stop.
+class _FinalizingIndicator extends StatelessWidget {
+  const _FinalizingIndicator({required this.isVisible});
+
+  final bool isVisible;
+
+  static const _revealDelay = Duration(milliseconds: 300);
+  static const _fadeDuration = Duration(milliseconds: 150);
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _revealDelay + _fadeDuration;
+    // Transparent for the first part of the fade in both directions, so a
+    // stop that ends inside the delay never shows the mark at all.
+    final fadeCurve = Interval(
+      _revealDelay.inMilliseconds / total.inMilliseconds,
+      1,
+    );
+    return AnimatedSwitcher(
+      duration: total,
+      reverseDuration: _fadeDuration,
+      switchInCurve: fadeCurve,
+      switchOutCurve: fadeCurve,
+      // Distinct keys: the switcher drops an outgoing child whose key matches
+      // the incoming one, which would cut the fade-out short.
+      child: isVisible
+          // The button's tooltip already announces the wait.
+          ? const ExcludeSemantics(
+              key: ValueKey('finalizing'),
+              child: BrandedLoadingIndicator(size: 40),
+            )
+          : const SizedBox.shrink(key: ValueKey('idle')),
     );
   }
 }

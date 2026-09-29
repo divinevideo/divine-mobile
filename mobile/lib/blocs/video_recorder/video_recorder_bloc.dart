@@ -1060,13 +1060,18 @@ class VideoRecorderBloc
     final ClipManagerNotifier clipManager;
     final Duration remainingDuration;
     try {
+      // Freeze the timer at the tap, not when the native stop returns. With a
+      // look-ahead stabilization mode iOS waits ~1.6s for the camera to hand
+      // over the last frames; a timer still running through that wait reads
+      // as a stop that did not take, and counts the wait into the clip.
+      _readClipManager().stopRecording();
       await _stopSoundPlayback();
       videoResult = event.result ?? await _cameraService.stopRecording();
       // Best-effort: a wakelock teardown failure must not abort the stop and
       // discard an already-captured clip (videoResult is assigned above), so
       // it is swallowed rather than thrown into the recovery catch.
       await _disableWakelockSafely();
-      clipManager = _readClipManager()..stopRecording();
+      clipManager = _readClipManager();
       remainingDuration = clipManager.remainingDuration;
     } catch (e, stackTrace) {
       // Defense-in-depth recovery. Neither production CameraService throws
@@ -1087,11 +1092,9 @@ class VideoRecorderBloc
         stackTrace: stackTrace,
       );
       addError(e, stackTrace);
-      // stopRecording() cancels the periodic 60fps duration timer and stops
-      // the stopwatch (resetRecording alone would leave that timer running).
-      _readClipManager()
-        ..stopRecording()
-        ..resetRecording();
+      // The 60fps duration timer was already stopped at the top of the try;
+      // resetRecording only clears the in-progress segment.
+      _readClipManager().resetRecording();
       await _disableWakelockSafely();
       emit(
         state.copyWith(
