@@ -28,9 +28,10 @@ abstract class AccountDeletionRecoveryPolling {
   ];
   static const cap = Duration(seconds: 30);
 
-  /// After this long, polls slow to [slowCap]. Final erasure runs on a server
+  /// After this long, [slowCap] replaces [cap]. Final erasure runs on a server
   /// schedule and usually lands hours later, so a 30-second cadence for the
-  /// whole wait would only spend battery and requests.
+  /// whole wait would only spend battery and requests. [schedule] still runs
+  /// first after every start, so a relaunch checks within seconds.
   static const slowAfter = Duration(minutes: 15);
   static const slowCap = Duration(minutes: 5);
 
@@ -53,8 +54,8 @@ abstract class AccountDeletionRecoveryPolling {
       : supportEscapeAfter;
 
   static Duration delayForTick(int tickIndex, {Duration elapsed = .zero}) {
-    if (elapsed >= slowAfter) return slowCap;
-    return tickIndex < schedule.length ? schedule[tickIndex] : cap;
+    if (tickIndex < schedule.length) return schedule[tickIndex];
+    return elapsed >= slowAfter ? slowCap : cap;
   }
 }
 

@@ -1005,6 +1005,41 @@ void main() {
       );
     });
 
+    test(
+      'a relaunch hours into processing checks within seconds, then slows',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+        await store.recordStartIfAbsent(
+          _processing.id,
+          now.subtract(const Duration(hours: 6)),
+        );
+        final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
+
+        await cubit.resume(_processing);
+
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          AccountDeletionRecoveryPolling.schedule.first,
+        );
+        for (final _ in AccountDeletionRecoveryPolling.schedule) {
+          await timers.fireNext();
+        }
+        expect(cubit.state.pollingPaused, isFalse);
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          AccountDeletionRecoveryPolling.slowCap,
+        );
+        await cubit.close();
+      },
+    );
+
     test('a different attempt receives a fresh budget', () async {
       final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
       await store.recordStartIfAbsent(
@@ -1198,8 +1233,7 @@ void main() {
         final fetchesBeforeRetry = cubit.state.pollTickIndex + 1;
         await cubit.retry();
         verify(repository.fetchCurrent).called(fetchesBeforeRetry + 1);
-        // Still past the support bound, so the fresh answer stays paused.
-        expect(cubit.state.pollingPaused, isTrue);
+        expect(cubit.state.pollingPaused, isFalse);
         await cubit.close();
       },
     );
