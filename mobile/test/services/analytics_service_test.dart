@@ -366,6 +366,49 @@ void main() {
     );
 
     test(
+      'stamps a navigation context with the time the navigation happened',
+      () async {
+        final queue = _MockProductEventQueue();
+        when(
+          () => queue.enqueue(any(), ownerPubkey: any(named: 'ownerPubkey')),
+        ).thenAnswer((_) async {});
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          productEventQueue: queue,
+          productAnalyticsEnabled: true,
+          currentUserPubkey: () => '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          now: () => DateTime.utc(2026, 8, 20),
+        );
+        await analyticsService.initialize();
+        final navigatedAt = DateTime.utc(2026, 8, 19, 23, 59, 59);
+
+        await analyticsService.recordNavigationContext(
+          fromSurface: ProductAnalyticsV2Surface.feed,
+          toSurface: ProductAnalyticsV2Surface.profile,
+          action: ProductAnalyticsV2NavigationAction.open,
+          occurredAt: navigatedAt,
+        );
+
+        final event =
+            verify(
+                  () => queue.enqueue(
+                    captureAny(),
+                    ownerPubkey: any(named: 'ownerPubkey'),
+                  ),
+                ).captured.single
+                as ProductAnalyticsV2Event;
+        expect(event.envelope.occurredAt, equals(navigatedAt));
+        expect(
+          event.envelope.eventId,
+          equals(
+            AnalyticsService.computeProductAnalyticsEventId(event.toJson()),
+          ),
+        );
+      },
+    );
+
+    test(
       'does not collect product events while the launch flag is off',
       () async {
         final queue = _MockProductEventQueue();

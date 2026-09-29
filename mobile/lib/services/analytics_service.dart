@@ -456,12 +456,17 @@ class AnalyticsService implements BackgroundAwareService {
     ),
   );
 
+  /// Records a move between two surfaces.
+  ///
+  /// Pass [occurredAt] when the navigation happened before this call, so the
+  /// event keeps its place among events the destination records meanwhile.
   Future<String?> recordNavigationContext({
     required ProductAnalyticsV2Surface fromSurface,
     required ProductAnalyticsV2Surface toSurface,
     required ProductAnalyticsV2NavigationAction action,
     String? contentId,
     String? recommendationId,
+    DateTime? occurredAt,
   }) => _trackProductEvent(
     (envelope) => ProductAnalyticsV2NavigationContextRecordedEvent(
       envelope: envelope,
@@ -473,6 +478,7 @@ class AnalyticsService implements BackgroundAwareService {
         recommendationId: recommendationId,
       ),
     ),
+    occurredAt: occurredAt,
   );
 
   Future<String?> recordOnboardingStep({
@@ -544,6 +550,7 @@ class AnalyticsService implements BackgroundAwareService {
   Future<String?> _trackProductEvent(
     ProductAnalyticsV2Event Function(ProductAnalyticsV2Envelope) build, {
     bool anonymous = false,
+    DateTime? occurredAt,
   }) async {
     // Fail closed until the stored consent preference has been loaded:
     // `_analyticsEnabled` defaults to true, so without the `_isInitialized`
@@ -561,7 +568,10 @@ class AnalyticsService implements BackgroundAwareService {
     final ownerPubkey = anonymous ? null : _currentUserPubkey?.call();
     if (!anonymous && (ownerPubkey == null || ownerPubkey.isEmpty)) return null;
 
-    final emptyEnvelope = _productAnalyticsEnvelope('');
+    final emptyEnvelope = _productAnalyticsEnvelope(
+      '',
+      occurredAt: occurredAt,
+    );
     final eventId = computeProductAnalyticsEventId(
       build(emptyEnvelope).toJson(),
     );
@@ -596,7 +606,10 @@ class AnalyticsService implements BackgroundAwareService {
     return eventId;
   }
 
-  ProductAnalyticsV2Envelope _productAnalyticsEnvelope(String eventId) {
+  ProductAnalyticsV2Envelope _productAnalyticsEnvelope(
+    String eventId, {
+    DateTime? occurredAt,
+  }) {
     final platform = switch (_platform().toLowerCase()) {
       'ios' => ProductAnalyticsV2Platform.ios,
       'android' => ProductAnalyticsV2Platform.android,
@@ -608,7 +621,7 @@ class AnalyticsService implements BackgroundAwareService {
     return ProductAnalyticsV2Envelope(
       eventId: eventId,
       schemaVersion: productAnalyticsV2SchemaVersion,
-      occurredAt: _now().toUtc(),
+      occurredAt: (occurredAt ?? _now()).toUtc(),
       anonymousId: _anonymousIdOverride?.call() ?? _anonymousId,
       sessionId: _sessionIdOverride?.call() ?? _sessionId,
       source: ProductAnalyticsV2Source.mobile,

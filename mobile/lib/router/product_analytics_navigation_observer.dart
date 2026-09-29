@@ -10,9 +10,12 @@ import 'package:openvine/services/analytics_service.dart';
 class ProductAnalyticsNavigationObserver extends NavigatorObserver {
   ProductAnalyticsNavigationObserver({
     required AnalyticsService Function() analytics,
-  }) : _analytics = analytics;
+    DateTime Function()? now,
+  }) : _analytics = analytics,
+       _now = now ?? DateTime.now;
 
   final AnalyticsService Function() _analytics;
+  final DateTime Function() _now;
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
@@ -53,19 +56,25 @@ class ProductAnalyticsNavigationObserver extends NavigatorObserver {
     required ProductAnalyticsV2NavigationAction action,
   }) {
     if (from == to) return;
-    try {
-      unawaited(
-        _analytics()
-            .recordNavigationContext(
-              fromSurface: from,
-              toSurface: to,
-              action: action,
-            )
-            .catchError((Object _) => null),
-      );
-    } catch (_) {
-      // Navigation must keep working if analytics has not started yet.
-    }
+    final navigatedAt = _now();
+    // A pages-API navigator notifies observers during its build, and a
+    // provider read there can make Riverpod call setState mid-build (#9334).
+    scheduleMicrotask(() {
+      try {
+        unawaited(
+          _analytics()
+              .recordNavigationContext(
+                fromSurface: from,
+                toSurface: to,
+                action: action,
+                occurredAt: navigatedAt,
+              )
+              .catchError((Object _) => null),
+        );
+      } catch (_) {
+        // Analytics may not be available yet; skipping this event is harmless.
+      }
+    });
   }
 }
 
