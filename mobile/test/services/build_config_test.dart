@@ -124,6 +124,17 @@ void main() {
       );
     });
 
+    test('smoothLoopSeam is an internal flag that defaults to off', () {
+      const config = BuildConfiguration();
+
+      expect(config.getDefault(FeatureFlag.smoothLoopSeam), isFalse);
+      expect(FeatureFlag.smoothLoopSeam.isInternal, isTrue);
+      expect(
+        config.getEnvironmentKey(FeatureFlag.smoothLoopSeam),
+        equals('FF_SMOOTH_LOOP_SEAM'),
+      );
+    });
+
     test('integratedApps should map to FF_INTEGRATED_APPS env var', () {
       const config = BuildConfiguration();
 
