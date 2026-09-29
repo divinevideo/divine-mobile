@@ -1307,159 +1307,219 @@ void main() {
       expect(repo.isSupporter, isTrue);
     });
 
-    test('settles a foreground claim the Worker verified but did not grant', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final apiClient = buildApiClient();
-      final repo = SupporterRepository(
-        pubkey: pubkeyA,
-        validator: validator,
-        prefs: prefs,
-        apiClient: apiClient,
+    group('settledPurchases', () {
+      const productId = 'divine.supporter.monthly';
+      late String readStatus;
+      late String claimStatus;
+      late List<Completer<void>> heldClaims;
+      late SupporterRepository repo;
+      late List<SupporterEntitlement> settled;
+
+      http.Response snapshotResponse(String status) => http.Response(
+        jsonEncode({
+          'status': status,
+          'entitlement': {
+            if (status == 'active') 'productId': productId,
+            'source': 'server',
+            'isActive': status == 'active',
+          },
+          'recognition': <String, dynamic>{},
+        }),
+        200,
       );
-      addTearDown(repo.dispose);
-      addTearDown(apiClient.dispose);
-      final settled = <SupporterEntitlement>[];
-      final subscription = repo.settledPurchases.listen(settled.add);
-      addTearDown(subscription.cancel);
-      // A routine refresh must not settle anything. It also leaves the account
-      // a non-member, so the claim below repeats the current value, which the
-      // changes stream cannot tell apart from that refresh.
-      await repo.refreshFromServer();
-      await pumpEventQueue();
-      expect(settled, isEmpty);
 
-      validator.proofController.add(
-        const SupporterPurchaseProof(
-          attemptId: 'foreground-refused',
-          store: 'apple',
-          productId: 'divine.supporter.monthly',
-          serverVerificationData: 'opaque-proof',
-          localVerificationData: '',
-          capturedPubkey: pubkeyA,
-        ),
+      SupporterPurchaseProof proof(String attemptId, {bool silent = false}) =>
+          SupporterPurchaseProof(
+            attemptId: attemptId,
+            store: 'apple',
+            productId: productId,
+            serverVerificationData: 'opaque-proof',
+            localVerificationData: '',
+            capturedPubkey: pubkeyA,
+            silent: silent,
+          );
+
+      /// Holds the next claim until the returned completer completes.
+      Completer<void> holdNextClaim() {
+        final hold = Completer<void>();
+        heldClaims.add(hold);
+        return hold;
+      }
+
+      setUp(() async {
+        readStatus = 'expired';
+        claimStatus = 'expired';
+        heldClaims = [];
+        final apiClient = SupporterApiClient(
+          baseUri: Uri.parse('https://supporters.test'),
+          authHeaderProvider: ({
+            required url,
+            required method,
+            payload,
+          }) async => (authorizationHeader: 'Nostr fixture', pubkey: pubkeyA),
+          httpClient: MockClient((request) async {
+            if (request.method != 'POST') return snapshotResponse(readStatus);
+            if (heldClaims.isNotEmpty) {
+              await heldClaims.removeAt(0).future;
+            }
+            return snapshotResponse(claimStatus);
+          }),
+        );
+        addTearDown(apiClient.dispose);
+        repo = SupporterRepository(
+          pubkey: pubkeyA,
+          validator: validator,
+          prefs: await SharedPreferences.getInstance(),
+          apiClient: apiClient,
+        );
+        addTearDown(repo.dispose);
+        settled = [];
+        final subscription = repo.settledPurchases.listen(settled.add);
+        addTearDown(subscription.cancel);
+      });
+
+      test('a routine refresh does not settle an open checkout', () async {
+        await repo.purchase(productId);
+        await repo.refreshFromServer();
+        await pumpEventQueue();
+
+        expect(settled, isEmpty);
+
+        validator.proofController.add(proof('checkout-after-refresh'));
+        await pumpEventQueue();
+        expect(settled, hasLength(1));
+      });
+
+      test(
+        'settles a checkout the Worker verified but did not grant',
+        () async {
+          await repo.purchase(productId);
+          validator.proofController.add(proof('checkout-refused'));
+          await pumpEventQueue();
+
+          expect(settled, hasLength(1));
+          expect(settled.single.isSupporter, isFalse);
+          expect(repo.isSupporter, isFalse);
+        },
       );
-      await pumpEventQueue();
 
-      expect(settled, hasLength(1));
-      expect(settled.single.isSupporter, isFalse);
-      expect(repo.isSupporter, isFalse);
-    });
+      test('settles a checkout whose claim granted access', () async {
+        claimStatus = 'active';
+        await repo.purchase(productId);
+        validator.proofController.add(proof('checkout-granted'));
+        await pumpEventQueue();
 
-    test('settles a foreground claim that granted access', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final apiClient = buildApiClient(active: true);
-      final repo = SupporterRepository(
-        pubkey: pubkeyA,
-        validator: validator,
-        prefs: prefs,
-        apiClient: apiClient,
+        expect(settled, hasLength(1));
+        expect(settled.single.isSupporter, isTrue);
+      });
+
+      test('settles a checkout only once', () async {
+        await repo.purchase(productId);
+        validator.proofController
+          ..add(proof('checkout-first'))
+          ..add(proof('checkout-second'));
+        await pumpEventQueue();
+
+        expect(validator.completePurchaseCallCount, equals(2));
+        expect(settled, hasLength(1));
+      });
+
+      test('does not settle a silent background claim', () async {
+        await repo.purchase(productId);
+        validator.proofController.add(proof('background', silent: true));
+        await pumpEventQueue();
+
+        expect(validator.completePurchaseCallCount, equals(1));
+        expect(settled, isEmpty);
+      });
+
+      test('does not settle a claim when no checkout is open', () async {
+        validator.proofController.add(proof('no-checkout'));
+        await pumpEventQueue();
+
+        expect(validator.completePurchaseCallCount, equals(1));
+        expect(settled, isEmpty);
+      });
+
+      test('does not settle a checkout the store ended', () async {
+        validator.purchaseError = const PurchaseFailedException(
+          'cancelled',
+          'Purchase was cancelled.',
+        );
+        await expectLater(
+          repo.purchase(productId),
+          throwsA(isA<PurchaseFailedException>()),
+        );
+
+        validator.proofController.add(proof('late-delivery'));
+        await pumpEventQueue();
+
+        expect(validator.completePurchaseCallCount, equals(1));
+        expect(settled, isEmpty);
+      });
+
+      test(
+        'a restore claim finishing mid-checkout does not settle it',
+        () async {
+          final restoreClaim = holdNextClaim();
+          await repo.restorePurchases();
+          validator.proofController.add(proof('restored'));
+          await pumpEventQueue();
+          await repo.purchase(productId);
+
+          restoreClaim.complete();
+          await pumpEventQueue();
+          expect(validator.completePurchaseCallCount, equals(1));
+          expect(settled, isEmpty);
+
+          validator.proofController.add(proof('checkout'));
+          await pumpEventQueue();
+          expect(settled, hasLength(1));
+        },
       );
-      addTearDown(repo.dispose);
-      addTearDown(apiClient.dispose);
-      final settled = <SupporterEntitlement>[];
-      final subscription = repo.settledPurchases.listen(settled.add);
-      addTearDown(subscription.cancel);
 
-      validator.proofController.add(
-        const SupporterPurchaseProof(
-          attemptId: 'foreground-granted',
-          store: 'apple',
-          productId: 'divine.supporter.monthly',
-          serverVerificationData: 'opaque-proof',
-          localVerificationData: '',
-          capturedPubkey: pubkeyA,
-        ),
+      test(
+        'an earlier checkout claim does not settle a later checkout',
+        () async {
+          final earlierClaim = holdNextClaim();
+          await repo.purchase(productId);
+          validator.proofController.add(proof('earlier-checkout'));
+          await pumpEventQueue();
+          await repo.purchase(productId);
+
+          earlierClaim.complete();
+          await pumpEventQueue();
+          expect(validator.completePurchaseCallCount, equals(1));
+          expect(settled, isEmpty);
+
+          validator.proofController.add(proof('later-checkout'));
+          await pumpEventQueue();
+          expect(settled, hasLength(1));
+        },
       );
-      await pumpEventQueue();
 
-      expect(settled, hasLength(1));
-      expect(settled.single.isSupporter, isTrue);
-    });
+      test(
+        'settles with known membership when the claim is inconclusive',
+        () async {
+          await repo.purchase(productId);
+          validator.emit(
+            const SupporterEntitlement(
+              productId: productId,
+              source: EntitlementSource.server,
+            ),
+          );
+          await pumpEventQueue();
+          expect(repo.isSupporter, isTrue);
 
-    test('settles an inconclusive claim with the membership it kept', () async {
-      final prefs = await SharedPreferences.getInstance();
-      var status = 'active';
-      final apiClient = SupporterApiClient(
-        baseUri: Uri.parse('https://supporters.test'),
-        authHeaderProvider: ({required url, required method, payload}) async =>
-            (authorizationHeader: 'Nostr fixture', pubkey: pubkeyA),
-        httpClient: MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'status': status,
-              'entitlement': {
-                'source': 'server',
-                'isActive': status == 'active',
-              },
-              'recognition': <String, dynamic>{},
-            }),
-            200,
-          ),
-        ),
+          claimStatus = 'unknown';
+          validator.proofController.add(proof('checkout-inconclusive'));
+          await pumpEventQueue();
+
+          expect(settled, hasLength(1));
+          expect(settled.single.isSupporter, isTrue);
+          expect(repo.isSupporter, isTrue);
+        },
       );
-      final repo = SupporterRepository(
-        pubkey: pubkeyA,
-        validator: validator,
-        prefs: prefs,
-        apiClient: apiClient,
-      );
-      addTearDown(repo.dispose);
-      addTearDown(apiClient.dispose);
-      await repo.refreshFromServer();
-      expect(repo.isSupporter, isTrue);
-      final settled = <SupporterEntitlement>[];
-      final subscription = repo.settledPurchases.listen(settled.add);
-      addTearDown(subscription.cancel);
-
-      status = 'unknown';
-      validator.proofController.add(
-        const SupporterPurchaseProof(
-          attemptId: 'foreground-inconclusive',
-          store: 'apple',
-          productId: 'divine.supporter.monthly',
-          serverVerificationData: 'opaque-proof',
-          localVerificationData: '',
-          capturedPubkey: pubkeyA,
-        ),
-      );
-      await pumpEventQueue();
-
-      expect(repo.isSupporter, isTrue);
-      expect(settled, hasLength(1));
-      expect(settled.single.isSupporter, isTrue);
-    });
-
-    test('does not settle a silent background claim', () async {
-      final prefs = await SharedPreferences.getInstance();
-      final apiClient = buildApiClient();
-      final repo = SupporterRepository(
-        pubkey: pubkeyA,
-        validator: validator,
-        prefs: prefs,
-        apiClient: apiClient,
-      );
-      addTearDown(repo.dispose);
-      addTearDown(apiClient.dispose);
-      final settled = <SupporterEntitlement>[];
-      final subscription = repo.settledPurchases.listen(settled.add);
-      addTearDown(subscription.cancel);
-
-      validator.proofController.add(
-        const SupporterPurchaseProof(
-          attemptId: 'background-refused',
-          store: 'apple',
-          productId: 'divine.supporter.monthly',
-          serverVerificationData: 'opaque-proof',
-          localVerificationData: '',
-          capturedPubkey: pubkeyA,
-          silent: true,
-        ),
-      );
-      await pumpEventQueue();
-
-      // The claim ran to acknowledgement, so the empty stream is not vacuous.
-      expect(validator.completePurchaseCallCount, 1);
-      expect(settled, isEmpty);
     });
 
     test('leaves a redelivered proof unacknowledged and surfaces unavailable '

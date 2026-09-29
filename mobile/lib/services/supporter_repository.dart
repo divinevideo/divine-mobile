@@ -97,6 +97,11 @@ class SupporterRepository {
   final StreamController<SupporterEntitlement> _settledPurchases =
       StreamController<SupporterEntitlement>.broadcast();
 
+  /// Identifies the checkout [purchase] opened, so only that checkout's claim
+  /// settles it. A restore or an earlier checkout whose claim is still in
+  /// flight must not end a checkout the user started afterwards.
+  Object? _openCheckout;
+
   /// The current entitlement (hydrated from cache on construction, refreshed by
   /// the validator stream as purchases arrive).
   SupporterEntitlement get current => _current;
@@ -125,14 +130,16 @@ class SupporterRepository {
   /// listeners.
   Stream<SupporterEntitlement> get changes => _controller.stream;
 
-  /// The canonical entitlement after a user-initiated purchase claim settles.
+  /// The canonical entitlement after the claim for a checkout started through
+  /// [purchase] settles.
   ///
   /// [changes] carries every canonical update, including a routine account
   /// refresh or a recognition edit, so a caller cannot tell a settled claim
   /// from one of those. This stream isolates the claim result, and emits once
-  /// per foreground claim even when it granted no entitlement, so checkout has
-  /// a terminal signal. Background recovery and renewals do not emit here, so
-  /// a silent repair cannot end someone else's checkout.
+  /// per checkout even when its claim granted no entitlement, so checkout has
+  /// a terminal signal. Restores, background recovery and renewals do not emit
+  /// here, and neither does a claim that began before the current checkout, so
+  /// none of them can end a checkout the user is watching.
   Stream<SupporterEntitlement> get settledPurchases => _settledPurchases.stream;
 
   /// The underlying validator, exposed so the UI/cubit can drive purchases and
@@ -166,6 +173,7 @@ class SupporterRepository {
       );
     }
     await _rememberOwner(pendingKey);
+    final checkout = _openCheckout = Object();
 
     Log.info(
       'Starting supporter purchase for ${pubkeyForLogs(_pubkey)} '
@@ -180,6 +188,7 @@ class SupporterRepository {
         attemptId: 'supporter-${DateTime.now().microsecondsSinceEpoch}',
       );
     } on EntitlementException catch (error) {
+      _closeCheckout(checkout);
       final storeCode = error is PurchaseFailedException
           ? ', code=${error.responseCode}'
           : '';
@@ -195,7 +204,14 @@ class SupporterRepository {
         await _prefs.remove(pendingKey);
       }
       rethrow;
+    } on Object {
+      _closeCheckout(checkout);
+      rethrow;
     }
+  }
+
+  void _closeCheckout(Object checkout) {
+    if (identical(_openCheckout, checkout)) _openCheckout = null;
   }
 
   /// Whether the store ended the attempt without creating a purchase that it
@@ -213,6 +229,8 @@ class SupporterRepository {
 
   /// Restores purchases for this exact signed-in account.
   Future<SupporterEntitlement> restorePurchases() {
+    // A restore is not a checkout; its claims never settle one.
+    _openCheckout = null;
     return _validator.restorePurchases(
       capturedPubkey: _pubkey,
       attemptId: 'supporter-restore-${DateTime.now().microsecondsSinceEpoch}',
@@ -412,6 +430,10 @@ class SupporterRepository {
   }
 
   Future<void> _confirmPurchase(SupporterPurchaseProof proof) async {
+    // Bind the claim to the checkout open when its proof arrived.
+    final checkout = !proof.silent && proof.capturedPubkey == _pubkey
+        ? _openCheckout
+        : null;
     final proofOwnerKey = '$_proofOwnerPrefix${proof.attemptId}';
     final pendingKey = '$_pendingOwnerPrefix${proof.productId}';
     final proofOwner = _prefs.getString(proofOwnerKey);
@@ -484,15 +506,14 @@ class SupporterRepository {
       );
       await _rememberOwner(proofOwnerKey);
       _handleSnapshot(snapshot);
-      // A user-initiated claim is terminal even when it granted nothing: the
+      // A checkout's claim is terminal even when it granted nothing: the
       // Worker verified the purchase and its canonical state is not active.
       // Report the resolved entitlement on the claim-only stream so callers can
       // end checkout without mistaking a routine refresh for the outcome, and
       // without an inconclusive claim revoking known benefits.
-      if (!proof.silent && proof.capturedPubkey == _pubkey) {
-        if (!_settledPurchases.isClosed) {
-          _settledPurchases.add(_current);
-        }
+      if (checkout != null && identical(checkout, _openCheckout)) {
+        _openCheckout = null;
+        if (!_settledPurchases.isClosed) _settledPurchases.add(_current);
       }
       await _validator.completePurchase(proof);
       if (_prefs.getString(pendingKey) == _pubkey) {
