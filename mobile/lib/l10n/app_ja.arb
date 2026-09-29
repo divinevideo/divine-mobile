@@ -3092,7 +3092,7 @@
     "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
     "supporterTitle": "Divine サポーター",
     "@supporterTitle": {"description": "Title of the supporter subscription settings screen and its settings tile."},
-    "supporterTileSubtitle": "任意の月額サブスクで Divine を応援。",
+    "supporterTileSubtitle": "任意のサブスクで Divine を応援。",
     "@supporterTileSubtitle": {"description": "Subtitle of the supporter subscription settings tile."},
     "supporterHeroTitle": "Divine を走らせ続けよう",
     "@supporterHeroTitle": {"description": "Headline at the top of the supporter subscription screen."},

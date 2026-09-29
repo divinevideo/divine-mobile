@@ -11688,7 +11688,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Подкрепи Divine с незадължителен месечен абонамент.';
+      'Подкрепи Divine с незадължителен абонамент.';
 
   @override
   String get supporterHeroTitle => 'Помогни на Divine да продължава';

@@ -11277,7 +11277,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterTitle => 'የDivine ደጋፊዎች';
 
   @override
-  String get supporterTileSubtitle => 'Divineን በአማራጭ ወርሃዊ የደንበኝነት ምዝገባ ይደግፉ።';
+  String get supporterTileSubtitle => 'Divineን በአማራጭ የደንበኝነት ምዝገባ ይደግፉ።';
 
   @override
   String get supporterHeroTitle => 'Divineን እንዲቀጥል ያድርጉ';

@@ -2638,7 +2638,7 @@
     "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
     "supporterTitle": "Divine 서포터",
     "@supporterTitle": {"description": "Title of the supporter subscription settings screen and its settings tile."},
-    "supporterTileSubtitle": "선택형 월간 구독으로 Divine을 후원해요.",
+    "supporterTileSubtitle": "선택형 구독으로 Divine을 후원해요.",
     "@supporterTileSubtitle": {"description": "Subtitle of the supporter subscription settings tile."},
     "supporterHeroTitle": "Divine이 계속 돌아가게 해주세요",
     "@supporterHeroTitle": {"description": "Headline at the top of the supporter subscription screen."},

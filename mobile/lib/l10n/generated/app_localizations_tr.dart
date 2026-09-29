@@ -11499,7 +11499,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'İsteğe bağlı aylık abonelikle Divine\'ı destekle.';
+      'İsteğe bağlı abonelikle Divine\'ı destekle.';
 
   @override
   String get supporterHeroTitle => 'Divine\'ı ayakta tut';

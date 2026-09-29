@@ -3099,7 +3099,7 @@
     "@crosspostingConnectionDenied": {"description": "Snackbar when the user denied the connection on the provider's page.", "placeholders": {"platform": {"type": "String"}}},
     "supporterTitle": "Sostenitori Divine",
     "@supporterTitle": {"description": "Title of the supporter subscription settings screen and its settings tile."},
-    "supporterTileSubtitle": "Sostieni Divine con un abbonamento mensile facoltativo.",
+    "supporterTileSubtitle": "Sostieni Divine con un abbonamento facoltativo.",
     "@supporterTileSubtitle": {"description": "Subtitle of the supporter subscription settings tile."},
     "supporterHeroTitle": "Mantieni Divine in funzione",
     "@supporterHeroTitle": {"description": "Headline at the top of the supporter subscription screen."},

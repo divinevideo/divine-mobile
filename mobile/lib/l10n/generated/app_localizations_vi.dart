@@ -11521,7 +11521,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Ủng hộ Divine bằng gói đăng ký hàng tháng tùy chọn.';
+      'Ủng hộ Divine bằng gói đăng ký tùy chọn.';
 
   @override
   String get supporterHeroTitle => 'Giữ Divine hoạt động';

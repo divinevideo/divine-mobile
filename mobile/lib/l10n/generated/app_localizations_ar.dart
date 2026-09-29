@@ -11513,7 +11513,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supporterTitle => 'داعمو Divine';
 
   @override
-  String get supporterTileSubtitle => 'ادعم Divine باشتراك شهري اختياري.';
+  String get supporterTileSubtitle => 'ادعم Divine باشتراك اختياري.';
 
   @override
   String get supporterHeroTitle => 'ساعد Divine على الاستمرار';

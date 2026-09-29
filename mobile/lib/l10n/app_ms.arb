@@ -6157,7 +6157,7 @@
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },
-  "supporterTileSubtitle": "Sokong Divine dengan langganan bulanan pilihan.",
+  "supporterTileSubtitle": "Sokong Divine dengan langganan pilihan.",
   "@supporterTileSubtitle": {
     "description": "Subtitle of the supporter subscription settings tile."
   },

@@ -6157,7 +6157,7 @@
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },
-  "supporterTileSubtitle": "通过自愿的月度订阅支持 Divine。",
+  "supporterTileSubtitle": "通过自愿订阅支持 Divine。",
   "@supporterTileSubtitle": {
     "description": "Subtitle of the supporter subscription settings tile."
   },
