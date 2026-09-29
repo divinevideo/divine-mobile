@@ -58,13 +58,10 @@ class TextEffectsPreviewText extends StatelessWidget {
         VideoEditorConstants.baseFontSize;
     final shadows = [for (final shadow in effects.shadows) shadow.scale(scale)];
 
-    // The outline pass paints with a stroke foreground, which a highlighted
-    // span's own color would replace, so only fill passes are highlighted.
-    Text line(TextStyle style, {bool fill = true}) {
+    Text line(TextStyle style) {
       final range = highlightRange;
       final color = highlightColor;
       final lit =
-          fill &&
           range != null &&
           color != null &&
           range.isValid &&
@@ -111,7 +108,6 @@ class TextEffectsPreviewText extends StatelessWidget {
               ..strokeJoin = StrokeJoin.round
               ..color = effects.outlineColor,
           ),
-          fill: false,
         ),
         line(style),
       ],
