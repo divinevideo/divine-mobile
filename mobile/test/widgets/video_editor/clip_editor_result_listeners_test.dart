@@ -129,6 +129,46 @@ void main() {
       );
     });
 
+    testWidgets('every detach gets its own layer id, even for the same clip', (
+      tester,
+    ) async {
+      // A clip that went back to the timeline keeps its id, so detaching it a
+      // second time must not hand its new layer the id of the first.
+      ClipEditorState detached() => ClipEditorState(
+        clips: [_clip('a')],
+        lastDetachResult: ClipDetachSuccess(
+          previousClips: [_clip('a'), _clip('b')],
+          detachedClip: _clip('b'),
+        ),
+      );
+      whenListen(
+        clipBloc,
+        Stream.fromIterable([detached(), detached()]),
+        initialState: const ClipEditorState(),
+      );
+
+      await tester.pumpWidget(build());
+      await tester.pump();
+      await tester.pump();
+
+      final layers = verify(
+        () => editor.addHistory(
+          newLayer: captureAny(named: 'newLayer'),
+          meta: any(named: 'meta'),
+        ),
+      ).captured.cast<Layer>();
+      expect(layers, hasLength(2));
+      expect(layers.first.id, isNot(layers.last.id));
+      // The meta names the layer by the same id, or its window is read off the
+      // wrong timeline item.
+      for (final layer in layers) {
+        expect(
+          DetachedClipLayerData.layerIdOf(DetachedClipLayerData.metaOf(layer)),
+          layer.id,
+        );
+      }
+    });
+
     testWidgets('putting a clip back removes its layer in the same entry', (
       tester,
     ) async {

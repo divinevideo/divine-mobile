@@ -371,7 +371,10 @@ class _ClipDetachResultListener extends StatelessWidget {
       compositionDuration: state.totalDuration,
     );
 
-    final layerId = 'detached_${detachedClip.id}';
+    // Unique per detach, not per clip: now that a clip can come back, detaching
+    // it again would reuse the id, and exported history folds layers by id.
+    final layerId =
+        'detached_${detachedClip.id}_${DateTime.now().microsecondsSinceEpoch}';
     final meta = DetachedClipLayerData(
       clip: detachedClip,
       layerId: layerId,
