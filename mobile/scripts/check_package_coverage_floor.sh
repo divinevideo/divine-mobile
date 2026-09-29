@@ -228,7 +228,7 @@ else
       fi
       echo "FAIL [package_coverage_floor]: cannot load the baseline from $BASE_REF."
       echo "  -> CI must never silently skip the ratchet, so this fails closed."
-      echo "     Ensure origin/main is fetched (git fetch --depth=1 origin main)."
+      echo "     Ensure origin/main is fetched (git fetch origin main)."
       echo "     For an intentional offline run: PACKAGE_COVERAGE_FLOOR_ALLOW_NO_BASE=1"
       exit 1
       ;;
