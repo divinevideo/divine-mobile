@@ -2032,17 +2032,16 @@ void main() {
       });
 
       // The line's count comes from the `profile_statistics` store, never from
-      // the profile object. Both keys below are shapes this screen's cache can
-      // never produce anyway — `follower_count` is written only by the
-      // people-search path, and `vine_followers` is a Kind 0 *tag* the getter
-      // reads out of *content* — so neither may reach the line (#8403).
+      // the profile object. `follower_count` below is a shape this screen's
+      // cache can never produce anyway — only the people-search path writes
+      // it — so it must not reach the line (#8403).
       testWidgets('ignores follower counts carried on the profile', (
         tester,
       ) async {
         final profile = UserProfile(
           pubkey: otherPubkey,
           name: 'Jack',
-          rawData: const {'follower_count': 2100, 'vine_followers': 430},
+          rawData: const {'follower_count': 2100},
           createdAt: now,
           eventId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
         );
@@ -2053,7 +2052,6 @@ void main() {
 
         expect(find.text(l10n.socialProofMutual), findsOneWidget);
         expect(find.textContaining('2.1K'), findsNothing);
-        expect(find.textContaining('430'), findsNothing);
       });
 
       // A zero is indistinguishable from a stats outage: funnelcake answers

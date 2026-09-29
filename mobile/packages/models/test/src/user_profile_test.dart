@@ -341,6 +341,35 @@ void main() {
 
         expect(profile.rawTags, isEmpty);
       });
+
+      test('keeps tags out of rawData', () {
+        // saveProfileEvent republishes rawData as the next kind 0's content,
+        // so a Vine archive import's tag-only metadata must stay a tag.
+        final content = {
+          'name': 'exampleviner',
+          'display_name': 'ExampleViner',
+          'nip05': '_@exampleviner.divine.video',
+        };
+        final event = Event(
+          testPubkey,
+          EventKind.metadata,
+          [
+            ['i', 'vine:1111111111111111111'],
+            ['vine_user_id', '1111111111111111111'],
+            ['vine_username', 'ExampleViner'],
+            ['vine_followers', '4213'],
+            ['vine_loops', '99871'],
+            ['vine_verified', 'true'],
+            ['client', 'vine-archive-importer'],
+          ],
+          jsonEncode(content),
+          createdAt: 1704067200,
+        )..id = testEventId;
+
+        final profile = UserProfile.fromNostrEvent(event);
+
+        expect(profile.rawData, equals(content));
+      });
     });
 
     group('fromUserProfileFound', () {
@@ -1076,129 +1105,8 @@ void main() {
       });
     });
 
-    group('vine-specific properties', () {
-      test('vineUsername returns value from rawData', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_username': 'vineuser'},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineUsername, equals('vineuser'));
-      });
-
-      test('vineUsername returns null when not present', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineUsername, isNull);
-      });
-
-      test('vineVerified returns true when set', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_verified': true},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineVerified, isTrue);
-      });
-
-      test('vineVerified returns false when not set', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineVerified, isFalse);
-      });
-
-      test('vineFollowers returns int value', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_followers': 1000},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineFollowers, equals(1000));
-      });
-
-      test('vineFollowers parses string value', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_followers': '500'},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineFollowers, equals(500));
-      });
-
-      test('vineFollowers returns null when not present', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineFollowers, isNull);
-      });
-
-      test('vineLoops returns int value', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_loops': 5000},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineLoops, equals(5000));
-      });
-
-      test('vineLoops parses string value', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_loops': '2500'},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.vineLoops, equals(2500));
-      });
-
-      test('isVineImport returns true when vineUsername is set', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {'vine_username': 'vineuser'},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.isVineImport, isTrue);
-      });
-
-      test('isVineImport returns false when vineUsername is not set', () {
-        final profile = UserProfile(
-          pubkey: testPubkey,
-          rawData: const {},
-          createdAt: testCreatedAt,
-          eventId: testEventId,
-        );
-
-        expect(profile.isVineImport, isFalse);
-      });
-
-      test('location returns value from rawData', () {
+    group('location', () {
+      test('returns value from rawData', () {
         final profile = UserProfile(
           pubkey: testPubkey,
           rawData: const {'location': 'New York'},
@@ -1714,71 +1622,6 @@ void main() {
         expect(result, contains(testPubkey));
         expect(result, contains('Test User'));
         expect(result, contains('hasAvatar: true'));
-      });
-    });
-
-    // #7486. The Vine archive importer writes its metadata as Kind 0 *tags*
-    // (`divine-resurrection-publisher/src/nostr.ts:104-129`), but these
-    // getters read `rawData`, which is the parsed Kind 0 *content*. Measured
-    // over 3,313 unique Kind 0 events on relay.divine.video: `vine_followers`
-    // appears in content 0 times and in tags 6. Pinned with a verbatim
-    // production event so the divergence cannot be rediscovered from scratch.
-    group('production Vine archive shape', () {
-      // pubkey 504363973e96a794628f01e481affc63191db0bd04219fdc3dfdb10b6c59fdd3
-      final archiveContent = jsonEncode(const {
-        'name': 'soloin',
-        'display_name': 'Soloin',
-        'location': 'Youtube: Soloin',
-        'picture': 'http://v.cdn.vine.co/r/avatars/4EFCEE3B84.jpg',
-        'banner': '0x33ccbf',
-        'website': 'https://divine.video/profile/5043',
-        'nip05': '_@soloin.divine.video',
-      });
-
-      Event archiveEvent() => Event(
-        testPubkey,
-        EventKind.metadata,
-        const [
-          ['i', 'vine:934260621510324224'],
-          ['vine_user_id', '934260621510324224'],
-          ['vine_username', 'Soloin'],
-          ['client', 'vine-archive-importer'],
-          ['vine_followers', '4213'],
-          ['vine_loops', '99871'],
-          ['vine_verified', 'true'],
-        ],
-        archiveContent,
-        createdAt: 1780262893,
-      )..id = testEventId;
-
-      test('carries the vine tags on rawTags', () {
-        final profile = UserProfile.fromNostrEvent(archiveEvent());
-
-        expect(
-          profile.rawTags.any((tag) => tag.first == 'vine_followers'),
-          isTrue,
-        );
-        expect(profile.rawTags.any((tag) => tag.first == 'vine_loops'), isTrue);
-      });
-
-      test('leaves every vine getter empty, because they read content', () {
-        final profile = UserProfile.fromNostrEvent(archiveEvent());
-
-        expect(profile.vineFollowers, isNull);
-        expect(profile.vineLoops, isNull);
-        expect(profile.vineUsername, isNull);
-        expect(profile.vineVerified, isFalse);
-      });
-
-      test('yields no follower or video count from a Kind 0', () {
-        final profile = UserProfile.fromNostrEvent(archiveEvent());
-
-        // Kind 0 never carries the REST keys either, so the conflating
-        // getters have nothing to fall back to on a by-pubkey surface.
-        expect(profile.restFollowerCount, isNull);
-        expect(profile.restVideoCount, isNull);
-        expect(profile.followerCount, isNull);
-        expect(profile.videoCount, isNull);
       });
     });
   });

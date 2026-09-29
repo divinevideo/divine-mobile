@@ -397,18 +397,6 @@ class UserProfile {
         '${animal[0].toUpperCase()}${animal.substring(1)} $number';
   }
 
-  /// Follower count from either Funnelcake REST API or Nostr Kind 0 rawData.
-  ///
-  /// Checks `follower_count` (REST) and `vine_followers` (Kind 0).
-  /// Returns `null` when neither source provides a value.
-  ///
-  /// Source-ambiguous, and both disjuncts are empty on a by-pubkey surface:
-  /// [restFollowerCount] is only ever populated by the people-search shape,
-  /// and [vineFollowers] never fires at all (see its own doc). Anything
-  /// resolving a profile by pubkey must read the `profile_statistics` store
-  /// instead — see `ProfileStats` and `watchProfileStats` (#7486, #8403).
-  int? get followerCount => restFollowerCount ?? vineFollowers;
-
   /// Follower count reported by Funnelcake REST responses only.
   ///
   /// Non-null only on a profile built by `ProfileSearchResult.toUserProfile`,
@@ -417,15 +405,6 @@ class UserProfile {
   /// `profile_statistics` rather than here, and a Kind 0 never carries the key
   /// at all — so this is always `null` on a by-pubkey surface (#8403).
   int? get restFollowerCount => _parseRawInt(rawData['follower_count']);
-
-  /// Video count from either Funnelcake REST API or Nostr Kind 0 rawData.
-  ///
-  /// Checks `video_count` (REST) and `vine_loops` (Kind 0).
-  /// Returns `null` when neither source provides a value.
-  ///
-  /// Carries the same source ambiguity as [followerCount], and is empty on a
-  /// by-pubkey surface for the same reasons (#7486, #8403).
-  int? get videoCount => restVideoCount ?? vineLoops;
 
   /// Video count reported by Funnelcake REST responses only.
   ///
@@ -497,33 +476,6 @@ class UserProfile {
     if (lud06?.isNotEmpty ?? false) return lud06;
     return null;
   }
-
-  /// Vine-specific metadata getters from rawData.
-  ///
-  /// **These four never fire in production.** [rawData] is the parsed Kind 0
-  /// *content*, but the only publisher of Vine-archive Kind 0 events
-  /// (`divine-resurrection-publisher`, `src/nostr.ts:104-129`) writes every
-  /// one of these keys as a **tag**. Measured over 3,313 unique Kind 0 events
-  /// on `relay.divine.video`: `vine_followers` appears in content 0 times and
-  /// in tags 6 times. `src/types.ts` declaring them on its `ProfileContent`
-  /// interface — where nothing assigns them — is the likely origin of the
-  /// mistake (`divine-resurrection-publisher#5`).
-  ///
-  /// Repointing them at [rawTags] would not help either: `user_profiles` has
-  /// no tags column, so a profile read back from the Drift cache always has
-  /// empty [rawTags]. Reviving Vine metrics needs a schema migration and a
-  /// label that does not pass an archive number off as a current one.
-  ///
-  /// Removal of these four, and of the fallbacks on [followerCount] /
-  /// [videoCount] above, is tracked in divine-mobile#8404.
-  String? get vineUsername => rawData['vine_username'] as String?;
-  bool get vineVerified => rawData['vine_verified'] == true;
-  int? get vineFollowers => _parseRawInt(rawData['vine_followers']);
-
-  int? get vineLoops => _parseRawInt(rawData['vine_loops']);
-
-  /// Check if this is an imported Vine user account
-  bool get isVineImport => vineUsername != null;
 
   /// Get location data if available
   String? get location => rawData['location'] as String?;
