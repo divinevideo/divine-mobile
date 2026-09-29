@@ -126,7 +126,7 @@ void main() {
       replyToAuthorPubkey: replyToAuthorPubkey,
     );
 
-    test('initial state is empty', () {
+    test('initial state is empty', () async {
       final bloc = createBloc();
       expect(bloc.state.mainInputText, '');
       expect(bloc.state.replyInputText, '');
@@ -134,7 +134,7 @@ void main() {
       expect(bloc.state.activeReplyCommentId, isNull);
       expect(bloc.state.activeEditCommentId, isNull);
       expect(bloc.state.outbox, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group('CommentTextChanged', () {
