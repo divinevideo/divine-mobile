@@ -282,6 +282,26 @@ run_list_ratchet
         expect(shallow.exitCode, 0);
         expect(shallow.stdout.toString().trim(), 'false');
       });
+
+      test('missing origin/main is fetched into a shallow checkout', () {
+        seedBaseRef(['a']);
+        writeCurrent(['a']);
+        // CI checks out shallow and has not fetched origin/main yet.
+        for (final args in [
+          ['branch', 'main'],
+          ['remote', 'add', 'origin', '.'],
+          ['fetch', '--quiet', '--depth=1', 'origin', 'main'],
+          ['update-ref', '-d', 'refs/remotes/origin/main'],
+        ]) {
+          final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        }
+
+        final res = run(baseRef: 'origin/main');
+
+        expect(res.exitCode, 0, reason: res.stdout.toString());
+        expect(res.stdout, contains('ratcheted vs origin/main'));
+      });
     });
   });
 }

@@ -146,6 +146,27 @@ run_numeric_ratchet
       expect(shallow.stdout.toString().trim(), 'false');
     });
 
+    test('missing origin/main is fetched into a shallow checkout', () {
+      // CI checks out shallow and has not fetched origin/main yet.
+      for (final args in [
+        ['remote', 'add', 'origin', '.'],
+        ['fetch', '--quiet', '--depth=1', 'origin', 'main'],
+        ['update-ref', '-d', 'refs/remotes/origin/main'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
+      // The baseline committed on main lacks `c`, so only a base ref that was
+      // fetched and loaded can report the addition.
+      writeCurrent('a\t5\nb\t3\nc\t1\n');
+      run(update: true);
+
+      final result = run(baseRef: 'origin/main');
+
+      expect(result.exitCode, 1, reason: result.stdout.toString());
+      expect(result.stdout, contains('ADDED a key'));
+    });
+
     test('fails when a key count grows', () {
       writeCurrent('a\t5\nb\t3\n');
       run(update: true);
