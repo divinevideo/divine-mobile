@@ -608,6 +608,104 @@ void main() {
       );
     });
 
+    group('loop wrap', () {
+      testWidgets('seeks to the end when a scrub wraps back past the start', (
+        tester,
+      ) async {
+        // A wrap moves the playhead across the whole composition in one
+        // update. Throttling it away would leave the preview on the start
+        // frame while the finger rests at the end.
+        final clips = [_createTestClip(id: 'a', seconds: 20)];
+
+        await tester.pumpWidget(
+          buildWidget(clipState: ClipEditorState(clips: clips)),
+        );
+        tester
+            .widget<SingleChildScrollView>(timelineScrollView())
+            .controller!
+            .jumpTo(100);
+        await tester.pump();
+
+        final strip = find.byType(VideoEditorTimelineClipStrip);
+        final gesture = await tester.startGesture(
+          tester.getTopLeft(strip) +
+              Offset(60, tester.getSize(strip).height / 2),
+        );
+        // Win the arena and seek once near the start, then wrap within the
+        // same throttle window.
+        await gesture.moveBy(const Offset(30, 0));
+        await tester.pump();
+        await gesture.moveBy(const Offset(5, 0));
+        await tester.pump();
+        await gesture.moveBy(const Offset(200, 0));
+        await tester.pump();
+
+        final seeks = verify(
+          () => mockMainBloc.add(
+            captureAny(that: isA<VideoEditorSeekRequested>()),
+          ),
+        ).captured.cast<VideoEditorSeekRequested>();
+        expect(seeks.last.position, greaterThan(const Duration(seconds: 10)));
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('keeps every reorder slot reachable past the loop point', (
+        tester,
+      ) async {
+        // Reorder lays clips out as fixed-size slots. With many short clips
+        // that row runs far past the composition's end, so the loop-point
+        // limit on the scroll range must not apply while reordering.
+        final clips = [
+          for (var i = 0; i < 12; i++)
+            _createTestClip(id: 'c$i', seconds: 0, milliseconds: 200),
+        ];
+        final states = StreamController<VideoEditorMainState>.broadcast();
+        addTearDown(states.close);
+        whenListen(
+          mockMainBloc,
+          states.stream,
+          initialState: const VideoEditorMainState(),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(clipState: ClipEditorState(clips: clips)),
+        );
+        final controller = tester
+            .widget<SingleChildScrollView>(timelineScrollView())
+            .controller!;
+        final loopEnd = timelinePositionToScrollOffset(
+          clips,
+          const Duration(milliseconds: 2400),
+          TimelineConstants.pixelsPerSecond,
+        );
+        expect(controller.position.maxScrollExtent, closeTo(loopEnd, 0.5));
+
+        final strip = find.byType(VideoEditorTimelineClipStrip);
+        final gesture = await tester.startGesture(
+          tester.getTopLeft(strip) +
+              Offset(5, tester.getSize(strip).height / 2),
+        );
+        await tester.pump(const Duration(milliseconds: 600));
+        states.add(const VideoEditorMainState(isReordering: true));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        const lastSlotLeft =
+            11 *
+            (TimelineConstants.thumbnailStripHeight +
+                TimelineConstants.clipGap);
+        expect(
+          controller.position.maxScrollExtent,
+          greaterThanOrEqualTo(lastSlotLeft),
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+    });
+
     group('marker-mode mutual exclusion', () {
       testWidgets(
         'entering marker mode clears volume mode, clip edit, and overlay '

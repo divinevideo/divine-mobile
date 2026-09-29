@@ -20,7 +20,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import io.flutter.plugin.common.BinaryMessenger
@@ -221,8 +223,49 @@ internal class DivineVideoPlayerInstance(
      */
     private var seekCompletionResult: MethodChannel.Result? = null
 
+    /**
+     * Whether the pending paused seek still waits for its frame. Paused,
+     * ExoPlayer reports STATE_READY before a clip's last frames leave the
+     * decoder; completing there lets a scrub's next seek flush them unseen.
+     *
+     * The signal is a frame rendered after the seek has been applied, not
+     * [Player.Listener.onRenderedFirstFrame]. That callback fires once per
+     * surface, so a later scrub would wait out [seekTimeoutRunnable] while
+     * the canvas holds the following seek.
+     */
+    @Volatile
+    private var seekAwaitsFrame = false
+
+    /**
+     * The generation a playback-thread message queued after [ExoPlayer.seekTo]
+     * armed, or [NO_ARMED_SEEK]. Frame callbacks post this snapshot rather than
+     * re-reading [seekFrameGeneration], so a frame already in flight when a
+     * newer seek starts carries the older generation and is ignored.
+     */
+    @Volatile
+    private var armedSeekGeneration = NO_ARMED_SEEK
+
+    /**
+     * Bumped on each seek and on dispose. A frame callback posted for an
+     * older seek must not complete the one that replaced it.
+     */
+    @Volatile
+    private var seekFrameGeneration = 0
+
+    /**
+     * Fires on the playback thread for every frame about to be rendered.
+     * Returns immediately unless a paused seek is armed, so feed playback
+     * does not enqueue a main-thread task per frame.
+     */
+    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, _ ->
+        val armed = armedSeekGeneration
+        if (!seekAwaitsFrame || armed == NO_ARMED_SEEK) return@VideoFrameMetadataListener
+        mainHandler.post { onSeekFrameRendered(armed) }
+    }
+
     /** Safety timeout so Dart is never left hanging if the callback is lost. */
     private val seekTimeoutRunnable = Runnable {
+        seekAwaitsFrame = false
         seekCompletionResult?.success(null)
         seekCompletionResult = null
     }
@@ -335,6 +378,7 @@ internal class DivineVideoPlayerInstance(
                 player = newPlayer
                 newPlayer.setSeekParameters(SeekParameters.EXACT)
                 newPlayer.addListener(playerListener)
+                newPlayer.setVideoFrameMetadataListener(renderedFrameListener)
                 val surface = activeSurface
                 if (surface != null) {
                     newPlayer.setVideoSurface(surface)
@@ -376,6 +420,11 @@ internal class DivineVideoPlayerInstance(
         // surfaces keep the default unbounded buffering.
         if (bufferProfile == BufferProfile.FEED) {
             builder.setLoadControl(FeedLoadControl.build())
+        } else {
+            // Paused, ExoPlayer otherwise only works once a second. A scrub
+            // onto a clip's last frames then waits up to that second: the
+            // decoder only releases them once it is fed the end of stream.
+            builder.experimentalSetDynamicSchedulingEnabled(true)
         }
         return builder.build()
     }
@@ -1110,6 +1159,9 @@ internal class DivineVideoPlayerInstance(
         mainHandler.removeCallbacks(seekTimeoutRunnable)
         seekCompletionResult?.success(null)
         seekCompletionResult = result
+        seekFrameGeneration++
+        armedSeekGeneration = NO_ARMED_SEEK
+        seekAwaitsFrame = !exoPlayer.playWhenReady && activeSurface != null
 
         // Ensure clip offsets are up-to-date from ExoPlayer's timeline
         // before resolving the global position. Without this, offsets
@@ -1128,6 +1180,12 @@ internal class DivineVideoPlayerInstance(
         // and not the start of the video, so the fade out stays on the join.
         declickProcessor.nextStreamStartUs = resolved.second * 1000L
         exoPlayer.seekTo(targetIndex, resolved.second)
+        if (seekAwaitsFrame) {
+            val generation = seekFrameGeneration
+            exoPlayer.createMessage { _, _ ->
+                if (generation == seekFrameGeneration) armedSeekGeneration = generation
+            }.send()
+        }
         // Settle any in-flight takeover before repositioning the loop track,
         // the same way pausing and setVolume do — otherwise the crossfade
         // keeps stepping against a track whose position just jumped underneath
@@ -1331,8 +1389,20 @@ internal class DivineVideoPlayerInstance(
         audioOverlayManager.update(globalPositionMs, videoPlayer.isPlaying)
     }
 
+    /**
+     * A frame for [generation] is about to be rendered. Completes a paused
+     * seek only when this is still that seek and the player is ready; a
+     * frame that arrives first just clears the wait so STATE_READY can.
+     */
+    private fun onSeekFrameRendered(generation: Int) {
+        if (generation != seekFrameGeneration || !seekAwaitsFrame) return
+        seekAwaitsFrame = false
+        if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
+    }
+
     /** Completes the pending seekTo result so Dart's await returns. */
     private fun completeSeekIfPending() {
+        seekAwaitsFrame = false
         seekCompletionResult?.let {
             mainHandler.removeCallbacks(seekTimeoutRunnable)
             it.success(null)
@@ -1569,7 +1639,7 @@ internal class DivineVideoPlayerInstance(
                 if (clipAudioPending) startClipAudioLoop(lastClipsRaw, lastClipsRaw.size)
                 // Seek complete — switch from reporting target to actual position.
                 pendingGlobalStartMs = 0L
-                completeSeekIfPending()
+                if (!seekAwaitsFrame) completeSeekIfPending()
                 // setClips complete — unblock the Dart await.
                 mainHandler.removeCallbacks(setClipsTimeoutRunnable)
                 pendingSetClipsResult?.success(null)
@@ -1950,6 +2020,9 @@ internal class DivineVideoPlayerInstance(
     }
 
     fun dispose() {
+        seekFrameGeneration++
+        armedSeekGeneration = NO_ARMED_SEEK
+        seekAwaitsFrame = false
         mainHandler.removeCallbacks(positionUpdater)
         mainHandler.removeCallbacks(seekTimeoutRunnable)
         mainHandler.removeCallbacks(setClipsTimeoutRunnable)
@@ -1984,6 +2057,9 @@ internal class DivineVideoPlayerInstance(
     }
 
     companion object {
+
+        /** [armedSeekGeneration] while no paused seek is armed. */
+        private const val NO_ARMED_SEEK = -1
 
         private const val POSITION_UPDATE_INTERVAL_MS = 200L
 
