@@ -767,7 +767,7 @@ class ProfileRepository implements ProfileReader {
     return dao.watchStats(pubkey).map(_statsFromRowOrNull);
   }
 
-  /// Returns fresh cached stats with a known lifetime view total for [pubkey].
+  /// Returns fresh cached stats with a known lifetime loop total for [pubkey].
   ///
   /// Unlike [watchProfileStats], this read is for deciding whether the card
   /// should start a fetch. It reads the row without deleting it, then applies
