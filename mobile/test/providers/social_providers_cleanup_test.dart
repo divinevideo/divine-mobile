@@ -16,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/hive_box_names.dart';
+import 'package:openvine/models/content_label.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
@@ -27,10 +28,12 @@ import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
+import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -286,7 +289,7 @@ void main() {
     );
 
     test(
-      'an account switch rebuilds live preference services from defaults',
+      'an account switch resets the live Divine-host filter in place',
       () async {
         await prefs.setBool(
           DivineHostFilterService.showDivineHostedOnlyStorageKey,
@@ -299,6 +302,8 @@ void main() {
         addTearDown(hostFilterSubscription.close);
         final departingService = hostFilterSubscription.read();
         expect(departingService.showDivineHostedOnly, isFalse);
+        var notifications = 0;
+        departingService.addListener(() => notifications++);
 
         final cleanupSubscription = container.listen(
           userDataCleanupServiceProvider,
@@ -311,16 +316,58 @@ void main() {
         );
 
         final incomingService = container.read(divineHostFilterServiceProvider);
-        expect(incomingService, isNot(same(departingService)));
+        expect(incomingService, same(departingService));
         expect(incomingService.showDivineHostedOnly, isTrue);
+        expect(notifications, equals(1));
       },
     );
 
-    test('account switch resets the live content language', () async {
-      final language = container.read(languagePreferenceServiceProvider);
-      await language.initialize();
-      await language.setContentLanguage('es');
-      expect(language.declaredContentLanguage, 'es');
+    test(
+      'an account switch resets the live provenance filter in place',
+      () async {
+        await prefs.setBool(
+          VideoProvenanceFilterService.showVerifiedOnlyStorageKey,
+          true,
+        );
+        final provenanceFilter = container.read(
+          videoProvenanceFilterServiceProvider,
+        );
+        expect(provenanceFilter.showVerifiedOnly, isTrue);
+        var notifications = 0;
+        provenanceFilter.addListener(() => notifications++);
+
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().clearUserSpecificData(
+          isIdentityChange: true,
+          userPubkey: _pubkeyA,
+        );
+
+        expect(
+          container.read(videoProvenanceFilterServiceProvider),
+          same(provenanceFilter),
+        );
+        expect(provenanceFilter.showVerifiedOnly, isFalse);
+        expect(notifications, equals(1));
+      },
+    );
+
+    test('an account switch resets the live content filter in place', () async {
+      final contentFilter = container.read(contentFilterServiceProvider);
+      await contentFilter.initialized;
+      await contentFilter.setPreference(
+        ContentLabel.spoiler,
+        ContentFilterPreference.hide,
+      );
+      expect(
+        contentFilter.getPreference(ContentLabel.spoiler),
+        ContentFilterPreference.hide,
+      );
+      var notifications = 0;
+      contentFilter.addListener(() => notifications++);
 
       final subscription = container.listen(
         userDataCleanupServiceProvider,
@@ -332,9 +379,35 @@ void main() {
         userPubkey: _pubkeyA,
       );
 
-      final incoming = container.read(languagePreferenceServiceProvider);
-      await incoming.initialize();
-      expect(incoming.declaredContentLanguage, isNull);
+      expect(container.read(contentFilterServiceProvider), same(contentFilter));
+      expect(
+        contentFilter.getPreference(ContentLabel.spoiler),
+        ContentFilterPreference.warn,
+      );
+      expect(notifications, equals(1));
+    });
+
+    test('account switch resets the live content language', () async {
+      final language = container.read(languagePreferenceServiceProvider);
+      await language.initialize();
+      await language.setContentLanguage('es');
+      expect(language.declaredContentLanguage, 'es');
+      var notifications = 0;
+      language.addListener(() => notifications++);
+
+      final subscription = container.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await subscription.read().clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: _pubkeyA,
+      );
+
+      expect(container.read(languagePreferenceServiceProvider), same(language));
+      expect(language.declaredContentLanguage, isNull);
+      expect(notifications, equals(1));
     });
 
     test('account switch preserves owner-scoped personal events', () async {
@@ -494,6 +567,7 @@ void main() {
       );
 
       final incoming = await container.read(soundLibraryServiceProvider.future);
+      expect(incoming, same(sounds));
       expect(incoming.customSounds, isEmpty);
     });
 
