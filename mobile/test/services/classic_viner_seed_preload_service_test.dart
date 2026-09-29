@@ -80,7 +80,9 @@ void main() {
       );
       expect(stats, isNotNull);
       expect(stats!.videoCount, 312);
-      expect(stats.totalViews, 128000000);
+      // The archived Vine total is loops, not Divine views, so it is not
+      // seeded into the views total.
+      expect(stats.totalViews, isNull);
     });
 
     test('preloads avatar bytes once per manifest version', () async {

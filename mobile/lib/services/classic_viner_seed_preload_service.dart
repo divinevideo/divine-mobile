@@ -54,8 +54,10 @@ class ClassicVinerSeedPreloadService {
       for (final profileSeed in manifest.profiles) {
         await profileStatsDao.upsertStats(
           pubkey: profileSeed.pubkey,
+          // The manifest's archived total is Vine-era loops, and the cached
+          // total renders as Divine views, so it is not seeded. Funnelcake
+          // supplies the total on the first profile fetch.
           videoCount: profileSeed.archivedStats.videoCount,
-          totalViews: profileSeed.archivedStats.totalViews,
           totalLikes: profileSeed.archivedStats.totalLikes,
         );
       }
@@ -246,17 +248,15 @@ class _ClassicVinerSeedProfile {
 }
 
 class _ArchivedStats {
-  const _ArchivedStats({this.videoCount, this.totalViews, this.totalLikes});
+  const _ArchivedStats({this.videoCount, this.totalLikes});
 
   factory _ArchivedStats.fromJson(Map<String, dynamic> json) {
     return _ArchivedStats(
       videoCount: json['videoCount'] as int?,
-      totalViews: json['totalViews'] as int?,
       totalLikes: json['totalLikes'] as int?,
     );
   }
 
   final int? videoCount;
-  final int? totalViews;
   final int? totalLikes;
 }
