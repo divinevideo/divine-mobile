@@ -11,6 +11,7 @@ import 'package:http/testing.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
@@ -53,6 +54,28 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(ActionChip), findsOneWidget);
       expect(find.byType(ListTile), findsNothing);
+    });
+
+    testWidgets('signed-out settings entry describes the subscription', (
+      tester,
+    ) async {
+      final auth = _MockAuth();
+      when(() => auth.isAuthenticated).thenReturn(false);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.unauthenticated,
+            ),
+          ],
+          child: buildLocalizedWidget(
+            const Scaffold(body: SupporterMembership()),
+          ),
+        ),
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.supporterTileSubtitle), findsOneWidget);
     });
 
     testWidgets('account switch ignores an old in-flight membership response', (

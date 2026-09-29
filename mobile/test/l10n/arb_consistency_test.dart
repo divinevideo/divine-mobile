@@ -522,10 +522,6 @@ const _knownUntranslatedDebt = <String>{
   'supporterJoinLabel',
   'supporterPublicRecognition',
   'supporterPublicRecognitionBody',
-  'supporterVerificationJoin',
-  'supporterVerificationEligible',
-  'supporterVerificationBody',
-  'supporterExploreVerification',
 
   // Explicit campaign-consent copy (#6745 / divine-push-service#40). Keep the
   // opt-in wording in English until a human translation pass can preserve the

@@ -35,7 +35,7 @@ class SupporterMembership extends ConsumerWidget {
       return _MembershipEntry(
         compact: compact,
         label: context.l10n.supporterTitle,
-        subtitle: context.l10n.supporterVerificationJoin,
+        subtitle: context.l10n.supporterTileSubtitle,
       );
     }
     ref.watch(currentAuthRpcCapabilityProvider);
@@ -74,8 +74,6 @@ class SupporterMembership extends ConsumerWidget {
             label: label,
             subtitle: state.isSupporter
                 ? context.l10n.supporterActiveBadge
-                : confirmedInactive
-                ? context.l10n.supporterVerificationJoin
                 : context.l10n.supporterTileSubtitle,
           );
         },

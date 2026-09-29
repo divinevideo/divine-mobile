@@ -313,7 +313,6 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
-      expect(find.text('Explore verification'), findsOneWidget);
     });
 
     testWidgets('saves public badge opt-in without changing other consent', (
@@ -384,10 +383,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Restore purchases'), findsOneWidget);
-      expect(
-        find.text('Become a supporter to apply for verification'),
-        findsOneWidget,
-      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.supporterMembershipBody), findsOneWidget);
     });
 
     testWidgets('shows active badge when entitlement is active', (
@@ -417,7 +414,6 @@ void main() {
 
       expect(find.textContaining("You're a Divine Supporter"), findsOneWidget);
       expect(find.text('Show my Supporter badge publicly'), findsOneWidget);
-      expect(find.text('Explore verification'), findsOneWidget);
     });
 
     testWidgets('shows unavailable note when store has no tiers', (

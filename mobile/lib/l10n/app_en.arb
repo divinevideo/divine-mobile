@@ -7865,16 +7865,12 @@
       }
     }
   },
-  "supporterMembershipBody": "Help keep Divine human, independent, and open. Your membership supports the network and makes you eligible to apply for verification.",
+  "supporterMembershipBody": "Help keep Divine human, independent, and open. Your membership supports the network.",
   "supporterRecognitionDisclaimer": "Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.",
   "supporterBadgeLabel": "Supporter",
   "supporterJoinLabel": "Become a supporter",
   "supporterPublicRecognition": "Show my Supporter badge publicly",
   "supporterPublicRecognitionBody": "Let others see that you support Divine. This is optional and is not a verification badge.",
-  "supporterVerificationJoin": "Become a supporter to apply for verification",
-  "supporterVerificationEligible": "Your support makes you eligible to apply for verification",
-  "supporterVerificationBody": "Membership does not verify your identity or guarantee approval. Link accounts to show where people know you.",
-  "supporterExploreVerification": "Explore verification",
   "supporterTitle": "Divine Supporters",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
