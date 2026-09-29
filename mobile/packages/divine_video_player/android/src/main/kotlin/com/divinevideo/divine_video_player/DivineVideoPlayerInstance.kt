@@ -164,6 +164,9 @@ internal class DivineVideoPlayerInstance(
 
     private var isLooping = false
 
+    /** Whether a lap restarted by [loopsBySeeking] is still buffering its start. */
+    private var restartingLap = false
+
     /**
      * Identifies this player in diagnostic logs.
      *
@@ -805,12 +808,7 @@ internal class DivineVideoPlayerInstance(
      * Apple player does.
      */
     private fun canClipToCommonTrackEnd(uri: String): Boolean {
-        val path = uri.substringBefore('?').substringBefore('#')
-        if (path.endsWith(".m3u8", ignoreCase = true) ||
-            path.contains("/hls/", ignoreCase = true)
-        ) {
-            return false
-        }
+        if (isHlsSource(uri)) return false
         return uri.startsWith("/") ||
             uri.startsWith("file://") ||
             uri.startsWith("http://") ||
@@ -866,6 +864,10 @@ internal class DivineVideoPlayerInstance(
         if (clipCount != 1 || !isLooping) return
         val map = clipsRaw.firstOrNull() ?: return
         val uri = map["uri"] as? String ?: return
+        // The track laps on its own clock, in step with a repeating item; a
+        // lap started by a seek has no fixed length to follow. HLS is also
+        // nothing the track's extractor can read.
+        if (isHlsSource(uri)) return
         if (((map["startMs"] as? Number)?.toLong() ?: 0L) != 0L) return
         // A static track plays the recording at its own rate and has no
         // stretcher to follow a speed change with, so an off-speed player keeps
@@ -1299,11 +1301,29 @@ internal class DivineVideoPlayerInstance(
      */
     private fun applyRepeatMode() {
         player?.repeatMode = when {
-            !isLooping -> Player.REPEAT_MODE_OFF
+            !isLooping || loopsBySeeking -> Player.REPEAT_MODE_OFF
             clipCount == 1 -> Player.REPEAT_MODE_ONE
             else -> Player.REPEAT_MODE_ALL
         }
     }
+
+    /**
+     * Whether the loop is closed by seeking back to the start when playback
+     * ends, instead of by an ExoPlayer repeat mode.
+     *
+     * A repeat mode makes ExoPlayer prepare the next lap as soon as the
+     * current one is fully buffered, up to 100 laps ahead. Preparing an HLS
+     * lap downloads a whole segment unless the playlist declares its codecs,
+     * and that download is not counted against [FeedLoadControl]'s budget.
+     * When one segment already covers the clip — a 7 s feed cut of a video
+     * with 12 s segments — every lap is fully buffered the moment it is
+     * prepared, so the player keeps chaining laps until the Java heap runs
+     * out. A playlist that does not repeat ends at its last item, and nothing
+     * is prepared past it.
+     */
+    private val loopsBySeeking: Boolean
+        get() = isLooping &&
+            lastClipsRaw.any { (it["uri"] as? String)?.let(::isHlsSource) == true }
 
     private fun handleJumpToClip(call: MethodCall, result: MethodChannel.Result) {
         val index = (call.argument<Number>("index"))?.toInt() ?: 0
@@ -1629,10 +1649,19 @@ internal class DivineVideoPlayerInstance(
                 mainHandler.removeCallbacks(bufferingWatchdogRunnable)
                 bufferingStallReported = false
             }
+            if (playbackState == Player.STATE_ENDED && loopsBySeeking) {
+                // Start the next lap by hand. Dart is not told the clip
+                // completed, as it is not under a repeat mode.
+                restartingLap = true
+                player?.seekTo(0, 0L)
+                syncAudioOverlays()
+                return
+            }
             if (playbackState == Player.STATE_ENDED && isLooping) {
                 syncAudioOverlays()
             }
             if (playbackState == Player.STATE_READY) {
+                restartingLap = false
                 // The video's length is only readable once the timeline is
                 // populated, and it bounds how long the fade may be.
                 updateDeclickDuration()
@@ -1688,6 +1717,7 @@ internal class DivineVideoPlayerInstance(
             val state = exoPlayer.playbackState
             val expected =
                 seekCompletionResult != null ||
+                    restartingLap ||
                     state == Player.STATE_ENDED ||
                     state == Player.STATE_IDLE
             val message =
@@ -2057,6 +2087,13 @@ internal class DivineVideoPlayerInstance(
     }
 
     companion object {
+
+        /** Whether [uri] addresses an HLS playlist rather than a media file. */
+        private fun isHlsSource(uri: String): Boolean {
+            val path = uri.substringBefore('?').substringBefore('#')
+            return path.endsWith(".m3u8", ignoreCase = true) ||
+                path.contains("/hls/", ignoreCase = true)
+        }
 
         /** [armedSeekGeneration] while no paused seek is armed. */
         private const val NO_ARMED_SEEK = -1

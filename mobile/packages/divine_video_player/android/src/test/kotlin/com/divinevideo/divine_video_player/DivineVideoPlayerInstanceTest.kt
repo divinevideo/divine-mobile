@@ -1099,6 +1099,65 @@ class DivineVideoPlayerInstanceTest {
         verify { mockPlayer.repeatMode = Player.REPEAT_MODE_ALL }
     }
 
+    // -- HLS loops by seeking back --
+
+    /**
+     * Imported videos publish only an HLS playlist without codecs, with
+     * segments longer than the 7 s the feed plays.
+     */
+    private fun hlsSetClipsCall(): MethodCall =
+        setClipsCall("https://media.example.com/video.m3u8")
+
+    @Test
+    fun `a looping HLS clip is not repeated by the player`() {
+        instance.onMethodCall(hlsSetClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+
+        // Under a repeat mode ExoPlayer prepares laps ahead without bound,
+        // each downloading a segment outside the load control's budget, until
+        // the Java heap runs out.
+        verify(exactly = 0) { mockPlayer.repeatMode = Player.REPEAT_MODE_ONE }
+        verify { mockPlayer.repeatMode = Player.REPEAT_MODE_OFF }
+    }
+
+    @Test
+    fun `a looping HLS clip starts its next lap from the beginning when it ends`() {
+        val listener = capturePlayerListener()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        val states = mutableListOf<Any>()
+        every { sink.success(capture(states)) } just runs
+        instance.onListen(null, sink)
+        instance.onMethodCall(hlsSetClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+        every { mockPlayer.playerError } returns null
+        every { mockPlayer.playbackState } returns Player.STATE_ENDED
+        states.clear()
+
+        listener.onPlaybackStateChanged(Player.STATE_ENDED)
+
+        verify { mockPlayer.seekTo(0, 0L) }
+        // A repeating player never reports the clip complete; neither may this.
+        assertEquals(
+            emptyList<Any?>(),
+            states.map { (it as Map<*, *>)["status"] }.filter { it == "completed" },
+        )
+    }
+
+    @Test
+    fun `the pause while an HLS lap restarts is not reported as a stall`() {
+        val listener = capturePlayerListener()
+        instance.onMethodCall(hlsSetClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+        every { mockPlayer.playWhenReady } returns true
+        listener.onPlaybackStateChanged(Player.STATE_ENDED)
+        every { mockPlayer.playbackState } returns Player.STATE_BUFFERING
+
+        val entry = captureUnrequestedStopLog { listener.onIsPlayingChanged(false) }
+
+        // The seek back is ours; the info line is for stops nobody asked for.
+        assertEquals("debug", entry?.first)
+    }
+
     /**
      * Records the audio-renderer selections the instance makes, newest last.
      *
