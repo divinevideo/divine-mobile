@@ -40,11 +40,23 @@ void main() {
     Future<void> Function() body,
   ) async {
     final unexpected = <Object>[];
-    await runZonedGuarded(body, (error, stackTrace) {
-      if (!'$error'.contains('allowRuntimeFetching is false')) {
-        unexpected.add(error);
-      }
-    });
+    // An error thrown by [body] itself would go to the zone handler and leave
+    // the awaited future pending until the test timed out, hiding the
+    // message. Catching it here records it and lets the test fail at once.
+    await runZonedGuarded(
+      () async {
+        try {
+          await body();
+        } on Object catch (error) {
+          unexpected.add(error);
+        }
+      },
+      (error, stackTrace) {
+        if (!'$error'.contains('allowRuntimeFetching is false')) {
+          unexpected.add(error);
+        }
+      },
+    );
     await tester.runAsync(pumpEventQueue);
     expect(unexpected, isEmpty);
   }
