@@ -239,7 +239,12 @@ class VideoEditorConstants {
   /// Ubuntu Font License, all of which permit commercial use and leave text
   /// burned into an exported video unrestricted. Before adding a font, confirm
   /// it lives under `ofl/`, `apache/` or `ufl/` in
-  /// https://github.com/google/fonts — nothing else is acceptable here.
+  /// https://github.com/google/fonts — nothing else is acceptable here — and
+  /// add its copyright notice under that license to
+  /// `assets/licenses/editor_fonts.json`, which credits it on the in-app
+  /// license page. For OFL fonts the notice is the header of the family's
+  /// `OFL.txt`; for the others it is the `copyright` field of its
+  /// `METADATA.pb`.
   ///
   /// google_fonts downloads the whole font file on first use, so keep an
   /// addition's regular face well under a megabyte: that rules out the CJK

@@ -17,6 +17,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/app/divine_app.dart';
+import 'package:openvine/bootstrap/editor_font_licenses.dart';
 import 'package:openvine/bootstrap/font_licenses.dart';
 import 'package:openvine/bootstrap/shorebird_licenses.dart';
 import 'package:openvine/config/screenshot_mode.dart';
@@ -177,6 +178,10 @@ Future<void> startOpenVineApp({
   // Register bundled OFL font licenses so they surface on the in-app
   // Open Source Licenses page (Settings → Legal). See #3659.
   registerBundledFontLicenses();
+
+  // The video editor's text fonts are downloaded by google_fonts at runtime;
+  // credit their licenses on the same page.
+  registerEditorFontLicenses();
 
   // Shorebird's Rust updater is linked into store engines but is outside
   // Flutter's generated NOTICES asset. Register its licenses explicitly so
