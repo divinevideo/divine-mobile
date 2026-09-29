@@ -8912,6 +8912,27 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'ٹیکسٹ پس منظر';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'آؤٹ لائن اور سایہ';
+
+  @override
+  String get videoEditorTextOutline => 'آؤٹ لائن';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'آؤٹ لائن کی موٹائی';
+
+  @override
+  String get videoEditorTextOutlineColor => 'آؤٹ لائن کا رنگ';
+
+  @override
+  String get videoEditorTextShadow => 'سایہ';
+
+  @override
+  String get videoEditorTextShadowStrength => 'سائے کی شدت';
+
+  @override
+  String get videoEditorTextShadowColor => 'سائے کا رنگ';
+
+  @override
   String get videoEditorFontSemanticLabel => 'فانٹ';
 
   @override

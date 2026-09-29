@@ -1,6 +1,7 @@
 // ABOUTME: Bottom sheet to build a user-defined caption style: font, colors,
-// ABOUTME: background pill, and animation, with a looped live preview and a
-// ABOUTME: save action that keeps the style for later videos.
+// ABOUTME: background pill, outline and shadow, and animation, with a looped
+// ABOUTME: live preview and a save action that keeps the style for later
+// ABOUTME: videos.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
@@ -12,12 +13,13 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/providers/saved_caption_style_repository_provider.dart';
-import 'package:openvine/widgets/color_swatch_button.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
+import 'package:openvine/widgets/video_editor/text_effects_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/caption_style_preview.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/saved_style_name_prompt.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_caption_font_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode;
 
@@ -29,8 +31,10 @@ Future<CaptionCustomStyle?> showCaptionCustomStyleSheet(
 }) {
   return VineBottomSheet.show<CaptionCustomStyle>(
     context: context,
-    initialChildSize: 0.85,
-    minChildSize: 0.6,
+    // Full height, so the pinned preview leaves room for the controls.
+    maxChildSize: 1,
+    initialChildSize: 1,
+    minChildSize: VineTheme.bottomSheetDismissFloor,
     title: Text(
       context.l10n.videoEditorCaptionsCustomStyleTitle,
       style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
@@ -197,24 +201,42 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
     final hasBackground = _style.hasBackground;
     return Column(
       children: [
+        // Pinned above the controls, so every change stays in view.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            _Inset.margin,
+            8,
+            _Inset.margin,
+            12,
+          ),
+          child: ExcludeSemantics(
+            child: _Preview(
+              style: _style,
+              controller: _controller,
+              loopMs: _loopMs,
+            ),
+          ),
+        ),
         Expanded(
           child: ListView(
             controller: widget.scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            // No horizontal padding here: the color rows scroll out to the
+            // sheet edge, so everything else is inset with [_Inset].
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
             children: [
-              ExcludeSemantics(
-                child: _Preview(
-                  style: _style,
-                  controller: _controller,
-                  loopMs: _loopMs,
+              _Inset(child: _SectionLabel(l10n.videoEditorCaptionsCustomFont)),
+              _Inset(
+                child: _FontField(
+                  index: _style.fontIndex,
+                  onChanged: _pickFont,
                 ),
               ),
               const SizedBox(height: 20),
-              _SectionLabel(l10n.videoEditorCaptionsCustomFont),
-              _FontField(index: _style.fontIndex, onChanged: _pickFont),
-              const SizedBox(height: 20),
-              _SectionLabel(l10n.videoEditorCaptionsCustomTextColor),
-              _ColorRow(
+              _Inset(
+                child: _SectionLabel(l10n.videoEditorCaptionsCustomTextColor),
+              ),
+              VideoEditorColorRow(
+                padding: _Inset.padding,
                 selected: _style.color,
                 onSelected: (color) => _update(_style.copyWith(color: color)),
                 onCustom: () => _pickColor(
@@ -223,28 +245,35 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
                 ),
               ),
               const SizedBox(height: 16),
-              DivineRowCheckbox(
-                state: hasBackground
-                    ? DivineCheckboxState.selected
-                    : DivineCheckboxState.unselected,
-                onChanged: (checked) => _update(
-                  _style.copyWith(
-                    colorMode: checked
-                        ? LayerBackgroundMode.backgroundAndColor
-                        : LayerBackgroundMode.onlyColor,
+              _Inset(
+                child: DivineRowCheckbox(
+                  state: hasBackground
+                      ? DivineCheckboxState.selected
+                      : DivineCheckboxState.unselected,
+                  onChanged: (checked) => _update(
+                    _style.copyWith(
+                      colorMode: checked
+                          ? LayerBackgroundMode.backgroundAndColor
+                          : LayerBackgroundMode.onlyColor,
+                    ),
                   ),
-                ),
-                label: Text(
-                  l10n.videoEditorCaptionsCustomBackground,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.primaryText,
+                  label: Text(
+                    l10n.videoEditorCaptionsCustomBackground,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
                   ),
                 ),
               ),
               if (hasBackground) ...[
                 const SizedBox(height: 16),
-                _SectionLabel(l10n.videoEditorCaptionsCustomBackgroundColor),
-                _ColorRow(
+                _Inset(
+                  child: _SectionLabel(
+                    l10n.videoEditorCaptionsCustomBackgroundColor,
+                  ),
+                ),
+                VideoEditorColorRow(
+                  padding: _Inset.padding,
                   selected: _style.background,
                   onSelected: (color) =>
                       _update(_style.copyWith(background: color)),
@@ -255,29 +284,44 @@ class _CaptionCustomStyleViewState extends State<_CaptionCustomStyleView>
                 ),
               ],
               const SizedBox(height: 20),
-              _SectionLabel(l10n.videoEditorCaptionsCustomAnimation),
-              _AnimationRow(
-                selected: _style.animation,
-                onSelected: (animation) =>
-                    _update(_style.copyWith(animation: animation)),
+              TextEffectsControls(
+                horizontalPadding: _Inset.margin,
+                effects: _style.effects,
+                onChanged: (effects) =>
+                    _update(_style.copyWith(effects: effects)),
+              ),
+              const SizedBox(height: 20),
+              _Inset(
+                child: _SectionLabel(l10n.videoEditorCaptionsCustomAnimation),
+              ),
+              _Inset(
+                child: _AnimationRow(
+                  selected: _style.animation,
+                  onSelected: (animation) =>
+                      _update(_style.copyWith(animation: animation)),
+                ),
               ),
               const SizedBox(height: 24),
-              DivineButton(
-                label: l10n.videoEditorCaptionsSavedStyleSaveTitle,
-                leadingIcon: DivineIconName.bookmarkPlus,
-                type: .secondary,
-                expanded: true,
-                onPressed: _saveStyle,
+              _Inset(
+                child: DivineButton(
+                  label: l10n.videoEditorCaptionsSavedStyleSaveTitle,
+                  leadingIcon: DivineIconName.bookmarkPlus,
+                  type: .secondary,
+                  expanded: true,
+                  onPressed: _saveStyle,
+                ),
               ),
               if (_saveOutcome case final outcome?) ...[
                 const SizedBox(height: 8),
-                Text(
-                  outcome.message,
-                  textAlign: TextAlign.center,
-                  style: VineTheme.bodyMediumFont(
-                    color: outcome.failed
-                        ? context.vineColors.onErrorContainer
-                        : context.vineColors.accentPositive,
+                _Inset(
+                  child: Text(
+                    outcome.message,
+                    textAlign: TextAlign.center,
+                    style: VineTheme.bodyMediumFont(
+                      color: outcome.failed
+                          ? context.vineColors.onErrorContainer
+                          : context.vineColors.accentPositive,
+                    ),
                   ),
                 ),
               ],
@@ -430,109 +474,20 @@ class _FontField extends StatelessWidget {
   }
 }
 
-class _ColorRow extends StatelessWidget {
-  const _ColorRow({
-    required this.selected,
-    required this.onSelected,
-    required this.onCustom,
-  });
+/// Insets sheet content to the sheet's margin; the list itself has none so
+/// the color rows can run edge to edge.
+class _Inset extends StatelessWidget {
+  const _Inset({required this.child});
 
-  final Color selected;
-  final ValueChanged<Color> onSelected;
-  final VoidCallback onCustom;
+  static const double margin = 16;
 
-  @override
-  Widget build(BuildContext context) {
-    final onPalette = VideoEditorConstants.colors.any(
-      (c) => c.toARGB32() == selected.toARGB32(),
-    );
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        // A custom (non-palette) color is shown selected on the picker swatch.
-        _ColorSwatch(
-          isCustom: true,
-          color: selected,
-          selected: !onPalette,
-          onTap: onCustom,
-        ),
-        for (final color in VideoEditorConstants.colors)
-          _ColorSwatch(
-            color: color,
-            selected: color.toARGB32() == selected.toARGB32(),
-            onTap: () => onSelected(color),
-          ),
-      ],
-    );
-  }
-}
+  static const padding = EdgeInsets.symmetric(horizontal: margin);
 
-class _ColorSwatch extends StatelessWidget {
-  const _ColorSwatch({
-    required this.color,
-    required this.selected,
-    required this.onTap,
-    this.isCustom = false,
-  });
-
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-  final bool isCustom;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    // Same swatch treatment as the text editor's color control: a rounded
-    // surfaceContainer tile framing the color circle, primary when selected.
-    // The custom swatch shows a paint-brush over the current color.
-    final rgbLabel = ColorSwatchButton.rgbSemanticLabel(context, color);
-    final semanticLabel = isCustom
-        ? context.l10n.videoEditorColorPickerSwatchSemanticLabel(
-            context.l10n.videoEditorColorPickerSemanticLabel,
-            rgbLabel,
-          )
-        : rgbLabel;
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      selected: selected,
-      onTap: onTap,
-      child: GestureDetector(
-        excludeFromSemantics: true,
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: BoxDecoration(
-            color: context.vineColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected
-                  ? context.vineColors.accentPositive
-                  : context.vineColors.outlineMuted,
-              width: 2,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: isCustom
-                  ? const Center(
-                      child: DivineIcon(
-                        icon: DivineIconName.paintBrush,
-                        color: VineTheme.primary,
-                        size: 16,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
-        ),
-      ),
-    );
+    return Padding(padding: padding, child: child);
   }
 }
 

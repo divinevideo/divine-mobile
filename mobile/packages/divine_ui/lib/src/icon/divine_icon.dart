@@ -213,6 +213,7 @@ enum DivineIconName {
   textBgNone('square'),
   textBgTransparent('square_duo'),
   textBgFill('square_fill'),
+  textOutlineShadow('text_outline_shadow'),
   timer('timer'),
   timer3('timer_3'),
   timer10('timer_10'),

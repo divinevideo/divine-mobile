@@ -8714,6 +8714,27 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'የጽሑፍ ዳራ';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'የጠርዝ መስመር እና ጥላ';
+
+  @override
+  String get videoEditorTextOutline => 'የጠርዝ መስመር';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'የጠርዝ መስመር ውፍረት';
+
+  @override
+  String get videoEditorTextOutlineColor => 'የጠርዝ መስመር ቀለም';
+
+  @override
+  String get videoEditorTextShadow => 'ጥላ';
+
+  @override
+  String get videoEditorTextShadowStrength => 'የጥላ ጥንካሬ';
+
+  @override
+  String get videoEditorTextShadowColor => 'የጥላ ቀለም';
+
+  @override
   String get videoEditorFontSemanticLabel => 'ቅርጸ-ቁምፊ';
 
   @override

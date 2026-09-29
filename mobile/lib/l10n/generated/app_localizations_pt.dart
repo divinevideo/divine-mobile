@@ -8980,6 +8980,27 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Fundo do texto';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contorno e sombra';
+
+  @override
+  String get videoEditorTextOutline => 'Contorno';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Espessura do contorno';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Cor do contorno';
+
+  @override
+  String get videoEditorTextShadow => 'Sombra';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensidade da sombra';
+
+  @override
+  String get videoEditorTextShadowColor => 'Cor da sombra';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Fonte';
 
   @override

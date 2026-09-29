@@ -8487,6 +8487,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'テキストの背景';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => '縁取りと影';
+
+  @override
+  String get videoEditorTextOutline => '縁取り';
+
+  @override
+  String get videoEditorTextOutlineThickness => '縁取りの太さ';
+
+  @override
+  String get videoEditorTextOutlineColor => '縁取りの色';
+
+  @override
+  String get videoEditorTextShadow => '影';
+
+  @override
+  String get videoEditorTextShadowStrength => '影の強さ';
+
+  @override
+  String get videoEditorTextShadowColor => '影の色';
+
+  @override
   String get videoEditorFontSemanticLabel => 'フォント';
 
   @override

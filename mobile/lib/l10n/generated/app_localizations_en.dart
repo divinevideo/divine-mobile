@@ -9007,6 +9007,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Text background';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Outline and shadow';
+
+  @override
+  String get videoEditorTextOutline => 'Outline';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Outline thickness';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Outline color';
+
+  @override
+  String get videoEditorTextShadow => 'Shadow';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Shadow strength';
+
+  @override
+  String get videoEditorTextShadowColor => 'Shadow color';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override

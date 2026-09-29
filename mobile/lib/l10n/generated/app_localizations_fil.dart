@@ -8980,6 +8980,27 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Background ng text';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Outline at anino';
+
+  @override
+  String get videoEditorTextOutline => 'Outline';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Kapal ng outline';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Kulay ng outline';
+
+  @override
+  String get videoEditorTextShadow => 'Anino';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Tindi ng anino';
+
+  @override
+  String get videoEditorTextShadowColor => 'Kulay ng anino';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override

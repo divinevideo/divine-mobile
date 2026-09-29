@@ -8922,6 +8922,27 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Garis luar dan bayang';
+
+  @override
+  String get videoEditorTextOutline => 'Garis luar';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Ketebalan garis luar';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Warna garis luar';
+
+  @override
+  String get videoEditorTextShadow => 'Bayang';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Kekuatan bayang';
+
+  @override
+  String get videoEditorTextShadowColor => 'Warna bayang';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Fon';
 
   @override

@@ -15210,6 +15210,48 @@ abstract class AppLocalizations {
   /// **'Text background'**
   String get videoEditorTextBackgroundSemanticLabel;
 
+  /// No description provided for @videoEditorTextEffectsSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline and shadow'**
+  String get videoEditorTextEffectsSemanticLabel;
+
+  /// No description provided for @videoEditorTextOutline.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorTextOutline;
+
+  /// No description provided for @videoEditorTextOutlineThickness.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline thickness'**
+  String get videoEditorTextOutlineThickness;
+
+  /// No description provided for @videoEditorTextOutlineColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline color'**
+  String get videoEditorTextOutlineColor;
+
+  /// No description provided for @videoEditorTextShadow.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow'**
+  String get videoEditorTextShadow;
+
+  /// No description provided for @videoEditorTextShadowStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow strength'**
+  String get videoEditorTextShadowStrength;
+
+  /// No description provided for @videoEditorTextShadowColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow color'**
+  String get videoEditorTextShadowColor;
+
   /// No description provided for @videoEditorFontSemanticLabel.
   ///
   /// In en, this message translates to:

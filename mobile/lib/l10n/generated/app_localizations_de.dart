@@ -9029,6 +9029,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Texthintergrund';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Kontur und Schatten';
+
+  @override
+  String get videoEditorTextOutline => 'Kontur';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Konturstärke';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Konturfarbe';
+
+  @override
+  String get videoEditorTextShadow => 'Schatten';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Schattenstärke';
+
+  @override
+  String get videoEditorTextShadowColor => 'Schattenfarbe';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Schriftart';
 
   @override
