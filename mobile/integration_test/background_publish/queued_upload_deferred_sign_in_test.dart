@@ -38,6 +38,7 @@ import '../helpers/db_helpers.dart';
 import '../helpers/held_upload_proxy.dart';
 import '../helpers/http_helpers.dart';
 import '../helpers/navigation_helpers.dart';
+import '../helpers/relay_helpers.dart' show queryRelay;
 import '../helpers/test_setup.dart';
 
 void main() {
@@ -452,47 +453,19 @@ Future<Set<String>> _publishedVideoTitles(
 }) async {
   var titles = <String>{};
   for (var attempt = 0; attempt < 30; attempt++) {
-    final events = await _queryRelay({
+    final events = await queryRelay({
       'kinds': [34236],
       'authors': [pubkey],
     });
     titles = {
       for (final event in events)
-        for (final tag in event['tags'] as List<dynamic>)
-          if (tag is List && tag.length > 1 && tag.first == 'title')
-            tag[1] as String,
+        for (final tag in event.tags)
+          if (tag.length > 1 && tag.first == 'title') tag[1],
     };
     if (titles.length >= expected) break;
     await Future<void>.delayed(const Duration(seconds: 1));
   }
   return titles;
-}
-
-Future<List<Map<String, dynamic>>> _queryRelay(
-  Map<String, dynamic> filter,
-) async {
-  final socket = await WebSocket.connect('ws://$localHost:$localRelayPort');
-  final subscriptionId =
-      'queued-upload-${DateTime.now().microsecondsSinceEpoch}';
-  final events = <Map<String, dynamic>>[];
-  final endOfStored = Completer<void>();
-  final messages = socket.listen((raw) {
-    final message = jsonDecode(raw as String) as List<dynamic>;
-    if (message.length < 2 || message[1] != subscriptionId) return;
-    if (message.first == 'EVENT') {
-      events.add(message[2] as Map<String, dynamic>);
-    } else if (message.first == 'EOSE' && !endOfStored.isCompleted) {
-      endOfStored.complete();
-    }
-  });
-  try {
-    socket.add(jsonEncode(['REQ', subscriptionId, filter]));
-    await endOfStored.future.timeout(const Duration(seconds: 10));
-  } finally {
-    await messages.cancel();
-    await socket.close();
-  }
-  return events;
 }
 
 /// Awaits [future] while pumping frames, so the app keeps running.
