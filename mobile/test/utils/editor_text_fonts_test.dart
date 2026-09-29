@@ -50,8 +50,8 @@ void main() {
       expect(fonts.toSet(), hasLength(fonts.length));
     });
 
-    test('keeps the persisted catalogue at 79 entries', () {
-      expect(VideoEditorConstants.textFontCatalogue, hasLength(79));
+    test('keeps the persisted catalogue at 128 entries', () {
+      expect(VideoEditorConstants.textFontCatalogue, hasLength(128));
     });
 
     test('rejects in-place reordering, which would repoint saved drafts', () {

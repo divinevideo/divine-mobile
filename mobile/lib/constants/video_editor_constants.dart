@@ -236,9 +236,14 @@ class VideoEditorConstants {
   /// identifier and its exact published spelling, capitalisation and spacing.
   ///
   /// Every entry ships under the SIL Open Font License 1.1, Apache 2.0 or the
-  /// Ubuntu Font License, all of which permit commercial use. Before adding a
-  /// font, confirm it lives under `ofl/`, `apache/` or `ufl/` in
+  /// Ubuntu Font License, all of which permit commercial use and leave text
+  /// burned into an exported video unrestricted. Before adding a font, confirm
+  /// it lives under `ofl/`, `apache/` or `ufl/` in
   /// https://github.com/google/fonts — nothing else is acceptable here.
+  ///
+  /// google_fonts downloads the whole font file on first use, so keep an
+  /// addition's regular face well under a megabyte: that rules out the CJK
+  /// families, which weigh several.
   static const List<EditorTextFont> textFontCatalogue = [
     (font: GoogleFonts.inter, familyName: 'Inter'),
     (font: GoogleFonts.bricolageGrotesque, familyName: 'Bricolage Grotesque'),
@@ -325,6 +330,66 @@ class VideoEditorConstants {
     (font: GoogleFonts.monoton, familyName: 'Monoton'),
     (font: GoogleFonts.pirataOne, familyName: 'Pirata One'),
     (font: GoogleFonts.unifrakturMaguntia, familyName: 'UnifrakturMaguntia'),
+    // Bold display.
+    (font: GoogleFonts.titanOne, familyName: 'Titan One'),
+    (font: GoogleFonts.paytoneOne, familyName: 'Paytone One'),
+    (font: GoogleFonts.passionOne, familyName: 'Passion One'),
+    (font: GoogleFonts.staatliches, familyName: 'Staatliches'),
+    (font: GoogleFonts.teko, familyName: 'Teko'),
+    (font: GoogleFonts.rubikMonoOne, familyName: 'Rubik Mono One'),
+    (font: GoogleFonts.unbounded, familyName: 'Unbounded'),
+    (font: GoogleFonts.chewy, familyName: 'Chewy'),
+    (font: GoogleFonts.shrikhand, familyName: 'Shrikhand'),
+    (font: GoogleFonts.knewave, familyName: 'Knewave'),
+    // Outline and effect.
+    (font: GoogleFonts.bungeeShade, familyName: 'Bungee Shade'),
+    (font: GoogleFonts.bungeeInline, familyName: 'Bungee Inline'),
+    (font: GoogleFonts.bungeeOutline, familyName: 'Bungee Outline'),
+    (font: GoogleFonts.rubikGlitch, familyName: 'Rubik Glitch'),
+    (font: GoogleFonts.rubikWetPaint, familyName: 'Rubik Wet Paint'),
+    // More script and handwriting.
+    (font: GoogleFonts.kaushanScript, familyName: 'Kaushan Script'),
+    (font: GoogleFonts.yellowtail, familyName: 'Yellowtail'),
+    (font: GoogleFonts.allura, familyName: 'Allura'),
+    (font: GoogleFonts.parisienne, familyName: 'Parisienne'),
+    (font: GoogleFonts.cookie, familyName: 'Cookie'),
+    (font: GoogleFonts.homemadeApple, familyName: 'Homemade Apple'),
+    (font: GoogleFonts.gochiHand, familyName: 'Gochi Hand'),
+    (font: GoogleFonts.architectsDaughter, familyName: 'Architects Daughter'),
+    (font: GoogleFonts.gloriaHallelujah, familyName: 'Gloria Hallelujah'),
+    (font: GoogleFonts.sedgwickAve, familyName: 'Sedgwick Ave'),
+    // More serif.
+    (font: GoogleFonts.bodoniModa, familyName: 'Bodoni Moda'),
+    (font: GoogleFonts.fraunces, familyName: 'Fraunces'),
+    (font: GoogleFonts.instrumentSerif, familyName: 'Instrument Serif'),
+    (font: GoogleFonts.yesevaOne, familyName: 'Yeseva One'),
+    (font: GoogleFonts.prata, familyName: 'Prata'),
+    // More modern sans.
+    (font: GoogleFonts.instrumentSans, familyName: 'Instrument Sans'),
+    (font: GoogleFonts.sora, familyName: 'Sora'),
+    (font: GoogleFonts.lexend, familyName: 'Lexend'),
+    (font: GoogleFonts.kanit, familyName: 'Kanit'),
+    (font: GoogleFonts.exo2, familyName: 'Exo 2'),
+    (font: GoogleFonts.urbanist, familyName: 'Urbanist'),
+    // Mono, pixel and tech.
+    (font: GoogleFonts.jetBrainsMono, familyName: 'JetBrains Mono'),
+    (font: GoogleFonts.silkscreen, familyName: 'Silkscreen'),
+    (font: GoogleFonts.pixelifySans, familyName: 'Pixelify Sans'),
+    (font: GoogleFonts.audiowide, familyName: 'Audiowide'),
+    (font: GoogleFonts.michroma, familyName: 'Michroma'),
+    // More themed.
+    (font: GoogleFonts.nosifer, familyName: 'Nosifer'),
+    (
+      font: GoogleFonts.mountainsOfChristmas,
+      familyName: 'Mountains of Christmas',
+    ),
+    (font: GoogleFonts.metalMania, familyName: 'Metal Mania'),
+    // Arabic and Korean display faces, which also carry Latin.
+    (font: GoogleFonts.cairo, familyName: 'Cairo'),
+    (font: GoogleFonts.lalezar, familyName: 'Lalezar'),
+    (font: GoogleFonts.reemKufi, familyName: 'Reem Kufi'),
+    (font: GoogleFonts.blackHanSans, familyName: 'Black Han Sans'),
+    (font: GoogleFonts.doHyeon, familyName: 'Do Hyeon'),
   ];
 
   /// The fonts of [textFontCatalogue], in catalogue order.
