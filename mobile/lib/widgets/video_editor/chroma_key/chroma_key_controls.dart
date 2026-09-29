@@ -10,6 +10,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 import 'package:unified_logger/unified_logger.dart';
 
 /// What the clip being keyed sits on, which decides what "Nothing" behind the
@@ -135,91 +136,58 @@ class ChromaKeyControlsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notice = detectionNotice;
-    return _PanelScope(
-      panel: this,
-      child: SingleChildScrollView(
-        controller: scrollController,
-        padding: const EdgeInsets.only(top: 8, bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: _sectionSpacing,
-          children: [
-            // One slot for both. The notice is usually absent, and an absent
-            // child in a `spacing` column still costs a full gap — which left
-            // the panel's first line floating away from whatever sits above
-            // it.
-            const _Gutter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _PreviewUnavailableNotice(),
-                  _SurfaceRequirementHint(),
-                ],
-              ),
+    return SingleChildScrollView(
+      controller: scrollController,
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: _sectionSpacing,
+        children: [
+          // One slot for both. The notice is usually absent, and an absent
+          // child in a `spacing` column still costs a full gap — which left
+          // the panel's first line floating away from whatever sits above it.
+          const _Gutter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _PreviewUnavailableNotice(),
+                _SurfaceRequirementHint(),
+              ],
             ),
-            if (notice != null) _Gutter(child: _InfoRow(text: notice)),
-            const _Gutter(child: _DetectRow()),
-            const _Gutter(child: _ScreenColorRow()),
-            const _Gutter(child: _ToleranceSliders()),
-            // Unpadded: the section insets its own text but lets the chips
-            // scroll past the gutter to the screen edge.
-            const _BackgroundSection(),
-          ],
-        ),
+          ),
+          if (notice != null) _Gutter(child: _InfoRow(text: notice)),
+          _Gutter(
+            child: _DetectRow(
+              isDetecting: isDetecting,
+              onDetect: onDetect,
+              onGreenPreset: onGreenPreset,
+              onBluePreset: onBluePreset,
+            ),
+          ),
+          _Gutter(
+            child: _ScreenColorRow(
+              color: chromaKey.key.color,
+              onColorChanged: onKeyColorChanged,
+            ),
+          ),
+          _Gutter(
+            child: _ToleranceSliders(
+              chromaKey: chromaKey.key,
+              onSimilarityChanged: onSimilarityChanged,
+              onSmoothnessChanged: onSmoothnessChanged,
+              onSpillChanged: onSpillChanged,
+            ),
+          ),
+          // Unpadded: the section insets its own text but lets the chips
+          // scroll past the gutter to the screen edge.
+          _BackgroundSection(
+            type: chromaKey.backgroundType,
+            onPickBackground: onPickBackground,
+            surface: surface,
+          ),
+        ],
       ),
     );
-  }
-}
-
-/// The parts of the panel that show state, each rebuilt only when what it
-/// shows changes.
-enum _PanelPart { detect, color, tolerance, background }
-
-/// Hands [panel]'s values to its parts.
-///
-/// A slider drag gives the panel a new key on every tick. The parts are
-/// constant widgets that subscribe to their own [_PanelPart], so a tick
-/// rebuilds the sliders rather than the presets, the swatch and the backdrop
-/// chips with them.
-class _PanelScope extends InheritedModel<_PanelPart> {
-  const _PanelScope({required this.panel, required super.child});
-
-  final ChromaKeyControlsPanel panel;
-
-  /// The panel's values, rebuilding [context] when those of [part] change.
-  static ChromaKeyControlsPanel watch(BuildContext context, _PanelPart part) =>
-      InheritedModel.inheritFrom<_PanelScope>(context, aspect: part)!.panel;
-
-  /// The panel's current values without subscribing, for a callback read
-  /// when a control fires rather than when it was built.
-  static ChromaKeyControlsPanel read(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<_PanelScope>()!.panel;
-
-  @override
-  bool updateShouldNotify(_PanelScope oldWidget) =>
-      _PanelPart.values.any((part) => _changed(oldWidget, part));
-
-  @override
-  bool updateShouldNotifyDependent(
-    _PanelScope oldWidget,
-    Set<_PanelPart> dependencies,
-  ) => dependencies.any((part) => _changed(oldWidget, part));
-
-  bool _changed(_PanelScope oldWidget, _PanelPart part) {
-    final old = oldWidget.panel;
-    final key = panel.chromaKey.key;
-    final oldKey = old.chromaKey.key;
-    return switch (part) {
-      _PanelPart.detect => panel.isDetecting != old.isDetecting,
-      _PanelPart.color => key.color != oldKey.color,
-      _PanelPart.tolerance =>
-        key.similarity != oldKey.similarity ||
-            key.smoothness != oldKey.smoothness ||
-            key.spill != oldKey.spill,
-      _PanelPart.background =>
-        panel.chromaKey.backgroundType != old.chromaKey.backgroundType ||
-            panel.surface != old.surface,
-    };
   }
 }
 
@@ -370,15 +338,20 @@ class _InfoRow extends StatelessWidget {
 /// preset tapped while one runs writes it off instead — see
 /// [ChromaKeyEditorState.isDetecting].
 class _DetectRow extends StatelessWidget {
-  const _DetectRow();
+  const _DetectRow({
+    required this.isDetecting,
+    required this.onDetect,
+    required this.onGreenPreset,
+    required this.onBluePreset,
+  });
+
+  final bool isDetecting;
+  final VoidCallback onDetect;
+  final VoidCallback onGreenPreset;
+  final VoidCallback onBluePreset;
 
   @override
   Widget build(BuildContext context) {
-    final isDetecting = _PanelScope.watch(
-      context,
-      _PanelPart.detect,
-    ).isDetecting;
-
     return Row(
       spacing: 8,
       children: [
@@ -388,22 +361,20 @@ class _DetectRow extends StatelessWidget {
             leadingIcon: .sparkle,
             size: .small,
             isLoading: isDetecting,
-            onPressed: isDetecting
-                ? null
-                : () => _PanelScope.read(context).onDetect(),
+            onPressed: isDetecting ? null : onDetect,
           ),
         ),
         DivineButton(
           label: context.l10n.videoEditorChromaKeyPresetGreen,
           type: .secondary,
           size: .small,
-          onPressed: () => _PanelScope.read(context).onGreenPreset(),
+          onPressed: onGreenPreset,
         ),
         DivineButton(
           label: context.l10n.videoEditorChromaKeyPresetBlue,
           type: .secondary,
           size: .small,
-          onPressed: () => _PanelScope.read(context).onBluePreset(),
+          onPressed: onBluePreset,
         ),
       ],
     );
@@ -412,15 +383,13 @@ class _DetectRow extends StatelessWidget {
 
 /// The colour being removed, with a swatch that opens the picker.
 class _ScreenColorRow extends StatelessWidget {
-  const _ScreenColorRow();
+  const _ScreenColorRow({required this.color, required this.onColorChanged});
+
+  final Color color;
+  final ValueChanged<Color> onColorChanged;
 
   @override
   Widget build(BuildContext context) {
-    final color = _PanelScope.watch(
-      context,
-      _PanelPart.color,
-    ).chromaKey.key.color;
-
     return Row(
       children: [
         Expanded(
@@ -435,7 +404,6 @@ class _ScreenColorRow extends StatelessWidget {
           color: color,
           semanticLabel: context.l10n.videoEditorChromaKeyScreenColorLabel,
           onPressed: () async {
-            final onColorChanged = _PanelScope.read(context).onKeyColorChanged;
             final picked = await showFullColorPicker(
               context,
               initialColor: color,
@@ -489,11 +457,21 @@ class _ColorSwatchButton extends StatelessWidget {
 
 /// The three tolerance sliders.
 class _ToleranceSliders extends StatelessWidget {
-  const _ToleranceSliders();
+  const _ToleranceSliders({
+    required this.chromaKey,
+    required this.onSimilarityChanged,
+    required this.onSmoothnessChanged,
+    required this.onSpillChanged,
+  });
+
+  final ChromaKey chromaKey;
+  final ValueChanged<double> onSimilarityChanged;
+  final ValueChanged<double> onSmoothnessChanged;
+  final ValueChanged<double> onSpillChanged;
 
   @override
   Widget build(BuildContext context) {
-    final key = _PanelScope.watch(context, _PanelPart.tolerance).chromaKey.key;
+    final key = chromaKey;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,21 +482,19 @@ class _ToleranceSliders extends StatelessWidget {
           hint: context.l10n.videoEditorChromaKeyAmountHint,
           value: key.similarity,
           min: ChromaKeyEditorCubit.minSimilarity,
-          onChanged: (value) =>
-              _PanelScope.read(context).onSimilarityChanged(value),
+          onChanged: onSimilarityChanged,
         ),
         _LabeledSlider(
           label: context.l10n.videoEditorChromaKeyEdgeLabel,
           hint: context.l10n.videoEditorChromaKeyEdgeHint,
           value: key.smoothness,
-          onChanged: (value) =>
-              _PanelScope.read(context).onSmoothnessChanged(value),
+          onChanged: onSmoothnessChanged,
         ),
         _LabeledSlider(
           label: context.l10n.videoEditorChromaKeySpillLabel,
           hint: context.l10n.videoEditorChromaKeySpillHint,
           value: key.spill,
-          onChanged: (value) => _PanelScope.read(context).onSpillChanged(value),
+          onChanged: onSpillChanged,
         ),
       ],
     );
@@ -576,12 +552,19 @@ class _LabeledSlider extends StatelessWidget {
 
 /// Picks what fills the area the key removed.
 class _BackgroundSection extends StatelessWidget {
-  const _BackgroundSection();
+  const _BackgroundSection({
+    required this.type,
+    required this.onPickBackground,
+    required this.surface,
+  });
+
+  /// The background currently chosen.
+  final ClipChromaKeyBackgroundType type;
+  final ValueChanged<ClipChromaKeyBackgroundType> onPickBackground;
+  final ChromaKeySurface surface;
 
   /// The backdrops that can be offered on [surface].
-  static List<ClipChromaKeyBackgroundType> _optionsOn(
-    ChromaKeySurface surface,
-  ) => switch (surface) {
+  List<ClipChromaKeyBackgroundType> get _options => switch (surface) {
     ChromaKeySurface.track => ClipChromaKeyBackgroundType.values,
     ChromaKeySurface.canvas =>
       ClipChromaKeyBackgroundType.values
@@ -591,10 +574,6 @@ class _BackgroundSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final panel = _PanelScope.watch(context, _PanelPart.background);
-    final type = panel.chromaKey.backgroundType;
-    final surface = panel.surface;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
@@ -619,12 +598,11 @@ class _BackgroundSection extends StatelessWidget {
           child: Row(
             spacing: 8,
             children: [
-              for (final option in _optionsOn(surface))
+              for (final option in _options)
                 _BackgroundChip(
                   option: option,
                   isSelected: option == type,
-                  onPressed: () =>
-                      _PanelScope.read(context).onPickBackground(option),
+                  onPressed: () => onPickBackground(option),
                 ),
             ],
           ),

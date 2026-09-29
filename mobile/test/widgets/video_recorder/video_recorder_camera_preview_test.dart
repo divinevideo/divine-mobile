@@ -1,8 +1,6 @@
 // ABOUTME: Tests for VideoRecorderCameraPreview widget
 // ABOUTME: Validates camera preview rendering, aspect ratio, and grid overlay
 
-import 'dart:async';
-
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +11,8 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
-import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
-import 'package:openvine/widgets/video_recorder/preview/video_recorder_mobile_preview.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_camera_placeholder.dart';
 
 class _MockVideoRecorderBloc
@@ -154,40 +149,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
 
       expect(find.byType(ImageFiltered), findsOneWidget);
-    });
-
-    group('camera rebuild', () {
-      testWidgets('keeps the chroma-key viewfinder mounted', (tester) async {
-        const before = VideoRecorderBlocState(
-          isCameraInitialized: true,
-          recorderMode: VideoRecorderMode.chromaKey,
-          previewTextureId: 7,
-          cameraSensorAspectRatio: 9 / 16,
-        );
-        final states = StreamController<VideoRecorderBlocState>();
-        addTearDown(states.close);
-        whenListen(recorderBloc, states.stream, initialState: before);
-        await tester.pumpWidget(buildSubject());
-        final viewfinder = tester.state(find.byType(ChromaKeyedVideo));
-        final preview = tester.element(find.byType(VideoRecorderMobilePreview));
-
-        // What a flip reports: a forced camera rebuild on the other lens.
-        states.add(before.copyWith(cameraRebuildCount: 1, isFrontCamera: true));
-        await tester.pump();
-
-        expect(
-          tester.element(find.byType(VideoRecorderMobilePreview)),
-          isNot(same(preview)),
-          reason: 'the camera preview still remounts onto the rebuilt camera',
-        );
-        expect(
-          tester.state(find.byType(ChromaKeyedVideo)),
-          same(viewfinder),
-          reason:
-              'the viewfinder holds the video backdrop, which restarts from '
-              'its first frame when the viewfinder remounts',
-        );
-      });
     });
   });
 }

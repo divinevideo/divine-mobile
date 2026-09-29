@@ -294,7 +294,7 @@ class VideoRecorderBloc
     );
     on<VideoRecorderChromaKeyMeasureRequested>(
       _onChromaKeyMeasureRequested,
-      transformer: sequential(),
+      transformer: droppable(),
     );
     on<VideoRecorderChromaKeyPresetSelected>(_onChromaKeyPresetSelected);
     on<VideoRecorderChromaKeySettingsChanged>(
@@ -1043,14 +1043,7 @@ class VideoRecorderBloc
 
     await _prepareSoundForPlayback();
 
-    final needsLiveChromaKey = state.recorderMode.needsLiveChromaKey;
-    emit(
-      state.copyWith(
-        recordingState: VideoRecorderState.recording,
-        takeChromaKey: needsLiveChromaKey ? state.chromaKey : null,
-        clearTakeChromaKey: !needsLiveChromaKey,
-      ),
-    );
+    emit(state.copyWith(recordingState: VideoRecorderState.recording));
 
     Log.info(
       '🎥 Starting recording - aspect ratio: ${state.aspectRatio.name}',
@@ -1119,7 +1112,6 @@ class VideoRecorderBloc
           isStartingRecording: false,
           pendingStopAfterStart: false,
           recordingState: VideoRecorderState.idle,
-          clearTakeChromaKey: true,
         ),
       );
     }
@@ -1158,7 +1150,6 @@ class VideoRecorderBloc
       category: LogCategory.video,
     );
     emit(state.copyWith(isStoppingRecording: true));
-    final takeChromaKey = state.takeChromaKey;
 
     unawaited(HapticService.recordingFeedback());
 
@@ -1206,7 +1197,6 @@ class VideoRecorderBloc
         state.copyWith(
           recordingState: VideoRecorderState.idle,
           isStoppingRecording: false,
-          clearTakeChromaKey: true,
         ),
       );
       return;
@@ -1216,7 +1206,6 @@ class VideoRecorderBloc
       state.copyWith(
         recordingState: VideoRecorderState.idle,
         isStoppingRecording: false,
-        clearTakeChromaKey: true,
       ),
     );
     if (videoResult == null) {
@@ -1231,11 +1220,10 @@ class VideoRecorderBloc
       return;
     }
 
-    // The footage is the raw camera frame; the key in effect when the camera
-    // started writing it travels with it as an intent and is baked once the
-    // editor opens.
+    // The footage is the raw camera frame; the key the viewfinder showed
+    // travels with it as an intent and is baked once the editor opens.
     final captureChromaKey = state.recorderMode.needsLiveChromaKey
-        ? takeChromaKey ?? state.chromaKey
+        ? state.chromaKey
         : null;
     final clip = clipManager.addClip(
       video: videoResult,
@@ -1501,7 +1489,6 @@ class VideoRecorderBloc
         isStartingRecording: false,
         pendingStopAfterStart: false,
         recordingState: VideoRecorderState.idle,
-        clearTakeChromaKey: true,
       ),
     );
   }
@@ -2374,7 +2361,6 @@ class VideoRecorderBloc
             ? state.chromaKeyMeasurementStatus
             : ChromaKeyMeasurementStatus.idle,
         unrecordedChromaKeyImagePath: state.unrecordedChromaKeyImagePath,
-        takeChromaKey: state.takeChromaKey,
       ),
     );
   }
