@@ -833,6 +833,42 @@ void main() {
       },
     );
 
+    test(
+      'a completed attempt whose receipt write keeps failing offers support '
+      'after 15 minutes',
+      () async {
+        when(
+          () => repository.fetchStatus(
+            attemptId: _completed.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _completed);
+        final start = now;
+        final cubit = buildCubit(
+          withReceipt: true,
+          onAttemptUpdated: (_) async =>
+              throw StateError('receipt write failed'),
+        );
+
+        await cubit.resume(_completed);
+        while (timers.timers.any((timer) => timer.isActive)) {
+          await timers.fireNext();
+        }
+
+        expect(cubit.state.status, AccountDeletionRecoveryStatus.processing);
+        expect(
+          cubit.state.attempt?.status,
+          AccountDeletionAttemptStatus.completed,
+        );
+        expect(cubit.state.pollingPaused, isTrue);
+        expect(
+          now.difference(start),
+          lessThanOrEqualTo(const Duration(minutes: 15)),
+        );
+        await cubit.close();
+      },
+    );
+
     test('receipt update failure polls again before local cleanup', () async {
       var updates = 0;
       when(

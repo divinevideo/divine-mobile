@@ -43,8 +43,12 @@ abstract class AccountDeletionRecoveryPolling {
   /// normally takes hours, and up to a day, so support waits until then.
   static const processingSupportEscapeAfter = Duration(hours: 36);
 
-  static Duration supportEscapeAfterFor(AccountDeletionRecoveryStatus status) =>
-      status == AccountDeletionRecoveryStatus.processing
+  /// The server attempt must be `processing` too: a completed attempt whose
+  /// receipt write keeps failing is re-polled as `processing`, but it is a
+  /// local failure, not normal progress.
+  static Duration supportEscapeAfterFor(AccountDeletionRecoveryState state) =>
+      state.status == AccountDeletionRecoveryStatus.processing &&
+          state.attempt?.status == AccountDeletionAttemptStatus.processing
       ? processingSupportEscapeAfter
       : supportEscapeAfter;
 
@@ -663,7 +667,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
       elapsed: nonNegativeElapsed,
     );
     if (nonNegativeElapsed + delay >
-        AccountDeletionRecoveryPolling.supportEscapeAfterFor(state.status)) {
+        AccountDeletionRecoveryPolling.supportEscapeAfterFor(state)) {
       if (!_overdueRefreshUsed) {
         _overdueRefreshUsed = true;
         _pollTimer = _timerFactory(
