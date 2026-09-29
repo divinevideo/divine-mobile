@@ -186,15 +186,8 @@ class _LoadedSettingsList extends StatelessWidget {
     final refreshLabel = MaterialLocalizations.of(
       context,
     ).refreshIndicatorSemanticLabel;
-    CrosspostingPlatformSettings? autoTarget;
-    for (final entry in state.entries) {
-      if (entry.isConnected &&
-          entry.supportsAutomatic &&
-          entry.mode != CrosspostingMode.automatic) {
-        autoTarget = entry;
-        break;
-      }
-    }
+    final benefitPlatform = state.benefitCardPlatform;
+    final automaticModePlatform = state.automaticModeCardPlatform;
     return RefreshIndicator(
       color: context.vineColors.accentPositive,
       backgroundColor: context.vineColors.surfaceContainer,
@@ -217,11 +210,10 @@ class _LoadedSettingsList extends StatelessWidget {
               ),
             ),
           ),
-          if (state.entries.isNotEmpty &&
-              state.entries.every((entry) => !entry.isConnected))
-            CrosspostingBenefitCard(platform: state.entries.first.platform),
-          if (autoTarget != null)
-            CrosspostingAutoCard(platform: autoTarget.platform),
+          if (benefitPlatform != null)
+            CrosspostingBenefitCard(platform: benefitPlatform),
+          if (automaticModePlatform != null)
+            CrosspostingAutoCard(platform: automaticModePlatform),
           for (final entry in state.entries) ...[
             Divider(height: 1, color: context.vineColors.outlineMuted),
             _PlatformSection(entry: entry, state: state),
