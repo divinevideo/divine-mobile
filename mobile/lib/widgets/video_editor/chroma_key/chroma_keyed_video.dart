@@ -143,10 +143,10 @@ class _ChromaKeyedVideoState extends State<ChromaKeyedVideo> {
       // The keyed video sizes the stack; the backdrop fills whatever that is.
       fit: StackFit.passthrough,
       children: [
+        // Always wrapped, so flipping the mirror keeps the backdrop where it
+        // is in the tree; unwrapping it would restart a video backdrop.
         Positioned.fill(
-          child: widget.mirrorBackdrop
-              ? Transform.flip(flipX: true, child: backdrop)
-              : backdrop,
+          child: Transform.flip(flipX: widget.mirrorBackdrop, child: backdrop),
         ),
         ImageFiltered(
           imageFilter: ui.ImageFilter.shader(shader),

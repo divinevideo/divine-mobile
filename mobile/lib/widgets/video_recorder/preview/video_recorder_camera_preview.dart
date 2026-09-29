@@ -76,13 +76,24 @@ class VideoRecorderCameraPreview extends StatelessWidget {
   }
 }
 
-class _StackItems extends StatelessWidget {
+class _StackItems extends StatefulWidget {
   const _StackItems({required this.enableTapToFocus});
 
   final bool enableTapToFocus;
 
   @override
+  State<_StackItems> createState() => _StackItemsState();
+}
+
+class _StackItemsState extends State<_StackItems> {
+  /// Moves the chroma-key viewfinder into each rebuilt camera stack instead of
+  /// recreating it: a video backdrop plays inside it, and a new one starts
+  /// over from its first frame.
+  final GlobalKey _viewfinderKey = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
+    final enableTapToFocus = widget.enableTapToFocus;
     final state = context.select(
       (VideoRecorderBloc b) => (
         isCameraInitialized: b.state.isCameraInitialized,
@@ -97,7 +108,10 @@ class _StackItems extends StatelessWidget {
         // Simulators never initialize the camera, so the screenshot pipeline
         // renders the stubbed preview instead of the black placeholder.
         if (state.isCameraInitialized || ScreenshotMode.enabled)
-          _CameraPreview(enableTapToFocus: enableTapToFocus)
+          _CameraPreview(
+            enableTapToFocus: enableTapToFocus,
+            viewfinderKey: _viewfinderKey,
+          )
         else
           VideoRecorderCameraPlaceholder(
             errorMessage: switch (state.initializationError) {
@@ -116,9 +130,13 @@ class _StackItems extends StatelessWidget {
 }
 
 class _CameraPreview extends StatelessWidget {
-  const _CameraPreview({required this.enableTapToFocus});
+  const _CameraPreview({
+    required this.enableTapToFocus,
+    required this.viewfinderKey,
+  });
 
   final bool enableTapToFocus;
+  final GlobalKey viewfinderKey;
 
   @override
   Widget build(BuildContext context) {
@@ -130,12 +148,14 @@ class _CameraPreview extends StatelessWidget {
       return const VideoRecorderMobilePreview(enableTapToFocus: false);
     }
 
-    final (:sensorAspectRatio, :textureId) = context.select(
-      (VideoRecorderBloc b) => (
-        sensorAspectRatio: b.state.cameraSensorAspectRatio,
-        textureId: b.state.previewTextureId,
-      ),
-    );
+    final (:sensorAspectRatio, :textureId, :cameraRebuildCount) = context
+        .select(
+          (VideoRecorderBloc b) => (
+            sensorAspectRatio: b.state.cameraSensorAspectRatio,
+            textureId: b.state.previewTextureId,
+            cameraRebuildCount: b.state.cameraRebuildCount,
+          ),
+        );
 
     return FittedBox(
       fit: .cover,
@@ -152,13 +172,15 @@ class _CameraPreview extends StatelessWidget {
             else
               // Keyed on the texture id: a facing flip rebinds the incoming
               // camera onto a fresh texture, so a changed id remounts the
-              // preview to pick up its frames. Neither this remount nor the
-              // camera-rebuild remount of the enclosing Stack resets the switch
-              // blur — it lives above [_StackItems], so its ramp-out plays over
-              // the new frame.
+              // preview to pick up its frames. The rebuild count keeps the
+              // camera-rebuild remount the enclosing Stack used to give it,
+              // now that the viewfinder around it is carried across. Neither
+              // remount resets the switch blur — it lives above
+              // [_StackItems], so its ramp-out plays over the new frame.
               _ChromaKeyViewfinder(
+                key: viewfinderKey,
                 child: VideoRecorderMobilePreview(
-                  key: ValueKey(textureId),
+                  key: ValueKey((textureId, cameraRebuildCount)),
                   enableTapToFocus: enableTapToFocus,
                 ),
               ),
@@ -177,7 +199,7 @@ class _CameraPreview extends StatelessWidget {
 /// exactly the frame the recording will contain — which is how the editor's
 /// bake places it — and the viewfinder's crop then trims both alike.
 class _ChromaKeyViewfinder extends StatefulWidget {
-  const _ChromaKeyViewfinder({required this.child});
+  const _ChromaKeyViewfinder({required this.child, super.key});
 
   final Widget child;
 
