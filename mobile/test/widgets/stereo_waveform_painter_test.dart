@@ -59,6 +59,8 @@ void main() {
       Duration maxDuration = const Duration(seconds: 10),
       Duration startOffset = Duration.zero,
       double heightFactor = 1.0,
+      Duration fadeIn = Duration.zero,
+      Duration fadeOut = Duration.zero,
     }) {
       return StereoWaveformPainter(
         leftChannel: leftChannel ?? Float32List(0),
@@ -71,6 +73,8 @@ void main() {
         maxDuration: maxDuration,
         startOffset: startOffset,
         heightFactor: heightFactor,
+        fadeIn: fadeIn,
+        fadeOut: fadeOut,
       );
     }
 
@@ -159,6 +163,23 @@ void main() {
         final other = createPainter(leftChannel: left, heightFactor: 0.5);
 
         expect(painter.shouldRepaint(other), isTrue);
+      });
+
+      test('returns true when a fade changes', () {
+        final painter = createPainter();
+
+        expect(
+          createPainter(
+            fadeIn: const Duration(seconds: 1),
+          ).shouldRepaint(painter),
+          isTrue,
+        );
+        expect(
+          createPainter(
+            fadeOut: const Duration(seconds: 1),
+          ).shouldRepaint(painter),
+          isTrue,
+        );
       });
 
       test('returns true when startOffset changes', () {
@@ -376,6 +397,35 @@ void main() {
         );
 
         expect(render, paints..rrect(rrect: ceilingBar(0)));
+      });
+
+      testWidgets('draws a fade in and out as a ramp from the baseline', (
+        tester,
+      ) async {
+        final render = await pumpPainter(
+          tester,
+          createPainter(
+            leftChannel: Float32List.fromList(List.filled(64, 0.5)),
+            fadeIn: const Duration(seconds: 2),
+            fadeOut: const Duration(seconds: 2),
+          ),
+        );
+        final bars = <RRect>[];
+        expect(
+          render,
+          paints..everything((method, arguments) {
+            if (method == #drawRRect) bars.add(arguments.first as RRect);
+            return true;
+          }),
+        );
+
+        // Silent where the fade in starts, full between the fades, and
+        // falling again where the fade out closes.
+        expect(bars.first, barAt(0, WaveformConstants.minBarHeight));
+        expect(bars[bars.length ~/ 2], ceilingBar(bars.length ~/ 2));
+        expect(bars[1].height, lessThan(bars[2].height));
+        expect(bars.last.height, lessThan(bars[bars.length - 2].height));
+        expect(bars.last.height, lessThan(ceilingBar(0).height));
       });
 
       testWidgets('keeps a near-silent source below the band', (tester) async {

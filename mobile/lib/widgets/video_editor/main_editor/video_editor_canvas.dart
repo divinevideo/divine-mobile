@@ -30,6 +30,7 @@ import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
@@ -1620,6 +1621,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           ),
           windowStart: item.startTime,
           windowEnd: item.endTime,
+          fadeIn: sound.fadeInDuration,
+          fadeOut: sound.fadeOutDuration,
         ),
       );
     }
@@ -1654,6 +1657,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // would throw.
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioEvents = overlayState.audioTracks;
+    final outputEnd = _renderedOutputEnd(
+      context.read<ClipEditorBloc>().state.clips,
+    );
 
     final soundItems = overlayState.items
         .where((item) => item.type == TimelineOverlayType.sound)
@@ -1677,6 +1683,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       final sound = audioById[item.id];
       if (sound == null || sound.url == null) continue;
 
+      // A fade out ends where the export's does: at the end of the rendered
+      // video, which overlap transitions and the length cap pull in before a
+      // sound that runs to the end of the timeline. Only a faded track is
+      // clamped — until a transition's seam renders, the preview still plays
+      // the unshortened clips, and a track without a fade loses nothing by
+      // running on past the loop point.
+      final videoEndTime =
+          sound.fadeOutDuration > Duration.zero &&
+              item.endTime > outputEnd &&
+              outputEnd > item.startTime
+          ? outputEnd
+          : item.endTime;
+
       try {
         final AudioTrack track;
         if (sound.isBundled && sound.assetPath != null) {
@@ -1687,8 +1706,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -1698,8 +1719,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         } else {
           track = AudioTrack.network(
@@ -1709,8 +1732,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         }
         tracks.add(track);
@@ -1748,6 +1773,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
+  }
+
+  /// Where the exported video ends: the transition-shortened length of
+  /// [clips], capped at [VideoEditorConstants.maxDuration] like the render.
+  static Duration _renderedOutputEnd(List<DivineVideoClip> clips) {
+    final output = renderedOutputDuration(clips);
+    return output > VideoEditorConstants.maxDuration
+        ? VideoEditorConstants.maxDuration
+        : output;
   }
 
   /// Timeline end position for a lip-sync sound seeded on editor init.

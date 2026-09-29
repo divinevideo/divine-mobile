@@ -348,7 +348,7 @@ void main() {
           log.message,
           contains(
             'composition=[0ms, 1400ms], source=[12000ms, 20000ms], '
-            'videoDuration=1400ms',
+            'fade=[0ms, 0ms], videoDuration=1400ms',
           ),
         );
         expect(log.message, isNot(contains('/private/user-name')));
@@ -370,6 +370,57 @@ void main() {
 
       expect(result.single.startTime, equals(const Duration(seconds: 1)));
       expect(result.single.endTime, equals(const Duration(seconds: 2)));
+    });
+
+    group('fade', () {
+      AudioEvent event(String id, {Duration fadeIn = .zero, Duration? out}) =>
+          AudioEvent(
+            id: id,
+            pubkey: 'pubkey',
+            createdAt: 0,
+            fadeInDuration: fadeIn,
+            fadeOutDuration: out ?? Duration.zero,
+          );
+
+      test(
+        "takes each track's fade from the timeline event with its id",
+        () async {
+          final result = await resolveRenderAudioTracks(
+            [
+              _fileTrack(id: 'faded', path: '/tmp/faded.mp3'),
+              _fileTrack(id: 'plain', path: '/tmp/plain.mp3'),
+            ],
+            logName: 'test',
+            audioEvents: [
+              event('plain'),
+              event(
+                'faded',
+                fadeIn: const Duration(milliseconds: 500),
+                out: const Duration(seconds: 1),
+              ),
+            ],
+          );
+
+          expect(
+            result[0].fadeInDuration,
+            equals(const Duration(milliseconds: 500)),
+          );
+          expect(result[0].fadeOutDuration, equals(const Duration(seconds: 1)));
+          expect(result[1].fadeInDuration, equals(Duration.zero));
+          expect(result[1].fadeOutDuration, equals(Duration.zero));
+        },
+      );
+
+      test('a track with no timeline event plays without a fade', () async {
+        final result = await resolveRenderAudioTracks(
+          [_fileTrack(id: 'selected-sound', path: '/tmp/sound.mp3')],
+          logName: 'test',
+          audioEvents: [event('other', fadeIn: const Duration(seconds: 1))],
+        );
+
+        expect(result.single.fadeInDuration, equals(Duration.zero));
+        expect(result.single.fadeOutDuration, equals(Duration.zero));
+      });
     });
   });
 

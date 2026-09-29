@@ -9400,6 +9400,22 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Clipsnelheid';
 
   @override
+  String get videoEditorFadeLabel => 'Faden';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'In- en uitfaden voor geselecteerd geluid instellen';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'In- en uitfaden';
+
+  @override
+  String get videoEditorFadeInLabel => 'Infaden';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Uitfaden';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Overgang';
 
   @override

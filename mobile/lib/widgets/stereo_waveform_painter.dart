@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/models/video_editor/audio_fade.dart';
 
 /// Constants for waveform bar rendering.
 abstract final class WaveformConstants {
@@ -63,6 +64,8 @@ abstract final class WaveformConstants {
 /// - Start offset for displaying a specific audio segment
 /// - Amplitude normalization against the source's own peak, so a quietly
 ///   recorded track fills the band instead of reading as silence
+/// - A fade in and out drawn as a ramp on the bars, so a fade can be judged
+///   without playing it back
 class StereoWaveformPainter extends CustomPainter {
   /// Creates a waveform progress painter.
   StereoWaveformPainter({
@@ -78,6 +81,8 @@ class StereoWaveformPainter extends CustomPainter {
     this.startOffset = Duration.zero,
     this.barWidth = WaveformConstants.barWidth,
     this.barSpacing = WaveformConstants.barSpacing,
+    this.fadeIn = Duration.zero,
+    this.fadeOut = Duration.zero,
   });
 
   /// Left channel amplitude data.
@@ -116,6 +121,13 @@ class StereoWaveformPainter extends CustomPainter {
 
   /// Spacing between waveform bars.
   final double barSpacing;
+
+  /// How long the displayed audio fades in; its bars rise from silence.
+  final Duration fadeIn;
+
+  /// How long the displayed audio fades out; its bars fall to silence where
+  /// the audio ends.
+  final Duration fadeOut;
 
   /// Computed step (width + spacing) for each bar.
   double get _barStep => barWidth + barSpacing;
@@ -222,6 +234,7 @@ class StereoWaveformPainter extends CustomPainter {
       visibleSampleCount: visibleSampleCount,
       sampleOffset: sampleOffset,
       progressX: progressX,
+      visibleMs: visibleMs,
     );
 
     // Draw placeholder bars for remaining empty space (if audio < maxDuration)
@@ -283,8 +296,11 @@ class StereoWaveformPainter extends CustomPainter {
     required int visibleSampleCount,
     required int sampleOffset,
     required double progressX,
+    required double visibleMs,
   }) {
     final barCount = (waveformWidth / _barStep).floor();
+    final hasFade = fadeIn > Duration.zero || fadeOut > Duration.zero;
+    final audibleLength = Duration(microseconds: (visibleMs * 1000).round());
 
     if (barCount <= 0 || visibleSampleCount <= 0) return;
 
@@ -306,12 +322,23 @@ class StereoWaveformPainter extends CustomPainter {
           ? _shape(rightSamples[sampleIndex])
           : 0.0;
 
+      final gain = hasFade
+          ? audioFadeGain(
+              position: Duration(
+                microseconds: (i / barCount * visibleMs * 1000).round(),
+              ),
+              length: audibleLength,
+              fadeIn: fadeIn,
+              fadeOut: fadeOut,
+            )
+          : 1.0;
+
       // Calculate bar heights (minimum for visibility), scaled by animation
-      final topHeight = (leftAmp * scaledHalfHeight).clamp(
+      final topHeight = (leftAmp * gain * scaledHalfHeight).clamp(
         WaveformConstants.minBarHeight,
         halfHeight,
       );
-      final bottomHeight = (rightAmp * scaledHalfHeight).clamp(
+      final bottomHeight = (rightAmp * gain * scaledHalfHeight).clamp(
         WaveformConstants.minBarHeight,
         halfHeight,
       );
@@ -349,6 +376,8 @@ class StereoWaveformPainter extends CustomPainter {
         oldDelegate.heightFactor != heightFactor ||
         oldDelegate.startOffset != startOffset ||
         oldDelegate.barWidth != barWidth ||
-        oldDelegate.barSpacing != barSpacing;
+        oldDelegate.barSpacing != barSpacing ||
+        oldDelegate.fadeIn != fadeIn ||
+        oldDelegate.fadeOut != fadeOut;
   }
 }

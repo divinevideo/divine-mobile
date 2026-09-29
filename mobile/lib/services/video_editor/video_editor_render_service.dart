@@ -856,6 +856,7 @@ class VideoEditorRenderService {
       customTracks,
       logName: _logName,
       videoDuration: videoContentDuration,
+      audioEvents: parameters?.audioTracksFromMeta ?? const [],
       tempFilePaths: tempFilePaths,
     );
 

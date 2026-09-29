@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
@@ -27,6 +28,7 @@ import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/providers/saved_title_style_repository_provider.dart';
 import 'package:openvine/repositories/saved_title_style_repository.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
@@ -82,42 +84,55 @@ void main() {
       _MockVideoEditorMainBloc mainBloc, {
       _MockClipEditorBloc? clipBloc,
       List<Override> overrides = const [],
+      bool routed = false,
     }) {
-      return ProviderScope(
-        overrides: overrides,
-        child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: MultiBlocProvider(
-              providers: [
-                BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
-                BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
-                if (clipBloc != null)
-                  BlocProvider<ClipEditorBloc>.value(value: clipBloc),
-              ],
-              child: VideoEditorScope(
-                editorKey: GlobalKey(),
-                removeAreaKey: GlobalKey(),
-                originalClipAspectRatio: 9 / 16,
-                bodySizeNotifier: ValueNotifier(const Size(400, 600)),
-                zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
-                playTimeNotifier: ValueNotifier(Duration.zero),
-                playheadAdvancingNotifier: ValueNotifier<bool>(false),
-                fromLibrary: false,
-                onOpenCamera: () {},
-                onOpenClipsEditor: () {},
-                onAddStickers: () {},
-                onAddEditTextLayer: ([layer]) async => null,
-                onOpenMusicLibrary: () {},
-                onOpenVoiceOver: () {},
-                onOpenCaptions: () {},
-                editorOverride: mockEditor,
-                child: TimelineOverlayControls(item: item),
-              ),
-            ),
+      final scaffold = Scaffold(
+        body: MultiBlocProvider(
+          providers: [
+            BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+            BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+            if (clipBloc != null)
+              BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+          ],
+          child: VideoEditorScope(
+            editorKey: GlobalKey(),
+            removeAreaKey: GlobalKey(),
+            originalClipAspectRatio: 9 / 16,
+            bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+            zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+            playTimeNotifier: ValueNotifier(Duration.zero),
+            playheadAdvancingNotifier: ValueNotifier<bool>(false),
+            fromLibrary: false,
+            onOpenCamera: () {},
+            onOpenClipsEditor: () {},
+            onAddStickers: () {},
+            onAddEditTextLayer: ([layer]) async => null,
+            onOpenMusicLibrary: () {},
+            onOpenVoiceOver: () {},
+            onOpenCaptions: () {},
+            editorOverride: mockEditor,
+            child: TimelineOverlayControls(item: item),
           ),
         ),
+      );
+      return ProviderScope(
+        overrides: overrides,
+        // A sheet that closes itself through go_router needs one in the tree.
+        child: routed
+            ? MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: GoRouter(
+                  routes: [
+                    GoRoute(path: '/', builder: (_, _) => scaffold),
+                  ],
+                ),
+              )
+            : MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: scaffold,
+              ),
       );
     }
 
@@ -340,6 +355,33 @@ void main() {
       expect(find.text(l10n.videoEditorDuplicateLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorSplitLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorDoneLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorFadeLabel), findsOneWidget);
+    });
+
+    testWidgets('highlights the fade once the sound carries one', (
+      tester,
+    ) async {
+      DivineIconButton fadeButton() => tester.widget<DivineIconButton>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is DivineIconButton &&
+              w.semanticLabel == l10n.videoEditorFadeSoundSemanticLabel,
+        ),
+      );
+      const plain = TimelineOverlayItem(
+        id: 'sound-1',
+        type: TimelineOverlayType.sound,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 10),
+      );
+
+      await tester.pumpWidget(build(plain));
+      expect(fadeButton().type, DivineIconButtonType.secondary);
+
+      await tester.pumpWidget(
+        build(plain.copyWith(fadeOut: const Duration(seconds: 1))),
+      );
+      expect(fadeButton().type, DivineIconButtonType.primary);
     });
 
     testWidgets('renders delete/edit/duplicate/split/done for tune', (
@@ -1090,6 +1132,140 @@ void main() {
           // second.startOffset = originalStartOffset + (splitAt - item.startTime)
           //                     = 2s + (5s - 3s) = 4s
           expect(second.startOffset, equals(const Duration(seconds: 4)));
+        },
+      );
+
+      testWidgets(
+        'sound split keeps the fade in on the head and the fade out on the '
+        'tail, so the cut itself plays at full volume',
+        (tester) async {
+          final track = AudioEvent(
+            id: 'sound-1',
+            pubkey: 'pub',
+            createdAt: 0,
+            startTime: const Duration(seconds: 3),
+            endTime: const Duration(seconds: 8),
+            fadeInDuration: const Duration(milliseconds: 500),
+            fadeOutDuration: const Duration(seconds: 1),
+          );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [track.toJson()],
+          });
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(
+              currentPosition: Duration(seconds: 5),
+            ),
+          );
+
+          const item = TimelineOverlayItem(
+            id: 'sound-1',
+            type: TimelineOverlayType.sound,
+            startTime: Duration(seconds: 3),
+            endTime: Duration(seconds: 8),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final tracks =
+              (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .map(AudioEvent.fromJson)
+                  .toList();
+
+          expect(
+            tracks[0].fadeInDuration,
+            equals(const Duration(milliseconds: 500)),
+          );
+          expect(tracks[0].fadeOutDuration, equals(Duration.zero));
+          expect(tracks[1].fadeInDuration, equals(Duration.zero));
+          expect(tracks[1].fadeOutDuration, equals(const Duration(seconds: 1)));
+        },
+      );
+
+      testWidgets(
+        'a fade picked in the fade sheet is written to the sound in the audio '
+        'history',
+        (tester) async {
+          final track = AudioEvent(
+            id: 'sound-1',
+            pubkey: 'pub',
+            createdAt: 0,
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 5),
+          );
+          final other = AudioEvent(id: 'sound-2', pubkey: 'pub', createdAt: 0);
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [
+              track.toJson(),
+              other.toJson(),
+            ],
+          });
+          when(
+            () => mainBloc.state,
+          ).thenReturn(const VideoEditorMainState());
+
+          const item = TimelineOverlayItem(
+            id: 'sound-1',
+            type: TimelineOverlayType.sound,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 5),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc, routed: true),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorFadeSoundSemanticLabel),
+          );
+          await tester.pumpAndSettle();
+          tester
+              .widgetList<DivineSlider>(find.byType(DivineSlider))
+              .singleWhere(
+                (slider) => slider.semanticLabel == l10n.videoEditorFadeInLabel,
+              )
+              .onChanged!(1.5);
+          await tester.pump();
+          await tester.tap(
+            find.descendant(
+              of: find.byType(VideoEditorAudioFadeSheet),
+              matching: find.byWidgetPredicate(
+                (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final tracks =
+              (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .map(AudioEvent.fromJson)
+                  .toList();
+
+          expect(
+            tracks[0].fadeInDuration,
+            equals(const Duration(milliseconds: 1500)),
+          );
+          expect(tracks[1].hasFade, isFalse);
         },
       );
 

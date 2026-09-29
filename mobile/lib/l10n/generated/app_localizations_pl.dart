@@ -9539,6 +9539,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Prędkość klipu';
 
   @override
+  String get videoEditorFadeLabel => 'Zanikanie';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Ustaw zgłaśnianie i wyciszanie wybranego dźwięku';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Zgłaśnianie i wyciszanie';
+
+  @override
+  String get videoEditorFadeInLabel => 'Zgłaśnianie';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Wyciszanie';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Przejście';
 
   @override

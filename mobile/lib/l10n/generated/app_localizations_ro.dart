@@ -9559,6 +9559,22 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Viteza clipului';
 
   @override
+  String get videoEditorFadeLabel => 'Estompare';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Setează intrarea și ieșirea treptată pentru sunetul selectat';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Intrare și ieșire treptată';
+
+  @override
+  String get videoEditorFadeInLabel => 'Intrare treptată';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Ieșire treptată';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Tranziție';
 
   @override

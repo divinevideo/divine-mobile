@@ -9271,6 +9271,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Klip Hızı';
 
   @override
+  String get videoEditorFadeLabel => 'Solma';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Seçili ses için yavaş giriş ve çıkışı ayarla';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Yavaş giriş ve çıkış';
+
+  @override
+  String get videoEditorFadeInLabel => 'Yavaş giriş';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Yavaş çıkış';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Geçiş';
 
   @override

@@ -124,6 +124,8 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     startOffset: item.startOffset,
                     leftChannel: item.waveformLeftChannel,
                     rightChannel: item.waveformRightChannel,
+                    fadeIn: item.fadeIn,
+                    fadeOut: item.fadeOut,
                   )
                 : _isDetachedClip(item.layer)
                 ? _DetachedClipContent(item: item)
@@ -362,6 +364,8 @@ class _SoundContent extends StatelessWidget {
     this.startOffset = Duration.zero,
     this.leftChannel,
     this.rightChannel,
+    this.fadeIn = Duration.zero,
+    this.fadeOut = Duration.zero,
   });
 
   final String label;
@@ -378,6 +382,10 @@ class _SoundContent extends StatelessWidget {
 
   final Float32List? leftChannel;
   final Float32List? rightChannel;
+
+  /// The sound's fade in and out, drawn as a ramp on the waveform.
+  final Duration fadeIn;
+  final Duration fadeOut;
 
   @override
   Widget build(BuildContext context) {
@@ -420,6 +428,8 @@ class _SoundContent extends StatelessWidget {
                   maxDuration: currentDuration,
                   startOffset: effectiveOffset,
                   barWidth: TimelineConstants.soundWaveformBarWidth,
+                  fadeIn: fadeIn,
+                  fadeOut: fadeOut,
                 ),
               ),
             ),

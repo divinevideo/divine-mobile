@@ -9273,6 +9273,22 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Kecepatan Klip';
 
   @override
+  String get videoEditorFadeLabel => 'Pudar';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Atur suara masuk dan keluar perlahan untuk suara yang dipilih';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Masuk & keluar perlahan';
+
+  @override
+  String get videoEditorFadeInLabel => 'Masuk perlahan';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Keluar perlahan';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transisi';
 
   @override

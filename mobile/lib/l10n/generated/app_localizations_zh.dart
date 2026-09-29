@@ -8811,6 +8811,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => '片段速度';
 
   @override
+  String get videoEditorFadeLabel => '淡入淡出';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel => '设置选中声音的淡入淡出';
+
+  @override
+  String get videoEditorFadeSheetTitle => '淡入淡出';
+
+  @override
+  String get videoEditorFadeInLabel => '淡入';
+
+  @override
+  String get videoEditorFadeOutLabel => '淡出';
+
+  @override
   String get videoEditorTransitionSheetTitle => '转场';
 
   @override

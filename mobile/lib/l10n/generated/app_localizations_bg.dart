@@ -9436,6 +9436,22 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Скорост на клипа';
 
   @override
+  String get videoEditorFadeLabel => 'Избледняване';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Задаване на плавно усилване и заглушаване за избрания звук';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Плавно усилване и заглушаване';
+
+  @override
+  String get videoEditorFadeInLabel => 'Плавно усилване';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Плавно заглушаване';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Преход';
 
   @override
