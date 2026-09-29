@@ -54,6 +54,7 @@ void main() {
     int selectedIndex = 0,
     ValueChanged<int>? onSelected,
     ScrollController? controller,
+    Locale? locale,
   }) async {
     tester.view
       ..physicalSize = const Size(1080, 2400)
@@ -65,6 +66,7 @@ void main() {
       () => tester.pumpWidget(
         MaterialApp(
           theme: VineTheme.theme,
+          locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -140,6 +142,27 @@ void main() {
           findsOneWidget,
         );
         expect(find.byType(DivineIcon), findsOneWidget);
+      });
+    });
+
+    group('right-to-left', () {
+      testWidgets('aligns section headers to the start edge', (tester) async {
+        const arabic = Locale('ar');
+        await pumpList(tester, locale: arabic);
+
+        // The chip carries the same name, so look inside the header only.
+        final header = tester.getRect(
+          find.descendant(
+            of: find.byType(DivineSectionHeader),
+            matching: find.text(
+              lookupAppLocalizations(arabic).videoEditorFontCategorySans,
+            ),
+          ),
+        );
+
+        // The view is 1080 wide and headers are inset 16 at the start, which
+        // in Arabic is the right.
+        expect(header.right, closeTo(1080 - 16, 1));
       });
     });
 

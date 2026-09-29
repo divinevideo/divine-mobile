@@ -319,7 +319,7 @@ class _CategoryHeader extends StatelessWidget {
     return Semantics(
       header: true,
       child: Align(
-        alignment: .bottomLeft,
+        alignment: AlignmentDirectional.bottomStart,
         child: DivineSectionHeader(
           category.localizedName(context.l10n),
           padding: _FontListMetrics._headerPadding,
