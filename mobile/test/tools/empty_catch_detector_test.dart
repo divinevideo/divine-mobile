@@ -142,9 +142,8 @@ void run() {
         'EMPTY_CATCH_SCAN_DIRS': '${tmp.path}/lib ${tmp.path}/packages',
         'EMPTY_CATCH_PATH_PREFIX': tmp.path,
         'EMPTY_CATCH_BASELINE_FILE': baselinePath,
-        // HEAD always resolves, so numeric_ratchet.sh never falls back to
-        // `git fetch --depth=1 origin main`, which turns a full clone shallow.
-        // The absent repo path makes it take the first-introduction path.
+        // HEAD always resolves, and the absent repo path makes
+        // numeric_ratchet.sh take the first-introduction path.
         'EMPTY_CATCH_BASELINE_BASE_REF': 'HEAD',
         'EMPTY_CATCH_BASELINE_REPO_PATH':
             'mobile/scripts/baseline/empty-catch-test-no-base-baseline.txt',
