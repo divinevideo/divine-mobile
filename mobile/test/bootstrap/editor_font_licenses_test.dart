@@ -110,6 +110,29 @@ void main() {
       );
     });
 
+    test('keeps license text out of the copyright notices', () async {
+      // The license page appends the full license after each notice, so a
+      // notice that carries the license text shows it twice.
+      const licenseMarkers = [
+        'This Font Software is licensed under',
+        'SIL OPEN FONT LICENSE',
+        'TERMS AND CONDITIONS FOR USE',
+      ];
+      final notices = await _noticesByFamily();
+
+      expect(
+        notices.entries
+            .where(
+              (entry) => licenseMarkers.any(
+                (marker) =>
+                    entry.value.toUpperCase().contains(marker.toUpperCase()),
+              ),
+            )
+            .map((entry) => entry.key),
+        isEmpty,
+      );
+    });
+
     test('rejects a license the editor does not accept', () async {
       final bundle = _FakeAssetBundle({
         'assets/licenses/editor_fonts.json': jsonEncode({
