@@ -18,6 +18,7 @@ import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
@@ -1052,7 +1053,12 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     final running = _capturedChromaKeyBakes[clip.id];
     if (running != null) return running;
 
-    final bake = _bakeCapturedChromaKey(clip);
+    // The library as it is now, while the take's own account is signed in:
+    // one read when the bake lands could belong to whoever signed in since.
+    final bake = _bakeCapturedChromaKey(
+      clip,
+      clipLibrary: ref.read(clipLibraryServiceProvider),
+    );
     _capturedChromaKeyBakes[clip.id] = bake;
     _editorBackgroundWork.track(
       bake
@@ -1066,36 +1072,79 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     return bake;
   }
 
-  Future<DivineVideoClip> _bakeCapturedChromaKey(DivineVideoClip clip) async {
+  Future<DivineVideoClip> _bakeCapturedChromaKey(
+    DivineVideoClip clip, {
+    required ClipLibraryService clipLibrary,
+  }) async {
     final keyed = await ref.read(capturedChromaKeyBakerProvider).bake(clip);
     if (!ref.mounted) return keyed;
 
-    final index = _clips.indexWhere((c) => c.id == clip.id);
+    // Signed out, or signed in as someone else, since the bake started: the
+    // session and its autosave are no longer the take's account's to write.
+    // Only the take's own library row gets the keyed file.
+    final accountChanged =
+        ref.read(clipLibraryServiceProvider).ownerPubkey !=
+        clipLibrary.ownerPubkey;
+    if (accountChanged) {
+      await applyChromaKeyBakeToLibrary(
+        raw: clip,
+        baked: keyed,
+        clipLibrary: clipLibrary,
+      );
+      return keyed;
+    }
+
     // Only a take still waiting on the very footage that was keyed: one the
     // editor already swapped the bake into, or that moved on to another file,
     // is left alone.
-    if (index != -1 &&
-        _clips[index].hasPendingCaptureChromaKey &&
-        _clips[index].video?.file?.path == clip.video?.file?.path) {
-      _clips[index] = _clips[index].copyWith(
-        video: keyed.video,
-        chromaKey: keyed.chromaKey,
-        chromaKeySourcePath: keyed.chromaKeySourcePath,
-        clearCaptureChromaKey: true,
-        clearForwardVideoPath: true,
-        clearReversedVideoPath: true,
-        thumbnailPath: keyed.thumbnailPath,
-        thumbnailTimestamp: keyed.thumbnailTimestamp,
-      );
+    bool waitsOnThisBake(DivineVideoClip held) =>
+        held.hasPendingCaptureChromaKey &&
+        held.video?.file?.path == clip.video?.file?.path;
+
+    final index = _clips.indexWhere((c) => c.id == clip.id);
+    final pending = state.pendingDeletion;
+    if (index != -1 && waitsOnThisBake(_clips[index])) {
+      _clips[index] = _clips[index].withCapturedChromaKeyBake(keyed);
       state = state.copyWith(clips: List.unmodifiable(_clips));
       _triggerAutosave();
+    } else if (pending != null &&
+        pending.clip.id == clip.id &&
+        waitsOnThisBake(pending.clip)) {
+      // Deleted while it baked, but the undo window is still open: an undo
+      // must bring back the keyed take the library row now points at.
+      state = state.copyWith(
+        pendingDeletion: ClipPendingDeletion(
+          clip: pending.clip.withCapturedChromaKeyBake(keyed),
+          originalIndex: pending.originalIndex,
+        ),
+      );
     }
 
-    if (await applyChromaKeyBakeToLibrary(raw: clip, baked: keyed) &&
+    if (await applyChromaKeyBakeToLibrary(
+          raw: clip,
+          baked: keyed,
+          clipLibrary: clipLibrary,
+        ) &&
         ref.mounted) {
       state = state.copyWith(libraryRevision: state.libraryRevision + 1);
     }
     return keyed;
+  }
+
+  /// Bakes the key the take [clipId] was recorded with, wherever the take is
+  /// now: in the session, deleted but still inside the undo window, or only
+  /// in the library once the recorder has moved on from it.
+  ///
+  /// For the recorder, right after a take. Does nothing when the take is
+  /// gone or already keyed. Throws whatever [bakeCapturedChromaKey] throws.
+  Future<void> bakeRecordedTake(String clipId) async {
+    final pending = state.pendingDeletion;
+    final clip =
+        getClipById(clipId) ??
+        (pending?.clip.id == clipId ? pending!.clip : null) ??
+        await ref.read(clipLibraryServiceProvider).getClipById(clipId);
+    if (clip == null || !clip.hasPendingCaptureChromaKey) return;
+    await bakeCapturedChromaKey(clip);
   }
 
   /// Holds chroma-key bakes back while the camera records — see
@@ -1117,13 +1166,18 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// The raw take stays on disk as the row's key source, so the key can still
   /// be re-tuned from clean footage.
   ///
+  /// [clipLibrary] is the library of the account the take was recorded
+  /// under, pinned when its bake started. It defaults to the current one.
+  ///
   /// Returns whether a library row was updated. Never throws.
   Future<bool> applyChromaKeyBakeToLibrary({
     required DivineVideoClip raw,
     required DivineVideoClip baked,
+    ClipLibraryService? clipLibrary,
   }) async {
     try {
-      final clipService = ref.read(clipLibraryServiceProvider);
+      final ClipLibraryService clipService =
+          clipLibrary ?? ref.read(clipLibraryServiceProvider);
       final libraryClip = await clipService.getClipById(raw.id);
       final libraryFile = libraryClip?.video?.file?.path;
       final rawFile = raw.video?.file?.path;
@@ -1134,18 +1188,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
           p.basename(libraryFile) != p.basename(rawFile)) {
         return false;
       }
-      await clipService.saveClip(
-        libraryClip.copyWith(
-          video: baked.video,
-          chromaKey: baked.chromaKey,
-          chromaKeySourcePath: baked.chromaKeySourcePath,
-          clearCaptureChromaKey: true,
-          clearForwardVideoPath: true,
-          clearReversedVideoPath: true,
-          thumbnailPath: baked.thumbnailPath,
-          thumbnailTimestamp: baked.thumbnailTimestamp,
-        ),
-      );
+      await clipService.saveClip(libraryClip.withCapturedChromaKeyBake(baked));
       return true;
     } catch (e, stackTrace) {
       Log.error(

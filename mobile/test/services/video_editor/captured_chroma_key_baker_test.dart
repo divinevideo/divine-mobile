@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
+import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/services/video_thumbnail_service.dart'
     show ThumbnailFileResult;
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -147,6 +150,42 @@ void main() {
         },
       );
 
+      test('gives up on a render that never settles and bakes the next', () {
+        fakeAsync((async) {
+          final cancelled = <String>[];
+          final baker = CapturedChromaKeyBaker(
+            render:
+                ({
+                  required sourceClip,
+                  required chromaKey,
+                  required renderId,
+                }) => sourceClip.id == 'stalled'
+                ? Completer<({EditorVideo video, String source})>().future
+                : Future.value(_keyedFile(sourceClip)),
+            extractPoster: _poster,
+            cancelRender: (renderId) async => cancelled.add(renderId),
+          );
+          Object? stalledError;
+          DivineVideoClip? next;
+          unawaited(
+            baker
+                .bake(_take('stalled'))
+                .then<void>(
+                  (_) {},
+                  onError: (Object error) => stalledError = error,
+                ),
+          );
+          unawaited(baker.bake(_take('next')).then((clip) => next = clip));
+
+          async.elapse(VideoEditorConstants.previewRenderWatchdogTimeout);
+          async.flushMicrotasks();
+
+          expect(stalledError, isA<VideoRenderFailedException>());
+          expect(cancelled, [ChromaKeyBakeService.renderIdFor('stalled')]);
+          expect(next?.chromaKey, _recordedKey);
+        });
+      });
+
       test('refuses a clip with no key waiting', () {
         final baker = CapturedChromaKeyBaker(
           render: ({
@@ -230,6 +269,38 @@ void main() {
           expect(attempts, 2);
         },
       );
+
+      test('fails a later render instead of retrying it forever', () async {
+        final firstAttempt = Completer<({EditorVideo video, String source})>();
+        var attempts = 0;
+        final baker = CapturedChromaKeyBaker(
+          render:
+              ({required sourceClip, required chromaKey, required renderId}) {
+                attempts++;
+                if (sourceClip.id == 'a' && attempts == 1) {
+                  return firstAttempt.future;
+                }
+                if (sourceClip.id == 'b') throw StateError('render failed');
+                return Future.value(_keyedFile(sourceClip));
+              },
+          extractPoster: _poster,
+          cancelRender: (_) async =>
+              firstAttempt.completeError(Exception('render cancelled')),
+        );
+
+        final a = baker.bake(_take('a'));
+        await pumpEventQueue();
+        baker
+          ..hold()
+          ..release();
+        await a;
+        final before = attempts;
+
+        // Nothing holds this one, so its failure is a failure, not a
+        // postponement.
+        await expectLater(baker.bake(_take('b')), throwsStateError);
+        expect(attempts, before + 1);
+      });
     });
   });
 }

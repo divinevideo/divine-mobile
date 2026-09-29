@@ -61,7 +61,7 @@ enum VideoRecorderMode {
     .capture => true,
     .stopMotion => true,
     .lipSync => true,
-    // The key is baked into the clip in the editor, never at capture.
+    // The camera records raw footage; the key is baked in afterwards.
     .chromaKey => true,
     .classic => false,
   };
@@ -111,7 +111,7 @@ enum VideoRecorderMode {
 
   /// Whether the viewfinder shows the chroma-key composite live.
   ///
-  /// Preview only: the recording is the raw camera footage, and the key is
-  /// baked into the clip once the editor opens.
+  /// The recording itself is the raw camera footage. The key is baked into
+  /// the clip afterwards.
   bool get needsLiveChromaKey => this == chromaKey;
 }

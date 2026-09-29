@@ -255,6 +255,33 @@ void main() {
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'still reloads once the user is back from the trash',
+        setUp: () {
+          when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+            (_) async => [
+              createClip(id: 'keyed').copyWith(
+                video: EditorVideo.file('/path/to/keyed.mp4'),
+              ),
+            ],
+          );
+        },
+        build: createBloc,
+        // Leaving the trash keeps its status; only the filter goes back.
+        seed: () => ClipsLibraryState(
+          status: ClipsLibraryStatus.trashLoaded,
+          clips: [createClip(id: 'keyed')],
+        ),
+        act: (bloc) => bloc.add(const ClipsLibraryClipsChanged()),
+        expect: () => [
+          isA<ClipsLibraryState>().having(
+            (s) => s.sortedClips.single.video?.file?.path,
+            'shown clip file',
+            '/path/to/keyed.mp4',
+          ),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         'leaves a library that has not loaded yet to its own load',
         build: createBloc,
         act: (bloc) => bloc.add(const ClipsLibraryClipsChanged()),

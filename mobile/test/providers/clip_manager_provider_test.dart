@@ -1178,6 +1178,135 @@ void main() {
           key,
         );
       });
+
+      test('renders a take again after its bake failed', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = recordTake(notifier);
+        when(
+          () => mockClipLibraryService.getClipById(take.id),
+        ).thenAnswer((_) async => null);
+        renderGate = Completer<void>();
+        final failed = expectLater(
+          notifier.bakeCapturedChromaKey(take),
+          throwsStateError,
+        );
+        await pumpEventQueue();
+        renderGate!.completeError(StateError('render failed'));
+        await failed;
+        renderGate = null;
+        final keyed = await notifier.bakeCapturedChromaKey(take);
+
+        expect(keyed.chromaKey, key);
+        expect(rendered, [take.id, take.id]);
+      });
+
+      test('holds bakes back until released', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = recordTake(notifier);
+        when(
+          () => mockClipLibraryService.getClipById(take.id),
+        ).thenAnswer((_) async => null);
+
+        notifier.holdCapturedChromaKeyBakes();
+        final bake = notifier.bakeCapturedChromaKey(take);
+        await pumpEventQueue();
+        expect(rendered, isEmpty);
+
+        notifier.releaseCapturedChromaKeyBakes();
+        await bake;
+        expect(rendered, [take.id]);
+      });
+
+      test('brings a take deleted while it baked back keyed on undo', () async {
+        final notifier = container.read(clipManagerProvider.notifier);
+        final take = recordTake(notifier);
+        when(
+          () => mockClipLibraryService.getClipById(take.id),
+        ).thenAnswer((_) async => null);
+        renderGate = Completer<void>();
+        final bake = notifier.bakeCapturedChromaKey(take);
+        await pumpEventQueue();
+
+        await notifier.scheduleDeleteLastClip();
+        renderGate!.complete();
+        await bake;
+        await notifier.undoPendingDeletion();
+
+        final restored = container.read(clipManagerProvider).clips.single;
+        expect(restored.video?.file?.path, '/documents/keyed.mp4');
+        expect(restored.chromaKey, key);
+      });
+
+      test(
+        'keys only the library row of the account that recorded the take',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          final signedOut = _MockClipLibraryService();
+          when(() => mockClipLibraryService.ownerPubkey).thenReturn('owner');
+          when(() => signedOut.ownerPubkey).thenReturn('anonymous');
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          renderGate = Completer<void>();
+          final bake = notifier.bakeCapturedChromaKey(take);
+          await pumpEventQueue();
+
+          container.updateOverrides([
+            sharedPreferencesProvider.overrideWithValue(
+              container.read(sharedPreferencesProvider),
+            ),
+            draftStorageServiceProvider.overrideWithValue(
+              mockDraftStorageService,
+            ),
+            clipLibraryServiceProvider.overrideWithValue(signedOut),
+            capturedChromaKeyBakerProvider.overrideWith((_) => chromaKeyBaker),
+          ]);
+          renderGate!.complete();
+          await bake;
+
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.single
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          verifyNever(() => signedOut.saveClip(any()));
+          // The session, and with it the autosave, is left alone.
+          expect(
+            container
+                .read(clipManagerProvider)
+                .clips
+                .single
+                .hasPendingCaptureChromaKey,
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'bakes the library copy of a take the recorder already let go',
+        () async {
+          final notifier = container.read(clipManagerProvider.notifier);
+          final take = recordTake(notifier);
+          when(
+            () => mockClipLibraryService.getClipById(take.id),
+          ).thenAnswer((_) async => take);
+          // Leaving the recorder right after the take clears the session.
+          notifier.clearClips();
+
+          await notifier.bakeRecordedTake(take.id);
+
+          expect(rendered, [take.id]);
+          final saved =
+              verify(
+                    () => mockClipLibraryService.saveClip(captureAny()),
+                  ).captured.last
+                  as DivineVideoClip;
+          expect(saved.video?.file?.path, '/documents/keyed.mp4');
+          expect(saved.chromaKey, key);
+        },
+      );
     });
 
     group('applyChromaKeyBakeToLibrary', () {

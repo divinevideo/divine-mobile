@@ -47,5 +47,11 @@ Future<String?> captureChromaKeyBackdropImage({
     await File(picked.path).readAsBytes(),
   );
   await File(target).writeAsBytes(normalized, flush: true);
+  // The picker's full-size original is no longer needed once the copy exists.
+  try {
+    await File(picked.path).delete();
+  } on FileSystemException {
+    // Only a cache file the OS clears on its own.
+  }
   return target;
 }

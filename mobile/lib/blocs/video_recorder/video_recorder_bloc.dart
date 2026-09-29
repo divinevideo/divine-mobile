@@ -43,6 +43,7 @@ import 'package:openvine/services/video_recorder/camera/camera_base_service.dart
 import 'package:openvine/services/video_recorder/stop_motion_session_store.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/chroma_key_still_detection.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -327,6 +328,11 @@ class VideoRecorderBloc
   /// in progress, or `null` while nothing is held. Kept so [close] can let
   /// them go even after the widget that reads the clip manager is gone.
   ClipManagerNotifier? _chromaKeyBakeHolder;
+
+  /// Set once [close] starts. A countdown keeps ticking through close's
+  /// awaits, and a tick must not take a new hold then: the widget that reads
+  /// the clip manager is already gone, and nothing would release the hold.
+  bool _isClosing = false;
   AudioPlaybackService? _audioPlaybackService;
   CountdownSoundService? _countdownSoundService;
   Timer? _focusPointTimer;
@@ -367,6 +373,7 @@ class VideoRecorderBloc
     final isCapturing =
         change.nextState.isStartingRecording || change.nextState.isRecording;
     if (isCapturing && _chromaKeyBakeHolder == null) {
+      if (_isClosing) return;
       _chromaKeyBakeHolder = _readClipManager()..holdCapturedChromaKeyBakes();
     } else if (!isCapturing) {
       _releaseChromaKeyBakes();
@@ -1220,8 +1227,8 @@ class VideoRecorderBloc
       return;
     }
 
-    // The footage is the raw camera frame; the key the viewfinder showed
-    // travels with it as an intent and is baked once the editor opens.
+    // The footage is the raw camera frame. The key the viewfinder showed
+    // travels with it as an intent and is baked right after the take.
     final captureChromaKey = state.recorderMode.needsLiveChromaKey
         ? state.chromaKey
         : null;
@@ -1291,39 +1298,22 @@ class VideoRecorderBloc
               stackTrace: stackTrace,
             );
           })
-          .then((_) => _bakeRecordedChromaKey(clipManager, clip.id)),
+          // Bakes the take into the composite the viewfinder showed, so the
+          // clip and its library copy hold that and not the raw footage. Only
+          // once post-processing is done: that pass ends by saving the raw
+          // take to the library, and a raw save landing after the keyed one
+          // would put the wall back. A failed bake leaves the take raw with its
+          // key, and the editor tries again when it opens on the clip.
+          .then((_) {
+            if (clip.captureChromaKey == null) return;
+            runDetached(
+              clipManager.bakeRecordedTake(clip.id),
+              'bake the chroma key of take ${clip.id}',
+              logName: 'VideoRecorderBloc',
+              category: LogCategory.video,
+            );
+          }),
     );
-  }
-
-  /// Bakes a chroma-key take into the composite the viewfinder showed, so the
-  /// clip and its library copy hold that rather than the raw footage.
-  ///
-  /// Started only once post-processing is done: that pass ends by saving the
-  /// raw take to the library, and a raw save landing after the keyed one would
-  /// put the wall back. A take deleted since, or already keyed by an editor
-  /// that opened first, is left alone.
-  Future<void> _bakeRecordedChromaKey(
-    ClipManagerNotifier clipManager,
-    String clipId,
-  ) async {
-    try {
-      final clip = clipManager.getClipById(clipId);
-      if (clip == null || !clip.hasPendingCaptureChromaKey) return;
-      await clipManager.bakeCapturedChromaKey(clip);
-    } catch (e, stackTrace) {
-      // The take keeps its raw footage and its recorded key; the editor tries
-      // again when it opens on the clip.
-      Log.warning(
-        '⚠️ Chroma-key bake failed for $clipId: $e',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
-      Log.debug(
-        '$stackTrace',
-        name: 'VideoRecorderBloc',
-        category: LogCategory.video,
-      );
-    }
   }
 
   /// Enriches a freshly recorded [clip] with its real duration, thumbnail and
@@ -1384,7 +1374,12 @@ class VideoRecorderBloc
         targetTimestamp: targetTimestamp,
       );
 
-      if (thumbnailResult != null) {
+      if (thumbnailResult != null &&
+          clipManager.getClipById(clip.id)?.chromaKey != null) {
+        // An editor that opened on the take first already keyed it, with a
+        // poster of the composite. A frame of the raw wall must not replace it.
+        _deleteFileQuietly(thumbnailResult.path);
+      } else if (thumbnailResult != null) {
         clipManager.updateThumbnail(
           clipId: clip.id,
           thumbnailPath: thumbnailResult.path,
@@ -2104,9 +2099,9 @@ class VideoRecorderBloc
   /// Deletes [path], logging rather than throwing: a file that cannot be
   /// removed costs disk, not correctness.
   ///
-  /// Synchronous on purpose. Both callers hand over a single small file — a
-  /// measurement still or a backdrop photo — and deleting it in the same turn
-  /// means a close right after cannot race the cleanup.
+  /// Synchronous on purpose. Every caller hands over a single small file, such
+  /// as a measurement still, a backdrop photo or a poster, and deleting it in
+  /// the same turn means a close right after cannot race the cleanup.
   void _deleteFileQuietly(String path) {
     try {
       final file = File(path);
@@ -2662,6 +2657,7 @@ class VideoRecorderBloc
     _zoomIndicatorTimer?.cancel();
     _zoomIndicatorTimer = null;
     // A recorder closed mid-take must not leave the bakes held for good.
+    _isClosing = true;
     _releaseChromaKeyBakes();
     // A backdrop image no clip was recorded with is referenced by nothing
     // once this recorder is gone. Unless a take is on the camera or being

@@ -160,8 +160,8 @@ class _BackdropSwatch extends StatelessWidget {
 /// The settings panel, bound to the recorder.
 ///
 /// The same panel as the editor's chroma key screen, so the key and
-/// backdrop a clip is recorded with are the ones the editor bakes and later
-/// re-opens with.
+/// backdrop a clip is recorded with are the ones baked into it and the ones
+/// the editor re-opens with.
 class _ChromaKeySettings extends StatelessWidget {
   const _ChromaKeySettings({required this.scrollController});
 

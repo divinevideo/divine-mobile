@@ -3,9 +3,11 @@
 
 import 'dart:async';
 
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:unified_logger/unified_logger.dart';
@@ -135,10 +137,18 @@ class CapturedChromaKeyBaker {
       _activeRenderId = renderId;
       _stoppedByHold = false;
       try {
-        return await _render(
-          sourceClip: clip,
-          chromaKey: clip.captureChromaKey!,
-          renderId: renderId,
+        // Bounded: the queue is shared, so one render that never settles would
+        // leave every later take raw.
+        return await VideoRenderWatchdog.run(
+          render: _render(
+            sourceClip: clip,
+            chromaKey: clip.captureChromaKey!,
+            renderId: renderId,
+          ),
+          taskId: renderId,
+          cancelTask: _cancelRender,
+          timeout: VideoEditorConstants.previewRenderWatchdogTimeout,
+          reason: 'captured chroma-key bake timed out',
         );
       } catch (_) {
         if (!_stoppedByHold) rethrow;

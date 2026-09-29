@@ -221,14 +221,30 @@ class DivineVideoClip {
   /// Set by the recorder's chroma key mode, which keys the viewfinder live
   /// but writes the raw camera footage. This is an intent, which is why it is
   /// not [chromaKey]: that one asserts the key is already burned into [video].
-  /// The editor bakes it when it opens and moves it to [chromaKey] on success;
-  /// until then it seeds the chroma key screen for this clip.
+  /// It is baked in the background right after the take. If that has not
+  /// happened yet, the editor bakes it when it opens. Either way it moves to
+  /// [chromaKey] on success. Until then it seeds the chroma key screen for
+  /// this clip.
   final ClipChromaKey? captureChromaKey;
 
   /// Whether this clip was recorded in chroma key mode and still waits for
   /// its key to be baked.
   bool get hasPendingCaptureChromaKey =>
       captureChromaKey != null && chromaKey == null && video != null;
+
+  /// This clip with the bake of its recorded key, [keyed], swapped in: the
+  /// keyed file, the key, the raw take as its source, and the keyed poster.
+  /// Everything else on this copy, such as trims or edits, stays.
+  DivineVideoClip withCapturedChromaKeyBake(DivineVideoClip keyed) => copyWith(
+    video: keyed.video,
+    chromaKey: keyed.chromaKey,
+    chromaKeySourcePath: keyed.chromaKeySourcePath,
+    clearCaptureChromaKey: true,
+    clearForwardVideoPath: true,
+    clearReversedVideoPath: true,
+    thumbnailPath: keyed.thumbnailPath,
+    thumbnailTimestamp: keyed.thumbnailTimestamp,
+  );
 
   /// All factual source credits carried by this clip.
   ///

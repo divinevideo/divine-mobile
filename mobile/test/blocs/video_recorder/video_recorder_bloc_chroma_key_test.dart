@@ -679,6 +679,28 @@ void main() {
         verify(() => clipManager.releaseCapturedChromaKeyBakes()).called(1);
       });
 
+      test('are not held again by a countdown tick during close', () async {
+        final disposed = Completer<void>();
+        when(() => cameraService.dispose()).thenAnswer((_) => disposed.future);
+        final bloc = buildBloc()
+          ..emit(
+            chromaKeyState.copyWith(
+              recordingState: VideoRecorderState.recording,
+              countdownValue: 3,
+            ),
+          );
+        final closing = bloc.close();
+        await pumpEventQueue();
+
+        // A countdown keeps ticking while close waits on the camera.
+        bloc.emit(bloc.state.copyWith(countdownValue: 2));
+        disposed.complete();
+        await closing;
+
+        verify(() => clipManager.holdCapturedChromaKeyBakes()).called(1);
+        verify(() => clipManager.releaseCapturedChromaKeyBakes()).called(1);
+      });
+
       test('bake a take once its post-processing is done', () async {
         stubStopReads();
         final recorded = _MockEditorVideo();
@@ -711,10 +733,9 @@ void main() {
         when(
           () => clipManager.saveClipToLibrary(any()),
         ).thenAnswer((_) async => true);
-        when(() => clipManager.getClipById('recorded')).thenReturn(take);
         when(
-          () => clipManager.bakeCapturedChromaKey(any()),
-        ).thenAnswer((_) async => take);
+          () => clipManager.bakeRecordedTake('recorded'),
+        ).thenAnswer((_) async {});
         final bloc = buildBloc()
           ..emit(
             chromaKeyState.copyWith(
@@ -726,12 +747,7 @@ void main() {
         bloc.add(const VideoRecorderRecordingStopRequested());
         await pumpEventQueue();
 
-        final baked =
-            verify(
-                  () => clipManager.bakeCapturedChromaKey(captureAny()),
-                ).captured.single
-                as DivineVideoClip;
-        expect(baked.id, 'recorded');
+        verify(() => clipManager.bakeRecordedTake('recorded')).called(1);
       });
     });
   });
