@@ -271,6 +271,72 @@ void main() {
       });
     });
 
+    group('roster surface', () {
+      const roundedTop = BorderRadius.vertical(
+        top: Radius.circular(VineTheme.shellInnerCornerRadius),
+      );
+
+      ClipRRect clipAround(WidgetTester tester, Finder content) =>
+          tester.widget<ClipRRect>(
+            find.ancestor(of: content, matching: find.byType(ClipRRect)).first,
+          );
+
+      testWidgets('rounds the top corners of the member list', (tester) async {
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list()],
+          ),
+        );
+
+        final clip = clipAround(tester, find.byType(ListView));
+        expect(clip.borderRadius, roundedTop);
+      });
+
+      testWidgets('sits on the nav-colored page the bar is drawn on', (
+        tester,
+      ) async {
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: _ownerPubkey,
+            lists: [_list()],
+          ),
+        );
+
+        final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+        expect(scaffold.backgroundColor, VineTheme.darkColors.nav);
+        final surface = tester.widget<ColoredBox>(
+          find
+              .ancestor(
+                of: find.byType(ListView),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        );
+        expect(surface.color, VineTheme.darkColors.surfaceContainerHigh);
+      });
+
+      testWidgets('keeps the same frame while the list loads', (tester) async {
+        await pumpRoster(
+          tester,
+          blocState: PeopleListsState(
+            status: PeopleListsStatus.loading,
+            ownerPubkey: _ownerPubkey,
+          ),
+        );
+
+        final clip = clipAround(
+          tester,
+          find.byType(DivineCircularProgressIndicator),
+        );
+        expect(clip.borderRadius, roundedTop);
+      });
+    });
+
     group('navigation', () {
       testWidgets('tapping a member opens their profile', (tester) async {
         await pumpRoster(

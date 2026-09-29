@@ -17,6 +17,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/rounded_grid_viewport.dart';
 
 /// Every member of a people list, best-ranked first.
 ///
@@ -145,31 +146,65 @@ class _RosterView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    return _RosterScaffold(
+      title: list.name,
+      subtitle: l10n.peopleListsPeopleCount(list.pubkeys.length),
+      actions: [
+        if (list.isEditable)
+          DiVineAppBarAction(
+            icon: SvgIconSource(DivineIconName.userPlus.assetPath),
+            tooltip: l10n.peopleListsAddPeopleTooltip,
+            semanticLabel: l10n.peopleListsAddPeopleSemanticLabel,
+            onPressed: () => runDetached(
+              context.push<void>(
+                '/people-lists/${Uri.encodeComponent(list.id)}/add-people',
+              ),
+              'open add-people picker',
+              logName: 'PeopleListMembersScreen',
+              category: LogCategory.ui,
+            ),
+          ),
+      ],
+      body: _RosterBody(list: list),
+    );
+  }
+}
+
+/// The roster's page frame, shared by every state of the screen.
+///
+/// The bar and the page behind it are the nav color, and the content sits on
+/// a surface whose top corners are rounded: the seam Explore and the inbox
+/// draw. Sharing it keeps the frame still while the roster loads.
+class _RosterScaffold extends StatelessWidget {
+  const _RosterScaffold({
+    required this.title,
+    required this.body,
+    this.subtitle,
+    this.actions = const [],
+  });
+
+  final String title;
+  final String? subtitle;
+  final List<DiVineAppBarAction> actions;
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.vineColors.surfaceContainerHigh,
+      backgroundColor: context.vineColors.nav,
       appBar: DiVineAppBar(
-        title: list.name,
-        subtitle: l10n.peopleListsPeopleCount(list.pubkeys.length),
+        title: title,
+        subtitle: subtitle,
         showBackButton: true,
         onBackPressed: context.safePop,
-        actions: [
-          if (list.isEditable)
-            DiVineAppBarAction(
-              icon: SvgIconSource(DivineIconName.userPlus.assetPath),
-              tooltip: l10n.peopleListsAddPeopleTooltip,
-              semanticLabel: l10n.peopleListsAddPeopleSemanticLabel,
-              onPressed: () => runDetached(
-                context.push<void>(
-                  '/people-lists/${Uri.encodeComponent(list.id)}/add-people',
-                ),
-                'open add-people picker',
-                logName: 'PeopleListMembersScreen',
-                category: LogCategory.ui,
-              ),
-            ),
-        ],
+        actions: actions,
       ),
-      body: _RosterBody(list: list),
+      body: RoundedGridViewport(
+        child: ColoredBox(
+          color: context.vineColors.surfaceContainerHigh,
+          child: SizedBox.expand(child: body),
+        ),
+      ),
     );
   }
 }
@@ -242,13 +277,8 @@ class _RosterLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.vineColors.surfaceContainerHigh,
-      appBar: DiVineAppBar(
-        title: context.l10n.peopleListsRouteTitle,
-        showBackButton: true,
-        onBackPressed: context.safePop,
-      ),
+    return _RosterScaffold(
+      title: context.l10n.peopleListsRouteTitle,
       body: const Center(
         child: DivineCircularProgressIndicator(color: VineTheme.vineGreen),
       ),
@@ -262,13 +292,8 @@ class _RosterNotFoundView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      backgroundColor: context.vineColors.surfaceContainerHigh,
-      appBar: DiVineAppBar(
-        title: l10n.peopleListsRouteTitle,
-        showBackButton: true,
-        onBackPressed: context.safePop,
-      ),
+    return _RosterScaffold(
+      title: l10n.peopleListsRouteTitle,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -293,13 +318,8 @@ class _RosterFailedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      backgroundColor: context.vineColors.surfaceContainerHigh,
-      appBar: DiVineAppBar(
-        title: l10n.peopleListsRouteTitle,
-        showBackButton: true,
-        onBackPressed: context.safePop,
-      ),
+    return _RosterScaffold(
+      title: l10n.peopleListsRouteTitle,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
