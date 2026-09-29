@@ -83,7 +83,7 @@ const _cancelling = AccountDeletionAttempt(
   username: 'alice',
 );
 final Duration _overdue =
-    AccountDeletionRecoveryPolling.supportEscapeAfter +
+    AccountDeletionRecoveryPolling.processingSupportEscapeAfter +
     const Duration(minutes: 1);
 
 const _processing = AccountDeletionAttempt(
@@ -672,7 +672,48 @@ void main() {
         expect(cubit.state.pollingPaused, isFalse);
         expect(
           timers.timers.singleWhere((timer) => timer.isActive).delay,
-          AccountDeletionRecoveryPolling.slowCap,
+          const Duration(minutes: 5),
+        );
+        await cubit.close();
+      },
+    );
+
+    test(
+      'a processing deletion offers support only after about 36 hours',
+      () async {
+        when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+        when(
+          () => repository.fetchStatus(
+            attemptId: _processing.id,
+            pubkeyHex: 'a' * 64,
+          ),
+        ).thenAnswer((_) async => _processing);
+        final start = now;
+        final cubit = buildCubit(withReceipt: true);
+        await cubit.resume(_processing);
+
+        while (now.difference(start) < const Duration(minutes: 15)) {
+          expect(
+            timers.timers.singleWhere((timer) => timer.isActive).delay,
+            lessThanOrEqualTo(const Duration(seconds: 30)),
+          );
+          await timers.fireNext();
+        }
+        expect(
+          timers.timers.singleWhere((timer) => timer.isActive).delay,
+          const Duration(minutes: 5),
+        );
+        while (timers.timers.any((timer) => timer.isActive)) {
+          await timers.fireNext();
+        }
+
+        expect(cubit.state.pollingPaused, isTrue);
+        expect(
+          now.difference(start),
+          allOf(
+            greaterThan(const Duration(hours: 35, minutes: 50)),
+            lessThanOrEqualTo(const Duration(hours: 36)),
+          ),
         );
         await cubit.close();
       },
@@ -1143,6 +1184,7 @@ void main() {
           ),
         ).thenAnswer((_) async => _recoverable);
         final cubit = buildCubit(withReceipt: true);
+        final start = now;
 
         await cubit.resume(_recoverable);
         final firstDelay = timers.timers.single.delay;
@@ -1160,6 +1202,12 @@ void main() {
           AccountDeletionRecoveryStatus.confirmingSubmission,
         );
         expect(cubit.state.pollingPaused, isTrue);
+        // An unconfirmed submission is not normal processing, so it keeps the
+        // short support bound rather than waiting a day and a half.
+        expect(
+          now.difference(start),
+          lessThanOrEqualTo(const Duration(minutes: 15)),
+        );
         await cubit.close();
       },
     );

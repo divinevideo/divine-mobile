@@ -34,9 +34,19 @@ abstract class AccountDeletionRecoveryPolling {
   static const slowAfter = Duration(minutes: 15);
   static const slowCap = Duration(minutes: 5);
 
-  /// When a still-processing deletion is treated as stuck and Contact Support
-  /// is offered. Completion normally takes hours, and up to a day.
-  static const supportEscapeAfter = Duration(hours: 36);
+  /// When polling pauses and Contact Support is offered, for any state except
+  /// `processing`: an unconfirmed submission or a stuck cancellation is not
+  /// normal progress.
+  static const supportEscapeAfter = Duration(minutes: 15);
+
+  /// The same bound once the server has accepted the deletion. Completion
+  /// normally takes hours, and up to a day, so support waits until then.
+  static const processingSupportEscapeAfter = Duration(hours: 36);
+
+  static Duration supportEscapeAfterFor(AccountDeletionRecoveryStatus status) =>
+      status == AccountDeletionRecoveryStatus.processing
+      ? processingSupportEscapeAfter
+      : supportEscapeAfter;
 
   static Duration delayForTick(int tickIndex, {Duration elapsed = .zero}) {
     if (elapsed >= slowAfter) return slowCap;
@@ -653,7 +663,7 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
       elapsed: nonNegativeElapsed,
     );
     if (nonNegativeElapsed + delay >
-        AccountDeletionRecoveryPolling.supportEscapeAfter) {
+        AccountDeletionRecoveryPolling.supportEscapeAfterFor(state.status)) {
       if (!_overdueRefreshUsed) {
         _overdueRefreshUsed = true;
         _pollTimer = _timerFactory(

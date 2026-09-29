@@ -7151,7 +7151,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountDeletionOverdueBody =>
-      'يستغرق حذف حسابك وقتًا أطول من المتوقع. تواصل مع الدعم وسنكمله.';
+      'يستغرق حذف حسابك وقتًا أطول من المتوقع. يُرجى التواصل مع الدعم لنُكمله.';
 
   @override
   String get accountDeletionOtherAccountPending =>
