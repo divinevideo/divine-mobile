@@ -472,6 +472,12 @@ void main() {
           accountDeletionRecoveryRepositoryProvider.overrideWithValue(
             repository,
           ),
+          ownedDivineUsernameProvider.overrideWith(
+            (ref) async => const DivineUsernameNotFound(),
+          ),
+          fetchUserProfileProvider(
+            _pubkeyHex,
+          ).overrideWith((ref) async => null),
           submittedAccountDeletionMonitorProvider.overrideWithValue(
             recoveryCubit,
           ),
@@ -514,6 +520,21 @@ void main() {
       return recoveryCubit;
     }
 
+    // Lets the flow run to wherever it would go if it were not blocked. Past
+    // the block it opens the confirmation sheet, whose confirm button is what
+    // this looks for.
+    Future<void> expectFlowStopped(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(
+        find.widgetWithText(
+          DivineButton,
+          l10n.deleteAccountDeleteAllContentButton,
+        ),
+        findsNothing,
+      );
+    }
+
     testWidgets('a pending receipt blocks deletion for another account', (
       tester,
     ) async {
@@ -533,13 +554,7 @@ void main() {
       );
       expect(find.text(l10n.supportContactSupport), findsOneWidget);
       verify(() => recoveryCubit.resume(_processing)).called(1);
-      verifyNever(repository.prepare);
-      verifyNever(
-        () => deletionService.deleteAccount(
-          onProgress: any(named: 'onProgress'),
-          expectedPubkey: any(named: 'expectedPubkey'),
-        ),
-      );
+      await expectFlowStopped(tester);
     });
 
     testWidgets(
@@ -560,7 +575,7 @@ void main() {
         );
         expect(find.text(l10n.supportContactSupport), findsNothing);
         verifyNever(() => recoveryCubit.resume(_processing));
-        verifyNever(repository.prepare);
+        await expectFlowStopped(tester);
       },
     );
 
@@ -607,7 +622,27 @@ void main() {
         );
         expect(find.text(l10n.supportContactSupport), findsOneWidget);
         verifyNever(() => recoveryCubit.resume(_processing));
-        verifyNever(repository.prepare);
+        await expectFlowStopped(tester);
+      },
+    );
+
+    testWidgets(
+      'a pending receipt whose submission is unconfirmed and overdue blocks '
+      'deletion with support',
+      (tester) async {
+        final recoveryCubit = await tapDeleteWithOtherAccountPending(
+          tester,
+          monitorState: const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.confirmingSubmission,
+            attempt: _recoverable,
+            pollingPaused: true,
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+        verify(() => recoveryCubit.resume(_processing)).called(1);
+        await expectFlowStopped(tester);
       },
     );
   });
