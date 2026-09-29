@@ -8490,6 +8490,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'フォント';
 
   @override
+  String get videoEditorFontCategorySans => 'サンセリフ';
+
+  @override
+  String get videoEditorFontCategoryHeadline => '見出し';
+
+  @override
+  String get videoEditorFontCategoryScript => '筆記体・手書き';
+
+  @override
+  String get videoEditorFontCategorySerif => 'セリフ';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'アウトライン・エフェクト';
+
+  @override
+  String get videoEditorFontCategoryMono => '等幅・テック';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'テーマ';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'その他の文字';
+
+  @override
   String get videoEditorNoStickersFound => 'ステッカーが見つかりません';
 
   @override

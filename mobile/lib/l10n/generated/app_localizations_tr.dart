@@ -8838,6 +8838,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Yazı tipi';
 
   @override
+  String get videoEditorFontCategorySans => 'Tırnaksız';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Başlık';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Kaligrafi ve el yazısı';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Tırnaklı';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Kontur ve efekt';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono ve tekno';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Temalı';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Diğer alfabeler';
+
+  @override
   String get videoEditorNoStickersFound => 'Çıkartma bulunamadı';
 
   @override

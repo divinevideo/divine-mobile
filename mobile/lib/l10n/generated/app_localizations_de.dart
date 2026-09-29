@@ -9032,6 +9032,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Schriftart';
 
   @override
+  String get videoEditorFontCategorySans => 'Serifenlos';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Headline';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Schreib- & Handschrift';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Mit Serifen';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Outline & Effekt';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono & Tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Themenschriften';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Andere Schriftsysteme';
+
+  @override
   String get videoEditorNoStickersFound => 'Keine Sticker gefunden';
 
   @override

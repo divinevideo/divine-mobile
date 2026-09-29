@@ -8983,6 +8983,30 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
+  String get videoEditorFontCategorySans => 'Sans serif';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Headline';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Script at sulat-kamay';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Serif';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Outline at effect';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono at tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'May tema';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Ibang script';
+
+  @override
   String get videoEditorNoStickersFound => 'Walang nahanap na sticker';
 
   @override

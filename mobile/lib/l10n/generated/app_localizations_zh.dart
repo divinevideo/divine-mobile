@@ -8418,6 +8418,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorFontSemanticLabel => '字体';
 
   @override
+  String get videoEditorFontCategorySans => '无衬线';
+
+  @override
+  String get videoEditorFontCategoryHeadline => '标题';
+
+  @override
+  String get videoEditorFontCategoryScript => '花体与手写';
+
+  @override
+  String get videoEditorFontCategorySerif => '衬线';
+
+  @override
+  String get videoEditorFontCategoryEffect => '描边与特效';
+
+  @override
+  String get videoEditorFontCategoryMono => '等宽与科技';
+
+  @override
+  String get videoEditorFontCategoryThemed => '主题';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => '其他文字';
+
+  @override
   String get videoEditorNoStickersFound => '没有找到贴纸';
 
   @override

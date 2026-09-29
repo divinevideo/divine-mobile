@@ -9095,6 +9095,30 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Czcionka';
 
   @override
+  String get videoEditorFontCategorySans => 'Bezszeryfowe';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Nagłówki';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Pisane i odręczne';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Szeryfowe';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Kontur i efekty';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono i tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Tematyczne';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Inne alfabety';
+
+  @override
   String get videoEditorNoStickersFound => 'Nie znaleziono naklejek';
 
   @override

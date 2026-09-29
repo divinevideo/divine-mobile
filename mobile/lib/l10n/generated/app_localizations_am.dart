@@ -8717,6 +8717,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'ቅርጸ-ቁምፊ';
 
   @override
+  String get videoEditorFontCategorySans => 'ሳንስ ሰሪፍ';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'ርዕሶች';
+
+  @override
+  String get videoEditorFontCategoryScript => 'የእጅ ጽሑፍ';
+
+  @override
+  String get videoEditorFontCategorySerif => 'ሰሪፍ';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'ጠርዝ እና ውጤቶች';
+
+  @override
+  String get videoEditorFontCategoryMono => 'ሞኖ እና ቴክ';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'ጭብጥ ያላቸው';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'ሌሎች የአጻጻፍ ሥርዓቶች';
+
+  @override
   String get videoEditorNoStickersFound => 'ምንም ተለጣፊዎች አልተገኙም።';
 
   @override

@@ -8505,6 +8505,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorFontSemanticLabel => '폰트';
 
   @override
+  String get videoEditorFontCategorySans => '산세리프';
+
+  @override
+  String get videoEditorFontCategoryHeadline => '헤드라인';
+
+  @override
+  String get videoEditorFontCategoryScript => '필기체·손글씨';
+
+  @override
+  String get videoEditorFontCategorySerif => '세리프';
+
+  @override
+  String get videoEditorFontCategoryEffect => '외곽선·효과';
+
+  @override
+  String get videoEditorFontCategoryMono => '고정폭·테크';
+
+  @override
+  String get videoEditorFontCategoryThemed => '테마';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => '기타 문자';
+
+  @override
   String get videoEditorNoStickersFound => '스티커를 찾을 수 없음';
 
   @override

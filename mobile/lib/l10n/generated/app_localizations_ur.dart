@@ -8915,6 +8915,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'فانٹ';
 
   @override
+  String get videoEditorFontCategorySans => 'سینز سیرف';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'سرخیاں';
+
+  @override
+  String get videoEditorFontCategoryScript => 'خطاطی اور ہاتھ کی لکھائی';
+
+  @override
+  String get videoEditorFontCategorySerif => 'سیرف';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'آؤٹ لائن اور ایفیکٹ';
+
+  @override
+  String get videoEditorFontCategoryMono => 'مونو اور ٹیک';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'تھیم والے';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'دیگر رسم الخط';
+
+  @override
   String get videoEditorNoStickersFound => 'کوئی اسٹیکر نہیں ملا';
 
   @override

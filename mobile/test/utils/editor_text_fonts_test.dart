@@ -66,6 +66,60 @@ void main() {
     });
   });
 
+  group('editorFontSections', () {
+    test('lists every catalogue font exactly once', () {
+      final listed = [
+        for (final section in editorFontSections) ...section.fontIndices,
+      ]..sort();
+
+      expect(
+        listed,
+        List.generate(VideoEditorConstants.textFonts.length, (i) => i),
+      );
+    });
+
+    test('files each font under its catalogue category', () {
+      final misfiled = [
+        for (final section in editorFontSections)
+          for (final index in section.fontIndices)
+            if (VideoEditorConstants.textFontCatalogue[index].category !=
+                section.category)
+              VideoEditorConstants.textFontCatalogue[index].familyName,
+      ];
+
+      expect(misfiled, isEmpty);
+    });
+
+    test('orders sections by category and fonts by catalogue index', () {
+      final categories = [
+        for (final section in editorFontSections) section.category.index,
+      ];
+      expect(categories, orderedEquals([...categories]..sort()));
+      expect(categories.toSet(), hasLength(categories.length));
+
+      for (final section in editorFontSections) {
+        expect(section.fontIndices, isNotEmpty);
+        expect(
+          section.fontIndices,
+          orderedEquals([...section.fontIndices]..sort()),
+        );
+      }
+    });
+
+    test('opens with the default font, which new text starts in', () {
+      expect(editorFontSections.first.fontIndices.first, 0);
+      expect(VideoEditorConstants.textFonts.first, same(GoogleFonts.inter));
+    });
+
+    test('cannot be regrouped at runtime', () {
+      expect(editorFontSections.removeLast, throwsUnsupportedError);
+      expect(
+        () => editorFontSections.first.fontIndices.add(0),
+        throwsUnsupportedError,
+      );
+    });
+  });
+
   group('editorTextFontsFor', () {
     test('matches the identifier a serialized text layer carries', () {
       // Inter is bundled, so this registers nothing new: the test config

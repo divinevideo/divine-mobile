@@ -8995,6 +8995,30 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Шрифт';
 
   @override
+  String get videoEditorFontCategorySans => 'Безсерифни';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Заглавия';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Ръкописни и калиграфски';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Серифни';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Контур и ефекти';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Моно и тех';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Тематични';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Други писмености';
+
+  @override
   String get videoEditorNoStickersFound => 'Няма намерени стикери';
 
   @override

@@ -9013,6 +9013,30 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Carattere';
 
   @override
+  String get videoEditorFontCategorySans => 'Senza grazie';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Titoli';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Calligrafici e a mano';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Con grazie';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Contorno ed effetti';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono e tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'A tema';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Altri alfabeti';
+
+  @override
   String get videoEditorNoStickersFound => 'Nessuno sticker trovato';
 
   @override

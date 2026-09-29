@@ -15216,6 +15216,54 @@ abstract class AppLocalizations {
   /// **'Font'**
   String get videoEditorFontSemanticLabel;
 
+  /// Section header in the video editor font picker over the sans serif fonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Sans serif'**
+  String get videoEditorFontCategorySans;
+
+  /// Section header in the video editor font picker over heavy display fonts made for big titles.
+  ///
+  /// In en, this message translates to:
+  /// **'Headline'**
+  String get videoEditorFontCategoryHeadline;
+
+  /// Section header in the video editor font picker over script, brush and handwriting fonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Script & handwriting'**
+  String get videoEditorFontCategoryScript;
+
+  /// Section header in the video editor font picker over the serif fonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Serif'**
+  String get videoEditorFontCategorySerif;
+
+  /// Section header in the video editor font picker over fonts with a built-in outline, shade or texture.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline & effect'**
+  String get videoEditorFontCategoryEffect;
+
+  /// Section header in the video editor font picker over monospaced, typewriter, pixel and futuristic fonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Mono & tech'**
+  String get videoEditorFontCategoryMono;
+
+  /// Section header in the video editor font picker over fonts tied to a mood or occasion, such as horror or holiday fonts.
+  ///
+  /// In en, this message translates to:
+  /// **'Themed'**
+  String get videoEditorFontCategoryThemed;
+
+  /// Section header in the video editor font picker over fonts built for non-Latin writing systems such as Arabic or Korean.
+  ///
+  /// In en, this message translates to:
+  /// **'Other scripts'**
+  String get videoEditorFontCategoryOtherScripts;
+
   /// No description provided for @videoEditorNoStickersFound.
   ///
   /// In en, this message translates to:
