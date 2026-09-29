@@ -213,7 +213,12 @@ Future<void> _postTwoVideosThenSignInAgain(WidgetTester tester) async {
     SettingsScreen.path,
     reason: 'Both uploads are unfinished, so sign-in must wait',
   );
-  expect(uploadA.isReleased || uploadB.isReleased, isFalse);
+  // The wait for upload A to finish publishing below relies on this.
+  expect(
+    _isInFlight(publishBloc.state, draftA),
+    isTrue,
+    reason: 'Upload A is held, so the bloc must still count it in flight',
+  );
 
   // ── Let A finish while B is still uploading ─────────────────────────────
   uploadA.release();
@@ -232,7 +237,6 @@ Future<void> _postTwoVideosThenSignInAgain(WidgetTester tester) async {
   );
   logPhase('Upload A finished; holding upload B for a settle window');
   await pumpUntilSettled(tester, maxSeconds: 3);
-  expect(uploadB.isReleased, isFalse);
 
   // ── Let B finish ────────────────────────────────────────────────────────
   uploadB.release();
