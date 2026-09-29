@@ -31,9 +31,11 @@ void main() {
       ThemeData? theme,
       bool reduceMotion = false,
       List<VideoRecorderMode> modes = VideoRecorderMode.values,
+      Locale? locale,
     }) {
       return MaterialApp(
         theme: theme,
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) => MediaQuery(
@@ -63,6 +65,7 @@ void main() {
       ThemeData? theme,
       bool reduceMotion = false,
       List<VideoRecorderMode> modes = VideoRecorderMode.values,
+      Locale? locale,
     }) async {
       tester.view.physicalSize = const Size(surfaceWidth, 400);
       tester.view.devicePixelRatio = 1.0;
@@ -74,10 +77,20 @@ void main() {
           theme: theme,
           reduceMotion: reduceMotion,
           modes: modes,
+          locale: locale,
         ),
       );
       await tester.pumpAndSettle();
     }
+
+    /// The label the wheel shows for [mode] in [labels]' language: Chroma Key
+    /// is localized, the other modes keep their English labels.
+    String shownLabel(VideoRecorderMode mode, [AppLocalizations? labels]) =>
+        switch (mode) {
+          VideoRecorderMode.chromaKey =>
+            (labels ?? l10n).videoEditorChromaKeyLabel,
+          _ => mode.label,
+        };
 
     // `Material` also inserts an `AnimatedDefaultTextStyle`, so take the
     // closest ancestor — the wheel's own.
@@ -101,7 +114,10 @@ void main() {
       testWidgets('offers only the modes it is given', (tester) async {
         await pumpSelector(tester, modes: withoutChromaKey);
 
-        expect(find.text(VideoRecorderMode.chromaKey.label), findsNothing);
+        expect(
+          find.text(shownLabel(VideoRecorderMode.chromaKey)),
+          findsNothing,
+        );
         expect(find.text(VideoRecorderMode.classic.label), findsOneWidget);
       });
 
@@ -124,8 +140,25 @@ void main() {
         await pumpSelector(tester);
 
         for (final mode in VideoRecorderMode.values) {
-          expect(find.text(mode.label), findsOneWidget);
+          expect(find.text(shownLabel(mode)), findsOneWidget);
         }
+      });
+
+      testWidgets("shows Chroma Key in the reader's language", (
+        tester,
+      ) async {
+        final spanish = lookupAppLocalizations(const Locale('es'));
+        expect(
+          spanish.videoEditorChromaKeyLabel,
+          isNot(VideoRecorderMode.chromaKey.label),
+        );
+
+        await pumpSelector(tester, locale: const Locale('es'));
+
+        expect(find.text(spanish.videoEditorChromaKeyLabel), findsOneWidget);
+        expect(find.text(VideoRecorderMode.chromaKey.label), findsNothing);
+        // The rest were English before chroma key arrived, and still are.
+        expect(find.text(VideoRecorderMode.classic.label), findsOneWidget);
       });
 
       testWidgets('lists capture leftmost and upload rightmost', (
@@ -134,7 +167,7 @@ void main() {
         await pumpSelector(tester);
 
         final labelsLeftToRight =
-            VideoRecorderMode.values.map((mode) => mode.label).toList()..sort(
+            VideoRecorderMode.values.map(shownLabel).toList()..sort(
               (a, b) => tester
                   .getCenter(find.text(a))
                   .dx
@@ -300,8 +333,8 @@ void main() {
         try {
           for (final mode in VideoRecorderMode.values) {
             final expectedLabel = mode == VideoRecorderMode.capture
-                ? mode.label
-                : l10n.videoRecorderSwitchToModeLabel(mode.label);
+                ? shownLabel(mode)
+                : l10n.videoRecorderSwitchToModeLabel(shownLabel(mode));
             final semantics = tester
                 .widgetList<Semantics>(find.byType(Semantics))
                 .firstWhere((s) => s.properties.label == expectedLabel);

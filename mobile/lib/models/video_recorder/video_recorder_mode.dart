@@ -36,6 +36,8 @@ enum VideoRecorderMode {
       if (liveChromaKeySupported || !mode.needsLiveChromaKey) mode,
   ];
 
+  /// English label for the mode wheel, which shows [chromaKey] under its
+  /// localized name instead.
   String get label => switch (this) {
     .upload => 'Upload',
     .capture => 'Capture',
