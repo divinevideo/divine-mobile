@@ -162,7 +162,7 @@ void main() {
       videoClipImportService: videoClipImportService,
     );
 
-    test('initial state is correct', () {
+    test('initial state is correct', () async {
       final bloc = createBloc();
       expect(bloc.state.status, equals(ShareSheetStatus.initial));
       expect(bloc.state.contacts, isEmpty);
@@ -173,7 +173,7 @@ void main() {
         bloc.state.bookmarkStatus,
         equals(ShareSheetBookmarkStatus.unknown),
       );
-      bloc.close();
+      await bloc.close();
     });
 
     // -----------------------------------------------------------------------
