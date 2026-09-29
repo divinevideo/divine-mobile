@@ -3,6 +3,7 @@
 // ABOUTME: parsing audio shared for use in other videos
 
 import 'package:meta/meta.dart';
+import 'package:models/src/audio_reuse_policy.dart';
 import 'package:models/src/nostr_hex_utils.dart';
 import 'package:models/src/sound_search_terms.dart';
 import 'package:models/src/video_event.dart';
@@ -82,8 +83,11 @@ class AudioEvent {
     this.startTime = Duration.zero,
     this.endTime,
     this.anchorClipId,
+    this.fadeInDuration = Duration.zero,
+    this.fadeOutDuration = Duration.zero,
     this.allowsReuse = true,
     this.hasExplicitReuseConsent = false,
+    this.requiresCurrentReuseVerification = false,
   }) : title = sanitizeUtf16OrNull(title),
        source = sanitizeUtf16OrNull(source),
        creatorName = sanitizeUtf16OrNull(creatorName),
@@ -252,16 +256,24 @@ class AudioEvent {
     VideoEvent video, {
     String? creatorName,
   }) {
+    final reuseTerms = originalSoundReuseTerms(video);
     return AudioEvent(
       id: 'video_${video.id}',
       pubkey: video.pubkey,
       createdAt: video.createdAt,
       url: video.videoUrl,
+      sha256: video.sha256,
       duration: video.duration?.toDouble(),
       title: creatorName == null ? null : 'Original sound - $creatorName',
       source: 'Original Sound',
       sourceVideoReference: video.addressableId,
-      allowsReuse: video.allowAudioReuse,
+      allowsReuse: reuseTerms ?? false,
+      hasExplicitReuseConsent:
+          video.audioReuseConsent == AudioReuseConsent.granted ||
+          video.audioReuseConsent == AudioReuseConsent.declined,
+      requiresCurrentReuseVerification:
+          reuseTerms == true &&
+          video.audioReuseConsent == AudioReuseConsent.unspecified,
     );
   }
 
@@ -321,12 +333,21 @@ class AudioEvent {
           ? Duration(milliseconds: json['endTimeMs'] as int)
           : null,
       anchorClipId: json['anchorClipId'] as String?,
-      // Persisted events without a consent field predate the reuse policy.
+      fadeInDuration: Duration(
+        milliseconds: (json['fadeInMs'] as num?)?.toInt() ?? 0,
+      ),
+      fadeOutDuration: Duration(
+        milliseconds: (json['fadeOutMs'] as num?)?.toInt() ?? 0,
+      ),
+      // Persisted events without a terms field predate the reuse policy.
       // Treat them as unknown and let the source-video resolver decide;
-      // defaulting to true would silently grant remix permission.
+      // archive compatibility is a provisional Divine policy grant, not an
+      // affirmative creator-consent record, and must be verified again.
       allowsReuse: json['allowsReuse'] as bool? ?? false,
       hasExplicitReuseConsent:
           json['hasExplicitReuseConsent'] as bool? ?? false,
+      requiresCurrentReuseVerification:
+          json['requiresCurrentReuseVerification'] as bool? ?? false,
     );
   }
 
@@ -596,6 +617,22 @@ class AudioEvent {
   /// Local-only editor state, never published to Nostr.
   final String? anchorClipId;
 
+  /// How long this track rises from silence to [volume] once it starts
+  /// playing at [startTime].
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final Duration fadeInDuration;
+
+  /// How long this track falls from [volume] to silence before it stops
+  /// playing.
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final Duration fadeOutDuration;
+
+  /// Whether this track fades in or out at all.
+  bool get hasFade =>
+      fadeInDuration > Duration.zero || fadeOutDuration > Duration.zero;
+
   /// Whether the source creator permits this sound to be reused by others.
   ///
   /// Parsed Kind 1063 events fail closed: only an explicit
@@ -603,11 +640,17 @@ class AudioEvent {
   /// `true` default for bundled and existing in-memory app sounds.
   final bool allowsReuse;
 
-  /// Whether a parsed Kind 1063 explicitly carried an audio-reuse decision.
+  /// Whether this event carries definitive audio-reuse terms.
   ///
-  /// This distinguishes legacy events with no consent tag from an explicit
-  /// `false`, which must remain credit-only.
+  /// Parsed Kind 1063 events set this only for an explicit consent tag.
+  /// Synthetic original sounds set it only for an explicit source marker.
   final bool hasExplicitReuseConsent;
+
+  /// Whether reuse must be checked against the current source video.
+  ///
+  /// Archive compatibility is controlled by server state and cannot become a
+  /// durable grant when this sound is saved or carried through the editor.
+  final bool requiresCurrentReuseVerification;
 
   /// Whether this audio is currently anchored to a source video clip.
   bool get isAnchored => anchorClipId != null;
@@ -755,8 +798,11 @@ class AudioEvent {
     Duration? endTime,
     String? anchorClipId,
     bool clearAnchorClipId = false,
+    Duration? fadeInDuration,
+    Duration? fadeOutDuration,
     bool? allowsReuse,
     bool? hasExplicitReuseConsent,
+    bool? requiresCurrentReuseVerification,
   }) {
     return AudioEvent(
       id: id ?? this.id,
@@ -787,9 +833,14 @@ class AudioEvent {
       anchorClipId: clearAnchorClipId
           ? null
           : (anchorClipId ?? this.anchorClipId),
+      fadeInDuration: fadeInDuration ?? this.fadeInDuration,
+      fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
       allowsReuse: allowsReuse ?? this.allowsReuse,
       hasExplicitReuseConsent:
           hasExplicitReuseConsent ?? this.hasExplicitReuseConsent,
+      requiresCurrentReuseVerification:
+          requiresCurrentReuseVerification ??
+          this.requiresCurrentReuseVerification,
     );
   }
 
@@ -801,12 +852,21 @@ class AudioEvent {
         other.startOffset == startOffset &&
         other.startTime == startTime &&
         other.endTime == endTime &&
-        other.anchorClipId == anchorClipId;
+        other.anchorClipId == anchorClipId &&
+        other.fadeInDuration == fadeInDuration &&
+        other.fadeOutDuration == fadeOutDuration;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, startOffset, startTime, endTime, anchorClipId);
+  int get hashCode => Object.hash(
+    id,
+    startOffset,
+    startTime,
+    endTime,
+    anchorClipId,
+    fadeInDuration,
+    fadeOutDuration,
+  );
 
   @override
   String toString() {
@@ -841,6 +901,7 @@ class AudioEvent {
     'proxyProtocol': ?proxyProtocol,
     'allowsReuse': allowsReuse,
     'hasExplicitReuseConsent': hasExplicitReuseConsent,
+    'requiresCurrentReuseVerification': requiresCurrentReuseVerification,
     // Always serialize volume so history and draft snapshots preserve
     // explicit user edits instead of relying on an implicit default.
     'volume': volume,
@@ -849,6 +910,10 @@ class AudioEvent {
     if (startTime != Duration.zero) 'startTimeMs': startTime.inMilliseconds,
     if (endTime != null) 'endTimeMs': endTime!.inMilliseconds,
     'anchorClipId': ?anchorClipId,
+    if (fadeInDuration > Duration.zero)
+      'fadeInMs': fadeInDuration.inMilliseconds,
+    if (fadeOutDuration > Duration.zero)
+      'fadeOutMs': fadeOutDuration.inMilliseconds,
   };
 }
 

@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
@@ -209,7 +210,12 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
     );
 
     if (_useLocalSearch) {
-      _loadFollowProfiles();
+      runDetached(
+        _loadFollowProfiles(),
+        'load followed profiles',
+        logName: 'UserPickerSheet',
+        category: LogCategory.ui,
+      );
     }
   }
 
@@ -326,7 +332,15 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   void dispose() {
     unawaited(_followersSubscription?.cancel());
     _searchController.dispose();
-    _searchBloc?.close();
+    final searchBloc = _searchBloc;
+    if (searchBloc != null) {
+      runDetached(
+        searchBloc.close(),
+        'close user search',
+        logName: 'UserPickerSheet',
+        category: LogCategory.ui,
+      );
+    }
     super.dispose();
   }
 

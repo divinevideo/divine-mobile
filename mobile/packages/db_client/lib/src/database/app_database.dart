@@ -66,7 +66,6 @@ const legacyV1NormalizationRepairIndexes = <String>[
     UserProfiles,
     VideoMetrics,
     ProfileStats,
-    HashtagStats,
     Notifications,
     PendingUploads,
     PersonalReactions,
@@ -101,7 +100,6 @@ const legacyV1NormalizationRepairIndexes = <String>[
     NostrEventsDao,
     VideoMetricsDao,
     ProfileStatsDao,
-    HashtagStatsDao,
     NotificationsDao,
     PendingUploadsDao,
     PersonalEventsDao,
@@ -140,7 +138,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -246,6 +244,14 @@ class AppDatabase extends _$AppDatabase {
         // `createTable` does not emit `@TableIndex.sql` indexes; see the
         // `from < 13` step above.
         await _createScheduledPostIndexes();
+      }
+      // Unlike every additive step above, a removal must also check `to`:
+      // migration tests call this with `to` capped below 19 to validate an
+      // intermediate version, and every other block here runs regardless of
+      // `to` because an extra table is invisible to schema verification — a
+      // missing one is not.
+      if (from < 19 && to >= 19) {
+        await _dropHashtagStats(m);
       }
     },
     beforeOpen: (details) async {
@@ -545,6 +551,24 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Drops the `hashtag_stats` table and its index (#9582).
+  ///
+  /// The table was Drift-only scaffolding nothing ever wrote to:
+  /// `HashtagStatsDao.upsertHashtag`/`upsertBatch` — its only writers — had
+  /// zero callers outside this package's own tests, so there is no data to
+  /// preserve.
+  ///
+  /// Uses `m.deleteTable` by name rather than `m.drop`: the `HashtagStats`
+  /// Dart table class is deleted in this same change, so there is no
+  /// `DatabaseSchemaEntity` left to pass a typed reference to. The explicit
+  /// `DROP INDEX` documents that `idx_hashtag_video_count` is gone too — not
+  /// load-bearing, since SQLite already drops a table's indexes when the
+  /// table itself is dropped.
+  Future<void> _dropHashtagStats(Migrator m) async {
+    await customStatement('DROP INDEX IF EXISTS idx_hashtag_video_count');
+    await m.deleteTable('hashtag_stats');
+  }
+
   /// Creates all indexes consolidated from explicit `List<Index>` getters.
   ///
   /// The `List<Index> get indexes` getters these replace were never read by
@@ -565,11 +589,15 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
     );
 
-    // HashtagStats indices
-    await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_hashtag_video_count '
-      'ON hashtag_stats (video_count DESC)',
-    );
+    // HashtagStats indices. Table dropped at v19 (#9582); guarded because
+    // this backfill also re-runs from beforeOpen's damaged-database recovery
+    // path on an already-current database, where the table no longer exists.
+    if (await _tableExists('hashtag_stats')) {
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_hashtag_video_count '
+        'ON hashtag_stats (video_count DESC)',
+      );
+    }
 
     // Notifications indices
     await customStatement(
@@ -1768,7 +1796,6 @@ class AppDatabase extends _$AppDatabase {
   /// This method should be called during app startup to remove:
   /// - Expired Nostr events (based on expire_at timestamp, including NULL)
   /// - Expired profile stats (older than 5 minutes)
-  /// - Expired hashtag stats (older than 1 hour)
   /// - Notification cache rows written more than 7 days ago
   /// - `video_metrics` rows orphaned by an `event` deletion above
   /// - `user_profiles` rows beyond the row cap, oldest by `last_fetched`
@@ -1780,9 +1807,6 @@ class AppDatabase extends _$AppDatabase {
 
     // Delete expired profile stats (5 minute expiry)
     final expiredProfileStatsDeleted = await profileStatsDao.deleteExpired();
-
-    // Delete expired hashtag stats (1 hour expiry)
-    final expiredHashtagStatsDeleted = await hashtagStatsDao.deleteExpired();
 
     // Delete notification cache rows written more than 7 days ago. Retention
     // is keyed on when the row was cached, not the notification's own age, so
@@ -1807,7 +1831,6 @@ class AppDatabase extends _$AppDatabase {
     return CleanupResult(
       expiredEventsDeleted: expiredEventsDeleted,
       expiredProfileStatsDeleted: expiredProfileStatsDeleted,
-      expiredHashtagStatsDeleted: expiredHashtagStatsDeleted,
       oldNotificationsDeleted: oldNotificationsDeleted,
       orphanedVideoMetricsDeleted: orphanedVideoMetricsDeleted,
       evictedUserProfilesDeleted: evictedUserProfilesDeleted,

@@ -25,7 +25,7 @@ void main() {
     LocaleCubit build() => LocaleCubit(localePreferenceService: service);
 
     group('initial load', () {
-      test('starts with no locale when service has nothing saved', () {
+      test('starts with no locale when service has nothing saved', () async {
         when(() => service.getLocale()).thenReturn(null);
 
         final cubit = build();
@@ -33,17 +33,17 @@ void main() {
         expect(cubit.state, const LocaleState());
         expect(cubit.state.locale, isNull);
 
-        cubit.close();
+        await cubit.close();
       });
 
-      test('emits saved locale on construction', () {
+      test('emits saved locale on construction', () async {
         when(() => service.getLocale()).thenReturn('es');
 
         final cubit = build();
 
         expect(cubit.state.locale, const Locale('es'));
 
-        cubit.close();
+        await cubit.close();
       });
     });
 

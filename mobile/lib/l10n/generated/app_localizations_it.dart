@@ -6249,6 +6249,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get commonBack => 'Indietro';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Chiudi';
 
   @override
@@ -9010,6 +9013,27 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Sfondo testo';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contorno e ombra';
+
+  @override
+  String get videoEditorTextOutline => 'Contorno';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Spessore del contorno';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Colore del contorno';
+
+  @override
+  String get videoEditorTextShadow => 'Ombra';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensità dell\'ombra';
+
+  @override
+  String get videoEditorTextShadowColor => 'Colore dell\'ombra';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Carattere';
 
   @override
@@ -9461,6 +9485,22 @@ class AppLocalizationsIt extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Velocità $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Dissolvenza';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Imposta la dissolvenza in entrata e in uscita del suono selezionato';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Dissolvenza in entrata e in uscita';
+
+  @override
+  String get videoEditorFadeInLabel => 'Dissolvenza in entrata';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Dissolvenza in uscita';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transizione';
@@ -11710,7 +11750,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Sostieni Divine con un abbonamento mensile facoltativo.';
+      'Sostieni Divine con un abbonamento facoltativo.';
 
   @override
   String get supporterHeroTitle => 'Mantieni Divine in funzione';

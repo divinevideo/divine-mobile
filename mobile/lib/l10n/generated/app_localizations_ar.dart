@@ -6150,6 +6150,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commonBack => 'رجوع';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'إغلاق';
 
   @override
@@ -8870,6 +8873,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'خلفية النص';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'الحد الخارجي والظل';
+
+  @override
+  String get videoEditorTextOutline => 'الحد الخارجي';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'سُمك الحد الخارجي';
+
+  @override
+  String get videoEditorTextOutlineColor => 'لون الحد الخارجي';
+
+  @override
+  String get videoEditorTextShadow => 'الظل';
+
+  @override
+  String get videoEditorTextShadowStrength => 'قوة الظل';
+
+  @override
+  String get videoEditorTextShadowColor => 'لون الظل';
+
+  @override
   String get videoEditorFontSemanticLabel => 'الخط';
 
   @override
@@ -9309,6 +9333,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'السرعة $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'تلاشٍ';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'تعيين الرفع والخفض التدريجي للصوت المحدد';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'رفع وخفض تدريجي';
+
+  @override
+  String get videoEditorFadeInLabel => 'رفع تدريجي';
+
+  @override
+  String get videoEditorFadeOutLabel => 'خفض تدريجي';
 
   @override
   String get videoEditorTransitionSheetTitle => 'انتقال';
@@ -11518,7 +11558,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supporterTitle => 'داعمو Divine';
 
   @override
-  String get supporterTileSubtitle => 'ادعم Divine باشتراك شهري اختياري.';
+  String get supporterTileSubtitle => 'ادعم Divine باشتراك اختياري.';
 
   @override
   String get supporterHeroTitle => 'ساعد Divine على الاستمرار';

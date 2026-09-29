@@ -6334,6 +6334,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get commonBack => 'Wstecz';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Zamknij';
 
   @override
@@ -9092,6 +9095,27 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Tło tekstu';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Obrys i cień';
+
+  @override
+  String get videoEditorTextOutline => 'Obrys';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Grubość obrysu';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Kolor obrysu';
+
+  @override
+  String get videoEditorTextShadow => 'Cień';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensywność cienia';
+
+  @override
+  String get videoEditorTextShadowColor => 'Kolor cienia';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Czcionka';
 
   @override
@@ -9542,6 +9566,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Prędkość $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Zanikanie';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Ustaw zgłaśnianie i wyciszanie wybranego dźwięku';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Zgłaśnianie i wyciszanie';
+
+  @override
+  String get videoEditorFadeInLabel => 'Zgłaśnianie';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Wyciszanie';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Przejście';
@@ -11802,8 +11842,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get supporterTitle => 'Wspierający Divine';
 
   @override
-  String get supporterTileSubtitle =>
-      'Wesprzyj Divine opcjonalną miesięczną subskrypcją.';
+  String get supporterTileSubtitle => 'Wesprzyj Divine opcjonalną subskrypcją.';
 
   @override
   String get supporterHeroTitle => 'Niech Divine działa dalej';

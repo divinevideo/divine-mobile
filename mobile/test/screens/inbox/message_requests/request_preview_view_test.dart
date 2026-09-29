@@ -177,12 +177,12 @@ void main() {
       );
     }
 
-    // #7486. These counts had never rendered. The widget read
-    // `UserProfile.followerCount` / `videoCount`, whose REST disjunct is only
-    // ever populated by the people-search shape (never written to the cache
-    // this screen reads) and whose Kind 0 disjunct reads `rawData` for keys
-    // the archive importer writes as tags. Both were structurally null, so the
-    // line was dead. Counts now come from the `profile_statistics` store.
+    // #7486. These counts had never rendered. The widget read them off the
+    // profile object, whose REST counts are only ever populated by the
+    // people-search shape (never written to the cache this screen reads) and
+    // whose Kind 0 fallback read `rawData` for keys the archive importer writes
+    // as tags. Both were structurally null, so the line was dead. Counts now
+    // come from the `profile_statistics` store.
     group('stats line', () {
       Widget buildStatsSubject(
         ProfileStats? stats, {

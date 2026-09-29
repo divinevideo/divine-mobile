@@ -100,7 +100,7 @@ void main() {
       );
     }
 
-    test('initial state is initial with empty collections', () {
+    test('initial state is initial with empty collections', () async {
       final bloc = createBloc();
       expect(bloc.state.status, ProfileCollabVideosStatus.initial);
       expect(bloc.state.videos, isEmpty);
@@ -108,7 +108,7 @@ void main() {
       expect(bloc.state.isLoadingMore, isFalse);
       expect(bloc.state.hasMoreContent, isTrue);
       expect(bloc.state.paginationCursor, isNull);
-      bloc.close();
+      await bloc.close();
     });
 
     group(ProfileCollabVideosState, () {

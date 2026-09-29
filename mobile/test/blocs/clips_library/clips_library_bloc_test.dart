@@ -121,13 +121,13 @@ void main() {
       allowsMixedClipTypes: allowsMixedClipTypes,
     );
 
-    test('initial state is correct', () {
+    test('initial state is correct', () async {
       final bloc = createBloc();
       expect(bloc.state, const ClipsLibraryState());
       expect(bloc.state.status, ClipsLibraryStatus.initial);
       expect(bloc.state.clips, isEmpty);
       expect(bloc.state.selectedClipIds, isEmpty);
-      bloc.close();
+      await bloc.close();
     });
 
     test('initial state carries the mixed-types allowance', () async {
@@ -1776,7 +1776,7 @@ void main() {
         originalAspectRatio: 9 / 16,
       );
 
-      test('returns empty list when no clips selected', () {
+      test('returns empty list when no clips selected', () async {
         final bloc = createBloc()
           ..emit(
             ClipsLibraryState(
@@ -1786,10 +1786,10 @@ void main() {
           );
 
         expect(bloc.state.selectedClips, isEmpty);
-        bloc.close();
+        await bloc.close();
       });
 
-      test('returns selected clips', () {
+      test('returns selected clips', () async {
         final bloc = createBloc()
           ..emit(
             ClipsLibraryState(
@@ -1800,23 +1800,26 @@ void main() {
           );
 
         expect(bloc.state.selectedClips, [clip1]);
-        bloc.close();
+        await bloc.close();
       });
 
-      test('returns selected clips in selection order not list order', () {
-        // selectedClipIds iteration order is clip2 then clip1
-        final bloc = createBloc()
-          ..emit(
-            ClipsLibraryState(
-              status: ClipsLibraryStatus.loaded,
-              clips: [clip1, clip2],
-              selectedClipIds: const {'clip2', 'clip1'},
-            ),
-          );
+      test(
+        'returns selected clips in selection order not list order',
+        () async {
+          // selectedClipIds iteration order is clip2 then clip1
+          final bloc = createBloc()
+            ..emit(
+              ClipsLibraryState(
+                status: ClipsLibraryStatus.loaded,
+                clips: [clip1, clip2],
+                selectedClipIds: const {'clip2', 'clip1'},
+              ),
+            );
 
-        expect(bloc.state.selectedClips, [clip2, clip1]);
-        bloc.close();
-      });
+          expect(bloc.state.selectedClips, [clip2, clip1]);
+          await bloc.close();
+        },
+      );
     });
 
     group('library filters', () {

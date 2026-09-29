@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_record_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,18 +38,24 @@ void main() {
 
     Widget buildWidget({
       VideoRecorderState recordingState = VideoRecorderState.idle,
+      bool isStoppingRecording = false,
       bool canRecord = true,
       bool isCameraInitialized = true,
       List<DivineVideoClip>? clips,
       VoidCallback? onBlockedTap,
+      Stream<VideoRecorderBlocState>? stateChanges,
     }) {
-      when(() => recorderBloc.state).thenReturn(
-        VideoRecorderBlocState(
-          recordingState: recordingState,
-          canRecord: canRecord,
-          isCameraInitialized: isCameraInitialized,
-        ),
+      final initialState = VideoRecorderBlocState(
+        recordingState: recordingState,
+        isStoppingRecording: isStoppingRecording,
+        canRecord: canRecord,
+        isCameraInitialized: isCameraInitialized,
       );
+      if (stateChanges != null) {
+        whenListen(recorderBloc, stateChanges, initialState: initialState);
+      } else {
+        when(() => recorderBloc.state).thenReturn(initialState);
+      }
 
       return ProviderScope(
         overrides: [
@@ -134,6 +143,129 @@ void main() {
 
         final semantics = tester.getSemantics(find.byType(RecordButton));
         expect(semantics.tooltip, equals('Stop recording'));
+      });
+    });
+
+    group('stop in flight', () {
+      const recording = VideoRecorderBlocState(
+        recordingState: VideoRecorderState.recording,
+        canRecord: true,
+        isCameraInitialized: true,
+      );
+      final stopping = recording.copyWith(isStoppingRecording: true);
+      const stopped = VideoRecorderBlocState(
+        canRecord: true,
+        isCameraInitialized: true,
+      );
+
+      double loadingMarkOpacity(WidgetTester tester) {
+        // Scoped to the switcher: the button's AnimatedOpacity is a
+        // FadeTransition above the mark too.
+        final fade = find.descendant(
+          of: find.descendant(
+            of: find.byType(RecordButton),
+            matching: find.byType(AnimatedSwitcher),
+          ),
+          matching: find.ancestor(
+            of: find.byType(BrandedLoadingIndicator),
+            matching: find.byType(FadeTransition),
+          ),
+        );
+        return tester.widget<FadeTransition>(fade).opacity.value;
+      }
+
+      testWidgets('shows the square while recording', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(recordingState: VideoRecorderState.recording),
+        );
+        await tester.pumpAndSettle();
+
+        final innerShape = find.byType(AnimatedContainer).last;
+        expect(tester.getSize(innerShape), equals(const Size(32, 32)));
+      });
+
+      testWidgets(
+        'returns to the idle dot as soon as a stop is requested, before the '
+        'recording is finalized',
+        (tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              recordingState: VideoRecorderState.recording,
+              isStoppingRecording: true,
+            ),
+          );
+          // The loading mark animates forever, so settle the shape morph by
+          // time rather than with pumpAndSettle.
+          await tester.pump(const Duration(milliseconds: 400));
+
+          final innerShape = find.byType(AnimatedContainer).last;
+          expect(tester.getSize(innerShape), equals(const Size(64, 64)));
+        },
+      );
+
+      testWidgets('announces loading while a stop is finalizing', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            isStoppingRecording: true,
+          ),
+        );
+        await tester.pump();
+
+        final semantics = tester.getSemantics(find.byType(RecordButton));
+        expect(
+          semantics.tooltip,
+          equals(lookupAppLocalizations(const Locale('en')).commonLoading),
+        );
+      });
+
+      testWidgets('fades the loading mark in once the stop outlasts a quick '
+          'stop', (tester) async {
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        await tester.pumpWidget(
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            stateChanges: states.stream,
+          ),
+        );
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+
+        states.add(stopping);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(loadingMarkOpacity(tester), equals(0));
+
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(loadingMarkOpacity(tester), equals(1));
+      });
+
+      testWidgets('never shows the loading mark for a stop that finishes '
+          'quickly', (tester) async {
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        await tester.pumpWidget(
+          buildWidget(
+            recordingState: VideoRecorderState.recording,
+            stateChanges: states.stream,
+          ),
+        );
+
+        states.add(stopping);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(loadingMarkOpacity(tester), equals(0));
+
+        states.add(stopped);
+        await tester.pump();
+        // Mid fade-out: the mark leaves without ever becoming visible.
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(loadingMarkOpacity(tester), equals(0));
+
+        await tester.pumpAndSettle();
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
       });
     });
 

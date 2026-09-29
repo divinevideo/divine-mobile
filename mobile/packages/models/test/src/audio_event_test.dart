@@ -427,6 +427,7 @@ void main() {
           content: 'classic vine',
           timestamp: now,
           videoUrl: 'https://example.com/video.mp4',
+          sha256: testSha256,
           duration: 6,
           vineId: 'vine-123',
           addressableDTag: 'vine-123',
@@ -438,6 +439,7 @@ void main() {
         );
 
         expect(audioEvent.duration, equals(6.0));
+        expect(audioEvent.sha256, equals(testSha256));
         expect(audioEvent.title, equals('Original sound - Kenya'));
         expect(
           audioEvent.sourceVideoReference,
@@ -484,32 +486,48 @@ void main() {
         },
       );
 
-      test('carries allowsReuse from the source video', () {
-        VideoEvent video({required bool allowReuse}) => VideoEvent(
-          id: testHexId,
-          pubkey: testPubkey,
-          createdAt: 1700000000,
-          content: 'classic vine',
-          timestamp: DateTime(2026),
-          videoUrl: 'https://example.com/video.mp4',
-          duration: 6,
-          vineId: 'vine-123',
-          addressableDTag: 'vine-123',
-          rawTags: allowReuse ? const {'allow_audio_reuse': 'true'} : const {},
-        );
+      test('carries definitive reuse terms from the source video', () {
+        VideoEvent video({String? marker, bool isVerifiedArchive = false}) {
+          final rawTags = <String, String>{};
+          if (marker case final value?) {
+            rawTags['allow_audio_reuse'] = value;
+          }
+          return VideoEvent(
+            id: testHexId,
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            content: 'classic vine',
+            timestamp: DateTime(2026),
+            videoUrl: 'https://example.com/video.mp4',
+            duration: 6,
+            vineId: 'vine-123',
+            addressableDTag: 'vine-123',
+            rawTags: rawTags,
+            isVerifiedArchive: isVerifiedArchive,
+            archiveAudioReuseEnabled: isVerifiedArchive,
+          );
+        }
 
-        expect(
-          AudioEvent.fromVideoOriginalSound(
-            video(allowReuse: true),
-          ).allowsReuse,
-          isTrue,
+        final granted = AudioEvent.fromVideoOriginalSound(
+          video(marker: 'true'),
         );
-        expect(
-          AudioEvent.fromVideoOriginalSound(
-            video(allowReuse: false),
-          ).allowsReuse,
-          isFalse,
+        final classicWithImportedFalse = AudioEvent.fromVideoOriginalSound(
+          video(marker: 'false', isVerifiedArchive: true),
         );
+        final classicCompatibility = AudioEvent.fromVideoOriginalSound(
+          video(isVerifiedArchive: true),
+        );
+        final unspecified = AudioEvent.fromVideoOriginalSound(video());
+
+        expect(granted.allowsReuse, isTrue);
+        expect(granted.hasExplicitReuseConsent, isTrue);
+        expect(classicWithImportedFalse.allowsReuse, isTrue);
+        expect(classicWithImportedFalse.hasExplicitReuseConsent, isTrue);
+        expect(classicCompatibility.allowsReuse, isTrue);
+        expect(classicCompatibility.hasExplicitReuseConsent, isFalse);
+        expect(classicCompatibility.requiresCurrentReuseVerification, isTrue);
+        expect(unspecified.allowsReuse, isFalse);
+        expect(unspecified.hasExplicitReuseConsent, isFalse);
       });
 
       test('defaults allowsReuse to true for a plain AudioEvent', () {
@@ -1694,6 +1712,51 @@ void main() {
         );
         expect(original.toJson(), isNot(contains('anchorClipId')));
         expect(AudioEvent.fromJson(original.toJson()).anchorClipId, isNull);
+      });
+    });
+
+    group('fade', () {
+      final faded = AudioEvent(
+        id: 'fade-id-12345678901234567890123456789012345678901234567890123',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: 'https://example.com/audio.aac',
+        fadeInDuration: const Duration(milliseconds: 500),
+        fadeOutDuration: const Duration(milliseconds: 1500),
+      );
+
+      test('defaults to none', () {
+        final plain = AudioEvent(
+          id: 'plain-id-1234567890123456789012345678901234567890123456789012',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+        );
+
+        expect(plain.fadeInDuration, Duration.zero);
+        expect(plain.fadeOutDuration, Duration.zero);
+        expect(plain.hasFade, isFalse);
+        expect(plain.toJson(), isNot(contains('fadeInMs')));
+        expect(plain.toJson(), isNot(contains('fadeOutMs')));
+      });
+
+      test('survives a toJson/fromJson roundtrip', () {
+        final restored = AudioEvent.fromJson(faded.toJson());
+
+        expect(restored.fadeInDuration, const Duration(milliseconds: 500));
+        expect(restored.fadeOutDuration, const Duration(milliseconds: 1500));
+        expect(restored.hasFade, isTrue);
+      });
+
+      test('is part of equality, so a fade-only edit is a change', () {
+        expect(faded.copyWith(fadeInDuration: Duration.zero), isNot(faded));
+        expect(faded.copyWith(fadeOutDuration: Duration.zero), isNot(faded));
+        expect(faded.copyWith(title: 'Renamed'), equals(faded));
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        final tags = faded.toTags().expand((tag) => tag);
+
+        expect(tags.any((value) => value.contains('fade')), isFalse);
       });
     });
 

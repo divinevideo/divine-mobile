@@ -25,8 +25,8 @@ class ReportTarget extends Equatable {
     this.videoUrl,
   });
 
-  /// Event id the kind-1984 names. Synthetic (`user_<pubkey>`) for a user
-  /// report.
+  /// Id of the reported event. Synthetic (`user_<pubkey>`) for a user
+  /// report, which names no event: only local report history keys on it.
   final String eventId;
 
   final String authorPubkey;
@@ -47,11 +47,15 @@ class ReportTarget extends Equatable {
   /// Header used in the moderation DM (e.g. "Content Report"). Internal-only.
   final String moderationKindLabel;
 
-  /// Label preceding the event id in the moderation DM body (e.g. "Event").
-  /// Internal-only.
+  /// Label preceding [moderationSubject] in the moderation DM body (e.g.
+  /// "Event", "User Pubkey"). Internal-only.
   final String moderationEventLabel;
 
   bool get isUserReport => userPubkey != null;
+
+  /// What the moderation DM names: the reported account's pubkey for a user
+  /// report, the reported event's id otherwise.
+  String get moderationSubject => userPubkey ?? eventId;
 
   /// Blob hash for the moderation DM, or null when the report targets an
   /// account rather than a video.
@@ -118,7 +122,9 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
       final content = StringBuffer()
         ..writeln(_target.moderationKindLabel)
         ..writeln('Reason: $reasonTitle')
-        ..writeln('${_target.moderationEventLabel}: ${_target.eventId}');
+        ..writeln(
+          '${_target.moderationEventLabel}: ${_target.moderationSubject}',
+        );
       if (details.isNotEmpty) content.writeln('Details: $details');
       final tags = ContentReportingService.moderationDmTags(
         reason: reason,

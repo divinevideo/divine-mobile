@@ -6193,6 +6193,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get commonBack => 'Kembali';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Tutup';
 
   @override
@@ -8922,6 +8925,27 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Garis luar dan bayang';
+
+  @override
+  String get videoEditorTextOutline => 'Garis luar';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Ketebalan garis luar';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Warna garis luar';
+
+  @override
+  String get videoEditorTextShadow => 'Bayang';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Kekuatan bayang';
+
+  @override
+  String get videoEditorTextShadowColor => 'Warna bayang';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Fon';
 
   @override
@@ -9366,6 +9390,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Kelajuan $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Pudar';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Tetapkan masuk dan keluar perlahan untuk bunyi dipilih';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Masuk & keluar perlahan';
+
+  @override
+  String get videoEditorFadeInLabel => 'Masuk perlahan';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Keluar perlahan';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Peralihan';
@@ -11577,8 +11617,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get supporterTitle => 'Penyokong Divine';
 
   @override
-  String get supporterTileSubtitle =>
-      'Sokong Divine dengan langganan bulanan pilihan.';
+  String get supporterTileSubtitle => 'Sokong Divine dengan langganan pilihan.';
 
   @override
   String get supporterHeroTitle => 'Pastikan Divine terus berjalan';

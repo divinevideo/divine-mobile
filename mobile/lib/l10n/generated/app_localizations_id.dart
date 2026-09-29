@@ -6118,6 +6118,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get commonBack => 'Kembali';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Tutup';
 
   @override
@@ -8832,6 +8835,27 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Garis tepi dan bayangan';
+
+  @override
+  String get videoEditorTextOutline => 'Garis tepi';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Ketebalan garis tepi';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Warna garis tepi';
+
+  @override
+  String get videoEditorTextShadow => 'Bayangan';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Kekuatan bayangan';
+
+  @override
+  String get videoEditorTextShadowColor => 'Warna bayangan';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
@@ -9276,6 +9300,22 @@ class AppLocalizationsId extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Kecepatan $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Pudar';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Atur suara masuk dan keluar perlahan untuk suara yang dipilih';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Masuk & keluar perlahan';
+
+  @override
+  String get videoEditorFadeInLabel => 'Masuk perlahan';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Keluar perlahan';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transisi';
@@ -11494,7 +11534,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Dukung Divine dengan langganan bulanan opsional.';
+      'Dukung Divine dengan langganan opsional.';
 
   @override
   String get supporterHeroTitle => 'Bantu Divine tetap berjalan';

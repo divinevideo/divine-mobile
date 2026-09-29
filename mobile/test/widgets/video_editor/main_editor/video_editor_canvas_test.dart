@@ -657,6 +657,64 @@ void main() {
     );
   });
 
+  group('VideoEditorCanvas.playheadAfterClipSpeedChange', () {
+    test('keeps the source frame when a speed-up ends the clip before the '
+        'playhead', () {
+      final clip = _createClip(id: 'a', duration: const Duration(seconds: 6));
+
+      expect(
+        VideoEditorCanvas.playheadAfterClipSpeedChange(
+          previous: [clip],
+          current: [clip.copyWith(playbackSpeed: 3)],
+          position: const Duration(seconds: 3),
+        ),
+        equals(const Duration(seconds: 1)),
+      );
+    });
+
+    test('shifts a playhead on a later clip when an earlier clip slows '
+        'down', () {
+      final a = _createClip(id: 'a');
+      final b = _createClip(id: 'b');
+
+      expect(
+        VideoEditorCanvas.playheadAfterClipSpeedChange(
+          previous: [a, b],
+          current: [a.copyWith(playbackSpeed: 0.5), b],
+          position: const Duration(seconds: 3),
+        ),
+        equals(const Duration(seconds: 5)),
+      );
+    });
+
+    test('keeps the position when no clip speed changed', () {
+      final clip = _createClip(id: 'a', duration: const Duration(seconds: 6));
+
+      expect(
+        VideoEditorCanvas.playheadAfterClipSpeedChange(
+          previous: [clip],
+          current: [clip.copyWith(trimStart: const Duration(seconds: 2))],
+          position: const Duration(seconds: 3),
+        ),
+        equals(const Duration(seconds: 3)),
+      );
+    });
+
+    test('keeps the position when a clip was removed', () {
+      final a = _createClip(id: 'a');
+      final b = _createClip(id: 'b');
+
+      expect(
+        VideoEditorCanvas.playheadAfterClipSpeedChange(
+          previous: [a, b],
+          current: [b],
+          position: const Duration(seconds: 3),
+        ),
+        equals(const Duration(seconds: 3)),
+      );
+    });
+  });
+
   group('VideoEditorCanvas.clipsChanged', () {
     const hold2 = Duration(milliseconds: 83);
     const hold4 = Duration(milliseconds: 167);
@@ -690,11 +748,15 @@ void main() {
   });
 }
 
-DivineVideoClip _createClip({required String id, String? videoPath}) {
+DivineVideoClip _createClip({
+  required String id,
+  String? videoPath,
+  Duration duration = const Duration(seconds: 2),
+}) {
   return DivineVideoClip(
     id: id,
     video: EditorVideo.file(videoPath ?? '/test/$id.mp4'),
-    duration: const Duration(seconds: 2),
+    duration: duration,
     recordedAt: DateTime(2024),
     targetAspectRatio: model.AspectRatio.vertical,
     originalAspectRatio: 9 / 16,

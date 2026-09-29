@@ -809,6 +809,106 @@ void main() {
         },
       );
 
+      test(
+        'puts the camera back on off when Classic is selected mid-change',
+        () async {
+          final applying = Completer<void>();
+          var current = DivineVideoStabilizationMode.off;
+          when(
+            () => cameraService.videoStabilizationMode,
+          ).thenAnswer((_) => current);
+          when(() => cameraService.availableVideoStabilizationModes).thenReturn(
+            const [
+              DivineVideoStabilizationMode.off,
+              DivineVideoStabilizationMode.cinematic,
+            ],
+          );
+          when(() => cameraService.setVideoStabilizationMode(any())).thenAnswer(
+            (invocation) async {
+              final mode =
+                  invocation.positionalArguments.first
+                      as DivineVideoStabilizationMode;
+              if (mode == DivineVideoStabilizationMode.cinematic) {
+                await applying.future;
+              }
+              current = mode;
+              return true;
+            },
+          );
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const VideoRecorderStabilizationModeSet(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          );
+          await pumpEventQueue();
+          applying.complete();
+          await pumpEventQueue();
+
+          verify(
+            () => cameraService.setVideoStabilizationMode(
+              DivineVideoStabilizationMode.off,
+            ),
+          ).called(1);
+          verify(
+            () =>
+                prefs.setString('camera_last_used_stabilization', 'cinematic'),
+          ).called(1);
+          expect(
+            bloc.state.videoStabilizationMode,
+            isNot(DivineVideoStabilizationMode.cinematic),
+          );
+        },
+      );
+
+      test(
+        're-pauses Upload when a stabilization change finishes after the switch',
+        () async {
+          final applying = Completer<void>();
+          when(() => cameraService.setVideoStabilizationMode(any())).thenAnswer(
+            (invocation) async {
+              final mode =
+                  invocation.positionalArguments.first
+                      as DivineVideoStabilizationMode;
+              if (mode == DivineVideoStabilizationMode.cinematic) {
+                await applying.future;
+              }
+              return true;
+            },
+          );
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const VideoRecorderStabilizationModeSet(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          applying.complete();
+          await pumpEventQueue();
+
+          verify(
+            () =>
+                cameraService.handleAppLifecycleState(AppLifecycleState.paused),
+          ).called(1);
+          verify(
+            () =>
+                prefs.setString('camera_last_used_stabilization', 'cinematic'),
+          ).called(1);
+        },
+      );
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'ignores mode changes while recording',
         build: () => buildBloc()
@@ -1569,8 +1669,8 @@ void main() {
         verify: (bloc) {
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
-          // stopRecording() must run on the recovery path too — it cancels the
-          // periodic duration timer that resetRecording() leaves running.
+          // The duration timer is stopped on the recovery path too —
+          // resetRecording() alone leaves it running.
           verify(() => clipManager.stopRecording()).called(1);
           verify(() => clipManager.resetRecording()).called(1);
         },
@@ -1716,6 +1816,53 @@ void main() {
           verify(() => cameraService.stopRecording()).called(2);
           expect(bloc.state.isStoppingRecording, isFalse);
           expect(bloc.state.recordingState, VideoRecorderState.idle);
+        },
+      );
+    });
+
+    group('RecordingStopRequested → immediate stop feedback', () {
+      late Completer<EditorVideo?> nativeStop;
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'freezes the timer and the shutter while the native stop is still '
+        'finalizing',
+        setUp: () {
+          // iOS with a look-ahead stabilization mode holds the native stop
+          // ~1.6s while the camera hands over the last frames.
+          nativeStop = Completer<EditorVideo?>();
+          when(
+            () => cameraService.stopRecording(),
+          ).thenAnswer((_) => nativeStop.future);
+        },
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              recordingState: VideoRecorderState.recording,
+            ),
+          ),
+        act: (bloc) async {
+          bloc.add(const VideoRecorderRecordingStopRequested());
+          await pumpEventQueue();
+
+          try {
+            verify(() => cameraService.stopRecording()).called(1);
+            expect(nativeStop.isCompleted, isFalse);
+            verify(() => clipManager.stopRecording()).called(1);
+            expect(bloc.state.isRecording, isTrue);
+            expect(bloc.state.showsActiveRecording, isFalse);
+          } finally {
+            // Release the stop even when an expectation fails, or the handler
+            // stays suspended and the test hangs until its timeout.
+            nativeStop.complete(null);
+            await pumpEventQueue();
+          }
+        },
+        errors: () => [isA<RecordingProducedNoVideoException>()],
+        verify: (bloc) {
+          expect(bloc.state.isRecording, isFalse);
+          // The freeze at the tap is the only stop; the timer is not stopped
+          // a second time when the native call returns.
+          verifyNever(() => clipManager.stopRecording());
         },
       );
     });
@@ -2576,6 +2723,43 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'applies the mode switched to while the camera was paused',
+        setUp: () {
+          when(
+            () => prefs.getString('camera_last_used_stabilization'),
+          ).thenReturn(DivineVideoStabilizationMode.cinematic.toNativeString());
+          when(() => cameraService.availableVideoStabilizationModes).thenReturn(
+            const [
+              DivineVideoStabilizationMode.off,
+              DivineVideoStabilizationMode.cinematic,
+            ],
+          );
+          when(
+            () => cameraService.videoStabilizationMode,
+          ).thenReturn(DivineVideoStabilizationMode.cinematic);
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        },
+        build: buildBloc,
+        // Upload -> Classic: the screen resumes the camera after the switch.
+        seed: () => initialized.copyWith(
+          recorderMode: VideoRecorderMode.classic,
+        ),
+        act: (bloc) => bloc.add(
+          const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+        ),
+        verify: (_) => verifyInOrder([
+          () => cameraService.handleAppLifecycleState(
+            AppLifecycleState.resumed,
+          ),
+          () => cameraService.setVideoStabilizationMode(
+            DivineVideoStabilizationMode.off,
+          ),
+        ]),
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'emits nothing when the camera resumes',
         build: buildBloc,
         seed: () => initialized,
@@ -2650,7 +2834,7 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'transitions involving upload preserve clips and editor',
+        'entering upload preserves clips and editor',
         build: buildBloc,
         act: (bloc) => bloc.add(
           const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
@@ -2668,6 +2852,168 @@ void main() {
           );
         },
       );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'upload → the mode it was entered from preserves clips and editor',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.capture);
+          verifyNever(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+          verifyNever(
+            () => videoEditor.reset(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'upload → another recording mode clears clips and editor',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          );
+          await pumpEventQueue();
+          bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.classic);
+          verify(
+            () => clipManager.clearAll(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          ).called(1);
+          verify(
+            () => videoEditor.reset(
+              keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+            ),
+          ).called(1);
+        },
+      );
+      group('stabilization', () {
+        setUp(() {
+          when(
+            () => prefs.getString('camera_last_used_stabilization'),
+          ).thenReturn(DivineVideoStabilizationMode.cinematic.toNativeString());
+          when(() => cameraService.availableVideoStabilizationModes).thenReturn(
+            const [
+              DivineVideoStabilizationMode.off,
+              DivineVideoStabilizationMode.cinematic,
+            ],
+          );
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        });
+
+        void cameraRuns(DivineVideoStabilizationMode mode) => when(
+          () => cameraService.videoStabilizationMode,
+        ).thenReturn(mode);
+
+        // Classic hides the control; Stop Motion captures stills, which the
+        // stabilization never reaches, so only the preview would be cropped.
+        for (final mode in [
+          VideoRecorderMode.classic,
+          VideoRecorderMode.stopMotion,
+        ]) {
+          blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+            'turns stabilization off in ${mode.name}, keeping the saved choice',
+            setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
+            build: buildBloc,
+            act: (bloc) => bloc.add(VideoRecorderRecorderModeSet(mode)),
+            verify: (_) {
+              verify(
+                () => cameraService.setVideoStabilizationMode(
+                  DivineVideoStabilizationMode.off,
+                ),
+              ).called(1);
+              verifyNever(
+                () => prefs.setString('camera_last_used_stabilization', any()),
+              );
+            },
+          );
+        }
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'restores the saved choice when switching back to capture',
+          setUp: () => cameraRuns(DivineVideoStabilizationMode.off),
+          build: buildBloc,
+          seed: () => const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.classic,
+          ),
+          act: (bloc) => bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          ),
+          verify: (_) => verify(
+            () => cameraService.setVideoStabilizationMode(
+              DivineVideoStabilizationMode.cinematic,
+            ),
+          ).called(1),
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'does not request a saved choice the current lens cannot take',
+          setUp: () {
+            cameraRuns(DivineVideoStabilizationMode.off);
+            when(
+              () => cameraService.availableVideoStabilizationModes,
+            ).thenReturn(const [DivineVideoStabilizationMode.off]);
+          },
+          build: buildBloc,
+          seed: () => const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.classic,
+          ),
+          act: (bloc) => bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+          ),
+          verify: (_) {
+            verifyNever(() => cameraService.setVideoStabilizationMode(any()));
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'leaves the camera alone when switching into upload',
+          setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
+          build: buildBloc,
+          act: (bloc) => bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.upload),
+          ),
+          verify: (_) {
+            verifyNever(() => cameraService.setVideoStabilizationMode(any()));
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'leaves the paused camera to the resume when leaving upload',
+          setUp: () => cameraRuns(DivineVideoStabilizationMode.cinematic),
+          build: buildBloc,
+          seed: () => const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.upload,
+          ),
+          act: (bloc) => bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          ),
+          verify: (_) {
+            verifyNever(() => cameraService.setVideoStabilizationMode(any()));
+          },
+        );
+      });
     });
 
     group('VideoRecorderInitializeRequested', () {
@@ -3088,6 +3434,83 @@ void main() {
           act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
           verify: (_) {
             verifyNever(() => cameraService.setVideoStabilizationMode(any()));
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'opens classic with stabilization off, keeping the saved choice',
+          setUp: () {
+            when(
+              () => prefs.getString('camera_last_used_stabilization'),
+            ).thenReturn(
+              DivineVideoStabilizationMode.cinematic.toNativeString(),
+            );
+            when(
+              () => prefs.getString(VideoRecorderMode.persistenceKey),
+            ).thenReturn(VideoRecorderMode.classic.name);
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+          verify: (_) {
+            expect(initializedWith(), DivineVideoStabilizationMode.off);
+            verifyNever(
+              () => prefs.setString('camera_last_used_stabilization', any()),
+            );
+          },
+        );
+
+        test(
+          'applies a mode switched to while the camera was starting',
+          () async {
+            when(
+              () => prefs.getString('camera_last_used_stabilization'),
+            ).thenReturn(
+              DivineVideoStabilizationMode.cinematic.toNativeString(),
+            );
+            when(() => cameraService.availableVideoStabilizationModes)
+                .thenReturn(
+                  const [
+                    DivineVideoStabilizationMode.off,
+                    DivineVideoStabilizationMode.cinematic,
+                  ],
+                );
+            when(
+              () => cameraService.videoStabilizationMode,
+            ).thenReturn(DivineVideoStabilizationMode.cinematic);
+            when(
+              () => cameraService.setVideoStabilizationMode(any()),
+            ).thenAnswer((_) async => true);
+            var cameraOpen = false;
+            when(() => cameraService.isInitialized)
+                .thenAnswer((_) => cameraOpen);
+            final opening = Completer<void>();
+            when(
+              () => cameraService.initialize(
+                videoQuality: any(named: 'videoQuality'),
+                initialLens: any(named: 'initialLens'),
+                enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+                preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+                videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              ),
+            ).thenAnswer((_) => opening.future.then((_) => cameraOpen = true));
+            final bloc = buildBloc();
+            addTearDown(bloc.close);
+
+            bloc.add(const VideoRecorderInitializeRequested());
+            await pumpEventQueue();
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+            );
+            await pumpEventQueue();
+            opening.complete();
+            await pumpEventQueue();
+
+            expect(initializedWith(), DivineVideoStabilizationMode.cinematic);
+            verify(
+              () => cameraService.setVideoStabilizationMode(
+                DivineVideoStabilizationMode.off,
+              ),
+            ).called(1);
           },
         );
 

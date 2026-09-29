@@ -6384,6 +6384,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get commonBack => 'వెనుకకు';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'మూసివేయండి';
 
   @override
@@ -9168,6 +9171,27 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'వచన నేపథ్యం';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'అంచు గీత మరియు నీడ';
+
+  @override
+  String get videoEditorTextOutline => 'అంచు గీత';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'అంచు గీత మందం';
+
+  @override
+  String get videoEditorTextOutlineColor => 'అంచు గీత రంగు';
+
+  @override
+  String get videoEditorTextShadow => 'నీడ';
+
+  @override
+  String get videoEditorTextShadowStrength => 'నీడ తీవ్రత';
+
+  @override
+  String get videoEditorTextShadowColor => 'నీడ రంగు';
+
+  @override
   String get videoEditorFontSemanticLabel => 'ఫాంట్';
 
   @override
@@ -9631,6 +9655,22 @@ class AppLocalizationsTe extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'వేగం $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'ఫేడ్';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'ఎంచుకున్న ధ్వని కోసం ఫేడ్ ఇన్, ఫేడ్ అవుట్ సెట్ చేయండి';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'ఫేడ్ ఇన్ & అవుట్';
+
+  @override
+  String get videoEditorFadeInLabel => 'ఫేడ్ ఇన్';
+
+  @override
+  String get videoEditorFadeOutLabel => 'ఫేడ్ అవుట్';
 
   @override
   String get videoEditorTransitionSheetTitle => 'పరివర్తన';

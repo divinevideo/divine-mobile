@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
+import 'package:openvine/widgets/video_editor/text_effects_preview_text.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show LayerAnimation, LayerAnimationType, SlideDirection;
@@ -207,8 +208,8 @@ class TitleStylePreview extends StatelessWidget {
   }
 }
 
-/// The sample text in [style]'s font, colors and pill — everything about a
-/// preview frame that does not change as the loop runs.
+/// The sample text in [style]'s font, colors, pill, outline and shadow —
+/// everything about a preview frame that does not change as the loop runs.
 class _StyledSample extends StatelessWidget {
   const _StyledSample({
     required this.style,
@@ -232,11 +233,12 @@ class _StyledSample extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             )
           : null,
-      child: Text(
+      child: TextEffectsPreviewText(
         text,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         textAlign: style.align,
+        effects: style.effects,
         style: style.font(fontSize: fontSize, color: style.color),
       ),
     );

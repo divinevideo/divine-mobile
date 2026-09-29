@@ -213,10 +213,7 @@ class AppDbClient {
   /// Insert or update a user profile.
   @visibleForTesting
   Future<UserProfileRow> upsertProfile(UserProfilesCompanion profile) async {
-    final result = await _dbClient.insert(
-      _db.userProfiles,
-      entry: profile,
-    );
+    final result = await _dbClient.insert(_db.userProfiles, entry: profile);
     return result as UserProfileRow;
   }
 
@@ -313,10 +310,7 @@ class AppDbClient {
   Future<VideoMetricRow> upsertVideoMetrics(
     VideoMetricsCompanion metrics,
   ) async {
-    final result = await _dbClient.insert(
-      _db.videoMetrics,
-      entry: metrics,
-    );
+    final result = await _dbClient.insert(_db.videoMetrics, entry: metrics);
     return result as VideoMetricRow;
   }
 
@@ -497,37 +491,6 @@ class AppDbClient {
   /// Count total profile stats entries.
   Future<int> countProfileStats() async {
     return _dbClient.count(_db.profileStats);
-  }
-
-  // ---------------------------------------------------------------------------
-  // HashtagStats operations (cache table - most logic in DAO)
-  // ---------------------------------------------------------------------------
-
-  /// Get hashtag stats by hashtag (raw row, no expiry check).
-  Future<HashtagStatRow?> getHashtagStatRow(String hashtag) async {
-    final result = await _dbClient.getBy(
-      _db.hashtagStats,
-      filter: (t) => (t as HashtagStats).hashtag.equals(hashtag),
-    );
-    return result as HashtagStatRow?;
-  }
-
-  /// Delete hashtag stats by hashtag.
-  Future<int> deleteHashtagStat(String hashtag) async {
-    return _dbClient.delete(
-      _db.hashtagStats,
-      filter: (t) => (t as HashtagStats).hashtag.equals(hashtag),
-    );
-  }
-
-  /// Delete all hashtag stats.
-  Future<int> clearAllHashtagStats() async {
-    return _dbClient.deleteAll(_db.hashtagStats);
-  }
-
-  /// Count total hashtag stats entries.
-  Future<int> countHashtagStats() async {
-    return _dbClient.count(_db.hashtagStats);
   }
 
   // ---------------------------------------------------------------------------

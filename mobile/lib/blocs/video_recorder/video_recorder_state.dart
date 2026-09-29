@@ -26,6 +26,7 @@ enum StopMotionStatus {
 class VideoRecorderBlocState extends Equatable {
   const VideoRecorderBlocState({
     this.recorderMode = VideoRecorderMode.capture,
+    this.modeBeforeUpload,
     this.recordingState = VideoRecorderState.idle,
     this.zoomLevel = 1.0,
     this.minZoomLevel = 1.0,
@@ -70,6 +71,12 @@ class VideoRecorderBlocState extends Equatable {
 
   /// Recorder mode from the camera.
   final VideoRecorderMode recorderMode;
+
+  /// The recording mode the Upload tab was entered from, or null outside it.
+  ///
+  /// The session's clips belong to that mode: returning to it keeps them,
+  /// moving on to any other recording mode discards them.
+  final VideoRecorderMode? modeBeforeUpload;
 
   /// Camera focus point in normalized coordinates (0.0-1.0).
   final Offset focusPoint;
@@ -250,6 +257,12 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether currently recording.
   bool get isRecording => recordingState == VideoRecorderState.recording;
 
+  /// Whether the shutter should show an active recording: recording, and no
+  /// stop requested yet. The shutter answers the stop tap right away, while
+  /// [isRecording] stays true until the file is finalized — ~1.6s later on
+  /// iOS with a look-ahead stabilization mode.
+  bool get showsActiveRecording => isRecording && !isStoppingRecording;
+
   /// Whether camera is initialized and not in error state.
   bool get isInitialized =>
       isCameraInitialized && recordingState != VideoRecorderState.error;
@@ -260,6 +273,8 @@ class VideoRecorderBlocState extends Equatable {
   /// Creates a copy of this state with updated values.
   VideoRecorderBlocState copyWith({
     VideoRecorderMode? recorderMode,
+    VideoRecorderMode? modeBeforeUpload,
+    bool clearModeBeforeUpload = false,
     VideoRecorderState? recordingState,
     double? zoomLevel,
     double? minZoomLevel,
@@ -301,6 +316,9 @@ class VideoRecorderBlocState extends Equatable {
   }) {
     return VideoRecorderBlocState(
       recorderMode: recorderMode ?? this.recorderMode,
+      modeBeforeUpload: clearModeBeforeUpload
+          ? null
+          : modeBeforeUpload ?? this.modeBeforeUpload,
       recordingState: recordingState ?? this.recordingState,
       zoomLevel: zoomLevel ?? this.zoomLevel,
       minZoomLevel: minZoomLevel ?? this.minZoomLevel,
@@ -353,6 +371,7 @@ class VideoRecorderBlocState extends Equatable {
   @override
   List<Object?> get props => [
     recorderMode,
+    modeBeforeUpload,
     recordingState,
     zoomLevel,
     minZoomLevel,

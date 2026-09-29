@@ -195,11 +195,27 @@ class CameraController: NSObject {
     /// `lastAudioAttachMs` still holds the tap's own cost.
     private var recordingAudioAttachPath = "unknown"
     private var recordingAudioEntryRoute = "unknown"
-    /// Wall clock at which the writer session was anchored, i.e. when capture
-    /// actually began. Against `recordRequestTime` this is the tap-to-capture
-    /// delay the user experiences as lost leading content.
+    /// Wall clock at which the frame the writer session was anchored on was
+    /// captured, i.e. when the recorded picture begins. Against
+    /// `recordRequestTime` this is the tap-to-capture delay the user
+    /// experiences as lost leading content.
     private var writerSessionStartedAt: Date?
-    
+    /// Frames delivered after the recording began but captured before it,
+    /// and dropped for that reason. A look-ahead stabilization mode delivers
+    /// every frame ~1s late, so this counts its latency in frames; without
+    /// one it stays at zero or one.
+    private var preRollFrameCount = 0
+    /// How late the video pipeline delivered the frame the writer session
+    /// was anchored on — capture-to-delivery latency, measured on the video
+    /// session's clock.
+    private var videoDeliveryLatency: CMTime?
+    /// How long the stop waited for the video pipeline to deliver the last
+    /// frames captured before it, and what ended the wait: `delivered` (a
+    /// frame from after the stop arrived), `none` (nothing was outstanding),
+    /// `timeout`, or the reason the camera went away mid-wait.
+    private var stopDrainMs: Double?
+    private var stopDrainEnd = "n/a"
+
     private var textureRegistry: FlutterTextureRegistry
 
     /// Re-asserts the owning (UI) engine's diagnostics sink before emitting
@@ -327,12 +343,66 @@ class CameraController: NSObject {
 
     /// End PTS (`presentationTime + frameDuration`) of the last video frame
     /// appended to the asset writer. Used at finalize to bound the writer
-    /// session to the video's actual end, so a look-ahead stabilization mode
-    /// (which delays video ~0.5–1s behind audio) can't leave the clip ending on
-    /// a frozen frame while audio keeps playing. The frame's *end* — not its
+    /// session to the video's actual end, so audio never outlasts the picture
+    /// and the clip cannot end on a frozen frame. The frame's *end* — not its
     /// start — so the last frame keeps its full display duration and short
     /// recordings don't collapse toward zero.
     private var lastVideoFrameEndPTS: CMTime?
+
+    /// The span of the video session's clock a recording covers: `start` is
+    /// read when the recording begins, `stop` when it is asked to end.
+    ///
+    /// The picture and the sound reach the writer with different delays. The
+    /// mic delivers within milliseconds; a look-ahead stabilization mode
+    /// (cinematic, cinematic extended, and auto where it picks one) delivers
+    /// each frame ~1–1.5s after it was captured, stamped with its capture
+    /// time. Anchoring the writer on the first frame *delivered* after the
+    /// tap therefore opened the file on picture filmed before the tap, under
+    /// audio that did not exist yet — a silent head as long as the latency —
+    /// and stopping on delivery cut the last second the user actually filmed.
+    /// Both tracks are bounded by this window instead, on capture time, so
+    /// the file holds exactly what was filmed between tap and stop whatever
+    /// the pipeline's latency.
+    ///
+    /// Written from main (the stop) and `videoOutputQueue` (the start and
+    /// the finish), read on `videoOutputQueue`, so it sits behind a lock. It
+    /// stays set after `isRecording` goes false, until the stop has drained.
+    private struct RecordingWindow {
+        let start: CMTime
+        var stop: CMTime?
+    }
+    private let recordingWindowLock = NSLock()
+    private var _recordingWindow: RecordingWindow?
+    private var recordingWindow: RecordingWindow? {
+        get {
+            recordingWindowLock.lock()
+            defer { recordingWindowLock.unlock() }
+            return _recordingWindow
+        }
+        set {
+            recordingWindowLock.lock()
+            _recordingWindow = newValue
+            recordingWindowLock.unlock()
+        }
+    }
+
+    /// Audio captured inside the recording window before its first frame
+    /// arrived. It is appended once the writer session opens on that frame,
+    /// so a pipeline that delivers the picture late costs no sound. Also
+    /// holds buffers the writer was not ready for, keeping capture order.
+    /// Bounded by `maxPendingAudioSeconds`. `videoOutputQueue` only.
+    private var pendingAudioBuffers: [CMSampleBuffer] = []
+    private static let maxPendingAudioSeconds = 3.0
+
+    /// The finalize a stop is holding back until the video pipeline has
+    /// delivered every frame captured before the stop, with the timeout that
+    /// gives up on the wait. `videoOutputQueue` only.
+    private var pendingStopFinish: ((_ end: String) -> Void)?
+    private var stopDrainTimeout: DispatchWorkItem?
+    /// Longest a stop waits for the video pipeline. Cinematic extended
+    /// delivers ~1.5s late on current iPhones; past this the clip ends on
+    /// the last frame that did arrive, which is the pre-drain behaviour.
+    private static let maxStopDrainSeconds = 2.5
     
     /// Completion handler for camera switch - called when first frame from new camera arrives
     private var switchCameraCompletion: (([String: Any]?, String?) -> Void)?
@@ -749,13 +819,16 @@ class CameraController: NSObject {
     /// same moment — e.g. background, then immediately foreground and tap
     /// Stop.
     private func salvageInterruptedRecording(reason: String) {
+        // A stop already waiting on the pipeline will not see another frame
+        // either; finalize it now rather than on the drain timeout.
+        finishStopDrainEarly(reason: "camera lost")
         guard isRecording else { return }
         DivineCameraLog.shared.info(
             "Recording interrupted (\(reason)) — finalizing whatever was "
                 + "captured so far",
             name: "DivineCamera.Recording"
         )
-        stopRecording { [weak self] result, error in
+        stopRecording(drainPipeline: false) { [weak self] result, error in
             if result == nil {
                 DivineCameraLog.shared.error(
                     "Recording interrupted with nothing to salvage: "
@@ -764,6 +837,16 @@ class CameraController: NSObject {
                 )
             }
             self?.sendAutoStopEvent(result: result)
+        }
+    }
+
+    /// Finalizes a stop that is still waiting for the video pipeline, for
+    /// when no further frame can arrive — the preview paused or the camera
+    /// was lost. Without this the stop would sit out its drain timeout, and
+    /// on a genuine background the encoder may not survive that long (#9210).
+    private func finishStopDrainEarly(reason: String) {
+        videoOutputQueue.async { [weak self] in
+            self?.finishPendingStop(end: reason)
         }
     }
 
@@ -2737,6 +2820,12 @@ class CameraController: NSObject {
         outputDirectory: String?,
         completion: @escaping (String?) -> Void
     ) {
+        // The previous clip's stop may still be waiting on the pipeline.
+        // Dart does not start a recording while a stop is in flight, but if
+        // one ever did, the old clip must be finalized before its writer
+        // state is replaced below.
+        finishPendingStop(end: "new recording")
+
         // Create output file - use cache, provided directory, or default to documents directory
         let outputDir: URL
         if let customDir = outputDirectory {
@@ -2840,8 +2929,16 @@ class CameraController: NSObject {
             // Start writing
             writer.startWriting()
 
+            self.pendingAudioBuffers.removeAll()
+            self.preRollFrameCount = 0
+            self.videoDeliveryLatency = nil
+            self.stopDrainMs = nil
+            self.stopDrainEnd = "n/a"
+            // Opened before isRecording so the first buffer that sees the
+            // recording also sees where it begins.
+            self.recordingWindow = RecordingWindow(start: self.videoClockNow(), stop: nil)
             self.isRecording = true
-            self.isWriterSessionStarted = false  // Will be set to true when first frame is received
+            self.isWriterSessionStarted = false  // Set by the first frame captured inside the window
             self.lastVideoFrameEndPTS = nil
             self.writerAnchorPTS = nil
             self.writerSessionStartedAt = nil
@@ -2919,163 +3016,243 @@ class CameraController: NSObject {
     }
     
     /// Stops video recording and returns the result.
-    func stopRecording(completion: @escaping ([String: Any]?, String?) -> Void) {
+    ///
+    /// The clip ends at the moment of the call, on capture time. Frames
+    /// captured before it that the video pipeline has not delivered yet — up
+    /// to ~1.5s of them under a look-ahead stabilization mode — are still
+    /// waited for, so the last second the user filmed is not cut. Pass
+    /// `drainPipeline: false` when no further frame can arrive (the app lost
+    /// the camera), so the file is finalized immediately.
+    func stopRecording(
+        drainPipeline: Bool = true,
+        completion: @escaping ([String: Any]?, String?) -> Void
+    ) {
         guard isRecording, let writer = assetWriter else {
             completion(nil, "Not recording")
             return
         }
-        
+
         // Cancel max duration timer if running
         maxDurationTimer?.invalidate()
         maxDurationTimer = nil
-        
+
         // Disable auto-flash torch if it was enabled
         disableAutoFlashTorch()
-        
+
+        // Closed before isRecording goes false, so a buffer that no longer
+        // sees the recording still sees where it ends.
+        let stopPTS = videoClockNow()
+        recordingWindowLock.lock()
+        _recordingWindow?.stop = stopPTS
+        recordingWindowLock.unlock()
         isRecording = false
-        
+
         videoOutputQueue.async { [weak self] in
             guard let self = self else { return }
 
-            // A writer session is only open once the first frame has been
-            // appended (see captureOutput's startSession(atSourceTime:)).
-            // Interrupted-before-any-frame and stopped-before-any-frame
-            // (a very fast record-then-stop tap) both land here.
-            let hasSession = writer.status == .writing && self.isWriterSessionStarted
-
-            // Bound the session to the last video frame. With a look-ahead
-            // stabilization mode the trailing ~0.5–1s of video never reaches
-            // the writer, so audio would otherwise outlast video and the clip
-            // would end on a held (frozen) frame. Ending here trims that
-            // surplus audio so both tracks stop together.
-            if hasSession, let endPTS = self.lastVideoFrameEndPTS {
-                writer.endSession(atSourceTime: endPTS)
+            let requestedAt = Date()
+            // Captures self strongly on purpose: a stop that is waiting on the
+            // pipeline must still deliver its completion, or the Dart caller
+            // awaiting it hangs.
+            let finish: (String) -> Void = { end in
+                self.stopDrainMs = Date().timeIntervalSince(requestedAt) * 1000
+                self.stopDrainEnd = end
+                self.finalizeRecording(writer: writer, completion: completion)
             }
 
-            self.videoWriterInput?.markAsFinished()
-            self.audioWriterInput?.markAsFinished()
+            guard drainPipeline else {
+                finish("skipped")
+                return
+            }
+            let delivered = self.lastVideoFrameEndPTS.map { $0 >= stopPTS } ?? false
+            guard writer.status == .writing, !delivered else {
+                finish("none")
+                return
+            }
+            // The first frame captured at or after stopPTS ends the wait
+            // (see captureOutput); the timeout covers a pipeline that stops
+            // delivering.
+            self.pendingStopFinish = finish
+            let timeout = DispatchWorkItem {
+                self.finishPendingStop(end: "timeout")
+            }
+            self.stopDrainTimeout = timeout
+            self.videoOutputQueue.asyncAfter(
+                deadline: .now() + Self.maxStopDrainSeconds,
+                execute: timeout
+            )
+        }
+    }
 
-            let finishHandler: () -> Void = { [weak self] in
-                guard let self = self else { return }
+    /// Runs the finalize a stop held back while the video pipeline drained,
+    /// recording what ended the wait. A no-op when no stop is waiting.
+    /// `videoOutputQueue` only.
+    private func finishPendingStop(end: String) {
+        guard let finish = pendingStopFinish else { return }
+        pendingStopFinish = nil
+        stopDrainTimeout?.cancel()
+        stopDrainTimeout = nil
+        if end != "delivered" {
+            DivineCameraLog.shared.warning(
+                "Stopped waiting for the video pipeline (\(end)) — the clip "
+                    + "ends on the last frame that arrived",
+                name: "DivineCamera.Recording"
+            )
+        }
+        finish(end)
+    }
 
-                DispatchQueue.main.async {
-                    switch writer.status {
-                    case .completed:
-                        // Get video dimensions
-                        guard let outputURL = self.currentRecordingURL else {
-                            completion(nil, "Output URL not available")
-                            return
-                        }
+    /// Finalizes the asset writer once the recording window is complete and
+    /// reports the finished clip. `videoOutputQueue` only.
+    private func finalizeRecording(
+        writer: AVAssetWriter,
+        completion: @escaping ([String: Any]?, String?) -> Void
+    ) {
+        // Closing the window first stops captureOutput feeding a writer that
+        // is about to finish.
+        recordingWindow = nil
 
-                        var width: Int = 1920
-                        var height: Int = 1080
+        // A writer session is only open once the first frame captured inside
+        // the window has been appended (see captureOutput's
+        // startSession(atSourceTime:)). Interrupted-before-any-frame and
+        // stopped-before-any-frame (a very fast record-then-stop tap) both
+        // land here.
+        let hasSession = writer.status == .writing && self.isWriterSessionStarted
 
-                        let asset = AVAsset(url: outputURL)
-                        if let track = asset.tracks(withMediaType: .video).first {
-                            let size = track.naturalSize.applying(track.preferredTransform)
-                            width = Int(abs(size.width))
-                            height = Int(abs(size.height))
-                        }
+        if hasSession, let audioInput = self.audioWriterInput {
+            appendPendingAudio(to: audioInput)
+        }
+        pendingAudioBuffers.removeAll()
 
-                        // Report the finished file's real duration. The
-                        // wall-clock span over-reports for look-ahead
-                        // stabilization (the trailing video never reaches the
-                        // writer), which would make a player hold the last
-                        // frame. Fall back to wall clock only if the asset
-                        // duration is unavailable.
-                        let assetSeconds = CMTimeGetSeconds(asset.duration)
-                        let duration: Int
-                        if assetSeconds.isFinite, assetSeconds > 0 {
-                            duration = Int(assetSeconds * 1000)
-                        } else if let startTime = self.recordingStartTime {
-                            duration = Int(Date().timeIntervalSince(startTime) * 1000)
-                        } else {
-                            duration = 0
-                        }
+        // Bound the session to the last video frame, so audio never outlasts
+        // the picture and the clip cannot end on a held (frozen) frame.
+        if hasSession, let endPTS = self.lastVideoFrameEndPTS {
+            writer.endSession(atSourceTime: endPTS)
+        }
 
-                        // Definitive signal for the "clip saved without sound"
-                        // reports (#4779): inspect the finished file rather than
-                        // trusting the in-flight audioReady flag.
-                        let hasAudioTrack = !asset.tracks(withMediaType: .audio).isEmpty
-                        let audioStats = "audioBuffers=\(self.appendedAudioBufferCount), "
-                            + "maxPeakDb=\(String(format: "%.1f", self.maxAudioPeakDb))"
+        self.videoWriterInput?.markAsFinished()
+        self.audioWriterInput?.markAsFinished()
 
-                        self.logAudioAlignmentDiagnostics(asset: asset)
-                        if hasAudioTrack {
-                            DivineCameraLog.shared.info(
-                                "Recording completed with audio track (durationMs=\(duration), \(audioStats))",
-                                name: "DivineCamera.Recording"
-                            )
-                        } else {
-                            DivineCameraLog.shared.warning(
-                                "Recording completed WITHOUT audio track (durationMs=\(duration), \(audioStats))",
-                                name: "DivineCamera.Recording"
-                            )
-                        }
+        let finishHandler: () -> Void = { [weak self] in
+            guard let self = self else { return }
 
-                        let result: [String: Any] = [
-                            "filePath": outputURL.path,
-                            "durationMs": duration,
-                            "width": width,
-                            "height": height
-                        ]
-
-                        completion(result, nil)
-                    case .cancelled:
-                        // No frame was ever appended, so no writer session
-                        // was ever opened — cancelWriting() below is the
-                        // deliberate result, not a failure.
-                        DivineCameraLog.shared.warning(
-                            "Recording stopped with no content captured "
-                                + "(interrupted, or stopped before the "
-                                + "first frame arrived)",
-                            name: "DivineCamera.Recording"
-                        )
-                        completion(nil, "No content captured")
-                    default:
-                        DivineCameraLog.shared.error(
-                            "Recording failed: "
-                                + "\(writer.error?.localizedDescription ?? "Unknown error")",
-                            name: "DivineCamera.Recording"
-                        )
-                        completion(nil, "Recording failed: \(writer.error?.localizedDescription ?? "Unknown error")")
+            DispatchQueue.main.async {
+                switch writer.status {
+                case .completed:
+                    // Get video dimensions
+                    guard let outputURL = self.currentRecordingURL else {
+                        completion(nil, "Output URL not available")
+                        return
                     }
 
-                    // Cleanup
-                    self.assetWriter = nil
-                    self.videoWriterInput = nil
-                    self.audioWriterInput = nil
-                    self.pixelBufferAdaptor = nil
-                    self.currentRecordingURL = nil
-                    self.recordingStartTime = nil
-                    self.isWriterSessionStarted = false
-                    self.lastVideoFrameEndPTS = nil
+                    var width: Int = 1920
+                    var height: Int = 1080
 
-                    // pausePreview() keeps the mic attached while a
-                    // recording is draining. If the preview is still
-                    // paused now (app locked mid-recording), release the
-                    // mic so the lock screen stops showing the recording
-                    // indicator.
-                    if self.isPaused {
-                        self.sessionQueue.async { [weak self] in
-                            guard let self = self,
-                                  self.isPaused,
-                                  !self.isRecording else { return }
-                            self.releaseAudioForPause()
-                        }
+                    let asset = AVAsset(url: outputURL)
+                    if let track = asset.tracks(withMediaType: .video).first {
+                        let size = track.naturalSize.applying(track.preferredTransform)
+                        width = Int(abs(size.width))
+                        height = Int(abs(size.height))
+                    }
+
+                    // Report the finished file's real duration. The
+                    // wall-clock span over-reports whenever the stop gave
+                    // up on the video pipeline (the trailing video never
+                    // reached the writer), which would make a player hold
+                    // the last frame. Fall back to wall clock only if the
+                    // asset duration is unavailable.
+                    let assetSeconds = CMTimeGetSeconds(asset.duration)
+                    let duration: Int
+                    if assetSeconds.isFinite, assetSeconds > 0 {
+                        duration = Int(assetSeconds * 1000)
+                    } else if let startTime = self.recordingStartTime {
+                        duration = Int(Date().timeIntervalSince(startTime) * 1000)
+                    } else {
+                        duration = 0
+                    }
+
+                    // Definitive signal for the "clip saved without sound"
+                    // reports (#4779): inspect the finished file rather than
+                    // trusting the in-flight audioReady flag.
+                    let hasAudioTrack = !asset.tracks(withMediaType: .audio).isEmpty
+                    let audioStats = "audioBuffers=\(self.appendedAudioBufferCount), "
+                        + "maxPeakDb=\(String(format: "%.1f", self.maxAudioPeakDb))"
+
+                    self.logAudioAlignmentDiagnostics(asset: asset)
+                    if hasAudioTrack {
+                        DivineCameraLog.shared.info(
+                            "Recording completed with audio track (durationMs=\(duration), \(audioStats))",
+                            name: "DivineCamera.Recording"
+                        )
+                    } else {
+                        DivineCameraLog.shared.warning(
+                            "Recording completed WITHOUT audio track (durationMs=\(duration), \(audioStats))",
+                            name: "DivineCamera.Recording"
+                        )
+                    }
+
+                    let result: [String: Any] = [
+                        "filePath": outputURL.path,
+                        "durationMs": duration,
+                        "width": width,
+                        "height": height
+                    ]
+
+                    completion(result, nil)
+                case .cancelled:
+                    // No frame was ever appended, so no writer session
+                    // was ever opened — cancelWriting() below is the
+                    // deliberate result, not a failure.
+                    DivineCameraLog.shared.warning(
+                        "Recording stopped with no content captured "
+                            + "(interrupted, or stopped before the "
+                            + "first frame arrived)",
+                        name: "DivineCamera.Recording"
+                    )
+                    completion(nil, "No content captured")
+                default:
+                    DivineCameraLog.shared.error(
+                        "Recording failed: "
+                            + "\(writer.error?.localizedDescription ?? "Unknown error")",
+                        name: "DivineCamera.Recording"
+                    )
+                    completion(nil, "Recording failed: \(writer.error?.localizedDescription ?? "Unknown error")")
+                }
+
+                // Cleanup
+                self.assetWriter = nil
+                self.videoWriterInput = nil
+                self.audioWriterInput = nil
+                self.pixelBufferAdaptor = nil
+                self.currentRecordingURL = nil
+                self.recordingStartTime = nil
+                self.isWriterSessionStarted = false
+                self.lastVideoFrameEndPTS = nil
+
+                // pausePreview() keeps the mic attached while a
+                // recording is draining. If the preview is still
+                // paused now (app locked mid-recording), release the
+                // mic so the lock screen stops showing the recording
+                // indicator.
+                if self.isPaused {
+                    self.sessionQueue.async { [weak self] in
+                        guard let self = self,
+                              self.isPaused,
+                              !self.isRecording else { return }
+                        self.releaseAudioForPause()
                     }
                 }
             }
+        }
 
-            if hasSession {
-                writer.finishWriting(completionHandler: finishHandler)
-            } else {
-                // finishWriting()'s behavior when startSession(atSourceTime:)
-                // was never called is undocumented; cancel outright instead
-                // of risking it, then run the same completion/cleanup path.
-                writer.cancelWriting()
-                finishHandler()
-            }
+        if hasSession {
+            writer.finishWriting(completionHandler: finishHandler)
+        } else {
+            // finishWriting()'s behavior when startSession(atSourceTime:)
+            // was never called is undocumented; cancel outright instead
+            // of risking it, then run the same completion/cleanup path.
+            writer.cancelWriting()
+            finishHandler()
         }
     }
 
@@ -3133,6 +3310,9 @@ class CameraController: NSObject {
     func pausePreview(releaseAudio: Bool = true) {
         disableScreenFlash()
         isPaused = true
+        // captureOutput drops every buffer while paused, so a stop waiting
+        // on the pipeline would only run into its timeout.
+        finishStopDrainEarly(reason: "preview paused")
         // Genuine background. The hardware encoder does not survive the app
         // being suspended, so a recording left open here fails with
         // "Operation Interrupted" on the next stop (#9210). The
@@ -3328,8 +3508,9 @@ class CameraController: NSObject {
     /// Emits the #7888 audio-alignment breadcrumb for a finished recording:
     /// how far the first encoded audio sample sits behind the writer anchor,
     /// how much of that gap predates any mic buffer at all, how far the audio
-    /// session's clock sat from the video session's, and which audio attach
-    /// path this recording took.
+    /// session's clock sat from the video session's, which audio attach path
+    /// this recording took, how late the video pipeline delivered its
+    /// picture, and how the stop's wait for that pipeline ended.
     private func logAudioAlignmentDiagnostics(asset: AVAsset) {
         func ms(_ later: CMTime?, _ earlier: CMTime?) -> String {
             guard let later, let earlier,
@@ -3361,7 +3542,11 @@ class CameraController: NSObject {
                 + "attachMs=\(String(format: "%.0f", self.lastAudioAttachMs)), "
                 + "attachPath=\(self.recordingAudioAttachPath), "
                 + "entry=[\(self.recordingAudioEntryRoute)], "
-                + "stabilization=\(self.reportedStabilizationString())",
+                + "stabilization=\(self.reportedStabilizationString()), "
+                + "videoLatencyMs=\(ms(self.videoDeliveryLatency, .zero)), "
+                + "preRollFrames=\(self.preRollFrameCount), "
+                + "stopDrainMs=\(self.stopDrainMs.map { String(format: "%.0f", $0) } ?? "n/a"), "
+                + "stopDrainEnd=\(self.stopDrainEnd)",
             name: "DivineCamera.Recording"
         )
     }
@@ -3400,11 +3585,15 @@ class CameraController: NSObject {
         sessionQueue.async {
             // Stop recording if in progress
             if self.isRecording {
+                self.recordingWindow = nil
                 self.isRecording = false
                 self.videoWriterInput?.markAsFinished()
                 self.audioWriterInput?.markAsFinished()
                 self.assetWriter?.cancelWriting()
             }
+            // A stop still waiting on the pipeline finalizes what it has
+            // rather than waiting out its timeout on a torn-down camera.
+            self.finishStopDrainEarly(reason: "released")
             
             self.captureSession?.stopRunning()
             self.captureSession = nil
@@ -3524,20 +3713,44 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 updatePreviewTexture(pixelBuffer: pixelBuffer, sampleBuffer: sampleBuffer)
             }
 
-            // Write video frame to asset writer if recording
-            if isRecording, let writer = assetWriter, let videoInput = videoWriterInput, let adaptor = pixelBufferAdaptor {
+            // Write every frame captured inside the recording window — which
+            // outlives isRecording while a stop waits for the pipeline.
+            if let window = recordingWindow, let writer = assetWriter, let videoInput = videoWriterInput, let adaptor = pixelBufferAdaptor {
                 let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
 
-                // Start session on first frame
+                // Captured at or after the stop: every frame the clip covers
+                // has now been delivered.
+                if let stop = window.stop, timestamp >= stop {
+                    finishPendingStop(end: "delivered")
+                    return
+                }
+
+                // Open the session on the first frame captured inside the
+                // window, never on the first one delivered: a look-ahead
+                // stabilization mode delivers frames captured ~1s before the
+                // tap, and anchoring on one puts pre-tap picture over audio
+                // that does not exist yet.
                 if !isWriterSessionStarted && writer.status == .writing {
+                    guard timestamp >= window.start else {
+                        preRollFrameCount += 1
+                        return
+                    }
                     writer.startSession(atSourceTime: timestamp)
                     isWriterSessionStarted = true
                     writerAnchorPTS = timestamp
-                    writerSessionStartedAt = Date()
+                    let latency = videoClockNow() - timestamp
+                    videoDeliveryLatency = latency
+                    let latencySeconds = latency.isNumeric ? max(latency.seconds, 0) : 0
+                    writerSessionStartedAt = Date().addingTimeInterval(-latencySeconds)
                     // Native-only event (sample-buffer delegate, no method
                     // call): reclaim the UI engine's diagnostics sink first.
                     reclaimLogSink?()
                     DivineCameraLog.shared.debug("DivineCamera: Writer session started at \(timestamp.seconds)")
+                    // Sound captured while this frame was still in the
+                    // pipeline goes in ahead of everything that follows.
+                    if let audioInput = audioWriterInput {
+                        appendPendingAudio(to: audioInput)
+                    }
                 }
 
                 if writer.status == .writing && videoInput.isReadyForMoreMediaData {
@@ -3578,20 +3791,84 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
             // Skip appending while interrupted — iOS keeps delivering
             // (silent) buffers after the session is deactivated, which
             // would produce a valid AAC track with no sound.
-            if isRecording, !audioInterrupted, let writer = assetWriter, let audioInput = audioWriterInput {
-                // Only append audio after session has started
-                if isWriterSessionStarted && writer.status == .writing && audioInput.isReadyForMoreMediaData {
-                    audioInput.append(sampleBuffer)
-                    if firstAppendedAudioPTS == nil {
-                        firstAppendedAudioPTS = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-                    }
-                    appendedAudioBufferCount += 1
+            if let window = recordingWindow, !audioInterrupted, let writer = assetWriter, let audioInput = audioWriterInput {
+                let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                let beforeStop = window.stop.map { timestamp < $0 } ?? true
+                if beforeStop && writer.status == .writing {
                     for channel in connection.audioChannels {
                         maxAudioPeakDb = max(maxAudioPeakDb, channel.peakHoldLevel)
+                    }
+                    if !isWriterSessionStarted {
+                        // The mic runs ahead of the picture; hold its sound
+                        // until the first frame inside the window arrives.
+                        holdPendingAudio(sampleBuffer, notBefore: window.start)
+                    } else {
+                        appendPendingAudio(to: audioInput)
+                        if pendingAudioBuffers.isEmpty && audioInput.isReadyForMoreMediaData {
+                            appendAudio(sampleBuffer, to: audioInput)
+                        } else {
+                            // Queue behind the backlog to keep capture order.
+                            holdPendingAudio(sampleBuffer, notBefore: window.start)
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// Current time on the clock the video capture session stamps its
+    /// buffers with — the timeline the recording window and the writer
+    /// share. Audio is moved onto it by `retimedToVideoClock(_:)`.
+    private func videoClockNow() -> CMTime {
+        CMClockGetTime(
+            synchronizationClock(of: captureSession) ?? CMClockGetHostTimeClock()
+        )
+    }
+
+    private static func endTime(of sampleBuffer: CMSampleBuffer) -> CMTime {
+        let start = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        let duration = CMSampleBufferGetDuration(sampleBuffer)
+        return duration.isNumeric ? start + duration : start
+    }
+
+    /// Holds an audio buffer until the writer can take it. Sound that ended
+    /// before `start` was captured before the recording began and is
+    /// dropped; past `maxPendingAudioSeconds` of backlog the oldest goes, so
+    /// a writer session that never opens cannot grow this without bound.
+    /// `videoOutputQueue` only.
+    private func holdPendingAudio(_ sampleBuffer: CMSampleBuffer, notBefore start: CMTime) {
+        guard Self.endTime(of: sampleBuffer) > start else { return }
+        pendingAudioBuffers.append(sampleBuffer)
+        let newest = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        while let oldest = pendingAudioBuffers.first,
+              (newest - CMSampleBufferGetPresentationTimeStamp(oldest)).seconds
+                > Self.maxPendingAudioSeconds {
+            pendingAudioBuffers.removeFirst()
+        }
+    }
+
+    /// Appends held audio in capture order for as long as the writer accepts
+    /// it. Buffers that end before the writer anchor are dropped — the
+    /// session starts after them; the one that straddles it is appended and
+    /// trimmed by the writer. `videoOutputQueue` only.
+    private func appendPendingAudio(to audioInput: AVAssetWriterInput) {
+        while let next = pendingAudioBuffers.first {
+            if let anchor = writerAnchorPTS, Self.endTime(of: next) <= anchor {
+                pendingAudioBuffers.removeFirst()
+                continue
+            }
+            guard audioInput.isReadyForMoreMediaData else { return }
+            pendingAudioBuffers.removeFirst()
+            appendAudio(next, to: audioInput)
+        }
+    }
+
+    private func appendAudio(_ sampleBuffer: CMSampleBuffer, to audioInput: AVAssetWriterInput) {
+        audioInput.append(sampleBuffer)
+        if firstAppendedAudioPTS == nil {
+            firstAppendedAudioPTS = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        }
+        appendedAudioBufferCount += 1
     }
 
     /// The clock a capture session stamps its output buffers on.
@@ -3617,8 +3894,9 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     /// the tail (#7888). `CMSyncConvertTime` is the conversion AVFoundation
     /// itself documents for exactly this.
     ///
-    /// Returns the buffer unchanged when not recording (nothing downstream
-    /// reads it then, and the audio session runs between recordings), when
+    /// Returns the buffer unchanged outside a recording window (nothing
+    /// downstream reads it then, and the audio session runs between
+    /// recordings; the window outlives `isRecording` while a stop drains), when
     /// both sessions already share a clock, or when any later step of the
     /// retime fails -- an unavailable clock, unreadable timing info, a
     /// non-numeric converted timestamp, or a failed buffer copy. Every
@@ -3626,7 +3904,7 @@ extension CameraController: AVCaptureVideoDataOutputSampleBufferDelegate {
     /// `audioRetimeFailureCount`. The data buffer is shared in every case;
     /// only the timing is ever replaced. Runs on `videoOutputQueue`.
     private func retimedToVideoClock(_ sampleBuffer: CMSampleBuffer) -> CMSampleBuffer {
-        guard isRecording else { return sampleBuffer }
+        guard recordingWindow != nil else { return sampleBuffer }
         guard let audioClock = synchronizationClock(of: audioCaptureSession),
               let videoClock = synchronizationClock(of: captureSession) else {
             audioRetimeFailureCount += 1

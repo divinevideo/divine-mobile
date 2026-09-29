@@ -26,6 +26,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
@@ -156,6 +157,37 @@ class VideoEditorCanvas extends StatelessWidget {
       if (a.thumbnailPath != b.thumbnailPath) anyThumbnailDiff = true;
     }
     return anyThumbnailDiff;
+  }
+
+  /// The timeline position that keeps the playhead on the same source frame
+  /// after a clip-speed change turned [previous] into [current].
+  ///
+  /// A speed change rescales the clip, so the unchanged [position] would show
+  /// a different frame — or lie past the end of a sped-up composition, where
+  /// the player parks on the last frame and restarts from zero on play
+  /// (#7455). Only a speed edit is remapped: an edit that changed no speed, or
+  /// that added, removed or reordered clips, keeps [position].
+  @visibleForTesting
+  static Duration playheadAfterClipSpeedChange({
+    required List<DivineVideoClip> previous,
+    required List<DivineVideoClip> current,
+    required Duration position,
+  }) {
+    if (previous.length != current.length) return position;
+    var speedChanged = false;
+    for (var i = 0; i < previous.length; i++) {
+      if (previous[i].id != current[i].id) return position;
+      if (previous[i].playbackSpeed != current[i].playbackSpeed) {
+        speedChanged = true;
+      }
+    }
+    if (!speedChanged) return position;
+    return rebaseTimelineMarkersForClipState(
+          oldClips: previous,
+          newClips: current,
+          markers: [position],
+        ).firstOrNull ??
+        position;
   }
 
   @visibleForTesting
@@ -675,6 +707,48 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// restarts the current clip instead of advancing, so the swap must wait for
   /// an idle player.
   bool _speedResyncPendingWhilePlaying = false;
+
+  /// The clips a clip-sync reload replaces, captured where the listener still
+  /// sees them (its `listenWhen`), so a speed change can remap the playhead.
+  List<DivineVideoClip>? _clipsBeforeSync;
+
+  /// Where the clip-sync reload moved the playhead for a clip-speed change,
+  /// kept for the speed listener that reloads the same edit right after. That
+  /// listener may still read the pre-remap position from the bloc, and must
+  /// not remap a position that already was.
+  ({Duration from, Duration to})? _speedRemap;
+
+  /// Remaps the playhead for a clip-speed change in [clips] and records it in
+  /// [_speedRemap]. Returns `null` when no speed changed or the playhead stays.
+  Duration? _remapPlayheadForSpeedChange(
+    List<DivineVideoClip> clips,
+    Duration position,
+  ) {
+    final previous = _clipsBeforeSync;
+    _clipsBeforeSync = null;
+    if (previous == null) return null;
+    final remapped = VideoEditorCanvas.playheadAfterClipSpeedChange(
+      previous: previous,
+      current: clips,
+      position: position,
+    );
+    if (remapped == position) return null;
+    Log.info(
+      '🎬 Clip speed changed: playhead '
+      '${position.inMilliseconds}ms → ${remapped.inMilliseconds}ms',
+      name: 'VideoEditorCanvas',
+      category: LogCategory.video,
+    );
+    _speedRemap = (from: position, to: remapped);
+    return remapped;
+  }
+
+  /// Returns [position] with a pending [_speedRemap] applied, consuming it.
+  Duration _takeSpeedRemap(Duration position) {
+    final remap = _speedRemap;
+    _speedRemap = null;
+    return remap != null && remap.from == position ? remap.to : position;
+  }
 
   @override
   void dispose() {
@@ -1547,6 +1621,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           ),
           windowStart: item.startTime,
           windowEnd: item.endTime,
+          fadeIn: sound.fadeInDuration,
+          fadeOut: sound.fadeOutDuration,
         ),
       );
     }
@@ -1581,6 +1657,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // would throw.
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioEvents = overlayState.audioTracks;
+    final outputEnd = renderedAudioEnd(
+      context.read<ClipEditorBloc>().state.clips,
+    );
 
     final soundItems = overlayState.items
         .where((item) => item.type == TimelineOverlayType.sound)
@@ -1604,6 +1683,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       final sound = audioById[item.id];
       if (sound == null || sound.url == null) continue;
 
+      // A fade out ends where the export's does; see [fadedSoundEnd].
+      final videoEndTime = fadedSoundEnd(
+        startTime: item.startTime,
+        endTime: item.endTime,
+        fadeOut: sound.fadeOutDuration,
+        outputEnd: outputEnd,
+      );
+
       try {
         final AudioTrack track;
         if (sound.isBundled && sound.assetPath != null) {
@@ -1614,8 +1701,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -1625,8 +1714,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         } else {
           track = AudioTrack.network(
@@ -1636,8 +1727,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         }
         tracks.add(track);
@@ -2089,10 +2182,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
         final clips = ref.read(clipManagerProvider).clips;
         if (clips.isEmpty || !_isPlayerInitialized) return;
-        final currentPosition = context
-            .read<VideoEditorMainBloc>()
-            .state
-            .currentPosition;
+        // The clip-sync reload for the same edit has remapped the playhead
+        // onto the same source frame; the bloc may not have processed it yet.
+        final currentPosition = _takeSpeedRemap(
+          context.read<VideoEditorMainBloc>().state.currentPosition,
+        );
 
         // Pin so a reset report from loading the seam-aware composition
         // doesn't snap the playhead back while paused.
@@ -2400,22 +2494,39 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 current.lastReverseResult is ClipReverseSuccess) {
               return false;
             }
-            return VideoEditorCanvas.shouldSyncPlayerForClipStateChange(
-              previous: previous,
-              current: current,
-            );
+            final shouldSync =
+                VideoEditorCanvas.shouldSyncPlayerForClipStateChange(
+                  previous: previous,
+                  current: current,
+                );
+            if (shouldSync) _clipsBeforeSync = previous.clips;
+            return shouldSync;
           },
           listener: (context, state) async {
             // See note on the trim-times listener above: skip empty
             // clip lists to avoid crashing the iOS native player.
             if (state.clips.isEmpty || !_isPlayerInitialized) return;
 
-            // Seek to the trim handle's release point when restoring the composite.
+            // Seek to the trim handle's release point when restoring the
+            // composite, or keep a sped-up / slowed-down clip on its frame.
             final trimEndPosition = _consumeTrimEndStartPosition(state.clips);
-            final startPosition = trimEndPosition ?? bloc.state.currentPosition;
+            final speedRemapPosition = trimEndPosition == null
+                ? _remapPlayheadForSpeedChange(
+                    state.clips,
+                    bloc.state.currentPosition,
+                  )
+                : null;
+            final startPosition =
+                trimEndPosition ??
+                speedRemapPosition ??
+                bloc.state.currentPosition;
             // Sync so subsequent re-emits read the post-seek position.
             if (trimEndPosition != null) {
               bloc.add(VideoEditorPositionChanged(trimEndPosition));
+            }
+            if (speedRemapPosition != null) {
+              bloc.add(VideoEditorPositionChanged(speedRemapPosition));
+              _setLayerPlayTime(speedRemapPosition);
             }
 
             final needsLegacyUpgrade =

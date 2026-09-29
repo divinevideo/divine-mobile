@@ -26,7 +26,10 @@ void main() {
       // dropping buffers, tapToCapture catches a slow start that loses leading
       // content without shifting audio at all, and the attach path plus the
       // session state on entry say whether the record tap paid for a
-      // reconfigure. Drop one and the next report is unactionable again.
+      // reconfigure. videoLatencyMs and preRollFrames measure the video
+      // pipeline's delay, which a look-ahead stabilization mode stretches to
+      // ~1.5s, and stopDrainMs/stopDrainEnd say whether the stop waited it
+      // out or gave up. Drop one and the next report is unactionable again.
       for (final key in const [
         'appendLeadInMs=',
         'micLeadInMs=',
@@ -36,6 +39,10 @@ void main() {
         'attachPath=',
         'entry=[',
         'stabilization=',
+        'videoLatencyMs=',
+        'preRollFrames=',
+        'stopDrainMs=',
+        'stopDrainEnd=',
       ]) {
         expect(diagnostics, contains(key), reason: 'missing $key');
       }
@@ -52,9 +59,12 @@ void main() {
       // A clip with no audio at all is the loudest version of this bug, so the
       // breadcrumb must not sit behind the hasAudioTrack branch that only
       // covers the good case.
-      final stop = declarationAt(source, 'func stopRecording(');
-      final call = stop.indexOf('self.logAudioAlignmentDiagnostics(asset:');
-      final branch = stop.indexOf('if hasAudioTrack {');
+      final finalize = declarationAt(
+        source,
+        'private func finalizeRecording(',
+      );
+      final call = finalize.indexOf('self.logAudioAlignmentDiagnostics(asset:');
+      final branch = finalize.indexOf('if hasAudioTrack {');
       expect(call, greaterThan(-1));
       expect(branch, greaterThan(-1));
       expect(call, lessThan(branch));
@@ -89,9 +99,10 @@ void main() {
       );
       final seen = audioBranch.indexOf('firstSeenAudioPTS =');
       final appendGate = audioBranch.indexOf(
-        'if isRecording, !audioInterrupted, let writer = assetWriter,',
+        'if let window = recordingWindow, !audioInterrupted, '
+        'let writer = assetWriter,',
       );
-      final sessionGate = audioBranch.indexOf('if isWriterSessionStarted &&');
+      final sessionGate = audioBranch.indexOf('if !isWriterSessionStarted {');
       expect(seen, greaterThan(-1));
       expect(appendGate, greaterThan(-1));
       expect(sessionGate, greaterThan(-1));

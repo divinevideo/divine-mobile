@@ -4663,6 +4663,13 @@
   "videoEditorTextColorSemanticLabel": "ٹیکسٹ کا رنگ",
   "videoEditorTextAlignmentSemanticLabel": "ٹیکسٹ سیدھ",
   "videoEditorTextBackgroundSemanticLabel": "ٹیکسٹ پس منظر",
+  "videoEditorTextEffectsSemanticLabel": "آؤٹ لائن اور سایہ",
+  "videoEditorTextOutline": "آؤٹ لائن",
+  "videoEditorTextOutlineThickness": "آؤٹ لائن کی موٹائی",
+  "videoEditorTextOutlineColor": "آؤٹ لائن کا رنگ",
+  "videoEditorTextShadow": "سایہ",
+  "videoEditorTextShadowStrength": "سائے کی شدت",
+  "videoEditorTextShadowColor": "سائے کا رنگ",
   "videoEditorFontSemanticLabel": "فانٹ",
   "videoEditorNoStickersFound": "کوئی اسٹیکر نہیں ملا",
   "videoEditorNoStickersAvailable": "کوئی اسٹیکر دستیاب نہیں",
@@ -4929,6 +4936,11 @@
       }
     }
   },
+  "videoEditorFadeLabel": "فیڈ",
+  "videoEditorFadeSoundSemanticLabel": "منتخب آواز کے لیے فیڈ اِن اور فیڈ آؤٹ مقرر کریں",
+  "videoEditorFadeSheetTitle": "فیڈ اِن اور آؤٹ",
+  "videoEditorFadeInLabel": "فیڈ اِن",
+  "videoEditorFadeOutLabel": "فیڈ آؤٹ",
   "videoEditorTransitionSheetTitle": "ٹرانزیشن",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."
@@ -6166,7 +6178,7 @@
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },
-  "supporterTileSubtitle": "اختیاری ماہانہ سبسکرپشن سے Divine کی سپورٹ کریں۔",
+  "supporterTileSubtitle": "اختیاری سبسکرپشن سے Divine کی سپورٹ کریں۔",
   "@supporterTileSubtitle": {
     "description": "Subtitle of the supporter subscription settings tile."
   },

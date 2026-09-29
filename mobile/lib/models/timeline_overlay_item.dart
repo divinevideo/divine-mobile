@@ -68,6 +68,8 @@ class TimelineOverlayItem extends Equatable {
     this.waveformLeftChannel,
     this.waveformRightChannel,
     this.audioSource,
+    this.fadeIn = Duration.zero,
+    this.fadeOut = Duration.zero,
   });
 
   /// Unique identifier.
@@ -124,6 +126,17 @@ class TimelineOverlayItem extends Equatable {
   /// `null` for non-sound items.
   final AudioSource? audioSource;
 
+  /// How long a sound item fades in from silence. [Duration.zero] for
+  /// non-sound items and sounds that start at full volume.
+  final Duration fadeIn;
+
+  /// How long a sound item fades out to silence. [Duration.zero] for
+  /// non-sound items and sounds that stop at full volume.
+  final Duration fadeOut;
+
+  /// Whether a sound item fades in or out at all.
+  bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
+
   /// Start time in seconds for layout calculations.
   double get startTimeInSeconds => startTime.inMilliseconds / 1000.0;
   double get durationInSeconds => duration.inMilliseconds / 1000;
@@ -144,6 +157,8 @@ class TimelineOverlayItem extends Equatable {
     Float32List? waveformLeftChannel,
     Float32List? waveformRightChannel,
     AudioSource? audioSource,
+    Duration? fadeIn,
+    Duration? fadeOut,
   }) {
     return TimelineOverlayItem(
       id: id ?? this.id,
@@ -159,6 +174,8 @@ class TimelineOverlayItem extends Equatable {
       waveformLeftChannel: waveformLeftChannel ?? this.waveformLeftChannel,
       waveformRightChannel: waveformRightChannel ?? this.waveformRightChannel,
       audioSource: audioSource ?? this.audioSource,
+      fadeIn: fadeIn ?? this.fadeIn,
+      fadeOut: fadeOut ?? this.fadeOut,
     );
   }
 
@@ -177,5 +194,7 @@ class TimelineOverlayItem extends Equatable {
     waveformLeftChannel,
     waveformRightChannel,
     audioSource,
+    fadeIn,
+    fadeOut,
   ];
 }

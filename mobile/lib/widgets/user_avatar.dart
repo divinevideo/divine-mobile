@@ -12,6 +12,7 @@ import 'package:openvine/blocs/avatar_svg/avatar_svg_cubit.dart';
 import 'package:openvine/providers/avatar_svg_repository_provider.dart';
 import 'package:openvine/repositories/avatar_svg_repository.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/avatar_failure_cache.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -277,8 +278,16 @@ class _AvatarSvgContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<AvatarSvgCubit>(
       key: ValueKey((imageUrl, repository)),
-      create: (_) =>
-          AvatarSvgCubit(repository: repository, url: imageUrl)..load(),
+      create: (_) {
+        final cubit = AvatarSvgCubit(repository: repository, url: imageUrl);
+        runDetached(
+          cubit.load(),
+          'load SVG avatar',
+          logName: 'UserAvatar',
+          category: LogCategory.ui,
+        );
+        return cubit;
+      },
       child: BlocBuilder<AvatarSvgCubit, AvatarSvgState>(
         builder: (context, state) {
           final bytes = state.bytes;

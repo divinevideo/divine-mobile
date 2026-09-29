@@ -6193,6 +6193,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commonBack => 'واپس';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'بند کریں';
 
   @override
@@ -8912,6 +8915,27 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'ٹیکسٹ پس منظر';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'آؤٹ لائن اور سایہ';
+
+  @override
+  String get videoEditorTextOutline => 'آؤٹ لائن';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'آؤٹ لائن کی موٹائی';
+
+  @override
+  String get videoEditorTextOutlineColor => 'آؤٹ لائن کا رنگ';
+
+  @override
+  String get videoEditorTextShadow => 'سایہ';
+
+  @override
+  String get videoEditorTextShadowStrength => 'سائے کی شدت';
+
+  @override
+  String get videoEditorTextShadowColor => 'سائے کا رنگ';
+
+  @override
   String get videoEditorFontSemanticLabel => 'فانٹ';
 
   @override
@@ -9355,6 +9379,22 @@ class AppLocalizationsUr extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'رفتار $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'فیڈ';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'منتخب آواز کے لیے فیڈ اِن اور فیڈ آؤٹ مقرر کریں';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'فیڈ اِن اور آؤٹ';
+
+  @override
+  String get videoEditorFadeInLabel => 'فیڈ اِن';
+
+  @override
+  String get videoEditorFadeOutLabel => 'فیڈ آؤٹ';
 
   @override
   String get videoEditorTransitionSheetTitle => 'ٹرانزیشن';
@@ -11563,7 +11603,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'اختیاری ماہانہ سبسکرپشن سے Divine کی سپورٹ کریں۔';
+      'اختیاری سبسکرپشن سے Divine کی سپورٹ کریں۔';
 
   @override
   String get supporterHeroTitle => 'Divine کو چلتے رکھیں';

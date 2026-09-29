@@ -201,9 +201,8 @@ class VideoRecorderBloc
             if (isClosed) return;
             add(_VideoRecorderAutoStopped(video));
           },
-          onScreenFlashChanged: (isActive) => addIfOpen(
-            _VideoRecorderScreenFlashChanged(isActive: isActive),
-          ),
+          onScreenFlashChanged: (isActive) =>
+              addIfOpen(_VideoRecorderScreenFlashChanged(isActive: isActive)),
         );
 
     on<VideoRecorderInitializeRequested>(_onInitializeRequested);
@@ -416,7 +415,10 @@ class VideoRecorderBloc
             prefs.getBool(MusicModePreferenceService.prefsKey) ?? false,
         // Rides the first bind: applying it after init would rebind the
         // whole camera a second time on Android.
-        videoStabilizationMode: _savedStabilizationMode(prefs),
+        videoStabilizationMode: _stabilizationModeFor(
+          state.recorderMode,
+          prefs,
+        ),
       );
     } catch (e, stackTrace) {
       initError = e;
@@ -464,6 +466,9 @@ class VideoRecorderBloc
       emit,
       aspectRatio: clips.isNotEmpty ? clips.first.targetAspectRatio : null,
     );
+
+    // A mode switched to while the camera was starting could not reach it.
+    await _applyStabilizationForRecorderMode();
 
     // Opening straight into Upload: the screen's pause for that tab arrived
     // while the camera was still starting and was dropped, so release it now.
@@ -513,6 +518,13 @@ class VideoRecorderBloc
           initializationError: CameraInitializationError.failed,
         ),
       );
+      return;
+    }
+
+    // Leaving the Upload tab resumes the camera it paused, into whichever
+    // mode the user switched to meanwhile.
+    if (event.state == AppLifecycleState.resumed) {
+      await _applyStabilizationForRecorderMode();
     }
   }
 
@@ -647,6 +659,12 @@ class VideoRecorderBloc
   ) async {
     if (state.isRecording) return;
     if (event.mode == state.videoStabilizationMode) return;
+    // Already on a mode that hides the control: keep the pick, but do not
+    // start a rebind. Upload's camera is paused, and a rebind would restart it.
+    if (!state.recorderMode.supportsVideoStabilization) {
+      await _saveStabilizationModePreference(event.mode);
+      return;
+    }
     final success = await _cameraService.setVideoStabilizationMode(event.mode);
     if (!success) {
       Log.warning(
@@ -654,6 +672,20 @@ class VideoRecorderBloc
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
+      return;
+    }
+    if (isClosed) return;
+    // The picker and a mode change run concurrently. The mode handler may
+    // have seen the camera still on the old value and skipped its own apply,
+    // and on Android this set rebinds even a camera Upload has paused.
+    if (!state.recorderMode.supportsVideoStabilization) {
+      await _saveStabilizationModePreference(event.mode);
+      if (isClosed) return;
+      if (state.recorderMode == VideoRecorderMode.upload) {
+        await _cameraService.handleAppLifecycleState(AppLifecycleState.paused);
+      } else {
+        await _applyStabilizationForRecorderMode();
+      }
       return;
     }
     emit(state.copyWith(videoStabilizationMode: event.mode));
@@ -1060,13 +1092,18 @@ class VideoRecorderBloc
     final ClipManagerNotifier clipManager;
     final Duration remainingDuration;
     try {
+      // Freeze the timer at the tap, not when the native stop returns. With a
+      // look-ahead stabilization mode iOS waits ~1.6s for the camera to hand
+      // over the last frames; a timer still running through that wait reads
+      // as a stop that did not take, and counts the wait into the clip.
+      _readClipManager().stopRecording();
       await _stopSoundPlayback();
       videoResult = event.result ?? await _cameraService.stopRecording();
       // Best-effort: a wakelock teardown failure must not abort the stop and
       // discard an already-captured clip (videoResult is assigned above), so
       // it is swallowed rather than thrown into the recovery catch.
       await _disableWakelockSafely();
-      clipManager = _readClipManager()..stopRecording();
+      clipManager = _readClipManager();
       remainingDuration = clipManager.remainingDuration;
     } catch (e, stackTrace) {
       // Defense-in-depth recovery. Neither production CameraService throws
@@ -1087,11 +1124,9 @@ class VideoRecorderBloc
         stackTrace: stackTrace,
       );
       addError(e, stackTrace);
-      // stopRecording() cancels the periodic 60fps duration timer and stops
-      // the stopwatch (resetRecording alone would leave that timer running).
-      _readClipManager()
-        ..stopRecording()
-        ..resetRecording();
+      // The 60fps duration timer was already stopped at the top of the try;
+      // resetRecording only clears the in-progress segment.
+      _readClipManager().resetRecording();
       await _disableWakelockSafely();
       emit(
         state.copyWith(
@@ -1626,11 +1661,17 @@ class VideoRecorderBloc
     VideoRecorderRecorderModeSet event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    final previousMode = state.recorderMode;
     await _applyRecorderMode(
       emit,
       event.mode,
       keepAutosavedDraft: event.keepAutosavedDraft,
     );
+    // Leaving Upload resumes a paused camera: a rebind while paused would
+    // restart it on Android, so the resume applies the mode instead.
+    if (previousMode != VideoRecorderMode.upload) {
+      await _applyStabilizationForRecorderMode();
+    }
   }
 
   Future<void> _applyRecorderMode(
@@ -1642,11 +1683,18 @@ class VideoRecorderBloc
     // cannot land inside it, and the `ready` it leaves behind already carries an
     // empty frame list — so the discard below is a no-op and the queued library
     // write has nothing to lose.
-    final previousMode = state.recorderMode;
     final previousFrames = state.stopMotionFrames;
+    // The recording mode the session's clips belong to. Upload records nothing,
+    // so while it shows, that is the mode it was entered from — null when the
+    // recorder opened straight into Upload.
+    final sessionMode = state.recorderMode == VideoRecorderMode.upload
+        ? state.modeBeforeUpload
+        : state.recorderMode;
     emit(
       state.copyWith(
         recorderMode: mode,
+        modeBeforeUpload: mode == VideoRecorderMode.upload ? sessionMode : null,
+        clearModeBeforeUpload: mode != VideoRecorderMode.upload,
         aspectRatio: mode.defaultAspectRatio,
         showGridLines: _gridLinesEnabledFor(mode),
         timerDuration: mode.supportsCountdownTimer
@@ -1663,10 +1711,13 @@ class VideoRecorderBloc
     final prefs = _readSharedPreferences();
     await prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
 
-    final touchesRecordingState =
+    // A peek at Upload and back keeps the session; any other move between two
+    // recording modes discards it, with or without Upload in between.
+    final switchesRecordingMode =
         mode != VideoRecorderMode.upload &&
-        previousMode != VideoRecorderMode.upload;
-    if (touchesRecordingState) {
+        sessionMode != null &&
+        mode != sessionMode;
+    if (switchesRecordingMode) {
       await _readClipManager().clearAll(
         keepAutosavedDraft: keepAutosavedDraft,
       );
@@ -1932,10 +1983,10 @@ class VideoRecorderBloc
 
   /// Rebuilds [state] from the current [CameraService] values.
   ///
-  /// Only the rebuild count, aspect ratio, recorder mode, overlay and grid
-  /// toggles, the stop-motion session and, while the camera is initialized,
-  /// the screen flash carry over; flash resets to `off` and every other field
-  /// to its default.
+  /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
+  /// was entered from), overlay and grid toggles, the stop-motion session and,
+  /// while the camera is initialized, the screen flash carry over; flash
+  /// resets to `off` and every other field to its default.
   void _emitCameraSync(
     Emitter<VideoRecorderBlocState> emit, {
     int? cameraRebuildCount,
@@ -1968,6 +2019,7 @@ class VideoRecorderBloc
             _cameraService.isVideoStabilizationSupported,
         showLastClipOverlay: state.showLastClipOverlay,
         recorderMode: state.recorderMode,
+        modeBeforeUpload: state.modeBeforeUpload,
         showGridLines: state.showGridLines,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
@@ -2096,17 +2148,55 @@ class VideoRecorderBloc
     );
   }
 
-  /// The persisted stabilization mode, handed to the camera's initialize.
+  /// The persisted stabilization mode, as last picked in a mode that shows
+  /// the control.
   ///
   /// The native controller is recreated (mode reset to off) on every init, so
-  /// the saved preference travels with each one. The platform opens with off
-  /// when the active lens does not support it.
+  /// the preference travels with each one (see [_stabilizationModeFor]). The
+  /// platform opens with off when the active lens does not support it.
   DivineVideoStabilizationMode _savedStabilizationMode(
     SharedPreferences prefs,
   ) {
     final saved = prefs.getString(_kLastUsedStabilizationModeKey);
     if (saved == null) return DivineVideoStabilizationMode.off;
     return DivineVideoStabilizationMode.fromNativeString(saved);
+  }
+
+  /// The stabilization the camera runs in [mode]: the saved choice where the
+  /// mode shows the control, off where it hides it, so Classic and Stop
+  /// Motion never run a mode picked in Capture. The saved choice itself stays
+  /// untouched.
+  DivineVideoStabilizationMode _stabilizationModeFor(
+    VideoRecorderMode mode,
+    SharedPreferences prefs,
+  ) => mode.supportsVideoStabilization
+      ? _savedStabilizationMode(prefs)
+      : DivineVideoStabilizationMode.off;
+
+  /// Points the live camera at [_stabilizationModeFor] the current mode.
+  ///
+  /// A saved mode the current lens cannot take is left alone: the camera
+  /// already opened with off for it, and requesting it again would rebind the
+  /// camera for nothing on Android.
+  Future<void> _applyStabilizationForRecorderMode() async {
+    final mode = state.recorderMode;
+    // Upload pauses the camera and records nothing.
+    if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
+      return;
+    }
+    final target = _stabilizationModeFor(mode, _readSharedPreferences());
+    if (target == _cameraService.videoStabilizationMode ||
+        !_cameraService.availableVideoStabilizationModes.contains(target)) {
+      return;
+    }
+    final success = await _cameraService.setVideoStabilizationMode(target);
+    if (!success) {
+      Log.warning(
+        '⚠️ Failed to set stabilization to ${target.name} for ${mode.name}',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
   }
 
   Future<void> _prepareSoundForPlayback() async {

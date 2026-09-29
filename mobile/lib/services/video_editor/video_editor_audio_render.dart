@@ -225,14 +225,21 @@ List<AudioTrack> buildRenderAudioTracks({
 ///
 /// When [videoDuration] is set, each track's composition window is clamped to
 /// it (see [clampAudioWindowToVideo]) so audio cannot outlast the video track.
+///
+/// Each track takes its fade from the [audioEvents] entry with its id. The
+/// render [AudioTrack] cannot carry one, so the editor's timeline events are
+/// the source. The fade out ends where the clamped window does, so a track
+/// cut short by the end of the video still fades out rather than stopping.
 Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
   List<AudioTrack> customTracks, {
   required String logName,
   Duration? videoDuration,
+  List<AudioEvent> audioEvents = const [],
   RenderAudioFetcher? fetcher,
   List<String>? tempFilePaths,
 }) async {
   final audioFetcher = fetcher ?? RenderAudioFetcher();
+  final eventsById = {for (final event in audioEvents) event.id: event};
   final audioTracks = <VideoAudioTrack>[];
   for (final track in customTracks) {
     final String audioPath;
@@ -281,6 +288,7 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       continue;
     }
     final (:startTime, :endTime) = window;
+    final event = eventsById[track.id];
     final resolvedTrack = VideoAudioTrack(
       path: audioPath,
       startTime: startTime,
@@ -289,6 +297,8 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       audioEndTime: track.audioEndTime,
       loop: track.loop,
       volume: track.volume,
+      fadeInDuration: event?.fadeInDuration ?? Duration.zero,
+      fadeOutDuration: event?.fadeOutDuration ?? Duration.zero,
     );
     audioTracks.add(resolvedTrack);
     Log.warning(
@@ -297,6 +307,8 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       '${_durationMs(resolvedTrack.endTime)}], '
       'source=[${_durationMs(resolvedTrack.audioStartTime)}, '
       '${_durationMs(resolvedTrack.audioEndTime)}], '
+      'fade=[${_durationMs(resolvedTrack.fadeInDuration)}, '
+      '${_durationMs(resolvedTrack.fadeOutDuration)}], '
       'videoDuration=${_durationMs(videoDuration)}',
       name: logName,
       category: LogCategory.video,

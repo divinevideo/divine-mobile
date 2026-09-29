@@ -10,7 +10,6 @@ class CleanupResult {
   const CleanupResult({
     required this.expiredEventsDeleted,
     required this.expiredProfileStatsDeleted,
-    required this.expiredHashtagStatsDeleted,
     required this.oldNotificationsDeleted,
     required this.orphanedVideoMetricsDeleted,
     required this.evictedUserProfilesDeleted,
@@ -21,9 +20,6 @@ class CleanupResult {
 
   /// Number of expired profile stats deleted.
   final int expiredProfileStatsDeleted;
-
-  /// Number of expired hashtag stats deleted.
-  final int expiredHashtagStatsDeleted;
 
   /// Number of old notifications deleted.
   final int oldNotificationsDeleted;
@@ -41,7 +37,6 @@ class CleanupResult {
   int get totalDeleted =>
       expiredEventsDeleted +
       expiredProfileStatsDeleted +
-      expiredHashtagStatsDeleted +
       oldNotificationsDeleted +
       orphanedVideoMetricsDeleted +
       evictedUserProfilesDeleted;
@@ -51,7 +46,6 @@ class CleanupResult {
     return 'CleanupResult('
         'events: $expiredEventsDeleted, '
         'profileStats: $expiredProfileStatsDeleted, '
-        'hashtagStats: $expiredHashtagStatsDeleted, '
         'notifications: $oldNotificationsDeleted, '
         'orphanedVideoMetrics: $orphanedVideoMetricsDeleted, '
         'evictedUserProfiles: $evictedUserProfilesDeleted)';

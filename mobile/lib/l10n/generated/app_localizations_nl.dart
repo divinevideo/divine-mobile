@@ -6215,6 +6215,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commonBack => 'Terug';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Sluiten';
 
   @override
@@ -8957,6 +8960,27 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Tekstachtergrond';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contour en schaduw';
+
+  @override
+  String get videoEditorTextOutline => 'Contour';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Contourdikte';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Contourkleur';
+
+  @override
+  String get videoEditorTextShadow => 'Schaduw';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Schaduwsterkte';
+
+  @override
+  String get videoEditorTextShadowColor => 'Schaduwkleur';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Lettertype';
 
   @override
@@ -9403,6 +9427,22 @@ class AppLocalizationsNl extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Snelheid $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Faden';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'In- en uitfaden voor geselecteerd geluid instellen';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'In- en uitfaden';
+
+  @override
+  String get videoEditorFadeInLabel => 'Infaden';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Uitfaden';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Overgang';
@@ -11641,7 +11681,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Steun Divine met een optioneel maandelijks abonnement.';
+      'Steun Divine met een optioneel abonnement.';
 
   @override
   String get supporterHeroTitle => 'Houd Divine draaiende';

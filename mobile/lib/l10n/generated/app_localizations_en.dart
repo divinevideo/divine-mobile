@@ -6278,6 +6278,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonBack => 'Back';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Close';
 
   @override
@@ -9007,6 +9010,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Text background';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Outline and shadow';
+
+  @override
+  String get videoEditorTextOutline => 'Outline';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Outline thickness';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Outline color';
+
+  @override
+  String get videoEditorTextShadow => 'Shadow';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Shadow strength';
+
+  @override
+  String get videoEditorTextShadowColor => 'Shadow color';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
@@ -9456,6 +9480,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Speed $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Fade';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Fade the selected sound in and out';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fade in & out';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fade in';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transition';
@@ -11668,10 +11708,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Support Divine with an optional monthly subscription.';
+      'Support Divine with an optional monthly or annual subscription.';
 
   @override
-  String get supporterHeroTitle => 'Keep Divine running';
+  String get supporterHeroTitle => 'A Divinely human corner of the internet.';
 
   @override
   String get supporterActiveBadge =>

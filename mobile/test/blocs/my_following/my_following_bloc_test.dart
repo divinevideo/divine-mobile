@@ -45,28 +45,31 @@ void main() {
       contentBlocklistRepository: mockBlocklistRepository,
     );
 
-    test('initial state is initial when repository cache is empty', () {
+    test('initial state is initial when repository cache is empty', () async {
       final bloc = createBloc();
       expect(bloc.state, const MyFollowingState());
-      bloc.close();
+      await bloc.close();
     });
 
-    test('initial state is seeded from repository cache when available', () {
-      when(
-        () => mockFollowRepository.followingPubkeys,
-      ).thenReturn([validPubkey('cached')]);
+    test(
+      'initial state is seeded from repository cache when available',
+      () async {
+        when(
+          () => mockFollowRepository.followingPubkeys,
+        ).thenReturn([validPubkey('cached')]);
 
-      final bloc = createBloc();
-      expect(
-        bloc.state,
-        MyFollowingState(
-          status: MyFollowingStatus.success,
-          rawFollowingPubkeys: [validPubkey('cached')],
-          followingPubkeys: [validPubkey('cached')],
-        ),
-      );
-      bloc.close();
-    });
+        final bloc = createBloc();
+        expect(
+          bloc.state,
+          MyFollowingState(
+            status: MyFollowingStatus.success,
+            rawFollowingPubkeys: [validPubkey('cached')],
+            followingPubkeys: [validPubkey('cached')],
+          ),
+        );
+        await bloc.close();
+      },
+    );
 
     group('closed mid-dispatch', () {
       late StreamController<List<String>> followingStream;

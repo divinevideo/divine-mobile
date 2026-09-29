@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_content_label_name.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/repositories/community_content_label_repository.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
 /// The "Help classify this" content-warning suggestion sheet.
@@ -35,11 +36,20 @@ class CommunitySuggestSheet {
       // the shell navigator rather than covering the tab bar.
       useRootNavigator: false,
       buildScrollBody: (scrollController) => BlocProvider(
-        create: (_) => CommunitySuggestCubit(
-          repository: repository,
-          video: video,
-          myPubkey: myPubkey,
-        )..loadExisting(),
+        create: (_) {
+          final cubit = CommunitySuggestCubit(
+            repository: repository,
+            video: video,
+            myPubkey: myPubkey,
+          );
+          runDetached(
+            cubit.loadExisting(),
+            'load existing community suggestions',
+            logName: 'CommunitySuggestSheet',
+            category: LogCategory.ui,
+          );
+          return cubit;
+        },
         child: CommunitySuggestView(scrollController: scrollController),
       ),
     );
@@ -61,10 +71,15 @@ class CommunitySuggestView extends StatelessWidget {
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
         if (state.status == CommunitySuggestStatus.success) {
-          SemanticsService.sendAnnouncement(
-            View.of(context),
-            context.l10n.communitySuggestSuccess,
-            Directionality.of(context),
+          runDetached(
+            SemanticsService.sendAnnouncement(
+              View.of(context),
+              context.l10n.communitySuggestSuccess,
+              Directionality.of(context),
+            ),
+            'announce community suggestion success',
+            logName: 'CommunitySuggestSheet',
+            category: LogCategory.ui,
           );
           Navigator.of(context).maybePop();
         } else if (state.status == CommunitySuggestStatus.failure) {
@@ -225,7 +240,12 @@ class _SubmitBar extends StatelessWidget {
         label: context.l10n.communitySuggestSubmit,
         isLoading: submitting,
         onPressed: canSubmit
-            ? () => context.read<CommunitySuggestCubit>().submit()
+            ? () => runDetached(
+                context.read<CommunitySuggestCubit>().submit(),
+                'submit community suggestions',
+                logName: 'CommunitySuggestSheet',
+                category: LogCategory.ui,
+              )
             : null,
       ),
     );

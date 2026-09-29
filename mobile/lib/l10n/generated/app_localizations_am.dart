@@ -6048,6 +6048,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commonBack => 'ተመለስ';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'ዝጋ';
 
   @override
@@ -8714,6 +8717,27 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'የጽሑፍ ዳራ';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'የጠርዝ መስመር እና ጥላ';
+
+  @override
+  String get videoEditorTextOutline => 'የጠርዝ መስመር';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'የጠርዝ መስመር ውፍረት';
+
+  @override
+  String get videoEditorTextOutlineColor => 'የጠርዝ መስመር ቀለም';
+
+  @override
+  String get videoEditorTextShadow => 'ጥላ';
+
+  @override
+  String get videoEditorTextShadowStrength => 'የጥላ ጥንካሬ';
+
+  @override
+  String get videoEditorTextShadowColor => 'የጥላ ቀለም';
+
+  @override
   String get videoEditorFontSemanticLabel => 'ቅርጸ-ቁምፊ';
 
   @override
@@ -9137,6 +9161,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'ፍጥነት $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'ፌድ';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'ለተመረጠው ድምጽ ቀስ ብሎ መግባትና መውጣት ያዘጋጁ';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'ቀስ ብሎ መግባትና መውጣት';
+
+  @override
+  String get videoEditorFadeInLabel => 'ቀስ ብሎ መግባት';
+
+  @override
+  String get videoEditorFadeOutLabel => 'ቀስ ብሎ መውጣት';
 
   @override
   String get videoEditorTransitionSheetTitle => 'ሽግግር';
@@ -11282,7 +11322,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get supporterTitle => 'የDivine ደጋፊዎች';
 
   @override
-  String get supporterTileSubtitle => 'Divineን በአማራጭ ወርሃዊ የደንበኝነት ምዝገባ ይደግፉ።';
+  String get supporterTileSubtitle => 'Divineን በአማራጭ የደንበኝነት ምዝገባ ይደግፉ።';
 
   @override
   String get supporterHeroTitle => 'Divineን እንዲቀጥል ያድርጉ';

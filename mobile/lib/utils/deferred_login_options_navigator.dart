@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Defers login-options navigation until in-flight background uploads finish.
 class DeferredLoginOptionsNavigator {
@@ -12,8 +14,7 @@ class DeferredLoginOptionsNavigator {
 
   void dispose() {
     _isDisposed = true;
-    _subscription?.cancel();
-    _subscription = null;
+    _cancelSubscription();
   }
 
   void goAfterUploadsComplete({
@@ -23,7 +24,7 @@ class DeferredLoginOptionsNavigator {
     if (_isDisposed) return;
     final router = GoRouter.of(context);
 
-    _subscription?.cancel();
+    _cancelSubscription();
     _subscription = publishBloc.stream.listen((state) {
       if (!state.hasUploadInProgress) {
         _navigateNow(router);
@@ -40,8 +41,19 @@ class DeferredLoginOptionsNavigator {
 
   void _navigateNow(GoRouter router) {
     if (_isDisposed) return;
-    _subscription?.cancel();
-    _subscription = null;
+    _cancelSubscription();
     router.go(WelcomeScreen.loginOptionsPath);
+  }
+
+  void _cancelSubscription() {
+    final cancelled = _subscription?.cancel();
+    _subscription = null;
+    if (cancelled == null) return;
+    runDetached(
+      cancelled,
+      'cancel background-publish listener',
+      logName: 'DeferredLoginOptionsNavigator',
+      category: LogCategory.ui,
+    );
   }
 }

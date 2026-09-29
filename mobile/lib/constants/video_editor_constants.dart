@@ -114,6 +114,17 @@ class VideoEditorConstants {
   /// [renderWatchdogTimeout] but not by an order of magnitude.
   static const Duration previewRenderWatchdogTimeout = Duration(minutes: 2);
 
+  /// How long the trim of a clip recorded past the remaining duration may run
+  /// before it is treated as never returning (#8797).
+  ///
+  /// The trim is the only thing that settles the clip's processing signal, and
+  /// proof generation, the speed render and the export all wait on that signal
+  /// first. It re-encodes one clip no longer than [maxDuration], so like the
+  /// others this is a liveness bound, not a budget. It sits below
+  /// [renderWatchdogTimeout] so a stalled trim fails as a trim rather than
+  /// spending the export's whole bound and reporting as an export timeout.
+  static const Duration clipTrimWatchdogTimeout = Duration(minutes: 2);
+
   /// Frame grid the editor presents to the user.
   ///
   /// The timeline ruler labels sub-second positions in frames at this rate, so
@@ -354,6 +365,9 @@ class VideoEditorConstants {
   /// Each value must lie within [clipSpeedMin]..[clipSpeedMax] and on the
   /// [clipSpeedStep] grid, so the slider can land on it exactly.
   static const List<double> clipSpeedPresets = [0.25, 0.5, 1, 1.5, 2, 3];
+
+  /// Step size between discrete values on the sound fade sliders.
+  static const Duration audioFadeStep = Duration(milliseconds: 100);
 
   /// Background color for the text editor overlay.
   static const Color textEditorBackground = Color(0x9B000000);

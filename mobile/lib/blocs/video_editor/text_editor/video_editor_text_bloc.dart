@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -28,6 +29,8 @@ class VideoEditorTextBloc
     on<VideoEditorTextReset>(_onReset);
     on<VideoEditorTextFontSelectorToggled>(_onFontSelectorToggled);
     on<VideoEditorTextColorPickerToggled>(_onColorPickerToggled);
+    on<VideoEditorTextEffectsChanged>(_onEffectsChanged);
+    on<VideoEditorTextEffectsPanelToggled>(_onEffectsPanelToggled);
     on<VideoEditorTextClosePanels>(_onClosePanels);
     on<VideoEditorTextInitFromLayer>(_onInitFromLayer);
   }
@@ -111,7 +114,9 @@ class VideoEditorTextBloc
     emit(
       state.copyWith(
         showFontSelector: !state.showFontSelector,
-        showColorPicker: false, // Close color picker when opening font selector
+        // Close the other panels when opening the font selector
+        showColorPicker: false,
+        showEffectsPanel: false,
       ),
     );
   }
@@ -124,13 +129,37 @@ class VideoEditorTextBloc
     emit(
       state.copyWith(
         showColorPicker: !state.showColorPicker,
-        showFontSelector:
-            false, // Close font selector when opening color picker
+        // Close the other panels when opening the color picker
+        showFontSelector: false,
+        showEffectsPanel: false,
       ),
     );
   }
 
-  /// Closes all open panels (font selector, color picker).
+  /// Updates the outline and shadow.
+  void _onEffectsChanged(
+    VideoEditorTextEffectsChanged event,
+    Emitter<VideoEditorTextState> emit,
+  ) {
+    emit(state.copyWith(effects: event.effects));
+  }
+
+  /// Toggles the outline and shadow panel visibility.
+  void _onEffectsPanelToggled(
+    VideoEditorTextEffectsPanelToggled event,
+    Emitter<VideoEditorTextState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        showEffectsPanel: !state.showEffectsPanel,
+        showFontSelector: false,
+        showColorPicker: false,
+      ),
+    );
+  }
+
+  /// Closes all open panels (font selector, color picker, outline and
+  /// shadow).
   void _onClosePanels(
     VideoEditorTextClosePanels event,
     Emitter<VideoEditorTextState> emit,
@@ -140,6 +169,7 @@ class VideoEditorTextBloc
         fontSize: 0.5,
         showFontSelector: false,
         showColorPicker: false,
+        showEffectsPanel: false,
       ),
     );
   }
@@ -162,6 +192,7 @@ class VideoEditorTextBloc
         backgroundStyle: event.backgroundStyle,
         fontSize: event.fontSize,
         selectedFontIndex: event.selectedFontIndex,
+        effects: event.effects,
       ),
     );
   }

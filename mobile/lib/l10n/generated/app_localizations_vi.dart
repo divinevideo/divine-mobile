@@ -6157,6 +6157,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commonBack => 'Quay lại';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Đóng';
 
   @override
@@ -8879,6 +8882,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Nền chữ';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Viền và bóng';
+
+  @override
+  String get videoEditorTextOutline => 'Viền';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Độ dày viền';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Màu viền';
+
+  @override
+  String get videoEditorTextShadow => 'Bóng';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Độ đậm của bóng';
+
+  @override
+  String get videoEditorTextShadowColor => 'Màu bóng';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Phông chữ';
 
   @override
@@ -9318,6 +9342,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Tốc độ $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Tăng giảm dần';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Đặt tăng dần và giảm dần cho âm thanh đã chọn';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Tăng dần & giảm dần';
+
+  @override
+  String get videoEditorFadeInLabel => 'Tăng dần';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Giảm dần';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Chuyển cảnh';
@@ -11526,7 +11566,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Ủng hộ Divine bằng gói đăng ký hàng tháng tùy chọn.';
+      'Ủng hộ Divine bằng gói đăng ký tùy chọn.';
 
   @override
   String get supporterHeroTitle => 'Giữ Divine hoạt động';

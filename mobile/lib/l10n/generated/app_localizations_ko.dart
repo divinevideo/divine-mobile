@@ -5887,6 +5887,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonBack => '뒤로';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => '닫기';
 
   @override
@@ -8502,6 +8505,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => '텍스트 배경';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => '외곽선 및 그림자';
+
+  @override
+  String get videoEditorTextOutline => '외곽선';
+
+  @override
+  String get videoEditorTextOutlineThickness => '외곽선 두께';
+
+  @override
+  String get videoEditorTextOutlineColor => '외곽선 색상';
+
+  @override
+  String get videoEditorTextShadow => '그림자';
+
+  @override
+  String get videoEditorTextShadowStrength => '그림자 강도';
+
+  @override
+  String get videoEditorTextShadowColor => '그림자 색상';
+
+  @override
   String get videoEditorFontSemanticLabel => '폰트';
 
   @override
@@ -8915,6 +8939,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return '속도 $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => '페이드';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel => '선택한 사운드의 페이드 인/아웃 설정';
+
+  @override
+  String get videoEditorFadeSheetTitle => '페이드 인/아웃';
+
+  @override
+  String get videoEditorFadeInLabel => '페이드 인';
+
+  @override
+  String get videoEditorFadeOutLabel => '페이드 아웃';
 
   @override
   String get videoEditorTransitionSheetTitle => '전환';
@@ -11023,7 +11062,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get supporterTitle => 'Divine 서포터';
 
   @override
-  String get supporterTileSubtitle => '선택형 월간 구독으로 Divine을 후원해요.';
+  String get supporterTileSubtitle => '선택형 구독으로 Divine을 후원해요.';
 
   @override
   String get supporterHeroTitle => 'Divine이 계속 돌아가게 해주세요';

@@ -4663,6 +4663,13 @@
   "videoEditorTextColorSemanticLabel": "文字颜色",
   "videoEditorTextAlignmentSemanticLabel": "文字对齐",
   "videoEditorTextBackgroundSemanticLabel": "文字背景",
+  "videoEditorTextEffectsSemanticLabel": "描边和阴影",
+  "videoEditorTextOutline": "描边",
+  "videoEditorTextOutlineThickness": "描边粗细",
+  "videoEditorTextOutlineColor": "描边颜色",
+  "videoEditorTextShadow": "阴影",
+  "videoEditorTextShadowStrength": "阴影强度",
+  "videoEditorTextShadowColor": "阴影颜色",
   "videoEditorFontSemanticLabel": "字体",
   "videoEditorNoStickersFound": "没有找到贴纸",
   "videoEditorNoStickersAvailable": "暂无贴纸",
@@ -4929,6 +4936,11 @@
       }
     }
   },
+  "videoEditorFadeLabel": "淡入淡出",
+  "videoEditorFadeSoundSemanticLabel": "设置选中声音的淡入淡出",
+  "videoEditorFadeSheetTitle": "淡入淡出",
+  "videoEditorFadeInLabel": "淡入",
+  "videoEditorFadeOutLabel": "淡出",
   "videoEditorTransitionSheetTitle": "转场",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."
@@ -6166,7 +6178,7 @@
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },
-  "supporterTileSubtitle": "通过自愿的月度订阅支持 Divine。",
+  "supporterTileSubtitle": "通过自愿订阅支持 Divine。",
   "@supporterTileSubtitle": {
     "description": "Subtitle of the supporter subscription settings tile."
   },

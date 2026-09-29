@@ -59,7 +59,7 @@ void main() {
     );
 
     group(ProfileCommentsState, () {
-      test('has correct initial state', () {
+      test('has correct initial state', () async {
         final bloc = createBloc();
         expect(bloc.state.status, equals(ProfileCommentsStatus.initial));
         expect(bloc.state.videoReplies, isEmpty);
@@ -68,7 +68,7 @@ void main() {
         expect(bloc.state.hasMoreContent, isTrue);
         expect(bloc.state.paginationCursor, isNull);
         expect(bloc.state.totalCount, equals(0));
-        bloc.close();
+        await bloc.close();
       });
 
       test('copyWith preserves existing values', () {

@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for ContentReportingService
 // ABOUTME: Tests NIP-56 content reporting including AI-generated content reports
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
@@ -2051,6 +2052,114 @@ void main() {
         isNotNull,
       );
       await reopened.close();
+    });
+
+    test(
+      'a user report without prepared text names the account by its pubkey',
+      () async {
+        final crs = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: dao,
+          moderationPubkey: _validEventId('f'),
+        );
+        final result = await crs.reportUser(
+          userPubkey: _validEventId('c'),
+          reason: ContentFilterReason.other,
+          details: 'Reported from DM conversation',
+        );
+        final row = (await dao.getById(result.reportId!))!;
+        final dm = jsonDecode(row.moderationPayload!) as Map<String, dynamic>;
+        expect(
+          dm['content'],
+          equals(
+            'User Report\n'
+            'Reason: other\n'
+            'User Pubkey: '
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\n'
+            'Details: Reported from DM conversation',
+          ),
+        );
+      },
+    );
+
+    group('support ticket', () {
+      // divine-relay-manager links a ticket to moderation by parsing these
+      // lines: `Event ID:` followed by 64 hex, and `Author Pubkey:`.
+      Future<List<String>> ticketLines(ReportResult result) async {
+        final row = (await dao.getById(result.reportId!))!;
+        final ticket = jsonDecode(row.zendeskPayload) as Map<String, dynamic>;
+        return (ticket['description'] as String).split('\n');
+      }
+
+      test('a user report names the account and no event', () async {
+        final lines = await ticketLines(
+          await service.reportUser(
+            userPubkey: _validEventId('c'),
+            reason: ContentFilterReason.harassment,
+            details: 'harassing me',
+          ),
+        );
+        expect(
+          lines,
+          contains(
+            'Author Pubkey: '
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+          ),
+        );
+        expect(lines.where((line) => line.startsWith('Event ID:')), isEmpty);
+      });
+
+      test('a content report still names the reported event', () async {
+        final lines = await ticketLines(
+          await service.reportContent(
+            eventId: _validEventId('a'),
+            authorPubkey: _validEventId('b'),
+            reason: ContentFilterReason.spam,
+            details: 'spam',
+          ),
+        );
+        expect(
+          lines,
+          contains(
+            'Event ID: '
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          ),
+        );
+      });
+
+      // The published report event's id is not known yet when the ticket is
+      // written: it is signed later, and signing can add tags.
+      test(
+        'a content report names its event once, as the reported one',
+        () async {
+          final lines = await ticketLines(
+            await service.reportContent(
+              eventId: _validEventId('a'),
+              authorPubkey: _validEventId('b'),
+              reason: ContentFilterReason.spam,
+              details: 'spam',
+            ),
+          );
+          expect(
+            lines.where((line) => line.contains(_validEventId('a'))),
+            equals(['Event ID: ${'a' * 64}']),
+          );
+        },
+      );
+
+      test('a user report carries no local history key', () async {
+        final lines = await ticketLines(
+          await service.reportUser(
+            userPubkey: _validEventId('c'),
+            reason: ContentFilterReason.harassment,
+            details: 'harassing me',
+          ),
+        );
+        expect(lines.where((line) => line.contains('user_')), isEmpty);
+      });
     });
 
     test(

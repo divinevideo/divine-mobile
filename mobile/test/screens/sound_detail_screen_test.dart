@@ -137,7 +137,11 @@ Widget createTestWidget({
   final mockAuth = createMockAuthService();
   when(() => mockAuth.currentPublicKeyHex).thenReturn(viewerPubkey);
   return ProviderScope(
-    overrides: [authServiceProvider.overrideWithValue(mockAuth), ...?overrides],
+    overrides: [
+      authServiceProvider.overrideWithValue(mockAuth),
+      ..._testAudioReuseOverrides(),
+      ...?overrides,
+    ],
     child: MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -153,6 +157,17 @@ Widget createTestWidget({
 
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
+
+List<Override> _testAudioReuseOverrides() {
+  return [
+    audioReuseConsentProvider.overrideWith(
+      (ref, sound) async => sound.allowsReuse,
+    ),
+    audioReuseTermsProvider.overrideWith(
+      (ref, sound) async => sound.allowsReuse,
+    ),
+  ];
+}
 
 void main() {
   group('SoundDetailScreen', () {
@@ -960,22 +975,32 @@ void main() {
       const creatorPubkey =
           'test_pubkey_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-      VideoEvent sourceVideo({required bool allowReuse}) => VideoEvent(
-        id: sourceVideoId,
-        pubkey: creatorPubkey,
-        createdAt: 1700000000,
-        content: '',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
-        videoUrl: 'https://example.com/video/$sourceVideoId.mp4',
-        rawTags: allowReuse ? const {'allow_audio_reuse': 'true'} : const {},
-      );
+      VideoEvent sourceVideo({String? marker, bool isVerifiedArchive = false}) {
+        final rawTags = <String, String>{};
+        if (marker case final value?) {
+          rawTags['allow_audio_reuse'] = value;
+        }
+        return VideoEvent(
+          id: sourceVideoId,
+          pubkey: creatorPubkey,
+          createdAt: 1700000000,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000 * 1000),
+          videoUrl: 'https://example.com/video/$sourceVideoId.mp4',
+          rawTags: rawTags,
+          isVerifiedArchive: isVerifiedArchive,
+          archiveAudioReuseEnabled: isVerifiedArchive,
+        );
+      }
 
       // The synthesized original sound carries allowsReuse from the video, so
       // the gate works regardless of whether sourceVideo is threaded through.
-      AudioEvent originalSound({required bool allowReuse}) =>
-          AudioEvent.fromVideoOriginalSound(
-            sourceVideo(allowReuse: allowReuse),
-          );
+      AudioEvent originalSound({
+        String? marker,
+        bool isVerifiedArchive = false,
+      }) => AudioEvent.fromVideoOriginalSound(
+        sourceVideo(marker: marker, isVerifiedArchive: isVerifiedArchive),
+      );
 
       List<Override> gridOverrides() => [
         soundUsageCountProvider(
@@ -987,12 +1012,12 @@ void main() {
         audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
       ];
 
-      testWidgets('hides Use Sound when the creator disabled audio reuse', (
+      testWidgets('hides Use Sound when audio reuse is unspecified', (
         tester,
       ) async {
         await tester.pumpWidget(
           createTestWidget(
-            child: SoundDetailScreen(sound: originalSound(allowReuse: false)),
+            child: SoundDetailScreen(sound: originalSound()),
             overrides: gridOverrides(),
           ),
         );
@@ -1013,7 +1038,7 @@ void main() {
           // enabled it.
           await tester.pumpWidget(
             createTestWidget(
-              child: SoundDetailScreen(sound: originalSound(allowReuse: true)),
+              child: SoundDetailScreen(sound: originalSound(marker: 'true')),
               overrides: gridOverrides(),
             ),
           );
@@ -1030,7 +1055,7 @@ void main() {
       ) async {
         final termsCompleter = Completer<bool>();
         final consentCompleter = Completer<bool>();
-        final sound = originalSound(allowReuse: false);
+        final sound = originalSound();
 
         await tester.pumpWidget(
           createTestWidget(
@@ -1066,7 +1091,60 @@ void main() {
         await tester.pumpWidget(
           createTestWidget(
             viewerPubkey: creatorPubkey,
-            child: SoundDetailScreen(sound: originalSound(allowReuse: false)),
+            child: SoundDetailScreen(sound: originalSound()),
+            overrides: gridOverrides(),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Use Sound'), findsOneWidget);
+      });
+
+      testWidgets('shows Use Sound for a legacy-policy verified archive', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            child: SoundDetailScreen(
+              sound: originalSound(isVerifiedArchive: true),
+            ),
+            overrides: [
+              ...gridOverrides(),
+              audioReuseConsentProvider(
+                originalSound(isVerifiedArchive: true),
+              ).overrideWith((ref) => Future.value(true)),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Use Sound'), findsOneWidget);
+      });
+
+      testWidgets('an explicit decline still permits the sound owner', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            viewerPubkey: creatorPubkey,
+            child: SoundDetailScreen(
+              sound: originalSound(marker: 'false', isVerifiedArchive: true),
+            ),
+            overrides: gridOverrides(),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Use Sound'), findsOneWidget);
+      });
+
+      testWidgets('a malformed marker still permits the sound owner', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            viewerPubkey: creatorPubkey,
+            child: SoundDetailScreen(sound: originalSound(marker: 'TRUE')),
             overrides: gridOverrides(),
           ),
         );
@@ -1271,6 +1349,8 @@ void main() {
           final sharedPreferences = await SharedPreferences.getInstance();
           final container = ProviderContainer(
             overrides: [
+              ..._testAudioReuseOverrides(),
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               sharedPreferencesProvider.overrideWithValue(sharedPreferences),
               soundUsageCountProvider(
                 testSound.id,
@@ -1330,6 +1410,8 @@ void main() {
             mediaProbe: _NoopSavedSoundMediaProbe(),
             child: ProviderScope(
               overrides: [
+                ..._testAudioReuseOverrides(),
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 sharedPreferencesProvider.overrideWithValue(sharedPreferences),
                 soundUsageCountProvider(
                   testSound.id,
@@ -1788,6 +1870,8 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                ..._testAudioReuseOverrides(),
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 soundUsageCountProvider(
                   testSound.id,
                 ).overrideWith((ref) => Future.value(0)),
@@ -1846,6 +1930,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._testAudioReuseOverrides(),
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               userProfileReactiveProvider(creatorPubkey).overrideWith((
                 ref,
               ) async* {
@@ -1895,6 +1981,8 @@ void main() {
             mediaProbe: _NoopSavedSoundMediaProbe(),
             child: ProviderScope(
               overrides: [
+                ..._testAudioReuseOverrides(),
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 sharedPreferencesProvider.overrideWithValue(sharedPreferences),
                 soundUsageCountProvider(
                   testSound.id,
@@ -1933,6 +2021,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ..._testAudioReuseOverrides(),
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               soundUsageCountProvider(
                 testSound.id,
               ).overrideWith((ref) => Future.value(0)),

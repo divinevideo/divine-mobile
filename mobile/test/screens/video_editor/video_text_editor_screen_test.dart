@@ -15,10 +15,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/video_editor/video_text_editor_screen.dart';
+import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_effects_panel.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
+import 'package:openvine/widgets/video_editor/text_effects_controls.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -270,6 +273,106 @@ void main() {
           expect(event.color, Colors.blue);
         },
       );
+    });
+
+    group('Outline and shadow', () {
+      const effects = TextEffects(
+        outlineThickness: 0.5,
+        outlineColor: Color(0xFFFF7FAF),
+        shadowStrength: 0.5,
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Finder slider(String label) => find.byWidgetPredicate(
+        (widget) => widget is Slider && widget.label == label,
+      );
+
+      TextEditorState editor(WidgetTester tester) =>
+          tester.state<TextEditorState>(find.byType(TextEditor));
+
+      testWidgets('dispatches the outline and shadow of the edited layer', (
+        tester,
+      ) async {
+        final layer = effects.applyTo(
+          TextLayer(text: 'Test', textStyle: const TextStyle()),
+        );
+
+        await tester.pumpWidget(buildWidget(layer: layer));
+        await tester.pump();
+
+        final captured = verify(
+          () => mockBloc.add(
+            captureAny(that: isA<VideoEditorTextInitFromLayer>()),
+          ),
+        ).captured;
+        final event = captured.first as VideoEditorTextInitFromLayer;
+        expect(event.effects, equals(effects));
+      });
+
+      testWidgets('previews the shadow of the edited layer while typing', (
+        tester,
+      ) async {
+        // Without an outline the typed glyphs cast the shadow themselves.
+        final layer = const TextEffects(shadowStrength: 0.5).applyTo(
+          TextLayer(text: 'Test', textStyle: const TextStyle()),
+        );
+
+        await tester.pumpWidget(buildWidget(layer: layer));
+        await tester.pump();
+
+        final textField = tester.widget<TextField>(find.byType(TextField));
+        expect(textField.style?.shadows, isNotEmpty);
+      });
+
+      testWidgets('shows the panel when showEffectsPanel is true', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoEditorTextEffectsPanel), findsOneWidget);
+        expect(find.byType(TextEffectsControls), findsOneWidget);
+        expect(find.byType(VideoEditorColorPickerSheet), findsNothing);
+      });
+
+      testWidgets('writes an outline from the panel to the live editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(slider(l10n.videoEditorTextOutlineThickness));
+        await tester.pump();
+
+        expect(editor(tester).outlineWidth, greaterThan(0));
+        verify(
+          () => mockBloc.add(any(that: isA<VideoEditorTextEffectsChanged>())),
+        ).called(1);
+      });
+
+      testWidgets('writes a shadow from the panel to the live editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(slider(l10n.videoEditorTextShadowStrength));
+        await tester.pump();
+
+        expect(editor(tester).selectedTextStyle.shadows, isNotEmpty);
+      });
     });
 
     group('Panel visibility', () {

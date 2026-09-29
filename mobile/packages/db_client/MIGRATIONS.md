@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 18** (see `app_database.dart`).
+**Version: 19** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -117,6 +117,24 @@ regardless, and a row not yet handed off waits on this device for its account
 to sign back in. The
 `from < 18` step creates the `(owner_pubkey, status)` index by hand for the
 same reason v13, v16 and v17 do.
+
+Version 19 drops `hashtag_stats` and its `idx_hashtag_video_count` index
+(#9582). The table cached trending-hashtag counts, but nothing ever wrote to
+it in production: `HashtagStatsDao.upsertHashtag`/`upsertBatch` — its only
+writers — had zero callers, so the only rows that could ever exist were ones
+a test inserted directly. This is the first migration to remove rather than
+add a schema entity: `HashtagStats` and `HashtagStatsDao` are deleted from
+`tables.dart`/`daos.dart` in the same change, so the `from < 19` step drops
+the table by name (`Migrator.deleteTable`) instead of referencing a Dart
+table object, since none remains after the deletion. `AppDbClient`'s four
+matching read/delete/count methods and
+`CleanupResult.expiredHashtagStatsDeleted` are removed alongside it, for the
+same reason: no caller ever used them.
+
+This removal is not backward-compatible with a v18 binary: v18 startup cleanup
+still calls `HashtagStatsDao.deleteExpired()`, which fails when the v19 database
+no longer has the table. Do not open a v19 database with an older build when
+testing an app rollback; use a separate database for the older build.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

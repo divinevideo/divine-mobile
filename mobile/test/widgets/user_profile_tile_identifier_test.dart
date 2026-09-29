@@ -131,23 +131,6 @@ void main() {
       expect(find.textContaining('npub'), findsNothing);
     });
 
-    testWidgets('does not render a self-reported Vine follower count', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildSubject(
-          profile: profileWith(rawData: const {'vine_followers': 430}),
-          relationship: FollowRelationship.mutual,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // vine_followers is the account's own kind-0 claim; only an
-      // authoritative follower_count earns a spot on the line.
-      expect(find.text(l10n.socialProofMutual), findsOneWidget);
-      expect(find.textContaining('430'), findsNothing);
-    });
-
     testWidgets('renders no identifier line when nothing is known', (
       tester,
     ) async {

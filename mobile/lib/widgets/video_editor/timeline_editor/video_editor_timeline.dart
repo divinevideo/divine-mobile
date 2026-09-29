@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
@@ -16,6 +19,7 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/utils/timeline_loop_scroll_controller.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_header.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_interactive_body.dart';
@@ -39,7 +43,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   /// Duration for the user-triggered timeline hide/show animation.
   static const _timelineToggleDuration = Duration(milliseconds: 220);
 
-  late final ScrollController _scrollController;
+  late final TimelineLoopScrollController _scrollController;
   late final ScrollController _verticalScrollController;
 
   /// Vertical scroll for the overlay-strips area inside the timeline body.
@@ -104,7 +108,9 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController()..addListener(_updatePlayheadTime);
+    _scrollController = TimelineLoopScrollController(
+      onUserWrap: _onLoopWrap,
+    )..addListener(_updatePlayheadTime);
     _verticalScrollController = ScrollController();
     _overlayStripsScrollController = ScrollController();
   }
@@ -177,6 +183,19 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     final displayDuration = wrapDisplay.displayTotal(clips);
     _totalDuration = displayDuration;
     _wrapDisplay = wrapDisplay;
+    // Reorder lays clips out as fixed-size slots, which can run far past the
+    // composition's end; every slot must stay reachable while dragging.
+    final isReordering = context.select(
+      (VideoEditorMainBloc b) => b.state.isReordering,
+    );
+    _scrollController.loopExtent = isReordering
+        ? null
+        : timelinePositionToScrollOffset(
+            clips,
+            displayDuration,
+            _pixelsPerSecond,
+            wrap: wrapDisplay,
+          );
     final screenWidth = MediaQuery.sizeOf(context).width;
     final halfScreen = screenWidth / 2;
     final totalWidth = _contentWidth(displayDuration);
@@ -1140,6 +1159,14 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
       duration: _positionChaseDuration,
       curve: Curves.linear,
     );
+  }
+
+  /// A scrub crossed the loop point: the playhead jumped across the whole
+  /// composition in one update. Its seek must not be throttled away — if the
+  /// finger rests right after, no later update would bring the preview over.
+  void _onLoopWrap() {
+    unawaited(HapticFeedback.selectionClick());
+    _syncPositionFromScroll(force: true);
   }
 
   void _syncPositionFromScroll({bool force = false}) {

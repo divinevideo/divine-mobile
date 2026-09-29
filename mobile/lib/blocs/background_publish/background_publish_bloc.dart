@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/background_publish/publish_foreground_session.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -28,8 +30,9 @@ class BackgroundPublishBloc
        _draftStorageService = draftStorageService,
        _foregroundSession = foregroundSession,
        super(const BackgroundPublishState()) {
-    on<BackgroundPublishRequested>(
-      _onBackgroundPublishRequested,
+    on<BackgroundPublishRequested>(_onBackgroundPublishRequested);
+    on<_BackgroundPublishQueued>(
+      _onBackgroundPublishQueued,
       transformer: sequential(),
     );
     on<BackgroundPublishProgressChanged>(_onBackgroundPublishProgressChanged);
@@ -51,11 +54,25 @@ class BackgroundPublishBloc
   /// ended. Null disables the behaviour (e.g. in tests).
   final PublishForegroundSession? _foregroundSession;
 
-  Future<void> _onBackgroundPublishRequested(
+  /// Drafts [parkInFlight] already wrote back to draft status. The sequential
+  /// handler is still awaiting those publishes, and account-switch teardown
+  /// settles them after the park returns. Recording that settlement would
+  /// delete the parked draft or mark it failed.
+  final Set<String> _parkedDraftIds = <String>{};
+
+  /// Serializes a park write with applying a publish result. A check outside
+  /// this lock is not enough: the result handler awaits a cover read after
+  /// that check, and the park write is itself awaited.
+  Future<void> _resultRecord = Future<void>.value();
+
+  /// Lists the upload as soon as it is requested, then waits its turn.
+  ///
+  /// The caller starts `publishVideo` before dispatching, so a publish queued
+  /// behind another is already uploading and must count as in progress.
+  void _onBackgroundPublishRequested(
     BackgroundPublishRequested event,
     Emitter<BackgroundPublishState> emit,
-  ) async {
-    // Check if the upload is already in progress
+  ) {
     final alreadyUploading = state.uploads.any(
       (upload) => upload.draft.id == event.draft.id,
     );
@@ -68,86 +85,129 @@ class BackgroundPublishBloc
       emit(state.copyWith(uploads: [...state.uploads, newUpload]));
     }
 
+    addIfOpen(
+      _BackgroundPublishQueued(
+        draft: event.draft,
+        publishmentProcess: event.publishmentProcess,
+      ),
+    );
+  }
+
+  Future<void> _onBackgroundPublishQueued(
+    _BackgroundPublishQueued event,
+    Emitter<BackgroundPublishState> emit,
+  ) async {
+    if (_settledResultIsStale(event.draft.id)) {
+      await _awaitPublishResult(event.publishmentProcess);
+      return;
+    }
+
     await _beginForegroundSession(event.draft.id);
     try {
       final result = await _awaitPublishResult(event.publishmentProcess);
+      if (_settledResultIsStale(event.draft.id)) return;
 
-      // Remove the upload if it was successful
-      if (result is PublishSuccess) {
-        final updatedUploads = state.uploads
-            .where((upload) => upload.draft.id != event.draft.id)
-            .toList();
+      // Read before the emit: _deletePublishedDrafts below reclaims the
+      // cover file, so a path handed to the confirmation would dangle by
+      // the time the sheet decoded it. The read stays outside the record
+      // lock so a park is not blocked on a file.
+      final thumbnailBytes = result is PublishSuccess
+          ? await _readCoverThumbnail(event.draft)
+          : null;
 
-        // Read before the emit: _deletePublishedDrafts below reclaims the
-        // cover file, so a path handed to the confirmation would dangle by
-        // the time the sheet decoded it.
-        final thumbnailBytes = await _readCoverThumbnail(event.draft);
-
-        emit(
-          state.copyWith(
-            uploads: updatedUploads,
-            recentlyPublished: [
-              PublishedVideo(
-                draftId: event.draft.id,
-                stableId: result.stableId,
-                thumbnailBytes: thumbnailBytes,
-              ),
-            ],
-          ),
+      await _withResultRecordLock(() async {
+        if (_settledResultIsStale(event.draft.id)) return;
+        await _recordSettledResult(
+          event: event,
+          emit: emit,
+          result: result,
+          thumbnailBytes: thumbnailBytes,
         );
-
-        // After the emit — the video is already live, so the draft row and its
-        // unreferenced media are reclaimed off the publish critical path
-        // rather than in front of the success state (#6548). Still inside the
-        // foreground session: deleting the row is the only record that this
-        // publish finished, so losing the process first makes resume offer a
-        // retry for an already-published video.
-        await _deletePublishedDrafts(event.draft);
-      } else if (result is PublishScheduled) {
-        // The media is up and the signed event waits for its time (#3538).
-        // The publish copy stays as the scheduled draft the section above the
-        // drafts shows and a cancel parks; only the source it was copied from
-        // is reclaimed, as it would be after an immediate publish.
-        //
-        // Both writes run *before* the emit, unlike the success branch above:
-        // scheduling leaves the creator on the drafts list, so the emit is the
-        // signal that list reloads on. Emitting first would race the writes
-        // and redraw the reclaimed draft next to the post it became.
-        await _persistPublishStatus(
-          draftId: event.draft.id,
-          status: PublishStatus.scheduled,
-        );
-        await _deleteSourceDraft(event.draft);
-        final updatedUploads = state.uploads
-            .where((upload) => upload.draft.id != event.draft.id)
-            .toList();
-        emit(state.copyWith(uploads: updatedUploads));
-      } else {
-        // Update the upload with the result
-        final updatedUploads = state.uploads.map((upload) {
-          if (upload.draft.id == event.draft.id) {
-            return upload.copyWith(result: result, progress: 1.0);
-          }
-          return upload;
-        }).toList();
-
-        emit(state.copyWith(uploads: updatedUploads));
-
-        // Persist the classified kind (same encoding the service writes), so
-        // the service/bloc writes are idempotent and resume re-localizes
-        // correctly.
-        final publishError = result is PublishError
-            ? result.toPersistedString()
-            : null;
-        await _persistPublishStatus(
-          draftId: event.draft.id,
-          status: PublishStatus.failed,
-          publishError: publishError,
-        );
-      }
+      });
     } finally {
       await _endForegroundSession(event.draft.id);
     }
+  }
+
+  Future<void> _withResultRecordLock(Future<void> Function() action) {
+    final gate = Completer<void>();
+    final previous = _resultRecord;
+    _resultRecord = gate.future;
+    return previous
+        .then<void>((_) {}, onError: (_, _) {})
+        .then((_) => action())
+        .whenComplete(gate.complete);
+  }
+
+  Future<void> _recordSettledResult({
+    required _BackgroundPublishQueued event,
+    required Emitter<BackgroundPublishState> emit,
+    required PublishResult result,
+    required Uint8List? thumbnailBytes,
+  }) async {
+    if (result is PublishSuccess) {
+      final updatedUploads = state.uploads
+          .where((upload) => upload.draft.id != event.draft.id)
+          .toList();
+      emit(
+        state.copyWith(
+          uploads: updatedUploads,
+          recentlyPublished: [
+            PublishedVideo(
+              draftId: event.draft.id,
+              stableId: result.stableId,
+              thumbnailBytes: thumbnailBytes,
+            ),
+          ],
+        ),
+      );
+      // After the emit — the video is already live, so the draft row and its
+      // unreferenced media are reclaimed off the publish critical path
+      // rather than in front of the success state (#6548). Still inside the
+      // foreground session: deleting the row is the only record that this
+      // publish finished, so losing the process first makes resume offer a
+      // retry for an already-published video.
+      await _deletePublishedDrafts(event.draft);
+      return;
+    }
+
+    if (result is PublishScheduled) {
+      // The media is up and the signed event waits for its time (#3538).
+      // The publish copy stays as the scheduled draft the section above the
+      // drafts shows and a cancel parks; only the source it was copied from
+      // is reclaimed, as it would be after an immediate publish.
+      //
+      // Both writes run *before* the emit, unlike the success branch above:
+      // scheduling leaves the creator on the drafts list, so the emit is the
+      // signal that list reloads on. Emitting first would race the writes
+      // and redraw the reclaimed draft next to the post it became.
+      await _persistPublishStatus(
+        draftId: event.draft.id,
+        status: PublishStatus.scheduled,
+      );
+      await _deleteSourceDraft(event.draft);
+      final updatedUploads = state.uploads
+          .where((upload) => upload.draft.id != event.draft.id)
+          .toList();
+      emit(state.copyWith(uploads: updatedUploads));
+      return;
+    }
+
+    final updatedUploads = state.uploads.map((upload) {
+      if (upload.draft.id == event.draft.id) {
+        return upload.copyWith(result: result, progress: 1.0);
+      }
+      return upload;
+    }).toList();
+    emit(state.copyWith(uploads: updatedUploads));
+    final publishError = result is PublishError
+        ? result.toPersistedString()
+        : null;
+    await _persistPublishStatus(
+      draftId: event.draft.id,
+      status: PublishStatus.failed,
+      publishError: publishError,
+    );
   }
 
   /// Awaits the publish, turning a thrown error into a [PublishError] so the
@@ -248,22 +308,34 @@ class BackgroundPublishBloc
   /// afterwards, for the in-memory cleanup only; re-parking an already parked
   /// upload is a no-op.
   Future<void> parkInFlight() async {
-    final inFlight = state.uploads
-        .where((upload) => upload.result == null)
-        .toList();
-    if (inFlight.isEmpty) return;
-
-    for (final upload in inFlight) {
-      await _park(
-        draftId: upload.draft.id,
-        draft: upload.draft,
-        propagateFailure: true,
-      );
-    }
-    for (final upload in inFlight) {
+    final parked = <BackgroundUpload>[];
+    await _withResultRecordLock(() async {
+      final inFlight = state.uploads
+          .where((upload) => upload.result == null)
+          .toList();
+      for (final upload in inFlight) {
+        await _park(
+          draftId: upload.draft.id,
+          draft: upload.draft,
+          propagateFailure: true,
+        );
+        _parkedDraftIds.add(upload.draft.id);
+        parked.add(upload);
+      }
+    });
+    for (final upload in parked) {
       if (isClosed) return;
       add(BackgroundPublishVanished(draftId: upload.draft.id));
     }
+  }
+
+  /// True when applying a publish result would undo a park, or the upload
+  /// has already left the in-flight list.
+  bool _settledResultIsStale(String draftId) {
+    if (_parkedDraftIds.contains(draftId)) return true;
+    return !state.uploads.any(
+      (upload) => upload.draft.id == draftId && upload.result == null,
+    );
   }
 
   /// Keeps an abandoned upload's video reachable.

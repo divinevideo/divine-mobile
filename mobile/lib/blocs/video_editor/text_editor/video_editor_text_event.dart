@@ -84,7 +84,24 @@ class VideoEditorTextColorPickerToggled extends VideoEditorTextEvent {
   const VideoEditorTextColorPickerToggled();
 }
 
-/// Triggered to close all open panels (font selector, color picker).
+/// Triggered when the outline or shadow changes.
+class VideoEditorTextEffectsChanged extends VideoEditorTextEvent {
+  const VideoEditorTextEffectsChanged(this.effects);
+
+  /// The new outline and shadow.
+  final TextEffects effects;
+
+  @override
+  List<Object?> get props => [effects];
+}
+
+/// Triggered when the outline and shadow panel visibility is toggled.
+class VideoEditorTextEffectsPanelToggled extends VideoEditorTextEvent {
+  const VideoEditorTextEffectsPanelToggled();
+}
+
+/// Triggered to close all open panels (font selector, color picker, outline
+/// and shadow).
 class VideoEditorTextClosePanels extends VideoEditorTextEvent {
   const VideoEditorTextClosePanels();
 }
@@ -98,6 +115,7 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     required this.backgroundStyle,
     required this.fontSize,
     required this.selectedFontIndex,
+    this.effects = TextEffects.none,
   });
 
   /// The text content of the layer.
@@ -118,6 +136,9 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
   /// The index of the selected font in [VideoEditorConstants.textFonts].
   final int selectedFontIndex;
 
+  /// The outline and shadow the layer draws.
+  final TextEffects effects;
+
   @override
   List<Object?> get props => [
     text,
@@ -126,5 +147,6 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     backgroundStyle,
     fontSize,
     selectedFontIndex,
+    effects,
   ];
 }

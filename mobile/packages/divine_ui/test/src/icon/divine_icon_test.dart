@@ -54,6 +54,14 @@ void main() {
       expect(DivineIconName.pushPin.assetPath, 'assets/icon/push_pin.svg');
     });
 
+    test('textOutlineShadow maps to its duo icon', () {
+      expect(DivineIconName.textOutlineShadow.fileName, 'text_outline_shadow');
+      expect(
+        DivineIconName.textOutlineShadow.assetPath,
+        'assets/icon/text_outline_shadow.svg',
+      );
+    });
+
     test('all enum values have non-empty file names', () {
       for (final icon in DivineIconName.values) {
         expect(

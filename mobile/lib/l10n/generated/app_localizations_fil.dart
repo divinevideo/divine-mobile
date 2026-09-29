@@ -6225,6 +6225,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get commonBack => 'Bumalik';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Isara';
 
   @override
@@ -8980,6 +8983,27 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Background ng text';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Outline at anino';
+
+  @override
+  String get videoEditorTextOutline => 'Outline';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Kapal ng outline';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Kulay ng outline';
+
+  @override
+  String get videoEditorTextShadow => 'Anino';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Tindi ng anino';
+
+  @override
+  String get videoEditorTextShadowColor => 'Kulay ng anino';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
@@ -9430,6 +9454,22 @@ class AppLocalizationsFil extends AppLocalizations {
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Bilis $speed×';
   }
+
+  @override
+  String get videoEditorFadeLabel => 'Fade';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Itakda ang fade in at fade out ng napiling sound';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fade in at fade out';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fade in';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transisyon';
@@ -11679,7 +11719,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get supporterTileSubtitle =>
-      'Suportahan ang Divine gamit ang optional na monthly subscription.';
+      'Suportahan ang Divine gamit ang optional na subscription.';
 
   @override
   String get supporterHeroTitle => 'Panatilihing tumatakbo ang Divine';
