@@ -19519,13 +19519,13 @@ abstract class AppLocalizations {
   /// Subtitle of the supporter subscription settings tile.
   ///
   /// In en, this message translates to:
-  /// **'Support Divine with an optional monthly subscription.'**
+  /// **'Support Divine with an optional monthly or annual subscription.'**
   String get supporterTileSubtitle;
 
   /// Headline at the top of the supporter subscription screen.
   ///
   /// In en, this message translates to:
-  /// **'Keep Divine running'**
+  /// **'A Divinely human corner of the internet.'**
   String get supporterHeroTitle;
 
   /// Confirmation shown to users with an active supporter subscription.

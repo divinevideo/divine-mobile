@@ -7797,11 +7797,11 @@
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },
-  "supporterTileSubtitle": "Support Divine with an optional monthly subscription.",
+  "supporterTileSubtitle": "Support Divine with an optional monthly or annual subscription.",
   "@supporterTileSubtitle": {
     "description": "Subtitle of the supporter subscription settings tile."
   },
-  "supporterHeroTitle": "Keep Divine running",
+  "supporterHeroTitle": "A Divinely human corner of the internet.",
   "@supporterHeroTitle": {
     "description": "Headline at the top of the supporter subscription screen."
   },
