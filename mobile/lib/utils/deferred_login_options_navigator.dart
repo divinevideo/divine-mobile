@@ -9,11 +9,20 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Defers login-options navigation until in-flight background uploads finish.
 class DeferredLoginOptionsNavigator {
+  static const _logName = 'DeferredLoginOptionsNavigator';
+
   StreamSubscription<BackgroundPublishState>? _subscription;
   var _isDisposed = false;
 
   void dispose() {
     _isDisposed = true;
+    if (_subscription != null) {
+      Log.info(
+        'Dropped deferred login options: closed before uploads finished',
+        name: _logName,
+        category: LogCategory.ui,
+      );
+    }
     _cancelSubscription();
   }
 
@@ -36,7 +45,16 @@ class DeferredLoginOptionsNavigator {
     // arrive and we must navigate immediately.
     if (!publishBloc.state.hasUploadInProgress) {
       _navigateNow(router);
+      return;
     }
+    final unfinished = publishBloc.state.uploads
+        .where((upload) => upload.result == null)
+        .length;
+    Log.info(
+      'Deferring login options until $unfinished upload(s) finish',
+      name: _logName,
+      category: LogCategory.ui,
+    );
   }
 
   void _navigateNow(GoRouter router) {
@@ -52,7 +70,7 @@ class DeferredLoginOptionsNavigator {
     runDetached(
       cancelled,
       'cancel background-publish listener',
-      logName: 'DeferredLoginOptionsNavigator',
+      logName: _logName,
       category: LogCategory.ui,
     );
   }
