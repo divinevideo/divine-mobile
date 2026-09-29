@@ -11,6 +11,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip05/nip05_validor.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -312,6 +313,28 @@ void main() {
       expect(refusals(), hasLength(1));
       expect(refusals().single, contains(retiredKey));
     });
+
+    test(
+      'logs the retired labeler it migrates away from in both encodings',
+      () async {
+        await mockPrefs.setStringList(
+          ModerationLabelService.subscribedLabelersStorageKey,
+          [retiredKey],
+        );
+        final service = buildService();
+
+        await service.ensureLoaded();
+
+        expect(service.subscribedLabelers, isNot(contains(retiredKey)));
+        final migrations = logCapture
+            .getRecentLogs(minLevel: LogLevel.info)
+            .map((entry) => entry.message)
+            .where((message) => message.contains('Migrated moderation'))
+            .toList();
+        expect(migrations, hasLength(1));
+        expect(migrations.single, contains(pubkeyForLogs(retiredKey)));
+      },
+    );
 
     test(
       'asks NIP-05 instead of trusting a fresh cached retired key',

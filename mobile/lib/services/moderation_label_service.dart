@@ -1365,7 +1365,8 @@ class ModerationLabelService {
 
     Log.info(
       'Migrated moderation labeler from retired pubkey(s) '
-      '${retired.join(', ')} to ${pubkeyForLogs(_divineModerationPubkey)}',
+      '${retired.map(pubkeyForLogs).join(', ')} to '
+      '${pubkeyForLogs(_divineModerationPubkey)}',
       name: 'ModerationLabelService',
       category: LogCategory.system,
     );
