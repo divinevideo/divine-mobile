@@ -7,8 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 
-/// The slider lands on `min + k * step` in floating point, so a preset counts
-/// as selected when the speed is within this distance of it.
+/// The slider computes its discrete values in floating point, so a preset
+/// counts as selected when the speed is within this distance of it.
 const double _presetTolerance = 1e-6;
 
 const double _minTapTarget = 48;
