@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:bloc/bloc.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -20,6 +22,7 @@ import 'package:profile_repository/profile_repository.dart';
 // Riverpod 3 exports `Override` from `misc.dart`, not the main entry point.
 import 'package:riverpod/misc.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Mock for ProfileRepository
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -29,6 +32,15 @@ class _MockFollowRepository extends Mock implements FollowRepository {}
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+/// Fails the picker's search bloc on close and leaves every other bloc alone.
+class _FailingSearchCloseObserver extends BlocObserver {
+  @override
+  void onClose(BlocBase<dynamic> bloc) {
+    super.onClose(bloc);
+    if (bloc is UserSearchBloc) throw Exception('search close failed');
+  }
+}
 
 _MockContentBlocklistRepository _createMockContentBlocklistRepository({
   Set<String> blockedPubkeys = const {},
@@ -1911,6 +1923,123 @@ void main() {
         );
         // Should not show the search field
         expect(find.byType(TextField), findsNothing);
+      });
+    });
+
+    group('background failures', () {
+      testWidgets('logs a follow-list load that fails outside its own '
+          'try/catch', (tester) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        final profile = UserProfile(
+          pubkey: 'pubkey1',
+          name: 'User One',
+          rawData: const {'name': 'User One'},
+          createdAt: DateTime.now(),
+          eventId: 'event1',
+        );
+        final mockFollowRepo = _createMockFollowRepository(
+          followingPubkeys: [profile.pubkey],
+        );
+        // Thrown after the cached-profile lookup has returned, so the load's
+        // own try/catch no longer covers it.
+        when(
+          mockFollowRepo.streamMyFollowers,
+        ).thenThrow(Exception('follower lookup failed'));
+        final mockProfileRepo = _createMockProfileRepository(
+          cachedProfiles: [profile],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _noVanishedProfiles,
+              profileRepositoryProvider.overrideWithValue(mockProfileRepo),
+              profileReadRepositoryProvider.overrideWithValue(mockProfileRepo),
+              followRepositoryProvider.overrideWithValue(mockFollowRepo),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                _createMockContentBlocklistRepository(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: UserPickerSheet(
+                  title: 'Title',
+                  filterMode: UserPickerFilterMode.mutualFollowsOnly,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final logs = logCapture.getRecentLogs().where(
+          (entry) => entry.name == 'UserPickerSheet',
+        );
+        expect(logs, hasLength(1));
+        expect(
+          logs.single.message,
+          equals(
+            'Failed to load followed profiles: '
+            'Exception: follower lookup failed',
+          ),
+        );
+        expect(logs.single.category, equals(LogCategory.ui));
+      });
+
+      testWidgets('logs a search bloc that fails to close', (tester) async {
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        // A bloc reads Bloc.observer when it is created, so the failing
+        // observer must be installed before the sheet builds its search bloc.
+        final priorObserver = Bloc.observer;
+        Bloc.observer = _FailingSearchCloseObserver();
+        addTearDown(() => Bloc.observer = priorObserver);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              _noVanishedProfiles,
+              profileRepositoryProvider.overrideWithValue(
+                _createMockProfileRepository(),
+              ),
+              followRepositoryProvider.overrideWithValue(
+                _createMockFollowRepository(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: UserPickerSheet(
+                  title: 'Title',
+                  filterMode: UserPickerFilterMode.allUsers,
+                ),
+              ),
+            ),
+          ),
+        );
+        // Unmounting disposes the sheet, which closes its search bloc.
+        await tester.pumpWidget(const SizedBox());
+        // Bloc.close() awaits subscription cancels whose completed futures
+        // belong to the root zone, so it only settles once the real event
+        // loop turns; the failure then reaches the test zone on the next pump.
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        final logs = logCapture.getRecentLogs().where(
+          (entry) => entry.name == 'UserPickerSheet',
+        );
+        expect(logs, hasLength(1));
+        expect(
+          logs.single.message,
+          equals('Failed to close user search: Exception: search close failed'),
+        );
+        expect(logs.single.category, equals(LogCategory.ui));
       });
     });
   });
