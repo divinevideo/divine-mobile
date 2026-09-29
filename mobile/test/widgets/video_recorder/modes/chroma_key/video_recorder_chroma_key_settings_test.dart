@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -147,6 +150,94 @@ void main() {
             const VideoRecorderChromaKeyBackdropSet.transparent(),
           ),
         ).called(1);
+      });
+    });
+
+    group('announcements', () {
+      /// The messages `SemanticsService.sendAnnouncement` delivers on the
+      /// platform accessibility channel while the test runs.
+      List<Object?> captureAnnouncements(WidgetTester tester) {
+        final announced = <Object?>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (message) async {
+                if (message is Map && message['type'] == 'announce') {
+                  announced.add((message['data'] as Map?)?['message']);
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
+        return announced;
+      }
+
+      /// Opens the settings on a recorder whose measurement then moves
+      /// through [statuses], and returns what was announced meanwhile.
+      Future<List<Object?>> measure(
+        WidgetTester tester,
+        List<ChromaKeyMeasurementStatus> statuses,
+      ) async {
+        final states = StreamController<VideoRecorderBlocState>();
+        addTearDown(states.close);
+        await pumpChip(tester);
+        whenListen(
+          recorderBloc,
+          states.stream,
+          initialState: const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.chromaKey,
+          ),
+        );
+        await openSettings(tester);
+        final announced = captureAnnouncements(tester);
+
+        for (final status in statuses) {
+          states.add(
+            VideoRecorderBlocState(
+              recorderMode: VideoRecorderMode.chromaKey,
+              chromaKeyMeasurementStatus: status,
+            ),
+          );
+          await tester.pump();
+        }
+        return announced;
+      }
+
+      testWidgets('announces a wall it could not find', (tester) async {
+        final announced = await measure(tester, const [
+          ChromaKeyMeasurementStatus.detecting,
+          ChromaKeyMeasurementStatus.failed,
+        ]);
+
+        expect(announced, [l10n.videoEditorChromaKeyDetectFailed]);
+      });
+
+      testWidgets('announces a measurement that took too long', (
+        tester,
+      ) async {
+        final announced = await measure(tester, const [
+          ChromaKeyMeasurementStatus.detecting,
+          ChromaKeyMeasurementStatus.timedOut,
+        ]);
+
+        expect(announced, [l10n.videoEditorChromaKeyDetectTimedOut]);
+      });
+
+      testWidgets('announces nothing for a measurement that landed', (
+        tester,
+      ) async {
+        final announced = await measure(tester, const [
+          ChromaKeyMeasurementStatus.detecting,
+          ChromaKeyMeasurementStatus.idle,
+        ]);
+
+        expect(announced, isEmpty);
       });
     });
   });

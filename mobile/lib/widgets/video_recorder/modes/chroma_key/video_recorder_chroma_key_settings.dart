@@ -12,6 +12,7 @@ import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/chroma_key_backdrop_image.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
@@ -166,38 +167,65 @@ class _ChromaKeySettings extends StatelessWidget {
     );
     final bloc = context.read<VideoRecorderBloc>();
 
-    return ChromaKeyControlsPanel(
-      scrollController: scrollController,
-      chromaKey: chromaKey,
-      isDetecting: status == ChromaKeyMeasurementStatus.detecting,
-      detectionNotice: switch (status) {
-        ChromaKeyMeasurementStatus.failed =>
-          context.l10n.videoEditorChromaKeyDetectFailed,
-        ChromaKeyMeasurementStatus.timedOut =>
-          context.l10n.videoEditorChromaKeyDetectTimedOut,
-        ChromaKeyMeasurementStatus.idle ||
-        ChromaKeyMeasurementStatus.detecting => null,
+    return BlocListener<VideoRecorderBloc, VideoRecorderBlocState>(
+      listenWhen: (previous, current) =>
+          previous.chromaKeyMeasurementStatus !=
+          current.chromaKeyMeasurementStatus,
+      // The notice appears inline with nothing to move a screen reader to it,
+      // so it is said aloud as well.
+      listener: (context, state) {
+        final notice = _measurementNotice(
+          context.l10n,
+          state.chromaKeyMeasurementStatus,
+        );
+        if (notice == null) return;
+        announceDetached(
+          context,
+          notice,
+          description: 'announce the chroma-key measurement result',
+          logName: 'VideoRecorderChromaKeySettings',
+        );
       },
-      onDetect: () => bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
-      onGreenPreset: () => bloc.add(
-        const VideoRecorderChromaKeyPresetSelected(ChromaKey.greenScreen()),
+      child: ChromaKeyControlsPanel(
+        scrollController: scrollController,
+        chromaKey: chromaKey,
+        isDetecting: status == ChromaKeyMeasurementStatus.detecting,
+        detectionNotice: _measurementNotice(context.l10n, status),
+        onDetect: () =>
+            bloc.add(const VideoRecorderChromaKeyMeasureRequested()),
+        onGreenPreset: () => bloc.add(
+          const VideoRecorderChromaKeyPresetSelected(ChromaKey.greenScreen()),
+        ),
+        onBluePreset: () => bloc.add(
+          const VideoRecorderChromaKeyPresetSelected(ChromaKey.blueScreen()),
+        ),
+        onKeyColorChanged: (color) =>
+            bloc.add(VideoRecorderChromaKeySettingsChanged(color: color)),
+        onSimilarityChanged: (value) => bloc.add(
+          VideoRecorderChromaKeySettingsChanged(similarity: value),
+        ),
+        onSmoothnessChanged: (value) => bloc.add(
+          VideoRecorderChromaKeySettingsChanged(smoothness: value),
+        ),
+        onSpillChanged: (value) =>
+            bloc.add(VideoRecorderChromaKeySettingsChanged(spill: value)),
+        onPickBackground: (type) => _pickBackdrop(context, type),
       ),
-      onBluePreset: () => bloc.add(
-        const VideoRecorderChromaKeyPresetSelected(ChromaKey.blueScreen()),
-      ),
-      onKeyColorChanged: (color) =>
-          bloc.add(VideoRecorderChromaKeySettingsChanged(color: color)),
-      onSimilarityChanged: (value) => bloc.add(
-        VideoRecorderChromaKeySettingsChanged(similarity: value),
-      ),
-      onSmoothnessChanged: (value) => bloc.add(
-        VideoRecorderChromaKeySettingsChanged(smoothness: value),
-      ),
-      onSpillChanged: (value) =>
-          bloc.add(VideoRecorderChromaKeySettingsChanged(spill: value)),
-      onPickBackground: (type) => _pickBackdrop(context, type),
     );
   }
+
+  /// What the panel says about the last measurement, or `null` when there is
+  /// nothing to report.
+  static String? _measurementNotice(
+    AppLocalizations l10n,
+    ChromaKeyMeasurementStatus status,
+  ) => switch (status) {
+    ChromaKeyMeasurementStatus.failed => l10n.videoEditorChromaKeyDetectFailed,
+    ChromaKeyMeasurementStatus.timedOut =>
+      l10n.videoEditorChromaKeyDetectTimedOut,
+    ChromaKeyMeasurementStatus.idle ||
+    ChromaKeyMeasurementStatus.detecting => null,
+  };
 
   Future<void> _pickBackdrop(
     BuildContext context,
