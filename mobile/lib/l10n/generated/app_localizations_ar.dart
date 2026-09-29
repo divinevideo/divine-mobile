@@ -6150,6 +6150,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commonBack => 'رجوع';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'إغلاق';
 
   @override

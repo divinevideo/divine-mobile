@@ -5837,6 +5837,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonBack => '返回';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => '关闭';
 
   @override

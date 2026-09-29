@@ -6240,6 +6240,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonBack => 'Volver';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Cerrar';
 
   @override

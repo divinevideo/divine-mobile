@@ -6269,6 +6269,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonBack => 'Zurück';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Schließen';
 
   @override

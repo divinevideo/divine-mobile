@@ -6215,6 +6215,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commonBack => 'Terug';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Sluiten';
 
   @override
