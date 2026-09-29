@@ -8,7 +8,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart' as intl;
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 /// Categories that `Intl.pluralLogic` resolves by exact value before consulting
 /// the CLDR rule, and the value each one matches.

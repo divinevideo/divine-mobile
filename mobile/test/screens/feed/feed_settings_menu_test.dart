@@ -11,7 +11,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show VideoEvent;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';

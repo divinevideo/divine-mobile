@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/explore/explore_tab_labels.dart';
 
 FeaturedTabConfig _configWithSponsor(Map<String, String> disclosureLabel) {

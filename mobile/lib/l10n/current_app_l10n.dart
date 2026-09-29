@@ -3,7 +3,7 @@
 
 import 'dart:ui';
 
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';

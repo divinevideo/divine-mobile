@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_cubit.dart';
 import 'package:openvine/blocs/shorebird_patch/shorebird_patch_state.dart';
-import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/developer_options/shorebird_patch_section.dart';
 
 import '../../helpers/test_provider_overrides.dart';

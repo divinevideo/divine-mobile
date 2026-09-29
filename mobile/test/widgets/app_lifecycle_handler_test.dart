@@ -343,7 +343,7 @@ void main() {
             nostrServiceProvider.overrideWithValue(nostrClient),
           ],
           child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: AppLifecycleHandler(child: SizedBox.shrink()),
           ),

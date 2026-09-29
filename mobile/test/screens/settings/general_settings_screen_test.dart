@@ -99,15 +99,12 @@ void main() {
       );
     }
 
-    Future<AppLocalizations> l10n() async {
-      await AppLocalizations.delegate.load(const Locale('en'));
-      return lookupAppLocalizations(const Locale('en'));
-    }
+    AppLocalizations l10n() => lookupAppLocalizations(const Locale('en'));
 
     testWidgets(
       'hides the Integrations header when no integration tile is visible',
       (tester) async {
-        final labels = await l10n();
+        final labels = l10n();
 
         await tester.pumpWidget(wrap(const GeneralSettingsScreen()));
         await tester.pumpAndSettle();
@@ -132,7 +129,7 @@ void main() {
     testWidgets(
       'shows the Integrations header when crossposting is eligible',
       (tester) async {
-        final labels = await l10n();
+        final labels = l10n();
 
         await tester.pumpWidget(
           wrap(
@@ -155,7 +152,7 @@ void main() {
     testWidgets(
       'shows the Integrations header when Bluesky publishing is enabled',
       (tester) async {
-        final labels = await l10n();
+        final labels = l10n();
 
         await tester.pumpWidget(
           wrap(
@@ -193,7 +190,7 @@ void main() {
     testWidgets('offers email and password to a Divine-login account', (
       tester,
     ) async {
-      final labels = await l10n();
+      final labels = l10n();
       useTallViewport(tester);
       when(
         () => authService.authenticationSource,
@@ -209,7 +206,7 @@ void main() {
     testWidgets('hides email and password from a key-only identity', (
       tester,
     ) async {
-      final labels = await l10n();
+      final labels = l10n();
       useTallViewport(tester);
       when(
         () => authService.authenticationSource,
@@ -228,7 +225,7 @@ void main() {
     testWidgets('square-only switch flips the feed aspect ratio preference', (
       tester,
     ) async {
-      final labels = await l10n();
+      final labels = l10n();
 
       await tester.pumpWidget(wrap(const GeneralSettingsScreen()));
       await tester.pumpAndSettle();
@@ -255,7 +252,7 @@ void main() {
     testWidgets('stats visibility switches persist and rebuild while mounted', (
       tester,
     ) async {
-      final labels = await l10n();
+      final labels = l10n();
       useTallViewport(tester);
 
       await tester.pumpWidget(wrap(const GeneralSettingsScreen()));
