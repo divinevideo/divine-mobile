@@ -237,12 +237,13 @@ internal class DivineVideoPlayerInstance(
     private var seekAwaitsFrame = false
 
     /**
-     * Set on the playback thread by a message queued after [ExoPlayer.seekTo].
-     * A frame callback already in flight reads this as false and is ignored,
-     * so it cannot complete the seek that just replaced it.
+     * The generation a playback-thread message queued after [ExoPlayer.seekTo]
+     * armed, or [NO_ARMED_SEEK]. Frame callbacks post this snapshot rather than
+     * re-reading [seekFrameGeneration], so a frame already in flight when a
+     * newer seek starts carries the older generation and is ignored.
      */
     @Volatile
-    private var seekFrameArmed = false
+    private var armedSeekGeneration = NO_ARMED_SEEK
 
     /**
      * Bumped on each seek and on dispose. A frame callback posted for an
@@ -257,9 +258,9 @@ internal class DivineVideoPlayerInstance(
      * does not enqueue a main-thread task per frame.
      */
     private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, _ ->
-        if (!seekAwaitsFrame || !seekFrameArmed) return@VideoFrameMetadataListener
-        val generation = seekFrameGeneration
-        mainHandler.post { onSeekFrameRendered(generation) }
+        val armed = armedSeekGeneration
+        if (!seekAwaitsFrame || armed == NO_ARMED_SEEK) return@VideoFrameMetadataListener
+        mainHandler.post { onSeekFrameRendered(armed) }
     }
 
     /** Safety timeout so Dart is never left hanging if the callback is lost. */
@@ -1159,7 +1160,7 @@ internal class DivineVideoPlayerInstance(
         seekCompletionResult?.success(null)
         seekCompletionResult = result
         seekFrameGeneration++
-        seekFrameArmed = false
+        armedSeekGeneration = NO_ARMED_SEEK
         seekAwaitsFrame = !exoPlayer.playWhenReady && activeSurface != null
 
         // Ensure clip offsets are up-to-date from ExoPlayer's timeline
@@ -1182,7 +1183,7 @@ internal class DivineVideoPlayerInstance(
         if (seekAwaitsFrame) {
             val generation = seekFrameGeneration
             exoPlayer.createMessage { _, _ ->
-                if (generation == seekFrameGeneration) seekFrameArmed = true
+                if (generation == seekFrameGeneration) armedSeekGeneration = generation
             }.send()
         }
         // Settle any in-flight takeover before repositioning the loop track,
@@ -2020,7 +2021,7 @@ internal class DivineVideoPlayerInstance(
 
     fun dispose() {
         seekFrameGeneration++
-        seekFrameArmed = false
+        armedSeekGeneration = NO_ARMED_SEEK
         seekAwaitsFrame = false
         mainHandler.removeCallbacks(positionUpdater)
         mainHandler.removeCallbacks(seekTimeoutRunnable)
@@ -2056,6 +2057,9 @@ internal class DivineVideoPlayerInstance(
     }
 
     companion object {
+
+        /** [armedSeekGeneration] while no paused seek is armed. */
+        private const val NO_ARMED_SEEK = -1
 
         private const val POSITION_UPDATE_INTERVAL_MS = 200L
 
