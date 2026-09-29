@@ -9,7 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
+import 'package:openvine/services/video_thumbnail_service.dart'
+    show ThumbnailFileResult;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 
@@ -49,6 +52,9 @@ void main() {
       void Function()? onFinalClipInvalidated,
       DeferFileCleanupFn? deferFileCleanup,
       ChromaKeyBakeFn? bakeChromaKey,
+      CapturedChromaKeysBakedFn? onCapturedChromaKeysBaked,
+      ExtractPosterFn? extractPoster,
+      MergeClipsFn? mergeClips,
     }) {
       final bloc = ClipEditorBloc(
         onFinalClipInvalidated: onFinalClipInvalidated ?? () {},
@@ -56,6 +62,11 @@ void main() {
         deferFileCleanup: deferFileCleanup,
         bakeCapturedChromaKey: bake,
         bakeChromaKey: bakeChromaKey,
+        onCapturedChromaKeysBaked: onCapturedChromaKeysBaked,
+        extractPoster:
+            extractPoster ??
+            ({required videoPath, required timestamp}) async => null,
+        mergeClips: mergeClips,
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(clips));
@@ -73,6 +84,7 @@ void main() {
     test('swaps each waiting take for its keyed version', () async {
       final asked = <String>[];
       var invalidated = 0;
+      final handedOver = <List<String>>[];
       final bloc = seeded(
         [
           _clip('a', captureChromaKey: _recordedKey),
@@ -83,6 +95,8 @@ void main() {
           return _keyed(clip);
         },
         onFinalClipInvalidated: () => invalidated++,
+        onCapturedChromaKeysBaked: (keyed) =>
+            handedOver.add([for (final clip in keyed) clip.id]),
       );
 
       final state = await bakeAll(bloc);
@@ -108,8 +122,12 @@ void main() {
         state.lastCapturedChromaKeyBakeResult,
         isA<CapturedChromaKeyBakeSuccess>(),
       );
-      // One history step for the pass, not one per clip.
-      expect(invalidated, 1);
+      // Handed over once for the whole pass, to go into the history as part
+      // of the starting state rather than as an edit.
+      expect(handedOver, [
+        ['a', 'b'],
+      ]);
+      expect(invalidated, 0);
     });
 
     test('keeps edits the editor made to the clip meanwhile', () async {
@@ -193,7 +211,7 @@ void main() {
     test(
       'keeps a failed take raw with its settings and bakes the rest',
       () async {
-        var invalidated = 0;
+        final handedOver = <List<String>>[];
         final bloc = seeded(
           [
             _clip('broken', captureChromaKey: _recordedKey),
@@ -205,7 +223,8 @@ void main() {
             }
             return _keyed(clip);
           },
-          onFinalClipInvalidated: () => invalidated++,
+          onCapturedChromaKeysBaked: (keyed) =>
+              handedOver.add([for (final clip in keyed) clip.id]),
         );
 
         final state = await bakeAll(bloc);
@@ -224,7 +243,9 @@ void main() {
           state.lastCapturedChromaKeyBakeResult,
           isA<CapturedChromaKeyBakeFailure>(),
         );
-        expect(invalidated, 1);
+        expect(handedOver, [
+          ['fine'],
+        ]);
       },
     );
 
@@ -317,6 +338,62 @@ void main() {
         expect(clip.video?.file?.path, rawPath);
         expect(clip.chromaKey, isNull);
         expect(clip.hasPendingCaptureChromaKey, isFalse);
+      },
+    );
+
+    test(
+      'puts a poster of the raw take back when the key is removed',
+      () async {
+        final documents = Directory.systemTemp.createTempSync('captured_key_');
+        addTearDown(() => documents.deleteSync(recursive: true));
+        final rawPath = '${documents.path}/a.mp4';
+        File(rawPath).writeAsBytesSync(const [0]);
+        final keyedTake = await _keyed(
+          _clip('a', captureChromaKey: _recordedKey, videoPath: rawPath),
+        );
+        final bloc = seeded(
+          [keyedTake],
+          bake: null,
+          extractPoster: ({required videoPath, required timestamp}) async =>
+              ThumbnailFileResult(
+                path: videoPath.replaceAll('.mp4', '_poster.jpg'),
+                timestamp: timestamp,
+              ),
+        );
+        await pumpEventQueue();
+
+        bloc.add(const ClipEditorChromaKeyRemoved('a'));
+        await pumpEventQueue();
+
+        final clip = bloc.state.clips.single;
+        expect(clip.video?.file?.path, rawPath);
+        // The keyed poster showed the composite, not the footage now in place.
+        expect(clip.thumbnailPath, '${documents.path}/a_poster.jpg');
+      },
+    );
+
+    test(
+      'merges the keyed version of a take still waiting on its key',
+      () async {
+        List<DivineVideoClip>? merged;
+        final bloc = seeded(
+          [_clip('a', captureChromaKey: _recordedKey), _clip('b')],
+          bake: _keyed,
+          mergeClips: ({required clips, required renderId}) async {
+            merged = clips;
+            return null;
+          },
+        );
+        await pumpEventQueue();
+
+        bloc
+          ..add(const ClipEditorMultiSelectStarted('a'))
+          ..add(const ClipEditorMultiSelectClipToggled('b'))
+          ..add(const ClipEditorSelectedClipsMergeRequested());
+        await pumpEventQueue();
+
+        expect(merged?.first.video?.file?.path, '/documents/a_keyed.mp4');
+        expect(merged?.last.video?.file?.path, '/documents/b.mp4');
       },
     );
   });

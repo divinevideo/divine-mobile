@@ -21,7 +21,8 @@ typedef ExtractPosterFn = Future<ThumbnailFileResult?> Function({
 /// Asks the renderer to stop the render running under `renderId`.
 typedef CancelRenderFn = Future<void> Function(String renderId);
 
-Future<ThumbnailFileResult?> _extractPosterFromFile({
+/// Takes a poster frame from the video file at [videoPath], near [timestamp].
+Future<ThumbnailFileResult?> extractPosterFromFile({
   required String videoPath,
   required Duration timestamp,
 }) => VideoThumbnailService.extractThumbnail(
@@ -29,21 +30,48 @@ Future<ThumbnailFileResult?> _extractPosterFromFile({
   targetTimestamp: timestamp,
 );
 
+/// [clips] with the key each pending take was recorded with baked in by
+/// [bake], so a render built straight from them keeps the key. Clips with no
+/// pending key pass through unchanged.
+///
+/// For every render that reads clips without the editor keying them first,
+/// such as posting a draft or merging clips: a take can still be pending there
+/// after a failed bake, or after the app was killed while it baked.
+///
+/// Throws whatever [bake] throws. The render must not go ahead without a key
+/// the user saw in the viewfinder.
+Future<List<DivineVideoClip>> bakePendingCapturedChromaKeys(
+  List<DivineVideoClip> clips,
+  Future<DivineVideoClip> Function(DivineVideoClip clip) bake,
+) async {
+  if (!clips.any((clip) => clip.hasPendingCaptureChromaKey)) return clips;
+  return [
+    for (final clip in clips)
+      if (clip.hasPendingCaptureChromaKey)
+        clip.withCapturedChromaKeyBake(await bake(clip))
+      else
+        clip,
+  ];
+}
+
 /// Turns chroma-key takes into the composite the viewfinder showed.
 ///
 /// The recorder writes the raw camera footage and records the key as
 /// [DivineVideoClip.captureChromaKey]; this renders that key into a new file.
-/// Bakes run one at a time, and never alongside a recording: [hold] stops the
-/// render in flight and keeps new ones from starting, so the camera's encoder
-/// never shares the hardware with a bake. A render a hold stopped starts over
-/// on [release] — it is only postponed, never dropped.
+/// Bakes run one at a time and step aside for a recording: [hold] cancels the
+/// render in flight and keeps new ones from starting. On iOS the plugin
+/// acknowledges a cancel slightly before the export has fully stopped, so this
+/// keeps the camera and a bake apart in practice rather than by a strict
+/// ordering. A render a hold stopped starts over
+/// on [release] — it is only postponed, never dropped. A render that never
+/// settles is cut off by [VideoRenderWatchdog], so it cannot stall the queue.
 class CapturedChromaKeyBaker {
   CapturedChromaKeyBaker({
     ChromaKeyBakeFn? render,
     ExtractPosterFn? extractPoster,
     CancelRenderFn? cancelRender,
   }) : _render = render ?? ChromaKeyBakeService.bakeClip,
-       _extractPoster = extractPoster ?? _extractPosterFromFile,
+       _extractPoster = extractPoster ?? extractPosterFromFile,
        _cancelRender = cancelRender ?? VideoEditorRenderService.cancelTask;
 
   static const _logName = 'CapturedChromaKeyBaker';

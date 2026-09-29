@@ -43,6 +43,31 @@ Future<ThumbnailFileResult?> _poster({
 );
 
 void main() {
+  group('bakePendingCapturedChromaKeys', () {
+    test('bakes only the takes still waiting on their key', () async {
+      final plain = _take('plain').copyWith(clearCaptureChromaKey: true);
+      final asked = <String>[];
+
+      final clips = await bakePendingCapturedChromaKeys(
+        [plain, _take('pending')],
+        (clip) async {
+          asked.add(clip.id);
+          return clip.copyWith(
+            video: EditorVideo.file('/documents/${clip.id}_keyed.mp4'),
+            chromaKey: clip.captureChromaKey,
+            chromaKeySourcePath: clip.video!.file!.path,
+            clearCaptureChromaKey: true,
+          );
+        },
+      );
+
+      expect(asked, ['pending']);
+      expect(clips.first, same(plain));
+      expect(clips.last.video?.file?.path, '/documents/pending_keyed.mp4');
+      expect(clips.last.chromaKey, _recordedKey);
+    });
+  });
+
   group(CapturedChromaKeyBaker, () {
     group('bake', () {
       test('returns the take with its recorded key burned in', () async {

@@ -12,8 +12,10 @@ import 'package:models/models.dart' show AspectRatio, StickerData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -57,10 +59,19 @@ class DraftOverlayRestoreException implements Exception {
 /// layers offscreen.
 class DraftRenderParametersService {
   /// Creates a service that rasterizes through [rasterizer].
-  const DraftRenderParametersService({required LayerRasterizer rasterizer})
-    : _rasterizer = rasterizer;
+  const DraftRenderParametersService({
+    required LayerRasterizer rasterizer,
+    Future<DivineVideoClip> Function(DivineVideoClip clip)?
+    bakeCapturedChromaKey,
+  }) : _rasterizer = rasterizer,
+       _bakeCapturedChromaKey = bakeCapturedChromaKey;
 
   final LayerRasterizer _rasterizer;
+
+  /// Bakes a take's recorded chroma key before a re-render, or `null` to
+  /// render pending takes raw. See [bakePendingCapturedChromaKeys].
+  final Future<DivineVideoClip> Function(DivineVideoClip clip)?
+  _bakeCapturedChromaKey;
 
   static const _logName = 'DraftRenderParametersService';
 
@@ -71,8 +82,11 @@ class DraftRenderParametersService {
   /// caller cannot fall back to uploading the unedited source footage.
   Future<DivineVideoDraft> renderDraft(DivineVideoDraft draft) async {
     final parameters = await buildForDraft(draft);
+    final bake = _bakeCapturedChromaKey;
     final (clip, proofJson) = await VideoEditorRenderService.renderVideoToClip(
-      clips: draft.clips,
+      clips: bake == null
+          ? draft.clips
+          : await bakePendingCapturedChromaKeys(draft.clips, bake),
       parameters: parameters,
       editorStateHistory: draft.editorStateHistory,
       taskId: draft.id,

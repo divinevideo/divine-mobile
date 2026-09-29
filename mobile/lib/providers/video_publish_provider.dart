@@ -49,6 +49,7 @@ import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -178,6 +179,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
     return VideoPublishService(
       rerenderDraft: DraftRenderParametersService(
         rasterizer: ref.read(layerRasterizerProvider),
+        bakeCapturedChromaKey: ref
+            .read(clipManagerProvider.notifier)
+            .bakeCapturedChromaKey,
       ).renderDraft,
       uploadManager: ref.read(uploadManagerProvider),
       authService: ref.read(authServiceProvider),
@@ -515,7 +519,10 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
         final (DivineVideoClip, String?) result;
         try {
           result = await VideoEditorRenderService.renderVideoToClip(
-            clips: draft.clips,
+            clips: await bakePendingCapturedChromaKeys(
+              draft.clips,
+              ref.read(clipManagerProvider.notifier).bakeCapturedChromaKey,
+            ),
             parameters: parameters,
             editorStateHistory: draft.editorStateHistory,
             taskId: draft.id,

@@ -2899,9 +2899,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 _syncMainCapabilities(scope, bloc);
 
                 // Chroma-key takes arrive as raw footage carrying the key
-                // they were recorded with. Bake only now: the bake commits its
-                // result as a history entry, which needs the seeded one above
-                // to build on.
+                // they were recorded with. Bake only now: the bake is written
+                // into the history as part of the starting state, which needs
+                // the seeded entry above.
                 context.read<ClipEditorBloc>().add(
                   const ClipEditorCapturedChromaKeysBakeRequested(),
                 );

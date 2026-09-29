@@ -17,6 +17,7 @@ import 'package:openvine/models/video_editor/detached_clip_reattach.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
 import 'package:openvine/services/video_editor/clip_placeholder_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_sample_service.dart';
@@ -27,6 +28,8 @@ import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_reverse_service.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:openvine/services/video_editor/video_editor_transform_service.dart';
+import 'package:openvine/services/video_thumbnail_service.dart'
+    show ThumbnailFileResult;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show EditorVideo, ExportTransform, RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
@@ -170,6 +173,14 @@ typedef BakeCapturedChromaKeyFn = Future<DivineVideoClip> Function(
   DivineVideoClip clip,
 );
 
+/// Receives the takes a pass over recorded chroma keys keyed, as they now
+/// stand in the clip list.
+///
+/// The widget layer writes them into the editor history as part of the
+/// session's starting state rather than as an edit, so undo can never bring
+/// the raw take back.
+typedef CapturedChromaKeysBakedFn = void Function(List<DivineVideoClip> keyed);
+
 /// BLoC for managing video clip editor state.
 ///
 /// Owns a local copy of the clip list so that all mutations (add, remove,
@@ -202,6 +213,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     SampleStopMotionFramesFn? sampleStopMotionFrames,
     CleanupSampledFramesFn? cleanupSampledFrames,
     BakeCapturedChromaKeyFn? bakeCapturedChromaKey,
+    CapturedChromaKeysBakedFn? onCapturedChromaKeysBaked,
+    ExtractPosterFn? extractPoster,
   }) : _audioExtractionService =
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
@@ -233,6 +246,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
            StopMotionFrameSampleService.cleanupSampledFrames,
        _saveClipToLibrary = saveClipToLibrary,
        _bakeCapturedChromaKey = bakeCapturedChromaKey,
+       _onCapturedChromaKeysBaked = onCapturedChromaKeysBaked,
+       _extractPoster = extractPoster ?? extractPosterFromFile,
        super(const ClipEditorState()) {
     // Clip data
     on<ClipEditorInitialized>(_onInitialized);
@@ -308,7 +323,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       _onChromaKeyRequested,
       transformer: droppable(),
     );
-    on<ClipEditorChromaKeyRemoved>(_onChromaKeyRemoved);
+    on<ClipEditorChromaKeyRemoved>(
+      _onChromaKeyRemoved,
+      transformer: sequential(),
+    );
     // sequential (not droppable) so clips that join while a pass runs — a
     // library import landing mid-bake — get a pass of their own.
     on<ClipEditorCapturedChromaKeysBakeRequested>(
@@ -381,6 +399,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// `null` when nothing is wired to bake chroma-key takes, which leaves them
   /// raw — see [BakeCapturedChromaKeyFn].
   final BakeCapturedChromaKeyFn? _bakeCapturedChromaKey;
+  final CapturedChromaKeysBakedFn? _onCapturedChromaKeysBaked;
+  final ExtractPosterFn _extractPoster;
   final RenderClipPlaceholderFn _renderClipPlaceholder;
   final MaterializeStopMotionClipFn _materializeStopMotionClip;
   final SampleStopMotionFramesFn _sampleStopMotionFrames;
@@ -703,7 +723,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     try {
       final merged = await _mergeClips(
-        clips: selectedClips,
+        clips: await _withCapturedChromaKeysBaked(selectedClips),
         renderId: renderId,
       );
 
@@ -1226,7 +1246,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     DivineVideoClip? flattened;
     try {
       flattened = await _flattenClipForLibrary(
-        clip: clip,
+        clip: (await _withCapturedChromaKeysBaked([clip])).single,
         renderId: renderId,
         overlays: overlays,
       );
@@ -1886,14 +1906,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
   // === TRANSFORM ===
 
-  void _onChromaKeyRemoved(
+  Future<void> _onChromaKeyRemoved(
     ClipEditorChromaKeyRemoved event,
     Emitter<ClipEditorState> emit,
-  ) {
-    final index = state.clips.indexWhere((c) => c.id == event.clipId);
-    if (index == -1) return;
+  ) async {
+    final clip = state.clips.firstWhereOrNull((c) => c.id == event.clipId);
+    if (clip == null) return;
 
-    final clip = state.clips[index];
     final source = clip.chromaKeySourcePath;
     if (clip.chromaKey == null || source == null) return;
 
@@ -1902,7 +1921,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     // to go back to — report it instead of leaving the key on screen.
     if (!File(source).existsSync()) {
       Log.warning(
-        '⚠️ Cannot drop the green screen on clip ${clip.id}: '
+        '⚠️ Cannot drop the chroma key on clip ${clip.id}: '
         'its pre-key video $source is gone',
         name: 'ClipEditorBloc',
         category: LogCategory.video,
@@ -1911,8 +1930,22 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       return;
     }
 
-    final restored = clip.copyWith(
+    // A key baked right after the take also moved the poster onto the
+    // composite, so take a fresh one from the footage going back in.
+    final poster = await _posterOf(source, at: clip.thumbnailTimestamp);
+    final index = state.clips.indexWhere(
+      (c) => c.id == clip.id && c.chromaKey == clip.chromaKey,
+    );
+    if (index == -1) {
+      // The clip moved on while the poster was taken.
+      if (poster != null) _deferFileCleanup([poster.path]);
+      return;
+    }
+
+    final restored = state.clips[index].copyWith(
       video: EditorVideo.file(source),
+      thumbnailPath: poster?.path,
+      thumbnailTimestamp: poster?.timestamp,
       clearChromaKey: true,
       // A removed key stays removed: a recorded one must not bake back in on
       // the next pass over the timeline.
@@ -1933,6 +1966,34 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     onFinalClipInvalidated.call();
     _deferSupersededFiles(clip);
+  }
+
+  /// [clips] with any key a take was recorded with baked in, for a render that
+  /// reads them directly. See [bakePendingCapturedChromaKeys].
+  Future<List<DivineVideoClip>> _withCapturedChromaKeysBaked(
+    List<DivineVideoClip> clips,
+  ) {
+    final bake = _bakeCapturedChromaKey;
+    if (bake == null) return Future.value(clips);
+    return bakePendingCapturedChromaKeys(clips, bake);
+  }
+
+  /// A poster frame of the video at [path] near [at], or `null` when none can
+  /// be taken, in which case the clip keeps its poster.
+  Future<ThumbnailFileResult?> _posterOf(
+    String path, {
+    required Duration at,
+  }) async {
+    try {
+      return await _extractPoster(videoPath: path, timestamp: at);
+    } catch (e) {
+      Log.warning(
+        '⚠️ Could not take a poster frame from $path: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return null;
+    }
   }
 
   /// Lifts a clip off the timeline so the widget layer can place it on the
@@ -2433,7 +2494,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     final bake = _bakeCapturedChromaKey;
     if (bake == null) return;
     final attempted = <String>{};
-    var bakedAny = false;
+    final baked = <DivineVideoClip>[];
     var failedAny = false;
 
     while (true) {
@@ -2461,16 +2522,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // Exactly what a confirmed chroma key screen records, so re-opening
         // the clip restores these settings and re-keys from the raw take.
         final current = state.clips[index];
-        final updated = current.copyWith(
-          video: keyed.video,
-          chromaKey: keyed.chromaKey,
-          chromaKeySourcePath: keyed.chromaKeySourcePath,
-          clearCaptureChromaKey: true,
-          clearForwardVideoPath: true,
-          clearReversedVideoPath: true,
-          thumbnailPath: keyed.thumbnailPath,
-          thumbnailTimestamp: keyed.thumbnailTimestamp,
-        );
+        final updated = current.withCapturedChromaKeyBake(keyed);
         emit(
           state.copyWith(
             clips: List.unmodifiable(
@@ -2478,7 +2530,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
             ),
           ),
         );
-        bakedAny = true;
+        baked.add(updated);
         _deferSupersededFiles(current);
       } catch (e, stackTrace) {
         failedAny = true;
@@ -2511,7 +2563,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
             : CapturedChromaKeyBakeSuccess(),
       ),
     );
-    if (bakedAny) onFinalClipInvalidated.call();
+    if (baked.isNotEmpty) _onCapturedChromaKeysBaked?.call(baked);
   }
 
   /// Queues every file [superseded] pointed at that the clip list no longer
