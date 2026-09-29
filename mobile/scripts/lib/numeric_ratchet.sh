@@ -214,7 +214,7 @@ run_numeric_ratchet() {
       else
         echo "FAIL [$RATCHET_LABEL]: could not load the baseline from ${BASE_REF}, so the"
         echo "  growth-vs-base ratchet cannot be verified — failing closed. Ensure ${BASE_REF}"
-        echo "  is fetched (CI runs 'git fetch --depth=1 origin main' before this guard)."
+        echo "  is fetched (git fetch origin main; CI fetches it before this guard)."
         echo "  For a local run without a base ref, set ${ALLOW_NO_BASE_VAR}=1 to skip."
         fail=1
       fi

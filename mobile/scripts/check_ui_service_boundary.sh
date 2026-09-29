@@ -230,7 +230,7 @@ case "$base_status" in
     else
       echo "FAIL [ui_service_boundary]: could not load the baseline from ${BASE_REF}, so the"
       echo "  growth ratchet cannot be verified — failing closed. Ensure ${BASE_REF} is"
-      echo "  fetched (CI runs 'git fetch --depth=1 origin main' before this guard)."
+      echo "  fetched (git fetch origin main; CI fetches it before this guard)."
       echo "  For a local run without a base ref, set UI_SERVICE_ALLOW_NO_BASE=1 to skip."
       fail=1
     fi
