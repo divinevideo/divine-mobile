@@ -55,6 +55,11 @@ const _completed = AccountDeletionAttempt(
   status: AccountDeletionAttemptStatus.completed,
 );
 
+const _terminalFailure = AccountDeletionAttempt(
+  id: 'attempt-id',
+  status: AccountDeletionAttemptStatus.terminalFailure,
+);
+
 void main() {
   group('startAccountDeletionFlow', () {
     late _MockAccountDeletionService deletionService;
@@ -448,16 +453,10 @@ void main() {
 
     Future<_MockRecoveryCubit> tapDeleteWithOtherAccountPending(
       WidgetTester tester, {
-      required bool pollingPaused,
+      required AccountDeletionRecoveryState monitorState,
     }) async {
       final recoveryCubit = _MockRecoveryCubit();
-      when(() => recoveryCubit.state).thenReturn(
-        AccountDeletionRecoveryState(
-          status: AccountDeletionRecoveryStatus.processing,
-          attempt: _processing,
-          pollingPaused: pollingPaused,
-        ),
-      );
+      when(() => recoveryCubit.state).thenReturn(monitorState);
       when(() => recoveryCubit.resume(_processing)).thenAnswer((_) async {});
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final sharedPreferences = await SharedPreferences.getInstance();
@@ -520,7 +519,11 @@ void main() {
     ) async {
       final recoveryCubit = await tapDeleteWithOtherAccountPending(
         tester,
-        pollingPaused: true,
+        monitorState: const AccountDeletionRecoveryState(
+          status: AccountDeletionRecoveryStatus.processing,
+          attempt: _processing,
+          pollingPaused: true,
+        ),
       );
 
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -544,7 +547,10 @@ void main() {
       (tester) async {
         final recoveryCubit = await tapDeleteWithOtherAccountPending(
           tester,
-          pollingPaused: false,
+          monitorState: const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.processing,
+            attempt: _processing,
+          ),
         );
 
         final l10n = lookupAppLocalizations(const Locale('en'));
@@ -553,6 +559,28 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(l10n.supportContactSupport), findsNothing);
+        verifyNever(() => recoveryCubit.resume(_processing));
+        verifyNever(repository.prepare);
+      },
+    );
+
+    testWidgets(
+      'a pending receipt whose deletion failed blocks deletion with support',
+      (tester) async {
+        final recoveryCubit = await tapDeleteWithOtherAccountPending(
+          tester,
+          monitorState: const AccountDeletionRecoveryState(
+            status: AccountDeletionRecoveryStatus.terminalFailure,
+            attempt: _terminalFailure,
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.accountDeletionOtherAccountPending),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
         verifyNever(() => recoveryCubit.resume(_processing));
         verifyNever(repository.prepare);
       },

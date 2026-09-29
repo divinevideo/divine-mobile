@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/account_deletion_recovery/account_deletion_recovery_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_deletion_attempt.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -55,16 +56,20 @@ Future<void> startAccountDeletionFlow({
   final pendingDeletion = ref.read(submittedAccountDeletionAttemptProvider);
   if (pendingDeletion != null && pendingDeletion.pubkeyHex != pubkey) {
     final monitor = ref.read(submittedAccountDeletionMonitorProvider);
-    // Support is offered only once the other deletion is overdue; a normal
-    // deletion can take up to a day to finish.
-    final overdue = monitor?.state.pollingPaused ?? false;
+    final monitorState = monitor?.state;
+    final overdue = monitorState?.pollingPaused ?? false;
+    // Support is offered only once the other deletion is overdue or has
+    // failed; a normal deletion can take up to a day to finish.
+    final offerSupport =
+        overdue ||
+        monitorState?.status == AccountDeletionRecoveryStatus.terminalFailure;
     if (overdue) {
       unawaited(monitor!.resume(pendingDeletion.attempt));
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.accountDeletionOtherAccountPending),
-        action: overdue
+        action: offerSupport
             ? SnackBarAction(
                 label: context.l10n.supportContactSupport,
                 onPressed: () => context.push(RoutePaths.supportCenter),
