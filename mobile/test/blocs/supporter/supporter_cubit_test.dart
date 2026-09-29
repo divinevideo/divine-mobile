@@ -47,6 +47,18 @@ class _FakeRepository extends Fake implements SupporterRepository {
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
 
+  StreamController<SupporterEntitlement>? settledController;
+
+  @override
+  Stream<SupporterEntitlement> get settledPurchases =>
+      (settledController ??= StreamController<SupporterEntitlement>.broadcast())
+          .stream;
+
+  void emitSettled(SupporterEntitlement entitlement) {
+    (settledController ??= StreamController<SupporterEntitlement>.broadcast())
+        .add(entitlement);
+  }
+
   @override
   Future<SupporterAccountSnapshot> updateRecognition({
     required bool haloVisible,
@@ -575,6 +587,75 @@ void main() {
         'supporter_subscribe_succeeded',
       ]);
     });
+
+    test(
+      'ends confirmation when a settled claim granted no entitlement',
+      () async {
+        final repo = _FakeRepository(controller);
+        final cubit = SupporterCubit(repository: repo);
+        addTearDown(cubit.close);
+        cubit.start();
+        await pumpEventQueue();
+
+        await cubit.subscribe('divine.supporter.monthly');
+        expect(cubit.state.status, SupporterStatus.confirming);
+        expect(cubit.state.awaitingPurchaseConfirmation, isTrue);
+
+        repo.emitSettled(SupporterEntitlement.inactive);
+        await pumpEventQueue();
+
+        expect(cubit.state.status, SupporterStatus.error);
+        expect(
+          cubit.state.failure,
+          SupporterFailure.verificationUnavailable,
+        );
+        expect(cubit.state.awaitingPurchaseConfirmation, isFalse);
+        expect(cubit.state.isBusy, isFalse);
+      },
+    );
+
+    test(
+      'a settled claim that granted access ends confirmation as active',
+      () async {
+        final repo = _FakeRepository(controller);
+        final cubit = SupporterCubit(repository: repo);
+        addTearDown(cubit.close);
+        cubit.start();
+        await pumpEventQueue();
+
+        await cubit.subscribe('divine.supporter.monthly');
+        expect(cubit.state.status, SupporterStatus.confirming);
+
+        repo.emitSettled(
+          const SupporterEntitlement(
+            productId: 'divine.supporter.monthly',
+            source: EntitlementSource.server,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(cubit.state.status, SupporterStatus.active);
+        expect(cubit.state.isSupporter, isTrue);
+        expect(cubit.state.awaitingPurchaseConfirmation, isFalse);
+      },
+    );
+
+    test(
+      'a settled claim does not disturb a screen with no checkout',
+      () async {
+        final repo = _FakeRepository(controller);
+        final cubit = SupporterCubit(repository: repo);
+        addTearDown(cubit.close);
+        cubit.start();
+        await pumpEventQueue();
+
+        repo.emitSettled(SupporterEntitlement.inactive);
+        await pumpEventQueue();
+
+        expect(cubit.state.status, isNot(SupporterStatus.error));
+        expect(cubit.state.failure, isNull);
+      },
+    );
 
     test('records failed verification instead of purchase success', () async {
       final events = <String>[];
