@@ -333,6 +333,8 @@ class TimelineOverlayBloc
       audioSource: track.isOriginalSound
           ? AudioSource.original
           : AudioSource.custom,
+      fadeIn: track.fadeInDuration,
+      fadeOut: track.fadeOutDuration,
     );
   }
 

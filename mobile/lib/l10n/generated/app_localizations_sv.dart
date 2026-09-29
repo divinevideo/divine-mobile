@@ -9355,6 +9355,22 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Klipphastighet';
 
   @override
+  String get videoEditorFadeLabel => 'Toning';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Ange intoning och uttoning för valt ljud';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Intoning och uttoning';
+
+  @override
+  String get videoEditorFadeInLabel => 'Intoning';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Uttoning';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Övergång';
 
   @override

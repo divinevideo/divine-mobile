@@ -8898,6 +8898,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'クリップの速度';
 
   @override
+  String get videoEditorFadeLabel => 'フェード';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel => '選択したサウンドのフェードイン・アウトを設定';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'フェードイン・アウト';
+
+  @override
+  String get videoEditorFadeInLabel => 'フェードイン';
+
+  @override
+  String get videoEditorFadeOutLabel => 'フェードアウト';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'トランジション';
 
   @override

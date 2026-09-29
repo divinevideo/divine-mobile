@@ -9631,6 +9631,22 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'క్లిప్ స్పీడ్';
 
   @override
+  String get videoEditorFadeLabel => 'ఫేడ్';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'ఎంచుకున్న ధ్వని కోసం ఫేడ్ ఇన్, ఫేడ్ అవుట్ సెట్ చేయండి';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'ఫేడ్ ఇన్ & అవుట్';
+
+  @override
+  String get videoEditorFadeInLabel => 'ఫేడ్ ఇన్';
+
+  @override
+  String get videoEditorFadeOutLabel => 'ఫేడ్ అవుట్';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'పరివర్తన';
 
   @override

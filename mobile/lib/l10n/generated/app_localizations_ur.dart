@@ -9355,6 +9355,22 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'کلپ رفتار';
 
   @override
+  String get videoEditorFadeLabel => 'فیڈ';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'منتخب آواز کے لیے فیڈ اِن اور فیڈ آؤٹ مقرر کریں';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'فیڈ اِن اور آؤٹ';
+
+  @override
+  String get videoEditorFadeInLabel => 'فیڈ اِن';
+
+  @override
+  String get videoEditorFadeOutLabel => 'فیڈ آؤٹ';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ٹرانزیشن';
 
   @override

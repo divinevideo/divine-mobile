@@ -9447,6 +9447,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Velocidad del clip';
 
   @override
+  String get videoEditorFadeLabel => 'Fundido';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Establecer el fundido de entrada y salida del sonido seleccionado';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fundido de entrada y salida';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fundido de entrada';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fundido de salida';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transición';
 
   @override

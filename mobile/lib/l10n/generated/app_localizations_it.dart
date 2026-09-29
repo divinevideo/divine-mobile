@@ -9461,6 +9461,22 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Velocità del clip';
 
   @override
+  String get videoEditorFadeLabel => 'Dissolvenza';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Imposta la dissolvenza in entrata e in uscita del suono selezionato';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Dissolvenza in entrata e in uscita';
+
+  @override
+  String get videoEditorFadeInLabel => 'Dissolvenza in entrata';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Dissolvenza in uscita';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transizione';
 
   @override

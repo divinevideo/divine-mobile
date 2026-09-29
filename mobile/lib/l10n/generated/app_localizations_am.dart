@@ -9137,6 +9137,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'የክሊፕ ፍጥነት';
 
   @override
+  String get videoEditorFadeLabel => 'ፌድ';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'ለተመረጠው ድምጽ ቀስ ብሎ መግባትና መውጣት ያዘጋጁ';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'ቀስ ብሎ መግባትና መውጣት';
+
+  @override
+  String get videoEditorFadeInLabel => 'ቀስ ብሎ መግባት';
+
+  @override
+  String get videoEditorFadeOutLabel => 'ቀስ ብሎ መውጣት';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'ሽግግር';
 
   @override

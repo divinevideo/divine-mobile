@@ -37,6 +37,8 @@ void main() {
       Duration windowStart = Duration.zero,
       Duration windowEnd = const Duration(seconds: 2),
       double volume = 1,
+      Duration fadeIn = Duration.zero,
+      Duration fadeOut = Duration.zero,
     }) {
       return StopMotionAudioPreviewTrack(
         id: id,
@@ -44,6 +46,8 @@ void main() {
         windowStart: windowStart,
         windowEnd: windowEnd,
         volume: volume,
+        fadeIn: fadeIn,
+        fadeOut: fadeOut,
       );
     }
 
@@ -65,6 +69,68 @@ void main() {
             players.single.setClip(const AudioSourceConfig.file('/music.mp3')),
       ).called(1);
       verify(() => players.single.setVolume(0.4)).called(1);
+    });
+
+    group('fade', () {
+      test('ramps the volume through the fade in and out as the playhead '
+          'moves', () async {
+        await preview.setTracks([
+          track(
+            windowStart: const Duration(seconds: 1),
+            windowEnd: const Duration(seconds: 5),
+            volume: 0.8,
+            fadeIn: const Duration(seconds: 1),
+            fadeOut: const Duration(seconds: 2),
+          ),
+        ]);
+        final player = players.single;
+        clearInteractions(player);
+
+        await preview.syncTo(const Duration(seconds: 1), isPlaying: true);
+        await preview.syncTo(
+          const Duration(milliseconds: 1500),
+          isPlaying: true,
+        );
+        await preview.syncTo(
+          const Duration(milliseconds: 2500),
+          isPlaying: true,
+        );
+        await preview.syncTo(const Duration(seconds: 4), isPlaying: true);
+
+        expect(
+          verify(() => player.setVolume(captureAny())).captured,
+          [0.0, 0.4, 0.8, 0.4],
+        );
+      });
+
+      test('starts a sound inside its fade in at the faded level', () async {
+        await preview.setTracks([
+          track(
+            windowEnd: const Duration(seconds: 4),
+            fadeIn: const Duration(seconds: 2),
+          ),
+        ]);
+        final player = players.single;
+        clearInteractions(player);
+
+        await preview.syncTo(const Duration(seconds: 1), isPlaying: true);
+
+        verifyInOrder([() => player.setVolume(0.5), player.play]);
+      });
+
+      test('a sound without a fade keeps its volume', () async {
+        await preview.setTracks([track(volume: 0.6)]);
+        final player = players.single;
+        clearInteractions(player);
+
+        await preview.syncTo(
+          const Duration(milliseconds: 500),
+          isPlaying: true,
+        );
+        await preview.syncTo(const Duration(seconds: 1), isPlaying: true);
+
+        verifyNever(() => player.setVolume(any()));
+      });
     });
 
     test('starts a sound when the playhead enters its window', () async {

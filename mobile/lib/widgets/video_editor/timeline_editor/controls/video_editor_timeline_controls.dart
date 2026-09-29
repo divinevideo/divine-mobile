@@ -8,6 +8,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     required this.onDone,
     this.onDelete,
     this.onEdit,
+    this.onFade,
+    this.hasFade = false,
     this.onDuplicated,
     this.onSplit,
     this.onDetach,
@@ -42,6 +44,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
 
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
+
+  /// Opens the fade in / fade out sheet. Sound overlays only.
+  final VoidCallback? onFade;
+
+  /// Whether the selected sound already fades in or out, which highlights
+  /// the action so the fade is visible from the timeline.
+  final bool hasFade;
   final VoidCallback? onDuplicated;
   final VoidCallback? onSplit;
 
@@ -157,6 +166,15 @@ class VideoEditorTimelineControls extends StatelessWidget {
                       semanticLabel:
                           context.l10n.videoEditorEditSelectedItemSemanticLabel,
                       onPressed: onEdit,
+                    ),
+                  if (onFade != null)
+                    _ControlButton(
+                      icon: .speakerHigh,
+                      label: context.l10n.videoEditorFadeLabel,
+                      semanticLabel:
+                          context.l10n.videoEditorFadeSoundSemanticLabel,
+                      onPressed: onFade,
+                      type: hasFade ? .primary : .secondary,
                     ),
                   if (onDuplicated != null)
                     _ControlButton(

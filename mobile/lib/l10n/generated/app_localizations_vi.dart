@@ -9318,6 +9318,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Tốc độ clip';
 
   @override
+  String get videoEditorFadeLabel => 'Tăng giảm dần';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Đặt tăng dần và giảm dần cho âm thanh đã chọn';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Tăng dần & giảm dần';
+
+  @override
+  String get videoEditorFadeInLabel => 'Tăng dần';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Giảm dần';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Chuyển cảnh';
 
   @override

@@ -9366,6 +9366,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Kelajuan Klip';
 
   @override
+  String get videoEditorFadeLabel => 'Pudar';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Tetapkan masuk dan keluar perlahan untuk bunyi dipilih';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Masuk & keluar perlahan';
+
+  @override
+  String get videoEditorFadeInLabel => 'Masuk perlahan';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Keluar perlahan';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Peralihan';
 
   @override

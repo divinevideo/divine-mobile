@@ -5786,6 +5786,11 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorFadeLabel": "ఫేడ్",
+  "videoEditorFadeSoundSemanticLabel": "ఎంచుకున్న ధ్వని కోసం ఫేడ్ ఇన్, ఫేడ్ అవుట్ సెట్ చేయండి",
+  "videoEditorFadeSheetTitle": "ఫేడ్ ఇన్ & అవుట్",
+  "videoEditorFadeInLabel": "ఫేడ్ ఇన్",
+  "videoEditorFadeOutLabel": "ఫేడ్ అవుట్",
   "videoEditorTransitionSheetTitle": "పరివర్తన",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

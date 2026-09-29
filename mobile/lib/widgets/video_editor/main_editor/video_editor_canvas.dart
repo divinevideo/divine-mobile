@@ -26,6 +26,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/clip_history_direction.dart';
 import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
@@ -1620,6 +1621,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           ),
           windowStart: item.startTime,
           windowEnd: item.endTime,
+          fadeIn: sound.fadeInDuration,
+          fadeOut: sound.fadeOutDuration,
         ),
       );
     }
@@ -1654,6 +1657,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // would throw.
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioEvents = overlayState.audioTracks;
+    final outputEnd = renderedAudioEnd(
+      context.read<ClipEditorBloc>().state.clips,
+    );
 
     final soundItems = overlayState.items
         .where((item) => item.type == TimelineOverlayType.sound)
@@ -1677,6 +1683,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       final sound = audioById[item.id];
       if (sound == null || sound.url == null) continue;
 
+      // A fade out ends where the export's does; see [fadedSoundEnd].
+      final videoEndTime = fadedSoundEnd(
+        startTime: item.startTime,
+        endTime: item.endTime,
+        fadeOut: sound.fadeOutDuration,
+        outputEnd: outputEnd,
+      );
+
       try {
         final AudioTrack track;
         if (sound.isBundled && sound.assetPath != null) {
@@ -1687,8 +1701,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -1698,8 +1714,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         } else {
           track = AudioTrack.network(
@@ -1709,8 +1727,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               isVoiceOverPreview: isVoiceOverPreview,
             ),
             videoStartTime: item.startTime,
-            videoEndTime: item.endTime,
+            videoEndTime: videoEndTime,
             trackStart: sound.startOffset,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
           );
         }
         tracks.add(track);

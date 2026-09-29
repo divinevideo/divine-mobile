@@ -1715,6 +1715,51 @@ void main() {
       });
     });
 
+    group('fade', () {
+      final faded = AudioEvent(
+        id: 'fade-id-12345678901234567890123456789012345678901234567890123',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: 'https://example.com/audio.aac',
+        fadeInDuration: const Duration(milliseconds: 500),
+        fadeOutDuration: const Duration(milliseconds: 1500),
+      );
+
+      test('defaults to none', () {
+        final plain = AudioEvent(
+          id: 'plain-id-1234567890123456789012345678901234567890123456789012',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+        );
+
+        expect(plain.fadeInDuration, Duration.zero);
+        expect(plain.fadeOutDuration, Duration.zero);
+        expect(plain.hasFade, isFalse);
+        expect(plain.toJson(), isNot(contains('fadeInMs')));
+        expect(plain.toJson(), isNot(contains('fadeOutMs')));
+      });
+
+      test('survives a toJson/fromJson roundtrip', () {
+        final restored = AudioEvent.fromJson(faded.toJson());
+
+        expect(restored.fadeInDuration, const Duration(milliseconds: 500));
+        expect(restored.fadeOutDuration, const Duration(milliseconds: 1500));
+        expect(restored.hasFade, isTrue);
+      });
+
+      test('is part of equality, so a fade-only edit is a change', () {
+        expect(faded.copyWith(fadeInDuration: Duration.zero), isNot(faded));
+        expect(faded.copyWith(fadeOutDuration: Duration.zero), isNot(faded));
+        expect(faded.copyWith(title: 'Renamed'), equals(faded));
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        final tags = faded.toTags().expand((tag) => tag);
+
+        expect(tags.any((value) => value.contains('fade')), isFalse);
+      });
+    });
+
     group('isClipAnchoredOriginalSound', () {
       test('is true for an original sound anchored to a clip', () {
         final event = AudioEvent(

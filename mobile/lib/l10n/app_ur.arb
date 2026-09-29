@@ -4920,6 +4920,11 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorFadeLabel": "فیڈ",
+  "videoEditorFadeSoundSemanticLabel": "منتخب آواز کے لیے فیڈ اِن اور فیڈ آؤٹ مقرر کریں",
+  "videoEditorFadeSheetTitle": "فیڈ اِن اور آؤٹ",
+  "videoEditorFadeInLabel": "فیڈ اِن",
+  "videoEditorFadeOutLabel": "فیڈ آؤٹ",
   "videoEditorTransitionSheetTitle": "ٹرانزیشن",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

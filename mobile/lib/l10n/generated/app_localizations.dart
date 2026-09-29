@@ -15948,6 +15948,36 @@ abstract class AppLocalizations {
   /// **'Clip Speed'**
   String get videoEditorSpeedSheetTitle;
 
+  /// Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade'**
+  String get videoEditorFadeLabel;
+
+  /// Accessibility label for the Fade button in the sound's timeline controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade the selected sound in and out'**
+  String get videoEditorFadeSoundSemanticLabel;
+
+  /// Title of the bottom sheet for setting how long a sound fades in and out.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade in & out'**
+  String get videoEditorFadeSheetTitle;
+
+  /// Label of the slider for how long a sound rises from silence to full volume when it starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade in'**
+  String get videoEditorFadeInLabel;
+
+  /// Label of the slider for how long a sound falls from full volume to silence before it ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade out'**
+  String get videoEditorFadeOutLabel;
+
   /// Title of the bottom sheet for choosing the transition between two adjacent clips.
   ///
   /// In en, this message translates to:

@@ -9309,6 +9309,22 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'سرعة المقطع';
 
   @override
+  String get videoEditorFadeLabel => 'تلاشٍ';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'تعيين الرفع والخفض التدريجي للصوت المحدد';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'رفع وخفض تدريجي';
+
+  @override
+  String get videoEditorFadeInLabel => 'رفع تدريجي';
+
+  @override
+  String get videoEditorFadeOutLabel => 'خفض تدريجي';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'انتقال';
 
   @override

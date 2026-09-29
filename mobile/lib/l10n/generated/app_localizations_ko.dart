@@ -8915,6 +8915,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => '클립 속도';
 
   @override
+  String get videoEditorFadeLabel => '페이드';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel => '선택한 사운드의 페이드 인/아웃 설정';
+
+  @override
+  String get videoEditorFadeSheetTitle => '페이드 인/아웃';
+
+  @override
+  String get videoEditorFadeInLabel => '페이드 인';
+
+  @override
+  String get videoEditorFadeOutLabel => '페이드 아웃';
+
+  @override
   String get videoEditorTransitionSheetTitle => '전환';
 
   @override

@@ -9496,6 +9496,22 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Vitesse du clip';
 
   @override
+  String get videoEditorFadeLabel => 'Fondu';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Définir le fondu d\'entrée et de sortie du son sélectionné';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fondu d\'entrée et de sortie';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fondu d\'entrée';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fondu de sortie';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transition';
 
   @override

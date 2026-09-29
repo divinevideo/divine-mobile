@@ -99,6 +99,8 @@ void main() {
           videoEndTime: Duration(seconds: 25),
           trackStart: Duration(seconds: 10),
           trackEnd: Duration(seconds: 30),
+          fadeInDuration: Duration(milliseconds: 500),
+          fadeOutDuration: Duration(seconds: 2),
         );
         final map = track.toMap();
 
@@ -108,6 +110,8 @@ void main() {
         expect(map['videoEndMs'], equals(25000));
         expect(map['trackStartMs'], equals(10000));
         expect(map['trackEndMs'], equals(30000));
+        expect(map['fadeInMs'], equals(500));
+        expect(map['fadeOutMs'], equals(2000));
       });
 
       test('serializes null end times', () {
@@ -125,6 +129,8 @@ void main() {
         expect(map['volume'], equals(1.0));
         expect(map['videoStartMs'], isZero);
         expect(map['trackStartMs'], isZero);
+        expect(map['fadeInMs'], isZero);
+        expect(map['fadeOutMs'], isZero);
       });
     });
 
@@ -159,6 +165,8 @@ void main() {
           videoEndTime: const Duration(seconds: 20),
           trackStart: const Duration(seconds: 5),
           trackEnd: const Duration(seconds: 15),
+          fadeInDuration: const Duration(seconds: 1),
+          fadeOutDuration: const Duration(seconds: 2),
           bundle: bundle,
         );
 
@@ -171,6 +179,8 @@ void main() {
         expect(track.videoEndTime, equals(const Duration(seconds: 20)));
         expect(track.trackStart, equals(const Duration(seconds: 5)));
         expect(track.trackEnd, equals(const Duration(seconds: 15)));
+        expect(track.fadeInDuration, equals(const Duration(seconds: 1)));
+        expect(track.fadeOutDuration, equals(const Duration(seconds: 2)));
         expect(File(track.uri).existsSync(), isTrue);
         expect(File(track.uri).readAsBytesSync(), equals(testBytes));
       });
@@ -207,6 +217,8 @@ void main() {
           videoEndTime: const Duration(seconds: 10),
           trackStart: const Duration(seconds: 3),
           trackEnd: const Duration(seconds: 8),
+          fadeInDuration: const Duration(milliseconds: 300),
+          fadeOutDuration: const Duration(milliseconds: 700),
         );
 
         expect(track.uri, contains('test_audio.mp3'));
@@ -218,6 +230,11 @@ void main() {
         expect(track.videoEndTime, equals(const Duration(seconds: 10)));
         expect(track.trackStart, equals(const Duration(seconds: 3)));
         expect(track.trackEnd, equals(const Duration(seconds: 8)));
+        expect(track.fadeInDuration, equals(const Duration(milliseconds: 300)));
+        expect(
+          track.fadeOutDuration,
+          equals(const Duration(milliseconds: 700)),
+        );
         expect(File(track.uri).existsSync(), isTrue);
         expect(File(track.uri).readAsBytesSync(), equals(bytes));
       });

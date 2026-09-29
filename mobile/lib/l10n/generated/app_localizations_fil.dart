@@ -9430,6 +9430,22 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Bilis ng Clip';
 
   @override
+  String get videoEditorFadeLabel => 'Fade';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Itakda ang fade in at fade out ng napiling sound';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fade in at fade out';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fade in';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fade out';
+
+  @override
   String get videoEditorTransitionSheetTitle => 'Transisyon';
 
   @override
