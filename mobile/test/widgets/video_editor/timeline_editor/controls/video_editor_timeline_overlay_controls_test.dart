@@ -514,6 +514,57 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('sending a detached clip back brings only what the bar still '
+          'shows once the composition got shorter', (tester) async {
+        final clipBloc = _MockClipEditorBloc();
+        when(() => clipBloc.isClosed).thenReturn(false);
+        final clip = DivineVideoClip(
+          id: 'clip-b',
+          video: EditorVideo.file('/docs/clip-b.mp4'),
+          duration: const Duration(seconds: 6),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: model.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        final meta = DetachedClipLayerData(
+          clip: clip,
+          layerId: 'detached-1',
+        ).toMeta();
+        // Placed over 1 s to 5 s; the composition has since shrunk to 3 s, and
+        // the timeline clamps the bar (and what plays) to that, though the
+        // layer itself still says 5 s.
+        final layer = WidgetLayer(
+          id: 'detached-1',
+          widget: const SizedBox.shrink(),
+          meta: meta,
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 5),
+          exportConfigs: WidgetLayerExportConfigs(id: 'detached-1', meta: meta),
+        );
+        when(() => mockEditor.activeLayers).thenReturn([layer]);
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+        const item = TimelineOverlayItem(
+          id: 'detached-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration(seconds: 1),
+          endTime: Duration(seconds: 3),
+        );
+        await tester.pumpWidget(
+          buildWithEditor(item, mockEditor, mainBloc, clipBloc: clipBloc),
+        );
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorReattachSemanticLabel),
+        );
+        await tester.pump();
+
+        final event =
+            verify(() => clipBloc.add(captureAny())).captured.single
+                as ClipEditorDetachedClipReattachRequested;
+        // Two seconds are on screen; the other two were never shown.
+        expect(event.window, const Duration(seconds: 2));
+      });
+
       testWidgets('splitting a detached clip offsets the tail into the clip', (
         tester,
       ) async {

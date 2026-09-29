@@ -164,7 +164,7 @@ class _LayerOverlayControls extends StatelessWidget {
   Future<void> _reattachLayer({required BuildContext context}) async {
     final layer = _liveLayer(context);
     if (layer == null) return;
-    await reattachDetachedClip(context, layer);
+    await reattachDetachedClip(context, layer, item: item);
   }
 
   Future<void> _transformLayer({required BuildContext context}) async {
