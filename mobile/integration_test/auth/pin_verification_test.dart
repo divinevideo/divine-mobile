@@ -48,93 +48,88 @@ void main() {
             '@test.divine.video';
         const password = 'TestPass123!';
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-        final semanticsHandle = tester.ensureSemantics();
+        await runWithAppErrorHandlers(() async {
+          final semanticsHandle = tester.ensureSemantics();
 
-        // 1. First launch + register -> land on the verification screen.
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          // 1. First launch + register -> land on the verification screen.
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        await navigateToCreateAccount(tester);
-        await registerNewUser(tester, testEmail, password);
+          await navigateToCreateAccount(tester);
+          await registerNewUser(tester, testEmail, password);
 
-        expect(
-          await waitForText(tester, _en.authCompleteRegistration),
-          isTrue,
-          reason: 'Registration should land on the verification screen',
-        );
+          expect(
+            await waitForText(tester, _en.authCompleteRegistration),
+            isTrue,
+            reason: 'Registration should land on the verification screen',
+          );
 
-        // 2. Seed a PIN keycast can verify (the real PIN is bcrypt-hashed and
-        // never surfaced, so we write a known hash and type the known value).
-        await seedKnownPin(testEmail);
+          // 2. Seed a PIN keycast can verify (the real PIN is bcrypt-hashed and
+          // never surfaced, so we write a known hash and type the known value).
+          await seedKnownPin(testEmail);
 
-        // 3. Simulate a cold start. A literal OS kill ends a patrol test, so
-        // re-launching app.main() (local storage persists) is the faithful way
-        // to exercise the startup restore path.
-        logPhase('Cold start: relaunching app.main()');
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          // 3. Simulate a cold start. A literal OS kill ends a patrol test, so
+          // re-launching app.main() (local storage persists) is the faithful way
+          // to exercise the startup restore path.
+          logPhase('Cold start: relaunching app.main()');
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        // 4. The app should restore to the verification screen with the PIN
-        // field visible and still polling — not Welcome.
-        expect(
-          await waitForText(tester, _en.authCompleteRegistration),
-          isTrue,
-          reason: 'Cold start should restore the verification screen',
-        );
-        expect(
-          find.text(_en.authVerificationPinPrompt),
-          findsOneWidget,
-          reason: 'Restored screen should show the PIN entry field',
-        );
-        expect(
-          find.text(_en.authWaitingForVerification),
-          findsOneWidget,
-          reason: 'Restored screen should still be polling',
-        );
+          // 4. The app should restore to the verification screen with the PIN
+          // field visible and still polling — not Welcome.
+          expect(
+            await waitForText(tester, _en.authCompleteRegistration),
+            isTrue,
+            reason: 'Cold start should restore the verification screen',
+          );
+          expect(
+            find.text(_en.authVerificationPinPrompt),
+            findsOneWidget,
+            reason: 'Restored screen should show the PIN entry field',
+          );
+          expect(
+            find.text(_en.authWaitingForVerification),
+            findsOneWidget,
+            reason: 'Restored screen should still be polling',
+          );
 
-        // 5. The escape hatch must be reachable (register / log in as a
-        // different user) without being a dead-end.
-        expect(
-          _closeButton(),
-          findsOneWidget,
-          reason:
-              'Restored screen must offer a close / start-over escape hatch',
-        );
+          // 5. The escape hatch must be reachable (register / log in as a
+          // different user) without being a dead-end.
+          expect(
+            _closeButton(),
+            findsOneWidget,
+            reason:
+                'Restored screen must offer a close / start-over escape hatch',
+          );
 
-        // 6. Type the seeded PIN and submit -> sign-in completes via the
-        // restored deviceCode/verifier (proves the persisted record still
-        // exchanges).
-        await tester.enterText(_pinField(), knownPin);
-        await tester.pumpAndSettle();
-        await tester.tap(
-          find.widgetWithText(DivineButton, _en.authVerificationPinSubmit),
-        );
+          // 6. Type the seeded PIN and submit -> sign-in completes via the
+          // restored deviceCode/verifier (proves the persisted record still
+          // exchanges).
+          await tester.enterText(_pinField(), knownPin);
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.widgetWithText(DivineButton, _en.authVerificationPinSubmit),
+          );
 
-        expect(
-          await waitForTextGone(tester, _en.authCompleteRegistration),
-          isTrue,
-          reason: 'Submitting the PIN should leave the verification screen',
-        );
-        await pumpUntilSettled(tester);
+          expect(
+            await waitForTextGone(tester, _en.authCompleteRegistration),
+            isTrue,
+            reason: 'Submitting the PIN should leave the verification screen',
+          );
+          await pumpUntilSettled(tester);
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(MaterialApp)),
-        );
-        expect(
-          container.read(authServiceProvider).isAuthenticated,
-          isTrue,
-          reason: 'PIN verification should complete sign-in',
-        );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MaterialApp)),
+          );
+          expect(
+            container.read(authServiceProvider).isAuthenticated,
+            isTrue,
+            reason: 'PIN verification should complete sign-in',
+          );
 
-        semanticsHandle.dispose();
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          semanticsHandle.dispose();
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 5)),
     );
@@ -149,63 +144,62 @@ void main() {
             '@test.divine.video';
         const password = 'TestPass123!';
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-        final semanticsHandle = tester.ensureSemantics();
+        await runWithAppErrorHandlers(() async {
+          final semanticsHandle = tester.ensureSemantics();
 
-        // Register, then cold-start to land on the restored screen.
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          // Register, then cold-start to land on the restored screen.
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        await navigateToCreateAccount(tester);
-        await registerNewUser(tester, testEmail, password);
-        expect(await waitForText(tester, _en.authCompleteRegistration), isTrue);
+          await navigateToCreateAccount(tester);
+          await registerNewUser(tester, testEmail, password);
+          expect(
+            await waitForText(tester, _en.authCompleteRegistration),
+            isTrue,
+          );
 
-        logPhase('Cold start: relaunching app.main()');
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
-        expect(
-          await waitForText(tester, _en.authCompleteRegistration),
-          isTrue,
-          reason: 'Cold start should restore the verification screen',
-        );
+          logPhase('Cold start: relaunching app.main()');
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
+          expect(
+            await waitForText(tester, _en.authCompleteRegistration),
+            isTrue,
+            reason: 'Cold start should restore the verification screen',
+          );
 
-        // Tap the escape hatch -> back to Welcome.
-        await tester.tap(_closeButton());
-        await tester.pumpAndSettle(const Duration(seconds: 1));
-        expect(
-          await waitForText(tester, _en.authCreateNewAccount),
-          isTrue,
-          reason: 'Escape hatch should return to the Welcome screen',
-        );
-        expect(
-          find.byType(EmailVerificationScreen),
-          findsNothing,
-          reason: 'Escape hatch should leave the verification screen',
-        );
+          // Tap the escape hatch -> back to Welcome.
+          await tester.tap(_closeButton());
+          await tester.pumpAndSettle(const Duration(seconds: 1));
+          expect(
+            await waitForText(tester, _en.authCreateNewAccount),
+            isTrue,
+            reason: 'Escape hatch should return to the Welcome screen',
+          );
+          expect(
+            find.byType(EmailVerificationScreen),
+            findsNothing,
+            reason: 'Escape hatch should leave the verification screen',
+          );
 
-        // The record must be cleared: a second cold start must NOT restore.
-        logPhase('Cold start 2: should NOT restore (record cleared)');
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
-        expect(
-          await waitForText(tester, _en.authCreateNewAccount),
-          isTrue,
-          reason: 'Cleared record means the second cold start stays on Welcome',
-        );
-        expect(
-          find.text(_en.authCompleteRegistration),
-          findsNothing,
-          reason: 'Cleared record must not restore the verification screen',
-        );
+          // The record must be cleared: a second cold start must NOT restore.
+          logPhase('Cold start 2: should NOT restore (record cleared)');
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
+          expect(
+            await waitForText(tester, _en.authCreateNewAccount),
+            isTrue,
+            reason:
+                'Cleared record means the second cold start stays on Welcome',
+          );
+          expect(
+            find.text(_en.authCompleteRegistration),
+            findsNothing,
+            reason: 'Cleared record must not restore the verification screen',
+          );
 
-        semanticsHandle.dispose();
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          semanticsHandle.dispose();
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 5)),
     );

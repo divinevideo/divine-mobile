@@ -171,53 +171,52 @@ void main() {
     testWidgets(
       'stays optimistic and parks exactly one outgoing_dms row',
       (tester) async {
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
+        await runWithAppErrorHandlers(() async {
+          // A relay that accepts the frame but never sends `OK` — the exact
+          // soft/unconfirmed shape the issue calls the worse case.
+          final relay = await FakeRelay.start(okConfirms: false);
+          addTearDown(relay.stop);
+          final stack = await buildStack(relay);
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          final preferences = await SharedPreferences.getInstance();
 
-        // A relay that accepts the frame but never sends `OK` — the exact
-        // soft/unconfirmed shape the issue calls the worse case.
-        final relay = await FakeRelay.start(okConfirms: false);
-        addTearDown(relay.stop);
-        final stack = await buildStack(relay);
-        SharedPreferences.setMockInitialValues(<String, Object>{});
-        final preferences = await SharedPreferences.getInstance();
+          await tester.pumpWidget(wrap(stack.repository, preferences));
+          await tester.pump();
 
-        await tester.pumpWidget(wrap(stack.repository, preferences));
-        await tester.pump();
+          final l10n = lookupAppLocalizations(const Locale('en'));
 
-        final l10n = lookupAppLocalizations(const Locale('en'));
+          // ── First send ──
+          logPhase('── Phase 1: first send (will go unconfirmed) ──');
+          await tester.enterText(find.byType(TextField), 'reel reply probe');
+          await tester.pump();
+          await tester.tap(find.byType(IconButton));
+          await tester.pump();
 
-        // ── First send ──
-        logPhase('── Phase 1: first send (will go unconfirmed) ──');
-        await tester.enterText(find.byType(TextField), 'reel reply probe');
-        await tester.pump();
-        await tester.tap(find.byType(IconButton));
-        await tester.pump();
+          // Let the send run its full OK-confirm budget. A soft-unconfirmed
+          // result is durable and retryable in the background, so it must stay
+          // optimistic instead of presenting the manual hard-failure action.
+          await pumpUntilSettled(tester, maxSeconds: 20);
+          expect(find.text(l10n.dmSendFailedRetry), findsNothing);
 
-        // Let the send run its full OK-confirm budget. A soft-unconfirmed
-        // result is durable and retryable in the background, so it must stay
-        // optimistic instead of presenting the manual hard-failure action.
-        await pumpUntilSettled(tester, maxSeconds: 20);
-        expect(find.text(l10n.dmSendFailedRetry), findsNothing);
-
-        final afterFirst = await stack.db.outgoingDmsDao.getForConversation(
-          conversationId: replyContext.conversationId,
-          ownerPubkey: senderPubkey,
-        );
-        logPhase('rows after first send: ${afterFirst.length}');
-        for (final row in afterFirst) {
-          logPhase('  row id=${row.id} content="${row.content}"');
-        }
-        expect(
-          afterFirst,
-          hasLength(1),
-          reason: 'the first send must park exactly one durable row',
-        );
-        expect(
-          afterFirst.single.content,
-          'reel reply probe',
-          reason: 'the parked row still carries the reply text',
-        );
+          final afterFirst = await stack.db.outgoingDmsDao.getForConversation(
+            conversationId: replyContext.conversationId,
+            ownerPubkey: senderPubkey,
+          );
+          logPhase('rows after first send: ${afterFirst.length}');
+          for (final row in afterFirst) {
+            logPhase('  row id=${row.id} content="${row.content}"');
+          }
+          expect(
+            afterFirst,
+            hasLength(1),
+            reason: 'the first send must park exactly one durable row',
+          );
+          expect(
+            afterFirst.single.content,
+            'reel reply probe',
+            reason: 'the parked row still carries the reply text',
+          );
+        });
       },
       timeout: const Timeout(Duration(minutes: 3)),
     );

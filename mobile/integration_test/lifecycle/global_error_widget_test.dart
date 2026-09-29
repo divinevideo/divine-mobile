@@ -31,60 +31,54 @@ void main() {
       'a widget that throws during build renders the branded surface, and '
       'Back leaves it',
       (tester) async {
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
+        await runWithAppErrorHandlers(() async {
+          launchAppGuarded(app.main);
 
-        launchAppGuarded(app.main);
+          // The blocking startup sequence ends in runApp; the root navigator
+          // exists once the router has built. pumpAndSettle never returns here
+          // because the app keeps polling timers alive.
+          var navigator = NavigatorKeys.root.currentState;
+          for (var i = 0; i < 120 && navigator == null; i++) {
+            await tester.pump(const Duration(milliseconds: 500));
+            navigator = NavigatorKeys.root.currentState;
+          }
+          expect(
+            navigator,
+            isNotNull,
+            reason: 'the app never reached its root navigator',
+          );
 
-        // The blocking startup sequence ends in runApp; the root navigator
-        // exists once the router has built. pumpAndSettle never returns here
-        // because the app keeps polling timers alive.
-        var navigator = NavigatorKeys.root.currentState;
-        for (var i = 0; i < 120 && navigator == null; i++) {
-          await tester.pump(const Duration(milliseconds: 500));
-          navigator = NavigatorKeys.root.currentState;
-        }
-        expect(
-          navigator,
-          isNotNull,
-          reason: 'the app never reached its root navigator',
-        );
+          navigator!.push(
+            MaterialPageRoute<void>(builder: (_) => const _ThrowsOnBuild()),
+          );
+          await pumpUntilSettled(tester, maxSeconds: 2);
 
-        navigator!.push(
-          MaterialPageRoute<void>(builder: (_) => const _ThrowsOnBuild()),
-        );
-        await pumpUntilSettled(tester, maxSeconds: 2);
+          final showsStartupSurface = find
+              .text('Oops, something went wrong')
+              .evaluate()
+              .isNotEmpty;
+          expect(
+            find.text('got a bit tangled'),
+            findsOneWidget,
+            reason:
+                'the branded error surface must replace the failing widget '
+                '(minimal startup surface rendered instead: '
+                '$showsStartupSurface)',
+          );
+          expect(
+            ErrorWidget.builder,
+            same(buildGlobalErrorWidget),
+            reason: 'main() must install buildGlobalErrorWidget',
+          );
 
-        final showsStartupSurface = find
-            .text('Oops, something went wrong')
-            .evaluate()
-            .isNotEmpty;
-        expect(
-          find.text('got a bit tangled'),
-          findsOneWidget,
-          reason:
-              'the branded error surface must replace the failing widget '
-              '(minimal startup surface rendered instead: '
-              '$showsStartupSurface)',
-        );
-        expect(
-          ErrorWidget.builder,
-          same(buildGlobalErrorWidget),
-          reason: 'main() must install buildGlobalErrorWidget',
-        );
+          // The page was pushed over the app's own route, so there is something
+          // to pop and the surface has to offer the way out itself.
+          await tester.tap(find.byType(DivineIconButton));
+          await pumpUntilSettled(tester, maxSeconds: 2);
+          expect(find.text('got a bit tangled'), findsNothing);
 
-        // The page was pushed over the app's own route, so there is something
-        // to pop and the surface has to offer the way out itself.
-        await tester.tap(find.byType(DivineIconButton));
-        await pumpUntilSettled(tester, maxSeconds: 2);
-        expect(find.text('got a bit tangled'), findsNothing);
-
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 3)),
     );

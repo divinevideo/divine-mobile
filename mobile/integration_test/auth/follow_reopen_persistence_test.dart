@@ -27,115 +27,112 @@ void main() {
             'follow-reopen-${DateTime.now().millisecondsSinceEpoch}@test.divine.video';
         const password = 'TestPass123!';
 
-        final originalOnError = suppressSetStateErrors();
-        addTearDown(() => restoreErrorHandler(originalOnError));
-        final originalErrorBuilder = saveErrorWidgetBuilder();
-        addTearDown(() => restoreErrorWidgetBuilder(originalErrorBuilder));
-        final semanticsHandle = tester.ensureSemantics();
+        await runWithAppErrorHandlers(() async {
+          final semanticsHandle = tester.ensureSemantics();
 
-        launchAppGuarded(app.main);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
+          launchAppGuarded(app.main);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
 
-        await navigateToCreateAccount(tester);
-        await registerNewUser(tester, testEmail, password);
+          await navigateToCreateAccount(tester);
+          await registerNewUser(tester, testEmail, password);
 
-        final foundVerifyScreen = await waitForText(
-          tester,
-          'Complete your registration',
-        );
-        expect(
-          foundVerifyScreen,
-          isTrue,
-          reason: 'Registration should navigate to email verification',
-        );
+          final foundVerifyScreen = await waitForText(
+            tester,
+            'Complete your registration',
+          );
+          expect(
+            foundVerifyScreen,
+            isTrue,
+            reason: 'Registration should navigate to email verification',
+          );
 
-        final verifyToken = await getVerificationToken(testEmail);
-        expect(
-          verifyToken,
-          isNotEmpty,
-          reason: 'Local Keycast DB should contain verification token',
-        );
+          final verifyToken = await getVerificationToken(testEmail);
+          expect(
+            verifyToken,
+            isNotEmpty,
+            reason: 'Local Keycast DB should contain verification token',
+          );
 
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(MaterialApp)),
-        );
-        await container
-            .read(emailVerificationListenerProvider)
-            .handleUri(
-              Uri.parse(
-                'https://login.divine.video/verify-email?token=$verifyToken',
-              ),
-            );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MaterialApp)),
+          );
+          await container
+              .read(emailVerificationListenerProvider)
+              .handleUri(
+                Uri.parse(
+                  'https://login.divine.video/verify-email?token=$verifyToken',
+                ),
+              );
 
-        final leftVerifyScreen = await waitForTextGone(
-          tester,
-          'Complete your registration',
-        );
-        expect(
-          leftVerifyScreen,
-          isTrue,
-          reason: 'Verification should complete and leave verification screen',
-        );
-        await pumpUntilSettled(tester, maxSeconds: 3);
+          final leftVerifyScreen = await waitForTextGone(
+            tester,
+            'Complete your registration',
+          );
+          expect(
+            leftVerifyScreen,
+            isTrue,
+            reason:
+                'Verification should complete and leave verification screen',
+          );
+          await pumpUntilSettled(tester, maxSeconds: 3);
 
-        final author = await publishTestVideoEvent(
-          title: 'Follow Reopen Persistence Video',
-        );
-        await publishTestProfileEvent(
-          name: 'Follow Reopen Author',
-          displayName: 'Follow Reopen Author',
-          about: 'E2E follow persistence author',
-          privateKey: author.privateKey,
-        );
+          final author = await publishTestVideoEvent(
+            title: 'Follow Reopen Persistence Video',
+          );
+          await publishTestProfileEvent(
+            name: 'Follow Reopen Author',
+            displayName: 'Follow Reopen Author',
+            about: 'E2E follow persistence author',
+            privateKey: author.privateKey,
+          );
 
-        final followRepository = container.read(followRepositoryProvider);
-        await followRepository.follow(author.pubkey);
-        expect(
-          followRepository.isFollowing(author.pubkey),
-          isTrue,
-          reason: 'FollowRepository should record the followed author',
-        );
-        expect(
-          container.read(cachedFollowingListProvider),
-          contains(author.pubkey),
-          reason: 'Cached following list should include the followed author',
-        );
+          final followRepository = container.read(followRepositoryProvider);
+          await followRepository.follow(author.pubkey);
+          expect(
+            followRepository.isFollowing(author.pubkey),
+            isTrue,
+            reason: 'FollowRepository should record the followed author',
+          );
+          expect(
+            container.read(cachedFollowingListProvider),
+            contains(author.pubkey),
+            reason: 'Cached following list should include the followed author',
+          );
 
-        await $.platformAutomator.mobile.pressHome();
-        await Future<void>.delayed(const Duration(seconds: 2));
-        await $.platformAutomator.mobile.openApp();
-        await tester.pump(const Duration(seconds: 3));
+          await $.platformAutomator.mobile.pressHome();
+          await Future<void>.delayed(const Duration(seconds: 2));
+          await $.platformAutomator.mobile.openApp();
+          await tester.pump(const Duration(seconds: 3));
 
-        container.invalidate(followRepositoryProvider);
-        await tester.pump(const Duration(milliseconds: 250));
-        final reloadedFollowRepository = container.read(
-          followRepositoryProvider,
-        );
-        for (var i = 0; i < 40; i++) {
+          container.invalidate(followRepositoryProvider);
           await tester.pump(const Duration(milliseconds: 250));
-          if (reloadedFollowRepository.isFollowing(author.pubkey)) break;
-        }
+          final reloadedFollowRepository = container.read(
+            followRepositoryProvider,
+          );
+          for (var i = 0; i < 40; i++) {
+            await tester.pump(const Duration(milliseconds: 250));
+            if (reloadedFollowRepository.isFollowing(author.pubkey)) break;
+          }
 
-        expect(
-          reloadedFollowRepository.isFollowing(author.pubkey),
-          isTrue,
-          reason:
-              'Follow state should survive app reopen and repository reload',
-        );
-        // cachedFollowingListProvider is keepAlive, so force it to re-read
-        // SharedPreferences rather than reusing the pre-background value.
-        container.invalidate(cachedFollowingListProvider);
-        expect(
-          container.read(cachedFollowingListProvider),
-          contains(author.pubkey),
-          reason: 'Cached following list should still include followed author',
-        );
+          expect(
+            reloadedFollowRepository.isFollowing(author.pubkey),
+            isTrue,
+            reason:
+                'Follow state should survive app reopen and repository reload',
+          );
+          // cachedFollowingListProvider is keepAlive, so force it to re-read
+          // SharedPreferences rather than reusing the pre-background value.
+          container.invalidate(cachedFollowingListProvider);
+          expect(
+            container.read(cachedFollowingListProvider),
+            contains(author.pubkey),
+            reason:
+                'Cached following list should still include followed author',
+          );
 
-        semanticsHandle.dispose();
-        drainAsyncErrors(tester);
-        // Inline restore is required by the framework's end-of-body
-        // ErrorWidget.builder check; the addTearDown above covers throws.
-        restoreErrorWidgetBuilder(originalErrorBuilder);
+          semanticsHandle.dispose();
+          drainAsyncErrors(tester);
+        });
       },
       timeout: const Timeout(Duration(minutes: 4)),
     );
