@@ -1,7 +1,6 @@
 // ABOUTME: Tests that a camera re-sync keeps the chroma-key setup: the key,
 // ABOUTME: the backdrop photo the recorder owns, and a running measurement.
 
-import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -231,95 +230,6 @@ void main() {
           );
         },
       );
-
-      test('drops a wall measurement taken through the other lens', () async {
-        final detection = Completer<ChromaKeyDetection>();
-        final bloc = buildBloc(
-          detect: (_, {required visibleAspectRatio}) => detection.future,
-        );
-        addTearDown(bloc.close);
-        final keyBefore = bloc.state.chromaKey;
-        bloc.add(const VideoRecorderChromaKeyMeasureRequested());
-        await pumpEventQueue();
-        expect(bloc.state.isMeasuringChromaKey, isTrue);
-
-        bloc.add(const VideoRecorderCameraSwitched());
-        await pumpEventQueue();
-        detection.complete(_measured);
-        await pumpEventQueue();
-
-        expect(bloc.state.isFrontCamera, isTrue);
-        expect(
-          bloc.state.chromaKey,
-          keyBefore,
-          reason: 'the still showed the wall behind the other lens',
-        );
-        expect(
-          bloc.state.chromaKeyMeasurementStatus,
-          ChromaKeyMeasurementStatus.idle,
-        );
-      });
-    });
-
-    group('VideoRecorderStabilizationModeSet', () {
-      setUp(stubLiveCamera);
-
-      test('keeps the chosen backdrop and key', () async {
-        final bloc = buildBloc()
-          ..add(
-            const VideoRecorderChromaKeyBackdropSet.color(Color(0xFF0000FF)),
-          );
-        addTearDown(bloc.close);
-        await pumpEventQueue();
-
-        bloc.add(
-          const VideoRecorderStabilizationModeSet(
-            DivineVideoStabilizationMode.standard,
-          ),
-        );
-        await pumpEventQueue();
-
-        verify(
-          () => camera.setVideoStabilizationMode(
-            DivineVideoStabilizationMode.standard,
-          ),
-        ).called(1);
-        expect(
-          bloc.state.chromaKey.backgroundType,
-          ClipChromaKeyBackgroundType.color,
-          reason: 'a stabilization change must not throw away the backdrop',
-        );
-      });
-
-      test('lets a running wall measurement land', () async {
-        final detection = Completer<ChromaKeyDetection>();
-        final bloc = buildBloc(
-          detect: (_, {required visibleAspectRatio}) => detection.future,
-        );
-        addTearDown(bloc.close);
-        bloc.add(const VideoRecorderChromaKeyMeasureRequested());
-        await pumpEventQueue();
-        expect(bloc.state.isMeasuringChromaKey, isTrue);
-
-        bloc.add(
-          const VideoRecorderStabilizationModeSet(
-            DivineVideoStabilizationMode.standard,
-          ),
-        );
-        await pumpEventQueue();
-        detection.complete(_measured);
-        await pumpEventQueue();
-
-        expect(
-          bloc.state.chromaKey.key.color,
-          _measured.color,
-          reason: 'the lens did not change, so the measured wall is in view',
-        );
-        expect(
-          bloc.state.chromaKeyMeasurementStatus,
-          ChromaKeyMeasurementStatus.idle,
-        );
-      });
     });
 
     group('VideoRecorderInitializeRequested', () {

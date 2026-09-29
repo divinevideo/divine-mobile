@@ -230,12 +230,18 @@ class _ChromaKeyViewfinderState extends State<_ChromaKeyViewfinder> {
       ),
     );
 
-    return ChromaKeyedVideo(
-      chromaKey: chromaKey,
-      backdropSync: _backdropSync,
-      // The selfie preview is shown mirrored while the recording is not.
-      mirrorBackdrop: isFrontCamera,
-      child: widget.child,
+    // A key with no backdrop is baked onto the renderer's black canvas, so the
+    // viewfinder shows that black instead of a checkerboard.
+    return ColoredBox(
+      color: VineTheme.backgroundColor,
+      child: ChromaKeyedVideo(
+        chromaKey: chromaKey,
+        backdropSync: _backdropSync,
+        previewTransparency: false,
+        // The selfie preview is shown mirrored while the recording is not.
+        mirrorBackdrop: isFrontCamera,
+        child: widget.child,
+      ),
     );
   }
 }

@@ -90,7 +90,9 @@ enum VideoRecorderMode {
     .capture => true,
     .stopMotion => false,
     .lipSync => true,
-    .chromaKey => true,
+    // Look-ahead stabilization delays the preview behind the file, and the
+    // backdrop is composited live against that preview.
+    .chromaKey => false,
     .classic => false,
   };
 
