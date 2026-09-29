@@ -1,5 +1,7 @@
 // ABOUTME: Tests for UserProfileResult sealed class and its sub-models.
 
+import 'dart:convert';
+
 import 'package:models/models.dart';
 import 'package:test/test.dart';
 
@@ -241,6 +243,17 @@ void main() {
           }).archivedLoops,
           isNull,
         );
+      });
+
+      test('is null for a max-int sentinel', () {
+        // A u64 sentinel decodes to a double that clamps to the int64 max,
+        // which would overflow when added to Divine-era views.
+        final data = ProfileEngagementData.fromJson(
+          jsonDecode('{"archived_loops": 18446744073709551615}')
+              as Map<String, dynamic>,
+        );
+
+        expect(data.archivedLoops, isNull);
       });
 
       test('participates in equality', () {

@@ -3,6 +3,7 @@
 // ABOUTME: returned by getUserProfile and getBulkProfiles.
 
 import 'package:meta/meta.dart';
+import 'package:models/src/engagement_count_parser.dart';
 
 // ---------------------------------------------------------------------------
 // Shared numeric parse helpers used by all sub-models below.
@@ -24,21 +25,6 @@ double parseDoubleSafe(dynamic value) {
   if (value is num) return value.toDouble();
   if (value is String) return double.tryParse(value) ?? 0;
   return 0;
-}
-
-/// Parses [value] as a non-negative [int], or returns `null` when it is
-/// missing, `null`, negative or unrecognised.
-///
-/// Unlike [parseIntSafe], this keeps "the server did not say" distinct from
-/// a genuine zero.
-int? parseNullableCount(dynamic value) {
-  final parsed = switch (value) {
-    final int v => v,
-    final num v => v.toInt(),
-    final String v => int.tryParse(v),
-    _ => null,
-  };
-  return parsed != null && parsed >= 0 ? parsed : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +223,7 @@ class ProfileEngagementData {
       totalReactions: parseIntSafe(json['total_reactions']),
       totalLoops: parseDoubleSafe(json['total_loops']),
       totalViews: parseIntSafe(json['total_views']),
-      archivedLoops: parseNullableCount(json['archived_loops']),
+      archivedLoops: tryParseEngagementCount(json['archived_loops']),
     );
   }
 
