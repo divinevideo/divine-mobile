@@ -1116,6 +1116,86 @@ void main() {
       },
     );
 
+    test('a relaunch hours into an unconfirmed submission checks once, then '
+        'offers support', () async {
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      when(
+        () => repository.submit(
+          attemptId: _recoverable.id,
+          vanishEventId: 'b' * 64,
+        ),
+      ).thenThrow(const AccountDeletionRecoveryException('offline'));
+      when(
+        () => repository.fetchStatus(
+          attemptId: _recoverable.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => _recoverable);
+      final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
+      await store.recordStartIfAbsent(
+        _recoverable.id,
+        now.subtract(const Duration(hours: 2)),
+      );
+      final cubit = buildCubit(withReceipt: true, pollBudgetStore: store);
+      addTearDown(cubit.close);
+
+      await cubit.resume(_recoverable);
+
+      expect(
+        cubit.state.status,
+        AccountDeletionRecoveryStatus.confirmingSubmission,
+      );
+      expect(
+        timers.timers.singleWhere((timer) => timer.isActive).delay,
+        Duration.zero,
+      );
+      await timers.fireNext();
+
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(timers.timers.any((timer) => timer.isActive), isFalse);
+    });
+
+    test('a submission accepted late moves to the processing bound', () async {
+      var status = _recoverable;
+      when(() => authService.currentPublicKeyHex).thenReturn('c' * 64);
+      final start = now;
+      when(
+        () => repository.submit(
+          attemptId: _recoverable.id,
+          vanishEventId: 'b' * 64,
+        ),
+      ).thenAnswer((_) async {
+        if (now.difference(start) < const Duration(minutes: 10)) {
+          throw const AccountDeletionRecoveryException('offline');
+        }
+        status = _processing;
+        return _processing;
+      });
+      when(
+        () => repository.fetchStatus(
+          attemptId: _recoverable.id,
+          pubkeyHex: 'a' * 64,
+        ),
+      ).thenAnswer((_) async => status);
+      final cubit = buildCubit(withReceipt: true);
+      addTearDown(cubit.close);
+
+      await cubit.resume(_recoverable);
+      while (timers.timers.any((timer) => timer.isActive)) {
+        await timers.fireNext();
+      }
+
+      expect(cubit.state.status, AccountDeletionRecoveryStatus.processing);
+      expect(cubit.state.pollingPaused, isTrue);
+      expect(
+        now.difference(start),
+        allOf(
+          greaterThan(const Duration(hours: 35, minutes: 50)),
+          lessThanOrEqualTo(const Duration(hours: 36)),
+        ),
+      );
+    });
+
     test('a different attempt receives a fresh budget', () async {
       final store = InMemoryAccountDeletionRecoveryPollBudgetStore();
       await store.recordStartIfAbsent(
