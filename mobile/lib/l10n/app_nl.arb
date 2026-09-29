@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "Geen berichten",
   "dmBlockedThreadTitle": "Je hebt dit account geblokkeerd",
   "dmBlockedThreadBody": "Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer om te reageren.",
+  "dmUnresolvedThreadTitle": "Dit gesprek kon niet worden geladen",
+  "dmUnresolvedThreadBody": "Ga terug en open het opnieuw. Je kunt reageren zodra het geladen is.",
   "verifyTitle": "Geverifieerde accounts",
   "verifySignedOutMessage": "Log in om je accounts te koppelen.",
   "verifyIntro": "Koppel accounts die je al hebt, zodat iedereen ziet dat jij het echt bent.",

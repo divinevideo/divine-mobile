@@ -6299,6 +6299,8 @@
   "inboxBlockedNoMessages": "暂无消息",
   "dmBlockedThreadTitle": "你已屏蔽此账号",
   "dmBlockedThreadBody": "消息会保留在这里，方便你查看或截图。解除屏蔽后即可回复。",
+  "dmUnresolvedThreadTitle": "无法加载此对话",
+  "dmUnresolvedThreadBody": "返回后重新打开。加载完成后即可回复。",
   "verifyTitle": "已验证账号",
   "verifySignedOutMessage": "登录后即可关联你的账号。",
   "verifyIntro": "把你已经在用的账号关联起来，别人一眼就知道是你本人。",

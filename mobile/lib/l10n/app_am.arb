@@ -4658,6 +4658,8 @@
   "inboxBlockedNoMessages": "መልእክቶች የሉም",
   "dmBlockedThreadTitle": "ይህን መለያ አግደዋል",
   "dmBlockedThreadBody": "መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ እገዳውን ያንሱ።",
+  "dmUnresolvedThreadTitle": "ይህን ውይይት መጫን አልተቻለም",
+  "dmUnresolvedThreadBody": "ተመልሰው ውይይቱን እንደገና ይክፈቱ። ከተጫነ በኋላ መልስ መስጠት ይችላሉ።",
   "verifyTitle": "የተረጋገጡ መለያዎች",
   "verifySignedOutMessage": "መለያዎችህን ለማገናኘት ግባ።",
   "verifyIntro": "አስቀድመህ ያሉህን መለያዎች አገናኝ፣ ሰዎች በእርግጥ አንተ መሆንህን እንዲያውቁ።",

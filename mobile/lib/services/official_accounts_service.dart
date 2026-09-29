@@ -51,16 +51,19 @@ class OfficialAccountsService {
   final SharedPreferences _prefs;
   final DateTime Function() _now;
   final List<OfficialAccount> _accounts;
+  final List<RetiredModerationKey> _retiredKeys;
 
   OfficialAccountsService({
     required Nip05Resolver resolver,
     required SharedPreferences prefs,
     DateTime Function()? now,
     List<OfficialAccount>? accounts,
+    List<RetiredModerationKey>? retiredKeys,
   }) : _resolver = resolver,
        _prefs = prefs,
        _now = now ?? DateTime.now,
-       _accounts = accounts ?? kPinnedOfficialAccounts;
+       _accounts = accounts ?? kPinnedOfficialAccounts,
+       _retiredKeys = retiredKeys ?? kRetiredModerationKeys;
 
   final StreamController<void> _verdictChanges =
       StreamController<void>.broadcast();
@@ -124,12 +127,19 @@ class OfficialAccountsService {
   /// event as it — the key cannot deliver anything to a minor. The composer
   /// stays closed for it independently, via `isRetiredModerationAccount`.
   ///
-  /// That argument rests on custody, which the register records per entry. A
-  /// future retired key whose private half is *archived* rather than
-  /// unrecovered has to be reconsidered here before it is added.
-  bool isReadableByProtectedMinor(String hex) =>
-      isApprovedMinorDmRecipientSync(hex) ||
-      isRetiredModerationAccount(_normHex(hex));
+  /// The widening follows custody, not one hardcoded entry: it applies only
+  /// while [RetiredKeyCustody.canStillSign] is false. An archived or
+  /// compromised retired key gets the strict predicate instead, so the
+  /// retirement procedure's step 10 — whether a rotated-away key still widens
+  /// this read path — is a data edit to the register, not a logic change.
+  bool isReadableByProtectedMinor(String hex) {
+    if (isApprovedMinorDmRecipientSync(hex)) return true;
+    final h = _normHex(hex);
+    for (final key in _retiredKeys) {
+      if (_normHex(key.pubkeyHex) == h) return !key.custody.canStillSign;
+    }
+    return false;
+  }
 
   /// Pin ∩ live NIP-05, graded. Awaits a fresh resolution when the cached
   /// verdict is stale (send-time freshness); returns the cached verdict while

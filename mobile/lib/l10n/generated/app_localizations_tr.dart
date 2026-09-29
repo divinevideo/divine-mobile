@@ -5640,6 +5640,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kaldır.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Bu sohbet yüklenemedi';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Geri dön ve tekrar aç. Yüklenince yanıtlayabilirsin.';
+
+  @override
   String get inboxFilterBlocked => 'Engellenenler';
 
   @override

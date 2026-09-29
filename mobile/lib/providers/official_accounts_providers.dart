@@ -35,10 +35,11 @@ final officialAccountsServiceProvider = Provider<OfficialAccountsService>((
 /// while reaching nobody — worst on an enforcement thread whose own copy
 /// invites a reply. Terminal rather than temporary: a retired recipient can
 /// never become deliverable, so the cold-start drain retains the sender's row
-/// in a non-retryable state. Checked ahead of the restriction branch
-/// because it applies to adults too — a protected minor is already bounced off
-/// these threads by [ConversationPage]'s route guard, since retired keys are
-/// absent from [kPinnedOfficialAccounts].
+/// in a non-retryable state. The refusal is checked ahead of the restriction
+/// branch because it applies to adults too: a protected minor may still read
+/// a retired-key thread, only while nobody can sign as the key
+/// ([OfficialAccountsService.isReadableByProtectedMinor]), and the send is
+/// refused either way.
 ///
 /// Otherwise, keys off [isDmRestrictedProvider]: an account is restricted
 /// only when it is confirmed as a protected minor, by a trusted live

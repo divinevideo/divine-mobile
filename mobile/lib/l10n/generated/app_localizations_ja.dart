@@ -5397,6 +5397,12 @@ class AppLocalizationsJa extends AppLocalizations {
       'メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するにはブロックを解除してください。';
 
   @override
+  String get dmUnresolvedThreadTitle => 'この会話を読み込めませんでした';
+
+  @override
+  String get dmUnresolvedThreadBody => '戻ってもう一度開いてください。読み込みが終わったら返信できます。';
+
+  @override
   String get inboxFilterBlocked => 'ブロック済み';
 
   @override

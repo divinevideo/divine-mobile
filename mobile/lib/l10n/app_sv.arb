@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "Inga meddelanden",
   "dmBlockedThreadTitle": "Du blockerade det här kontot",
   "dmBlockedThreadBody": "Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen för att svara.",
+  "dmUnresolvedThreadTitle": "Det gick inte att läsa in den här konversationen",
+  "dmUnresolvedThreadBody": "Gå tillbaka och öppna den igen. Du kan svara så snart den har laddats.",
   "verifyTitle": "Verifierade konton",
   "verifySignedOutMessage": "Logga in för att länka dina konton.",
   "verifyIntro": "Länka konton du redan har, så syns det att det verkligen är du.",

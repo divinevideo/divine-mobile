@@ -5725,6 +5725,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer om te reageren.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Dit gesprek kon niet worden geladen';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Ga terug en open het opnieuw. Je kunt reageren zodra het geladen is.';
+
+  @override
   String get inboxFilterBlocked => 'Geblokkeerd';
 
   @override

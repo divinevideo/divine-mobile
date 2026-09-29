@@ -90,6 +90,53 @@ void main() {
       expect(kLegacyModerationPubkeys, isNot(contains(kModerationPubkeyHex)));
     });
 
+    group('retired key register', () {
+      test('kLegacyModerationPubkeys lists the register in order', () {
+        expect(kLegacyModerationPubkeys, [
+          for (final key in kRetiredModerationKeys) key.pubkeyHex,
+        ]);
+      });
+
+      test('every entry is a 64-character lowercase hex pubkey', () {
+        for (final key in kRetiredModerationKeys) {
+          expect(key.pubkeyHex, matches(RegExp(r'^[0-9a-f]{64}$')));
+        }
+      });
+
+      // If two entries named the same pubkeyHex with different custody, the
+      // first would silently win: list iteration order, not a deliberate
+      // choice, would decide whether the key reads as unrecovered or
+      // archived.
+      test('no pubkeyHex is registered twice', () {
+        final seen = <String>{};
+        for (final key in kRetiredModerationKeys) {
+          expect(
+            seen.add(key.pubkeyHex),
+            isTrue,
+            reason: '${key.pubkeyHex} is registered more than once',
+          );
+        }
+      });
+
+      // Load-bearing for the protected-minor read exception: this entry is
+      // readable by minors only because nobody can sign as it (#7851).
+      test('records the 2026-03 key as unrecovered', () {
+        final entry = kRetiredModerationKeys.singleWhere(
+          (key) => key.pubkeyHex == '121b915baba659cbe59626a8afaf83b01dc42354dfecaad9d465d51bb5715d72',
+        );
+        expect(entry.custody, RetiredKeyCustody.unrecovered);
+      });
+    });
+
+    group('RetiredKeyCustody.canStillSign', () {
+      test('is false only when no copy of the key can exist', () {
+        expect(RetiredKeyCustody.unrecovered.canStillSign, isFalse);
+        expect(RetiredKeyCustody.destroyed.canStillSign, isFalse);
+        expect(RetiredKeyCustody.archived.canStillSign, isTrue);
+        expect(RetiredKeyCustody.compromised.canStillSign, isTrue);
+      });
+    });
+
     group('profile checkmark pubkeys', () {
       // Lookups lowercase the profile's pubkey before testing membership, so
       // an entry pasted in mixed case matches nobody — no crash, no analyzer

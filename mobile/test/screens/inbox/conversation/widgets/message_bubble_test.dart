@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -29,6 +30,7 @@ import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../../../helpers/contrast.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -762,6 +764,176 @@ void main() {
       });
 
       testWidgets(
+        'draws the failed-status caption under the bubble, not on its '
+        'green fill',
+        (tester) async {
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Failed send',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.failed,
+                ),
+              ),
+            ),
+          );
+
+          // The sent bubble's fixed green fill is only readable by the
+          // Container carrying it — the status caption must sit outside
+          // that Container, not merely outside its own visual bounds.
+          expect(
+            find.ancestor(
+              of: find.text(strings.dmStatusFailed),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Container &&
+                    widget.decoration is BoxDecoration &&
+                    (widget.decoration! as BoxDecoration).color ==
+                        VineTheme.primaryAccessible,
+              ),
+            ),
+            findsNothing,
+          );
+        },
+      );
+
+      testWidgets(
+        'draws the blocked-status caption under the bubble, not on its '
+        'green fill',
+        (tester) async {
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+
+          expect(
+            find.ancestor(
+              of: find.text(strings.dmSendBlockedRetiredMessage),
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Container &&
+                    widget.decoration is BoxDecoration &&
+                    (widget.decoration! as BoxDecoration).color ==
+                        VineTheme.primaryAccessible,
+              ),
+            ),
+            findsNothing,
+          );
+        },
+      );
+
+      testWidgets('failed-status caption clears 4.5:1 against the thread '
+          'background in dark mode', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: MessageBubble(
+                message: 'Failed send',
+                timestamp: '2:30 PM',
+                isSent: true,
+                deliveryStatus: DmDeliveryStatus.failed,
+              ),
+            ),
+          ),
+        );
+
+        final colors = Theme.of(
+          tester.element(find.byType(MessageBubble)),
+        ).extension<VineThemeColors>()!;
+        final textColor = tester
+            .widget<Text>(find.text(strings.dmStatusFailed))
+            .style!
+            .color!;
+        final ratio = contrastRatio(textColor, colors.surfaceContainerHigh);
+
+        expect(
+          ratio,
+          greaterThanOrEqualTo(4.5),
+          reason: 'dark measured ${ratio.toStringAsFixed(2)}:1',
+        );
+      });
+
+      testWidgets('failed-status caption clears 4.5:1 against the thread '
+          'background in light mode', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.lightTheme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
+              body: MessageBubble(
+                message: 'Failed send',
+                timestamp: '2:30 PM',
+                isSent: true,
+                deliveryStatus: DmDeliveryStatus.failed,
+              ),
+            ),
+          ),
+        );
+
+        final colors = Theme.of(
+          tester.element(find.byType(MessageBubble)),
+        ).extension<VineThemeColors>()!;
+        final textColor = tester
+            .widget<Text>(find.text(strings.dmStatusFailed))
+            .style!
+            .color!;
+        final ratio = contrastRatio(textColor, colors.surfaceContainerHigh);
+
+        expect(
+          ratio,
+          greaterThanOrEqualTo(4.5),
+          reason: 'light measured ${ratio.toStringAsFixed(2)}:1',
+        );
+      });
+
+      testWidgets(
+        'keeps the blocked-status icon out of the merged bubble semantics',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+
+          final node = tester.getSemantics(
+            find.bySemanticsLabel(RegExp('Retained appeal')),
+          );
+          expect(node.flagsCollection.isImage, isFalse);
+
+          handle.dispose();
+        },
+      );
+
+      testWidgets(
         'does not render indicator for received messages even when '
         'a non-delivered status is passed',
         (tester) async {
@@ -789,6 +961,312 @@ void main() {
           expect(find.byIcon(Icons.access_time), findsNothing);
         },
       );
+
+      testWidgets(
+        'reads the failed-status caption once in the merged bubble '
+        'semantics, not twice',
+        (tester) async {
+          // Regression: the indicator wrapped its Row in `Semantics(label:)`
+          // while leaving the child Text un-excluded, so the merged bubble
+          // label carried "Failed to send" twice — VoiceOver read it back
+          // to back.
+          final handle = tester.ensureSemantics();
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Verify me 7851',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.failed,
+                ),
+              ),
+            ),
+          );
+
+          // Anchor on the message text (unique, unaffected by the fix) so
+          // the finder resolves to exactly one element regardless of
+          // whether the status label is currently duplicated.
+          final node = tester.getSemantics(
+            find.bySemanticsLabel(RegExp('Verify me 7851')),
+          );
+          final occurrences = strings.dmStatusFailed
+              .allMatches(node.label)
+              .length;
+          expect(occurrences, equals(1));
+
+          handle.dispose();
+        },
+      );
+
+      testWidgets(
+        'reads the blocked-status caption once in the merged bubble '
+        'semantics, not twice',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Verify me 7851',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+
+          final node = tester.getSemantics(
+            find.bySemanticsLabel(RegExp('Verify me 7851')),
+          );
+          final occurrences = strings.dmSendBlockedRetiredMessage
+              .allMatches(node.label)
+              .length;
+          expect(occurrences, equals(1));
+
+          handle.dispose();
+        },
+      );
+    });
+
+    group('status line layout', () {
+      testWidgets(
+        'wraps a long blocked-status caption within the bubble max width',
+        (tester) async {
+          // Regression: the status Row had no width cap, so a long message
+          // wrapped across nearly the full message row — far wider than
+          // the bubble it explains.
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          const bubbleMaxWidth = 360 * 0.75;
+          final statusTextRect = tester.getRect(
+            find.text(strings.dmSendBlockedRetiredMessage),
+          );
+
+          expect(
+            statusTextRect.width,
+            lessThanOrEqualTo(bubbleMaxWidth + 1),
+            reason: 'measured ${statusTextRect.width}',
+          );
+        },
+      );
+
+      testWidgets(
+        "ends the blocked-status caption flush with the bubble's end "
+        'edge in LTR',
+        (tester) async {
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: DmDeliveryStatus.blocked,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final bubbleContainerRect = tester.getRect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Container &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration! as BoxDecoration).color ==
+                      VineTheme.primaryAccessible,
+            ),
+          );
+          final statusTextRect = tester.getRect(
+            find.text(strings.dmSendBlockedRetiredMessage),
+          );
+
+          expect(
+            (statusTextRect.right - bubbleContainerRect.right).abs(),
+            lessThanOrEqualTo(1),
+            reason:
+                'status right ${statusTextRect.right}, bubble right '
+                '${bubbleContainerRect.right}',
+          );
+        },
+      );
+
+      testWidgets(
+        "keeps the blocked-status caption flush with the bubble's end edge "
+        'under RTL',
+        (tester) async {
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await tester.pumpWidget(
+            const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Scaffold(
+                  body: MessageBubble(
+                    message: 'Retained appeal',
+                    timestamp: '2:30 PM',
+                    isSent: true,
+                    deliveryStatus: DmDeliveryStatus.blocked,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final bubbleContainerRect = tester.getRect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Container &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration! as BoxDecoration).color ==
+                      VineTheme.primaryAccessible,
+            ),
+          );
+          final statusTextRect = tester.getRect(
+            find.text(strings.dmSendBlockedRetiredMessage),
+          );
+
+          expect(
+            (statusTextRect.left - bubbleContainerRect.left).abs(),
+            lessThanOrEqualTo(1),
+            reason:
+                'status left ${statusTextRect.left}, bubble left '
+                '${bubbleContainerRect.left}',
+          );
+        },
+      );
+
+      group('icon beside the first line', () {
+        /// Gap between the status icon and the first glyph of [caption].
+        ///
+        /// The Row lays them out 4 apart. A wrapped caption that fills the
+        /// full width right-aligns its first line away from the icon, so the
+        /// gap grows by whatever that line is shorter than the width.
+        double iconToFirstLineGap(WidgetTester tester, String caption) {
+          final row = find
+              .ancestor(of: find.text(caption), matching: find.byType(Row))
+              .first;
+          final icon = tester.getRect(
+            find.descendant(of: row, matching: find.byType(DivineIcon)),
+          );
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.text(caption),
+          );
+          final firstGlyph = paragraph
+              .getBoxesForSelection(
+                const TextSelection(baseOffset: 0, extentOffset: 1),
+              )
+              .first;
+          final firstGlyphLeft = paragraph
+              .localToGlobal(Offset(firstGlyph.left, firstGlyph.top))
+              .dx;
+          return firstGlyphLeft - icon.right;
+        }
+
+        /// Guards the premise: an unwrapped caption has no gap to grow.
+        void expectWraps(WidgetTester tester, String caption) {
+          final lineHeight = tester
+              .renderObject<RenderParagraph>(find.text(caption))
+              .getFullHeightForCaret(const TextPosition(offset: 0));
+          expect(
+            tester.getSize(find.text(caption)).height,
+            greaterThan(lineHeight * 1.5),
+            reason: 'the caption must wrap for this test to mean anything',
+          );
+        }
+
+        Future<void> pumpOwnBubble(
+          WidgetTester tester, {
+          required double width,
+          required DmDeliveryStatus status,
+        }) async {
+          tester.view.physicalSize = Size(width, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MessageBubble(
+                  message: 'Retained appeal',
+                  timestamp: '2:30 PM',
+                  isSent: true,
+                  deliveryStatus: status,
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+        }
+
+        testWidgets('for a wrapped blocked-status caption', (tester) async {
+          await pumpOwnBubble(
+            tester,
+            width: 360,
+            status: DmDeliveryStatus.blocked,
+          );
+          final caption = strings.dmSendBlockedRetiredMessage;
+          expectWraps(tester, caption);
+
+          expect(iconToFirstLineGap(tester, caption), closeTo(4, 1));
+        });
+
+        testWidgets('for a wrapped failed-status caption', (tester) async {
+          // A bubble this narrow wraps "Failed to send" as a long
+          // translation or a large text scale would.
+          await pumpOwnBubble(
+            tester,
+            width: 110,
+            status: DmDeliveryStatus.failed,
+          );
+          final caption = strings.dmStatusFailed;
+          expectWraps(tester, caption);
+
+          expect(iconToFirstLineGap(tester, caption), closeTo(4, 1));
+        });
+      });
     });
 
     group('URL linkification', () {

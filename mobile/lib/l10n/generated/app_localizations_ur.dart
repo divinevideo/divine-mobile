@@ -5712,6 +5712,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'پیغامات یہیں رہتے ہیں تاکہ آپ انہیں پڑھ سکیں یا اسکرین شاٹ لے سکیں۔ جواب دینے کے لیے بلاک ہٹائیں۔';
 
   @override
+  String get dmUnresolvedThreadTitle => 'یہ گفتگو لوڈ نہیں ہو سکی';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'واپس جائیں اور اسے دوبارہ کھولیں۔ لوڈ ہونے کے بعد آپ جواب دے سکیں گے۔';
+
+  @override
   String get inboxFilterBlocked => 'مسدود';
 
   @override

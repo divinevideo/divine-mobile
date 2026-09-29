@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "Brak wiadomości",
   "dmBlockedThreadTitle": "Zablokowano to konto",
   "dmBlockedThreadBody": "Wiadomości pozostają tutaj, żebyś mógł je przeczytać lub zrobić zrzut ekranu. Odblokuj, aby odpowiedzieć.",
+  "dmUnresolvedThreadTitle": "Nie udało się wczytać tej rozmowy",
+  "dmUnresolvedThreadBody": "Wróć i otwórz ją ponownie. Będzie można odpowiedzieć, gdy się wczyta.",
   "verifyTitle": "Zweryfikowane konta",
   "verifySignedOutMessage": "Zaloguj się, żeby połączyć swoje konta.",
   "verifyIntro": "Połącz konta, które już masz, żeby było widać, że to naprawdę ty.",

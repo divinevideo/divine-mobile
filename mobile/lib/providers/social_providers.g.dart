@@ -655,7 +655,7 @@ final class ContentReportingServiceProvider
 }
 
 String _$contentReportingServiceHash() =>
-    r'0030c3a41a37d211afaf14a8e90ff9983bd140b1';
+    r'fd8248bb3b21d83eec8d2e1860a9a14b5b8dcb77';
 
 /// Auto-sweep service for the durable `pending_reports` queue.
 ///

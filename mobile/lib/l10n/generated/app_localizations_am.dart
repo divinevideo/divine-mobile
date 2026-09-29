@@ -5574,6 +5574,13 @@ class AppLocalizationsAm extends AppLocalizations {
       'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ እገዳውን ያንሱ።';
 
   @override
+  String get dmUnresolvedThreadTitle => 'ይህን ውይይት መጫን አልተቻለም';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'ተመልሰው ውይይቱን እንደገና ይክፈቱ። ከተጫነ በኋላ መልስ መስጠት ይችላሉ።';
+
+  @override
   String get inboxFilterBlocked => 'የታገዱ';
 
   @override

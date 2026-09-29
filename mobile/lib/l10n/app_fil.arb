@@ -3532,6 +3532,8 @@
   "inboxBlockedNoMessages": "Walang mensahe",
   "dmBlockedThreadTitle": "Na-block mo ang account na ito",
   "dmBlockedThreadBody": "Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. Mag-unblock para makasagot.",
+  "dmUnresolvedThreadTitle": "Hindi na-load ang usapang ito",
+  "dmUnresolvedThreadBody": "Bumalik ka at buksan ulit ito. Makakasagot ka na pagka-load nito.",
   "verifyTitle": "Mga verified na account",
   "verifySignedOutMessage": "Mag-sign in para i-link ang mga account mo.",
   "verifyIntro": "I-link ang mga account na meron ka na, para alam nilang ikaw talaga 'to.",

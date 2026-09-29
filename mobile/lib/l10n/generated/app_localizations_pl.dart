@@ -5845,6 +5845,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wiadomości pozostają tutaj, żebyś mógł je przeczytać lub zrobić zrzut ekranu. Odblokuj, aby odpowiedzieć.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Nie udało się wczytać tej rozmowy';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Wróć i otwórz ją ponownie. Będzie można odpowiedzieć, gdy się wczyta.';
+
+  @override
   String get inboxFilterBlocked => 'Zablokowane';
 
   @override

@@ -123,7 +123,44 @@ const Set<String> kDivineTeamPubkeys = {
   kHqPubkeyHex,
 };
 
-/// Moderation pubkeys the account has rotated away from.
+/// Whether anyone could still sign as a retired moderation key.
+///
+/// Recorded per register entry because the client trusts a retired key
+/// differently depending on it: a protected minor may read a retired key's
+/// thread only while nobody can sign a new message as that key. States follow
+/// the moderation-key retirement procedure in `support-trust-safety`.
+enum RetiredKeyCustody {
+  /// Lost before any custody decision; no known holder.
+  unrecovered,
+
+  /// Deliberately deleted from every store.
+  destroyed,
+
+  /// Kept in the team's vault; whoever can read that entry can sign.
+  archived,
+
+  /// May be held outside the team, whatever became of the team's copy.
+  compromised;
+
+  /// Whether someone could still sign a new event as the key.
+  bool get canStillSign => switch (this) {
+    RetiredKeyCustody.unrecovered || RetiredKeyCustody.destroyed => false,
+    RetiredKeyCustody.archived || RetiredKeyCustody.compromised => true,
+  };
+}
+
+/// One entry in the retired moderation key register.
+class RetiredModerationKey {
+  const RetiredModerationKey({required this.pubkeyHex, required this.custody});
+
+  /// The retired identity, lowercase hex.
+  final String pubkeyHex;
+
+  /// Who, if anyone, can still sign as [pubkeyHex].
+  final RetiredKeyCustody custody;
+}
+
+/// Moderation keys the account has rotated away from.
 ///
 /// A DM thread opened before a rotation stays keyed on the old pubkey. Those
 /// threads are deliberately NOT folded into the pinned support row: the row
@@ -136,14 +173,16 @@ const Set<String> kDivineTeamPubkeys = {
 /// Never a send target — messages always go to the current pin above. Used for
 /// recognising the account ([isModerationAccount], which drives the bundled
 /// avatar and the display name), for refusing outbound sends
-/// ([isRetiredModerationAccount]), and for the `ModerationLabelService`
-/// subscription migration.
+/// ([isRetiredModerationAccount]), for the `ModerationLabelService`
+/// subscription migration, for the custody-aware protected-minor read
+/// (`OfficialAccountsService.isReadableByProtectedMinor`), and for refusing a
+/// retired key as the moderation identity (`ModerationPubkeyResolver`).
 ///
 /// Every entry carries its rotation date and what performed it below — which
 /// may be no commit at all. The register of what each key was, the roles it
 /// held, and what a rotation has to do is
 /// `mobile/docs/RETIRED_MODERATION_KEYS.md` — read it before adding one.
-const List<String> kLegacyModerationPubkeys = [
+const List<RetiredModerationKey> kRetiredModerationKeys = [
   // Retired 2026-03-12 by an operational secret rotation, after the service
   // and the clients drifted onto different keys — a mismatch, not a
   // compromise. Also held Funnelcake's RELAY_PUBKEY and one ADMIN_PUBKEYS
@@ -158,8 +197,18 @@ const List<String> kLegacyModerationPubkeys = [
   // the recipient, so messages sent here are unreadable by anyone forever,
   // and the closed composer is permanent for this key rather than pending a
   // custody answer. See mobile/docs/RETIRED_MODERATION_KEYS.md#key-custody.
-  '121b915baba659cbe59626a8afaf83b01dc42354dfecaad9d465d51bb5715d72',
+  RetiredModerationKey(
+    pubkeyHex:
+        '121b915baba659cbe59626a8afaf83b01dc42354dfecaad9d465d51bb5715d72',
+    custody: RetiredKeyCustody.unrecovered,
+  ),
 ];
+
+/// Pubkeys of [kRetiredModerationKeys], in register order. Derived so the
+/// register stays the single source of what is retired.
+final List<String> kLegacyModerationPubkeys = List.unmodifiable([
+  for (final key in kRetiredModerationKeys) key.pubkeyHex,
+]);
 
 /// Whether [pubkeyHex] is the Divine moderation account, current or retired.
 ///
@@ -188,7 +237,8 @@ bool isModerationAccount(String pubkeyHex) =>
 /// [kLegacyModerationPubkeys] has no known private-key holder, and a gift wrap
 /// is encrypted to its recipient — so pointing a reader at it would deliver
 /// ciphertext nobody can open. Do not reopen this on the theory that the
-/// service could grow a watched set. A future retired key may differ, which is
-/// why `mobile/docs/RETIRED_MODERATION_KEYS.md` records custody per entry.
+/// service could grow a watched set. A future retired key may differ, which
+/// is why each [kRetiredModerationKeys] entry records its own custody in
+/// code — mirrored in `mobile/docs/RETIRED_MODERATION_KEYS.md`'s register.
 bool isRetiredModerationAccount(String pubkeyHex) =>
     kLegacyModerationPubkeys.contains(pubkeyHex);

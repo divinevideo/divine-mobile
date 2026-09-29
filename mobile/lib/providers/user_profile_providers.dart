@@ -194,9 +194,17 @@ Stream<UserProfile?> blockedUserProfile(Ref ref, String pubkey) {
 /// Use this when you need a single read (e.g., building a share sheet)
 /// rather than a reactive stream.
 ///
+/// Returns `null` immediately for an empty [pubkey] without reading
+/// [profileReadRepositoryProvider] or calling either repository method: a
+/// conversation whose counterparty could not be resolved falls back to `''`,
+/// and a lookup for that pubkey sends every relay an empty-author filter they
+/// reject outright (#8664, #8677).
+///
 /// Same read gate as [userProfileReactive] — both paths are signer-free.
 @riverpod
 Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
+  if (pubkey.isEmpty) return null;
+
   final repo = ref.watch(profileReadRepositoryProvider);
   if (repo == null) return null;
 

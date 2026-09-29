@@ -43,6 +43,8 @@ import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:profile_repository/profile_repository.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -72,6 +74,8 @@ class _MockWatermarkDownloadService extends Mock
 
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockProfileReader extends Mock implements ProfileReader {}
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
@@ -246,6 +250,8 @@ void main() {
       Stream<ConversationState>? stateStream,
       DmVideoSendService? videoSendService,
       ImagePicker? videoPicker,
+      ProfileReader? profileReadRepository,
+      List<Override> extraOverrides = const [],
     }) {
       final effectiveState = state ?? const ConversationState();
       if (restoreStatus != null) {
@@ -274,7 +280,9 @@ void main() {
             mockWatermarkDownloadService,
           ),
           profileRepositoryProvider.overrideWithValue(null),
-          profileReadRepositoryProvider.overrideWithValue(null),
+          profileReadRepositoryProvider.overrideWithValue(
+            profileReadRepository,
+          ),
           fetchUserProfileProvider(
             counterparty,
           ).overrideWith(
@@ -309,6 +317,7 @@ void main() {
             dmVideoSendServiceProvider.overrideWithValue(videoSendService),
           if (videoPicker != null)
             dmVideoPickerProvider.overrideWithValue(videoPicker),
+          ...extraOverrides,
         ],
         home: BlocProvider<ConversationBloc>.value(
           value: mockBloc,
@@ -1364,6 +1373,172 @@ void main() {
           ),
         );
       });
+    });
+
+    // #8664, #8677. `ConversationParticipantsCubit` emits an empty
+    // participant list when the conversation row is missing or the read
+    // failed — nobody to address, so the resolver now fails the thread
+    // closed the same way a retired or blocked one does, with its own notice.
+    group('unresolved participants (#8664)', () {
+      testWidgets('replaces the composer with the unresolved-thread notice', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject(counterparties: const []));
+        await tester.pump();
+
+        expect(find.byType(MessageInputBar), findsNothing);
+        expect(find.text(l10n.dmUnresolvedThreadTitle), findsOneWidget);
+        expect(find.text(l10n.dmUnresolvedThreadBody), findsOneWidget);
+      });
+
+      testWidgets(
+        'an own bubble offers no delete-for-everyone or reaction picker',
+        (tester) async {
+          final message = DmMessage(
+            id: 'own-message',
+            conversationId: 'conversation',
+            senderPubkey: currentPubkey,
+            content: 'sent before the thread lost its participants',
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            giftWrapId: 'wrap',
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [],
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [message],
+              ),
+            ),
+          );
+          await tester.pump();
+
+          await tester.longPress(find.text(message.content));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.dmMessageActionDeleteForEveryone),
+            findsNothing,
+            reason:
+                'no participant is known, so there is nobody left to '
+                'notify and nothing to retract on their side',
+          );
+          expect(
+            find.text(kDefaultDmReactionEmojis.first),
+            findsNothing,
+            reason:
+                'reacting to a message with no known recipient is '
+                'meaningless',
+          );
+          // The read affordance stays: the thread is still an archive.
+          expect(find.text(l10n.dmMessageActionCopyText), findsOneWidget);
+        },
+      );
+
+      // Device evidence, 2026-09-28: an empty participant list previously fell
+      // through to the ordinary peer-resolution path, so the header watched
+      // `fetchUserProfileProvider('')` and friends, and the empty-state card
+      // offered a "View profile" that pushed a route for an empty npub. Both
+      // sent relays an empty-author filter they rejected outright.
+      testWidgets(
+        'shows a neutral header and no peer card, and never resolves a '
+        'profile for the empty pubkey',
+        (tester) async {
+          final mockProfileReader = _MockProfileReader();
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [],
+              profileReadRepository: mockProfileReader,
+              state: const ConversationState(status: ConversationStatus.loaded),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.inboxConversationViewProfileButton),
+            findsNothing,
+          );
+          expect(
+            find.text(UserProfile.defaultDisplayNameFor('')),
+            findsNothing,
+          );
+          verifyNever(() => mockProfileReader.getCachedProfile(pubkey: ''));
+          verifyNever(() => mockProfileReader.fetchFreshProfile(pubkey: ''));
+        },
+      );
+
+      testWidgets('hides the options button', (tester) async {
+        await tester.pumpWidget(buildSubject(counterparties: const []));
+        await tester.pump();
+
+        expect(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+          findsNothing,
+        );
+      });
+
+      // Pins the gate directly rather than only through
+      // fetchUserProfileProvider('') short-circuiting at the provider
+      // boundary (which the test above already covers): every per-pubkey
+      // provider the view watches is overridden at the empty pubkey with a
+      // stub that records whether it was read, so a removed `isUnresolved`
+      // branch would flip one of these from false to true.
+      testWidgets(
+        'never reads any per-pubkey provider for the empty pubkey',
+        (tester) async {
+          var fetchProfileRead = false;
+          var identityResolvingRead = false;
+          var vanishedRead = false;
+          var nip05Read = false;
+          var statsRead = false;
+          var followRead = false;
+
+          await tester.pumpWidget(
+            buildSubject(
+              counterparties: const [],
+              state: const ConversationState(
+                status: ConversationStatus.loaded,
+              ),
+              extraOverrides: [
+                fetchUserProfileProvider('').overrideWith((ref) {
+                  fetchProfileRead = true;
+                  return Future<UserProfile?>.value();
+                }),
+                profileIdentityResolvingProvider('').overrideWith((ref) {
+                  identityResolvingRead = true;
+                  return false;
+                }),
+                profileVanishedProvider('').overrideWith((ref) {
+                  vanishedRead = true;
+                  return false;
+                }),
+                nip05VerificationProvider('').overrideWith((ref) {
+                  nip05Read = true;
+                  return Nip05VerificationStatus.none;
+                }),
+                userProfileStatsReactiveProvider('').overrideWith((ref) {
+                  statsRead = true;
+                  return const Stream<ProfileStats?>.empty();
+                }),
+                followRelationshipProvider('').overrideWith((ref) {
+                  followRead = true;
+                  return Stream.value(FollowRelationship.none);
+                }),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          expect(fetchProfileRead, isFalse);
+          expect(identityResolvingRead, isFalse);
+          expect(vanishedRead, isFalse);
+          expect(nip05Read, isFalse);
+          expect(statsRead, isFalse);
+          expect(followRead, isFalse);
+        },
+      );
     });
 
     group('refused retraction', () {

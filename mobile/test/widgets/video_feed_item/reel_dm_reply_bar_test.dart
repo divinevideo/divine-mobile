@@ -184,6 +184,26 @@ void main() {
       expect(find.text('❤️'), findsNothing);
     });
 
+    testWidgets('does not render when the participants are unknown', (
+      tester,
+    ) async {
+      const unresolvedContext = DmReplyContext(
+        conversationId: 'unresolved-convo',
+        participantPubkeys: [],
+        isGroup: false,
+        sharedReelMessageId: _reelId,
+        messageAuthorPubkey: _peer,
+        hintName: 'Alice',
+        isOwnMessage: false,
+      );
+
+      await tester.pumpWidget(wrap(unresolvedContext));
+      await tester.pump();
+
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('❤️'), findsNothing);
+    });
+
     testWidgets('does not render for a blocked thread', (tester) async {
       when(() => blocklist.isBlocked(_peer)).thenReturn(true);
 

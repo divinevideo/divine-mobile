@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "Mesaj yok",
   "dmBlockedThreadTitle": "Bu hesabı engelledin",
   "dmBlockedThreadBody": "Mesajlar burada kalır, böylece okuyabilir veya ekran görüntüsü alabilirsin. Yanıtlamak için engeli kaldır.",
+  "dmUnresolvedThreadTitle": "Bu sohbet yüklenemedi",
+  "dmUnresolvedThreadBody": "Geri dön ve tekrar aç. Yüklenince yanıtlayabilirsin.",
   "verifyTitle": "Doğrulanmış hesaplar",
   "verifySignedOutMessage": "Hesaplarını bağlamak için giriş yap.",
   "verifyIntro": "Zaten sahip olduğun hesapları bağla ki gerçekten sen olduğun anlaşılsın.",

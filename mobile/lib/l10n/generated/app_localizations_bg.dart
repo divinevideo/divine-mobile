@@ -5758,6 +5758,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можете да ги прочетете или да направите екранна снимка. Отблокирайте, за да отговорите.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'Този разговор не се зареди';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Върни се назад и го отвори отново. Ще можеш да отговориш, щом се зареди.';
+
+  @override
   String get inboxFilterBlocked => 'Блокирани';
 
   @override

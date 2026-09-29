@@ -21,7 +21,7 @@ void main() {
             displayName: displayName,
             handle: handle,
             onBack: onBack ?? () {},
-            onOptions: onOptions ?? () {},
+            onOptions: onOptions,
             isResolving: isResolving,
             loadingDisplayName: 'Generated Name',
           ),
@@ -53,6 +53,18 @@ void main() {
 
         expect(find.text('Alice'), findsOneWidget);
         expect(find.text(''), findsNothing);
+      });
+
+      testWidgets('does not render an options button when onOptions is null', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject());
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+          findsNothing,
+        );
       });
 
       testWidgets('announces loading instead of the placeholder identity', (

@@ -4086,6 +4086,8 @@
   "inboxBlockedNoMessages": "메시지 없음",
   "dmBlockedThreadTitle": "이 계정을 차단했습니다",
   "dmBlockedThreadBody": "메시지는 여기에 남아 있어 읽거나 스크린샷을 찍을 수 있습니다. 답장하려면 차단을 해제하세요.",
+  "dmUnresolvedThreadTitle": "이 대화를 불러오지 못했어요",
+  "dmUnresolvedThreadBody": "뒤로 가서 다시 열어보세요. 다 불러오면 답장할 수 있어요.",
   "verifyTitle": "인증된 계정",
   "verifySignedOutMessage": "계정을 연결하려면 로그인해.",
   "verifyIntro": "이미 쓰는 계정을 연결하면 진짜 너라는 걸 바로 알 수 있어.",

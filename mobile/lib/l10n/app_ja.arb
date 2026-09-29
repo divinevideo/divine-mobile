@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "メッセージなし",
   "dmBlockedThreadTitle": "このアカウントをブロックしました",
   "dmBlockedThreadBody": "メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するにはブロックを解除してください。",
+  "dmUnresolvedThreadTitle": "この会話を読み込めませんでした",
+  "dmUnresolvedThreadBody": "戻ってもう一度開いてください。読み込みが終わったら返信できます。",
   "verifyTitle": "認証済みアカウント",
   "verifySignedOutMessage": "アカウントを連携するにはログインしてね。",
   "verifyIntro": "すでに持っているアカウントを連携すれば、本人だとひと目でわかるよ。",

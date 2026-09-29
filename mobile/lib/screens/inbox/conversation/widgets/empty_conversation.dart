@@ -120,19 +120,30 @@ class _ViewProfileButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: context.vineColors.surfaceContainer,
-          border: Border.all(color: context.vineColors.outlineMuted, width: 2),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          context.l10n.inboxConversationViewProfileButton,
-          style: VineTheme.titleMediumFont(
-            color: context.vineColors.accentPositive,
+    final onTap = this.onTap;
+    if (onTap == null) return const SizedBox.shrink();
+
+    return Semantics(
+      // No `label:` — it rides up from the child Text below, so it cannot
+      // drift from the rendered string.
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: context.vineColors.surfaceContainer,
+            border: Border.all(
+              color: context.vineColors.outlineMuted,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            context.l10n.inboxConversationViewProfileButton,
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.accentPositive,
+            ),
           ),
         ),
       ),

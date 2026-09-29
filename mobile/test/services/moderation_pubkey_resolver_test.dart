@@ -1,0 +1,265 @@
+// ABOUTME: Tests for ModerationPubkeyResolver
+// ABOUTME: Validates cache/NIP-05/retired-key resolution behaviour
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/services/moderation_pubkey_resolver.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+import '../helpers/test_pubkeys.dart';
+
+void main() {
+  const pin = kModerationPubkeyHex;
+  const resolvedPubkeyPrefsKey = 'divine_moderation_resolved_pubkey';
+  const resolvedAtPrefsKey = 'divine_moderation_resolved_at';
+  final retiredKey = kLegacyModerationPubkeys.first;
+
+  group(ModerationPubkeyResolver, () {
+    late SharedPreferences prefs;
+    late LogCaptureService logCapture;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+    });
+
+    tearDown(() async {
+      await logCapture.clearAllLogs();
+    });
+
+    List<String> refusals() => logCapture
+        .getRecentLogs(minLevel: LogLevel.warning)
+        .map((entry) => entry.message)
+        .where((message) => message.contains('lists it as retired'))
+        .toList();
+
+    List<String> resolvedLogs() => logCapture
+        .getRecentLogs(minLevel: LogLevel.info)
+        .map((entry) => entry.message)
+        .where((message) => message.contains('Resolved moderation pubkey'))
+        .toList();
+
+    group('resolve', () {
+      test(
+        'returns a fresh cached pubkey without calling the lookup',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().toIso8601String(),
+          );
+          var lookupCalls = 0;
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async {
+              lookupCalls++;
+              return syntheticOtherTestPubkey;
+            },
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, syntheticTestPubkey);
+          expect(lookupCalls, 0);
+        },
+      );
+
+      test('asks the lookup when the cache is stale', () async {
+        await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+        await prefs.setString(
+          resolvedAtPrefsKey,
+          DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+        );
+        final resolver = ModerationPubkeyResolver(
+          lookupPubkey: (_) async => syntheticOtherTestPubkey,
+        );
+
+        final result = await resolver.resolve(prefs);
+
+        expect(result, syntheticOtherTestPubkey);
+        expect(
+          prefs.getString(resolvedPubkeyPrefsKey),
+          syntheticOtherTestPubkey,
+        );
+        // AGENTS.md: every pubkey reaching a log sink carries both encodings.
+        final logged = resolvedLogs();
+        expect(logged, hasLength(1));
+        expect(logged.single, contains(syntheticOtherTestPubkey));
+        expect(logged.single, contains(syntheticOtherTestNpub));
+      });
+
+      test('falls back to the stale cache when the lookup throws', () async {
+        await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+        await prefs.setString(
+          resolvedAtPrefsKey,
+          DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+        );
+        final resolver = ModerationPubkeyResolver(
+          lookupPubkey: (_) async => throw Exception('network down'),
+        );
+
+        final result = await resolver.resolve(prefs);
+
+        expect(result, syntheticTestPubkey);
+      });
+
+      test(
+        'falls back to the pin when nothing is cached and the lookup '
+        'answers nothing',
+        () async {
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => null,
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, pin);
+        },
+      );
+
+      test(
+        'refuses a fresh cached retired key and adopts the lookup answer '
+        'instead',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().toIso8601String(),
+          );
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => syntheticTestPubkey,
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, syntheticTestPubkey);
+          expect(refusals(), isNotEmpty);
+        },
+      );
+
+      test(
+        'refuses a retired lookup answer, even uppercase, and does not '
+        'persist it',
+        () async {
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => retiredKey.toUpperCase(),
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, pin);
+          expect(prefs.getString(resolvedPubkeyPrefsKey), isNull);
+          expect(refusals(), isNotEmpty);
+        },
+      );
+
+      test(
+        'clears a different stale cached key when the lookup answers a '
+        'retired key',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+          );
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => retiredKey,
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, pin);
+          expect(prefs.getString(resolvedPubkeyPrefsKey), isNull);
+          expect(prefs.getString(resolvedAtPrefsKey), isNull);
+          // The next cold start reads the cache without asking NIP-05.
+          expect(resolver.cached(prefs), pin);
+        },
+      );
+
+      test(
+        'refuses a retired stale cache and falls back to the pin when the '
+        'lookup also fails',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+          );
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => null,
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, pin);
+        },
+      );
+    });
+
+    group('cached', () {
+      test('returns the cached pubkey when one is present', () async {
+        await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+        final resolver = ModerationPubkeyResolver();
+
+        expect(resolver.cached(prefs), syntheticTestPubkey);
+      });
+
+      test('returns the pin when nothing is cached', () {
+        final resolver = ModerationPubkeyResolver();
+
+        expect(resolver.cached(prefs), pin);
+      });
+
+      test(
+        'refuses a cached retired key and returns the pin instead',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+          final resolver = ModerationPubkeyResolver();
+
+          final result = resolver.cached(prefs);
+
+          expect(result, pin);
+          expect(refusals(), isNotEmpty);
+        },
+      );
+    });
+
+    group('refusal logging', () {
+      // Observed on device: cached() at load and resolve() at refresh both
+      // check the same cached retired key under the same source string, and
+      // logged two identical "... from the cached NIP-05 answer" lines 8ms
+      // apart.
+      test(
+        'logs a refused retired cached key once across cached() then '
+        'resolve(), but still logs a refused NIP-05 answer under its own '
+        'source',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().toIso8601String(),
+          );
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => retiredKey,
+          );
+
+          resolver.cached(prefs);
+          await resolver.resolve(prefs);
+
+          expect(
+            refusals().where(
+              (message) => message.contains('from the cached NIP-05 answer'),
+            ),
+            hasLength(1),
+          );
+          expect(
+            refusals().where((message) => message.contains('from NIP-05:')),
+            hasLength(1),
+          );
+        },
+      );
+    });
+  });
+}

@@ -5779,6 +5779,14 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les messages restent ici pour que vous puissiez les lire ou les capturer. Débloquez pour répondre.';
 
   @override
+  String get dmUnresolvedThreadTitle =>
+      'Impossible de charger cette conversation';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'Reviens et rouvre-la. Tu pourras répondre une fois qu\'elle sera chargée.';
+
+  @override
   String get inboxFilterBlocked => 'Bloqués';
 
   @override

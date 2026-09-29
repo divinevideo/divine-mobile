@@ -5889,6 +5889,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి అన్‌బ్లాక్ చేయండి.';
 
   @override
+  String get dmUnresolvedThreadTitle => 'ఈ సంభాషణను లోడ్ చేయడం సాధ్యపడలేదు';
+
+  @override
+  String get dmUnresolvedThreadBody =>
+      'వెనక్కి వెళ్లి దాన్ని మళ్లీ తెరవండి. లోడ్ అయిన తర్వాత మీరు ప్రత్యుత్తరం ఇవ్వవచ్చు.';
+
+  @override
   String get inboxFilterBlocked => 'నిరోధించబడింది';
 
   @override

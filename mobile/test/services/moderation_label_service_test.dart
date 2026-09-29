@@ -11,9 +11,12 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip05/nip05_validor.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/moderation_pubkey_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -141,13 +144,29 @@ void main() {
       await logCapture.clearAllLogs();
     });
 
-    ModerationLabelService buildService({bool canQueryRelays = false}) =>
-        ModerationLabelService(
-          nostrClient: mockNostrClient,
-          authService: mockAuthService,
-          sharedPreferences: mockPrefs,
-          canQueryRelays: () => canQueryRelays,
-        );
+    ModerationLabelService buildService({
+      bool canQueryRelays = false,
+      ModerationPubkeyResolver? pubkeyResolver,
+    }) => ModerationLabelService(
+      nostrClient: mockNostrClient,
+      authService: mockAuthService,
+      sharedPreferences: mockPrefs,
+      canQueryRelays: () => canQueryRelays,
+      pubkeyResolver: pubkeyResolver,
+    );
+
+    test('uses the injected moderation pubkey resolver', () async {
+      final service = buildService(
+        canQueryRelays: true,
+        pubkeyResolver: ModerationPubkeyResolver(
+          lookupPubkey: (_) async => divergentKey,
+        ),
+      );
+
+      await service.initialize();
+
+      expect(service.divineModerationPubkeyHex, divergentKey);
+    });
 
     List<String> pinWarnings() => logCapture
         .getRecentLogs(minLevel: LogLevel.warning)
@@ -238,6 +257,131 @@ void main() {
       expect(service.divineModerationPubkeyHex, divergentKey);
       expect(pinWarnings(), hasLength(1));
       expect(pinWarnings().single, contains(divergentKey));
+    });
+  });
+
+  group('retired moderation keys (#7851)', () {
+    const pin = ModerationLabelService.fallbackModerationPubkeyHex;
+    const resolvedPubkeyPrefsKey = 'divine_moderation_resolved_pubkey';
+    const resolvedAtPrefsKey = 'divine_moderation_resolved_at';
+    final retiredKey = kLegacyModerationPubkeys.first;
+
+    late LogCaptureService logCapture;
+    late HttpClientAdapter originalAdapter;
+
+    setUp(() async {
+      logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+      originalAdapter = Nip05Validor.dio.httpClientAdapter;
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
+    });
+
+    tearDown(() async {
+      Nip05Validor.dio.httpClientAdapter = originalAdapter;
+      await logCapture.clearAllLogs();
+    });
+
+    ModerationLabelService buildService({bool canQueryRelays = false}) =>
+        ModerationLabelService(
+          nostrClient: mockNostrClient,
+          authService: mockAuthService,
+          sharedPreferences: mockPrefs,
+          canQueryRelays: () => canQueryRelays,
+        );
+
+    List<String> refusals() => logCapture
+        .getRecentLogs(minLevel: LogLevel.warning)
+        .map((entry) => entry.message)
+        .where((message) => message.contains('lists it as retired'))
+        .toList();
+
+    test('refuses a cached retired key at load and adopts the pin', () async {
+      await mockPrefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+      final service = buildService();
+
+      await service.ensureLoaded();
+
+      expect(service.divineModerationPubkeyHex, pin);
+      expect(service.subscribedLabelers, isNot(contains(retiredKey)));
+      expect(refusals(), hasLength(1));
+      expect(refusals().single, contains(retiredKey));
+    });
+
+    test(
+      'logs the retired labeler it migrates away from in both encodings',
+      () async {
+        await mockPrefs.setStringList(
+          ModerationLabelService.subscribedLabelersStorageKey,
+          [retiredKey],
+        );
+        final service = buildService();
+
+        await service.ensureLoaded();
+
+        expect(service.subscribedLabelers, isNot(contains(retiredKey)));
+        final migrations = logCapture
+            .getRecentLogs(minLevel: LogLevel.info)
+            .map((entry) => entry.message)
+            .where((message) => message.contains('Migrated moderation'))
+            .toList();
+        expect(migrations, hasLength(1));
+        expect(migrations.single, contains(pubkeyForLogs(retiredKey)));
+      },
+    );
+
+    test(
+      'asks NIP-05 instead of trusting a fresh cached retired key',
+      () async {
+        await mockPrefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+        await mockPrefs.setString(
+          resolvedAtPrefsKey,
+          DateTime.now().toIso8601String(),
+        );
+        Nip05Validor.dio.httpClientAdapter = _FakeNip05Adapter(
+          '{"names":{"moderation":"$pin"}}',
+        );
+        final service = buildService(canQueryRelays: true);
+
+        await service.initialize();
+
+        expect(service.divineModerationPubkeyHex, pin);
+        expect(mockPrefs.getString(resolvedPubkeyPrefsKey), pin);
+      },
+    );
+
+    test('refuses a NIP-05 answer that is a retired key', () async {
+      Nip05Validor.dio.httpClientAdapter = _FakeNip05Adapter(
+        '{"names":{"moderation":"${retiredKey.toUpperCase()}"}}',
+      );
+      final service = buildService(canQueryRelays: true);
+
+      await service.initialize();
+
+      expect(service.divineModerationPubkeyHex, pin);
+      expect(mockPrefs.getString(resolvedPubkeyPrefsKey), isNull);
+      expect(refusals(), isNotEmpty);
+    });
+
+    test('falls back to the pin, not a retired stale cache, when NIP-05 '
+        'fails', () async {
+      await mockPrefs.setString(resolvedPubkeyPrefsKey, retiredKey);
+      await mockPrefs.setString(
+        resolvedAtPrefsKey,
+        DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+      );
+      Nip05Validor.dio.httpClientAdapter = _FakeNip05Adapter('{"names":{}}');
+      final service = buildService(canQueryRelays: true);
+
+      await service.initialize();
+
+      expect(service.divineModerationPubkeyHex, pin);
     });
   });
 

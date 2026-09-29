@@ -17,6 +17,10 @@ void main() {
       );
 
   group('resolveDmThreadWritability', () {
+    test('an empty participant list is unresolved, never writable', () {
+      expect(resolve(const []), DmThreadWritability.unresolved);
+    });
+
     test('ordinary thread is writable', () {
       expect(resolve([ordinaryPeer]), DmThreadWritability.writable);
     });

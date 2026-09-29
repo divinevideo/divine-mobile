@@ -5416,6 +5416,12 @@ class AppLocalizationsKo extends AppLocalizations {
       '메시지는 여기에 남아 있어 읽거나 스크린샷을 찍을 수 있습니다. 답장하려면 차단을 해제하세요.';
 
   @override
+  String get dmUnresolvedThreadTitle => '이 대화를 불러오지 못했어요';
+
+  @override
+  String get dmUnresolvedThreadBody => '뒤로 가서 다시 열어보세요. 다 불러오면 답장할 수 있어요.';
+
+  @override
   String get inboxFilterBlocked => '차단됨';
 
   @override

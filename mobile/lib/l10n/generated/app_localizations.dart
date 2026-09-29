@@ -9836,6 +9836,18 @@ abstract class AppLocalizations {
   /// **'Messages stay here so you can read or screenshot them. Unblock to reply.'**
   String get dmBlockedThreadBody;
 
+  /// Title of the notice that replaces the message composer when the app cannot tell who a conversation is with because its participants failed to load. Replying is off because there is no one to address.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t load this conversation'**
+  String get dmUnresolvedThreadTitle;
+
+  /// Body of the notice replacing the composer when a conversation's participants failed to load. Tells the viewer how to recover by reopening the conversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back and open it again. You can reply once it loads.'**
+  String get dmUnresolvedThreadBody;
+
   /// Filter chip label showing conversations with accounts the viewer has blocked. Only rendered once the viewer has blocked someone.
   ///
   /// In en, this message translates to:

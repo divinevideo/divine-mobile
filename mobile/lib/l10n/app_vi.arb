@@ -6299,6 +6299,8 @@
   "inboxBlockedNoMessages": "Không có tin nhắn",
   "dmBlockedThreadTitle": "Bạn đã chặn tài khoản này",
   "dmBlockedThreadBody": "Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn để trả lời.",
+  "dmUnresolvedThreadTitle": "Không tải được cuộc trò chuyện này",
+  "dmUnresolvedThreadBody": "Hãy quay lại và mở lại nó. Bạn có thể trả lời khi tải xong.",
   "verifyTitle": "Tài khoản đã xác minh",
   "verifySignedOutMessage": "Đăng nhập để liên kết tài khoản của bạn.",
   "verifyIntro": "Liên kết những tài khoản bạn đã có, để mọi người biết đúng là bạn.",

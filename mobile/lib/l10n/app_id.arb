@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "Tidak ada pesan",
   "dmBlockedThreadTitle": "Kamu memblokir akun ini",
   "dmBlockedThreadBody": "Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir untuk membalas.",
+  "dmUnresolvedThreadTitle": "Percakapan ini tidak dapat dimuat",
+  "dmUnresolvedThreadBody": "Kembali, lalu buka lagi. Kamu bisa membalas setelah dimuat.",
   "verifyTitle": "Akun terverifikasi",
   "verifySignedOutMessage": "Masuk dulu untuk menautkan akunmu.",
   "verifyIntro": "Tautkan akun yang sudah kamu punya, biar orang tahu ini memang kamu.",

@@ -4540,6 +4540,8 @@
   "inboxBlockedNoMessages": "Nessun messaggio",
   "dmBlockedThreadTitle": "Hai bloccato questo account",
   "dmBlockedThreadBody": "I messaggi restano qui così puoi leggerli o farne uno screenshot. Sblocca per rispondere.",
+  "dmUnresolvedThreadTitle": "Impossibile caricare questa conversazione",
+  "dmUnresolvedThreadBody": "Torna indietro e riaprila. Potrai rispondere non appena si carica.",
   "verifyTitle": "Account verificati",
   "verifySignedOutMessage": "Accedi per collegare i tuoi account.",
   "verifyIntro": "Collega gli account che hai già, così si vede che sei davvero tu.",
