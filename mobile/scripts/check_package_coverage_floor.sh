@@ -137,7 +137,8 @@ write_baseline() {
 #   0 loaded; 2 base ref ok but file absent (bootstrap); 1 base ref
 #   unresolvable; 3 file exists but blob unreadable.
 load_base_baseline() {
-  if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+  if [[ "$BASE_REF" == "origin/main" ]] &&
+     ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
      [[ "$(git -C "$REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
     git -C "$REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi

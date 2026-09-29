@@ -132,7 +132,7 @@ run_numeric_ratchet
       writeCurrent('a\t5\nb\t3\n');
       run(update: true);
 
-      final result = run(baseRef: 'refs/heads/probe-missing-base');
+      final result = run(baseRef: 'origin/main');
 
       expect(result.exitCode, 0, reason: result.stdout.toString());
       expect(result.stdout, contains('unavailable; skipping'));
@@ -144,6 +144,34 @@ run_numeric_ratchet
       ]);
       expect(shallow.exitCode, 0);
       expect(shallow.stdout.toString().trim(), 'false');
+    });
+
+    test('missing base ref does not truncate a shallow repository', () {
+      for (final args in [
+        ['commit', '--allow-empty', '-m', 'second'],
+        ['commit', '--allow-empty', '-m', 'third'],
+        ['remote', 'add', 'origin', '.'],
+        ['fetch', '--quiet', '--depth=2', 'origin', 'main'],
+      ]) {
+        final result = Process.runSync('git', ['-C', tmp.path, ...args]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
+      String visibleHistory() => Process.runSync('git', [
+        '-C',
+        tmp.path,
+        'rev-list',
+        '--count',
+        'HEAD',
+      ]).stdout.toString().trim();
+      expect(visibleHistory(), equals('2'));
+      writeCurrent('a\t5\nb\t3\n');
+      run(update: true);
+
+      final result = run(baseRef: 'refs/heads/probe-missing-base');
+
+      expect(result.exitCode, 0, reason: result.stdout.toString());
+      expect(result.stdout, contains('unavailable; skipping'));
+      expect(visibleHistory(), equals('2'));
     });
 
     test('missing origin/main is fetched into a shallow checkout', () {

@@ -358,7 +358,8 @@ def load_base_manifest():
         return subprocess.run(["git", "-C", REPO_ROOT, *args],
                               capture_output=True, text=True)
 
-    if (git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0
+    if (BASE_REF == "origin/main"
+            and git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0
             and git("rev-parse", "--is-shallow-repository").stdout.strip() == "true"):
         git("fetch", "--quiet", "--depth=1", "origin", "main")
     if git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0:
@@ -378,7 +379,8 @@ def load_base_waivers():
         return subprocess.run(["git", "-C", REPO_ROOT, *args],
                               capture_output=True, text=True)
 
-    if (git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0
+    if (BASE_REF == "origin/main"
+            and git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0
             and git("rev-parse", "--is-shallow-repository").stdout.strip() == "true"):
         git("fetch", "--quiet", "--depth=1", "origin", "main")
     if git("rev-parse", "--verify", "--quiet", BASE_REF).returncode != 0:

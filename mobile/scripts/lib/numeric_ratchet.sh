@@ -168,9 +168,11 @@ run_numeric_ratchet() {
   fi
 
   local base_status=0
-  # A depth-limited fetch in a full worktree shallows the shared git directory.
-  # Only CI's already-shallow checkout needs this fallback.
-  if ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+  # A depth-limited fetch moves the shallow boundary every linked worktree
+  # shares, so use it only where it can help: restoring origin/main in an
+  # already-shallow checkout, as in CI.
+  if [[ "$BASE_REF" == "origin/main" ]] &&
+     ! git -C "$REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
      [[ "$(git -C "$REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
     git -C "$REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi

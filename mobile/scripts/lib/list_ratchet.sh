@@ -93,8 +93,11 @@ _lr_write_baseline() {
 # Return: 0 loaded (LR_MAIN_BASELINE set); 2 base ref ok but file absent
 # (bootstrap); 1 base ref unresolvable; 3 file exists but blob unreadable.
 _lr_load_base_baseline() {
-  # Linked worktrees share shallow state; never depth-limit a full repository.
-  if ! git -C "$LR_REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
+  # A depth-limited fetch moves the shallow boundary every linked worktree
+  # shares, so use it only where it can help: restoring origin/main in an
+  # already-shallow checkout, as in CI.
+  if [[ "$BASE_REF" == "origin/main" ]] &&
+     ! git -C "$LR_REPO_ROOT" rev-parse --verify --quiet "$BASE_REF" >/dev/null 2>&1 &&
      [[ "$(git -C "$LR_REPO_ROOT" rev-parse --is-shallow-repository)" == "true" ]]; then
     git -C "$LR_REPO_ROOT" fetch --quiet --depth=1 origin main 2>/dev/null || true
   fi
