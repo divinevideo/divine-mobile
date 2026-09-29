@@ -338,11 +338,10 @@ extension VideoEditorExtensions on ProImageEditorState {
     List<Duration>? timelineMarkers,
   }) {
     final currentTracks = stateManager.audioTracks;
-    final grownTracks = growAudioToCompositionEnd(
-      rebaseAnchoredAudioForClipState(clips, currentTracks),
-      previousDuration: compositionDuration(previousClips),
-      duration: compositionDuration(clips),
-      maxDuration: VideoEditorConstants.maxDuration,
+    final grownTracks = _grownAudioTracks(
+      currentTracks: currentTracks,
+      previousClips: previousClips,
+      clips: clips,
     );
 
     if (identical(grownTracks, currentTracks) && addedAudioTracks.isEmpty) {
@@ -355,6 +354,24 @@ extension VideoEditorExtensions on ProImageEditorState {
       timelineMarkers: timelineMarkers,
     );
   }
+
+  /// The sounds after an edit that turns [previousClips] into [clips]: anchored
+  /// sounds follow their clip, and a window that covered the old end grows onto
+  /// the new one (#6401).
+  ///
+  /// Returns [currentTracks] itself when nothing moved, so a caller can tell
+  /// that from a change with `identical`. Pass the list it already holds — the
+  /// state manager builds a fresh one on every read.
+  List<AudioEvent> _grownAudioTracks({
+    required List<AudioEvent> currentTracks,
+    required List<DivineVideoClip> previousClips,
+    required List<DivineVideoClip> clips,
+  }) => growAudioToCompositionEnd(
+    rebaseAnchoredAudioForClipState(clips, currentTracks),
+    previousDuration: compositionDuration(previousClips),
+    duration: compositionDuration(clips),
+    maxDuration: VideoEditorConstants.maxDuration,
+  );
 
   /// Persists a new [layer] and a clip-list change as **one** history entry.
   ///
@@ -393,11 +410,10 @@ extension VideoEditorExtensions on ProImageEditorState {
     List<Duration>? timelineMarkers,
   }) {
     final currentTracks = stateManager.audioTracks;
-    final tracks = growAudioToCompositionEnd(
-      rebaseAnchoredAudioForClipState(clips, currentTracks),
-      previousDuration: compositionDuration(previousClips),
-      duration: compositionDuration(clips),
-      maxDuration: VideoEditorConstants.maxDuration,
+    final tracks = _grownAudioTracks(
+      currentTracks: currentTracks,
+      previousClips: previousClips,
+      clips: clips,
     );
 
     addHistory(
