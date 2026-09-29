@@ -1457,6 +1457,8 @@ void main() {
       );
       await pumpEventQueue();
 
+      // The claim ran to acknowledgement, so the empty stream is not vacuous.
+      expect(validator.completePurchaseCallCount, 1);
       expect(settled, isEmpty);
     });
 
