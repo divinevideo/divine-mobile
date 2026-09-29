@@ -2090,7 +2090,7 @@ void main() {
           prefs: prefs,
           moderationRelayUrl: 'wss://relay.divine.video',
           pendingReportsDao: dao,
-          moderationPubkey: _validEventId('f'),
+          currentModerationPubkey: () => _validEventId('f'),
         );
         final result = await crs.reportUser(
           userPubkey: _validEventId('c'),
