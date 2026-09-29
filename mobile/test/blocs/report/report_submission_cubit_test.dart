@@ -227,5 +227,55 @@ void main() {
         );
       },
     );
+
+    test(
+      'a user report names the account by its pubkey, not the history key',
+      () async {
+        when(
+          () => service.reportUser(
+            userPubkey: any(named: 'userPubkey'),
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+          ),
+        ).thenAnswer(
+          (_) async => ReportResult.createSuccess(
+            'report',
+            delivery: ReportDelivery.queued,
+          ),
+        );
+        final cubit = build(
+          reportTarget: ReportTarget(
+            eventId: 'user_${target.authorPubkey}',
+            authorPubkey: target.authorPubkey,
+            userPubkey: target.authorPubkey,
+            moderationKindLabel: 'User Report',
+            moderationEventLabel: 'User Pubkey',
+          ),
+        );
+        addTearDown(cubit.close);
+        await submit(cubit);
+        final content =
+            verify(
+                  () => service.reportUser(
+                    userPubkey: target.authorPubkey,
+                    reason: ContentFilterReason.aiGenerated,
+                    details: 'My report',
+                    moderationContent: captureAny(named: 'moderationContent'),
+                    moderationTags: any(named: 'moderationTags'),
+                  ),
+                ).captured.single
+                as String;
+        expect(
+          content.split('\n'),
+          contains(
+            'User Pubkey: '
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          ),
+        );
+        expect(content, isNot(contains('user_')));
+      },
+    );
   });
 }

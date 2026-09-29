@@ -494,7 +494,11 @@ class ContentReportingService implements ReportChannelDriver {
           : null,
       hashtags: ['user-report'],
       nip56EventIds: validRelatedEventIds ?? const [],
-      moderationContent: moderationContent,
+      // The report sheet's shape: a user report names the account (#9622).
+      moderationContent:
+          moderationContent ??
+          'User Report\nReason: ${reason.name}\nUser Pubkey: $userPubkey\n'
+              'Details: $details',
       moderationTags: moderationTags,
     );
   }
@@ -783,7 +787,9 @@ class ContentReportingService implements ReportChannelDriver {
     description.writeln('Content Report - NIP-56');
     description.writeln();
     description.writeln('Report ID: $reportId');
-    description.writeln('Event ID: $eventId');
+    // A user report names no event, and divine-relay-manager reads any
+    // 64-hex `Event ID:` as one, so the account stays on Author Pubkey alone.
+    if (_isValidEventId(eventId)) description.writeln('Event ID: $eventId');
     description.writeln('Author Pubkey: $authorPubkey');
     description.writeln();
     description.writeln('Violation Type: ${reason.name}');
@@ -801,8 +807,9 @@ class ContentReportingService implements ReportChannelDriver {
 
     description.writeln();
     description.writeln('---');
+    // No report event id: the queued event is signed later, and signing can
+    // add tags, so its published id is not known when this ticket is written.
     description.writeln('Reported via Divine mobile app');
-    description.writeln('NIP-56 Nostr event created: $eventId');
 
     return {
       'subject': 'Content Report: ${reason.name}',
