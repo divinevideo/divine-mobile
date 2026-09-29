@@ -6345,6 +6345,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commonBack => 'Înapoi';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Închide';
 
   @override
@@ -9121,6 +9124,27 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Fundal text';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contur și umbră';
+
+  @override
+  String get videoEditorTextOutline => 'Contur';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Grosimea conturului';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Culoarea conturului';
+
+  @override
+  String get videoEditorTextShadow => 'Umbră';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensitatea umbrei';
+
+  @override
+  String get videoEditorTextShadowColor => 'Culoarea umbrei';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
@@ -9566,6 +9590,22 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Viteza clipului';
+
+  @override
+  String get videoEditorFadeLabel => 'Estompare';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Setează intrarea și ieșirea treptată pentru sunetul selectat';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Intrare și ieșire treptată';
+
+  @override
+  String get videoEditorFadeInLabel => 'Intrare treptată';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Ieșire treptată';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Tranziție';

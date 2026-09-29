@@ -10646,6 +10646,12 @@ abstract class AppLocalizations {
   /// **'Back'**
   String get commonBack;
 
+  /// No description provided for @commonReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get commonReload;
+
   /// No description provided for @commonClose.
   ///
   /// In en, this message translates to:
@@ -15228,6 +15234,48 @@ abstract class AppLocalizations {
   /// **'Text background'**
   String get videoEditorTextBackgroundSemanticLabel;
 
+  /// No description provided for @videoEditorTextEffectsSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline and shadow'**
+  String get videoEditorTextEffectsSemanticLabel;
+
+  /// No description provided for @videoEditorTextOutline.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorTextOutline;
+
+  /// No description provided for @videoEditorTextOutlineThickness.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline thickness'**
+  String get videoEditorTextOutlineThickness;
+
+  /// No description provided for @videoEditorTextOutlineColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline color'**
+  String get videoEditorTextOutlineColor;
+
+  /// No description provided for @videoEditorTextShadow.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow'**
+  String get videoEditorTextShadow;
+
+  /// No description provided for @videoEditorTextShadowStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow strength'**
+  String get videoEditorTextShadowStrength;
+
+  /// No description provided for @videoEditorTextShadowColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadow color'**
+  String get videoEditorTextShadowColor;
+
   /// No description provided for @videoEditorFontSemanticLabel.
   ///
   /// In en, this message translates to:
@@ -15959,6 +16007,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clip Speed'**
   String get videoEditorSpeedSheetTitle;
+
+  /// Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade'**
+  String get videoEditorFadeLabel;
+
+  /// Accessibility label for the Fade button in the sound's timeline controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade the selected sound in and out'**
+  String get videoEditorFadeSoundSemanticLabel;
+
+  /// Title of the bottom sheet for setting how long a sound fades in and out.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade in & out'**
+  String get videoEditorFadeSheetTitle;
+
+  /// Label of the slider for how long a sound rises from silence to full volume when it starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade in'**
+  String get videoEditorFadeInLabel;
+
+  /// Label of the slider for how long a sound falls from full volume to silence before it ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade out'**
+  String get videoEditorFadeOutLabel;
 
   /// Title of the bottom sheet for choosing the transition between two adjacent clips.
   ///

@@ -6242,6 +6242,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get commonBack => 'Назад';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Затвори';
 
   @override
@@ -9001,6 +9004,27 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Текстов фон';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Контур и сянка';
+
+  @override
+  String get videoEditorTextOutline => 'Контур';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Дебелина на контура';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Цвят на контура';
+
+  @override
+  String get videoEditorTextShadow => 'Сянка';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Интензивност на сянката';
+
+  @override
+  String get videoEditorTextShadowColor => 'Цвят на сянката';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Шрифт';
 
   @override
@@ -9443,6 +9467,22 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Скорост на клипа';
+
+  @override
+  String get videoEditorFadeLabel => 'Избледняване';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Задаване на плавно усилване и заглушаване за избрания звук';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Плавно усилване и заглушаване';
+
+  @override
+  String get videoEditorFadeInLabel => 'Плавно усилване';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Плавно заглушаване';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Преход';

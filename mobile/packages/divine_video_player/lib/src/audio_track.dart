@@ -31,6 +31,8 @@ class AudioTrack {
     this.videoEndTime,
     this.trackStart = Duration.zero,
     this.trackEnd,
+    this.fadeInDuration = Duration.zero,
+    this.fadeOutDuration = Duration.zero,
   });
 
   /// Creates an [AudioTrack] from a local file path.
@@ -41,6 +43,8 @@ class AudioTrack {
     this.videoEndTime,
     this.trackStart = Duration.zero,
     this.trackEnd,
+    this.fadeInDuration = Duration.zero,
+    this.fadeOutDuration = Duration.zero,
   }) : uri = path;
 
   /// Creates an [AudioTrack] from a network URL.
@@ -51,6 +55,8 @@ class AudioTrack {
     this.videoEndTime,
     this.trackStart = Duration.zero,
     this.trackEnd,
+    this.fadeInDuration = Duration.zero,
+    this.fadeOutDuration = Duration.zero,
   }) : uri = url;
 
   /// Creates an [AudioTrack] from a Flutter asset.
@@ -64,6 +70,8 @@ class AudioTrack {
     Duration? videoEndTime,
     Duration trackStart = Duration.zero,
     Duration? trackEnd,
+    Duration fadeInDuration = Duration.zero,
+    Duration fadeOutDuration = Duration.zero,
     AssetBundle? bundle,
   }) async {
     final (data, dir) = await (
@@ -81,6 +89,8 @@ class AudioTrack {
       videoEndTime: videoEndTime,
       trackStart: trackStart,
       trackEnd: trackEnd,
+      fadeInDuration: fadeInDuration,
+      fadeOutDuration: fadeOutDuration,
     );
   }
 
@@ -96,6 +106,8 @@ class AudioTrack {
     Duration? videoEndTime,
     Duration trackStart = Duration.zero,
     Duration? trackEnd,
+    Duration fadeInDuration = Duration.zero,
+    Duration fadeOutDuration = Duration.zero,
   }) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/divine_player_audio_memory/$fileName');
@@ -108,6 +120,8 @@ class AudioTrack {
       videoEndTime: videoEndTime,
       trackStart: trackStart,
       trackEnd: trackEnd,
+      fadeInDuration: fadeInDuration,
+      fadeOutDuration: fadeOutDuration,
     );
   }
 
@@ -134,6 +148,21 @@ class AudioTrack {
   /// When `null`, playback continues to the end of the file.
   final Duration? trackEnd;
 
+  /// How long the track rises from silence to [volume] once it starts
+  /// playing at [videoStartTime].
+  ///
+  /// The gain ramps linearly, matching the fade `pro_video_editor` bakes into
+  /// an exported track.
+  final Duration fadeInDuration;
+
+  /// How long the track falls from [volume] to silence before it stops
+  /// sounding: at [videoEndTime], at [trackEnd], or where the file runs out,
+  /// whichever comes first.
+  ///
+  /// The gain ramps linearly, and where it overlaps [fadeInDuration] the
+  /// quieter of the two wins.
+  final Duration fadeOutDuration;
+
   /// Serializes this track for platform channel transport.
   Map<String, dynamic> toMap() {
     return {
@@ -143,6 +172,8 @@ class AudioTrack {
       'videoEndMs': videoEndTime?.inMilliseconds,
       'trackStartMs': trackStart.inMilliseconds,
       'trackEndMs': trackEnd?.inMilliseconds,
+      'fadeInMs': fadeInDuration.inMilliseconds,
+      'fadeOutMs': fadeOutDuration.inMilliseconds,
     };
   }
 }

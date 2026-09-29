@@ -4666,6 +4666,13 @@
   "videoEditorTextColorSemanticLabel": "Warna teks",
   "videoEditorTextAlignmentSemanticLabel": "Penjajaran teks",
   "videoEditorTextBackgroundSemanticLabel": "Latar belakang teks",
+  "videoEditorTextEffectsSemanticLabel": "Garis luar dan bayang",
+  "videoEditorTextOutline": "Garis luar",
+  "videoEditorTextOutlineThickness": "Ketebalan garis luar",
+  "videoEditorTextOutlineColor": "Warna garis luar",
+  "videoEditorTextShadow": "Bayang",
+  "videoEditorTextShadowStrength": "Kekuatan bayang",
+  "videoEditorTextShadowColor": "Warna bayang",
   "videoEditorFontSemanticLabel": "Fon",
   "videoEditorNoStickersFound": "Tiada pelekat ditemui",
   "videoEditorNoStickersAvailable": "Tiada pelekat tersedia",
@@ -4923,6 +4930,11 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorFadeLabel": "Pudar",
+  "videoEditorFadeSoundSemanticLabel": "Tetapkan masuk dan keluar perlahan untuk bunyi dipilih",
+  "videoEditorFadeSheetTitle": "Masuk & keluar perlahan",
+  "videoEditorFadeInLabel": "Masuk perlahan",
+  "videoEditorFadeOutLabel": "Keluar perlahan",
   "videoEditorTransitionSheetTitle": "Peralihan",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

@@ -33,11 +33,12 @@ void main() {
     );
   }
 
-  /// The words of the preview caption drawn in [highlightColor].
+  /// The words of the preview caption drawn in [highlightColor]. A caption
+  /// without highlights renders plain text, which has no spans at all.
   List<String> litWords(WidgetTester tester) {
     final text = tester.widget<Text>(find.byType(Text));
     final lit = <String>[];
-    text.textSpan!.visitChildren((span) {
+    text.textSpan?.visitChildren((span) {
       if (span is TextSpan && span.style?.color == highlightColor) {
         lit.add(span.text!);
       }

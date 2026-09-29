@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:sound_service/sound_service.dart';
 
 /// One timeline sound scheduled against the stop-motion preview clock.
@@ -13,6 +14,8 @@ class StopMotionAudioPreviewTrack {
     required this.windowStart,
     required this.windowEnd,
     this.volume = 1,
+    this.fadeIn = Duration.zero,
+    this.fadeOut = Duration.zero,
   });
 
   /// Timeline item id of the sound.
@@ -30,6 +33,14 @@ class StopMotionAudioPreviewTrack {
 
   /// Editor-timeline position where this sound stops.
   final Duration windowEnd;
+
+  /// How long the sound rises from silence after [windowStart].
+  final Duration fadeIn;
+
+  /// How long the sound falls to silence before [windowEnd].
+  final Duration fadeOut;
+
+  bool get _hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 }
 
 /// Creates the per-track player; injectable for tests.
@@ -114,7 +125,8 @@ class StopMotionAudioPreview {
         await player.dispose();
         return;
       }
-      _tracks[track.id] = _ScheduledTrack(track: track, player: player);
+      _tracks[track.id] = _ScheduledTrack(track: track, player: player)
+        ..appliedVolume = track.volume;
     }
   }
 
@@ -177,6 +189,14 @@ class StopMotionAudioPreview {
           position >= track.windowStart && position < track.windowEnd;
       final shouldPlay = isPlaying && inWindow;
 
+      // The ticker calls in every frame, which steps a fade finely enough
+      // that no single step is audible. Before a start, so it does not blip
+      // at full volume inside a fade in.
+      if (shouldPlay) {
+        await _applyFade(scheduled, position);
+        if (_disposed) return;
+      }
+
       if (shouldPlay && (!scheduled.active || jumped)) {
         scheduled.active = true;
         await scheduled.player.seek(position - track.windowStart);
@@ -194,6 +214,23 @@ class StopMotionAudioPreview {
         if (_disposed) return;
       }
     }
+  }
+
+  /// Sets [scheduled]'s volume to its fade at [position], when that changed.
+  Future<void> _applyFade(_ScheduledTrack scheduled, Duration position) async {
+    final track = scheduled.track;
+    if (!track._hasFade) return;
+    final volume =
+        track.volume *
+        audioFadeGain(
+          position: position - track.windowStart,
+          length: track.windowEnd - track.windowStart,
+          fadeIn: track.fadeIn,
+          fadeOut: track.fadeOut,
+        );
+    if (volume == scheduled.appliedVolume) return;
+    scheduled.appliedVolume = volume;
+    await scheduled.player.setVolume(volume);
   }
 
   /// Pauses every sound (preview paused). Positions re-sync on the next
@@ -235,4 +272,7 @@ class _ScheduledTrack {
 
   /// Whether the playhead currently has this sound playing.
   bool active = false;
+
+  /// The volume last sent to [player].
+  double? appliedVolume;
 }

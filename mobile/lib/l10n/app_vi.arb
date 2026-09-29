@@ -4666,6 +4666,13 @@
   "videoEditorTextColorSemanticLabel": "Màu chữ",
   "videoEditorTextAlignmentSemanticLabel": "Căn chỉnh chữ",
   "videoEditorTextBackgroundSemanticLabel": "Nền chữ",
+  "videoEditorTextEffectsSemanticLabel": "Viền và bóng",
+  "videoEditorTextOutline": "Viền",
+  "videoEditorTextOutlineThickness": "Độ dày viền",
+  "videoEditorTextOutlineColor": "Màu viền",
+  "videoEditorTextShadow": "Bóng",
+  "videoEditorTextShadowStrength": "Độ đậm của bóng",
+  "videoEditorTextShadowColor": "Màu bóng",
   "videoEditorFontSemanticLabel": "Phông chữ",
   "videoEditorNoStickersFound": "Không tìm thấy nhãn dán nào",
   "videoEditorNoStickersAvailable": "Không có nhãn dán nào",
@@ -4923,6 +4930,11 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorFadeLabel": "Tăng giảm dần",
+  "videoEditorFadeSoundSemanticLabel": "Đặt tăng dần và giảm dần cho âm thanh đã chọn",
+  "videoEditorFadeSheetTitle": "Tăng dần & giảm dần",
+  "videoEditorFadeInLabel": "Tăng dần",
+  "videoEditorFadeOutLabel": "Giảm dần",
   "videoEditorTransitionSheetTitle": "Chuyển cảnh",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

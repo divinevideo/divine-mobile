@@ -4035,6 +4035,7 @@
   "commonDelete": "Delete",
   "commonCancel": "Cancel",
   "commonBack": "Back",
+  "commonReload": "Reload",
   "commonClose": "Close",
   "commonNotNow": "Not now",
   "commonLoading": "Loading",
@@ -5893,6 +5894,13 @@
   "videoEditorTextColorSemanticLabel": "Text color",
   "videoEditorTextAlignmentSemanticLabel": "Text alignment",
   "videoEditorTextBackgroundSemanticLabel": "Text background",
+  "videoEditorTextEffectsSemanticLabel": "Outline and shadow",
+  "videoEditorTextOutline": "Outline",
+  "videoEditorTextOutlineThickness": "Outline thickness",
+  "videoEditorTextOutlineColor": "Outline color",
+  "videoEditorTextShadow": "Shadow",
+  "videoEditorTextShadowStrength": "Shadow strength",
+  "videoEditorTextShadowColor": "Shadow color",
   "videoEditorFontSemanticLabel": "Font",
   "videoEditorNoStickersFound": "No stickers found",
   "videoEditorNoStickersAvailable": "No stickers available",
@@ -6185,6 +6193,26 @@
   "videoEditorSpeedSheetTitle": "Clip Speed",
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
+  },
+  "videoEditorFadeLabel": "Fade",
+  "@videoEditorFadeLabel": {
+    "description": "Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet."
+  },
+  "videoEditorFadeSoundSemanticLabel": "Fade the selected sound in and out",
+  "@videoEditorFadeSoundSemanticLabel": {
+    "description": "Accessibility label for the Fade button in the sound's timeline controls."
+  },
+  "videoEditorFadeSheetTitle": "Fade in & out",
+  "@videoEditorFadeSheetTitle": {
+    "description": "Title of the bottom sheet for setting how long a sound fades in and out."
+  },
+  "videoEditorFadeInLabel": "Fade in",
+  "@videoEditorFadeInLabel": {
+    "description": "Label of the slider for how long a sound rises from silence to full volume when it starts."
+  },
+  "videoEditorFadeOutLabel": "Fade out",
+  "@videoEditorFadeOutLabel": {
+    "description": "Label of the slider for how long a sound falls from full volume to silence before it ends."
   },
   "videoEditorTransitionSheetTitle": "Transition",
   "@videoEditorTransitionSheetTitle": {

@@ -530,6 +530,41 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'carries the fade onto sound items so the strip can draw it',
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: const <Layer>[],
+            filters: const <FilterState>[],
+            audioTracks: [
+              _audioEvent(
+                id: 'sound-1',
+                start: Duration.zero,
+                end: const Duration(seconds: 4),
+              ).copyWith(
+                fadeInDuration: const Duration(milliseconds: 500),
+                fadeOutDuration: const Duration(seconds: 1),
+              ),
+            ],
+            totalVideoDuration: const Duration(seconds: 6),
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>()
+              .having(
+                (s) => s.items.first.fadeIn,
+                'fadeIn',
+                const Duration(milliseconds: 500),
+              )
+              .having(
+                (s) => s.items.first.fadeOut,
+                'fadeOut',
+                const Duration(seconds: 1),
+              ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'spans the whole video when a sound carries a zero-length window',
         build: TimelineOverlayBloc.new,
         act: (bloc) => bloc.add(

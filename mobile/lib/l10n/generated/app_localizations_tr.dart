@@ -6121,6 +6121,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commonBack => 'Geri';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Kapat';
 
   @override
@@ -8844,6 +8847,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Metin arka planı';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Kontur ve gölge';
+
+  @override
+  String get videoEditorTextOutline => 'Kontur';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Kontur kalınlığı';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Kontur rengi';
+
+  @override
+  String get videoEditorTextShadow => 'Gölge';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Gölge yoğunluğu';
+
+  @override
+  String get videoEditorTextShadowColor => 'Gölge rengi';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Yazı tipi';
 
   @override
@@ -9278,6 +9302,22 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Klip Hızı';
+
+  @override
+  String get videoEditorFadeLabel => 'Solma';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Seçili ses için yavaş giriş ve çıkışı ayarla';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Yavaş giriş ve çıkış';
+
+  @override
+  String get videoEditorFadeInLabel => 'Yavaş giriş';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Yavaş çıkış';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Geçiş';

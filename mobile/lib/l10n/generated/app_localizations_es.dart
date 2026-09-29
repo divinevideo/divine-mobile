@@ -6240,6 +6240,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonBack => 'Volver';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Cerrar';
 
   @override
@@ -9007,6 +9010,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Fondo de texto';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contorno y sombra';
+
+  @override
+  String get videoEditorTextOutline => 'Contorno';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Grosor del contorno';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Color del contorno';
+
+  @override
+  String get videoEditorTextShadow => 'Sombra';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensidad de la sombra';
+
+  @override
+  String get videoEditorTextShadowColor => 'Color de la sombra';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Fuente';
 
   @override
@@ -9451,6 +9475,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Velocidad del clip';
+
+  @override
+  String get videoEditorFadeLabel => 'Fundido';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Establecer el fundido de entrada y salida del sonido seleccionado';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fundido de entrada y salida';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fundido de entrada';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fundido de salida';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transición';

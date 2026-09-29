@@ -74,11 +74,11 @@ void main() {
             body: Builder(
               builder: (context) => ElevatedButton(
                 onPressed: () async {
-                  final style = await showCaptionCustomStyleSheet(
+                  final result = await showCaptionCustomStyleSheet(
                     context,
                     initial: initial,
                   );
-                  onResult?.call(style);
+                  onResult?.call(result);
                 },
                 child: const Text('Open style sheet'),
               ),
@@ -151,6 +151,51 @@ void main() {
           expectedLabel(lookupAppLocalizations(const Locale('en'))),
         ),
         findsNothing,
+      );
+    });
+  });
+
+  group('outline and shadow', () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    Finder slider(String label) => find.byWidgetPredicate(
+      (widget) => widget is Slider && widget.label == label,
+    );
+
+    testWidgets('applies the outline and shadow set in the sheet', (
+      tester,
+    ) async {
+      CaptionCustomStyle? result;
+      await pumpSheet(
+        tester,
+        disableAnimations: true,
+        onResult: (style) => result = style,
+      );
+      await tester.pumpAndSettle();
+
+      for (final label in [
+        l10n.videoEditorTextOutlineThickness,
+        l10n.videoEditorTextShadowStrength,
+      ]) {
+        await tester.ensureVisible(slider(label));
+        await tester.pumpAndSettle();
+        await tester.tap(slider(label));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DivineButton),
+          matching: find.text(l10n.videoEditorCaptionsCustomApply),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(result?.effects.hasOutline, isTrue);
+      expect(result?.effects.hasShadow, isTrue);
+      // Everything else is the look the sheet opened with.
+      expect(
+        result?.copyWith(effects: initial.effects),
+        equals(initial),
       );
     });
   });

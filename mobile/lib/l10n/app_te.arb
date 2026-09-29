@@ -5523,6 +5523,13 @@
   "videoEditorTextColorSemanticLabel": "వచన రంగు",
   "videoEditorTextAlignmentSemanticLabel": "వచన అమరిక",
   "videoEditorTextBackgroundSemanticLabel": "వచన నేపథ్యం",
+  "videoEditorTextEffectsSemanticLabel": "అంచు గీత మరియు నీడ",
+  "videoEditorTextOutline": "అంచు గీత",
+  "videoEditorTextOutlineThickness": "అంచు గీత మందం",
+  "videoEditorTextOutlineColor": "అంచు గీత రంగు",
+  "videoEditorTextShadow": "నీడ",
+  "videoEditorTextShadowStrength": "నీడ తీవ్రత",
+  "videoEditorTextShadowColor": "నీడ రంగు",
   "videoEditorFontSemanticLabel": "ఫాంట్",
   "videoEditorNoStickersFound": "స్టిక్కర్‌లు ఏవీ కనుగొనబడలేదు",
   "videoEditorNoStickersAvailable": "స్టిక్కర్‌లు అందుబాటులో లేవు",
@@ -5789,6 +5796,11 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorFadeLabel": "ఫేడ్",
+  "videoEditorFadeSoundSemanticLabel": "ఎంచుకున్న ధ్వని కోసం ఫేడ్ ఇన్, ఫేడ్ అవుట్ సెట్ చేయండి",
+  "videoEditorFadeSheetTitle": "ఫేడ్ ఇన్ & అవుట్",
+  "videoEditorFadeInLabel": "ఫేడ్ ఇన్",
+  "videoEditorFadeOutLabel": "ఫేడ్ అవుట్",
   "videoEditorTransitionSheetTitle": "పరివర్తన",
   "@videoEditorTransitionSheetTitle": {
     "description": "Title of the bottom sheet for choosing the transition between two adjacent clips."

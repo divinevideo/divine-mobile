@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
+import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_effects_panel.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_style_bar.dart';
@@ -74,6 +76,7 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
         backgroundStyle: layer.colorMode,
         fontSize: _normalizeFontScale(layer.fontScale),
         selectedFontIndex: max(0, fontIndex),
+        effects: TextEffects.of(layer),
       ),
     );
   }
@@ -135,15 +138,15 @@ class _BottomPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (showFontSelector, showColorPicker, color) = context.select(
-      (VideoEditorTextBloc bloc) => (
-        bloc.state.showFontSelector,
-        bloc.state.showColorPicker,
-        bloc.state.color,
-      ),
-    );
-
-    final showBottomPanel = showFontSelector || showColorPicker;
+    final (showFontSelector, showEffectsPanel, showBottomPanel, color) = context
+        .select(
+          (VideoEditorTextBloc bloc) => (
+            bloc.state.showFontSelector,
+            bloc.state.showEffectsPanel,
+            bloc.state.showsPanel,
+            bloc.state.color,
+          ),
+        );
 
     return Container(
       decoration: BoxDecoration(
@@ -167,9 +170,19 @@ class _BottomPanel extends StatelessWidget {
             child: showFontSelector
                 ? VideoEditorTextFontSelector(
                     onFontSelected: (textStyle) {
-                      editorKey.currentState?.setTextStyle(textStyle);
+                      // The font's style carries no shadows; keep the ones
+                      // the text already has.
+                      final effects = context
+                          .read<VideoEditorTextBloc>()
+                          .state
+                          .effects;
+                      editorKey.currentState?.setTextStyle(
+                        effects.applyToStyle(textStyle),
+                      );
                     },
                   )
+                : showEffectsPanel
+                ? const VideoEditorTextEffectsPanel()
                 : VideoEditorColorPickerSheet(
                     selectedColor: color,
                     onColorSelected: (color) {
@@ -261,6 +274,8 @@ class _TextEditor extends StatelessWidget {
               background: Colors.transparent,
               inputCursorColor: VineTheme.whiteText,
               inputTextFieldPadding: .only(top: 96, left: 16, right: 48),
+              // Preview the text's own shadow while typing.
+              inputShadows: null,
             ),
             safeArea: const EditorSafeArea.none(),
             enableAutocorrect: false,

@@ -5837,6 +5837,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonBack => '返回';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => '关闭';
 
   @override
@@ -8424,6 +8427,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => '文字背景';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => '描边和阴影';
+
+  @override
+  String get videoEditorTextOutline => '描边';
+
+  @override
+  String get videoEditorTextOutlineThickness => '描边粗细';
+
+  @override
+  String get videoEditorTextOutlineColor => '描边颜色';
+
+  @override
+  String get videoEditorTextShadow => '阴影';
+
+  @override
+  String get videoEditorTextShadowStrength => '阴影强度';
+
+  @override
+  String get videoEditorTextShadowColor => '阴影颜色';
+
+  @override
   String get videoEditorFontSemanticLabel => '字体';
 
   @override
@@ -8818,6 +8842,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => '片段速度';
+
+  @override
+  String get videoEditorFadeLabel => '淡入淡出';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel => '设置选中声音的淡入淡出';
+
+  @override
+  String get videoEditorFadeSheetTitle => '淡入淡出';
+
+  @override
+  String get videoEditorFadeInLabel => '淡入';
+
+  @override
+  String get videoEditorFadeOutLabel => '淡出';
 
   @override
   String get videoEditorTransitionSheetTitle => '转场';

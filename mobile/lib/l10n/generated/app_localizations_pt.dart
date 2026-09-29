@@ -6229,6 +6229,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonBack => 'Voltar';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Fechar';
 
   @override
@@ -8989,6 +8992,27 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Fundo do texto';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Contorno e sombra';
+
+  @override
+  String get videoEditorTextOutline => 'Contorno';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Espessura do contorno';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Cor do contorno';
+
+  @override
+  String get videoEditorTextShadow => 'Sombra';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Intensidade da sombra';
+
+  @override
+  String get videoEditorTextShadowColor => 'Cor da sombra';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Fonte';
 
   @override
@@ -9432,6 +9456,22 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Velocidade do clipe';
+
+  @override
+  String get videoEditorFadeLabel => 'Fade';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Definir o fade in e o fade out do som selecionado';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Fade in e fade out';
+
+  @override
+  String get videoEditorFadeInLabel => 'Fade in';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transição';

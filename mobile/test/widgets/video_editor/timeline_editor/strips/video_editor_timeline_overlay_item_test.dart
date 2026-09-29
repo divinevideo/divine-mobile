@@ -1,19 +1,30 @@
 // ABOUTME: Widget tests for TimelineOverlayItemTile.
 // ABOUTME: Verifies label rendering and drag visual state.
 
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
+import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show DrawPaintItem, PaintLayer, PaintMode, PaintedModel, WidgetLayer;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ClipTransition, ClipTransitionType, EditorVideo;
+
+class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
+    implements ClipEditorBloc {}
 
 void main() {
   group(TimelineOverlayItemTile, () {
@@ -149,6 +160,88 @@ void main() {
           expect(painter.maxDuration, const Duration(seconds: 4));
         },
       );
+
+      group('fade out', () {
+        late _MockClipEditorBloc clipEditorBloc;
+
+        DivineVideoClip clip(String id, {ClipTransition? transition}) =>
+            DivineVideoClip(
+              id: id,
+              video: EditorVideo.file('${Directory.systemTemp.path}/$id.mp4'),
+              duration: const Duration(seconds: 3),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              transition: transition,
+            );
+
+        // Two 3 s clips joined by a dissolve (0.5 s by default) render 5.5 s.
+        final dissolvedClips = [
+          clip(
+            'a',
+            transition: const ClipTransition(
+              type: ClipTransitionType.dissolve,
+            ),
+          ),
+          clip('b'),
+        ];
+
+        TimelineOverlayItem fadingSound({required Duration endTime}) =>
+            TimelineOverlayItem(
+              id: 'sound-fade',
+              type: TimelineOverlayType.sound,
+              startTime: Duration.zero,
+              endTime: endTime,
+              label: 'Beat',
+              sourceDuration: const Duration(seconds: 8),
+              fadeOut: const Duration(seconds: 1),
+              waveformLeftChannel: Float32List.fromList(
+                List<double>.filled(64, 0.5),
+              ),
+            );
+
+        setUp(() {
+          clipEditorBloc = _MockClipEditorBloc();
+          when(
+            () => clipEditorBloc.state,
+          ).thenReturn(ClipEditorState(clips: dissolvedClips));
+        });
+
+        Widget buildFading(TimelineOverlayItem item) =>
+            BlocProvider<ClipEditorBloc>.value(
+              value: clipEditorBloc,
+              child: buildSound(item),
+            );
+
+        testWidgets(
+          'ends the ramp where the rendered video cuts the sound short',
+          (tester) async {
+            await tester.pumpWidget(
+              buildFading(fadingSound(endTime: const Duration(seconds: 6))),
+            );
+
+            final painter = findWaveformPainter(tester);
+            expect(painter.fadeOut, const Duration(seconds: 1));
+            expect(painter.maxDuration, const Duration(seconds: 6));
+            expect(
+              painter.audibleDuration,
+              const Duration(milliseconds: 5500),
+            );
+          },
+        );
+
+        testWidgets('ends the ramp at the sound end inside the video', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildFading(fadingSound(endTime: const Duration(seconds: 5))),
+          );
+
+          final painter = findWaveformPainter(tester);
+          expect(painter.fadeOut, const Duration(seconds: 1));
+          expect(painter.audibleDuration, isNull);
+        });
+      });
     });
 
     group('_StickerPreview', () {

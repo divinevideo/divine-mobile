@@ -1,5 +1,6 @@
-// ABOUTME: Caption render style (font + colors + animation) and the
-// ABOUTME: serializable custom-style descriptor users configure themselves.
+// ABOUTME: Caption render style (font + colors + outline and shadow +
+// ABOUTME: animation) and the serializable custom-style descriptor users
+// ABOUTME: configure themselves.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:equatable/equatable.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/painting.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
@@ -127,6 +129,7 @@ class CaptionStyle {
     required this.leave,
     this.fontScale = 1,
     this.highlightColor,
+    this.effects = TextEffects.none,
   });
 
   /// The Google Font this style renders with.
@@ -154,6 +157,9 @@ class CaptionStyle {
   /// style does not highlight words.
   final Color? highlightColor;
 
+  /// The outline and shadow drawn around the caption text.
+  final TextEffects effects;
+
   /// Vertical placement of caption cues: fraction of the canvas height below
   /// center, keeping captions in the lower third without touching the edge.
   static const double _bottomOffsetFactor = 0.32;
@@ -166,10 +172,17 @@ class CaptionStyle {
     final highlightColor = this.highlightColor;
     return TextLayer(
       text: cue.text,
-      textStyle: font(),
+      textStyle: effects.applyToStyle(font()),
+      outlineWidth: effects.outlineWidth,
+      outlineColor: effects.outlineColor,
       colorMode: colorMode,
       color: color,
-      background: background,
+      // The layer paints its background whatever the mode, so a style
+      // without a pill must hand it no color; [background] stays on the
+      // style for when the pill is switched back on.
+      background: colorMode == LayerBackgroundMode.onlyColor
+          ? VineTheme.transparent
+          : background,
       align: TextAlign.center,
       fontScale: fontScale,
       offset: Offset(0, bodySize.shortestSide * _bottomOffsetFactor),
@@ -240,6 +253,7 @@ class CaptionCustomStyle extends Equatable {
     required this.animation,
     this.fontScale = 1,
     this.highlightColor = defaultHighlightColor,
+    this.effects = TextEffects.none,
   });
 
   /// The default custom style: the first font, white on a dark pill, fading.
@@ -277,6 +291,7 @@ class CaptionCustomStyle extends Equatable {
         final int argb => colorFromArgb32(argb),
         _ => defaultHighlightColor,
       },
+      effects: TextEffects.fromJson(json['effects']),
     );
   }
 
@@ -302,6 +317,9 @@ class CaptionCustomStyle extends Equatable {
   /// [animation] highlights words.
   final Color highlightColor;
 
+  /// The outline and shadow drawn around the caption text.
+  final TextEffects effects;
+
   /// Whether the style draws a background pill.
   bool get hasBackground => colorMode != LayerBackgroundMode.onlyColor;
 
@@ -321,6 +339,7 @@ class CaptionCustomStyle extends Equatable {
       background: background,
       colorMode: colorMode,
       fontScale: fontScale,
+      effects: effects,
       enter: animations.enter,
       leave: animations.leave,
       highlightColor: animation.highlightsWords ? highlightColor : null,
@@ -336,6 +355,7 @@ class CaptionCustomStyle extends Equatable {
     'animation': animation.name,
     'fontScale': fontScale,
     'highlightColor': highlightColor.toARGB32(),
+    'effects': effects.toJson(),
   };
 
   /// Copy with the given fields replaced.
@@ -347,6 +367,7 @@ class CaptionCustomStyle extends Equatable {
     CaptionAnimationStyle? animation,
     double? fontScale,
     Color? highlightColor,
+    TextEffects? effects,
   }) => CaptionCustomStyle(
     fontIndex: fontIndex ?? this.fontIndex,
     color: color ?? this.color,
@@ -355,6 +376,7 @@ class CaptionCustomStyle extends Equatable {
     animation: animation ?? this.animation,
     fontScale: fontScale ?? this.fontScale,
     highlightColor: highlightColor ?? this.highlightColor,
+    effects: effects ?? this.effects,
   );
 
   @override
@@ -366,5 +388,6 @@ class CaptionCustomStyle extends Equatable {
     animation,
     fontScale,
     highlightColor,
+    effects,
   ];
 }

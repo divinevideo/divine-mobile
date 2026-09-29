@@ -6180,6 +6180,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get commonBack => 'Tillbaka';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Stäng';
 
   @override
@@ -8918,6 +8921,27 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Textbakgrund';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Kontur och skugga';
+
+  @override
+  String get videoEditorTextOutline => 'Kontur';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Konturtjocklek';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Konturfärg';
+
+  @override
+  String get videoEditorTextShadow => 'Skugga';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Skuggstyrka';
+
+  @override
+  String get videoEditorTextShadowColor => 'Skuggfärg';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Typsnitt';
 
   @override
@@ -9359,6 +9383,22 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Klipphastighet';
+
+  @override
+  String get videoEditorFadeLabel => 'Toning';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Ange intoning och uttoning för valt ljud';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Intoning och uttoning';
+
+  @override
+  String get videoEditorFadeInLabel => 'Intoning';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Uttoning';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Övergång';

@@ -5,6 +5,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
@@ -498,7 +499,103 @@ void main() {
       );
     });
 
+    group('VideoEditorTextEffectsChanged', () {
+      const effects = TextEffects(outlineThickness: 0.5, shadowStrength: 0.2);
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'stores the outline and shadow',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoEditorTextEffectsChanged(effects)),
+        expect: () => [
+          isA<VideoEditorTextState>().having(
+            (s) => s.effects,
+            'effects',
+            effects,
+          ),
+        ],
+      );
+    });
+
+    group('VideoEditorTextEffectsPanelToggled', () {
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'opens the outline and shadow panel when closed',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoEditorTextEffectsPanelToggled()),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.showEffectsPanel, 'showEffectsPanel', isTrue)
+              .having((s) => s.showsPanel, 'showsPanel', isTrue),
+        ],
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'closes the outline and shadow panel when open',
+        build: buildBloc,
+        seed: () => const VideoEditorTextState(showEffectsPanel: true),
+        act: (bloc) => bloc.add(const VideoEditorTextEffectsPanelToggled()),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.showEffectsPanel, 'showEffectsPanel', isFalse)
+              .having((s) => s.showsPanel, 'showsPanel', isFalse),
+        ],
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'closes the font selector and color picker when opening',
+        build: buildBloc,
+        seed: () => const VideoEditorTextState(
+          showFontSelector: true,
+          showColorPicker: true,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorTextEffectsPanelToggled()),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.showEffectsPanel, 'showEffectsPanel', isTrue)
+              .having((s) => s.showFontSelector, 'showFontSelector', isFalse)
+              .having((s) => s.showColorPicker, 'showColorPicker', isFalse),
+        ],
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'is closed by opening the font selector',
+        build: buildBloc,
+        seed: () => const VideoEditorTextState(showEffectsPanel: true),
+        act: (bloc) => bloc.add(const VideoEditorTextFontSelectorToggled()),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.showFontSelector, 'showFontSelector', isTrue)
+              .having((s) => s.showEffectsPanel, 'showEffectsPanel', isFalse),
+        ],
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'is closed by opening the color picker',
+        build: buildBloc,
+        seed: () => const VideoEditorTextState(showEffectsPanel: true),
+        act: (bloc) => bloc.add(const VideoEditorTextColorPickerToggled()),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.showColorPicker, 'showColorPicker', isTrue)
+              .having((s) => s.showEffectsPanel, 'showEffectsPanel', isFalse),
+        ],
+      );
+    });
+
     group('VideoEditorTextClosePanels', () {
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'closes the outline and shadow panel',
+        build: buildBloc,
+        seed: () => const VideoEditorTextState(showEffectsPanel: true),
+        act: (bloc) => bloc.add(const VideoEditorTextClosePanels()),
+        expect: () => [
+          isA<VideoEditorTextState>().having(
+            (s) => s.showEffectsPanel,
+            'showEffectsPanel',
+            isFalse,
+          ),
+        ],
+      );
+
       blocTest<VideoEditorTextBloc, VideoEditorTextState>(
         'closes font selector',
         build: buildBloc,
@@ -567,10 +664,16 @@ void main() {
             backgroundStyle: LayerBackgroundMode.onlyColor,
             fontSize: 0.8,
             selectedFontIndex: 3,
+            effects: TextEffects(outlineThickness: 0.25),
           ),
         ),
         expect: () => [
           isA<VideoEditorTextState>()
+              .having(
+                (s) => s.effects,
+                'effects',
+                const TextEffects(outlineThickness: 0.25),
+              )
               .having((s) => s.text, 'text', 'Existing Text')
               .having((s) => s.alignment, 'alignment', TextAlign.left)
               .having((s) => s.color, 'color', Colors.blue)

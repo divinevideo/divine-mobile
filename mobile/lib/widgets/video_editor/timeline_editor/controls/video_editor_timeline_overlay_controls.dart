@@ -18,6 +18,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_chroma
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
@@ -523,6 +524,8 @@ class _SoundOverlayControls extends StatelessWidget {
     return VideoEditorTimelineControls(
       onDelete: () => _removeSound(context: context),
       onEdit: () => _editSound(context: context),
+      onFade: () => _fadeSound(context: context),
+      hasFade: item.hasFade,
       onDuplicated: () => _duplicateSound(context: context),
       onSplit: () => _splitSound(context: context),
       onDone: () => TimelineOverlayControls._deselect(context),
@@ -564,6 +567,50 @@ class _SoundOverlayControls extends StatelessWidget {
       case AudioTimingDeleted():
         _removeSound(context: context);
     }
+  }
+
+  Future<void> _fadeSound({required BuildContext context}) async {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final sound = editor.stateManager.audioTracks
+        .where((t) => t.id == item.id)
+        .firstOrNull;
+    if (sound == null) return;
+
+    final result = await VineBottomSheet.show<AudioFadeSelection>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      isScrollControlled: true,
+      body: VideoEditorAudioFadeSheet(
+        soundLength: item.duration,
+        initialFadeIn: sound.fadeInDuration,
+        initialFadeOut: sound.fadeOutDuration,
+      ),
+    );
+    if (result == null || !context.mounted) return;
+
+    // Re-read the tracks after the async gap: another edit (an undo, a
+    // finished extraction) may have changed them while the sheet was open.
+    final tracks = editor.stateManager.audioTracks;
+    if (!tracks.any((t) => t.id == item.id)) return;
+    editor.addHistory(
+      meta: {
+        ...editor.stateManager.activeMeta,
+        VideoEditorConstants.audioStateHistoryKey: tracks
+            .map(
+              (t) => t.id == item.id
+                  ? t.copyWith(
+                      fadeInDuration: result.fadeIn,
+                      fadeOutDuration: result.fadeOut,
+                    )
+                  : t,
+            )
+            .map((e) => e.toJson())
+            .toList(),
+      },
+    );
   }
 
   void _removeSound({required BuildContext context}) {
@@ -625,15 +672,22 @@ class _SoundOverlayControls extends StatelessWidget {
 
     final track = tracks[trackIdx];
     final offsetShift = splitAt - item.startTime;
+    // The fade in stays with the head and the fade out with the tail: the cut
+    // itself is a new edge, which starts and ends at full volume.
     final second = track.copyWith(
       id: _copyId(item.id),
       startOffset: track.startOffset + offsetShift,
       startTime: splitAt,
       endTime: item.endTime,
+      fadeInDuration: Duration.zero,
+    );
+    final first = track.copyWith(
+      endTime: splitAt,
+      fadeOutDuration: Duration.zero,
     );
 
     final updatedTracks = List.of(tracks)
-      ..[trackIdx] = track.copyWith(endTime: splitAt)
+      ..[trackIdx] = first
       ..insert(trackIdx + 1, second);
 
     editor.addHistory(

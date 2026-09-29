@@ -6118,6 +6118,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get commonBack => 'Kembali';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => 'Tutup';
 
   @override
@@ -8841,6 +8844,27 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => 'Garis tepi dan bayangan';
+
+  @override
+  String get videoEditorTextOutline => 'Garis tepi';
+
+  @override
+  String get videoEditorTextOutlineThickness => 'Ketebalan garis tepi';
+
+  @override
+  String get videoEditorTextOutlineColor => 'Warna garis tepi';
+
+  @override
+  String get videoEditorTextShadow => 'Bayangan';
+
+  @override
+  String get videoEditorTextShadowStrength => 'Kekuatan bayangan';
+
+  @override
+  String get videoEditorTextShadowColor => 'Warna bayangan';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
@@ -9280,6 +9304,22 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'Kecepatan Klip';
+
+  @override
+  String get videoEditorFadeLabel => 'Pudar';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel =>
+      'Atur suara masuk dan keluar perlahan untuk suara yang dipilih';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'Masuk & keluar perlahan';
+
+  @override
+  String get videoEditorFadeInLabel => 'Masuk perlahan';
+
+  @override
+  String get videoEditorFadeOutLabel => 'Keluar perlahan';
 
   @override
   String get videoEditorTransitionSheetTitle => 'Transisi';

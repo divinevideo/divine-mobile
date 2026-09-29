@@ -5867,6 +5867,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonBack => '戻る';
 
   @override
+  String get commonReload => 'Reload';
+
+  @override
   String get commonClose => '閉じる';
 
   @override
@@ -8496,6 +8499,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'テキストの背景';
 
   @override
+  String get videoEditorTextEffectsSemanticLabel => '縁取りと影';
+
+  @override
+  String get videoEditorTextOutline => '縁取り';
+
+  @override
+  String get videoEditorTextOutlineThickness => '縁取りの太さ';
+
+  @override
+  String get videoEditorTextOutlineColor => '縁取りの色';
+
+  @override
+  String get videoEditorTextShadow => '影';
+
+  @override
+  String get videoEditorTextShadowStrength => '影の強さ';
+
+  @override
+  String get videoEditorTextShadowColor => '影の色';
+
+  @override
   String get videoEditorFontSemanticLabel => 'フォント';
 
   @override
@@ -8902,6 +8926,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorSpeedSheetTitle => 'クリップの速度';
+
+  @override
+  String get videoEditorFadeLabel => 'フェード';
+
+  @override
+  String get videoEditorFadeSoundSemanticLabel => '選択したサウンドのフェードイン・アウトを設定';
+
+  @override
+  String get videoEditorFadeSheetTitle => 'フェードイン・アウト';
+
+  @override
+  String get videoEditorFadeInLabel => 'フェードイン';
+
+  @override
+  String get videoEditorFadeOutLabel => 'フェードアウト';
 
   @override
   String get videoEditorTransitionSheetTitle => 'トランジション';

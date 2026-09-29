@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -35,6 +36,12 @@ void main() {
     scaleFrom: 0.5,
   );
   const enterPoint = Offset(-0.4, -0.3);
+  const effects = TextEffects(
+    outlineThickness: 0.5,
+    outlineColor: Color(0xFFFF7FAF),
+    shadowStrength: 0.25,
+    shadowColor: Color(0x80000000),
+  );
 
   // Font index 0 is Inter, the one editor font bundled with the app: any
   // other index asks google_fonts to fetch when the font is called, which
@@ -47,6 +54,7 @@ void main() {
     customSecondaryColor: true,
     align: TextAlign.left,
     fontScale: 1.6,
+    effects: effects,
     enter: [enterFade, enterSlide],
     leave: [leaveScale],
     enterPoint: enterPoint,
@@ -57,12 +65,14 @@ void main() {
       test('lifts the styling, animations and slide points off a layer', () {
         final layer = TextLayer(
           text: 'Episode 12',
-          textStyle: VideoEditorConstants.textFonts[0](),
+          textStyle: effects.applyToStyle(VideoEditorConstants.textFonts[0]()),
           color: style.color,
           background: style.background,
           colorMode: style.colorMode,
           customSecondaryColor: true,
           fontScale: 1.6,
+          outlineWidth: effects.outlineWidth,
+          outlineColor: effects.outlineColor,
           animations: [enterFade, enterSlide, leaveScale].toLayerAnimations(),
           meta: const LayerSlidePoints(enter: enterPoint).applyTo(null),
         );
@@ -180,6 +190,7 @@ void main() {
         expect(decoded?.align, TextAlign.center);
         expect(decoded?.fontScale, 1);
         expect(decoded?.customSecondaryColor, isFalse);
+        expect(decoded?.effects, TextEffects.none);
         expect(decoded?.enter, isEmpty);
         expect(decoded?.leave, isEmpty);
         // An index past the catalogue still resolves to a font.
@@ -226,6 +237,9 @@ void main() {
         expect(result.customSecondaryColor, isTrue);
         expect(result.align, TextAlign.left);
         expect(result.fontScale, 1.6);
+        expect(result.outlineWidth, effects.outlineWidth);
+        expect(result.outlineColor, effects.outlineColor);
+        expect(result.textStyle?.shadows, effects.shadows);
 
         expect(result.divineEnterAnimations, [enterFade, enterSlide]);
         expect(result.divineLeaveAnimations, [leaveScale]);
@@ -255,6 +269,26 @@ void main() {
 
         expect(result.divineAnimations, isEmpty);
         expect(result.endTime, isNull);
+      });
+
+      test('clears the outline and shadow a plain style is applied over', () {
+        const plain = TitleStyle(
+          fontIndex: 0,
+          color: Color(0xFFFFFFFF),
+          background: Color(0xFF000000),
+          colorMode: LayerBackgroundMode.onlyColor,
+        );
+        final outlined = effects.applyTo(target());
+        expect(outlined.hasOutline, isTrue);
+
+        final result = plain.applyTo(
+          outlined,
+          canvasSize: canvas,
+          totalDuration: total,
+        );
+
+        expect(result.hasOutline, isFalse);
+        expect(result.textStyle?.shadows, isEmpty);
       });
     });
   });

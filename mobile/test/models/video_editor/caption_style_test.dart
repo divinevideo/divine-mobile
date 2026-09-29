@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode, TextHighlight;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
@@ -87,6 +88,11 @@ void main() {
       colorMode: LayerBackgroundMode.onlyColor,
       animation: CaptionAnimationStyle.pop,
       fontScale: 1.2,
+      effects: TextEffects(
+        outlineThickness: 0.75,
+        shadowStrength: 0.5,
+        shadowColor: Color(0xFF8568FF),
+      ),
     );
 
     test('round-trips through toJson/fromJson', () {
@@ -100,11 +106,18 @@ void main() {
       expect(CaptionCustomStyle.fromJson(const {'fontIndex': 'x'}), isNull);
     });
 
-    test('resolve applies the font, colors, and animation', () {
+    test('reads a style saved before outline and shadow as having none', () {
+      final json = style.toJson()..remove('effects');
+
+      expect(CaptionCustomStyle.fromJson(json)?.effects, TextEffects.none);
+    });
+
+    test('resolve applies the font, colors, effects and animation', () {
       final resolved = style.resolve();
       expect(resolved.color, equals(const Color(0xFFAABBCC)));
       expect(resolved.colorMode, equals(LayerBackgroundMode.onlyColor));
       expect(resolved.fontScale, equals(1.2));
+      expect(resolved.effects, equals(style.effects));
       expect(
         resolved.enter,
         equals(CaptionAnimationStyle.pop.resolve().enter),
@@ -203,6 +216,52 @@ void main() {
       );
       expect(layer.startTime, equals(cue.start));
       expect(layer.endTime, equals(cue.end));
+    });
+
+    test('buildLayer draws the outline and shadow of the style', () {
+      const effects = TextEffects(
+        outlineThickness: 0.5,
+        shadowStrength: 1,
+        shadowColor: Color(0xFF8568FF),
+      );
+      final outlined = CaptionCustomStyle.initial()
+          .copyWith(effects: effects)
+          .resolve();
+
+      final layer = outlined.buildLayer(cue, bodySize: const Size(200, 400));
+
+      expect(layer.outlineWidth, effects.outlineWidth);
+      expect(layer.outlineColor, effects.outlineColor);
+      expect(layer.textStyle?.shadows, effects.shadows);
+      expect(TextEffects.of(layer), equals(effects));
+    });
+
+    test('buildLayer draws no pill for a style without a background', () {
+      final layer = CaptionCustomStyle.initial()
+          .copyWith(colorMode: LayerBackgroundMode.onlyColor)
+          .resolve()
+          .buildLayer(cue, bodySize: const Size(200, 400));
+
+      expect(layer.background.a, 0);
+    });
+
+    test('buildLayer draws the pill of a style with a background', () {
+      final initial = CaptionCustomStyle.initial();
+
+      final layer = initial.resolve().buildLayer(
+        cue,
+        bodySize: const Size(200, 400),
+      );
+
+      expect(initial.hasBackground, isTrue);
+      expect(layer.background, initial.background);
+    });
+
+    test('buildLayer draws neither without effects', () {
+      final layer = style.buildLayer(cue, bodySize: const Size(200, 400));
+
+      expect(layer.hasOutline, isFalse);
+      expect(layer.textStyle?.shadows, isEmpty);
     });
 
     test('buildLayer adds no highlights for a style without them', () {

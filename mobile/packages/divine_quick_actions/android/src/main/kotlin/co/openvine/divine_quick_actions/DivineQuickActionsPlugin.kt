@@ -1,6 +1,8 @@
 package co.openvine.divine_quick_actions
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
@@ -16,6 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
+import java.lang.ref.WeakReference
 
 /** DivineQuickActionsPlugin */
 class DivineQuickActionsPlugin :
@@ -52,6 +55,8 @@ class DivineQuickActionsPlugin :
                 result.success(pendingLaunchAction)
                 pendingLaunchAction = null
             }
+            "isCameraWidgetPinSupported" -> result.success(appWidgetManagerForPinning() != null)
+            "requestPinCameraWidget" -> result.success(requestPinCameraWidget())
             else -> result.notImplemented()
         }
     }
@@ -59,6 +64,7 @@ class DivineQuickActionsPlugin :
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
         applicationContext = null
+        if (pinRequester === this) pinRequester = null
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -118,6 +124,39 @@ class DivineQuickActionsPlugin :
 
     private fun isSupported(): Boolean {
         return applicationContext != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1
+    }
+
+    /** Returns the manager only when the current launcher accepts pin requests. */
+    private fun appWidgetManagerForPinning(): AppWidgetManager? {
+        val context = applicationContext ?: return null
+        // The plugin's minSdk is below API 26, where pinning was introduced.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+
+        // Null on devices without the app-widget feature.
+        val manager = context.getSystemService(AppWidgetManager::class.java) ?: return null
+        return manager.takeIf { it.isRequestPinAppWidgetSupported }
+    }
+
+    private fun requestPinCameraWidget(): Boolean {
+        val context = applicationContext ?: return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+        val manager = appWidgetManagerForPinning() ?: return false
+
+        val provider = ComponentName(context, CameraQuickActionWidgetProvider::class.java)
+        pinRequester = this
+        // Throws when the app is not in the foreground; false when the
+        // launcher refuses. Either way the caller falls back to instructions.
+        return runCatching {
+            manager.requestPinAppWidget(
+                provider,
+                null,
+                CameraWidgetPinnedReceiver.successCallback(context)
+            )
+        }.getOrDefault(false)
+    }
+
+    private fun notifyCameraWidgetPinned() {
+        channel.invokeMethod("onCameraWidgetPinned", null)
     }
 
     private fun setShortcutActions(actions: List<Map<*, *>>): Boolean {
@@ -239,5 +278,24 @@ class DivineQuickActionsPlugin :
         return bundle.keySet().mapNotNull { key ->
             bundle.getString(key)?.let { value -> key to value }
         }.toMap()
+    }
+
+    companion object {
+        // The launcher confirms through a manifest receiver rather than this
+        // instance, so remember which engine asked. Weak because the plugin
+        // holds the Activity.
+        @Volatile
+        private var pinRequesterRef: WeakReference<DivineQuickActionsPlugin>? = null
+
+        private var pinRequester: DivineQuickActionsPlugin?
+            get() = pinRequesterRef?.get()
+            set(value) {
+                pinRequesterRef = value?.let(::WeakReference)
+            }
+
+        /** Forwards a pin confirmation to the engine that requested it. */
+        internal fun dispatchCameraWidgetPinned() {
+            pinRequester?.notifyCameraWidgetPinned()
+        }
     }
 }

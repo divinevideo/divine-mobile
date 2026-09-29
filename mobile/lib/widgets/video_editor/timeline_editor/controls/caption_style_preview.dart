@@ -1,6 +1,7 @@
 // ABOUTME: Looped animated preview of a caption CaptionStyle (font + colors
-// ABOUTME: + animation), cycling two cues so the enter→leave→next transition
-// ABOUTME: is visible, shared by the preset grid and custom editor.
+// ABOUTME: + outline and shadow + animation), cycling two cues so the
+// ABOUTME: enter→leave→next transition is visible, shared by the preset grid
+// ABOUTME: and custom editor.
 
 import 'dart:ui' show lerpDouble;
 
@@ -9,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
+import 'package:openvine/widgets/video_editor/text_effects_preview_text.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -98,11 +100,14 @@ class CaptionStylePreview extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         )
                       : null,
-                  child: Text.rich(
-                    _captionSpan(text, local, textStyle),
+                  child: TextEffectsPreviewText(
+                    text,
                     maxLines: 1,
                     textAlign: TextAlign.center,
+                    effects: style.effects,
                     style: textStyle,
+                    highlightRange: _litWord(text, local),
+                    highlightColor: style.highlightColor,
                   ),
                 ),
               ),
@@ -113,28 +118,19 @@ class CaptionStylePreview extends StatelessWidget {
     );
   }
 
-  /// [text] at [local] (0..1 within its cue window). A word-highlighting
-  /// style lights its words up one after another across the window, the way
-  /// evenly spoken words would.
-  TextSpan _captionSpan(String text, double local, TextStyle textStyle) {
-    final highlightColor = style.highlightColor;
-    if (highlightColor == null) return TextSpan(text: text);
-    final litStyle = textStyle.copyWith(color: highlightColor);
-
-    final words = text.split(' ');
-    final active = (local * words.length).floor().clamp(0, words.length - 1);
-    return TextSpan(
-      children: [
-        for (final (index, word) in words.indexed) ...[
-          if (index > 0) const TextSpan(text: ' '),
-          TextSpan(
-            text: word,
-            style: index == active ? litStyle : null,
-          ),
-        ],
-      ],
-    );
+  /// The word of [text] lit at [local] (0..1 within its cue window) by a
+  /// word-highlighting style: the words take turns across the window, the
+  /// way evenly spoken words would. `null` for a style without highlights.
+  TextRange? _litWord(String text, double local) {
+    if (style.highlightColor == null) return null;
+    final words = _wordPattern.allMatches(text).toList();
+    if (words.isEmpty) return null;
+    final lit =
+        words[(local * words.length).floor().clamp(0, words.length - 1)];
+    return TextRange(start: lit.start, end: lit.end);
   }
+
+  static final _wordPattern = RegExp(r'\S+');
 
   /// Visual transform of the active cue at [local] (0..1 within its window of
   /// [windowMs]): enter animations play at the start, leave animations at the

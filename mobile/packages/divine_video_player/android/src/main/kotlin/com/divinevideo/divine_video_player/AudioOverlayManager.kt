@@ -1,6 +1,9 @@
 package com.divinevideo.divine_video_player
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 
@@ -10,10 +13,33 @@ import androidx.media3.exoplayer.ExoPlayer
  * Each overlay is an independent [ExoPlayer] instance positioned and
  * synced to the main video timeline. Drift correction keeps audio
  * aligned within [DRIFT_THRESHOLD_MS].
+ *
+ * A track with an [AudioOverlayFade] has its volume stepped every
+ * [FADE_TICK_MS] from the overlay's own position while it plays. The 200 ms
+ * position sync is far too coarse for a ramp, and ExoPlayer has no volume
+ * ramp of its own; at this rate each step is too small to hear as one.
  */
-internal class AudioOverlayManager(private val context: Context) {
+internal class AudioOverlayManager(
+    private val context: Context,
+    private val handler: Handler = Handler(Looper.getMainLooper()),
+) {
 
     private val overlays = mutableListOf<AudioOverlayEntry>()
+
+    private var fadeTickerScheduled = false
+
+    private val fadeTicker = object : Runnable {
+        override fun run() {
+            fadeTickerScheduled = false
+            var fading = false
+            for (entry in overlays) {
+                if (!entry.isFading) continue
+                applyFadeGain(entry, entry.player.currentPosition)
+                fading = true
+            }
+            if (fading) scheduleFadeTicker()
+        }
+    }
 
     /** Replaces all audio overlays with the given track definitions. */
     fun setTracks(
@@ -33,25 +59,28 @@ internal class AudioOverlayManager(private val context: Context) {
             val overlay = ExoPlayer.Builder(context).build()
             overlay.setMediaItem(MediaItem.fromUri(uri))
             overlay.prepare()
-            overlay.volume = vol
             overlay.setPlaybackSpeed(currentPlaybackSpeed)
 
-            overlays.add(
-                AudioOverlayEntry(
-                    player = overlay,
-                    videoStartMs = videoStartMs,
-                    videoEndMs = videoEndMs,
-                    trackStartMs = trackStartMs,
-                    trackEndMs = trackEndMs,
-                ),
+            val entry = AudioOverlayEntry(
+                player = overlay,
+                videoStartMs = videoStartMs,
+                videoEndMs = videoEndMs,
+                trackStartMs = trackStartMs,
+                trackEndMs = trackEndMs,
+                baseVolume = vol,
+                fade = AudioOverlayFade.fromMap(map),
             )
+            applyFadeGain(entry, trackStartMs)
+            overlays.add(entry)
         }
     }
 
     /** Sets volume for the overlay at [index]. */
     fun setTrackVolume(index: Int, volume: Float) {
         if (index in overlays.indices) {
-            overlays[index].player.volume = volume
+            val entry = overlays[index]
+            entry.baseVolume = volume
+            applyFadeGain(entry, entry.player.currentPosition)
         }
     }
 
@@ -67,6 +96,7 @@ internal class AudioOverlayManager(private val context: Context) {
         for (entry in overlays) {
             if (entry.isActive) entry.player.play()
         }
+        ensureFadeTicker()
     }
 
     /** Pauses all overlay players without changing active state. */
@@ -117,6 +147,9 @@ internal class AudioOverlayManager(private val context: Context) {
                 }
 
                 if (!entry.isActive) {
+                    // Set the level before the first sample plays, so a
+                    // start inside a fade in does not blip at full volume.
+                    applyFadeGain(entry, expectedAudioMs)
                     entry.player.seekTo(expectedAudioMs)
                     entry.player.play()
                     entry.isActive = true
@@ -125,6 +158,7 @@ internal class AudioOverlayManager(private val context: Context) {
                     val actualMs = entry.player.currentPosition
                     val drift = kotlin.math.abs(expectedAudioMs - actualMs)
                     if (drift > DRIFT_THRESHOLD_MS) {
+                        applyFadeGain(entry, expectedAudioMs)
                         entry.player.seekTo(expectedAudioMs)
                     }
                 }
@@ -135,10 +169,13 @@ internal class AudioOverlayManager(private val context: Context) {
                 }
             }
         }
+        ensureFadeTicker()
     }
 
     /** Releases all overlay players and clears the list. */
     fun releaseAll() {
+        handler.removeCallbacks(fadeTicker)
+        fadeTickerScheduled = false
         for (entry in overlays) {
             entry.player.stop()
             entry.player.release()
@@ -146,8 +183,48 @@ internal class AudioOverlayManager(private val context: Context) {
         overlays.clear()
     }
 
+    /**
+     * Sets [entry]'s volume to its base level scaled by its fade at
+     * [audioPositionMs], a position in the audio file.
+     */
+    private fun applyFadeGain(entry: AudioOverlayEntry, audioPositionMs: Long) {
+        val gain = entry.fade.gainAt(
+            elapsedMs = audioPositionMs - entry.trackStartMs,
+            audibleMs = audibleMs(entry),
+        )
+        val volume = entry.baseVolume * gain
+        if (entry.player.volume != volume) entry.player.volume = volume
+    }
+
+    /**
+     * How long [entry] sounds, which is where its fade out ends: the end of its
+     * slot on the video timeline, the end of its trimmed audio, or the end of
+     * the file, whichever comes first. Null while none of them is known.
+     */
+    private fun audibleMs(entry: AudioOverlayEntry): Long? {
+        val fileDurationMs = entry.player.duration
+        return listOfNotNull(
+            entry.videoEndMs?.let { it - entry.videoStartMs },
+            entry.trackEndMs?.let { it - entry.trackStartMs },
+            fileDurationMs.takeIf { it != C.TIME_UNSET }?.let { it - entry.trackStartMs },
+        ).minOrNull()
+    }
+
+    private fun ensureFadeTicker() {
+        if (overlays.any { it.isFading }) scheduleFadeTicker()
+    }
+
+    private fun scheduleFadeTicker() {
+        if (fadeTickerScheduled) return
+        fadeTickerScheduled = true
+        handler.postDelayed(fadeTicker, FADE_TICK_MS)
+    }
+
     companion object {
         private const val DRIFT_THRESHOLD_MS = 250L
+
+        /** How often a fading track's volume is stepped. */
+        private const val FADE_TICK_MS = 20L
     }
 }
 
@@ -158,5 +235,12 @@ internal class AudioOverlayEntry(
     val videoEndMs: Long?,
     val trackStartMs: Long,
     val trackEndMs: Long?,
+    /** The track's volume before its fade is applied. */
+    var baseVolume: Float = 1.0f,
+    val fade: AudioOverlayFade = AudioOverlayFade(fadeInMs = 0, fadeOutMs = 0),
     var isActive: Boolean = false,
-)
+) {
+    /** Whether this track is sounding with a fade that needs stepping. */
+    val isFading: Boolean
+        get() = isActive && player.playWhenReady && !fade.isNone
+}

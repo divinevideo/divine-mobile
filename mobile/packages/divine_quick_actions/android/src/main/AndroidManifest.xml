@@ -11,5 +11,8 @@
         android:name="android.appwidget.provider"
         android:resource="@xml/divine_quick_actions_camera_widget_info" />
     </receiver>
+    <receiver
+      android:name=".CameraWidgetPinnedReceiver"
+      android:exported="false" />
   </application>
 </manifest>

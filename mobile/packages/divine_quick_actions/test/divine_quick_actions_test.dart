@@ -11,13 +11,33 @@ class MockDivineQuickActionsPlatform
     implements DivineQuickActionsPlatform {
   final StreamController<DivineQuickActionEvent> _controller =
       StreamController<DivineQuickActionEvent>.broadcast();
+  final StreamController<void> _pinnedController =
+      StreamController<void>.broadcast();
 
   DivineQuickActionEvent? launchAction;
   List<DivineQuickAction> actions = const <DivineQuickAction>[];
   bool supported = true;
+  bool pinSupported = true;
+  int pinRequests = 0;
 
   @override
   Stream<DivineQuickActionEvent> get actionStream => _controller.stream;
+
+  @override
+  Stream<void> get cameraWidgetPinnedStream => _pinnedController.stream;
+
+  @override
+  Future<bool> isCameraWidgetPinSupported() async => pinSupported;
+
+  @override
+  Future<bool> requestPinCameraWidget() async {
+    pinRequests++;
+    return pinSupported;
+  }
+
+  void confirmPinned() {
+    _pinnedController.add(null);
+  }
 
   @override
   Future<bool> clearActions() async {
@@ -93,6 +113,35 @@ void main() {
         ]),
         throwsArgumentError,
       );
+    });
+  });
+
+  group('camera widget pinning', () {
+    test('forwards the launcher capability and request result', () async {
+      final plugin = DivineQuickActions.instance;
+      final fakePlatform = MockDivineQuickActionsPlatform()
+        ..pinSupported = false;
+      DivineQuickActionsPlatform.instance = fakePlatform;
+
+      expect(await plugin.isCameraWidgetPinSupported, isFalse);
+      expect(await plugin.requestPinCameraWidget(), isFalse);
+      expect(fakePlatform.pinRequests, 1);
+    });
+
+    test('emits when the platform confirms the widget was added', () async {
+      final plugin = DivineQuickActions.instance;
+      final fakePlatform = MockDivineQuickActionsPlatform();
+      DivineQuickActionsPlatform.instance = fakePlatform;
+      var pinnedCount = 0;
+      final subscription = plugin.cameraWidgetPinnedStream.listen(
+        (_) => pinnedCount++,
+      );
+      addTearDown(subscription.cancel);
+
+      fakePlatform.confirmPinned();
+      await pumpEventQueue();
+
+      expect(pinnedCount, 1);
     });
   });
 
