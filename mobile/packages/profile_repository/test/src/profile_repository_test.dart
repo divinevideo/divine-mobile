@@ -1553,6 +1553,32 @@ void main() {
             verifyCachedTotalKept();
           });
 
+          test('an archive-only response after a failed view lookup does '
+              'not lower a known total', () async {
+            // Funnelcake reports a failed view lookup as `total_views: 0`
+            // while its archive lookup can still succeed.
+            stubCachedTotal(501000);
+            stubEngagement(const {
+              'total_views': 0,
+              'total_loops': 0,
+              'archived_loops': 1000,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
+
+          test('an archive-only response still raises a smaller cached '
+              'total', () async {
+            stubCachedTotal(50);
+            stubEngagement(const {'total_views': 0, 'archived_loops': 1000});
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotal(1000);
+          });
+
           test('records a zero when no total is cached yet', () async {
             stubCachedTotal(null);
             stubEngagement(const {'total_views': 0});

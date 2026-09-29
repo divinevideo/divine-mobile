@@ -870,8 +870,10 @@ class ProfileRepository implements ProfileReader {
   /// only, and is therefore not allowed to lower a cached total — the classic
   /// Vine seed writes archived totals into this row.
   ///
-  /// A zero is ambiguous: funnelcake answers 200 with `total_views: 0` when
-  /// ClickHouse is down, so a zero never overwrites a known positive total.
+  /// A zero Divine-era count is just as incomplete: funnelcake answers 200
+  /// with `total_views: 0` when its view lookup fails, even when the archive
+  /// lookup succeeded. An incomplete response may raise a cached total but
+  /// never lower it.
   Future<int?> _lifetimeTotalToCache(
     String pubkey,
     ProfileStatsDao dao,
@@ -882,10 +884,10 @@ class ProfileRepository implements ProfileReader {
         : engagement.totalLoops.round();
     final archivedLoops = engagement.archivedLoops;
     final total = (archivedLoops ?? 0) + divineViews;
+    final isIncomplete = archivedLoops == null || divineViews == 0;
 
     final cachedTotal = (await dao.getStatsRaw(pubkey))?.totalViews ?? 0;
-    if (total == 0) return cachedTotal > 0 ? null : 0;
-    if (archivedLoops == null && total < cachedTotal) return null;
+    if (isIncomplete && total < cachedTotal) return null;
     return total;
   }
 
