@@ -71,11 +71,11 @@ void main() {
       return observer;
     }
 
-    test('initial state is $MyProfileInitial', () {
+    test('initial state is $MyProfileInitial', () async {
       final bloc = createBloc();
       expect(bloc.state, isA<MyProfileInitial>());
       expect(bloc.pubkey, equals(testPubkey));
-      bloc.close();
+      await bloc.close();
     });
 
     group('$MyProfileState', () {
@@ -875,9 +875,9 @@ void main() {
           when(
             () => mockProfileRepository.watchProfile(pubkey: testPubkey),
           ).thenAnswer((_) => controller.stream);
-          addTearDown(() {
+          addTearDown(() async {
             if (!controller.isClosed) {
-              controller.close();
+              await controller.close();
             }
           });
           profileStreamController = controller;
@@ -1153,9 +1153,9 @@ void main() {
           when(
             () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
           ).thenAnswer((_) => refreshFetchCompleter.future);
-          addTearDown(() {
+          addTearDown(() async {
             if (!controller.isClosed) {
-              controller.close();
+              await controller.close();
             }
           });
           profileStreamController = controller;
