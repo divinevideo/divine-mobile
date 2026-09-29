@@ -94,6 +94,22 @@ void main() {
       );
     });
 
+    test('keeps every copyright notice whole', () async {
+      final notices = await _noticesByFamily();
+
+      expect(notices, isNotEmpty);
+      expect(
+        notices.entries
+            .where(
+              (entry) =>
+                  entry.value.trimRight().endsWith(r'\') ||
+                  entry.value.trimRight().endsWith('Reserved Font Name'),
+            )
+            .map((entry) => entry.key),
+        isEmpty,
+      );
+    });
+
     test('rejects a license the editor does not accept', () async {
       final bundle = _FakeAssetBundle({
         'assets/licenses/editor_fonts.json': jsonEncode({
@@ -145,4 +161,17 @@ class _FakeAssetBundle extends CachingAssetBundle {
   @override
   Future<ByteData> load(String key) async =>
       ByteData.sublistView(utf8.encode(_assets[key]!));
+}
+
+/// Every notice in the editor font credits, keyed by family, read straight
+/// from the asset so a malformed notice is caught before it is rendered.
+Future<Map<String, String>> _noticesByFamily() async {
+  final json = jsonDecode(
+    await rootBundle.loadString('assets/licenses/editor_fonts.json'),
+  ) as Map<String, dynamic>;
+  return {
+    for (final byFamily in json.values)
+      for (final entry in (byFamily as Map<String, dynamic>).entries)
+        entry.key: entry.value as String,
+  };
 }
