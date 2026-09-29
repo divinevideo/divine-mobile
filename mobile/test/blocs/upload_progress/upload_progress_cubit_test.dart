@@ -24,15 +24,20 @@ void main() {
       );
     }
 
-    test('polls and emits progress + status', () {
+    test('polls and emits progress + status', () async {
+      late UploadProgressCubit cubit;
       fakeAsync((async) {
         var progress = 0.0;
         var status = UploadStatus.pending;
-        final cubit = UploadProgressCubit(
+        var lookups = 0;
+        cubit = UploadProgressCubit(
           uploadId: 'u1',
-          lookup: (id) => id == 'u1'
-              ? fakeUpload(progress: progress, status: status)
-              : null,
+          lookup: (id) {
+            lookups++;
+            return id == 'u1'
+                ? fakeUpload(progress: progress, status: status)
+                : null;
+          },
           pollInterval: const Duration(milliseconds: 100),
         )..start();
 
@@ -49,13 +54,13 @@ void main() {
         expect(cubit.state.status, UploadStatus.readyToPublish);
         expect(cubit.state.progress, 1.0);
 
-        // Polling should now be stopped. Further elapses don't change state.
-        final lastState = cubit.state;
+        // Polling should now be stopped. Count lookups rather than compare
+        // state: a re-poll emits an equal state, which Cubit drops.
+        expect(lookups, equals(3));
         async.elapse(const Duration(milliseconds: 500));
-        expect(cubit.state, lastState);
-
-        cubit.close();
+        expect(lookups, equals(3));
       });
+      await cubit.close();
     });
 
     blocTest<UploadProgressCubit, UploadProgressState>(
