@@ -2302,14 +2302,19 @@ class VideoRecorderBloc
   /// Rebuilds [state] from the current [CameraService] values.
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
-  /// was entered from), overlay and grid toggles, the stop-motion session and,
-  /// while the camera is initialized, the screen flash carry over; flash
-  /// resets to `off` and every other field to its default.
+  /// was entered from), overlay and grid toggles, the stop-motion session, the
+  /// chroma-key setup and, while the camera is initialized, the screen flash
+  /// carry over; flash resets to `off` and every other field to its default.
+  ///
+  /// A wall measurement survives a re-sync on the same side of the phone, but
+  /// not a flip to the other one: its still shows the wall behind the lens it
+  /// was taken through, so it is written off and dropped when it lands.
   void _emitCameraSync(
     Emitter<VideoRecorderBlocState> emit, {
     int? cameraRebuildCount,
     model.AspectRatio? aspectRatio,
   }) {
+    final isFrontCamera = _cameraService.currentLens.isFrontFacing;
     emit(
       VideoRecorderBlocState(
         cameraRebuildCount: cameraRebuildCount ?? state.cameraRebuildCount,
@@ -2328,7 +2333,7 @@ class VideoRecorderBloc
         isScreenFlashActive:
             _cameraService.isInitialized && state.isScreenFlashActive,
         canSwitchCamera: _cameraService.canSwitchCamera,
-        isFrontCamera: _cameraService.currentLens.isFrontFacing,
+        isFrontCamera: isFrontCamera,
         previewTextureId: _cameraService.textureId,
         videoStabilizationMode: _cameraService.videoStabilizationMode,
         availableVideoStabilizationModes:
@@ -2346,6 +2351,14 @@ class VideoRecorderBloc
         stopMotionFrames: state.stopMotionFrames,
         stopMotionStatus: state.stopMotionStatus,
         stopMotionShutterTick: state.stopMotionShutterTick,
+        // The key and backdrop are the user's, and the backdrop photo is still
+        // this recorder's to delete: a flip, a stabilization rebind or a
+        // re-init must not reset them.
+        chromaKey: state.chromaKey,
+        chromaKeyMeasurementStatus: isFrontCamera == state.isFrontCamera
+            ? state.chromaKeyMeasurementStatus
+            : ChromaKeyMeasurementStatus.idle,
+        unrecordedChromaKeyImagePath: state.unrecordedChromaKeyImagePath,
       ),
     );
   }

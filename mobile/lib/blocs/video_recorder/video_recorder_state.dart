@@ -283,8 +283,9 @@ class VideoRecorderBlocState extends Equatable {
   /// recorded in [VideoRecorderMode.chromaKey] carries as its
   /// [DivineVideoClip.captureChromaKey].
   ///
-  /// Kept across mode switches, so leaving the mode and coming back finds the
-  /// wall and backdrop as they were set.
+  /// Kept across mode switches and camera re-syncs, so leaving the mode and
+  /// coming back, or flipping the camera, finds the wall and backdrop as they
+  /// were set.
   final ClipChromaKey chromaKey;
 
   /// Where the wall measurement stands.
