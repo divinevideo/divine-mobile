@@ -64,6 +64,84 @@ void main() {
     verify(secondClient.close).called(1);
   });
 
+  group('isCrosspostingAccountEligible', () {
+    test('is true for an authenticated, registered account with a key', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.authenticated,
+          publicKeyHex: 'a' * 64,
+          isRegistered: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('is false when signed out', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.unauthenticated,
+          publicKeyHex: 'a' * 64,
+          isRegistered: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('is false when the public key is not known yet', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.authenticated,
+          publicKeyHex: null,
+          isRegistered: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('is false when the account is not registered', () {
+      expect(
+        isCrosspostingAccountEligible(
+          authState: AuthState.authenticated,
+          publicKeyHex: 'a' * 64,
+          isRegistered: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('crosspostingAvailabilityFor', () {
+    test('is native for an eligible account with OAuth support', () {
+      expect(
+        crosspostingAvailabilityFor(
+          accountEligible: true,
+          oauthSupported: true,
+        ),
+        CrosspostingAvailability.native,
+      );
+    });
+
+    test('is webOnly for an eligible account without OAuth support', () {
+      expect(
+        crosspostingAvailabilityFor(
+          accountEligible: true,
+          oauthSupported: false,
+        ),
+        CrosspostingAvailability.webOnly,
+      );
+    });
+
+    test('is unavailable for an ineligible account regardless of OAuth', () {
+      expect(
+        crosspostingAvailabilityFor(
+          accountEligible: false,
+          oauthSupported: true,
+        ),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+  });
+
   group('crosspostingAvailabilityProvider', () {
     ProviderContainer buildContainer({
       bool oauthSupported = true,
@@ -166,6 +244,29 @@ void main() {
 
     test('is unavailable when signed out', () async {
       final container = buildContainer(authenticated: false);
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('does not wait on the support lookup when signed out', () async {
+      final container = buildContainer(
+        support: Completer<bool>().future,
+        authenticated: false,
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        await resolveCrosspostingAvailability(container),
+        CrosspostingAvailability.unavailable,
+      );
+    });
+
+    test('is unavailable when the account is not registered', () async {
+      final container = buildContainer(registered: false);
       addTearDown(container.dispose);
 
       expect(
