@@ -341,8 +341,10 @@ final class VideoRecorderStopMotionAssembleRequested
 /// measured screen colour and amount into
 /// [VideoRecorderBlocState.chromaKey].
 ///
-/// Registered with `transformer: droppable()` so a second tap cannot start a
-/// second capture while one is in flight.
+/// Registered with `transformer: sequential()` so a second capture never
+/// starts while one is in flight. Not `droppable()`: a hand edit writes a
+/// running measurement off and enables Auto-detect again, and a tap then has
+/// to wait for the written-off still rather than be dropped.
 final class VideoRecorderChromaKeyMeasureRequested extends VideoRecorderEvent {
   const VideoRecorderChromaKeyMeasureRequested();
 }

@@ -406,6 +406,42 @@ void main() {
         );
       });
 
+      test('measures again when Auto-detect is tapped after a hand edit '
+          'overtook the last measurement', () async {
+        stubStill();
+        const remeasured = ChromaKeyDetection(
+          color: Color(0xFF2040C0),
+          similarity: 0.2,
+          coverage: 0.9,
+          spread: 0.05,
+        );
+        final overtaken = Completer<ChromaKeyDetection>();
+        var measurements = 0;
+        final bloc = buildBloc(
+          detect: (_, {required visibleAspectRatio}) =>
+              ++measurements == 1 ? overtaken.future : Future.value(remeasured),
+        )..emit(chromaKeyState);
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoRecorderChromaKeyMeasureRequested());
+        await pumpEventQueue();
+        bloc.add(
+          const VideoRecorderChromaKeySettingsChanged(similarity: 0.3),
+        );
+        await pumpEventQueue();
+        // The edit took the panel back to idle, which enables Auto-detect.
+        expect(bloc.state.isMeasuringChromaKey, isFalse);
+
+        bloc.add(const VideoRecorderChromaKeyMeasureRequested());
+        await pumpEventQueue();
+        overtaken.complete(_measured);
+        await pumpEventQueue();
+
+        expect(bloc.state.chromaKey.key.color, remeasured.color);
+        expect(bloc.state.chromaKey.key.similarity, remeasured.similarity);
+        expect(measurements, 2);
+      });
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'does not take a still outside chroma key mode',
         build: buildBloc,

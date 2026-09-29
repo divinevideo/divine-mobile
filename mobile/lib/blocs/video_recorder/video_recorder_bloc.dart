@@ -294,7 +294,7 @@ class VideoRecorderBloc
     );
     on<VideoRecorderChromaKeyMeasureRequested>(
       _onChromaKeyMeasureRequested,
-      transformer: droppable(),
+      transformer: sequential(),
     );
     on<VideoRecorderChromaKeyPresetSelected>(_onChromaKeyPresetSelected);
     on<VideoRecorderChromaKeySettingsChanged>(
