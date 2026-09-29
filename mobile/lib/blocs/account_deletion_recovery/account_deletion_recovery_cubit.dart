@@ -35,12 +35,14 @@ abstract class AccountDeletionRecoveryPolling {
   static const slowAfter = Duration(minutes: 15);
   static const slowCap = Duration(minutes: 5);
 
-  /// When polling pauses and Contact Support is offered, for any state except
-  /// `processing`: an unconfirmed submission or a stuck cancellation is not
-  /// normal progress.
+  /// When polling pauses for a state that is not confirmed processing: an
+  /// unconfirmed submission, a stuck cancellation, a failed local cleanup and a
+  /// completed attempt whose receipt cannot be saved are not normal progress.
+  /// The screen offers Contact Support after the pause only for the
+  /// unconfirmed submission and the unsaved receipt; the others keep Retry.
   static const supportEscapeAfter = Duration(minutes: 15);
 
-  /// The same bound once the server has accepted the deletion. Completion
+  /// The bound once the server has accepted the deletion. Completion
   /// normally takes hours, and up to a day, so support waits until then.
   static const processingSupportEscapeAfter = Duration(hours: 36);
 
