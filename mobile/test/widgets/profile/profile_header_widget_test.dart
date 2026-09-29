@@ -1680,10 +1680,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Likes'), findsOneWidget);
-      expect(find.text('Loops'), findsOneWidget);
+      expect(find.text('Views'), findsOneWidget);
     });
 
-    testWidgets('follows the total-loops setting while mounted', (
+    testWidgets('follows the total-views setting while mounted', (
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({});
@@ -1710,20 +1710,20 @@ void main() {
       final settings = ProviderScope.containerOf(
         tester.element(find.byType(ProfileHeaderWidget)),
       ).read(statsVisibilityPreferencesProvider);
-      expect(find.text(enL10n.profileLoopsLabel), findsOneWidget);
+      expect(find.text(enL10n.profileViewsLabel), findsOneWidget);
 
       await tester.runAsync(() => settings.setShowTotalLoops(false));
       await tester.pumpAndSettle();
-      expect(find.text(enL10n.profileLoopsLabel), findsNothing);
+      expect(find.text(enL10n.profileViewsLabel), findsNothing);
       // The rest of the row is unaffected.
       expect(find.text(enL10n.profileLikesLabel), findsOneWidget);
 
       await tester.runAsync(() => settings.setShowTotalLoops(true));
       await tester.pumpAndSettle();
-      expect(find.text(enL10n.profileLoopsLabel), findsOneWidget);
+      expect(find.text(enL10n.profileViewsLabel), findsOneWidget);
     });
 
-    testWidgets('hides Loops when the viewer turns total loops off', (
+    testWidgets('hides Views when the viewer turns total loops off', (
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
@@ -1750,12 +1750,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The rest of the row still renders; only Loops is withheld.
-      expect(find.text(enL10n.profileLoopsLabel), findsNothing);
+      // The rest of the row still renders; only Views is withheld.
+      expect(find.text(enL10n.profileViewsLabel), findsNothing);
       expect(find.text('Likes'), findsOneWidget);
     });
 
-    testWidgets('shows the viewer a small Loops total by default', (
+    testWidgets('shows the viewer a small Views total by default', (
       tester,
     ) async {
       final testProfile = createTestProfile(displayName: 'New Creator');
@@ -1779,10 +1779,10 @@ void main() {
 
       // No visibility floor: the viewer's preference alone decides, so a
       // small total is shown rather than withheld.
-      expect(find.text(enL10n.profileLoopsLabel), findsOneWidget);
+      expect(find.text(enL10n.profileViewsLabel), findsOneWidget);
     });
 
-    testWidgets('hides a known zero loop total from visitors', (tester) async {
+    testWidgets('hides a known zero view total from visitors', (tester) async {
       final testProfile = createTestProfile(displayName: 'New Creator');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -1798,10 +1798,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(enL10n.profileLoopsLabel), findsNothing);
+      expect(find.text(enL10n.profileViewsLabel), findsNothing);
     });
 
-    testWidgets('shows the owner a known zero loop total', (tester) async {
+    testWidgets('shows the owner a known zero view total', (tester) async {
       final testProfile = createTestProfile(displayName: 'Owner');
       const profileStats = ProfileStats(
         pubkey: testUserHex,
@@ -1817,10 +1817,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Loops'), findsOneWidget);
+      expect(find.text('Views'), findsOneWidget);
     });
 
-    testWidgets('opens creator analytics when the owner taps Loops', (
+    testWidgets('opens creator analytics when the owner taps Views', (
       tester,
     ) async {
       final mockGoRouter = MockGoRouter();
@@ -1846,7 +1846,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Loops'));
+      await tester.tap(find.text('Views'));
       await tester.pumpAndSettle();
 
       verify(
@@ -1854,7 +1854,7 @@ void main() {
       ).called(1);
     });
 
-    testWidgets("leaves a visitor's Loops column untappable", (tester) async {
+    testWidgets("leaves a visitor's Views column untappable", (tester) async {
       final mockGoRouter = MockGoRouter();
       when(() => mockGoRouter.push<Object?>(any()))
           .thenAnswer((_) async => null);
@@ -1878,8 +1878,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Loops'), findsOneWidget);
-      await tester.tap(find.text('Loops'));
+      expect(find.text('Views'), findsOneWidget);
+      await tester.tap(find.text('Views'));
       await tester.pumpAndSettle();
 
       verifyNever(
@@ -1888,7 +1888,7 @@ void main() {
     });
 
     testWidgets(
-      "hides Loops on the owner's own profile when they turn it off",
+      "hides Views on the owner's own profile when they turn it off",
       (tester) async {
         SharedPreferences.setMockInitialValues({
           StatsVisibilityPreferences.showTotalLoopsKey: false,
@@ -1915,7 +1915,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // The viewer's choice applies to their own profile too.
-        expect(find.text(enL10n.profileLoopsLabel), findsNothing);
+        expect(find.text(enL10n.profileViewsLabel), findsNothing);
       },
     );
 
@@ -1938,7 +1938,7 @@ void main() {
       expect(find.text('Followers'), findsOneWidget);
       expect(find.text('Following'), findsOneWidget);
       expect(find.text('Likes'), findsOneWidget);
-      expect(find.text('Loops'), findsOneWidget);
+      expect(find.text('Views'), findsOneWidget);
     });
 
     testWidgets(
@@ -2051,7 +2051,7 @@ void main() {
         expect(find.text('Followers'), findsOneWidget);
         expect(find.text('Following'), findsOneWidget);
         expect(find.text('Likes'), findsOneWidget);
-        expect(find.text('Loops'), findsOneWidget);
+        expect(find.text('Views'), findsOneWidget);
         expect(find.text('—'), findsNWidgets(4));
 
         // Stats Skeletonizer (the closest one above a stat label) must
@@ -2091,7 +2091,7 @@ void main() {
           expect(find.text('Followers'), findsOneWidget);
           expect(find.text('Following'), findsOneWidget);
           expect(find.text('Likes'), findsOneWidget);
-          expect(find.text('Loops'), findsOneWidget);
+          expect(find.text('Views'), findsOneWidget);
 
           // Stats Skeletonizer (the closest one above a stat label) must
           // be active — not just present in the tree.
@@ -2129,7 +2129,7 @@ void main() {
           await tester.pumpAndSettle();
 
           // Actual data shown — no timeout was needed.
-          expect(find.text('Loops'), findsOneWidget);
+          expect(find.text('Views'), findsOneWidget);
           expect(find.text('Likes'), findsOneWidget);
         },
       );

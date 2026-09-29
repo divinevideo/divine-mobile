@@ -374,11 +374,11 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఫీడ్‌లను క్లాసిక్ స్క్వేర్ ఫార్మాట్‌లో ఉంచండి';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalViews => 'Show total views';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalViewsSubtitle =>
+      'The creator\'s view count across all their videos';
 
   @override
   String get generalSettingsShowVideoLoops => 'Show video loops';
@@ -956,7 +956,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get profileCompletePrimaryButton => 'మీ ప్రొఫైల్‌ను అప్‌డేట్ చేయండి';
 
   @override
-  String get profileLoopsLabel => 'లూప్స్';
+  String get profileViewsLabel => 'Views';
 
   @override
   String get profileLikesLabel => 'ఇష్టాలు';
@@ -2012,6 +2012,17 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoOverlayCommentPostFailedSnackbar =>
       'వ్యాఖ్యను పోస్ట్ చేయడం సాధ్యపడలేదు';
+
+  @override
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'views',
+      one: 'view',
+    );
+    return '$compactCount $_temp0';
+  }
 
   @override
   String videoFeedLoopCountLine(String compactCount, int count) {

@@ -366,11 +366,11 @@ class AppLocalizationsAm extends AppLocalizations {
       'ምግቦችን በክላሲክ ካሬ ቅርጽ ያቆዩ';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalViews => 'Show total views';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalViewsSubtitle =>
+      'The creator\'s view count across all their videos';
 
   @override
   String get generalSettingsShowVideoLoops => 'Show video loops';
@@ -909,7 +909,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileCompletePrimaryButton => 'መገለጫዎን ያዘምኑ';
 
   @override
-  String get profileLoopsLabel => 'ቀለበቶች';
+  String get profileViewsLabel => 'Views';
 
   @override
   String get profileLikesLabel => 'መውደዶች';
@@ -1923,6 +1923,17 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoOverlayCommentPostFailedSnackbar => 'አስተያየት መለጠፍ አልተቻለም';
+
+  @override
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'views',
+      one: 'view',
+    );
+    return '$compactCount $_temp0';
+  }
 
   @override
   String videoFeedLoopCountLine(String compactCount, int count) {

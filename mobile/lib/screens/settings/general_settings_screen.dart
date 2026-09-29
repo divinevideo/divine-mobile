@@ -282,8 +282,8 @@ class _StatsVisibilityToggles extends ConsumerWidget {
         children: [
           DivineSwitchTile(
             leadingIcon: DivineIconName.trendUp,
-            title: context.l10n.generalSettingsShowTotalLoops,
-            subtitle: context.l10n.generalSettingsShowTotalLoopsSubtitle,
+            title: context.l10n.generalSettingsShowTotalViews,
+            subtitle: context.l10n.generalSettingsShowTotalViewsSubtitle,
             value: service.showTotalLoops,
             onChanged: service.setShowTotalLoops,
           ),

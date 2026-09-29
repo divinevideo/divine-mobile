@@ -323,11 +323,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get generalSettingsVideoShapeSquareOnlySubtitle => '让信息流保持经典方形格式';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalViews => 'Show total views';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalViewsSubtitle =>
+      'The creator\'s view count across all their videos';
 
   @override
   String get generalSettingsShowVideoLoops => 'Show video loops';
@@ -849,7 +849,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileCompletePrimaryButton => '更新你的资料';
 
   @override
-  String get profileLoopsLabel => '循环';
+  String get profileViewsLabel => 'Views';
 
   @override
   String get profileLikesLabel => '点赞';
@@ -1829,6 +1829,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoOverlayCommentPostFailedSnackbar => '评论发布失败';
+
+  @override
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'views',
+      one: 'view',
+    );
+    return '$compactCount $_temp0';
+  }
 
   @override
   String videoFeedLoopCountLine(String compactCount, int count) {

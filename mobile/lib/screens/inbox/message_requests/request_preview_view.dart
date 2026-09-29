@@ -642,15 +642,18 @@ class _StatsLineState extends State<_StatsLine> {
         );
       }
       if (loopCount != null) {
-        // `videoFeedLoopCountLine` declares its display string before its
-        // plural selector, the reverse of the two keys above, so it cannot be
-        // handed to `compactPlural` directly. Reused rather than duplicated
-        // into a new key because it already carries this wording in all 22
-        // locales.
+        // The creator total is views, not loops: `ProfileStats.totalViews`
+        // excludes archived Vine loops. `videoFeedAuthorTotalViewsLine`
+        // declares its display string before its plural selector, the reverse
+        // of the two keys above, so it cannot be handed to `compactPlural`
+        // directly.
         parts.add(
           StringUtils.compactPlural(
             loopCount,
-            (value, display) => l10n.videoFeedLoopCountLine(display, value),
+            (value, display) => l10n.videoFeedAuthorTotalViewsLine(
+              display,
+              value,
+            ),
           ),
         );
       }

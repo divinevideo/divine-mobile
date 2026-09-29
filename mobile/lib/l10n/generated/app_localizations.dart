@@ -656,17 +656,17 @@ abstract class AppLocalizations {
   /// **'Keep feeds in the classic square format'**
   String get generalSettingsVideoShapeSquareOnlySubtitle;
 
-  /// No description provided for @generalSettingsShowTotalLoops.
+  /// No description provided for @generalSettingsShowTotalViews.
   ///
   /// In en, this message translates to:
-  /// **'Show total loops'**
-  String get generalSettingsShowTotalLoops;
+  /// **'Show total views'**
+  String get generalSettingsShowTotalViews;
 
-  /// No description provided for @generalSettingsShowTotalLoopsSubtitle.
+  /// No description provided for @generalSettingsShowTotalViewsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The creator\'s loop count across all their videos'**
-  String get generalSettingsShowTotalLoopsSubtitle;
+  /// **'The creator\'s view count across all their videos'**
+  String get generalSettingsShowTotalViewsSubtitle;
 
   /// No description provided for @generalSettingsShowVideoLoops.
   ///
@@ -1568,11 +1568,11 @@ abstract class AppLocalizations {
   /// **'Update Your Profile'**
   String get profileCompletePrimaryButton;
 
-  /// No description provided for @profileLoopsLabel.
+  /// No description provided for @profileViewsLabel.
   ///
   /// In en, this message translates to:
-  /// **'Loops'**
-  String get profileLoopsLabel;
+  /// **'Views'**
+  String get profileViewsLabel;
 
   /// No description provided for @profileLikesLabel.
   ///
@@ -3403,6 +3403,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t post comment'**
   String get videoOverlayCommentPostFailedSnackbar;
+
+  /// No description provided for @videoFeedAuthorTotalViewsLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{compactCount} {count, plural, =1{view} other{views}}'**
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count);
 
   /// No description provided for @videoFeedLoopCountLine.
   ///

@@ -335,7 +335,7 @@ void main() {
 
         expect(
           find.textContaining(
-            l10n.videoFeedLoopCountLine(
+            l10n.videoFeedAuthorTotalViewsLine(
               StringUtils.formatCompactNumber(250),
               250,
             ),
@@ -360,7 +360,7 @@ void main() {
         );
         expect(
           find.textContaining(
-            l10n.videoFeedLoopCountLine('0', 0),
+            l10n.videoFeedAuthorTotalViewsLine('0', 0),
             findRichText: true,
           ),
           findsNothing,
@@ -382,7 +382,7 @@ void main() {
         final settings = ProviderScope.containerOf(
           tester.element(find.byType(RequestPreviewView)),
         ).read(statsVisibilityPreferencesProvider);
-        final loopsText = l10n.videoFeedLoopCountLine(
+        final loopsText = l10n.videoFeedAuthorTotalViewsLine(
           StringUtils.formatCompactNumber(250),
           250,
         );
@@ -423,7 +423,7 @@ void main() {
 
         expect(
           find.textContaining(
-            l10n.videoFeedLoopCountLine(
+            l10n.videoFeedAuthorTotalViewsLine(
               StringUtils.formatCompactNumber(250),
               250,
             ),

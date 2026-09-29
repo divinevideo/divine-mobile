@@ -690,7 +690,7 @@ class VideoOverlayActions extends ConsumerWidget {
 /// deliberately omitted, so an old timestamp cannot make the feed read as
 /// inactive; the metadata sheet carries it.
 ///
-/// Rendered only when the viewer has total loops on
+/// Rendered only when the viewer has the creator total on
 /// ([StatsVisibilityPreferences.showTotalLoops], on by default), and only
 /// while the total is known (`null`), rather than an empty row or a
 /// placeholder zero. The stats lookup starts only once the total is shown.
@@ -724,15 +724,15 @@ class _AuthorTotalLoops extends ConsumerWidget {
     final authorStats = ref
         .watch(videoCardAuthorStatsProvider(authorPubkey))
         .value;
-    final totalLoops = authorStats?.hasKnownTotalViews == true
+    final totalViews = authorStats?.hasKnownTotalViews == true
         ? authorStats!.totalViews
         : null;
-    if (totalLoops == null || totalLoops <= 0) return const SizedBox.shrink();
+    if (totalViews == null || totalViews <= 0) return const SizedBox.shrink();
 
     return Text(
-      context.l10n.videoFeedLoopCountLine(
-        StringUtils.formatCompactNumber(totalLoops),
-        totalLoops,
+      context.l10n.videoFeedAuthorTotalViewsLine(
+        StringUtils.formatCompactNumber(totalViews),
+        totalViews,
       ),
       // Sits on the video next to the white author name.
       style: VineTheme.labelSmallFont(color: VineTheme.onSurfaceVariant),

@@ -368,11 +368,11 @@ class AppLocalizationsUr extends AppLocalizations {
       'فیڈز کو کلاسک چوکور فارمیٹ میں رکھیں';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalViews => 'Show total views';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalViewsSubtitle =>
+      'The creator\'s view count across all their videos';
 
   @override
   String get generalSettingsShowVideoLoops => 'Show video loops';
@@ -935,7 +935,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get profileCompletePrimaryButton => 'اپنا پروفائل اپڈیٹ کریں';
 
   @override
-  String get profileLoopsLabel => 'لوپ';
+  String get profileViewsLabel => 'Views';
 
   @override
   String get profileLikesLabel => 'پسندیں';
@@ -1969,6 +1969,17 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoOverlayCommentPostFailedSnackbar => 'تبصرہ پوسٹ نہیں ہو سکا';
+
+  @override
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'views',
+      one: 'view',
+    );
+    return '$compactCount $_temp0';
+  }
 
   @override
   String videoFeedLoopCountLine(String compactCount, int count) {

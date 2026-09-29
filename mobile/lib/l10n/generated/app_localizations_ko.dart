@@ -295,11 +295,11 @@ class AppLocalizationsKo extends AppLocalizations {
       '피드를 클래식한 정사각형으로 유지해요';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalViews => 'Show total views';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalViewsSubtitle =>
+      'The creator\'s view count across all their videos';
 
   @override
   String get generalSettingsShowVideoLoops => 'Show video loops';
@@ -829,7 +829,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profileCompletePrimaryButton => '프로필 업데이트';
 
   @override
-  String get profileLoopsLabel => '루프';
+  String get profileViewsLabel => 'Views';
 
   @override
   String get profileLikesLabel => '좋아요';
@@ -1824,6 +1824,17 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoOverlayCommentPostFailedSnackbar => '댓글을 남기지 못했어요';
+
+  @override
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'views',
+      one: 'view',
+    );
+    return '$compactCount $_temp0';
+  }
 
   @override
   String videoFeedLoopCountLine(String compactCount, int count) {

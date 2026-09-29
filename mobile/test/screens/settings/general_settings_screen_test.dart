@@ -268,7 +268,7 @@ void main() {
         ),
       );
 
-      final totalLoopsTitle = labels.generalSettingsShowTotalLoops;
+      final totalLoopsTitle = labels.generalSettingsShowTotalViews;
       final videoLoopsTitle = labels.generalSettingsShowVideoLoops;
       final publishDateTitle = labels.generalSettingsShowPublishedDate;
       expect(find.text(totalLoopsTitle), findsOneWidget);

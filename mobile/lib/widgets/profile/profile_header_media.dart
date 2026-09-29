@@ -315,7 +315,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
         final hasLikes = widget.profileStats?.totalLikes != null;
         final totalViews = widget.profileStats?.totalViews;
         // The viewer controls whether totals appear. Keep a known zero hidden
-        // on visitor profiles so new creators do not get a public "0 loops"
+        // on visitor profiles so new creators do not get a public "0 views"
         // label; creators can still see their own zero as before.
         final showLoopsColumn =
             statsVisibility.showTotalLoops &&
@@ -328,7 +328,7 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
           if (showLoopsColumn)
             ProfileStatColumn(
               count: isLoading ? _skeletonPlaceholderCount : totalViews!,
-              label: l10n.profileLoopsLabel,
+              label: l10n.profileViewsLabel,
               isLoading: isLoading && _timeoutExpired,
               // Loops is the owner's own reach figure, so it is where a creator
               // looks first for the detail behind it. Visitors get no tap: the

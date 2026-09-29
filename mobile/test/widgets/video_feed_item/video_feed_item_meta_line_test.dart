@@ -147,9 +147,13 @@ void main() {
     }
   }
 
-  String loopLine(WidgetTester tester, int count) => _l10n(
-    tester,
-  ).videoFeedLoopCountLine(StringUtils.formatCompactNumber(count), count);
+  String loopLine(WidgetTester tester, int count) =>
+      _l10n(
+        tester,
+      ).videoFeedAuthorTotalViewsLine(
+        StringUtils.formatCompactNumber(count),
+        count,
+      );
 
   group('video card meta line', () {
     testWidgets('shows OG Beta Tester for an eligible non-team member', (

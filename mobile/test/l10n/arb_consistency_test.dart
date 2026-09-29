@@ -486,11 +486,17 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Creator total relabeled to the available metric (#9453): the figure is
+  // Divine-era views, never the archived Vine loop count. The previous
+  // "loops" translations described the wrong metric, so they were dropped.
+  // English in all 21 non-English locales until a human translation pass.
+  'profileViewsLabel',
+  'videoFeedAuthorTotalViewsLine',
   // Viewer stats-visibility toggles (#7632). Deferred to the next
   // human pass rather than machine-translated so the loop/date wording stays
   // natural in each locale.
-  'generalSettingsShowTotalLoops',
-  'generalSettingsShowTotalLoopsSubtitle',
+  'generalSettingsShowTotalViews',
+  'generalSettingsShowTotalViewsSubtitle',
   'generalSettingsShowVideoLoops',
   'generalSettingsShowVideoLoopsSubtitle',
   'generalSettingsShowPublishedDate',

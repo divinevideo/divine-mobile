@@ -287,7 +287,7 @@ void main() {
       final l10n = _l10n(tester);
       expect(
         find.textContaining(
-          l10n.videoFeedLoopCountLine(
+          l10n.videoFeedAuthorTotalViewsLine(
             StringUtils.formatCompactNumber(10000),
             10000,
           ),

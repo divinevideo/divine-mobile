@@ -337,11 +337,11 @@ class AppLocalizationsFil extends AppLocalizations {
       'Panatilihin ang feeds sa classic na square format';
 
   @override
-  String get generalSettingsShowTotalLoops => 'Show total loops';
+  String get generalSettingsShowTotalViews => 'Show total views';
 
   @override
-  String get generalSettingsShowTotalLoopsSubtitle =>
-      'The creator\'s loop count across all their videos';
+  String get generalSettingsShowTotalViewsSubtitle =>
+      'The creator\'s view count across all their videos';
 
   @override
   String get generalSettingsShowVideoLoops => 'Show video loops';
@@ -907,7 +907,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get profileCompletePrimaryButton => 'I-update ang Profile Mo';
 
   @override
-  String get profileLoopsLabel => 'Loops';
+  String get profileViewsLabel => 'Views';
 
   @override
   String get profileLikesLabel => 'Mga Like';
@@ -1964,6 +1964,17 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoOverlayCommentPostFailedSnackbar =>
       'Hindi nai-post ang komento';
+
+  @override
+  String videoFeedAuthorTotalViewsLine(String compactCount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'views',
+      one: 'view',
+    );
+    return '$compactCount $_temp0';
+  }
 
   @override
   String videoFeedLoopCountLine(String compactCount, int count) {

@@ -272,8 +272,8 @@
   "generalSettingsClosedCaptionsSubtitle": "Show captions when videos include them",
   "generalSettingsVideoShapeSquareOnly": "Square videos only",
   "generalSettingsVideoShapeSquareOnlySubtitle": "Keep feeds in the classic square format",
-  "generalSettingsShowTotalLoops": "Show total loops",
-  "generalSettingsShowTotalLoopsSubtitle": "The creator's loop count across all their videos",
+  "generalSettingsShowTotalViews": "Show total views",
+  "generalSettingsShowTotalViewsSubtitle": "The creator's view count across all their videos",
   "generalSettingsShowVideoLoops": "Show video loops",
   "generalSettingsShowVideoLoopsSubtitle": "How many times the video you're watching has looped",
   "generalSettingsShowPublishedDate": "Show publish date",
@@ -613,7 +613,7 @@
   "profileMaybeLaterLabel": "Maybe Later",
   "profileSecurePrimaryButton": "Add Email & Password",
   "profileCompletePrimaryButton": "Update Your Profile",
-  "profileLoopsLabel": "Loops",
+  "profileViewsLabel": "Views",
   "profileLikesLabel": "Likes",
   "profileMyLibraryLabel": "My Library",
   "profileMessageLabel": "Message",
@@ -1289,6 +1289,17 @@
   "videoOverlayCommentPostFailedSnackbar": "Couldn't post comment",
   "@videoOverlayCommentPostFailedSnackbar": {
     "description": "Snackbar shown when posting a comment from the inline comment field fails (e.g. relay unreachable)."
+  },
+  "videoFeedAuthorTotalViewsLine": "{compactCount} {count, plural, =1{view} other{views}}",
+  "@videoFeedAuthorTotalViewsLine": {
+    "placeholders": {
+      "compactCount": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loops}}",
   "@videoFeedLoopCountLine": {

@@ -215,7 +215,10 @@ void main() {
       expect(find.textContaining('description with'), findsOneWidget);
       expect(
         find.textContaining(
-          l10n.videoFeedLoopCountLine(StringUtils.formatCompactNumber(0), 0),
+          l10n.videoFeedAuthorTotalViewsLine(
+            StringUtils.formatCompactNumber(0),
+            0,
+          ),
         ),
         findsNothing,
       );
