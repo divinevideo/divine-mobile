@@ -8904,6 +8904,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'الخط';
 
   @override
+  String get videoEditorFontCategorySans => 'بلا زوائد';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'عناوين';
+
+  @override
+  String get videoEditorFontCategoryScript => 'خطوط يدوية ومزخرفة';
+
+  @override
+  String get videoEditorFontCategorySerif => 'بزوائد';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'إطار وتأثيرات';
+
+  @override
+  String get videoEditorFontCategoryMono => 'مونو وتقنية';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'حسب المناسبة';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'أنظمة كتابة أخرى';
+
+  @override
   String get videoEditorNoStickersFound => 'لم يتم العثور على ملصقات';
 
   @override

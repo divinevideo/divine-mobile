@@ -9015,6 +9015,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Fonte';
 
   @override
+  String get videoEditorFontCategorySans => 'Sem serifa';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Títulos';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Cursiva e manuscrita';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Com serifa';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Contorno e efeitos';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono e tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Temáticas';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Outros alfabetos';
+
+  @override
   String get videoEditorNoStickersFound => 'Nenhum sticker encontrado';
 
   @override

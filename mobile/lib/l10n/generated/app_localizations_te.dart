@@ -9202,6 +9202,30 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'ఫాంట్';
 
   @override
+  String get videoEditorFontCategorySans => 'సాన్స్ సెరిఫ్';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'శీర్షికలు';
+
+  @override
+  String get videoEditorFontCategoryScript => 'చేతిరాత';
+
+  @override
+  String get videoEditorFontCategorySerif => 'సెరిఫ్';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'అవుట్‌లైన్ & ఎఫెక్ట్';
+
+  @override
+  String get videoEditorFontCategoryMono => 'మోనో & టెక్';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'థీమ్';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'ఇతర లిపులు';
+
+  @override
   String get videoEditorNoStickersFound => 'స్టిక్కర్‌లు ఏవీ కనుగొనబడలేదు';
 
   @override

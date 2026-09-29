@@ -181,7 +181,7 @@ void main() {
 
       test('defaults the optional fields a stored row may lack', () {
         final decoded = TitleStyle.fromJson({
-          'fontIndex': 99,
+          'fontIndex': VideoEditorConstants.textFonts.length,
           'color': 0xFFFFFFFF,
           'background': 0xFF000000,
         });

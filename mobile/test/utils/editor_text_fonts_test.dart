@@ -50,8 +50,8 @@ void main() {
       expect(fonts.toSet(), hasLength(fonts.length));
     });
 
-    test('keeps the persisted catalogue at 79 entries', () {
-      expect(VideoEditorConstants.textFontCatalogue, hasLength(79));
+    test('keeps the persisted catalogue at 128 entries', () {
+      expect(VideoEditorConstants.textFontCatalogue, hasLength(128));
     });
 
     test('rejects in-place reordering, which would repoint saved drafts', () {
@@ -63,6 +63,60 @@ void main() {
       expect(() => fonts.removeAt(0), throwsUnsupportedError);
       expect(() => fonts.add(GoogleFonts.inter), throwsUnsupportedError);
       expect(fonts.first, same(first));
+    });
+  });
+
+  group('editorFontSections', () {
+    test('lists every catalogue font exactly once', () {
+      final listed = [
+        for (final section in editorFontSections) ...section.fontIndices,
+      ]..sort();
+
+      expect(
+        listed,
+        List.generate(VideoEditorConstants.textFonts.length, (i) => i),
+      );
+    });
+
+    test('files each font under its catalogue category', () {
+      final misfiled = [
+        for (final section in editorFontSections)
+          for (final index in section.fontIndices)
+            if (VideoEditorConstants.textFontCatalogue[index].category !=
+                section.category)
+              VideoEditorConstants.textFontCatalogue[index].familyName,
+      ];
+
+      expect(misfiled, isEmpty);
+    });
+
+    test('orders sections by category and fonts by catalogue index', () {
+      final categories = [
+        for (final section in editorFontSections) section.category.index,
+      ];
+      expect(categories, orderedEquals([...categories]..sort()));
+      expect(categories.toSet(), hasLength(categories.length));
+
+      for (final section in editorFontSections) {
+        expect(section.fontIndices, isNotEmpty);
+        expect(
+          section.fontIndices,
+          orderedEquals([...section.fontIndices]..sort()),
+        );
+      }
+    });
+
+    test('opens with the default font, which new text starts in', () {
+      expect(editorFontSections.first.fontIndices.first, 0);
+      expect(VideoEditorConstants.textFonts.first, same(GoogleFonts.inter));
+    });
+
+    test('cannot be regrouped at runtime', () {
+      expect(editorFontSections.removeLast, throwsUnsupportedError);
+      expect(
+        () => editorFontSections.first.fontIndices.add(0),
+        throwsUnsupportedError,
+      );
     });
   });
 

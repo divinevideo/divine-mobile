@@ -9077,6 +9077,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Police';
 
   @override
+  String get videoEditorFontCategorySans => 'Sans empattement';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Titres';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Manuscrite et calligraphique';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Avec empattement';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Contour et effets';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono et tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Thématiques';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Autres écritures';
+
+  @override
   String get videoEditorNoStickersFound => 'Aucun sticker trouvé';
 
   @override

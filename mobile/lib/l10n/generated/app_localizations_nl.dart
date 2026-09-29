@@ -8991,6 +8991,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Lettertype';
 
   @override
+  String get videoEditorFontCategorySans => 'Schreefloos';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Koppen';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Schrijf- en handschrift';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Schreef';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Contour en effect';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono en tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Thema';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Andere schriften';
+
+  @override
   String get videoEditorNoStickersFound => 'Geen stickers gevonden';
 
   @override

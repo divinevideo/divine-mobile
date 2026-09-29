@@ -8944,6 +8944,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Typsnitt';
 
   @override
+  String get videoEditorFontCategorySans => 'Sans serif';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Rubriker';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Skrivstil och handskrift';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Serif';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Kontur och effekt';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono och tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Teman';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Andra skriftsystem';
+
+  @override
   String get videoEditorNoStickersFound => 'Inga stickers hittades';
 
   @override

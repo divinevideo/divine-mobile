@@ -16,7 +16,41 @@ typedef TextFont = TextStyle Function({double? fontSize, Color? color});
 /// reference to it retains all ~1700 font descriptors and defeats the
 /// package's per-font tree shaking — worth 6.6 MiB of `main.dart.js`, which
 /// pushed the web bundle past Cloudflare Pages' 25 MiB per-file limit (#9269).
-typedef EditorTextFont = ({TextFont font, String familyName});
+///
+/// [category] is the section the font pickers list it under.
+typedef EditorTextFont = ({
+  TextFont font,
+  String familyName,
+  EditorFontCategory category,
+});
+
+/// The sections the font pickers group the editor fonts into, declared in the
+/// order the pickers show them.
+enum EditorFontCategory {
+  /// Neutral sans serif faces.
+  sans,
+
+  /// Heavy display faces made for a big title.
+  headline,
+
+  /// Script, brush and handwriting faces.
+  script,
+
+  /// Serif faces.
+  serif,
+
+  /// Faces with a built-in outline, shade or texture.
+  effect,
+
+  /// Monospaced, typewriter, pixel and futuristic faces.
+  mono,
+
+  /// Faces tied to a mood or occasion: horror, holiday, blackletter.
+  themed,
+
+  /// Faces built for a non-Latin script, which also carry Latin.
+  otherScripts,
+}
 
 /// Constants for the video editor feature.
 class VideoEditorConstants {
@@ -222,11 +256,13 @@ class VideoEditorConstants {
   /// Available text fonts for text overlays, with the family name each one is
   /// published under.
   ///
-  /// The first 35 are sorted by popularity; every later addition is appended
-  /// in category groups. **Append only, never reorder or remove**: a caption
-  /// track persists its font as an index into this list
-  /// (`CaptionCustomStyle.fontIndex`), so a moved entry silently changes the
-  /// font of every saved draft.
+  /// The first 35 are sorted by popularity; every later addition is appended.
+  /// **Append only, never reorder or remove**: a caption track and a saved
+  /// title style persist their font as an index into this list
+  /// (`CaptionCustomStyle.fontIndex`, `TitleStyle.fontIndex`), so a moved
+  /// entry silently changes the font of every saved draft and style. The font
+  /// pickers do not show this order: they group the fonts by `category`, see
+  /// `editorFontSections`.
   ///
   /// `familyName` is the name google_fonts publishes the family under, spaces
   /// and capitalisation included ('Press Start 2P', not 'PressStart2p'); it is
@@ -236,95 +272,360 @@ class VideoEditorConstants {
   /// identifier and its exact published spelling, capitalisation and spacing.
   ///
   /// Every entry ships under the SIL Open Font License 1.1, Apache 2.0 or the
-  /// Ubuntu Font License, all of which permit commercial use. Before adding a
-  /// font, confirm it lives under `ofl/`, `apache/` or `ufl/` in
-  /// https://github.com/google/fonts — nothing else is acceptable here.
+  /// Ubuntu Font License, all of which permit commercial use and leave text
+  /// burned into an exported video unrestricted. Before adding a font, confirm
+  /// it lives under `ofl/`, `apache/` or `ufl/` in
+  /// https://github.com/google/fonts — nothing else is acceptable here — and
+  /// add its copyright notice under that license to
+  /// `assets/licenses/editor_fonts.json`, which credits it on the in-app
+  /// license page. For OFL fonts the notice is the header of the family's
+  /// `OFL.txt`; for the others it is the `copyright` field of its
+  /// `METADATA.pb`.
+  ///
+  /// google_fonts downloads the whole font file on first use, so keep an
+  /// addition's regular face well under a megabyte: that rules out the CJK
+  /// families, which weigh several.
   static const List<EditorTextFont> textFontCatalogue = [
-    (font: GoogleFonts.inter, familyName: 'Inter'),
-    (font: GoogleFonts.bricolageGrotesque, familyName: 'Bricolage Grotesque'),
-    (font: GoogleFonts.roboto, familyName: 'Roboto'),
-    (font: GoogleFonts.openSans, familyName: 'Open Sans'),
-    (font: GoogleFonts.notoSans, familyName: 'Noto Sans'),
-    (font: GoogleFonts.montserrat, familyName: 'Montserrat'),
-    (font: GoogleFonts.lato, familyName: 'Lato'),
-    (font: GoogleFonts.poppins, familyName: 'Poppins'),
-    (font: GoogleFonts.robotoMono, familyName: 'Roboto Mono'),
-    (font: GoogleFonts.oswald, familyName: 'Oswald'),
-    (font: GoogleFonts.raleway, familyName: 'Raleway'),
-    (font: GoogleFonts.ubuntu, familyName: 'Ubuntu'),
-    (font: GoogleFonts.nunito, familyName: 'Nunito'),
-    (font: GoogleFonts.rubik, familyName: 'Rubik'),
-    (font: GoogleFonts.merriweather, familyName: 'Merriweather'),
-    (font: GoogleFonts.playfairDisplay, familyName: 'Playfair Display'),
-    (font: GoogleFonts.nunitoSans, familyName: 'Nunito Sans'),
-    (font: GoogleFonts.lora, familyName: 'Lora'),
-    (font: GoogleFonts.ptSans, familyName: 'PT Sans'),
-    (font: GoogleFonts.workSans, familyName: 'Work Sans'),
-    (font: GoogleFonts.barlow, familyName: 'Barlow'),
-    (font: GoogleFonts.quicksand, familyName: 'Quicksand'),
-    (font: GoogleFonts.mulish, familyName: 'Mulish'),
-    (font: GoogleFonts.titilliumWeb, familyName: 'Titillium Web'),
-    (font: GoogleFonts.josefinSans, familyName: 'Josefin Sans'),
-    (font: GoogleFonts.bebasNeue, familyName: 'Bebas Neue'),
-    (font: GoogleFonts.comfortaa, familyName: 'Comfortaa'),
-    (font: GoogleFonts.lobster, familyName: 'Lobster'),
-    (font: GoogleFonts.pacifico, familyName: 'Pacifico'),
-    (font: GoogleFonts.dancingScript, familyName: 'Dancing Script'),
-    (font: GoogleFonts.caveat, familyName: 'Caveat'),
-    (font: GoogleFonts.permanentMarker, familyName: 'Permanent Marker'),
-    (font: GoogleFonts.crimsonText, familyName: 'Crimson Text'),
-    (font: GoogleFonts.ibmPlexMono, familyName: 'IBM Plex Mono'),
-    (font: GoogleFonts.anonymousPro, familyName: 'Anonymous Pro'),
-    // Display and headline faces.
-    (font: GoogleFonts.anton, familyName: 'Anton'),
-    (font: GoogleFonts.bangers, familyName: 'Bangers'),
-    (font: GoogleFonts.archivoBlack, familyName: 'Archivo Black'),
-    (font: GoogleFonts.alfaSlabOne, familyName: 'Alfa Slab One'),
-    (font: GoogleFonts.luckiestGuy, familyName: 'Luckiest Guy'),
-    (font: GoogleFonts.lilitaOne, familyName: 'Lilita One'),
-    (font: GoogleFonts.righteous, familyName: 'Righteous'),
-    (font: GoogleFonts.russoOne, familyName: 'Russo One'),
-    (font: GoogleFonts.blackOpsOne, familyName: 'Black Ops One'),
-    (font: GoogleFonts.bungee, familyName: 'Bungee'),
-    (font: GoogleFonts.fredoka, familyName: 'Fredoka'),
-    (font: GoogleFonts.abrilFatface, familyName: 'Abril Fatface'),
-    // Script and handwriting.
-    (font: GoogleFonts.satisfy, familyName: 'Satisfy'),
-    (font: GoogleFonts.greatVibes, familyName: 'Great Vibes'),
-    (font: GoogleFonts.sacramento, familyName: 'Sacramento'),
-    (font: GoogleFonts.amaticSc, familyName: 'Amatic SC'),
-    (font: GoogleFonts.shadowsIntoLight, familyName: 'Shadows Into Light'),
-    (font: GoogleFonts.indieFlower, familyName: 'Indie Flower'),
-    (font: GoogleFonts.patrickHand, familyName: 'Patrick Hand'),
-    (font: GoogleFonts.kalam, familyName: 'Kalam'),
-    (font: GoogleFonts.courgette, familyName: 'Courgette'),
-    (font: GoogleFonts.rockSalt, familyName: 'Rock Salt'),
-    // Serif.
-    (font: GoogleFonts.cormorantGaramond, familyName: 'Cormorant Garamond'),
-    (font: GoogleFonts.ebGaramond, familyName: 'EB Garamond'),
-    (font: GoogleFonts.libreBaskerville, familyName: 'Libre Baskerville'),
-    (font: GoogleFonts.dmSerifDisplay, familyName: 'DM Serif Display'),
-    (font: GoogleFonts.cinzel, familyName: 'Cinzel'),
-    (font: GoogleFonts.robotoSlab, familyName: 'Roboto Slab'),
-    // Modern sans.
-    (font: GoogleFonts.dmSans, familyName: 'DM Sans'),
-    (font: GoogleFonts.manrope, familyName: 'Manrope'),
-    (font: GoogleFonts.plusJakartaSans, familyName: 'Plus Jakarta Sans'),
-    (font: GoogleFonts.figtree, familyName: 'Figtree'),
-    (font: GoogleFonts.spaceGrotesk, familyName: 'Space Grotesk'),
-    (font: GoogleFonts.outfit, familyName: 'Outfit'),
-    // Retro, typewriter and tech.
-    (font: GoogleFonts.spaceMono, familyName: 'Space Mono'),
-    (font: GoogleFonts.courierPrime, familyName: 'Courier Prime'),
-    (font: GoogleFonts.specialElite, familyName: 'Special Elite'),
-    (font: GoogleFonts.vt323, familyName: 'VT323'),
-    (font: GoogleFonts.pressStart2p, familyName: 'Press Start 2P'),
-    (font: GoogleFonts.orbitron, familyName: 'Orbitron'),
-    // Themed.
-    (font: GoogleFonts.creepster, familyName: 'Creepster'),
-    (font: GoogleFonts.monoton, familyName: 'Monoton'),
-    (font: GoogleFonts.pirataOne, familyName: 'Pirata One'),
-    (font: GoogleFonts.unifrakturMaguntia, familyName: 'UnifrakturMaguntia'),
+    (font: GoogleFonts.inter, familyName: 'Inter', category: .sans),
+    (
+      font: GoogleFonts.bricolageGrotesque,
+      familyName: 'Bricolage Grotesque',
+      category: .sans,
+    ),
+    (font: GoogleFonts.roboto, familyName: 'Roboto', category: .sans),
+    (font: GoogleFonts.openSans, familyName: 'Open Sans', category: .sans),
+    (font: GoogleFonts.notoSans, familyName: 'Noto Sans', category: .sans),
+    (font: GoogleFonts.montserrat, familyName: 'Montserrat', category: .sans),
+    (font: GoogleFonts.lato, familyName: 'Lato', category: .sans),
+    (font: GoogleFonts.poppins, familyName: 'Poppins', category: .sans),
+    (font: GoogleFonts.robotoMono, familyName: 'Roboto Mono', category: .mono),
+    (font: GoogleFonts.oswald, familyName: 'Oswald', category: .sans),
+    (font: GoogleFonts.raleway, familyName: 'Raleway', category: .sans),
+    (font: GoogleFonts.ubuntu, familyName: 'Ubuntu', category: .sans),
+    (font: GoogleFonts.nunito, familyName: 'Nunito', category: .sans),
+    (font: GoogleFonts.rubik, familyName: 'Rubik', category: .sans),
+    (
+      font: GoogleFonts.merriweather,
+      familyName: 'Merriweather',
+      category: .serif,
+    ),
+    (
+      font: GoogleFonts.playfairDisplay,
+      familyName: 'Playfair Display',
+      category: .serif,
+    ),
+    (font: GoogleFonts.nunitoSans, familyName: 'Nunito Sans', category: .sans),
+    (font: GoogleFonts.lora, familyName: 'Lora', category: .serif),
+    (font: GoogleFonts.ptSans, familyName: 'PT Sans', category: .sans),
+    (font: GoogleFonts.workSans, familyName: 'Work Sans', category: .sans),
+    (font: GoogleFonts.barlow, familyName: 'Barlow', category: .sans),
+    (font: GoogleFonts.quicksand, familyName: 'Quicksand', category: .sans),
+    (font: GoogleFonts.mulish, familyName: 'Mulish', category: .sans),
+    (
+      font: GoogleFonts.titilliumWeb,
+      familyName: 'Titillium Web',
+      category: .sans,
+    ),
+    (
+      font: GoogleFonts.josefinSans,
+      familyName: 'Josefin Sans',
+      category: .sans,
+    ),
+    (
+      font: GoogleFonts.bebasNeue,
+      familyName: 'Bebas Neue',
+      category: .headline,
+    ),
+    (font: GoogleFonts.comfortaa, familyName: 'Comfortaa', category: .sans),
+    (font: GoogleFonts.lobster, familyName: 'Lobster', category: .script),
+    (font: GoogleFonts.pacifico, familyName: 'Pacifico', category: .script),
+    (
+      font: GoogleFonts.dancingScript,
+      familyName: 'Dancing Script',
+      category: .script,
+    ),
+    (font: GoogleFonts.caveat, familyName: 'Caveat', category: .script),
+    (
+      font: GoogleFonts.permanentMarker,
+      familyName: 'Permanent Marker',
+      category: .script,
+    ),
+    (
+      font: GoogleFonts.crimsonText,
+      familyName: 'Crimson Text',
+      category: .serif,
+    ),
+    (
+      font: GoogleFonts.ibmPlexMono,
+      familyName: 'IBM Plex Mono',
+      category: .mono,
+    ),
+    (
+      font: GoogleFonts.anonymousPro,
+      familyName: 'Anonymous Pro',
+      category: .mono,
+    ),
+    (font: GoogleFonts.anton, familyName: 'Anton', category: .headline),
+    (font: GoogleFonts.bangers, familyName: 'Bangers', category: .headline),
+    (
+      font: GoogleFonts.archivoBlack,
+      familyName: 'Archivo Black',
+      category: .headline,
+    ),
+    (
+      font: GoogleFonts.alfaSlabOne,
+      familyName: 'Alfa Slab One',
+      category: .headline,
+    ),
+    (
+      font: GoogleFonts.luckiestGuy,
+      familyName: 'Luckiest Guy',
+      category: .headline,
+    ),
+    (
+      font: GoogleFonts.lilitaOne,
+      familyName: 'Lilita One',
+      category: .headline,
+    ),
+    (font: GoogleFonts.righteous, familyName: 'Righteous', category: .headline),
+    (font: GoogleFonts.russoOne, familyName: 'Russo One', category: .headline),
+    (
+      font: GoogleFonts.blackOpsOne,
+      familyName: 'Black Ops One',
+      category: .headline,
+    ),
+    (font: GoogleFonts.bungee, familyName: 'Bungee', category: .headline),
+    (font: GoogleFonts.fredoka, familyName: 'Fredoka', category: .headline),
+    (
+      font: GoogleFonts.abrilFatface,
+      familyName: 'Abril Fatface',
+      category: .headline,
+    ),
+    (font: GoogleFonts.satisfy, familyName: 'Satisfy', category: .script),
+    (
+      font: GoogleFonts.greatVibes,
+      familyName: 'Great Vibes',
+      category: .script,
+    ),
+    (font: GoogleFonts.sacramento, familyName: 'Sacramento', category: .script),
+    (font: GoogleFonts.amaticSc, familyName: 'Amatic SC', category: .script),
+    (
+      font: GoogleFonts.shadowsIntoLight,
+      familyName: 'Shadows Into Light',
+      category: .script,
+    ),
+    (
+      font: GoogleFonts.indieFlower,
+      familyName: 'Indie Flower',
+      category: .script,
+    ),
+    (
+      font: GoogleFonts.patrickHand,
+      familyName: 'Patrick Hand',
+      category: .script,
+    ),
+    (font: GoogleFonts.kalam, familyName: 'Kalam', category: .script),
+    (font: GoogleFonts.courgette, familyName: 'Courgette', category: .script),
+    (font: GoogleFonts.rockSalt, familyName: 'Rock Salt', category: .script),
+    (
+      font: GoogleFonts.cormorantGaramond,
+      familyName: 'Cormorant Garamond',
+      category: .serif,
+    ),
+    (font: GoogleFonts.ebGaramond, familyName: 'EB Garamond', category: .serif),
+    (
+      font: GoogleFonts.libreBaskerville,
+      familyName: 'Libre Baskerville',
+      category: .serif,
+    ),
+    (
+      font: GoogleFonts.dmSerifDisplay,
+      familyName: 'DM Serif Display',
+      category: .serif,
+    ),
+    (font: GoogleFonts.cinzel, familyName: 'Cinzel', category: .serif),
+    (font: GoogleFonts.robotoSlab, familyName: 'Roboto Slab', category: .serif),
+    (font: GoogleFonts.dmSans, familyName: 'DM Sans', category: .sans),
+    (font: GoogleFonts.manrope, familyName: 'Manrope', category: .sans),
+    (
+      font: GoogleFonts.plusJakartaSans,
+      familyName: 'Plus Jakarta Sans',
+      category: .sans,
+    ),
+    (font: GoogleFonts.figtree, familyName: 'Figtree', category: .sans),
+    (
+      font: GoogleFonts.spaceGrotesk,
+      familyName: 'Space Grotesk',
+      category: .sans,
+    ),
+    (font: GoogleFonts.outfit, familyName: 'Outfit', category: .sans),
+    (font: GoogleFonts.spaceMono, familyName: 'Space Mono', category: .mono),
+    (
+      font: GoogleFonts.courierPrime,
+      familyName: 'Courier Prime',
+      category: .mono,
+    ),
+    (
+      font: GoogleFonts.specialElite,
+      familyName: 'Special Elite',
+      category: .mono,
+    ),
+    (font: GoogleFonts.vt323, familyName: 'VT323', category: .mono),
+    (
+      font: GoogleFonts.pressStart2p,
+      familyName: 'Press Start 2P',
+      category: .mono,
+    ),
+    (font: GoogleFonts.orbitron, familyName: 'Orbitron', category: .mono),
+    (font: GoogleFonts.creepster, familyName: 'Creepster', category: .themed),
+    (font: GoogleFonts.monoton, familyName: 'Monoton', category: .effect),
+    (font: GoogleFonts.pirataOne, familyName: 'Pirata One', category: .themed),
+    (
+      font: GoogleFonts.unifrakturMaguntia,
+      familyName: 'UnifrakturMaguntia',
+      category: .themed,
+    ),
+    (font: GoogleFonts.titanOne, familyName: 'Titan One', category: .headline),
+    (
+      font: GoogleFonts.paytoneOne,
+      familyName: 'Paytone One',
+      category: .headline,
+    ),
+    (
+      font: GoogleFonts.passionOne,
+      familyName: 'Passion One',
+      category: .headline,
+    ),
+    (
+      font: GoogleFonts.staatliches,
+      familyName: 'Staatliches',
+      category: .headline,
+    ),
+    (font: GoogleFonts.teko, familyName: 'Teko', category: .headline),
+    (
+      font: GoogleFonts.rubikMonoOne,
+      familyName: 'Rubik Mono One',
+      category: .headline,
+    ),
+    (font: GoogleFonts.unbounded, familyName: 'Unbounded', category: .headline),
+    (font: GoogleFonts.chewy, familyName: 'Chewy', category: .headline),
+    (font: GoogleFonts.shrikhand, familyName: 'Shrikhand', category: .headline),
+    (font: GoogleFonts.knewave, familyName: 'Knewave', category: .headline),
+    (
+      font: GoogleFonts.bungeeShade,
+      familyName: 'Bungee Shade',
+      category: .effect,
+    ),
+    (
+      font: GoogleFonts.bungeeInline,
+      familyName: 'Bungee Inline',
+      category: .effect,
+    ),
+    (
+      font: GoogleFonts.bungeeOutline,
+      familyName: 'Bungee Outline',
+      category: .effect,
+    ),
+    (
+      font: GoogleFonts.rubikGlitch,
+      familyName: 'Rubik Glitch',
+      category: .effect,
+    ),
+    (
+      font: GoogleFonts.rubikWetPaint,
+      familyName: 'Rubik Wet Paint',
+      category: .effect,
+    ),
+    (
+      font: GoogleFonts.kaushanScript,
+      familyName: 'Kaushan Script',
+      category: .script,
+    ),
+    (font: GoogleFonts.yellowtail, familyName: 'Yellowtail', category: .script),
+    (font: GoogleFonts.allura, familyName: 'Allura', category: .script),
+    (font: GoogleFonts.parisienne, familyName: 'Parisienne', category: .script),
+    (font: GoogleFonts.cookie, familyName: 'Cookie', category: .script),
+    (
+      font: GoogleFonts.homemadeApple,
+      familyName: 'Homemade Apple',
+      category: .script,
+    ),
+    (font: GoogleFonts.gochiHand, familyName: 'Gochi Hand', category: .script),
+    (
+      font: GoogleFonts.architectsDaughter,
+      familyName: 'Architects Daughter',
+      category: .script,
+    ),
+    (
+      font: GoogleFonts.gloriaHallelujah,
+      familyName: 'Gloria Hallelujah',
+      category: .script,
+    ),
+    (
+      font: GoogleFonts.sedgwickAve,
+      familyName: 'Sedgwick Ave',
+      category: .script,
+    ),
+    (font: GoogleFonts.bodoniModa, familyName: 'Bodoni Moda', category: .serif),
+    (font: GoogleFonts.fraunces, familyName: 'Fraunces', category: .serif),
+    (
+      font: GoogleFonts.instrumentSerif,
+      familyName: 'Instrument Serif',
+      category: .serif,
+    ),
+    (font: GoogleFonts.yesevaOne, familyName: 'Yeseva One', category: .serif),
+    (font: GoogleFonts.prata, familyName: 'Prata', category: .serif),
+    (
+      font: GoogleFonts.instrumentSans,
+      familyName: 'Instrument Sans',
+      category: .sans,
+    ),
+    (font: GoogleFonts.sora, familyName: 'Sora', category: .sans),
+    (font: GoogleFonts.lexend, familyName: 'Lexend', category: .sans),
+    (font: GoogleFonts.kanit, familyName: 'Kanit', category: .sans),
+    (font: GoogleFonts.exo2, familyName: 'Exo 2', category: .sans),
+    (font: GoogleFonts.urbanist, familyName: 'Urbanist', category: .sans),
+    (
+      font: GoogleFonts.jetBrainsMono,
+      familyName: 'JetBrains Mono',
+      category: .mono,
+    ),
+    (font: GoogleFonts.silkscreen, familyName: 'Silkscreen', category: .mono),
+    (
+      font: GoogleFonts.pixelifySans,
+      familyName: 'Pixelify Sans',
+      category: .mono,
+    ),
+    (font: GoogleFonts.audiowide, familyName: 'Audiowide', category: .mono),
+    (font: GoogleFonts.michroma, familyName: 'Michroma', category: .mono),
+    (font: GoogleFonts.nosifer, familyName: 'Nosifer', category: .themed),
+    (
+      font: GoogleFonts.mountainsOfChristmas,
+      familyName: 'Mountains of Christmas',
+      category: .themed,
+    ),
+    (
+      font: GoogleFonts.metalMania,
+      familyName: 'Metal Mania',
+      category: .themed,
+    ),
+    (font: GoogleFonts.cairo, familyName: 'Cairo', category: .otherScripts),
+    (font: GoogleFonts.lalezar, familyName: 'Lalezar', category: .otherScripts),
+    (
+      font: GoogleFonts.reemKufi,
+      familyName: 'Reem Kufi',
+      category: .otherScripts,
+    ),
+    (
+      font: GoogleFonts.blackHanSans,
+      familyName: 'Black Han Sans',
+      category: .otherScripts,
+    ),
+    (
+      font: GoogleFonts.doHyeon,
+      familyName: 'Do Hyeon',
+      category: .otherScripts,
+    ),
   ];
 
   /// The fonts of [textFontCatalogue], in catalogue order.

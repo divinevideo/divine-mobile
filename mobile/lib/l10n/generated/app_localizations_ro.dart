@@ -9147,6 +9147,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
+  String get videoEditorFontCategorySans => 'Fără serife';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Titluri';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Caligrafice și de mână';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Cu serife';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Contur și efecte';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono și tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Tematice';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Alte alfabete';
+
+  @override
   String get videoEditorNoStickersFound => 'Nu au fost găsite stickere';
 
   @override

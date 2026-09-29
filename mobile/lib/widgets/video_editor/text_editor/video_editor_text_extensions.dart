@@ -36,6 +36,21 @@ extension TextEditorFont on TextFont {
       _resolvedDisplayName ?? l10n.videoEditorFontUnknown;
 }
 
+/// Extension on [EditorFontCategory] for the font pickers.
+extension TextEditorFontCategory on EditorFontCategory {
+  /// Returns the localized section header for this category.
+  String localizedName(AppLocalizations l10n) => switch (this) {
+    EditorFontCategory.sans => l10n.videoEditorFontCategorySans,
+    EditorFontCategory.headline => l10n.videoEditorFontCategoryHeadline,
+    EditorFontCategory.script => l10n.videoEditorFontCategoryScript,
+    EditorFontCategory.serif => l10n.videoEditorFontCategorySerif,
+    EditorFontCategory.effect => l10n.videoEditorFontCategoryEffect,
+    EditorFontCategory.mono => l10n.videoEditorFontCategoryMono,
+    EditorFontCategory.themed => l10n.videoEditorFontCategoryThemed,
+    EditorFontCategory.otherScripts => l10n.videoEditorFontCategoryOtherScripts,
+  };
+}
+
 /// Extension on [TextAlign] for text editor UI purposes.
 extension TextEditorTextAlign on TextAlign {
   /// Returns the icon for this alignment.

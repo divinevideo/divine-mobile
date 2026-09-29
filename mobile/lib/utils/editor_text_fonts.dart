@@ -16,6 +16,30 @@ final Map<TextFont, String> _googleFontFamilyNames = {
     entry.font: entry.familyName,
 };
 
+/// One section of the font pickers: a [category] and the indices into
+/// [VideoEditorConstants.textFonts] of the fonts listed under it.
+typedef EditorFontSection = ({
+  EditorFontCategory category,
+  List<int> fontIndices,
+});
+
+/// The editor fonts in the order the font pickers list them: one section per
+/// [EditorFontCategory] that has fonts, in declaration order, each keeping
+/// catalogue order within it.
+///
+/// Only the display order changes. A picked font is still reported by its
+/// catalogue index, which is what saved captions and title styles persist.
+final List<EditorFontSection> editorFontSections = List.unmodifiable([
+  for (final category in EditorFontCategory.values)
+    if (_fontIndicesIn(category) case final indices when indices.isNotEmpty)
+      (category: category, fontIndices: indices),
+]);
+
+List<int> _fontIndicesIn(EditorFontCategory category) => List.unmodifiable([
+  for (final (index, entry) in VideoEditorConstants.textFontCatalogue.indexed)
+    if (entry.category == category) index,
+]);
+
 /// The published Google Fonts family name of [font] ("Bebas Neue"), or `null`
 /// when [font] is not one of the editor's catalogue fonts.
 String? googleFontFamilyName(TextFont font) => _googleFontFamilyNames[font];

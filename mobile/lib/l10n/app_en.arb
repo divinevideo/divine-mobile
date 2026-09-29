@@ -5898,6 +5898,38 @@
   "videoEditorTextShadowStrength": "Shadow strength",
   "videoEditorTextShadowColor": "Shadow color",
   "videoEditorFontSemanticLabel": "Font",
+  "videoEditorFontCategorySans": "Sans serif",
+  "@videoEditorFontCategorySans": {
+    "description": "Section header in the video editor font picker over the sans serif fonts."
+  },
+  "videoEditorFontCategoryHeadline": "Headline",
+  "@videoEditorFontCategoryHeadline": {
+    "description": "Section header in the video editor font picker over heavy display fonts made for big titles."
+  },
+  "videoEditorFontCategoryScript": "Script & handwriting",
+  "@videoEditorFontCategoryScript": {
+    "description": "Section header in the video editor font picker over script, brush and handwriting fonts."
+  },
+  "videoEditorFontCategorySerif": "Serif",
+  "@videoEditorFontCategorySerif": {
+    "description": "Section header in the video editor font picker over the serif fonts."
+  },
+  "videoEditorFontCategoryEffect": "Outline & effect",
+  "@videoEditorFontCategoryEffect": {
+    "description": "Section header in the video editor font picker over fonts with a built-in outline, shade or texture."
+  },
+  "videoEditorFontCategoryMono": "Mono & tech",
+  "@videoEditorFontCategoryMono": {
+    "description": "Section header in the video editor font picker over monospaced, typewriter, pixel and futuristic fonts."
+  },
+  "videoEditorFontCategoryThemed": "Themed",
+  "@videoEditorFontCategoryThemed": {
+    "description": "Section header in the video editor font picker over fonts tied to a mood or occasion, such as horror or holiday fonts."
+  },
+  "videoEditorFontCategoryOtherScripts": "Other scripts",
+  "@videoEditorFontCategoryOtherScripts": {
+    "description": "Section header in the video editor font picker over fonts built for non-Latin writing systems such as Arabic or Korean."
+  },
   "videoEditorNoStickersFound": "No stickers found",
   "videoEditorNoStickersAvailable": "No stickers available",
   "videoEditorFailedLoadStickers": "Failed to load stickers",

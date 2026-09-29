@@ -8913,6 +8913,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Phông chữ';
 
   @override
+  String get videoEditorFontCategorySans => 'Không chân';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Tiêu đề';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Viết tay & thư pháp';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Có chân';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Viền & hiệu ứng';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono & công nghệ';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Theo chủ đề';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Hệ chữ khác';
+
+  @override
   String get videoEditorNoStickersFound => 'Không tìm thấy nhãn dán nào';
 
   @override

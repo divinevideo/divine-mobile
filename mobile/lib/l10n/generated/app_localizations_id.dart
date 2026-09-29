@@ -8866,6 +8866,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override
+  String get videoEditorFontCategorySans => 'Sans serif';
+
+  @override
+  String get videoEditorFontCategoryHeadline => 'Judul';
+
+  @override
+  String get videoEditorFontCategoryScript => 'Tulisan tangan & kaligrafi';
+
+  @override
+  String get videoEditorFontCategorySerif => 'Serif';
+
+  @override
+  String get videoEditorFontCategoryEffect => 'Garis tepi & efek';
+
+  @override
+  String get videoEditorFontCategoryMono => 'Mono & tech';
+
+  @override
+  String get videoEditorFontCategoryThemed => 'Bertema';
+
+  @override
+  String get videoEditorFontCategoryOtherScripts => 'Aksara lain';
+
+  @override
   String get videoEditorNoStickersFound => 'Stiker tidak ditemukan';
 
   @override
