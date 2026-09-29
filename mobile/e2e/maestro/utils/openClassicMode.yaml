@@ -11,17 +11,24 @@ appId: co.openvine.app.staging
 # and falls back to Capture when the key is absent, so a first run after a
 # `clearState` never opens here on its own.
 #
-# Classic sits three places from Capture, which is further than any other mode
+# Classic sits three places from Capture, or four where the wheel also offers
+# Chroma Key between Lip Sync and Classic, which is further than any other mode
 # a flow has to travel. The wheel is a lazy ListView that only builds entries
 # near the armed one, so the hops below step one entry at a time rather than
 # betting on how many the viewport happens to have built — openCaptureMode documents the same trap from the other end
 # ("from Classic the Capture entry is not rendered at all").
 #
+# Chroma Key is on the wheel only where the renderer supports shader image
+# filters (`VideoRecorderMode.available`): every iOS build, but not every
+# Android one. So its hop runs only while its entry shows; without it Lip Sync
+# is Classic's neighbour and the last hop is skipped.
+#
 # The hops are guarded on Classic not already being on screen, which is what
 # makes a rerun pass: selecting a mode persists it, so a second run opens
-# straight on Classic, from where Stop Motion is two entries away and may not
-# be built. When the guard does let the hops through, each tap lands on the
-# armed entry's immediate neighbour, which the wheel always has built.
+# straight on Classic, from where Stop Motion is at least two entries away and
+# may not be built. When the guard does let the hops through, each tap lands on
+# the armed entry's immediate neighbour, which the wheel always has built.
+# test/tools/maestro_mode_wheel_walk_test.dart holds this helper to that walk.
 
 - runFlow: openRecorder.yaml
 
@@ -34,6 +41,13 @@ appId: co.openvine.app.staging
           id: camera_mode_stopMotion
       - tapOn:
           id: camera_mode_lipSync
+      - runFlow:
+          when:
+            visible:
+              id: camera_mode_chromaKey
+          commands:
+            - tapOn:
+                id: camera_mode_chromaKey
 
 # Tapping the armed entry is a no-op in the bloc, so this is also safe on the
 # rerun path that skipped the hops above.
