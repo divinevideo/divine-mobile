@@ -1,6 +1,7 @@
-# Pull policy: images pinned to a version pull only when missing, so a cached
-# stack starts without the network. The `:latest` images keep `always` so they
-# follow new builds.
+# Pull policy: images pinned to a version pull only when missing, so `up` stops
+# asking the registry about them once they are cached.
+# The `:latest` images keep `always` to follow new builds, so a plain `up` still
+# needs the network; `mise run local_up_cached` starts from the cache alone.
 services:
   # ---------------------------------------------------------------------------
   # Keycast (OAuth + NIP-46 bunker signer)
