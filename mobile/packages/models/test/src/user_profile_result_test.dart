@@ -199,19 +199,20 @@ void main() {
         expect(data.archivedLoops, equals(0));
       });
 
-      test('parses numeric and string representations', () {
-        expect(
-          ProfileEngagementData.fromJson(const {
-            'archived_loops': 12.0,
-          }).archivedLoops,
-          equals(12),
-        );
-        expect(
-          ProfileEngagementData.fromJson(const {
-            'archived_loops': '34',
-          }).archivedLoops,
-          equals(34),
-        );
+      test('parses a whole-number double', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': 12.0,
+        });
+
+        expect(data.archivedLoops, equals(12));
+      });
+
+      test('parses a numeric string', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': '34',
+        });
+
+        expect(data.archivedLoops, equals(34));
       });
 
       test('is null when the field is absent', () {
@@ -230,19 +231,20 @@ void main() {
         expect(data.archivedLoops, isNull);
       });
 
-      test('is null for a negative or unparseable value', () {
-        expect(
-          ProfileEngagementData.fromJson(const {
-            'archived_loops': -1,
-          }).archivedLoops,
-          isNull,
-        );
-        expect(
-          ProfileEngagementData.fromJson(const {
-            'archived_loops': 'lots',
-          }).archivedLoops,
-          isNull,
-        );
+      test('is null for a negative value', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': -1,
+        });
+
+        expect(data.archivedLoops, isNull);
+      });
+
+      test('is null for an unparseable value', () {
+        final data = ProfileEngagementData.fromJson(const {
+          'archived_loops': 'lots',
+        });
+
+        expect(data.archivedLoops, isNull);
       });
 
       test('is null for a max-int sentinel', () {
@@ -256,7 +258,7 @@ void main() {
         expect(data.archivedLoops, isNull);
       });
 
-      test('participates in equality', () {
+      group('identity', () {
         const withArchive = ProfileEngagementData(
           totalReactions: 1,
           totalLoops: 2,
@@ -269,8 +271,17 @@ void main() {
           totalViews: 3,
         );
 
-        expect(withArchive, isNot(equals(withoutArchive)));
-        expect(withArchive.toString(), contains('archivedLoops: 4'));
+        test('participates in equality', () {
+          expect(withArchive, isNot(equals(withoutArchive)));
+        });
+
+        test('participates in hashCode', () {
+          expect(withArchive.hashCode, isNot(equals(withoutArchive.hashCode)));
+        });
+
+        test('appears in toString', () {
+          expect(withArchive.toString(), contains('archivedLoops: 4'));
+        });
       });
     });
   });
