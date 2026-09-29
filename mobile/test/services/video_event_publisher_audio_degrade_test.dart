@@ -208,7 +208,9 @@ void main() {
       );
       expect(
         signed.single.tags.where((tag) => tag.first == 'allow_audio_reuse'),
-        isEmpty,
+        [
+          ['allow_audio_reuse', 'true'],
+        ],
       );
       expect(
         signed.single.tags.where(
