@@ -38,6 +38,7 @@ class SupporterCubit extends Cubit<SupporterState> {
 
   StreamSubscription<SupporterEntitlement>? _entitlementSub;
   StreamSubscription<EntitlementLifecycle>? _lifecycleSub;
+  StreamSubscription<SupporterEntitlement>? _settledPurchaseSub;
   int _foregroundOperationRevision = 0;
 
   /// Begin listening to the repository's entitlement stream. Call from the
@@ -71,6 +72,10 @@ class SupporterCubit extends Cubit<SupporterState> {
           clearFailure: true,
         ),
       ),
+    );
+    _settledPurchaseSub ??= _repository.settledPurchases.listen(
+      _handleSettledPurchase,
+      onError: _handleEntitlementError,
     );
     if (loadStore) {
       unawaited(loadTiers());
@@ -280,6 +285,41 @@ class SupporterCubit extends Cubit<SupporterState> {
     if (!isClosed) emit(nextState);
   }
 
+  /// Ends checkout when a user-initiated purchase claim has settled.
+  ///
+  /// The [SupporterRepository.changes] stream also carries routine refreshes
+  /// and recognition edits, so a non-supporter value there is not proof the
+  /// purchase failed. [SupporterRepository.settledPurchases] only reports the
+  /// claim, and only an in-flight foreground purchase is affected, so a
+  /// background recovery or a restore never fails a checkout the user is
+  /// watching.
+  void _handleSettledPurchase(SupporterEntitlement entitlement) {
+    if (isClosed || !state.awaitingPurchaseConfirmation) return;
+    if (entitlement.isSupporter) {
+      _finishPurchaseAnalytics(succeeded: true);
+      _emit(
+        state.copyWith(
+          awaitingPurchaseConfirmation: false,
+          entitlement: entitlement,
+          snapshot: _repository.snapshot,
+          status: SupporterStatus.active,
+          clearFailure: true,
+        ),
+      );
+      return;
+    }
+    _finishPurchaseAnalytics(succeeded: false);
+    _emit(
+      state.copyWith(
+        awaitingPurchaseConfirmation: false,
+        entitlement: entitlement,
+        snapshot: _repository.snapshot,
+        status: SupporterStatus.error,
+        failure: SupporterFailure.unknown,
+      ),
+    );
+  }
+
   void _handleEntitlementError(Object error, StackTrace stackTrace) {
     if (isClosed) return;
     _finishPurchaseAnalytics(succeeded: false);
@@ -353,9 +393,11 @@ class SupporterCubit extends Cubit<SupporterState> {
   Future<void> close() async {
     final entitlementCancelled = _entitlementSub?.cancel();
     final lifecycleCancelled = _lifecycleSub?.cancel();
+    final settledCancelled = _settledPurchaseSub?.cancel();
     await super.close();
     await entitlementCancelled;
     await lifecycleCancelled;
+    await settledCancelled;
   }
 
   static void _noopAnalytics(String _) {}

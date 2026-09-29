@@ -1307,6 +1307,104 @@ void main() {
       expect(repo.isSupporter, isTrue);
     });
 
+    test('settles a foreground claim the Worker verified but did not grant', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final apiClient = buildApiClient();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: apiClient,
+      );
+      addTearDown(repo.dispose);
+      addTearDown(apiClient.dispose);
+      // Establish canonical non-member state first, so the claim returns a
+      // value identical to the current one. The changes stream coalesces that;
+      // the settled stream must still fire so checkout can end.
+      await repo.refreshFromServer();
+      final settled = <SupporterEntitlement>[];
+      final subscription = repo.settledPurchases.listen(settled.add);
+      addTearDown(subscription.cancel);
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'foreground-refused',
+          store: 'apple',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(settled, hasLength(1));
+      expect(settled.single.isSupporter, isFalse);
+      expect(repo.isSupporter, isFalse);
+    });
+
+    test('settles a foreground claim that granted access', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final apiClient = buildApiClient(active: true);
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: apiClient,
+      );
+      addTearDown(repo.dispose);
+      addTearDown(apiClient.dispose);
+      final settled = <SupporterEntitlement>[];
+      final subscription = repo.settledPurchases.listen(settled.add);
+      addTearDown(subscription.cancel);
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'foreground-granted',
+          store: 'apple',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(settled, hasLength(1));
+      expect(settled.single.isSupporter, isTrue);
+    });
+
+    test('does not settle a silent background claim', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final apiClient = buildApiClient();
+      final repo = SupporterRepository(
+        pubkey: pubkeyA,
+        validator: validator,
+        prefs: prefs,
+        apiClient: apiClient,
+      );
+      addTearDown(repo.dispose);
+      addTearDown(apiClient.dispose);
+      final settled = <SupporterEntitlement>[];
+      final subscription = repo.settledPurchases.listen(settled.add);
+      addTearDown(subscription.cancel);
+
+      validator.proofController.add(
+        const SupporterPurchaseProof(
+          attemptId: 'background-refused',
+          store: 'apple',
+          productId: 'divine.supporter.monthly',
+          serverVerificationData: 'opaque-proof',
+          localVerificationData: '',
+          capturedPubkey: pubkeyA,
+          silent: true,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(settled, isEmpty);
+    });
+
     test('leaves a redelivered proof unacknowledged and surfaces unavailable '
         'when no verification client is configured', () async {
       final prefs = await SharedPreferences.getInstance();

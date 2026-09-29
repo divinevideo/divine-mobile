@@ -65,6 +65,13 @@ class _FakeRepository extends Fake implements SupporterRepository {
   @override
   Stream<SupporterEntitlement> get changes => _controller.stream;
 
+  final StreamController<SupporterEntitlement> _settledController =
+      StreamController<SupporterEntitlement>.broadcast();
+
+  @override
+  Stream<SupporterEntitlement> get settledPurchases =>
+      _settledController.stream;
+
   @override
   Future<SupporterEntitlement> purchase(String productId) =>
       purchaseCompleter?.future ?? validator.purchase(productId);

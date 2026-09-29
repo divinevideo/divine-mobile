@@ -94,6 +94,8 @@ class SupporterRepository {
   int _claimFailureRevision = 0;
   final StreamController<SupporterEntitlement> _controller =
       StreamController<SupporterEntitlement>.broadcast();
+  final StreamController<SupporterEntitlement> _settledPurchases =
+      StreamController<SupporterEntitlement>.broadcast();
 
   /// The current entitlement (hydrated from cache on construction, refreshed by
   /// the validator stream as purchases arrive).
@@ -122,6 +124,16 @@ class SupporterRepository {
   /// A stream of entitlement updates. Emits the current value to new
   /// listeners.
   Stream<SupporterEntitlement> get changes => _controller.stream;
+
+  /// The canonical entitlement after a user-initiated purchase claim settles.
+  ///
+  /// [changes] carries every canonical update, including a routine account
+  /// refresh or a recognition edit, so a caller cannot tell a settled claim
+  /// from one of those. This stream isolates the claim result, and emits once
+  /// per foreground claim even when it granted no entitlement, so checkout has
+  /// a terminal signal. Background recovery and renewals do not emit here, so
+  /// a silent repair cannot end someone else's checkout.
+  Stream<SupporterEntitlement> get settledPurchases => _settledPurchases.stream;
 
   /// The underlying validator, exposed so the UI/cubit can drive purchases and
   /// restores through the same store connection this repository owns.
@@ -472,6 +484,15 @@ class SupporterRepository {
       );
       await _rememberOwner(proofOwnerKey);
       _handleSnapshot(snapshot);
+      // A user-initiated claim is terminal even when it granted nothing: the
+      // Worker verified the purchase and its canonical state is not active.
+      // Report it on the claim-only stream so callers can end checkout without
+      // mistaking a routine refresh for the outcome.
+      if (!proof.silent && proof.capturedPubkey == _pubkey) {
+        if (!_settledPurchases.isClosed) {
+          _settledPurchases.add(snapshot.entitlement);
+        }
+      }
       await _validator.completePurchase(proof);
       if (_prefs.getString(pendingKey) == _pubkey) {
         await _prefs.remove(pendingKey);
@@ -554,6 +575,12 @@ class SupporterRepository {
     runDetached(
       _controller.close(),
       'close the supporter entitlement stream',
+      logName: 'SupporterRepository',
+      category: LogCategory.system,
+    );
+    runDetached(
+      _settledPurchases.close(),
+      'close the settled-purchase stream',
       logName: 'SupporterRepository',
       category: LogCategory.system,
     );
