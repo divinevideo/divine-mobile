@@ -2651,10 +2651,11 @@ class VideoRecorderBloc
     // A recorder closed mid-take must not leave the bakes held for good.
     _releaseChromaKeyBakes();
     // A backdrop image no clip was recorded with is referenced by nothing
-    // once this recorder is gone. Unless a take is still being wrapped up:
-    // the clip it becomes may yet point at the image.
+    // once this recorder is gone. Unless a take is on the camera or being
+    // wrapped up: the clip it becomes may yet point at the image. A countdown
+    // has put nothing on the camera, so it keeps no image alive.
     if (state.unrecordedChromaKeyImagePath case final orphan?
-        when !state.isRecording && !state.isStoppingRecording) {
+        when !state.isCapturingFootage && !state.isStoppingRecording) {
       _deleteFileQuietly(orphan);
     }
     try {
