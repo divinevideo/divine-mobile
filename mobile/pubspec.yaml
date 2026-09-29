@@ -422,7 +422,7 @@ dependencies:
   # 14.0.0 is the first release built on material_ui; before it the editor's
   # ThemeData is the framework's and no longer interchangeable with ours.
   # 14.2.0 adds the paint-layer raster cache the video editor turns on.
-  pro_image_editor: ^14.4.0
+  pro_image_editor: ^14.5.0
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0
@@ -436,12 +436,6 @@ dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the
   # transitive 11.x platform interface changes.
   device_info_plus: ^10.1.2
-  # TODO(#9558): Replace with pro_image_editor ^14.5.0 once
-  # hm21/pro_image_editor#875 (text layer outline) is released on pub.dev.
-  pro_image_editor:
-    git:
-      url: https://github.com/hm21/pro_image_editor.git
-      ref: 56ddc78beb8f403345b597a835a2b11903391998
 
 dev_dependencies:
   flutter_test:
