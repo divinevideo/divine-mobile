@@ -83,6 +83,8 @@ class AudioEvent {
     this.startTime = Duration.zero,
     this.endTime,
     this.anchorClipId,
+    this.fadeInDuration = Duration.zero,
+    this.fadeOutDuration = Duration.zero,
     this.allowsReuse = true,
     this.hasExplicitReuseConsent = false,
     this.requiresCurrentReuseVerification = false,
@@ -331,6 +333,12 @@ class AudioEvent {
           ? Duration(milliseconds: json['endTimeMs'] as int)
           : null,
       anchorClipId: json['anchorClipId'] as String?,
+      fadeInDuration: Duration(
+        milliseconds: (json['fadeInMs'] as num?)?.toInt() ?? 0,
+      ),
+      fadeOutDuration: Duration(
+        milliseconds: (json['fadeOutMs'] as num?)?.toInt() ?? 0,
+      ),
       // Persisted events without a terms field predate the reuse policy.
       // Treat them as unknown and let the source-video resolver decide;
       // archive compatibility is a provisional Divine policy grant, not an
@@ -609,6 +617,22 @@ class AudioEvent {
   /// Local-only editor state, never published to Nostr.
   final String? anchorClipId;
 
+  /// How long this track rises from silence to [volume] once it starts
+  /// playing at [startTime].
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final Duration fadeInDuration;
+
+  /// How long this track falls from [volume] to silence before it stops
+  /// playing.
+  ///
+  /// Local-only editor state, never published to Nostr.
+  final Duration fadeOutDuration;
+
+  /// Whether this track fades in or out at all.
+  bool get hasFade =>
+      fadeInDuration > Duration.zero || fadeOutDuration > Duration.zero;
+
   /// Whether the source creator permits this sound to be reused by others.
   ///
   /// Parsed Kind 1063 events fail closed: only an explicit
@@ -774,6 +798,8 @@ class AudioEvent {
     Duration? endTime,
     String? anchorClipId,
     bool clearAnchorClipId = false,
+    Duration? fadeInDuration,
+    Duration? fadeOutDuration,
     bool? allowsReuse,
     bool? hasExplicitReuseConsent,
     bool? requiresCurrentReuseVerification,
@@ -807,6 +833,8 @@ class AudioEvent {
       anchorClipId: clearAnchorClipId
           ? null
           : (anchorClipId ?? this.anchorClipId),
+      fadeInDuration: fadeInDuration ?? this.fadeInDuration,
+      fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
       allowsReuse: allowsReuse ?? this.allowsReuse,
       hasExplicitReuseConsent:
           hasExplicitReuseConsent ?? this.hasExplicitReuseConsent,
@@ -824,12 +852,21 @@ class AudioEvent {
         other.startOffset == startOffset &&
         other.startTime == startTime &&
         other.endTime == endTime &&
-        other.anchorClipId == anchorClipId;
+        other.anchorClipId == anchorClipId &&
+        other.fadeInDuration == fadeInDuration &&
+        other.fadeOutDuration == fadeOutDuration;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, startOffset, startTime, endTime, anchorClipId);
+  int get hashCode => Object.hash(
+    id,
+    startOffset,
+    startTime,
+    endTime,
+    anchorClipId,
+    fadeInDuration,
+    fadeOutDuration,
+  );
 
   @override
   String toString() {
@@ -873,6 +910,10 @@ class AudioEvent {
     if (startTime != Duration.zero) 'startTimeMs': startTime.inMilliseconds,
     if (endTime != null) 'endTimeMs': endTime!.inMilliseconds,
     'anchorClipId': ?anchorClipId,
+    if (fadeInDuration > Duration.zero)
+      'fadeInMs': fadeInDuration.inMilliseconds,
+    if (fadeOutDuration > Duration.zero)
+      'fadeOutMs': fadeOutDuration.inMilliseconds,
   };
 }
 
