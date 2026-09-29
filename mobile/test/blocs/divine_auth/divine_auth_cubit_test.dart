@@ -85,10 +85,10 @@ void main() {
     }
 
     group('initial state', () {
-      test('is $DivineAuthInitial', () {
+      test('is $DivineAuthInitial', () async {
         final cubit = buildCubit();
         expect(cubit.state, isA<DivineAuthInitial>());
-        cubit.close();
+        await cubit.close();
       });
     });
 
