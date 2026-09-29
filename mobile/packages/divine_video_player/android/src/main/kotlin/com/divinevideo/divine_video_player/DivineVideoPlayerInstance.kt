@@ -168,6 +168,10 @@ internal class DivineVideoPlayerInstance(
     /** Whether a lap restarted by [loopsBySeeking] is still buffering its start. */
     private var restartingLap = false
 
+    /** The position the loop fade-in is anchored at, for tests. */
+    internal val declickStreamStartUsForTesting: Long
+        get() = declickProcessor.nextStreamStartUs
+
     /**
      * Identifies this player in diagnostic logs.
      *
@@ -1657,6 +1661,10 @@ internal class DivineVideoPlayerInstance(
                 // Start the next lap by hand. Dart is not told the clip
                 // completed, as it is not under a repeat mode.
                 restartingLap = true
+                // Anchor the fade in at the lap's start, as handleSeekTo does
+                // at its target: a seek is not a stream change, so nothing
+                // else retires an offset an earlier seek left behind.
+                declickProcessor.nextStreamStartUs = 0L
                 player?.seekTo(0, 0L)
                 syncAudioOverlays()
                 return

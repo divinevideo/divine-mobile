@@ -1158,6 +1158,26 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `an HLS lap restarted after a seek fades in from its start`() {
+        val listener = capturePlayerListener()
+        instance.onMethodCall(hlsSetClipsCall(), mockk(relaxed = true))
+        instance.onMethodCall(loopingCall(looping = true), mockk(relaxed = true))
+        every { mockPlayer.playbackState } returns Player.STATE_READY
+        instance.onMethodCall(
+            MethodCall("seekTo", mapOf("positionMs" to 3000)),
+            mockk(relaxed = true),
+        )
+        every { mockPlayer.playbackState } returns Player.STATE_ENDED
+
+        listener.onPlaybackStateChanged(Player.STATE_ENDED)
+
+        // The restart is a seek, not a stream change, so nothing else retires
+        // the offset the earlier seek left; the next lap would start past its
+        // fade-in.
+        assertEquals(0L, instance.declickStreamStartUsForTesting)
+    }
+
+    @Test
     fun `the pause while an HLS lap restarts is not reported as a stall`() {
         val listener = capturePlayerListener()
         instance.onMethodCall(hlsSetClipsCall(), mockk(relaxed = true))
