@@ -46,19 +46,45 @@ class _ThrowingSink implements AnalyticsEventSink {
 
 void main() {
   group(logCrosspostCtaTapped, () {
-    test('logs the event with the surface', () async {
+    test('logs the event with the surface and the CTA', () async {
       final sink = _RecordingSink();
 
-      await logCrosspostCtaTapped(sink, 'settings');
+      await logCrosspostCtaTapped(
+        sink,
+        surface: CrosspostCtaSurface.settings,
+        cta: CrosspostCta.automaticMode,
+      );
 
       expect(sink.events, hasLength(1));
-      expect(sink.events.single.name, 'crosspost_cta_tapped');
-      expect(sink.events.single.parameters, {'surface': 'settings'});
+      expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'settings', 'cta': 'automatic_mode'}),
+      );
+    });
+
+    test('sends the share-sheet surface as share_sheet', () async {
+      final sink = _RecordingSink();
+
+      await logCrosspostCtaTapped(
+        sink,
+        surface: CrosspostCtaSurface.shareSheet,
+        cta: CrosspostCta.connect,
+      );
+
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'share_sheet', 'cta': 'connect'}),
+      );
     });
 
     test('swallows sink failures', () async {
       await expectLater(
-        logCrosspostCtaTapped(_ThrowingSink(), 'share_sheet'),
+        logCrosspostCtaTapped(
+          _ThrowingSink(),
+          surface: CrosspostCtaSurface.shareSheet,
+          cta: CrosspostCta.connect,
+        ),
         completes,
       );
     });

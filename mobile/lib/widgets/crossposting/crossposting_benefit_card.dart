@@ -41,7 +41,8 @@ class CrosspostingBenefitCard extends ConsumerWidget {
     unawaited(
       logCrosspostCtaTapped(
         ref.read(analyticsEventSinkProvider),
-        'settings',
+        surface: CrosspostCtaSurface.settings,
+        cta: CrosspostCta.connect,
       ),
     );
     final container = ProviderScope.containerOf(context, listen: false);

@@ -633,6 +633,14 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       return;
     }
 
+    // Only this branch is a CTA: with a connection the row is ordinary use.
+    unawaited(
+      logCrosspostCtaTapped(
+        ref.read(analyticsEventSinkProvider),
+        surface: CrosspostCtaSurface.shareSheet,
+        cta: CrosspostCta.connect,
+      ),
+    );
     final container = ProviderScope.containerOf(context, listen: false);
     _safePop(context);
     await openCrosspostingSetup(container);

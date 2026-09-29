@@ -101,15 +101,7 @@ class _MoreActionsSection extends ConsumerWidget {
         _ActionData(
           icon: DivineIconName.arrowsClockwise,
           label: context.l10n.shareSheetCrosspost,
-          onTap: () {
-            unawaited(
-              logCrosspostCtaTapped(
-                ref.read(analyticsEventSinkProvider),
-                'share_sheet',
-              ),
-            );
-            unawaited(onCrosspost!.call());
-          },
+          onTap: () => unawaited(onCrosspost!.call()),
         ),
       _ActionData(
         icon: DivineIconName.listPlus,

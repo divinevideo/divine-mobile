@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -47,6 +49,18 @@ class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
+
+class _RecordingAnalyticsSink extends NoOpAnalyticsEventSink {
+  final events = <({String name, Map<String, Object> parameters})>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add((name: name, parameters: parameters));
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -516,12 +530,14 @@ void main() {
             final client = _MockCrosspostingApiClient();
             final connections = Completer<List<CrosspostingConnection>>();
             when(client.getConnections).thenAnswer((_) => connections.future);
+            final sink = _RecordingAnalyticsSink();
 
             await pumpOwnerSheet(
               tester,
               goRouter: goRouter,
               additionalOverrides: [
                 crossposterApiClientProvider.overrideWithValue(client),
+                analyticsEventSinkProvider.overrideWithValue(sink),
               ],
             );
 
@@ -544,6 +560,7 @@ void main() {
             verifyNever(
               () => goRouter.push<void>(any(), extra: any(named: 'extra')),
             );
+            expect(sink.events, isEmpty);
           },
         );
 
@@ -555,6 +572,8 @@ void main() {
             () => goRouter.push<void>(any(), extra: any(named: 'extra')),
           ).thenAnswer((_) async {});
 
+          final sink = _RecordingAnalyticsSink();
+
           // Deliberately not pre-warmed: the async resolver must await the
           // support lookup and still route native on a cold read.
           await pumpOwnerSheet(
@@ -562,6 +581,7 @@ void main() {
             goRouter: goRouter,
             additionalOverrides: [
               appOAuthSupportProvider.overrideWith((ref) async => true),
+              analyticsEventSinkProvider.overrideWithValue(sink),
             ],
           );
 
@@ -572,6 +592,12 @@ void main() {
           verify(
             () => goRouter.push<void>(RoutePaths.crosspostingSettings),
           ).called(1);
+          expect(sink.events, hasLength(1));
+          expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+          expect(
+            sink.events.single.parameters,
+            equals({'surface': 'share_sheet', 'cta': 'connect'}),
+          );
         });
       });
 

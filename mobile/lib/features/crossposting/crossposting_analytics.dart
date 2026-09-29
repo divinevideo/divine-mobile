@@ -4,15 +4,44 @@
 import 'package:analytics/analytics.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Records a crossposting CTA tap. [surface] is `settings` or `share_sheet`.
+/// Where a crossposting CTA is shown.
+enum CrosspostCtaSurface {
+  settings('settings'),
+  shareSheet('share_sheet');
+
+  const CrosspostCtaSurface(this.wireName);
+
+  /// The `surface` parameter value sent to analytics.
+  final String wireName;
+}
+
+/// Which crossposting CTA was tapped.
+enum CrosspostCta {
+  /// Connect a first platform.
+  connect('connect'),
+
+  /// Switch a connected platform to automatic crossposting.
+  automaticMode('automatic_mode');
+
+  const CrosspostCta(this.wireName);
+
+  /// The `cta` parameter value sent to analytics.
+  final String wireName;
+}
+
+/// Records a tap on a crossposting CTA.
+///
+/// Log only taps that act as a call to action. Using the share-menu Crosspost
+/// row to crosspost through an existing connection is not a CTA tap.
 Future<void> logCrosspostCtaTapped(
-  AnalyticsEventSink sink,
-  String surface,
-) async {
+  AnalyticsEventSink sink, {
+  required CrosspostCtaSurface surface,
+  required CrosspostCta cta,
+}) async {
   try {
     await sink.logEvent(
       name: 'crosspost_cta_tapped',
-      parameters: {'surface': surface},
+      parameters: {'surface': surface.wireName, 'cta': cta.wireName},
     );
   } catch (error, stackTrace) {
     Log.warning(

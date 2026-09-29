@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:ui' show SemanticsAction, Tristate;
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -14,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/crossposting_settings/crossposting_settings_cubit.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -30,6 +32,18 @@ class _MockAuthService extends Mock implements AuthService {}
 
 class _MockCrosspostingRepository extends Mock
     implements CrosspostingRepository {}
+
+class _RecordingAnalyticsSink extends NoOpAnalyticsEventSink {
+  final events = <({String name, Map<String, Object> parameters})>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add((name: name, parameters: parameters));
+  }
+}
 
 final _testAuthStateProvider = StateProvider<AuthState>(
   (_) => AuthState.authenticated,
@@ -1066,6 +1080,72 @@ void main() {
           CrosspostingMode.automatic,
         ),
       ).called(1);
+    });
+
+    testWidgets('logs which settings CTA was tapped', (tester) async {
+      final sink = _RecordingAnalyticsSink();
+      when(repository.loadSettings).thenAnswer(
+        (_) async => [_disconnected()],
+      );
+
+      await tester.pumpWidget(
+        buildApp(
+          additionalOverrides: [
+            appOAuthSupportProvider.overrideWith((ref) async => true),
+            analyticsEventSinkProvider.overrideWithValue(sink),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(l10n.crosspostingBenefitConnect('Instagram')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(sink.events, hasLength(1));
+      expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'settings', 'cta': 'connect'}),
+      );
+    });
+
+    testWidgets('logs the automatic-mode card tap as its own CTA', (
+      tester,
+    ) async {
+      final sink = _RecordingAnalyticsSink();
+      when(repository.loadSettings).thenAnswer(
+        (_) async => const [
+          CrosspostingPlatformSettings(
+            platform: CrosspostingPlatform.instagram,
+            supportsAutomatic: true,
+            mode: CrosspostingMode.manual,
+            connection: CrosspostingConnection(
+              id: 'ig',
+              platform: CrosspostingPlatform.instagram,
+              status: CrosspostingConnectionStatus.connected,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        buildApp(
+          additionalOverrides: [
+            analyticsEventSinkProvider.overrideWithValue(sink),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.crosspostingAutoEnable));
+      await tester.pump();
+
+      expect(sink.events, hasLength(1));
+      expect(sink.events.single.name, equals('crosspost_cta_tapped'));
+      expect(
+        sink.events.single.parameters,
+        equals({'surface': 'settings', 'cta': 'automatic_mode'}),
+      );
     });
 
     testWidgets('hides the auto card when the platform is already automatic', (

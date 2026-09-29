@@ -40,7 +40,8 @@ class CrosspostingAutoCard extends ConsumerWidget {
     unawaited(
       logCrosspostCtaTapped(
         ref.read(analyticsEventSinkProvider),
-        'settings',
+        surface: CrosspostCtaSurface.settings,
+        cta: CrosspostCta.automaticMode,
       ),
     );
     unawaited(
