@@ -12,6 +12,9 @@ import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/widgets/video_recorder/modes/chroma_key/video_recorder_chroma_key_settings.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 
+import '../../../../helpers/image_picker_stub.dart';
+import '../../../../helpers/shared_channel_override.dart';
+
 class _MockVideoRecorderBloc
     extends MockBloc<VideoRecorderEvent, VideoRecorderBlocState>
     implements VideoRecorderBloc {}
@@ -78,7 +81,6 @@ void main() {
         await pumpChip(tester, status: ChromaKeyMeasurementStatus.failed);
         await openSettings(tester);
 
-        // A snackbar would land on the scaffold underneath the sheet.
         expect(
           find.text(l10n.videoEditorChromaKeyDetectFailed),
           findsOneWidget,
@@ -150,6 +152,26 @@ void main() {
             const VideoRecorderChromaKeyBackdropSet.transparent(),
           ),
         ).called(1);
+      });
+
+      testWidgets('shows a backdrop photo it could not take over the sheet', (
+        tester,
+      ) async {
+        overrideSharedChannel(imagePickerChannel, (call) async {
+          throw PlatformException(code: 'no_available_camera');
+        });
+        await pumpChip(tester);
+        await openSettings(tester);
+
+        await tester.tap(find.text(l10n.videoEditorChromaKeyBackgroundImage));
+        await tester.pumpAndSettle();
+
+        // Shown is not enough: on the recorder's scaffold the message sits
+        // underneath the open sheet, where nobody can see or reach it.
+        expect(
+          find.text(l10n.videoEditorChromaKeyImagePickFailed).hitTestable(),
+          findsOneWidget,
+        );
       });
     });
 

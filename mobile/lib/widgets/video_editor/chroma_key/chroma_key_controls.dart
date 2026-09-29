@@ -124,8 +124,8 @@ class ChromaKeyControlsPanel extends StatelessWidget {
   /// Why the last measurement came back empty, shown inline above
   /// Auto-detect, or `null` for nothing to report.
   ///
-  /// The editor reports it as a snackbar instead. A panel inside a bottom
-  /// sheet cannot: the snackbar lands on the scaffold underneath the sheet.
+  /// The editor reports it as a snackbar instead; the recorder's settings
+  /// sheet shows it here.
   final String? detectionNotice;
 
   /// Drives the panel's scroll view, for a host that has to own it — a

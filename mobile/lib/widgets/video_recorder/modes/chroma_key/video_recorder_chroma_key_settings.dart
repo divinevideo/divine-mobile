@@ -35,8 +35,18 @@ Future<void> showVideoRecorderChromaKeySettings(BuildContext context) async {
       contentTitle: context.l10n.videoEditorChromaKeyTitle,
       barrierColor: VineTheme.transparent,
       initialChildSize: 0.5,
-      contentWrapper: (_, sheet) =>
-          BlocProvider<VideoRecorderBloc>.value(value: bloc, child: sheet),
+      contentWrapper: (_, sheet) => BlocProvider<VideoRecorderBloc>.value(
+        value: bloc,
+        // The sheet's own messenger: a snackbar raised from inside it would
+        // otherwise land on the recorder's scaffold, underneath the sheet.
+        child: ScaffoldMessenger(
+          child: Scaffold(
+            backgroundColor: VineTheme.transparent,
+            resizeToAvoidBottomInset: false,
+            body: sheet,
+          ),
+        ),
+      ),
       buildScrollBody: (scrollController) =>
           _ChromaKeySettings(scrollController: scrollController),
     );
