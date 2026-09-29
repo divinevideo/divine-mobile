@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
+import java.net.URI
 import java.util.Collections
 import kotlin.math.abs
 import java.util.concurrent.ExecutorService
@@ -163,6 +164,13 @@ internal class DivineVideoPlayerInstance(
     private var lastClipsRaw: List<Map<String, Any?>> = emptyList()
 
     private var isLooping = false
+
+    /** Whether a lap restarted by [loopsBySeeking] is still buffering its start. */
+    private var restartingLap = false
+
+    /** The position the loop fade-in is anchored at, for tests. */
+    internal val declickStreamStartUsForTesting: Long
+        get() = declickProcessor.nextStreamStartUs
 
     /**
      * Identifies this player in diagnostic logs.
@@ -805,12 +813,7 @@ internal class DivineVideoPlayerInstance(
      * Apple player does.
      */
     private fun canClipToCommonTrackEnd(uri: String): Boolean {
-        val path = uri.substringBefore('?').substringBefore('#')
-        if (path.endsWith(".m3u8", ignoreCase = true) ||
-            path.contains("/hls/", ignoreCase = true)
-        ) {
-            return false
-        }
+        if (isHlsSource(uri)) return false
         return uri.startsWith("/") ||
             uri.startsWith("file://") ||
             uri.startsWith("http://") ||
@@ -866,6 +869,9 @@ internal class DivineVideoPlayerInstance(
         if (clipCount != 1 || !isLooping) return
         val map = clipsRaw.firstOrNull() ?: return
         val uri = map["uri"] as? String ?: return
+        // The track's extractor cannot read a playlist, and a lap started by
+        // a seek has no fixed length for the track to follow.
+        if (isHlsSource(uri)) return
         if (((map["startMs"] as? Number)?.toLong() ?: 0L) != 0L) return
         // A static track plays the recording at its own rate and has no
         // stretcher to follow a speed change with, so an off-speed player keeps
@@ -1299,11 +1305,33 @@ internal class DivineVideoPlayerInstance(
      */
     private fun applyRepeatMode() {
         player?.repeatMode = when {
-            !isLooping -> Player.REPEAT_MODE_OFF
+            !isLooping || loopsBySeeking -> Player.REPEAT_MODE_OFF
             clipCount == 1 -> Player.REPEAT_MODE_ONE
             else -> Player.REPEAT_MODE_ALL
         }
     }
+
+    /**
+     * Whether the loop is closed by seeking back to the start when playback
+     * ends, instead of by an ExoPlayer repeat mode.
+     *
+     * A repeat mode makes ExoPlayer prepare the next lap as soon as the
+     * current one is fully buffered, up to 100 laps ahead. Preparing an HLS
+     * lap downloads a whole segment unless the playlist declares its codecs,
+     * and that download is not counted against [FeedLoadControl]'s budget.
+     * When one segment already covers the clip — a 7 s feed cut of a video
+     * with 12 s segments — every lap is fully buffered the moment it is
+     * prepared, so the player keeps chaining laps until the Java heap runs
+     * out. A playlist that does not repeat ends at its last item, and nothing
+     * is prepared past it.
+     *
+     * The seek costs a visible stall at every restart, 300–400 ms on a
+     * Galaxy S26, so Divine's own playlists keep the repeat mode: they
+     * declare their codecs, and their laps are prepared without a download.
+     */
+    private val loopsBySeeking: Boolean
+        get() = isLooping &&
+            lastClipsRaw.any { (it["uri"] as? String)?.let(::isForeignHlsSource) == true }
 
     private fun handleJumpToClip(call: MethodCall, result: MethodChannel.Result) {
         val index = (call.argument<Number>("index"))?.toInt() ?: 0
@@ -1629,10 +1657,23 @@ internal class DivineVideoPlayerInstance(
                 mainHandler.removeCallbacks(bufferingWatchdogRunnable)
                 bufferingStallReported = false
             }
+            if (playbackState == Player.STATE_ENDED && loopsBySeeking) {
+                // Start the next lap by hand. Dart is not told the clip
+                // completed, as it is not under a repeat mode.
+                restartingLap = true
+                // Anchor the fade in at the lap's start, as handleSeekTo does
+                // at its target: a seek is not a stream change, so nothing
+                // else retires an offset an earlier seek left behind.
+                declickProcessor.nextStreamStartUs = 0L
+                player?.seekTo(0, 0L)
+                syncAudioOverlays()
+                return
+            }
             if (playbackState == Player.STATE_ENDED && isLooping) {
                 syncAudioOverlays()
             }
             if (playbackState == Player.STATE_READY) {
+                restartingLap = false
                 // The video's length is only readable once the timeline is
                 // populated, and it bounds how long the fade may be.
                 updateDeclickDuration()
@@ -1688,6 +1729,7 @@ internal class DivineVideoPlayerInstance(
             val state = exoPlayer.playbackState
             val expected =
                 seekCompletionResult != null ||
+                    restartingLap ||
                     state == Player.STATE_ENDED ||
                     state == Player.STATE_IDLE
             val message =
@@ -2057,6 +2099,24 @@ internal class DivineVideoPlayerInstance(
     }
 
     companion object {
+
+        /** Whether [uri] addresses an HLS playlist rather than a media file. */
+        private fun isHlsSource(uri: String): Boolean {
+            val path = uri.substringBefore('?').substringBefore('#')
+            return path.endsWith(".m3u8", ignoreCase = true) ||
+                path.contains("/hls/", ignoreCase = true)
+        }
+
+        /** Whether [uri] is an HLS playlist served from outside Divine. */
+        private fun isForeignHlsSource(uri: String): Boolean =
+            isHlsSource(uri) && !isDivineHosted(uri)
+
+        /** Whether [uri] is served from a `divine.video` host. */
+        private fun isDivineHosted(uri: String): Boolean {
+            val host = runCatching { URI(uri).host }.getOrNull()?.lowercase()
+                ?: return false
+            return host == "divine.video" || host.endsWith(".divine.video")
+        }
 
         /** [armedSeekGeneration] while no paused seek is armed. */
         private const val NO_ARMED_SEEK = -1
