@@ -2,6 +2,8 @@
 // ABOUTME: Verifies rendering for each overlay type with proper
 // ABOUTME: VideoEditorScope in the tree.
 
+import 'dart:io';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -31,11 +33,14 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 import 'package:riverpod/misc.dart' show Override;
+
+import '../../../../mocks/mock_path_provider_platform.dart';
 
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
@@ -454,115 +459,169 @@ void main() {
         );
       });
 
-      testWidgets('sending a detached clip back hands the clip editor what the '
-          'layer shows', (tester) async {
-        final clipBloc = _MockClipEditorBloc();
-        when(() => clipBloc.isClosed).thenReturn(false);
-        final clip = DivineVideoClip(
-          id: 'clip-b',
-          video: EditorVideo.file('/docs/clip-b.mp4'),
-          duration: const Duration(seconds: 6),
-          recordedAt: DateTime(2026),
-          targetAspectRatio: model.AspectRatio.vertical,
-          originalAspectRatio: 9 / 16,
-        );
-        final meta = DetachedClipLayerData(
-          clip: clip,
-          layerId: 'detached-1',
-          sourceOffset: const Duration(seconds: 1),
-          placeholderClipId: 'placeholder_1',
-        ).toMeta();
-        final layer = WidgetLayer(
-          id: 'detached-1',
-          widget: const SizedBox.shrink(),
-          meta: meta,
-          startTime: const Duration(seconds: 1),
-          endTime: const Duration(seconds: 3),
-          exportConfigs: WidgetLayerExportConfigs(id: 'detached-1', meta: meta),
-        );
-        when(() => mockEditor.activeLayers).thenReturn([layer]);
-        when(() => mainBloc.state).thenReturn(
-          const VideoEditorMainState(currentPosition: Duration(seconds: 5)),
-        );
+      group('sending a detached clip back', () {
+        late Directory documentsDir;
+        late PathProviderPlatform originalPathProvider;
+        late _MockClipEditorBloc clipBloc;
 
-        const item = TimelineOverlayItem(
-          id: 'detached-1',
-          type: TimelineOverlayType.layer,
-          startTime: Duration(seconds: 1),
-          endTime: Duration(seconds: 3),
-        );
-        await tester.pumpWidget(
-          buildWithEditor(item, mockEditor, mainBloc, clipBloc: clipBloc),
-        );
-        await tester.tap(
-          find.bySemanticsLabel(l10n.videoEditorReattachSemanticLabel),
-        );
-        await tester.pump();
+        setUp(() {
+          documentsDir = Directory.systemTemp.createTempSync('reattach_docs');
+          originalPathProvider = PathProviderPlatform.instance;
+          PathProviderPlatform.instance = MockPathProviderPlatform()
+            ..setApplicationDocumentsPath(documentsDir.path);
+          clipBloc = _MockClipEditorBloc();
+          when(() => clipBloc.isClosed).thenReturn(false);
+        });
 
-        final event =
-            verify(() => clipBloc.add(captureAny())).captured.single
-                as ClipEditorDetachedClipReattachRequested;
-        expect(event.layerId, 'detached-1');
-        expect(event.clip.id, 'clip-b');
-        expect(event.sourceOffset, const Duration(seconds: 1));
-        // The bar runs two seconds, so two seconds of the clip go back.
-        expect(event.window, const Duration(seconds: 2));
-        expect(event.placeholderClipId, 'placeholder_1');
-        expect(event.playhead, const Duration(seconds: 5));
-        verify(
-          () => overlayBloc.add(const TimelineOverlayItemSelected(null)),
-        ).called(1);
-      });
+        tearDown(() {
+          PathProviderPlatform.instance = originalPathProvider;
+          if (documentsDir.existsSync()) {
+            documentsDir.deleteSync(recursive: true);
+          }
+        });
 
-      testWidgets('sending a detached clip back brings only what the bar still '
-          'shows once the composition got shorter', (tester) async {
-        final clipBloc = _MockClipEditorBloc();
-        when(() => clipBloc.isClosed).thenReturn(false);
-        final clip = DivineVideoClip(
-          id: 'clip-b',
-          video: EditorVideo.file('/docs/clip-b.mp4'),
-          duration: const Duration(seconds: 6),
-          recordedAt: DateTime(2026),
-          targetAspectRatio: model.AspectRatio.vertical,
-          originalAspectRatio: 9 / 16,
-        );
-        final meta = DetachedClipLayerData(
-          clip: clip,
-          layerId: 'detached-1',
-        ).toMeta();
-        // Placed over 1 s to 5 s; the composition has since shrunk to 3 s, and
-        // the timeline clamps the bar (and what plays) to that, though the
-        // layer itself still says 5 s.
-        final layer = WidgetLayer(
-          id: 'detached-1',
-          widget: const SizedBox.shrink(),
-          meta: meta,
-          startTime: const Duration(seconds: 1),
-          endTime: const Duration(seconds: 5),
-          exportConfigs: WidgetLayerExportConfigs(id: 'detached-1', meta: meta),
-        );
-        when(() => mockEditor.activeLayers).thenReturn([layer]);
-        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+        /// A detached layer over [start] to [end], with its clip's file in the
+        /// documents directory unless [fileOnDisk] is `false`.
+        WidgetLayer layerFor({
+          required Duration start,
+          required Duration end,
+          Duration sourceOffset = Duration.zero,
+          String? placeholderClipId,
+          bool fileOnDisk = true,
+        }) {
+          if (fileOnDisk) {
+            File('${documentsDir.path}/clip-b.mp4').writeAsBytesSync(const [0]);
+          }
+          final meta = DetachedClipLayerData(
+            clip: DivineVideoClip(
+              id: 'clip-b',
+              video: EditorVideo.file('/docs/clip-b.mp4'),
+              duration: const Duration(seconds: 6),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+            layerId: 'detached-1',
+            sourceOffset: sourceOffset,
+            placeholderClipId: placeholderClipId,
+          ).toMeta();
+          return WidgetLayer(
+            id: 'detached-1',
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            startTime: start,
+            endTime: end,
+            exportConfigs: WidgetLayerExportConfigs(
+              id: 'detached-1',
+              meta: meta,
+            ),
+          );
+        }
 
-        const item = TimelineOverlayItem(
-          id: 'detached-1',
-          type: TimelineOverlayType.layer,
-          startTime: Duration(seconds: 1),
-          endTime: Duration(seconds: 3),
-        );
-        await tester.pumpWidget(
-          buildWithEditor(item, mockEditor, mainBloc, clipBloc: clipBloc),
-        );
-        await tester.tap(
-          find.bySemanticsLabel(l10n.videoEditorReattachSemanticLabel),
-        );
-        await tester.pump();
+        /// Shows [item] for [layer] and taps "Back to timeline".
+        Future<void> tapBackToTimeline(
+          WidgetTester tester, {
+          required WidgetLayer layer,
+          required TimelineOverlayItem item,
+          Duration playhead = Duration.zero,
+        }) async {
+          when(() => mockEditor.activeLayers).thenReturn([layer]);
+          when(
+            () => mainBloc.state,
+          ).thenReturn(VideoEditorMainState(currentPosition: playhead));
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc, clipBloc: clipBloc),
+          );
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorReattachSemanticLabel),
+          );
+          await tester.pump();
+        }
 
-        final event =
-            verify(() => clipBloc.add(captureAny())).captured.single
-                as ClipEditorDetachedClipReattachRequested;
-        // Two seconds are on screen; the other two were never shown.
-        expect(event.window, const Duration(seconds: 2));
+        testWidgets('hands the clip editor what the layer shows', (
+          tester,
+        ) async {
+          final layer = layerFor(
+            start: const Duration(seconds: 1),
+            end: const Duration(seconds: 3),
+            sourceOffset: const Duration(seconds: 1),
+            placeholderClipId: 'placeholder_1',
+          );
+          const item = TimelineOverlayItem(
+            id: 'detached-1',
+            type: TimelineOverlayType.layer,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 3),
+          );
+
+          await tapBackToTimeline(
+            tester,
+            layer: layer,
+            item: item,
+            playhead: const Duration(seconds: 5),
+          );
+
+          final event =
+              verify(() => clipBloc.add(captureAny())).captured.single
+                  as ClipEditorDetachedClipReattachRequested;
+          expect(event.layerId, 'detached-1');
+          expect(event.clip.id, 'clip-b');
+          expect(event.sourceOffset, const Duration(seconds: 1));
+          // The bar runs two seconds, so two seconds of the clip go back.
+          expect(event.window, const Duration(seconds: 2));
+          expect(event.placeholderClipId, 'placeholder_1');
+          expect(event.playhead, const Duration(seconds: 5));
+          verify(
+            () => overlayBloc.add(const TimelineOverlayItemSelected(null)),
+          ).called(1);
+        });
+
+        testWidgets('brings only what the bar still shows once the '
+            'composition got shorter', (tester) async {
+          // Placed over 1 s to 5 s; the composition has since shrunk to 3 s,
+          // and the timeline clamps the bar (and what plays) to that, though
+          // the layer itself still says 5 s.
+          final layer = layerFor(
+            start: const Duration(seconds: 1),
+            end: const Duration(seconds: 5),
+          );
+          const item = TimelineOverlayItem(
+            id: 'detached-1',
+            type: TimelineOverlayType.layer,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 3),
+          );
+
+          await tapBackToTimeline(tester, layer: layer, item: item);
+
+          final event =
+              verify(() => clipBloc.add(captureAny())).captured.single
+                  as ClipEditorDetachedClipReattachRequested;
+          // Two seconds are on screen; the other two were never shown.
+          expect(event.window, const Duration(seconds: 2));
+        });
+
+        testWidgets('leaves the layer alone when its clip file is gone', (
+          tester,
+        ) async {
+          final layer = layerFor(
+            start: const Duration(seconds: 1),
+            end: const Duration(seconds: 3),
+            fileOnDisk: false,
+          );
+          const item = TimelineOverlayItem(
+            id: 'detached-1',
+            type: TimelineOverlayType.layer,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 3),
+          );
+
+          await tapBackToTimeline(tester, layer: layer, item: item);
+
+          // The canvas drops a clip it cannot find when it mirrors history, so
+          // sending it would remove the layer and leave no clip behind.
+          verifyNever(() => clipBloc.add(any()));
+        });
       });
 
       testWidgets('splitting a detached clip offsets the tail into the clip', (

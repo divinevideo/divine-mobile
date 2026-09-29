@@ -43,7 +43,13 @@ Future<void> reattachDetachedClip(
   if (bloc.isClosed) return;
 
   final data = DetachedClipLayerData.fromMeta(meta, documentsPath);
-  if (data == null || data.clip.video == null) return;
+  // The canvas drops a clip it cannot find when it mirrors history, so a clip
+  // sent back without its file would take the layer with it and leave nothing.
+  if (data == null ||
+      data.clip.video == null ||
+      !data.clip.hasResolvableVideoFile) {
+    return;
+  }
 
   bloc.add(
     ClipEditorDetachedClipReattachRequested(
