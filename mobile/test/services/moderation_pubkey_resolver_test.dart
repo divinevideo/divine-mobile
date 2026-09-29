@@ -15,33 +15,33 @@ void main() {
   const resolvedAtPrefsKey = 'divine_moderation_resolved_at';
   final retiredKey = kLegacyModerationPubkeys.first;
 
-  late SharedPreferences prefs;
-  late LogCaptureService logCapture;
-
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    prefs = await SharedPreferences.getInstance();
-    logCapture = LogCaptureService();
-    await logCapture.clearAllLogs();
-  });
-
-  tearDown(() async {
-    await logCapture.clearAllLogs();
-  });
-
-  List<String> refusals() => logCapture
-      .getRecentLogs(minLevel: LogLevel.warning)
-      .map((entry) => entry.message)
-      .where((message) => message.contains('lists it as retired'))
-      .toList();
-
-  List<String> resolvedLogs() => logCapture
-      .getRecentLogs(minLevel: LogLevel.info)
-      .map((entry) => entry.message)
-      .where((message) => message.contains('Resolved moderation pubkey'))
-      .toList();
-
   group(ModerationPubkeyResolver, () {
+    late SharedPreferences prefs;
+    late LogCaptureService logCapture;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      logCapture = LogCaptureService();
+      await logCapture.clearAllLogs();
+    });
+
+    tearDown(() async {
+      await logCapture.clearAllLogs();
+    });
+
+    List<String> refusals() => logCapture
+        .getRecentLogs(minLevel: LogLevel.warning)
+        .map((entry) => entry.message)
+        .where((message) => message.contains('lists it as retired'))
+        .toList();
+
+    List<String> resolvedLogs() => logCapture
+        .getRecentLogs(minLevel: LogLevel.info)
+        .map((entry) => entry.message)
+        .where((message) => message.contains('Resolved moderation pubkey'))
+        .toList();
+
     group('resolve', () {
       test(
         'returns a fresh cached pubkey without calling the lookup',
@@ -152,6 +152,29 @@ void main() {
           expect(result, pin);
           expect(prefs.getString(resolvedPubkeyPrefsKey), isNull);
           expect(refusals(), isNotEmpty);
+        },
+      );
+
+      test(
+        'clears a different stale cached key when the lookup answers a '
+        'retired key',
+        () async {
+          await prefs.setString(resolvedPubkeyPrefsKey, syntheticTestPubkey);
+          await prefs.setString(
+            resolvedAtPrefsKey,
+            DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+          );
+          final resolver = ModerationPubkeyResolver(
+            lookupPubkey: (_) async => retiredKey,
+          );
+
+          final result = await resolver.resolve(prefs);
+
+          expect(result, pin);
+          expect(prefs.getString(resolvedPubkeyPrefsKey), isNull);
+          expect(prefs.getString(resolvedAtPrefsKey), isNull);
+          // The next cold start reads the cache without asking NIP-05.
+          expect(resolver.cached(prefs), pin);
         },
       );
 
