@@ -606,6 +606,17 @@ class CommentsRepository {
       ..add(_RecentlyPostedComment(comment, _now()));
   }
 
+  /// Removes a deleted comment from every root's recently-posted cache.
+  ///
+  /// [deleteComment] may be called without a root event id, so search all
+  /// roots by the globally unique Nostr event id.
+  void _removeRecentlyPostedComment(String commentId) {
+    _recentlyPostedComments.removeWhere((_, comments) {
+      comments.removeWhere((comment) => comment.comment.id == commentId);
+      return comments.isEmpty;
+    });
+  }
+
   /// Merges any retained just-posted comments for [rootEventId] into [thread]
   /// when the fetched thread does not already contain them (#5598).
   ///
@@ -690,6 +701,8 @@ class CommentsRepository {
           'Failed to publish deletion request',
         );
       }
+
+      _removeRecentlyPostedComment(commentId);
 
       if (rootEventId != null) {
         _adjustCachedCommentCount(
