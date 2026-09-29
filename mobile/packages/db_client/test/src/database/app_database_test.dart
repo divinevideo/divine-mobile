@@ -181,29 +181,6 @@ void main() {
         },
       );
 
-      test('deletes expired hashtag stats', () async {
-        // Insert stats with old cachedAt using proper Drift insert
-        final oldTime = DateTime.now().subtract(const Duration(hours: 2));
-        await database
-            .into(database.hashtagStats)
-            .insert(
-              HashtagStatsCompanion.insert(
-                hashtag: 'flutter',
-                videoCount: const Value(50),
-                cachedAt: oldTime,
-              ),
-            );
-
-        // Run cleanup (default expiry is 1 hour, entry is 2 hours old)
-        final result = await database.runStartupCleanup();
-
-        // Expired stats should be deleted
-        final isFresh = await database.hashtagStatsDao.isCacheFresh();
-        expect(isFresh, isFalse);
-
-        expect(result.expiredHashtagStatsDeleted, equals(1));
-      });
-
       test('deletes notifications cached more than 7 days ago', () async {
         final dao = database.notificationsDao;
 
@@ -253,7 +230,6 @@ void main() {
 
         expect(result.expiredEventsDeleted, equals(0));
         expect(result.expiredProfileStatsDeleted, equals(0));
-        expect(result.expiredHashtagStatsDeleted, equals(0));
         expect(result.oldNotificationsDeleted, equals(0));
         expect(result.orphanedVideoMetricsDeleted, equals(0));
         expect(result.evictedUserProfilesDeleted, equals(0));
@@ -265,7 +241,6 @@ void main() {
 
         expect(result.expiredEventsDeleted, equals(0));
         expect(result.expiredProfileStatsDeleted, equals(0));
-        expect(result.expiredHashtagStatsDeleted, equals(0));
         expect(result.oldNotificationsDeleted, equals(0));
         expect(result.orphanedVideoMetricsDeleted, equals(0));
         expect(result.evictedUserProfilesDeleted, equals(0));
@@ -1328,7 +1303,6 @@ void main() {
       test('does not delete non-expired data', () async {
         final eventsDao = database.nostrEventsDao;
         final profileStatsDao = database.profileStatsDao;
-        final hashtagStatsDao = database.hashtagStatsDao;
         final notificationsDao = database.notificationsDao;
 
         // Insert valid (non-expired) data
@@ -1336,8 +1310,6 @@ void main() {
         await eventsDao.upsertEvent(validEvent, expireAt: nowUnix() + 3600);
 
         await profileStatsDao.upsertStats(pubkey: testPubkey, videoCount: 10);
-
-        await hashtagStatsDao.upsertHashtag(hashtag: 'dart', videoCount: 20);
 
         await notificationsDao.upsertNotification(
           id: 'recent',
@@ -1355,9 +1327,6 @@ void main() {
 
         final stats = await profileStatsDao.getStats(testPubkey);
         expect(stats, isNotNull);
-
-        final hashtagFresh = await hashtagStatsDao.isCacheFresh();
-        expect(hashtagFresh, isTrue);
 
         final notifications = await notificationsDao.getAllNotifications();
         expect(notifications.length, equals(1));
