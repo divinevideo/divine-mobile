@@ -155,6 +155,7 @@ void main() {
       await tester.pumpWidget(_app(cubit));
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.accountDeletionOverdueBody), findsOneWidget);
       expect(
         find.widgetWithText(DivineButton, l10n.supportContactSupport),
         findsOneWidget,
@@ -178,6 +179,7 @@ void main() {
       await tester.pumpWidget(_app(cubit));
 
       final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.accountDeletionOverdueBody), findsOneWidget);
       expect(
         find.widgetWithText(DivineButton, l10n.supportContactSupport),
         findsOneWidget,
@@ -201,9 +203,13 @@ void main() {
       await tester.pumpWidget(_app(cubit));
 
       final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
+      expect(find.text(l10n.accountDeletionProcessingBody), findsOneWidget);
       expect(
         find.widgetWithText(DivineButton, l10n.accountDeletionRestoreUsername),
+        findsNothing,
+      );
+      expect(
+        find.widgetWithText(DivineButton, l10n.supportContactSupport),
         findsNothing,
       );
       await tester.tap(

@@ -7411,8 +7411,12 @@ class AppLocalizationsTe extends AppLocalizations {
       'నా వినియోగదారు పేరును పునరుద్ధరించండి';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'మీ ఖాతా తొలగింపు అభ్యర్థన ఇప్పటికీ ప్రాసెస్ చేయబడుతోంది. మేము దీన్ని పూర్తి చేసే వరకు మీరు మరొక ఖాతాను ఉపయోగించవచ్చు.';
+  String get accountDeletionProcessingBody =>
+      'మీ ఖాతాను తొలగించడానికి ఒక రోజు వరకు పట్టవచ్చు. మేము పూర్తి చేసే వరకు మీరు యాప్‌ను మూసివేయవచ్చు లేదా మరొక ఖాతాను ఉపయోగించవచ్చు.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'మీ ఖాతా తొలగింపుకు అనుకున్నదానికంటే ఎక్కువ సమయం పడుతోంది. సపోర్ట్‌ను సంప్రదించండి, మేము దాన్ని పూర్తి చేస్తాము.';
 
   @override
   String get accountDeletionOtherAccountPending =>

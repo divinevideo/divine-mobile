@@ -12299,11 +12299,17 @@ abstract class AppLocalizations {
   /// **'Restore my username'**
   String get accountDeletionRestoreUsername;
 
-  /// Shown while the server is durably completing an account deletion.
+  /// Shown while the server finishes a normal account deletion, which can take up to a day.
   ///
   /// In en, this message translates to:
-  /// **'Your deletion request is still being processed. You can use another account while we finish.'**
-  String get accountDeletionFinishingBody;
+  /// **'Deleting your account can take up to a day. You can close the app or use another account while we finish.'**
+  String get accountDeletionProcessingBody;
+
+  /// Shown with a Contact Support button when an account deletion is still not finished long after it should have been.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleting your account is taking longer than it should. Contact support and we\'ll finish it.'**
+  String get accountDeletionOverdueBody;
 
   /// Snackbar shown when this installation already holds a pending deletion receipt for a different account.
   ///

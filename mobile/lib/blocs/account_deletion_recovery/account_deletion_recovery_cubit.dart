@@ -27,10 +27,21 @@ abstract class AccountDeletionRecoveryPolling {
     Duration(seconds: 21),
   ];
   static const cap = Duration(seconds: 30);
-  static const supportEscapeAfter = Duration(minutes: 15);
 
-  static Duration delayForTick(int tickIndex) =>
-      tickIndex < schedule.length ? schedule[tickIndex] : cap;
+  /// After this long, polls slow to [slowCap]. Final erasure runs on a server
+  /// schedule and usually lands hours later, so a 30-second cadence for the
+  /// whole wait would only spend battery and requests.
+  static const slowAfter = Duration(minutes: 15);
+  static const slowCap = Duration(minutes: 5);
+
+  /// When a still-processing deletion is treated as stuck and Contact Support
+  /// is offered. Completion normally takes hours, and up to a day.
+  static const supportEscapeAfter = Duration(hours: 36);
+
+  static Duration delayForTick(int tickIndex, {Duration elapsed = .zero}) {
+    if (elapsed >= slowAfter) return slowCap;
+    return tickIndex < schedule.length ? schedule[tickIndex] : cap;
+  }
 }
 
 typedef RecoveryTimerFactory = Timer Function(
@@ -635,9 +646,12 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     await _loadPollBudget();
     if (!_isCurrent(generation)) return;
     final tickIndex = state.pollTickIndex;
-    final delay = AccountDeletionRecoveryPolling.delayForTick(tickIndex);
     final elapsed = _now().toUtc().difference(_pollBudgetStartedAt!);
     final nonNegativeElapsed = elapsed.isNegative ? Duration.zero : elapsed;
+    final delay = AccountDeletionRecoveryPolling.delayForTick(
+      tickIndex,
+      elapsed: nonNegativeElapsed,
+    );
     if (nonNegativeElapsed + delay >
         AccountDeletionRecoveryPolling.supportEscapeAfter) {
       if (!_overdueRefreshUsed) {

@@ -55,16 +55,21 @@ Future<void> startAccountDeletionFlow({
   final pendingDeletion = ref.read(submittedAccountDeletionAttemptProvider);
   if (pendingDeletion != null && pendingDeletion.pubkeyHex != pubkey) {
     final monitor = ref.read(submittedAccountDeletionMonitorProvider);
-    if (monitor?.state.pollingPaused ?? false) {
+    // Support is offered only once the other deletion is overdue; a normal
+    // deletion can take up to a day to finish.
+    final overdue = monitor?.state.pollingPaused ?? false;
+    if (overdue) {
       unawaited(monitor!.resume(pendingDeletion.attempt));
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.accountDeletionOtherAccountPending),
-        action: SnackBarAction(
-          label: context.l10n.supportContactSupport,
-          onPressed: () => context.push(RoutePaths.supportCenter),
-        ),
+        action: overdue
+            ? SnackBarAction(
+                label: context.l10n.supportContactSupport,
+                onPressed: () => context.push(RoutePaths.supportCenter),
+              )
+            : null,
       ),
     );
     return;

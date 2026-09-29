@@ -147,14 +147,14 @@ class _RecoveryStateContent extends StatelessWidget {
       AccountDeletionRecoveryStatus.confirmingSubmission =>
         state.pollingPaused
             ? _RecoveryContent(
-                body: context.l10n.accountDeletionFinishingBody,
+                body: context.l10n.accountDeletionOverdueBody,
                 actionLabel: context.l10n.supportContactSupport,
                 onPressed: () => context.push(RoutePaths.supportCenter),
                 secondaryActionLabel: context.l10n.authUseAnotherAccount,
                 onSecondaryPressed: () => _switchAccount(context, cubit),
               )
             : _PassiveRecoveryContent(
-                body: context.l10n.accountDeletionFinishingBody,
+                body: context.l10n.accountDeletionProcessingBody,
               ),
       AccountDeletionRecoveryStatus.loadFailed => _RecoveryContent(
         body: state.failure == AccountDeletionRecoveryFailure.signerUnavailable
@@ -181,14 +181,14 @@ class _RecoveryStateContent extends StatelessWidget {
       AccountDeletionRecoveryStatus.processing =>
         state.pollingPaused
             ? _RecoveryContent(
-                body: context.l10n.accountDeletionFinishingBody,
+                body: context.l10n.accountDeletionOverdueBody,
                 actionLabel: context.l10n.supportContactSupport,
                 onPressed: () => context.push(RoutePaths.supportCenter),
                 secondaryActionLabel: context.l10n.authUseAnotherAccount,
                 onSecondaryPressed: () => _switchAccount(context, cubit),
               )
             : _RecoveryContent(
-                body: context.l10n.accountDeletionFinishingBody,
+                body: context.l10n.accountDeletionProcessingBody,
                 actionLabel: context.l10n.authUseAnotherAccount,
                 onPressed: () => _switchAccount(context, cubit),
               ),

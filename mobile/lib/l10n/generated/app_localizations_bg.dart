@@ -7255,8 +7255,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Върни потребителското ми име';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Заявката ти за изтриване все още се обработва. Можеш да използваш друг акаунт, докато приключим.';
+  String get accountDeletionProcessingBody =>
+      'Изтриването на акаунта ти може да отнеме до един ден. Можеш да затвориш приложението или да използваш друг акаунт, докато приключим.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Изтриването на акаунта ти отнема повече време от очакваното. Свържи се с поддръжката и ние ще го довършим.';
 
   @override
   String get accountDeletionOtherAccountPending =>

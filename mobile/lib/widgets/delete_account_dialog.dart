@@ -503,7 +503,7 @@ Future<void> executeAccountDeletion({
   final usernameRestoredText = context.l10n.accountDeletionUsernameRestored;
   final attemptCancelledText = context.l10n.accountDeletionAttemptCancelled;
   final recoveryFailedText = context.l10n.accountDeletionRecoveryFailed;
-  final finishingDeletionText = context.l10n.accountDeletionFinishingBody;
+  final processingDeletionText = context.l10n.accountDeletionProcessingBody;
 
   AccountDeletionAttempt? deletionAttempt;
   var usernamePrepared = false;
@@ -826,7 +826,7 @@ Future<void> executeAccountDeletion({
           error: error,
         );
         dismissProgressSheet();
-        showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
+        showDurableDeletionOutcome(processingDeletionText, offerCancel: false);
         return;
       } on Object catch (error) {
         Log.error(
@@ -849,7 +849,7 @@ Future<void> executeAccountDeletion({
       // the completed recovery screen reports the result. The processing copy
       // would contradict that, so only the processing outcome is announced here.
       if (!ownerCompletedSignOut) {
-        showDurableDeletionOutcome(finishingDeletionText, offerCancel: false);
+        showDurableDeletionOutcome(processingDeletionText, offerCancel: false);
         await authService.signOut();
       }
       return;

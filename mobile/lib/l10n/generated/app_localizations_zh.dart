@@ -6777,7 +6777,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountDeletionRestoreUsername => '找回我的用户名';
 
   @override
-  String get accountDeletionFinishingBody => '你的账号删除请求仍在处理中。处理完成前，你可以使用其他账号。';
+  String get accountDeletionProcessingBody =>
+      '删除账号最多可能需要一天。处理完成前，你可以关闭应用或使用其他账号。';
+
+  @override
+  String get accountDeletionOverdueBody => '删除账号所需时间比预期更长。请联系支持团队，我们会帮你完成。';
 
   @override
   String get accountDeletionOtherAccountPending =>

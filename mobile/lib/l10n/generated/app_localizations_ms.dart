@@ -7192,8 +7192,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'Pulihkan nama pengguna saya';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'Permintaan pemadaman anda masih diproses. Anda boleh menggunakan akaun lain sementara kami menyelesaikannya.';
+  String get accountDeletionProcessingBody =>
+      'Pemadaman akaun anda boleh mengambil masa sehingga sehari. Anda boleh menutup aplikasi atau menggunakan akaun lain sementara kami menyelesaikannya.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'Pemadaman akaun anda mengambil masa lebih lama daripada sepatutnya. Hubungi sokongan dan kami akan menyelesaikannya.';
 
   @override
   String get accountDeletionOtherAccountPending =>

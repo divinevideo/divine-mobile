@@ -324,7 +324,7 @@ void main() {
         verifyNever(() => authService.signOut());
         expect(find.text(l10n.accountDeletionRecoveryBody), findsNothing);
         expect(find.text(l10n.accountDeletionCancelAttemptBody), findsNothing);
-        expect(find.text(l10n.accountDeletionFinishingBody), findsNothing);
+        expect(find.text(l10n.accountDeletionProcessingBody), findsNothing);
         await container.read(submittedAccountDeletionMonitorProvider)?.close();
       },
     );
@@ -446,15 +446,16 @@ void main() {
       },
     );
 
-    testWidgets('a pending receipt blocks deletion for another account', (
-      tester,
-    ) async {
+    Future<_MockRecoveryCubit> tapDeleteWithOtherAccountPending(
+      WidgetTester tester, {
+      required bool pollingPaused,
+    }) async {
       final recoveryCubit = _MockRecoveryCubit();
       when(() => recoveryCubit.state).thenReturn(
-        const AccountDeletionRecoveryState(
+        AccountDeletionRecoveryState(
           status: AccountDeletionRecoveryStatus.processing,
           attempt: _processing,
-          pollingPaused: true,
+          pollingPaused: pollingPaused,
         ),
       );
       when(() => recoveryCubit.resume(_processing)).thenAnswer((_) async {});
@@ -511,6 +512,16 @@ void main() {
 
       await tester.tap(find.byKey(const Key('delete')));
       await tester.pump();
+      return recoveryCubit;
+    }
+
+    testWidgets('a pending receipt blocks deletion for another account', (
+      tester,
+    ) async {
+      final recoveryCubit = await tapDeleteWithOtherAccountPending(
+        tester,
+        pollingPaused: true,
+      );
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(
@@ -527,5 +538,24 @@ void main() {
         ),
       );
     });
+
+    testWidgets(
+      'a pending receipt that is not overdue blocks deletion without support',
+      (tester) async {
+        final recoveryCubit = await tapDeleteWithOtherAccountPending(
+          tester,
+          pollingPaused: false,
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.accountDeletionOtherAccountPending),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.supportContactSupport), findsNothing);
+        verifyNever(() => recoveryCubit.resume(_processing));
+        verifyNever(repository.prepare);
+      },
+    );
   });
 }

@@ -238,7 +238,7 @@ void main() {
 
         final l10n = lookupAppLocalizations(const Locale('en'));
         expect(find.byType(AccountDeletionRecoveryScreen), findsOneWidget);
-        expect(find.text(l10n.accountDeletionFinishingBody), findsOneWidget);
+        expect(find.text(l10n.accountDeletionProcessingBody), findsOneWidget);
         expect(find.text(l10n.accountDeletionRestoreUsername), findsNothing);
         expect(find.text(l10n.accountDeletionSignOut), findsNothing);
 

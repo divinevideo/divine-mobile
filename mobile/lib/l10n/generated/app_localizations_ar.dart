@@ -7146,8 +7146,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'استعادة اسم المستخدم';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'لا يزال طلب حذف حسابك قيد المعالجة. يمكنك استخدام حساب آخر إلى أن ننتهي.';
+  String get accountDeletionProcessingBody =>
+      'قد يستغرق حذف حسابك مدة تصل إلى يوم. يمكنك إغلاق التطبيق أو استخدام حساب آخر إلى أن ننتهي.';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'يستغرق حذف حسابك وقتًا أطول من المتوقع. تواصل مع الدعم وسنكمله.';
 
   @override
   String get accountDeletionOtherAccountPending =>

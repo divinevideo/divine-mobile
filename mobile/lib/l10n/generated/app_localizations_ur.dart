@@ -7185,8 +7185,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get accountDeletionRestoreUsername => 'میرا صارف نام بحال کریں';
 
   @override
-  String get accountDeletionFinishingBody =>
-      'آپ کے اکاؤنٹ کو حذف کرنے کی درخواست پر ابھی کارروائی ہو رہی ہے۔ ہمارے مکمل کرنے تک آپ کوئی دوسرا اکاؤنٹ استعمال کر سکتے ہیں۔';
+  String get accountDeletionProcessingBody =>
+      'آپ کا اکاؤنٹ حذف ہونے میں ایک دن تک لگ سکتا ہے۔ ہمارے مکمل کرنے تک آپ ایپ بند کر سکتے ہیں یا کوئی دوسرا اکاؤنٹ استعمال کر سکتے ہیں۔';
+
+  @override
+  String get accountDeletionOverdueBody =>
+      'آپ کا اکاؤنٹ حذف ہونے میں توقع سے زیادہ وقت لگ رہا ہے۔ سپورٹ سے رابطہ کریں اور ہم اسے مکمل کر دیں گے۔';
 
   @override
   String get accountDeletionOtherAccountPending =>
