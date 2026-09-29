@@ -45,10 +45,10 @@ void main() {
     DraftsLibraryBloc createBloc() =>
         DraftsLibraryBloc(draftStorageService: mockDraftStorageService);
 
-    test('initial state is $DraftsLibraryInitial', () {
+    test('initial state is $DraftsLibraryInitial', () async {
       final bloc = createBloc();
       expect(bloc.state, const DraftsLibraryInitial());
-      bloc.close();
+      await bloc.close();
     });
 
     group('DraftsLibraryLoadRequested', () {
