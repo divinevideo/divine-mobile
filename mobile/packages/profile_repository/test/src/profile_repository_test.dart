@@ -1569,6 +1569,22 @@ void main() {
             verifyCachedTotalKept();
           });
 
+          test('watch-duration loops standing in for a failed view lookup '
+              'do not lower a known total', () async {
+            // Funnelcake fetches views and watch-duration loops in separate
+            // queries, so `total_loops` can survive a failed view lookup.
+            stubCachedTotal(501000);
+            stubEngagement(const {
+              'total_views': 0,
+              'total_loops': 10,
+              'archived_loops': 1000,
+            });
+
+            await repoWithFunnelcake.fetchFreshProfile(pubkey: testPubkey);
+
+            verifyCachedTotalKept();
+          });
+
           test('an archive-only response still raises a smaller cached '
               'total', () async {
             stubCachedTotal(50);
